@@ -30,7 +30,10 @@ export const defaultRubric: EvaluationRubric = {
       weight: 0.4,
       evaluate: (plan) => {
         // Higher score for more tasks (heuristic for detail)
-        const taskCount = plan.phases.reduce((sum, p) => sum + p.tasks.length, 0);
+        const taskCount = plan.phases.reduce(
+          (sum, p) => sum + p.tasks.length,
+          0
+        );
         return Math.min(1.0, taskCount / 10);
       },
     },
@@ -39,7 +42,11 @@ export const defaultRubric: EvaluationRubric = {
       weight: 0.3,
       evaluate: (plan) => {
         // Higher score for parallel strategy
-        return plan.resources.strategy === "parallel" ? 1.0 : plan.resources.strategy === "mixed" ? 0.7 : 0.4;
+        return plan.resources.strategy === "parallel"
+          ? 1.0
+          : plan.resources.strategy === "mixed"
+            ? 0.7
+            : 0.4;
       },
     },
     {

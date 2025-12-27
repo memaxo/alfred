@@ -128,7 +128,8 @@ export function buildDreamHeuristic(args: {
     return { status: "skip", reason: "missing_workflow_id" };
   }
 
-  const rawError = typeof args.errorMessage === "string" ? args.errorMessage : "";
+  const rawError =
+    typeof args.errorMessage === "string" ? args.errorMessage : "";
   const safeError = redactSecrets(rawError).trim();
   if (!safeError) {
     return { status: "skip", reason: "missing_error_message" };
@@ -185,4 +186,3 @@ export function buildDreamHeuristic(args: {
     },
   };
 }
-

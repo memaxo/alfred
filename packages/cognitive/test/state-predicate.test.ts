@@ -1,13 +1,6 @@
 import { describe, expect, it } from "bun:test";
-
-import {
-  canInterrupt,
-  duration,
-  isActive,
-  isExecuting,
-  isStale,
-  requiresInput,
-} from "../src/state/predicate";
+import { initialAutonomy } from "../src/autonomy/update";
+import type { Plan } from "../src/plan/types";
 import {
   capturing,
   deciding,
@@ -16,8 +9,14 @@ import {
   reflecting,
   thinking,
 } from "../src/state/factory";
-import { initialAutonomy } from "../src/autonomy/update";
-import type { Plan } from "../src/plan/types";
+import {
+  canInterrupt,
+  duration,
+  isActive,
+  isExecuting,
+  isStale,
+  requiresInput,
+} from "../src/state/predicate";
 import { confidence } from "../src/util/math";
 
 const now = 1_700_000_000_000;
@@ -51,7 +50,9 @@ describe("isActive", () => {
 
   it("returns true for reflecting state", () => {
     expect(
-      isActive(reflecting({ _: "success", result: null, duration: 10 }, "a", "b"))
+      isActive(
+        reflecting({ _: "success", result: null, duration: 10 }, "a", "b")
+      )
     ).toBe(true);
   });
 });
@@ -79,7 +80,9 @@ describe("canInterrupt", () => {
 
   it("returns false for reflecting state", () => {
     expect(
-      canInterrupt(reflecting({ _: "success", result: null, duration: 10 }, "a", "b"))
+      canInterrupt(
+        reflecting({ _: "success", result: null, duration: 10 }, "a", "b")
+      )
     ).toBe(false);
   });
 });
@@ -107,7 +110,9 @@ describe("requiresInput", () => {
 
   it("returns true for reflecting state", () => {
     expect(
-      requiresInput(reflecting({ _: "success", result: null, duration: 10 }, "a", "b"))
+      requiresInput(
+        reflecting({ _: "success", result: null, duration: 10 }, "a", "b")
+      )
     ).toBe(true);
   });
 });

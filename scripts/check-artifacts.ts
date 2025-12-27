@@ -47,7 +47,9 @@ async function main(): Promise<void> {
   const fixMode = process.argv.includes("--fix");
   const hits = await findForbiddenArtifacts();
   if (hits.length === 0) {
-    console.log("[check-artifacts] OK (no generated artifacts under packages/*/src)");
+    console.log(
+      "[check-artifacts] OK (no generated artifacts under packages/*/src)"
+    );
     return;
   }
 

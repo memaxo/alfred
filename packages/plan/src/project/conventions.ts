@@ -1,8 +1,8 @@
 import { projectRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { generateObject, type LanguageModel } from "ai";
-import { getOpenAI, getModelId } from "../ai.js";
 import { z } from "zod";
+import { getModelId, getOpenAI } from "../ai.js";
 import type { WorkflowRunLike } from "../pattern/extract.js";
 
 /**
@@ -14,7 +14,9 @@ export async function learnProjectConventions(
   summary: string
 ): Promise<void> {
   const project = await projectRepo.getProjectById(projectId);
-  if (!project) return;
+  if (!project) {
+    return;
+  }
 
   // Use AI to extract conventions from the summary of changes
   try {

@@ -1,6 +1,6 @@
 import { createGatewayProvider } from "@ai-sdk/gateway";
-import { tool, type Tool } from "ai";
-import type { z, ZodTypeAny } from "zod";
+import { type Tool, tool } from "ai";
+import type { ZodTypeAny, z } from "zod";
 
 import { toolBook } from "../assistant/src/tool/book";
 import { toolFocus } from "../assistant/src/tool/focus";
@@ -18,14 +18,11 @@ import {
 } from "../assistant/src/tool/preference";
 import { toolRemind } from "../assistant/src/tool/remind";
 import { toolTimer } from "../assistant/src/tool/timer";
-import {
-  toolVoiceControl,
-  toolVoiceStatus,
-} from "../assistant/src/tool/voice";
+import { toolVoiceControl, toolVoiceStatus } from "../assistant/src/tool/voice";
 import { toolWebAssistant } from "../assistant/src/tool/web";
-import { toolCognitiveState } from "./orchestrator/tool/cognitive";
 import { toolCodex } from "./orchestrator/tool/codex";
 import { toolCodexlog } from "./orchestrator/tool/codexlog";
+import { toolCognitiveState } from "./orchestrator/tool/cognitive";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
 import { toolGit } from "./orchestrator/tool/git";

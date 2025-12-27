@@ -3,20 +3,22 @@ import { db } from "../client";
 import { clarificationRequests } from "../schema/clarification";
 
 export type ClarificationRequest = typeof clarificationRequests.$inferSelect;
-export type ClarificationRequestInsert = typeof clarificationRequests.$inferInsert;
+export type ClarificationRequestInsert =
+  typeof clarificationRequests.$inferInsert;
 
 export async function createRequest(
   data: ClarificationRequestInsert
 ): Promise<ClarificationRequest> {
-  const [row] = await db
-    .insert(clarificationRequests)
-    .values(data)
-    .returning();
-  if (!row) throw new Error("Failed to create clarification request");
+  const [row] = await db.insert(clarificationRequests).values(data).returning();
+  if (!row) {
+    throw new Error("Failed to create clarification request");
+  }
   return row;
 }
 
-export async function getRequest(id: string): Promise<ClarificationRequest | null> {
+export async function getRequest(
+  id: string
+): Promise<ClarificationRequest | null> {
   const [row] = await db
     .select()
     .from(clarificationRequests)
@@ -37,7 +39,9 @@ export async function updateResponse(
     })
     .where(eq(clarificationRequests.id, id))
     .returning();
-  if (!row) throw new Error("Failed to update clarification response");
+  if (!row) {
+    throw new Error("Failed to update clarification response");
+  }
   return row;
 }
 

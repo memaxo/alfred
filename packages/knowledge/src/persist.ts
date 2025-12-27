@@ -2,7 +2,6 @@ import type { KnowledgeEntry } from "./extractor.js";
 import {
   type Hypergraph,
   type Knowledge,
-  knowledgeHash,
   type NodeId,
   nodeFromHash,
   type Timestamp,

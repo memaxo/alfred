@@ -11,7 +11,8 @@ import {
 installAuthTokenMock();
 
 // Use shared mock for assertions
-const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+const mockRequireToolScopesAndPolicy =
+  authTokenMocks.requireToolScopesAndPolicy;
 
 const originalRedisUrl = process.env.REDIS_URL;
 

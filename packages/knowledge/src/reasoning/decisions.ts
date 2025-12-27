@@ -1,6 +1,6 @@
+import { cosineSimilarity } from "@alfred/embed";
 import nlp from "compromise";
 import type { KnowledgeEntry } from "../extractor";
-import { cosineSimilarity } from "@alfred/embed";
 import { fact, type Knowledge, knowledgeHash } from "../hypergraph";
 import {
   embedTextSamples,

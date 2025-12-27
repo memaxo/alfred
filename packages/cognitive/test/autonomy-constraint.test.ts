@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 
 import { meetsConstraints } from "../src/autonomy/constraint";
-import { initialAutonomy } from "../src/autonomy/update";
 import type { AutonomyGradient, Constraint } from "../src/autonomy/types";
+import { initialAutonomy } from "../src/autonomy/update";
 import { autonomy, confidence, timestamp } from "../src/util/math";
 
 const baseNow = 1_700_000_000_000;
@@ -19,7 +19,7 @@ const createGradient = (constraints: Constraint[]): AutonomyGradient => ({
 describe("meetsConstraints - temporal", () => {
   it("allows action before deadline", () => {
     const auto = createGradient([
-      { _: "temporal", until: timestamp(baseNow + 10000) },
+      { _: "temporal", until: timestamp(baseNow + 10_000) },
     ]);
     const result = meetsConstraints(auto, "deploy", undefined, baseNow);
     expect(result.allowed).toBe(true);
@@ -154,33 +154,33 @@ describe("meetsConstraints - approval", () => {
 describe("meetsConstraints - physiology", () => {
   it("blocks on high frustration (> 0.85)", () => {
     const auto = initialAutonomy(baseNow);
-    const result = meetsConstraints(
-      auto,
-      "deploy",
-      { energy: 1, boredom: 0, frustration: 0.9 }
-    );
+    const result = meetsConstraints(auto, "deploy", {
+      energy: 1,
+      boredom: 0,
+      frustration: 0.9,
+    });
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("frustration_threshold_exceeded");
   });
 
   it("blocks on low energy (< 0.1)", () => {
     const auto = initialAutonomy(baseNow);
-    const result = meetsConstraints(
-      auto,
-      "deploy",
-      { energy: 0.05, boredom: 0, frustration: 0 }
-    );
+    const result = meetsConstraints(auto, "deploy", {
+      energy: 0.05,
+      boredom: 0,
+      frustration: 0,
+    });
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("energy_depleted");
   });
 
   it("blocks on high boredom (> 0.9)", () => {
     const auto = initialAutonomy(baseNow);
-    const result = meetsConstraints(
-      auto,
-      "deploy",
-      { energy: 1, boredom: 0.95, frustration: 0 }
-    );
+    const result = meetsConstraints(auto, "deploy", {
+      energy: 1,
+      boredom: 0.95,
+      frustration: 0,
+    });
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("boredom_loop_detected");
   });
@@ -195,11 +195,11 @@ describe("meetsConstraints - physiology", () => {
       lastUpdate: timestamp(baseNow),
     };
     // Would pass approval but fail physiology
-    const result = meetsConstraints(
-      auto,
-      "deploy",
-      { energy: 0.05, boredom: 0, frustration: 0 }
-    );
+    const result = meetsConstraints(auto, "deploy", {
+      energy: 0.05,
+      boredom: 0,
+      frustration: 0,
+    });
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("energy_depleted");
   });
@@ -219,7 +219,7 @@ describe("meetsConstraints - multiple constraints", () => {
 
   it("passes when all constraints pass", () => {
     const auto = createGradient([
-      { _: "temporal", until: timestamp(baseNow + 10000) },
+      { _: "temporal", until: timestamp(baseNow + 10_000) },
       { _: "scope", allowed: ["deploy"], forbidden: [] },
     ]);
     const result = meetsConstraints(auto, "deploy", undefined, baseNow);

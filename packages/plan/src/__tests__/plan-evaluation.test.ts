@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { evaluatePlanDeterministic } from "../evaluate/verify.js";
 
 describe("Deterministic Plan Evaluation", () => {
@@ -17,7 +17,17 @@ describe("Deterministic Plan Evaluation", () => {
         agentType: "codex" as const,
         estimatedDurationMs: 1000,
         dependsOn: [],
-        tasks: [{ id: "T1", title: "Task 1", requirement: "req", deps: [], priority: 1, acceptance: [], filesHint: [] }],
+        tasks: [
+          {
+            id: "T1",
+            title: "Task 1",
+            requirement: "req",
+            deps: [],
+            priority: 1,
+            acceptance: [],
+            filesHint: [],
+          },
+        ],
       },
     ],
     resources: {
@@ -40,11 +50,15 @@ describe("Deterministic Plan Evaluation", () => {
       exitCode: 0,
     } as any);
 
-    const result = await evaluatePlanDeterministic(mockPlan, { checks: ["lint"] });
+    const result = await evaluatePlanDeterministic(mockPlan, {
+      checks: ["lint"],
+    });
 
     expect(result.selected).toBe(true);
     expect(result.aggregateScore).toBeGreaterThan(0);
-    expect(result.scores.some(s => s.criterion === "checks" && s.score === 1.0)).toBe(true);
+    expect(
+      result.scores.some((s) => s.criterion === "checks" && s.score === 1.0)
+    ).toBe(true);
   });
 
   it("should fail evaluation if checks fail", async () => {
@@ -55,20 +69,26 @@ describe("Deterministic Plan Evaluation", () => {
       exitCode: 1,
     } as any);
 
-    const result = await evaluatePlanDeterministic(mockPlan, { checks: ["typecheck"] });
+    const result = await evaluatePlanDeterministic(mockPlan, {
+      checks: ["typecheck"],
+    });
 
     expect(result.selected).toBe(false);
     expect(result.aggregateScore).toBe(0);
-    expect(result.scores.some(s => s.criterion === "checks" && s.score === 0.0)).toBe(true);
+    expect(
+      result.scores.some((s) => s.criterion === "checks" && s.score === 0.0)
+    ).toBe(true);
   });
 
   it("should fail if budget is exceeded", async () => {
     const hugePlan = {
       ...mockPlan,
-      phases: [{
-        ...mockPlan.phases[0],
-        estimatedDurationMs: 100 * 24 * 60 * 60 * 1000 // 100 days
-      }]
+      phases: [
+        {
+          ...mockPlan.phases[0],
+          estimatedDurationMs: 100 * 24 * 60 * 60 * 1000, // 100 days
+        },
+      ],
     };
 
     const result = await evaluatePlanDeterministic(hugePlan);

@@ -1,6 +1,6 @@
+import type { WavePlan } from "@alfred/type/plan";
 import { z } from "zod";
 import type { Phase, StructuredPlan } from "../types.js";
-import type { WavePlan } from "@alfred/type/plan";
 
 /**
  * AgentType: The type of agent assigned to a phase

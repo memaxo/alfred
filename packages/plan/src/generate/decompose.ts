@@ -1,5 +1,10 @@
 import { logger } from "@alfred/logger";
-import type { ContextBundle, SubTask, SubTaskId, DecomposeContext } from "@alfred/type/plan";
+import type {
+  ContextBundle,
+  DecomposeContext,
+  SubTask,
+  SubTaskId,
+} from "@alfred/type/plan";
 
 const MAX_SUBTASKS =
   Number.parseInt(process.env.MAX_SUBTASKS ?? "10", 10) || 10;

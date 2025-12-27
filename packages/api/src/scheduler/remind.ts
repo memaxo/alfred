@@ -1,6 +1,47 @@
 import * as assistantRepo from "@alfred/db/repo/assistant";
+import { bridgeReminder } from "../webhooks/cognitive-bridge";
 
 type Reminder = Awaited<ReturnType<typeof assistantRepo.getReminders>>[number];
+
+/**
+ * Default reminder fire handler - bridges to cognitive system
+ */
+async function defaultOnFire(
+  reminder: Reminder,
+  logger: Pick<Console, "info" | "warn" | "error">
+): Promise<void> {
+  try {
+    // Get intent data from reminder metadata if available
+    const metadata = reminder.metadata as {
+      intentType?: string;
+      intentData?: unknown;
+    } | null;
+
+    const result = await bridgeReminder(reminder.userId, {
+      id: reminder.id,
+      title: reminder.title,
+      description: reminder.description ?? undefined,
+      intentType: metadata?.intentType,
+      intentData: metadata?.intentData,
+    });
+
+    logger.info?.(
+      `[assistant-remind] Reminder ${reminder.id} bridged to cognitive system`,
+      {
+        action: result.action,
+        taskId: result.taskId,
+      }
+    );
+  } catch (error) {
+    logger.warn?.(
+      `[assistant-remind] Failed to bridge reminder ${reminder.id}`,
+      {
+        error: error instanceof Error ? error.message : String(error),
+      }
+    );
+    // Don't throw - reminder was already marked as fired
+  }
+}
 
 export type ReminderSchedulerOptions = {
   intervalMs?: number;
@@ -39,9 +80,8 @@ async function tick(
       if (options.onFire) {
         await options.onFire(reminder);
       } else {
-        options.logger.info?.(
-          `[assistant-remind] Fired reminder ${reminder.id} for user ${reminder.userId} at ${now.toISOString()}`
-        );
+        // Default behavior: bridge to cognitive system
+        await defaultOnFire(reminder, options.logger);
       }
     }
   } catch (error) {

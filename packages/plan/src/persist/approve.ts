@@ -1,6 +1,6 @@
 import { planRepo, workflowRepo } from "@alfred/db";
-import { logger } from "@alfred/logger";
 import type { WorkflowPlan } from "@alfred/db/schema/plan";
+import { logger } from "@alfred/logger";
 
 /**
  * Approve a plan and trigger workflow execution

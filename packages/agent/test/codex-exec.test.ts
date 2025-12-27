@@ -1,4 +1,12 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -13,7 +21,7 @@ function setMockEvents(events: ThreadEvent[]) {
   pendingEvents = events;
 }
 
-const noop = () => {};
+const _noop = () => {};
 
 const assessSessionResumeEligibilityMock = mock(() =>
   Promise.resolve({
@@ -22,8 +30,8 @@ const assessSessionResumeEligibilityMock = mock(() =>
   })
 );
 
-const getSessionMock = mock(() => undefined);
-const createSessionMock = mock(() => undefined);
+const getSessionMock = mock(() => {});
+const createSessionMock = mock(() => {});
 
 mock.module("../src/orchestrator/codex-session.js", () => ({
   assessSessionResumeEligibility: assessSessionResumeEligibilityMock,
@@ -36,21 +44,34 @@ mock.module("../src/orchestrator/codex-session.js", () => ({
 }));
 
 // Ensure the exec.ts dependency on definition.js is resolved to the TS module.
-const definitionModule = await import("../src/orchestrator/tool/codex/definition.ts");
-mock.module("../src/orchestrator/tool/codex/definition.js", () => definitionModule);
+const definitionModule = await import(
+  "../src/orchestrator/tool/codex/definition.ts"
+);
+mock.module(
+  "../src/orchestrator/tool/codex/definition.js",
+  () => definitionModule
+);
 
 mock.module("@alfred/codex", () => ({
-  runStreamed: async function* (opts: {
+  async *runStreamed(opts: {
     cmd: string;
     prompt: string;
     env?: Record<string, string>;
-    spawn?: (args: { cmd: string; args: string[]; env?: Record<string, string> }) => unknown;
+    spawn?: (args: {
+      cmd: string;
+      args: string[];
+      env?: Record<string, string>;
+    }) => unknown;
   }) {
     observedPrompt = opts.prompt;
     if (shouldInvokeSpawn) {
       // Exercise the tool-provided spawn wrapper (docker/poof/host selection).
       // This lets tests assert docker `--workdir` behavior deterministically.
-      const spawned = opts.spawn?.({ cmd: opts.cmd, args: ["--version"], env: opts.env });
+      const spawned = opts.spawn?.({
+        cmd: opts.cmd,
+        args: ["--version"],
+        env: opts.env,
+      });
       if (
         spawned &&
         typeof spawned === "object" &&
@@ -66,8 +87,12 @@ mock.module("@alfred/codex", () => ({
   },
 }));
 
-const buildCodexLearningContextMock = mock(() => Promise.resolve<string | null>(null));
-const buildCodexHeuristicContextMock = mock(() => Promise.resolve<string | null>(null));
+const buildCodexLearningContextMock = mock(() =>
+  Promise.resolve<string | null>(null)
+);
+const buildCodexHeuristicContextMock = mock(() =>
+  Promise.resolve<string | null>(null)
+);
 
 mock.module("@alfred/db/repo/codex-learning", () => ({
   buildCodexLearningContext: (
@@ -89,9 +114,9 @@ beforeEach(() => {
     reason: "missing-session",
   });
   getSessionMock.mockReset();
-  getSessionMock.mockImplementation(() => undefined);
+  getSessionMock.mockImplementation(() => {});
   createSessionMock.mockReset();
-  createSessionMock.mockImplementation(() => undefined);
+  createSessionMock.mockImplementation(() => {});
   shouldInvokeSpawn = false;
   observedPrompt = null;
   buildCodexLearningContextMock.mockReset();
@@ -212,7 +237,7 @@ describe("executeWithCodex container workdir", () => {
       const argsPath = path.join(binDir, "args.txt");
       await writeFile(
         dockerPath,
-        `#!/bin/sh\nprintf '%s\\n' \"$@\" > \"${argsPath}\"\nexit 0\n`,
+        `#!/bin/sh\nprintf '%s\\n' "$@" > "${argsPath}"\nexit 0\n`,
         "utf8"
       );
       await chmod(dockerPath, 0o755);
@@ -396,12 +421,10 @@ describe("executeWithCodex metadata and sessionState", () => {
         status: "active" as const,
         createdAt: new Date(),
         lastAccessedAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 86_400_000),
       },
     });
-    setMockEvents([
-      { type: "thread.started", thread_id: "existing-thread" },
-    ]);
+    setMockEvents([{ type: "thread.started", thread_id: "existing-thread" }]);
 
     const result = await executeWithCodex({
       input: {
@@ -422,9 +445,7 @@ describe("executeWithCodex metadata and sessionState", () => {
   });
 
   it("handles missing token usage gracefully", async () => {
-    setMockEvents([
-      { type: "thread.started", thread_id: "thread-no-usage" },
-    ]);
+    setMockEvents([{ type: "thread.started", thread_id: "thread-no-usage" }]);
 
     const result = await executeWithCodex({
       input: {

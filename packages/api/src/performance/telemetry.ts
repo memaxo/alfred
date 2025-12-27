@@ -1,23 +1,19 @@
 import {
+  droidExecDurationSeconds,
+  droidExecRunsTotal,
+} from "@alfred/agent/orchestrator/tool/droid/metrics";
+import { cognitiveFeedbackSubmissionsTotal } from "@alfred/metrics/shared";
+import type client from "prom-client";
+import {
+  assistantGenerateDurationSeconds,
+  assistantGenerateRequestsTotal,
   graphContextDurationSeconds,
   graphQueriesTotal,
   graphQueryDurationSeconds,
   graphRagEmptyTotal,
   graphRagHitsTotal,
 } from "../metrics";
-import {
-  assistantGenerateDurationSeconds,
-  assistantGenerateRequestsTotal,
-} from "../metrics";
 import { healthChecksTotal } from "../metrics/health";
-import {
-  cognitiveFeedbackSubmissionsTotal,
-} from "@alfred/metrics/shared";
-import {
-  droidExecRunsTotal,
-  droidExecDurationSeconds,
-} from "@alfred/agent/orchestrator/tool/droid/metrics";
-import type client from "prom-client";
 
 export type HistogramSummary = {
   count: number;
@@ -95,7 +91,7 @@ export async function collectPerformanceTelemetry(): Promise<PerformanceTelemetr
     },
     tools: {
       droidRunsTotal: droidRunsTotalVal,
-      droidDuration: droidDuration,
+      droidDuration,
     },
     system: {
       healthChecksTotal: healthChecksTotalVal,
@@ -111,7 +107,7 @@ async function summarizeCounter(counter: CounterMetric): Promise<number> {
       return 0;
     }
     return metric.values.reduce((sum, value) => sum + (value.value ?? 0), 0);
-  } catch (error) {
+  } catch (_error) {
     return 0;
   }
 }
@@ -151,7 +147,7 @@ async function summarizeHistogram(
       p50: computePercentile(sortedBuckets, totalCount, 0.5),
       p95: computePercentile(sortedBuckets, totalCount, 0.95),
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       unit,
       count: 0,

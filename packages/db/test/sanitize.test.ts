@@ -18,7 +18,8 @@ describe("repo/sanitize", () => {
     });
 
     it("blocks iframe/embed/object tags and their contents", () => {
-      const dirty = "a<IFRAME src=x>pwn</IFRAME>b<embed src=y />c<object>x</object>d";
+      const dirty =
+        "a<IFRAME src=x>pwn</IFRAME>b<embed src=y />c<object>x</object>d";
       const cleaned = sanitizeContextText(dirty);
       expect(cleaned.toLowerCase()).not.toContain("iframe");
       expect(cleaned.toLowerCase()).not.toContain("embed");
@@ -27,7 +28,8 @@ describe("repo/sanitize", () => {
     });
 
     it("prevents javascript: URL vectors embedded in tags", () => {
-      const dirty = '<a href="JAVASCRIPT:alert(1)">x</a> <img src="javascript:alert(2)">';
+      const dirty =
+        '<a href="JAVASCRIPT:alert(1)">x</a> <img src="javascript:alert(2)">';
       const cleaned = sanitizeContextText(dirty);
       expect(cleaned.toLowerCase()).not.toContain("javascript:");
       expect(cleaned.toLowerCase()).not.toContain("alert");
@@ -35,7 +37,8 @@ describe("repo/sanitize", () => {
     });
 
     it("removes codex context comment delimiters", () => {
-      const dirty = "<!-- CONTEXT_START_deadbeef -->hello<!-- CONTEXT_END_deadbeef -->";
+      const dirty =
+        "<!-- CONTEXT_START_deadbeef -->hello<!-- CONTEXT_END_deadbeef -->";
       const cleaned = sanitizeContextText(dirty);
       expect(cleaned).toBe("hello");
     });
@@ -53,4 +56,3 @@ describe("repo/sanitize", () => {
     });
   });
 });
-

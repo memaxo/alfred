@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Use shared test utilities - import BEFORE any other imports
 import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";

@@ -1,6 +1,6 @@
-import { logger } from "@alfred/logger";
 import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import type { WorkflowPattern } from "@alfred/db/repo/pattern";
+import { logger } from "@alfred/logger";
 
 /**
  * Sync a WorkflowPattern to the Knowledge Graph for semantic matching.

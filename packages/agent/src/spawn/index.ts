@@ -5,53 +5,50 @@
  * where filesystem changes can be captured, reviewed, and applied.
  */
 
-// Core types and utilities
-export {
-  type PoofMode,
-  type PoofProfile,
-  type PoofProfileName,
-  POOF_PROFILES,
-  POOF_EXIT_CODES,
-  POOF_SANDBOX_ENV,
-  isPoofAvailable,
-  getPoofBinary,
-  resolvePoofBinary,
-  resetPoofCache,
-  buildPoofArgs,
-  isPoofTimeout,
-  isCommandNotFound,
-  isInsideSandbox,
-} from "./poof.js";
-
-// Spawn utilities
-export {
-  type IsolatedSpawnOptions,
-  type IsolatedSpawnResult,
-  spawnIsolated,
-  spawnEphemeral,
-  spawnReviewable,
-  createUpperDir,
-  cleanupUpperDir,
-} from "./isolated.js";
-
 // Diff utilities
 export {
-  type PoofChange,
-  type PoofChangeType,
-  type PoofChangeSummary,
-  parseUpperLayer,
-  summarizeChanges,
-  generateDiff,
   applyUpperLayer,
   discardUpperLayer,
   formatChanges,
+  generateDiff,
   hasChanges,
+  type PoofChange,
+  type PoofChangeSummary,
+  type PoofChangeType,
+  parseUpperLayer,
+  summarizeChanges,
 } from "./diff.js";
-
 // Wave handoff utilities
 export {
-  type WaveAgentResult,
-  type WaveState,
-  WaveHandoff,
   createWaveHandoff,
+  type WaveAgentResult,
+  WaveHandoff,
+  type WaveState,
 } from "./handoff.js";
+// Spawn utilities
+export {
+  cleanupUpperDir,
+  createUpperDir,
+  type IsolatedSpawnOptions,
+  type IsolatedSpawnResult,
+  spawnEphemeral,
+  spawnIsolated,
+  spawnReviewable,
+} from "./isolated.js";
+// Core types and utilities
+export {
+  buildPoofArgs,
+  getPoofBinary,
+  isCommandNotFound,
+  isInsideSandbox,
+  isPoofAvailable,
+  isPoofTimeout,
+  POOF_EXIT_CODES,
+  POOF_PROFILES,
+  POOF_SANDBOX_ENV,
+  type PoofMode,
+  type PoofProfile,
+  type PoofProfileName,
+  resetPoofCache,
+  resolvePoofBinary,
+} from "./poof.js";

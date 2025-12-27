@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Mock AI SDK generateObject
 const mockGenerateObject = mock();
@@ -18,9 +18,9 @@ mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
   decomposeTask: mockDecomposeTask,
 }));
 
-import { generatePlan } from "../generate/phased.js";
-import { groupIntoPhases } from "../generate/group.js";
 import { buildDependencyGraph } from "../generate/dependencies.js";
+import { groupIntoPhases } from "../generate/group.js";
+import { generatePlan } from "../generate/phased.js";
 
 describe("Plan Generation", () => {
   const mockIntent = {
@@ -56,15 +56,58 @@ describe("Plan Generation", () => {
 
   it("should group subtasks into logical phases", () => {
     const subtasks = [
-      { id: "T1", title: "Setup theme colors", requirement: "setup", deps: [], priority: 1, acceptance: [], filesHint: [] },
-      { id: "T2", title: "Create DB migration", requirement: "db", deps: [], priority: 1, acceptance: [], filesHint: [] },
-      { id: "T3", title: "Implement API", requirement: "api", deps: [], priority: 1, acceptance: [], filesHint: [] },
-      { id: "T4", title: "Add UI toggle", requirement: "ui", deps: [], priority: 1, acceptance: [], filesHint: [] },
-      { id: "T5", title: "Write tests", requirement: "test", deps: [], priority: 1, acceptance: [], filesHint: [] },
+      {
+        id: "T1",
+        title: "Setup theme colors",
+        requirement: "setup",
+        deps: [],
+        priority: 1,
+        acceptance: [],
+        filesHint: [],
+      },
+      {
+        id: "T2",
+        title: "Create DB migration",
+        requirement: "db",
+        deps: [],
+        priority: 1,
+        acceptance: [],
+        filesHint: [],
+      },
+      {
+        id: "T3",
+        title: "Implement API",
+        requirement: "api",
+        deps: [],
+        priority: 1,
+        acceptance: [],
+        filesHint: [],
+      },
+      {
+        id: "T4",
+        title: "Add UI toggle",
+        requirement: "ui",
+        deps: [],
+        priority: 1,
+        acceptance: [],
+        filesHint: [],
+      },
+      {
+        id: "T5",
+        title: "Write tests",
+        requirement: "test",
+        deps: [],
+        priority: 1,
+        acceptance: [],
+        filesHint: [],
+      },
     ];
 
-    const groups = groupIntoPhases(subtasks, { maxPhases: 5, preferParallel: true });
-    
+    const groups = groupIntoPhases(subtasks, {
+      maxPhases: 5,
+      preferParallel: true,
+    });
+
     expect(groups.length).toBe(5);
     expect(groups[0].name).toBe("Environment Setup");
     expect(groups[1].name).toBe("Data Architecture");
@@ -76,13 +119,43 @@ describe("Plan Generation", () => {
   it("should build dependency graph between phases", () => {
     const phases = [
       {
-        id: "p1", name: "Setup", description: "", agentType: "codex" as const, estimatedDurationMs: 0, dependsOn: [],
-        tasks: [{ id: "T1", title: "T1", requirement: "", deps: [], priority: 1, acceptance: [], filesHint: [] }]
+        id: "p1",
+        name: "Setup",
+        description: "",
+        agentType: "codex" as const,
+        estimatedDurationMs: 0,
+        dependsOn: [],
+        tasks: [
+          {
+            id: "T1",
+            title: "T1",
+            requirement: "",
+            deps: [],
+            priority: 1,
+            acceptance: [],
+            filesHint: [],
+          },
+        ],
       },
       {
-        id: "p2", name: "UI", description: "", agentType: "codex" as const, estimatedDurationMs: 0, dependsOn: [],
-        tasks: [{ id: "T2", title: "T2", requirement: "", deps: ["T1"], priority: 1, acceptance: [], filesHint: [] }]
-      }
+        id: "p2",
+        name: "UI",
+        description: "",
+        agentType: "codex" as const,
+        estimatedDurationMs: 0,
+        dependsOn: [],
+        tasks: [
+          {
+            id: "T2",
+            title: "T2",
+            requirement: "",
+            deps: ["T1"],
+            priority: 1,
+            acceptance: [],
+            filesHint: [],
+          },
+        ],
+      },
     ];
 
     const withDeps = buildDependencyGraph(phases);
@@ -91,8 +164,24 @@ describe("Plan Generation", () => {
 
   it("should generate a full StructuredPlan", async () => {
     mockDecomposeTask.mockResolvedValue([
-      { id: "T1", title: "Setup", requirement: "setup", deps: [], priority: 1, acceptance: [], filesHint: [] },
-      { id: "T2", title: "Test", requirement: "test", deps: ["T1"], priority: 1, acceptance: [], filesHint: [] },
+      {
+        id: "T1",
+        title: "Setup",
+        requirement: "setup",
+        deps: [],
+        priority: 1,
+        acceptance: [],
+        filesHint: [],
+      },
+      {
+        id: "T2",
+        title: "Test",
+        requirement: "test",
+        deps: ["T1"],
+        priority: 1,
+        acceptance: [],
+        filesHint: [],
+      },
     ]);
 
     mockGenerateObject.mockResolvedValue({

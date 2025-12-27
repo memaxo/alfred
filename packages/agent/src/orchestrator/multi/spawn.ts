@@ -59,17 +59,17 @@ function determineEnvironment(
   _options?: { maxParallel?: number; useIsolation?: boolean }
 ): WorkspaceKind {
   // Feature-flagged legacy path: poof isolation (Linux only)
-  if (feature("LEGACY_POOF")) {
-    if (process.env.ORCH_USE_POOF === "1" && process.platform === "linux") {
-      return "poof";
-    }
+  if (
+    feature("LEGACY_POOF") &&
+    process.env.ORCH_USE_POOF === "1" &&
+    process.platform === "linux"
+  ) {
+    return "poof";
   }
 
   // Feature-flagged legacy path: git worktree isolation
-  if (feature("LEGACY_WORKTREE")) {
-    if (process.env.ORCH_USE_WORKTREE === "1") {
-      return "worktree";
-    }
+  if (feature("LEGACY_WORKTREE") && process.env.ORCH_USE_WORKTREE === "1") {
+    return "worktree";
   }
 
   // Production default: Docker container isolation
@@ -208,7 +208,9 @@ export function planWaves(
   const compareTasks = (a: SubTaskId, b: SubTaskId): number => {
     const ta = byId.get(a);
     const tb = byId.get(b);
-    if (!(ta && tb)) return 0;
+    if (!(ta && tb)) {
+      return 0;
+    }
     const diff = (tb.priority ?? 0) - (ta.priority ?? 0);
     return diff !== 0 ? diff : a.localeCompare(b);
   };
@@ -238,12 +240,16 @@ export function planWaves(
       currentWaveTasks.length < maxParallel
     ) {
       const id = readyQueue[readyIndex++]!;
-      if (scheduled.has(id)) continue;
+      if (scheduled.has(id)) {
+        continue;
+      }
       currentWaveTasks.push(id);
       scheduled.add(id);
     }
 
-    if (currentWaveTasks.length === 0) break;
+    if (currentWaveTasks.length === 0) {
+      break;
+    }
 
     const waveId = `wave_${waveIndex}`;
 
@@ -252,7 +258,9 @@ export function planWaves(
     for (const taskId of currentWaveTasks) {
       taskToWave.set(taskId, waveId);
       const taskDeps = deps.get(taskId);
-      if (!taskDeps) continue;
+      if (!taskDeps) {
+        continue;
+      }
       for (const dep of taskDeps) {
         const depWave = taskToWave.get(dep);
         if (depWave && depWave !== waveId) {
@@ -283,7 +291,9 @@ export function planWaves(
 
     // Rebuild ready queue with remaining + new items
     if (newReady.length > 0 || readyIndex < readyQueue.length) {
-      const remaining = readyQueue.slice(readyIndex).filter((id) => !scheduled.has(id));
+      const remaining = readyQueue
+        .slice(readyIndex)
+        .filter((id) => !scheduled.has(id));
       readyQueue = [...remaining, ...newReady].sort(compareTasks);
       readyIndex = 0;
     }

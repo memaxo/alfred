@@ -3,12 +3,12 @@
  */
 
 import {
-  clamp01,
   CONFIDENCE_DECAY_RATE,
+  clamp01,
   MS_PER_DAY,
   type Timestamp,
 } from "../util/math.js";
-import { DEFAULT_BETA_PRIOR, type BetaPrior, type Evidence } from "./types.js";
+import { type BetaPrior, DEFAULT_BETA_PRIOR, type Evidence } from "./types.js";
 
 const OVERRIDE_WEIGHT = 1.5;
 

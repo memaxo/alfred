@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import * as flowctx from "@alfred/agent/orchestrator/flow/context";
 import * as semantic from "@alfred/agent/orchestrator/reasoning/decompose-semantic";
-import * as patterns from "../research/patterns.js";
 import * as conventions from "../research/conventions.js";
+import * as patterns from "../research/patterns.js";
 
 // Import the thing we're testing
 const { gatherInternalResearch } = await import("../research/internal.js");
@@ -17,7 +17,12 @@ describe("Internal Research", () => {
     // Use spyOn instead of mock.module to avoid global mock leakage
     buildSpy = spyOn(flowctx, "gatherCodeContext").mockResolvedValue({
       code: [
-        { id: "1", kind: "code", path: "packages/api/src/routers/plan.ts", score: 1 },
+        {
+          id: "1",
+          kind: "code",
+          path: "packages/api/src/routers/plan.ts",
+          score: 1,
+        },
         {
           id: "2",
           kind: "code",

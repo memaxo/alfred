@@ -1,3 +1,4 @@
+import { EMBEDDING_DIM } from "@alfred/embed";
 import {
   bigint,
   integer,
@@ -9,9 +10,8 @@ import {
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
-import { projects } from "./project";
 import { user } from "./auth";
-import { EMBEDDING_DIM } from "@alfred/embed";
+import { projects } from "./project";
 
 export const workflowPatterns = pgTable("workflow_patterns", {
   id: uuid("id").defaultRandom().primaryKey(),

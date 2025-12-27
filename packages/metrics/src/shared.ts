@@ -122,3 +122,155 @@ export const linearRateLimitRetryAfterTotal = new client.Counter({
   help: "Count of times Retry-After header was honored for Linear rate limiting.",
   registers: [metricsRegistry],
 });
+
+// ============================================================================
+// Budget Metrics (used by @alfred/agent budget manager)
+// ============================================================================
+
+export const budgetUsageGauge = new client.Gauge({
+  name: "alfred_budget_usage_ratio",
+  help: "Current budget usage ratio (0-1).",
+  labelNames: ["userId", "type"] as const, // type: "dollar" | "token"
+  registers: [metricsRegistry],
+});
+
+export const budgetExceededTotal = new client.Counter({
+  name: "alfred_budget_exceeded_total",
+  help: "Count of requests blocked due to budget.",
+  labelNames: ["reason"] as const, // reason: "daily_dollar" | "daily_token" | "request_limit"
+  registers: [metricsRegistry],
+});
+
+export const budgetUsageRecordedTotal = new client.Counter({
+  name: "alfred_budget_usage_recorded_total",
+  help: "Count of usage records created.",
+  labelNames: ["provider", "role"] as const,
+  registers: [metricsRegistry],
+});
+
+export const budgetCostCentsTotal = new client.Counter({
+  name: "alfred_budget_cost_cents_total",
+  help: "Total cost in cents across all users.",
+  labelNames: ["provider", "role"] as const,
+  registers: [metricsRegistry],
+});
+
+export const budgetTokensTotal = new client.Counter({
+  name: "alfred_budget_tokens_total",
+  help: "Total tokens used across all users.",
+  labelNames: ["provider", "role", "type"] as const, // type: "input" | "output" | "cached"
+  registers: [metricsRegistry],
+});
+
+// ============================================================================
+// Idle Loop Metrics (used by @alfred/api idle-loop scheduler)
+// ============================================================================
+
+export const idleLoopTasksProcessedTotal = new client.Counter({
+  name: "alfred_idle_loop_tasks_processed_total",
+  help: "Count of tasks processed during idle time.",
+  labelNames: ["type", "status"] as const, // type: task type, status: "completed" | "failed"
+  registers: [metricsRegistry],
+});
+
+export const idleLoopTaskDurationMs = new client.Histogram({
+  name: "alfred_idle_loop_task_duration_ms",
+  help: "Duration of idle loop task processing in milliseconds.",
+  buckets: [10, 50, 100, 500, 1000, 5000, 10_000, 30_000],
+  labelNames: ["type"] as const,
+  registers: [metricsRegistry],
+});
+
+export const idleLoopCycleTotal = new client.Counter({
+  name: "alfred_idle_loop_cycle_total",
+  help: "Count of idle loop cycles executed.",
+  registers: [metricsRegistry],
+});
+
+export const idleLoopUsersProcessedTotal = new client.Counter({
+  name: "alfred_idle_loop_users_processed_total",
+  help: "Count of users processed in idle loop.",
+  registers: [metricsRegistry],
+});
+
+export const idleLoopQueueDepth = new client.Gauge({
+  name: "alfred_idle_loop_queue_depth",
+  help: "Current number of pending tasks in the queue.",
+  labelNames: ["status"] as const, // status: "pending" | "running"
+  registers: [metricsRegistry],
+});
+
+// ============================================================================
+// Model Selection Metrics (used by @alfred/agent selector)
+// ============================================================================
+
+export const modelSelectionTotal = new client.Counter({
+  name: "alfred_model_selection_total",
+  help: "Count of model selections by role and provider.",
+  labelNames: ["role", "provider", "reason"] as const, // reason: "user_pref" | "budget" | "latency" | "env" | "fallback"
+  registers: [metricsRegistry],
+});
+
+export const modelSelectionFallbackTotal = new client.Counter({
+  name: "alfred_model_selection_fallback_total",
+  help: "Count of model selection fallbacks due to budget or latency constraints.",
+  labelNames: [
+    "role",
+    "originalProvider",
+    "fallbackProvider",
+    "reason",
+  ] as const,
+  registers: [metricsRegistry],
+});
+
+export const modelLatencyMs = new client.Histogram({
+  name: "alfred_model_latency_ms",
+  help: "Actual latency of model requests in milliseconds.",
+  buckets: [50, 100, 200, 500, 1000, 2000, 5000, 10_000, 30_000],
+  labelNames: ["provider", "role"] as const,
+  registers: [metricsRegistry],
+});
+
+export const modelProviderAvailability = new client.Gauge({
+  name: "alfred_model_provider_availability",
+  help: "Whether a model provider is available (1) or not (0).",
+  labelNames: ["provider"] as const, // provider: "cerebras" | "openrouter" | "gateway"
+  registers: [metricsRegistry],
+});
+
+// ============================================================================
+// Cognitive Bridge Metrics (used by @alfred/api cognitive-bridge)
+// ============================================================================
+
+export const cognitiveBridgeTriggerTotal = new client.Counter({
+  name: "alfred_cognitive_bridge_trigger_total",
+  help: "Count of cognitive bridge triggers by source.",
+  labelNames: ["source", "action"] as const, // action: "immediate" | "queued" | "dropped"
+  registers: [metricsRegistry],
+});
+
+export const cognitiveBridgeProcessingMs = new client.Histogram({
+  name: "alfred_cognitive_bridge_processing_ms",
+  help: "Duration of cognitive bridge processing in milliseconds.",
+  buckets: [10, 50, 100, 500, 1000, 5000],
+  labelNames: ["source"] as const,
+  registers: [metricsRegistry],
+});
+
+// ============================================================================
+// Personality Metrics (used by @alfred/cognitive personality)
+// ============================================================================
+
+export const personalityTraitUpdateTotal = new client.Counter({
+  name: "alfred_personality_trait_update_total",
+  help: "Count of personality trait updates.",
+  labelNames: ["trait", "eventType"] as const,
+  registers: [metricsRegistry],
+});
+
+export const personalityCalibrationAccuracy = new client.Gauge({
+  name: "alfred_personality_calibration_accuracy",
+  help: "Current calibration accuracy for a domain.",
+  labelNames: ["domain"] as const,
+  registers: [metricsRegistry],
+});

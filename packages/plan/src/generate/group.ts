@@ -15,7 +15,9 @@ export function groupIntoPhases(
     preferParallel: boolean;
   }
 ): PhaseGroup[] {
-  if (subtasks.length === 0) return [];
+  if (subtasks.length === 0) {
+    return [];
+  }
 
   // Group 1: Setup & Environment
   const setup = subtasks.filter(
@@ -39,8 +41,7 @@ export function groupIntoPhases(
   // Group 3: Core Logic & API
   const api = subtasks.filter(
     (t) =>
-      !setup.includes(t) &&
-      !db.includes(t) &&
+      !(setup.includes(t) || db.includes(t)) &&
       (t.title.toLowerCase().includes("api") ||
         t.title.toLowerCase().includes("logic") ||
         t.title.toLowerCase().includes("backend") ||
@@ -50,9 +51,7 @@ export function groupIntoPhases(
   // Group 4: Frontend & UI
   const ui = subtasks.filter(
     (t) =>
-      !setup.includes(t) &&
-      !db.includes(t) &&
-      !api.includes(t) &&
+      !(setup.includes(t) || db.includes(t) || api.includes(t)) &&
       (t.title.toLowerCase().includes("ui") ||
         t.title.toLowerCase().includes("frontend") ||
         t.title.toLowerCase().includes("component") ||
@@ -62,10 +61,12 @@ export function groupIntoPhases(
   // Group 5: Testing & Validation
   const tests = subtasks.filter(
     (t) =>
-      !setup.includes(t) &&
-      !db.includes(t) &&
-      !api.includes(t) &&
-      !ui.includes(t) &&
+      !(
+        setup.includes(t) ||
+        db.includes(t) ||
+        api.includes(t) ||
+        ui.includes(t)
+      ) &&
       (t.title.toLowerCase().includes("test") ||
         t.title.toLowerCase().includes("spec") ||
         t.title.toLowerCase().includes("validate") ||
@@ -75,20 +76,34 @@ export function groupIntoPhases(
   // Group 6: Miscellaneous
   const misc = subtasks.filter(
     (t) =>
-      !setup.includes(t) &&
-      !db.includes(t) &&
-      !api.includes(t) &&
-      !ui.includes(t) &&
-      !tests.includes(t)
+      !(
+        setup.includes(t) ||
+        db.includes(t) ||
+        api.includes(t) ||
+        ui.includes(t) ||
+        tests.includes(t)
+      )
   );
 
   const groups: PhaseGroup[] = [];
-  if (setup.length > 0) groups.push({ name: "Environment Setup", subtasks: setup });
-  if (db.length > 0) groups.push({ name: "Data Architecture", subtasks: db });
-  if (api.length > 0) groups.push({ name: "Logic & API", subtasks: api });
-  if (ui.length > 0) groups.push({ name: "User Interface", subtasks: ui });
-  if (tests.length > 0) groups.push({ name: "Testing & Validation", subtasks: tests });
-  if (misc.length > 0) groups.push({ name: "Final Adjustments", subtasks: misc });
+  if (setup.length > 0) {
+    groups.push({ name: "Environment Setup", subtasks: setup });
+  }
+  if (db.length > 0) {
+    groups.push({ name: "Data Architecture", subtasks: db });
+  }
+  if (api.length > 0) {
+    groups.push({ name: "Logic & API", subtasks: api });
+  }
+  if (ui.length > 0) {
+    groups.push({ name: "User Interface", subtasks: ui });
+  }
+  if (tests.length > 0) {
+    groups.push({ name: "Testing & Validation", subtasks: tests });
+  }
+  if (misc.length > 0) {
+    groups.push({ name: "Final Adjustments", subtasks: misc });
+  }
 
   // Consolidate if over maxPhases
   if (groups.length > options.maxPhases) {

@@ -1,8 +1,11 @@
-import { decomposeTask } from "./decompose.js";
 import { logger } from "@alfred/logger";
+import { generateObject } from "ai";
+import { z } from "zod";
+import { getModelId, getOpenAI } from "../ai.js";
 import type { WorkflowIntent } from "../intent/types.js";
 import type { ResearchResult } from "../research/types.js";
 import { assignAgentTypes } from "./agents.js";
+import { decomposeTask } from "./decompose.js";
 import { buildDependencyGraph } from "./dependencies.js";
 import { estimateDurations } from "./duration.js";
 import { groupIntoPhases } from "./group.js";
@@ -12,9 +15,6 @@ import type {
   StructuredPlan,
   SubTask,
 } from "./types.js";
-import { generateObject } from "ai";
-import { z } from "zod";
-import { getOpenAI, getModelId } from "../ai.js";
 
 /**
  * Generate a phased plan from intent and research
@@ -106,7 +106,7 @@ async function enrichPhasesWithAI(
       }),
       prompt: `Generate professional names and descriptions for the following workflow phases.
 User Intent: ${intent.description}
-Project Framework: ${research.internal.conventions.find(c => c.id.includes('import'))?.description ?? 'Unknown'}
+Project Framework: ${research.internal.conventions.find((c) => c.id.includes("import"))?.description ?? "Unknown"}
 
 Phases:
 ${groups
@@ -158,18 +158,25 @@ function countUniqueAgents(phases: Phase[]): number {
   return new Set(phases.map((p) => p.agentType)).size;
 }
 
-function determineStrategy(phases: Phase[]): StructuredPlan["resources"]["strategy"] {
+function determineStrategy(
+  phases: Phase[]
+): StructuredPlan["resources"]["strategy"] {
   const hasDeps = phases.some((p) => p.dependsOn.length > 0);
-  if (!hasDeps) return "parallel";
+  if (!hasDeps) {
+    return "parallel";
+  }
   // Check if some can run in parallel
-  const canRunParallel = phases.some(p1 => 
-    !phases.some(p2 => p2.dependsOn.includes(p1.id)) && 
-    p1.dependsOn.length === 0
+  const canRunParallel = phases.some(
+    (p1) =>
+      !phases.some((p2) => p2.dependsOn.includes(p1.id)) &&
+      p1.dependsOn.length === 0
   );
   return hasDeps && canRunParallel ? "mixed" : "sequential";
 }
 
-function generateEvaluationCriteria(_intent: WorkflowIntent): Array<{ name: string; weight: number; threshold: string }> {
+function generateEvaluationCriteria(
+  _intent: WorkflowIntent
+): Array<{ name: string; weight: number; threshold: string }> {
   return [
     {
       name: "Functional correctness",

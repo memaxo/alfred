@@ -754,7 +754,9 @@ export async function getTransitiveClosure(
   `;
 
   const result = await db.execute(query);
-  return (result.rows ?? []).map((row) => String((row as { node_id: string }).node_id));
+  return (result.rows ?? []).map((row) =>
+    String((row as { node_id: string }).node_id)
+  );
 }
 
 async function getTransitiveClosureSqlite(
@@ -768,7 +770,9 @@ async function getTransitiveClosureSqlite(
     ? db
         .select()
         .from(memoryEdges)
-        .where(and(eq(memoryEdges.kind, kind), eq(memoryEdges.resource, resource)))
+        .where(
+          and(eq(memoryEdges.kind, kind), eq(memoryEdges.resource, resource))
+        )
     : db.select().from(memoryEdges).where(eq(memoryEdges.kind, kind));
   const edges = await edgeQuery;
 
@@ -779,7 +783,9 @@ async function getTransitiveClosureSqlite(
   }
 
   const visited = new Set<string>();
-  const queue: Array<{ id: string; depth: number }> = [{ id: nodeId, depth: 0 }];
+  const queue: Array<{ id: string; depth: number }> = [
+    { id: nodeId, depth: 0 },
+  ];
 
   visited.add(nodeId);
 

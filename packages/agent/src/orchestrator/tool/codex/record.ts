@@ -121,9 +121,11 @@ async function loadRepo(): Promise<CodexRunRepo | null> {
 }
 
 export class CodexRunRecorder {
-  static async start(options: CodexRunRecorderOptions): Promise<CodexRunRecorder> {
+  static async start(
+    options: CodexRunRecorderOptions
+  ): Promise<CodexRunRecorder> {
     const repo = await loadRepo();
-    if (!repo || !options.userId) {
+    if (!(repo && options.userId)) {
       return new CodexRunRecorder(null, null, null);
     }
 
@@ -366,7 +368,10 @@ export class CodexRunRecorder {
     }
     await this.flush().catch(() => {});
     const now = new Date();
-    const errorMessage = safeText(args.errorMessage ?? undefined, MAX_EVENT_TEXT_BYTES);
+    const errorMessage = safeText(
+      args.errorMessage ?? undefined,
+      MAX_EVENT_TEXT_BYTES
+    );
     await this.repo
       .finalizeRun(this.runId, {
         status: "failed",
@@ -384,4 +389,3 @@ export class CodexRunRecorder {
       });
   }
 }
-

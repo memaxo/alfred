@@ -136,10 +136,31 @@ export function decomposeSemantically(
   bundle: ContextBundle
 ): SubTask[] {
   const filesWithContent = bundle.files
-    .filter((f): f is { path: string; content: string; startLine: number; endLine: number; tokens: number } =>
-      Boolean(f.path && f.content && typeof f.startLine === 'number' && typeof f.endLine === 'number' && typeof f.tokens === 'number')
+    .filter(
+      (
+        f
+      ): f is {
+        path: string;
+        content: string;
+        startLine: number;
+        endLine: number;
+        tokens: number;
+      } =>
+        Boolean(
+          f.path &&
+            f.content &&
+            typeof f.startLine === "number" &&
+            typeof f.endLine === "number" &&
+            typeof f.tokens === "number"
+        )
     )
-    .map((f) => ({ path: f.path, content: f.content, startLine: f.startLine, endLine: f.endLine, tokens: f.tokens }));
+    .map((f) => ({
+      path: f.path,
+      content: f.content,
+      startLine: f.startLine,
+      endLine: f.endLine,
+      tokens: f.tokens,
+    }));
 
   if (filesWithContent.length === 0) {
     return [];

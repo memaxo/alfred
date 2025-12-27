@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 
 import {
   autonomy,
+  CONFIDENCE_DECAY_RATE,
   clamp01,
   confidence,
-  CONFIDENCE_DECAY_RATE,
   MS_PER_DAY,
   timestamp,
 } from "../src/util/math";
@@ -92,12 +92,18 @@ describe("timestamp brand constructor", () => {
   });
 
   it("rejects NaN", () => {
-    expect(() => timestamp(NaN)).toThrow("Timestamp must be a finite number");
+    expect(() => timestamp(Number.NaN)).toThrow(
+      "Timestamp must be a finite number"
+    );
   });
 
   it("rejects Infinity", () => {
-    expect(() => timestamp(Infinity)).toThrow("Timestamp must be a finite number");
-    expect(() => timestamp(-Infinity)).toThrow("Timestamp must be a finite number");
+    expect(() => timestamp(Number.POSITIVE_INFINITY)).toThrow(
+      "Timestamp must be a finite number"
+    );
+    expect(() => timestamp(Number.NEGATIVE_INFINITY)).toThrow(
+      "Timestamp must be a finite number"
+    );
   });
 });
 

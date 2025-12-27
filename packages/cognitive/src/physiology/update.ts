@@ -53,9 +53,6 @@ export const updatePhysiology = (
     cognitivePhysiologyUpdateDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.01) {
-      console.warn(
-        `cognitive_physiology_update_slow: ${durationMs.toFixed(3)}ms (budget: 0.01ms)`
-      );
     }
   }
 };

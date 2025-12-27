@@ -31,16 +31,24 @@ if (
     true;
 }
 
-// API-local metrics
-export * from "./metrics/index";
-
-// Re-export from domain packages
 export {
-  fineTuneRunDurationSeconds,
-  fineTuneRunsTotal,
-  fineTuneSamplesTotal,
-  fineTuneTokensTotal,
-} from "@alfred/tune";
+  codexErrorsTotal,
+  codexExecDurationSeconds,
+  codexExecRunsTotal,
+  codexLinearActivitiesDroppedTotal,
+  codexLinearActivitiesEmittedTotal,
+  codexLinearActivityBatchesTotal,
+  codexLinearIntegrationLatencySeconds,
+  codexSessionContinuityTotal,
+  codexSessionValidationDurationSeconds,
+} from "@alfred/agent/orchestrator/tool/codex/metrics";
+// Tool metrics
+export {
+  droidExecDurationSeconds,
+  droidExecRunsTotal,
+  droidPendingCleanupTotal,
+  droidPendingRunsGauge,
+} from "@alfred/agent/orchestrator/tool/droid/metrics";
 
 export * from "@alfred/agent/workflow/metrics";
 export * from "@alfred/db";
@@ -51,36 +59,12 @@ export {
   graphRagEmptyTotal,
   graphRagHitsTotal,
 } from "@alfred/db/metrics";
+export * from "@alfred/history";
 export {
   historyContextTierDropsTotal,
   historyContextTokensTotal,
 } from "@alfred/history";
-export * from "@alfred/history";
 export * from "@alfred/knowledge/metrics";
-export * from "@alfred/policy";
-export * from "@alfred/runtime/metrics";
-export * from "@alfred/voice/metrics";
-
-// Tool metrics
-export {
-  droidExecRunsTotal,
-  droidExecDurationSeconds,
-  droidPendingCleanupTotal,
-  droidPendingRunsGauge,
-} from "@alfred/agent/orchestrator/tool/droid/metrics";
-
-export {
-  codexExecRunsTotal,
-  codexExecDurationSeconds,
-  codexErrorsTotal,
-  codexSessionValidationDurationSeconds,
-  codexLinearActivitiesDroppedTotal,
-  codexLinearActivitiesEmittedTotal,
-  codexLinearActivityBatchesTotal,
-  codexLinearIntegrationLatencySeconds,
-  codexSessionContinuityTotal,
-} from "@alfred/agent/orchestrator/tool/codex/metrics";
-
 // Re-export shared metrics
 export {
   codexSessionValidationTimeoutTotal,
@@ -101,6 +85,18 @@ export {
   redisConnectionStatus,
   redisReconnectionAttemptsTotal,
 } from "@alfred/metrics/shared";
+export * from "@alfred/policy";
+export * from "@alfred/runtime/metrics";
+// Re-export from domain packages
+export {
+  fineTuneRunDurationSeconds,
+  fineTuneRunsTotal,
+  fineTuneSamplesTotal,
+  fineTuneTokensTotal,
+} from "@alfred/tune";
+export * from "@alfred/voice/metrics";
+// API-local metrics
+export * from "./metrics/index";
 
 // Assistant metrics
 import client from "prom-client";
@@ -137,10 +133,9 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
   (async () => {
     try {
       const agent = await import("@alfred/agent");
-      const {
-        droidExecRunsTotal,
-        droidExecDurationSeconds,
-      } = await import("@alfred/agent/orchestrator/tool/droid/metrics");
+      const { droidExecRunsTotal, droidExecDurationSeconds } = await import(
+        "@alfred/agent/orchestrator/tool/droid/metrics"
+      );
       const {
         codexExecRunsTotal,
         codexExecDurationSeconds,

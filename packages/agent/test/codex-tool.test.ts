@@ -199,7 +199,7 @@ describe("codex tool sandbox helpers", () => {
     it("retains PATH and forwards only allowlisted CODEX_* overrides (plus optional OPENAI)", () => {
       // Clear any warnings from module initialization
       warnSpy.mockClear();
-      
+
       const result = pickEnvCodex({
         CODEX_REGION: "us-east-1",
         PATH: "/tmp/malicious",

@@ -1,5 +1,8 @@
-import { structuredPlanSchema, type StructuredPlan } from "../generate/types.js";
 import { hasCycles } from "../generate/dependencies.js";
+import {
+  type StructuredPlan,
+  structuredPlanSchema,
+} from "../generate/types.js";
 
 /**
  * Validate a StructuredPlan for structural correctness

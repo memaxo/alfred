@@ -58,7 +58,9 @@ const dockerOutputSchema = z.object({
       running: z.boolean().optional(),
       containerPort: z.number().optional(),
       hostPort: z.number().nullable().optional(),
-      ports: z.array(z.object({ host: z.number(), container: z.number() })).optional(),
+      ports: z
+        .array(z.object({ host: z.number(), container: z.number() }))
+        .optional(),
       exitCode: z.number().optional(),
       text: z.string().optional(),
       error: z.string().optional(),
@@ -101,7 +103,7 @@ describe("docker tool schema validation", () => {
         action: "run",
         tag: "myapp:latest",
         name: "test",
-        containerPort: 70000,
+        containerPort: 70_000,
       });
       expect(result.success).toBe(false);
     });
@@ -222,7 +224,7 @@ describe("docker tool schema validation", () => {
         action: "build",
         context: "./",
         tag: "test",
-        timeoutSec: 10000,
+        timeoutSec: 10_000,
       });
       expect(result.success).toBe(false);
     });

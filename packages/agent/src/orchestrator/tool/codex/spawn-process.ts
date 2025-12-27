@@ -7,13 +7,13 @@
  * - Direct host execution
  */
 
+import { feature } from "bun:bundle";
 import os from "node:os";
 import path from "node:path";
-import { feature } from "bun:bundle";
 import type { SpawnFn } from "@alfred/codex";
 import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
-import { resolveExecutable } from "./policy.js";
 import { CodexError } from "./error.js";
+import { resolveExecutable } from "./policy.js";
 
 type AllowedDirectoryHandle = {
   path: string;
@@ -41,14 +41,10 @@ function isWithinDir(base: string, target: string): boolean {
   return rel === "" || !(rel.startsWith("..") || path.isAbsolute(rel));
 }
 
-function wrapProcess(
-  proc: ReturnType<typeof spawnWithSecureCwd>
-): SpawnResult {
+function wrapProcess(proc: ReturnType<typeof spawnWithSecureCwd>): SpawnResult {
   return {
-    stdout:
-      typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
-    stderr:
-      typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
+    stdout: typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
+    stderr: typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
     exited: proc.exited,
     kill: (signal) => {
       if (typeof signal === "number") {

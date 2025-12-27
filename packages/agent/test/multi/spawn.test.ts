@@ -1,7 +1,7 @@
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   __internals,

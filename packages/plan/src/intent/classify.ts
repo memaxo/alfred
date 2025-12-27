@@ -16,7 +16,10 @@ export async function classifyIntent(intent: WorkflowIntent): Promise<string> {
     { category: "refactor", regex: /\b(refactor|clean|improve|optimize)\b/i },
     { category: "test", regex: /\b(test|spec|unit|integration|e2e)\b/i },
     { category: "docs", regex: /\b(docs?|documentation|readme|comment)\b/i },
-    { category: "chore", regex: /\b(chore|deps?|dependencies|update|build)\b/i },
+    {
+      category: "chore",
+      regex: /\b(chore|deps?|dependencies|update|build)\b/i,
+    },
   ];
 
   for (const { category, regex } of patterns) {

@@ -24,7 +24,6 @@ pre-push:
         UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
         FILTER=""
         if [ -z "$UPSTREAM" ]; then
-          # No upstream set, check changed files since last commit
           FILTER="[HEAD~1]"
         else
           FILTER="[${UPSTREAM}...HEAD]"

@@ -12,7 +12,7 @@ let findNodesForDecay: typeof import("@alfred/db/repo/graph/read").findNodesForD
 let updateNodeConfidenceBatch: typeof import("@alfred/db/repo/graph/write").updateNodeConfidenceBatch;
 let findNodesByConfidence: typeof import("@alfred/db/repo/graph/read").findNodesByConfidence;
 let archiveNodes: typeof import("@alfred/db/repo/graph/write").archiveNodes;
-let deleteArchivedNodes: typeof import("@alfred/db/repo/graph/write").deleteArchivedNodes;
+let _deleteArchivedNodes: typeof import("@alfred/db/repo/graph/write").deleteArchivedNodes;
 
 async function resetGraph() {
   if (!db) {
@@ -34,7 +34,7 @@ describeFn("Memory Decay Integration", () => {
     const dbMod = await import("@alfred/db");
     graphRepo = dbMod.graphRepo;
     db = dbMod.db;
-    
+
     // Import decay functions directly
     const graphRead = await import("@alfred/db/repo/graph/read");
     const graphWrite = await import("@alfred/db/repo/graph/write");
@@ -42,7 +42,7 @@ describeFn("Memory Decay Integration", () => {
     updateNodeConfidenceBatch = graphWrite.updateNodeConfidenceBatch;
     findNodesByConfidence = graphRead.findNodesByConfidence;
     archiveNodes = graphWrite.archiveNodes;
-    deleteArchivedNodes = graphWrite.deleteArchivedNodes;
+    _deleteArchivedNodes = graphWrite.deleteArchivedNodes;
   });
 
   beforeEach(async () => {
@@ -85,7 +85,7 @@ describeFn("Memory Decay Integration", () => {
       24 * 60 * 60 * 1000, // 24 hours threshold
       1000 // limit
     );
-    
+
     const updates = staleNodes.map((node) => {
       const props = (node.properties as Record<string, unknown>) || {};
       const currentConfidence =
@@ -99,7 +99,7 @@ describeFn("Memory Decay Integration", () => {
         confidence: newConfidence,
       };
     });
-    
+
     await updateNodeConfidenceBatch(updates);
 
     // Verify confidence was decayed
@@ -182,7 +182,12 @@ describeFn("Memory Decay Integration", () => {
     }
 
     // Run pruning logic directly
-    const lowConfidenceNodes = await findNodesByConfidence(0, 0.2, undefined, 100);
+    const lowConfidenceNodes = await findNodesByConfidence(
+      0,
+      0.2,
+      undefined,
+      100
+    );
     if (lowConfidenceNodes.length > 0) {
       const ids = lowConfidenceNodes.map((n) => n.id);
       await archiveNodes(ids, "low_confidence");

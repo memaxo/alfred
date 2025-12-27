@@ -69,23 +69,23 @@ declare module "bun" {
     readonly closed: boolean;
   }
 
-    namespace Spawn {
-      type SpawnOptions<
-        In extends Spawn.Writable = Spawn.Writable,
-        Out extends Spawn.Readable = Spawn.Readable,
-        Err extends Spawn.Readable = Spawn.Readable,
-      > = import("bun-types").Bun.Spawn.SpawnOptions<In, Out, Err> & {
-        /**
-         * Terminal options for pseudo-terminal (PTY) support
-         * Available in Bun v1.3.5+
-         */
-        terminal?: {
-          cols: number;
-          rows: number;
-          data: (terminal: Terminal, data: string | Uint8Array) => void;
-        };
+  namespace Spawn {
+    type SpawnOptions<
+      In extends Spawn.Writable = Spawn.Writable,
+      Out extends Spawn.Readable = Spawn.Readable,
+      Err extends Spawn.Readable = Spawn.Readable,
+    > = import("bun-types").Bun.Spawn.SpawnOptions<In, Out, Err> & {
+      /**
+       * Terminal options for pseudo-terminal (PTY) support
+       * Available in Bun v1.3.5+
+       */
+      terminal?: {
+        cols: number;
+        rows: number;
+        data: (terminal: Terminal, data: string | Uint8Array) => void;
       };
-    }
+    };
+  }
 
   type Subprocess<
     In extends Spawn.Writable = Spawn.Writable,

@@ -93,7 +93,10 @@ function createOrchestratorConfig(): ToolLoopAgentSettings<
 }
 
 // Lazy defaults - model is a getter to defer OpenAI client initialization
-function createAssistantDefaults(): ToolLoopAgentSettings<never, AssistantTools> {
+function createAssistantDefaults(): ToolLoopAgentSettings<
+  never,
+  AssistantTools
+> {
   return {
     get model() {
       return getOpenAI().languageModel(getModelId());

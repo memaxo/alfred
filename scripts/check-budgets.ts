@@ -60,13 +60,15 @@ function isBudgetCategory(value: string): value is BudgetCategory {
   return Object.prototype.hasOwnProperty.call(BUDGET_DEFAULTS, value);
 }
 
-async function collectCoverage(files?: string[]): Promise<{ coverage: Map<BudgetCategory, string[]>, files: string[] }> {
+async function collectCoverage(
+  files?: string[]
+): Promise<{ coverage: Map<BudgetCategory, string[]>; files: string[] }> {
   const coverage = new Map<BudgetCategory, string[]>();
   for (const category of REQUIRED_CATEGORIES) {
     coverage.set(category, []);
   }
 
-  const perfFiles = files ?? await collectPerfTestFiles();
+  const perfFiles = files ?? (await collectPerfTestFiles());
 
   // Read files in parallel for speed
   const fileContents = await Promise.allSettled(
@@ -113,7 +115,7 @@ async function collectCoverage(files?: string[]): Promise<{ coverage: Map<Budget
 }
 
 async function runPerformanceTests(files?: string[]): Promise<boolean> {
-  const testFiles = files ?? await collectPerfTestFiles();
+  const testFiles = files ?? (await collectPerfTestFiles());
 
   if (testFiles.length === 0) {
     console.warn("No performance test files found");
@@ -137,7 +139,9 @@ async function runPerformanceTests(files?: string[]): Promise<boolean> {
   const argsBase = ["bun", "test", "--max-concurrency=1", "--timeout=30000"];
 
   if (!isolate) {
-    console.log(`\n[budgets] bun test ${testFiles.length} file(s) (single process)`);
+    console.log(
+      `\n[budgets] bun test ${testFiles.length} file(s) (single process)`
+    );
     const proc = Bun.spawn([...argsBase, ...testFiles], {
       stdout: "inherit",
       stderr: "inherit",
@@ -187,7 +191,9 @@ async function runPerformanceTests(files?: string[]): Promise<boolean> {
 
     // Hard timeout: kill after 35s per file
     const killTimer = setTimeout(() => {
-      console.error(`\n[budgets] Timeout: killing test process for ${file} after 35s`);
+      console.error(
+        `\n[budgets] Timeout: killing test process for ${file} after 35s`
+      );
       try {
         proc.kill("SIGKILL");
       } catch {
@@ -255,18 +261,17 @@ async function main(): Promise<void> {
     console.log("Run without --skip-tests to verify budgets.");
     setTimeout(() => process.exit(0), 10);
     return;
-  } else {
-    console.log("\nRunning performance tests to verify budgets...");
-    const testsPassed = await runPerformanceTests(files);
-
-    if (!testsPassed) {
-      setTimeout(() => process.exit(1), 10);
-      return;
-    }
-
-    console.log("All performance budgets met!");
-    setTimeout(() => process.exit(0), 10);
   }
+  console.log("\nRunning performance tests to verify budgets...");
+  const testsPassed = await runPerformanceTests(files);
+
+  if (!testsPassed) {
+    setTimeout(() => process.exit(1), 10);
+    return;
+  }
+
+  console.log("All performance budgets met!");
+  setTimeout(() => process.exit(0), 10);
 }
 
 if (import.meta.main) {
@@ -275,7 +280,7 @@ if (import.meta.main) {
     console.error("\n[FATAL] Script hung - forcing exit after 2 minutes");
     setTimeout(() => process.exit(124), 10);
   }, 120_000);
-  
+
   try {
     await main();
     clearTimeout(safetyTimer);

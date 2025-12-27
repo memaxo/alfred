@@ -1,18 +1,16 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+} from "@alfred/test-kit/auth/token";
+import { installLoggerMock } from "@alfred/test-kit/logger";
 import type {
   KnowledgeConnectInput,
   KnowledgeCorrectInput,
   KnowledgeExtractInput,
   KnowledgeQueryInput,
 } from "../src/orchestrator/tool/knowledge/definition";
-
-// Use shared test utilities - import BEFORE any other imports
-import {
-  authTokenMocks,
-  installAuthTokenMock,
-  resetAuthTokenMocks,
-} from "@alfred/test-kit/auth/token";
-import { installLoggerMock, resetLoggerMocks } from "@alfred/test-kit/logger";
 
 // Install shared mocks
 installAuthTokenMock();

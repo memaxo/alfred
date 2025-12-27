@@ -63,8 +63,13 @@ describe("VoiceStreamClient", () => {
     // Wait for connection
     await new Promise((r) => setTimeout(r, 10));
 
-    ws?.simulateMessage({ type: "ready" });
-    ws?.simulateMessage({ type: "session_started", sessionId: "s1" });
+    ws?.simulateMessage({ _: "ready", sessionId: null });
+    ws?.simulateMessage({
+      _: "session_started",
+      sessionId: "s1",
+      codec: "pcm",
+      negotiatedCodec: "pcm",
+    });
 
     const sessionId = await sessionPromise;
     expect(sessionId).toBe("s1");
@@ -75,7 +80,7 @@ describe("VoiceStreamClient", () => {
     const ws = MockWebSocket.instances[0];
     await new Promise((r) => setTimeout(r, 10));
 
-    ws?.simulateMessage({ type: "error", message: "failed" });
+    ws?.simulateMessage({ _: "error", sessionId: null, message: "failed" });
     // Wait for reject
     expect(sessionPromise).rejects.toThrow("failed");
   });

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { createTestSandbox } from "@alfred/test-kit";
@@ -41,12 +40,18 @@ describe("conflictArbiter (integration)", () => {
     await execGit(["config", "user.email", "alfred@example.com"], repoRoot);
     await execGit(["config", "user.name", "Alfred"], repoRoot);
 
-    await fs.writeFile(path.join(repoRoot, "conflict.txt"), "line1\nline2\n", "utf8");
+    await fs.writeFile(
+      path.join(repoRoot, "conflict.txt"),
+      "line1\nline2\n",
+      "utf8"
+    );
     await execGit(["add", "."], repoRoot);
     await execGit(["commit", "-m", "init"], repoRoot);
 
     // Default Codex stub: do nothing (tests override as needed)
-    toolCodex.execute = mock(async () => ({ ok: true })) as unknown as typeof toolCodex.execute;
+    toolCodex.execute = mock(async () => ({
+      ok: true,
+    })) as unknown as typeof toolCodex.execute;
   });
 
   afterEach(async () => {
@@ -77,7 +82,11 @@ describe("conflictArbiter (integration)", () => {
     const codexStub = mock(async ({ input }: { input: any }) => {
       codexCalls.push(input);
       const cw = String(input.cw);
-      await fs.writeFile(path.join(cw, "conflict.txt"), "line1\nline2-resolved\n", "utf8");
+      await fs.writeFile(
+        path.join(cw, "conflict.txt"),
+        "line1\nline2-resolved\n",
+        "utf8"
+      );
       await execGit(["add", "conflict.txt"], cw);
       return { ok: true };
     });
@@ -134,7 +143,12 @@ describe("conflictArbiter (integration)", () => {
     const codexStub = mock(async () => ({ ok: true }));
     toolCodex.execute = codexStub as unknown as typeof toolCodex.execute;
 
-    const result = await conflictArbiter.resolve(repoRoot, "run-2", "main", "branch-clean");
+    const result = await conflictArbiter.resolve(
+      repoRoot,
+      "run-2",
+      "main",
+      "branch-clean"
+    );
 
     expect(result.status).toBe("resolved");
     expect(codexStub).toHaveBeenCalledTimes(0);
@@ -164,7 +178,12 @@ describe("conflictArbiter (integration)", () => {
     });
     toolCodex.execute = codexStub as unknown as typeof toolCodex.execute;
 
-    const result = await conflictArbiter.resolve(repoRoot, "run-3", "main", "branch1");
+    const result = await conflictArbiter.resolve(
+      repoRoot,
+      "run-3",
+      "main",
+      "branch1"
+    );
 
     expect(result.status).toBe("failed");
     if (result.status === "failed") {

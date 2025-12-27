@@ -29,10 +29,17 @@ export type {
 
 export { codexInputSchema, toolOutputSchema } from "./definition.js";
 
-export { CodexError, type CodexErrorStage, type CodexErrorCode } from "./error.js";
+export {
+  CodexError,
+  type CodexErrorCode,
+  type CodexErrorStage,
+} from "./error.js";
+export {
+  formatArtifactReasoning,
+  processThreadEvent,
+} from "./event-processor.js";
 export * from "./metrics.js";
 export { createCodexSpawn } from "./spawn-process.js";
-export { processThreadEvent, formatArtifactReasoning } from "./event-processor.js";
 
 export const toolCodex = {
   name: "codex",

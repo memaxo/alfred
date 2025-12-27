@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Mock AI SDK generateObject
 const mockGenerateObject = mock();
@@ -54,7 +54,17 @@ describe("Plan Critique", () => {
         agentType: "codex" as const,
         estimatedDurationMs: 1000,
         dependsOn: [],
-        tasks: [{ id: "T1", title: "Add CSS", requirement: "css", deps: [], priority: 1, acceptance: [], filesHint: [] }],
+        tasks: [
+          {
+            id: "T1",
+            title: "Add CSS",
+            requirement: "css",
+            deps: [],
+            priority: 1,
+            acceptance: [],
+            filesHint: [],
+          },
+        ],
       },
     ],
     resources: {
@@ -105,7 +115,13 @@ describe("Plan Critique", () => {
     // First call: critique with issue
     mockGenerateObject.mockResolvedValueOnce({
       object: {
-        issues: [{ severity: "high", description: "Missing tests", suggestion: "Add a test phase" }],
+        issues: [
+          {
+            severity: "high",
+            description: "Missing tests",
+            suggestion: "Add a test phase",
+          },
+        ],
         overallScore: 0.5,
         strengths: [],
         weaknesses: ["No testing"],
@@ -125,7 +141,17 @@ describe("Plan Critique", () => {
             agentType: "codex" as const,
             estimatedDurationMs: 500,
             dependsOn: ["phase-1"],
-            tasks: [{ id: "T2", title: "Unit test", requirement: "test", deps: [], priority: 1, acceptance: [], filesHint: [] }],
+            tasks: [
+              {
+                id: "T2",
+                title: "Unit test",
+                requirement: "test",
+                deps: [],
+                priority: 1,
+                acceptance: [],
+                filesHint: [],
+              },
+            ],
           },
         ],
       },
@@ -141,7 +167,9 @@ describe("Plan Critique", () => {
       },
     });
 
-    const result = await critiquePlan(mockPlan, mockIntent, mockResearch, { maxRevisions: 1 });
+    const result = await critiquePlan(mockPlan, mockIntent, mockResearch, {
+      maxRevisions: 1,
+    });
 
     expect(result.iterations).toBe(1);
     expect(result.revisedPlan?.phases.length).toBe(2);

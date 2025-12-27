@@ -5,7 +5,6 @@
  * See: https://docs.exa.ai/sdks/typescript-sdk-specification
  */
 
-import Exa from "exa-js";
 import type {
   ExaCost,
   ExaResearchResponse,
@@ -13,6 +12,7 @@ import type {
   ExaSearchResult,
   ExaSearchType,
 } from "@alfred/type";
+import Exa from "exa-js";
 
 let cachedClient: Exa | null = null;
 
@@ -113,11 +113,13 @@ export type NormalizedExaResult = ExaSearchResult & {
 };
 
 // Convert boolean options to SDK-compatible format
-function toSdkOption<T>(
-  value: boolean | T | undefined
-): true | T | undefined {
-  if (value === false || value === undefined) return undefined;
-  if (value === true) return true;
+function toSdkOption<T>(value: boolean | T | undefined): true | T | undefined {
+  if (value === false || value === undefined) {
+    return;
+  }
+  if (value === true) {
+    return true;
+  }
   return value;
 }
 
@@ -327,11 +329,17 @@ function generateSnippet(
   const text = result.text as string | undefined;
 
   const source = summary ?? highlights?.[0] ?? text;
-  if (!source) return undefined;
+  if (!source) {
+    return;
+  }
 
   const compact = source.replace(/\s+/g, " ").trim();
-  if (compact.length === 0) return undefined;
-  if (compact.length <= maxLength) return compact;
+  if (compact.length === 0) {
+    return;
+  }
+  if (compact.length <= maxLength) {
+    return compact;
+  }
 
   return `${compact.slice(0, maxLength - 3).trimEnd()}...`;
 }

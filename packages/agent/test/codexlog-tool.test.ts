@@ -95,7 +95,10 @@ describe("codexlog tool", () => {
         eventType: "alfred_event",
         eventData: {
           type: "codex_event",
-          event: { type: "thought", content: "sk-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+          event: {
+            type: "thought",
+            content: "sk-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          },
         },
         text: null,
         createdAt: new Date("2025-12-20T00:00:00.000Z"),
@@ -107,11 +110,13 @@ describe("codexlog tool", () => {
     });
 
     expect(out).toMatchObject({ action: "reasoning" });
-    const result = out as { action: "reasoning"; reasoning: Array<{ text: string }> };
+    const result = out as {
+      action: "reasoning";
+      reasoning: Array<{ text: string }>;
+    };
     expect(result.reasoning).toHaveLength(1);
     expect(result.reasoning[0]?.text).not.toContain(
       "sk-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     );
   });
 });
-

@@ -8,15 +8,16 @@ export type WorkflowPatternInsert = typeof workflowPatterns.$inferInsert;
 export async function createPattern(
   data: WorkflowPatternInsert
 ): Promise<WorkflowPattern> {
-  const [row] = await db
-    .insert(workflowPatterns)
-    .values(data)
-    .returning();
-  if (!row) throw new Error("Failed to create workflow pattern");
+  const [row] = await db.insert(workflowPatterns).values(data).returning();
+  if (!row) {
+    throw new Error("Failed to create workflow pattern");
+  }
   return row;
 }
 
-export async function getPatternById(id: string): Promise<WorkflowPattern | null> {
+export async function getPatternById(
+  id: string
+): Promise<WorkflowPattern | null> {
   const [row] = await db
     .select()
     .from(workflowPatterns)
@@ -37,7 +38,9 @@ export async function updatePattern(
     })
     .where(eq(workflowPatterns.id, id))
     .returning();
-  if (!row) throw new Error("Failed to update workflow pattern");
+  if (!row) {
+    throw new Error("Failed to update workflow pattern");
+  }
   return row;
 }
 

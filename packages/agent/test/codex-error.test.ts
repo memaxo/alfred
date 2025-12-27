@@ -13,7 +13,11 @@ describe("CodexError", () => {
     });
 
     it("includes detail in message when provided", () => {
-      const error = new CodexError("runtime", "codex_exec_failed", "connection reset");
+      const error = new CodexError(
+        "runtime",
+        "codex_exec_failed",
+        "connection reset"
+      );
       expect(error.message).toBe("codex_exec_failed:connection reset");
       expect(error.detail).toBe("connection reset");
     });
@@ -79,7 +83,10 @@ describe("CodexError", () => {
     });
 
     it("session() creates session-stage error", () => {
-      const error = CodexError.session("codex_session_forbidden", "user mismatch");
+      const error = CodexError.session(
+        "codex_session_forbidden",
+        "user mismatch"
+      );
       expect(error.stage).toBe("session");
       expect(error.code).toBe("codex_session_forbidden");
       expect(error.detail).toBe("user mismatch");

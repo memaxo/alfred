@@ -77,4 +77,3 @@ describe("detectDomain", () => {
     expect(mockEmbedMany).toHaveBeenCalled();
   });
 });
-

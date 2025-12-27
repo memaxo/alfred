@@ -1,6 +1,7 @@
 import path from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import type { CodexExecuteArgs } from "./codex/definition.js";
 import {
   appendOutput,
   appendReasoningTrace,
@@ -24,7 +25,6 @@ import {
   startToolTimer,
   streamStderr,
 } from "./shared";
-import type { CodexExecuteArgs } from "./codex/definition.js";
 
 const MCP_ENV_ALLOWLIST = new Set([
   "CONTEXT7_API_KEY",

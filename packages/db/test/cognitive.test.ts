@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { randomUUID } from "node:crypto";
+import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
@@ -54,13 +54,21 @@ describeFn("cognitiveRepo.findActivePlans", () => {
       },
       {
         streamId: "s2",
-        state: { _: "executing", plan: { steps: [{ description: "x" }] }, step: 0 },
+        state: {
+          _: "executing",
+          plan: { steps: [{ description: "x" }] },
+          step: 0,
+        },
         lastEventId: randomUUID(),
         createdAt: now,
       },
       {
         streamId: "s3",
-        state: { _: "executing", plan: { steps: [{ description: "y" }] }, step: 0 },
+        state: {
+          _: "executing",
+          plan: { steps: [{ description: "y" }] },
+          step: 0,
+        },
         lastEventId: randomUUID(),
         createdAt: now,
       },

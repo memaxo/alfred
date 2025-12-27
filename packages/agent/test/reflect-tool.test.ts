@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 
@@ -22,10 +28,10 @@ describe("reflect tool", () => {
     tempDir = mkdtempSync(join(os.tmpdir(), "alfred-reflect-test-"));
     originalCwd = process.cwd();
     process.chdir(tempDir);
-    
+
     // Create .ruler directory
     mkdirSync(join(tempDir, ".ruler"), { recursive: true });
-    
+
     mockRequireToolScopesAndPolicy.mockClear();
   });
 
@@ -104,7 +110,10 @@ describe("reflect tool", () => {
         expect(result.success).toBe(true);
         expect(result.fileUpdated).toContain("99-learned.md");
 
-        const content = readFileSync(join(tempDir, ".ruler", "99-learned.md"), "utf-8");
+        const content = readFileSync(
+          join(tempDir, ".ruler", "99-learned.md"),
+          "utf-8"
+        );
         expect(content).toContain("## Learned Rules");
         expect(content).toContain("- Always validate input before processing");
       });
@@ -113,17 +122,16 @@ describe("reflect tool", () => {
         const result = await toolReflect.execute({
           input: {
             outcome: "success",
-            learnings: [
-              "Learning one",
-              "Learning two",
-              "Learning three",
-            ],
+            learnings: ["Learning one", "Learning two", "Learning three"],
           },
         });
 
         expect(result.success).toBe(true);
 
-        const content = readFileSync(join(tempDir, ".ruler", "99-learned.md"), "utf-8");
+        const content = readFileSync(
+          join(tempDir, ".ruler", "99-learned.md"),
+          "utf-8"
+        );
         expect(content).toContain("- Learning one");
         expect(content).toContain("- Learning two");
         expect(content).toContain("- Learning three");
@@ -131,7 +139,10 @@ describe("reflect tool", () => {
 
       it("appends to existing file", async () => {
         const existingContent = "# Existing Rules\n\nSome content here.\n";
-        writeFileSync(join(tempDir, ".ruler", "99-learned.md"), existingContent);
+        writeFileSync(
+          join(tempDir, ".ruler", "99-learned.md"),
+          existingContent
+        );
 
         await toolReflect.execute({
           input: {
@@ -140,7 +151,10 @@ describe("reflect tool", () => {
           },
         });
 
-        const content = readFileSync(join(tempDir, ".ruler", "99-learned.md"), "utf-8");
+        const content = readFileSync(
+          join(tempDir, ".ruler", "99-learned.md"),
+          "utf-8"
+        );
         expect(content).toContain("# Existing Rules");
         expect(content).toContain("## Learned Rules");
         expect(content).toContain("- New learning");
@@ -165,7 +179,10 @@ describe("reflect tool", () => {
         expect(result.success).toBe(true);
         expect(result.fileUpdated).toContain("04-database.md");
 
-        const content = readFileSync(join(tempDir, ".ruler", "04-database.md"), "utf-8");
+        const content = readFileSync(
+          join(tempDir, ".ruler", "04-database.md"),
+          "utf-8"
+        );
         expect(content).toContain("- Always use transactions");
       });
 
@@ -181,7 +198,9 @@ describe("reflect tool", () => {
             domain: "db",
           },
         });
-        expect(readFileSync(join(tempDir, ".ruler", "04-database.md"), "utf-8")).toContain("- DB rule");
+        expect(
+          readFileSync(join(tempDir, ".ruler", "04-database.md"), "utf-8")
+        ).toContain("- DB rule");
 
         // Test 'test' alias
         await toolReflect.execute({
@@ -191,7 +210,9 @@ describe("reflect tool", () => {
             domain: "test",
           },
         });
-        expect(readFileSync(join(tempDir, ".ruler", "05-testing.md"), "utf-8")).toContain("- Test rule");
+        expect(
+          readFileSync(join(tempDir, ".ruler", "05-testing.md"), "utf-8")
+        ).toContain("- Test rule");
       });
 
       it("falls back to 99-learned.md for unknown domain", async () => {
@@ -210,8 +231,12 @@ describe("reflect tool", () => {
 
     describe("deduplication", () => {
       it("does not duplicate existing learnings", async () => {
-        const existingContent = "# Rules\n\n## Learned Rules\n\n- Existing learning\n";
-        writeFileSync(join(tempDir, ".ruler", "99-learned.md"), existingContent);
+        const existingContent =
+          "# Rules\n\n## Learned Rules\n\n- Existing learning\n";
+        writeFileSync(
+          join(tempDir, ".ruler", "99-learned.md"),
+          existingContent
+        );
 
         const result = await toolReflect.execute({
           input: {
@@ -223,7 +248,10 @@ describe("reflect tool", () => {
         expect(result.success).toBe(true);
         expect(result.message).toContain("already present");
 
-        const content = readFileSync(join(tempDir, ".ruler", "99-learned.md"), "utf-8");
+        const content = readFileSync(
+          join(tempDir, ".ruler", "99-learned.md"),
+          "utf-8"
+        );
         const occurrences = (content.match(/Existing learning/g) || []).length;
         expect(occurrences).toBe(1);
       });

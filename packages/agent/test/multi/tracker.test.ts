@@ -3,18 +3,19 @@ import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
 import {
   __internals,
-  createTrackerContext,
-  updateTrackerWithContext,
-  detectStuckWithContext,
   clearAgentDetectorWithContext,
-  clearAllDetectorsWithContext,
+  createTrackerContext,
+  detectStuckWithContext,
   getStuckDetectionDefaults,
   type TrackerContext,
+  updateTrackerWithContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
 
 const emptySubTasks: SubTask[] = [];
 
-function createEmptyContext(options?: { noProgressMs?: number }): TrackerContext {
+function createEmptyContext(options?: {
+  noProgressMs?: number;
+}): TrackerContext {
   return createTrackerContext(emptySubTasks, options);
 }
 
@@ -123,7 +124,9 @@ describe("tracker.detectStuckWithContext", () => {
       ts: now,
     });
 
-    expect(detectStuckWithContext(ctx, "agent-4" as AgentId, now + 1000)).toBe(false);
+    expect(detectStuckWithContext(ctx, "agent-4" as AgentId, now + 1000)).toBe(
+      false
+    );
   });
 
   it("detects no-progress timeout", () => {
@@ -136,7 +139,11 @@ describe("tracker.detectStuckWithContext", () => {
       ts: now,
     });
 
-    const stuck = detectStuckWithContext(ctx, "agent-5" as AgentId, now + 200_000);
+    const stuck = detectStuckWithContext(
+      ctx,
+      "agent-5" as AgentId,
+      now + 200_000
+    );
     expect(stuck).toBe(true);
   });
 
@@ -160,7 +167,9 @@ describe("tracker.detectStuckWithContext", () => {
 
     // Status should be stuck from the LoopDetector
     expect(ctx.state.agents["agent-6" as AgentId].status).toBe("stuck");
-    expect(detectStuckWithContext(ctx, "agent-6" as AgentId, baseTs + 10_000)).toBe(true);
+    expect(
+      detectStuckWithContext(ctx, "agent-6" as AgentId, baseTs + 10_000)
+    ).toBe(true);
   });
 
   it("allows varied content without marking stuck", () => {
@@ -186,7 +195,9 @@ describe("tracker.detectStuckWithContext", () => {
 
     const agent = ctx.state.agents["agent-varied" as AgentId];
     expect(agent.status).toBe("running");
-    expect(detectStuckWithContext(ctx, "agent-varied" as AgentId, baseTs + 10_000)).toBe(false);
+    expect(
+      detectStuckWithContext(ctx, "agent-varied" as AgentId, baseTs + 10_000)
+    ).toBe(false);
   });
 });
 
@@ -260,8 +271,12 @@ describe("detectStuckWithContext with custom thresholds", () => {
     });
 
     // Should be stuck after 60s (context threshold) but not 50s
-    expect(detectStuckWithContext(ctx, "agent-env" as AgentId, now + 50_000)).toBe(false);
-    expect(detectStuckWithContext(ctx, "agent-env" as AgentId, now + 70_000)).toBe(true);
+    expect(
+      detectStuckWithContext(ctx, "agent-env" as AgentId, now + 50_000)
+    ).toBe(false);
+    expect(
+      detectStuckWithContext(ctx, "agent-env" as AgentId, now + 70_000)
+    ).toBe(true);
   });
 
   it("allows longer timeout for complex tasks", () => {
@@ -275,10 +290,14 @@ describe("detectStuckWithContext with custom thresholds", () => {
     });
 
     // With longer timeout (5 minutes), should not be stuck after 3 minutes
-    expect(detectStuckWithContext(ctx, "agent-complex" as AgentId, now + 180_000)).toBe(false);
+    expect(
+      detectStuckWithContext(ctx, "agent-complex" as AgentId, now + 180_000)
+    ).toBe(false);
 
     // But should be stuck after 6 minutes
-    expect(detectStuckWithContext(ctx, "agent-complex" as AgentId, now + 360_000)).toBe(true);
+    expect(
+      detectStuckWithContext(ctx, "agent-complex" as AgentId, now + 360_000)
+    ).toBe(true);
   });
 });
 

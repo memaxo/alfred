@@ -148,7 +148,8 @@ export const applyTransition = (
           // Find the selected option or use first option
           const selectedOption =
             state.options.find(
-              (opt) => opt.id === event.content || opt.id.includes(event.content)
+              (opt) =>
+                opt.id === event.content || opt.id.includes(event.content)
             ) ?? state.options[0];
           if (selectedOption) {
             result = {
@@ -251,7 +252,6 @@ export const applyTransition = (
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.1) {
-      console.warn(`cognitive_transition_slow: ${durationMs.toFixed(3)}ms (budget: 0.1ms)`);
     }
   }
 };

@@ -1,14 +1,14 @@
 import type { ContextBundle } from "@alfred/type/plan";
 import type { SubTask, SubTaskId } from "./decompose";
-import type { AgentSpec, WavePlan, AgentId, WaveId } from "./spawn";
-import {
-  type TrackerContext,
-  type StuckDetectionOptions,
-  createTrackerContext,
-} from "./tracker";
-import type { AgentOutcome, MergePlan } from "./merge";
-import type { ReviewPlan, ReviewFailureDetail } from "./review";
 import type { ExecPlanSnapshot } from "./execplan";
+import type { AgentOutcome, MergePlan } from "./merge";
+import type { ReviewFailureDetail, ReviewPlan } from "./review";
+import type { AgentId, AgentSpec, WaveId, WavePlan } from "./spawn";
+import {
+  createTrackerContext,
+  type StuckDetectionOptions,
+  type TrackerContext,
+} from "./tracker";
 
 /**
  * Execution context built during the plan phase.
@@ -504,49 +504,65 @@ export function transitionPipeline(
 
 export function isInitStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "init" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "init" }>;
+} {
   return p.stage.stage === "init";
 }
 
 export function isPlanningStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "planning" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "planning" }>;
+} {
   return p.stage.stage === "planning";
 }
 
 export function isWavesStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "waves" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "waves" }>;
+} {
   return p.stage.stage === "waves";
 }
 
 export function isMergingStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "merging" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "merging" }>;
+} {
   return p.stage.stage === "merging";
 }
 
 export function isReviewingStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "reviewing" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "reviewing" }>;
+} {
   return p.stage.stage === "reviewing";
 }
 
 export function isCompletedStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "completed" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "completed" }>;
+} {
   return p.stage.stage === "completed";
 }
 
 export function isEscalatedStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "escalated" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "escalated" }>;
+} {
   return p.stage.stage === "escalated";
 }
 
 export function isAbortedStage(
   p: OrchestratorPipeline
-): p is OrchestratorPipeline & { stage: Extract<PipelineStage, { stage: "aborted" }> } {
+): p is OrchestratorPipeline & {
+  stage: Extract<PipelineStage, { stage: "aborted" }>;
+} {
   return p.stage.stage === "aborted";
 }
 
@@ -600,6 +616,7 @@ export function buildPipelineSummary(
     mergeStatus,
     reviewPassed: pipeline.review?.passed ?? false,
     fixAttempts: pipeline.review?.fixAttempts ?? 0,
-    durationMs: (pipeline.metrics.endedAt ?? Date.now()) - pipeline.metrics.startedAt,
+    durationMs:
+      (pipeline.metrics.endedAt ?? Date.now()) - pipeline.metrics.startedAt,
   };
 }

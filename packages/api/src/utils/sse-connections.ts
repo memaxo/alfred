@@ -130,7 +130,7 @@ export function createConnection(
   if (!userConnections.has(userId)) {
     userConnections.set(userId, new Set());
   }
-  userConnections.get(userId)!.add(connectionId);
+  userConnections.get(userId)?.add(connectionId);
 
   startCleanupTimer();
 

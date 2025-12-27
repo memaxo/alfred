@@ -1,10 +1,4 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type {
-  LearnMistakeInput,
-  LearnPatternInput,
-  LearnRecordInput,
-} from "../src/orchestrator/tool/learning/definition";
-
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
@@ -12,13 +6,19 @@ import {
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
+import type {
+  LearnMistakeInput,
+  LearnPatternInput,
+  LearnRecordInput,
+} from "../src/orchestrator/tool/learning/definition";
 
 // Install shared mocks
 installAuthTokenMock();
 installLoggerMock();
 
 // Use shared mock for assertions
-const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+const mockRequireToolScopesAndPolicy =
+  authTokenMocks.requireToolScopesAndPolicy;
 
 const mockUpsertNodes = mock();
 mock.module("@alfred/db/repo/graph", () => ({

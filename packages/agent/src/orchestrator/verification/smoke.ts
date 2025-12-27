@@ -1,9 +1,9 @@
-import type { ProjectConfig } from "../../utils/project-detector";
 import {
   DEFAULT_ALLOW_PREFIXES,
   openDirectorySecure,
 } from "../../security/filesystem";
 import { spawnWithSecureCwd } from "../../security/secure-spawn";
+import type { ProjectConfig } from "../../utils/project-detector";
 
 type SmokeResult = {
   success: boolean;
@@ -19,7 +19,7 @@ function formatOutput(stdout: string, stderr: string): string {
   return out || err || "(no output)";
 }
 
-function cap(text: string, max = 8_000): string {
+function cap(text: string, max = 8000): string {
   if (text.length <= max) {
     return text;
   }

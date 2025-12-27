@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  structuredPlanSchema,
   type StructuredPlan,
+  structuredPlanSchema,
 } from "../generate/types.js";
 import type { PlanEvaluation } from "../types.js";
 

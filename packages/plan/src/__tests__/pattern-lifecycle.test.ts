@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { managePatternLifecycle } from "../pattern/lifecycle.js";
 
 // Mock @alfred/db
@@ -22,16 +22,19 @@ describe("Pattern Lifecycle Management", () => {
     const oldDate = new Date();
     oldDate.setDate(oldDate.getDate() - 31);
 
-    mockListAllPatterns.mockImplementation(async () => [
-      {
-        id: "old-pattern",
-        trigger: "test",
-        status: "active",
-        lastUsedAt: oldDate,
-        successRate: "0.9000",
-        usageCount: 10,
-      },
-    ] as any);
+    mockListAllPatterns.mockImplementation(
+      async () =>
+        [
+          {
+            id: "old-pattern",
+            trigger: "test",
+            status: "active",
+            lastUsedAt: oldDate,
+            successRate: "0.9000",
+            usageCount: 10,
+          },
+        ] as any
+    );
 
     await managePatternLifecycle();
 
@@ -41,16 +44,19 @@ describe("Pattern Lifecycle Management", () => {
   });
 
   it("should quarantine patterns with low success rate", async () => {
-    mockListAllPatterns.mockImplementation(async () => [
-      {
-        id: "failing-pattern",
-        trigger: "test",
-        status: "active",
-        lastUsedAt: new Date(),
-        successRate: "0.2000", // < 0.3
-        usageCount: 6, // > 5
-      },
-    ] as any);
+    mockListAllPatterns.mockImplementation(
+      async () =>
+        [
+          {
+            id: "failing-pattern",
+            trigger: "test",
+            status: "active",
+            lastUsedAt: new Date(),
+            successRate: "0.2000", // < 0.3
+            usageCount: 6, // > 5
+          },
+        ] as any
+    );
 
     await managePatternLifecycle();
 
@@ -60,16 +66,19 @@ describe("Pattern Lifecycle Management", () => {
   });
 
   it("should not quarantine patterns with insufficient usage", async () => {
-    mockListAllPatterns.mockImplementation(async () => [
-      {
-        id: "new-failing-pattern",
-        trigger: "test",
-        status: "active",
-        lastUsedAt: new Date(),
-        successRate: "0.1000",
-        usageCount: 2, // <= 5
-      },
-    ] as any);
+    mockListAllPatterns.mockImplementation(
+      async () =>
+        [
+          {
+            id: "new-failing-pattern",
+            trigger: "test",
+            status: "active",
+            lastUsedAt: new Date(),
+            successRate: "0.1000",
+            usageCount: 2, // <= 5
+          },
+        ] as any
+    );
 
     await managePatternLifecycle();
 

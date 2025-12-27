@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach } from "bun:test";
-import { LoopDetector, type LoopConfig } from "../src/loop";
+import { beforeEach, describe, expect, it } from "bun:test";
+import { type LoopConfig, LoopDetector } from "../src/loop";
 
 describe("LoopDetector", () => {
   let detector: LoopDetector;
@@ -122,12 +122,12 @@ describe("LoopDetector", () => {
 
     it("does not trigger on dissimilar embeddings", () => {
       // Use orthogonal-ish embeddings
-      const embedding1 = new Array(1024).fill(0).map((_, i) =>
-        i % 2 === 0 ? 1 : 0
-      );
-      const embedding2 = new Array(1024).fill(0).map((_, i) =>
-        i % 2 === 1 ? 1 : 0
-      );
+      const embedding1 = new Array(1024)
+        .fill(0)
+        .map((_, i) => (i % 2 === 0 ? 1 : 0));
+      const embedding2 = new Array(1024)
+        .fill(0)
+        .map((_, i) => (i % 2 === 1 ? 1 : 0));
 
       let result = detector.check("thought 1", embedding1);
       expect(result.loop).toBe(false);

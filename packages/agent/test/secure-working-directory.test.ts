@@ -5,7 +5,6 @@ import {
   describe,
   expect,
   it,
-  mock,
   vi,
 } from "bun:test";
 import {
@@ -19,24 +18,24 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { __internals as dockerInternals } from "../src/orchestrator/tool/docker";
-import { toolDroid } from "../src/orchestrator/tool/droid";
-import { __internals as gitInternals } from "../src/orchestrator/tool/git";
-import * as filesystem from "../src/security/filesystem";
-import { openDirectorySecure } from "../src/security/filesystem";
-
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
+import { __internals as dockerInternals } from "../src/orchestrator/tool/docker";
+import { toolDroid } from "../src/orchestrator/tool/droid";
+import { __internals as gitInternals } from "../src/orchestrator/tool/git";
+import * as filesystem from "../src/security/filesystem";
+import { openDirectorySecure } from "../src/security/filesystem";
 
 // Install shared mocks
 installAuthTokenMock();
 
 // Use shared mock for assertions
-const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+const mockRequireToolScopesAndPolicy =
+  authTokenMocks.requireToolScopesAndPolicy;
 
 /**
  * Security Test Cleanup

@@ -1,9 +1,9 @@
 import { logger } from "@alfred/logger";
-import { toolCodex } from "./tool/codex/index.js";
-import { worktreeManager } from "./tool/worktree.js";
 import type { DirectoryHandle } from "../security/filesystem.js";
 import { openDirectorySecure } from "../security/filesystem.js";
 import { spawnWithSecureCwd } from "../security/secure-spawn.js";
+import { toolCodex } from "./tool/codex/index.js";
+import { worktreeManager } from "./tool/worktree.js";
 
 export type ConflictResolution =
   | { status: "resolved"; resolvedBranch: string }

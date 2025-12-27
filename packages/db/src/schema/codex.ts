@@ -55,9 +55,12 @@ export const codexRuns = pgTable(
     userId: text("user_id").notNull(),
     sessionId: varchar("session_id", { length: 255 }),
     threadId: varchar("thread_id", { length: 255 }),
-    parentRunId: uuid("parent_run_id").references((): AnyPgColumn => codexRuns.id, {
-      onDelete: "set null",
-    }),
+    parentRunId: uuid("parent_run_id").references(
+      (): AnyPgColumn => codexRuns.id,
+      {
+        onDelete: "set null",
+      }
+    ),
     resumeCount: integer("resume_count").notNull().default(0),
     schemaVersion: integer("schema_version").notNull().default(1),
 

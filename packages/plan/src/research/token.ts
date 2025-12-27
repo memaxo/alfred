@@ -8,15 +8,15 @@ const estimator = createTokenEstimator();
  */
 export function estimateSourceTokens(source: ResearchSource): number {
   let text = `${source.title}\n${source.summary}`;
-  
+
   if (source.highlights && source.highlights.length > 0) {
     text += `\n${source.highlights.join("\n")}`;
   }
-  
+
   if (source.fullText) {
     text += `\n${source.fullText}`;
   }
-  
+
   // Also count subpages if present
   let subpageTokens = 0;
   if (source.subpages && source.subpages.length > 0) {

@@ -67,8 +67,9 @@ export async function findSimilarCodexExecutions(
       .split(/\s+/)
       .filter((word) => word.length > 3);
     const labelLower = sanitizeContextText(node.label).toLowerCase();
-    const matchCount = keywords.filter((keyword) => labelLower.includes(keyword))
-      .length;
+    const matchCount = keywords.filter((keyword) =>
+      labelLower.includes(keyword)
+    ).length;
     const similarity = keywords.length > 0 ? matchCount / keywords.length : 0;
 
     if (similarity > 0) {
@@ -136,8 +137,9 @@ export async function findRelevantHeuristics(
     const corpus = sanitizeContextText(
       `${node.label}\n${rule ?? ""}`.trim()
     ).toLowerCase();
-    const matchCount = keywords.filter((keyword) => corpus.includes(keyword))
-      .length;
+    const matchCount = keywords.filter((keyword) =>
+      corpus.includes(keyword)
+    ).length;
     const similarity = keywords.length > 0 ? matchCount / keywords.length : 0;
 
     if (similarity > 0) {
@@ -203,7 +205,9 @@ export async function getCodexExecutionReasoning(
     const props = node.properties as Record<string, unknown> | null;
     const createdAt = node.created ?? new Date();
     const timestamp =
-      typeof props?.timestamp === "number" ? props.timestamp : createdAt.getTime();
+      typeof props?.timestamp === "number"
+        ? props.timestamp
+        : createdAt.getTime();
     return {
       text: node.label,
       timestamp,
@@ -287,8 +291,10 @@ export async function buildCodexHeuristicContext(
       continue;
     }
 
-    const severity = sanitizeContextText(entry.severity ?? "medium") || "medium";
-    const domain = sanitizeContextText(entry.domain ?? "workflow") || "workflow";
+    const severity =
+      sanitizeContextText(entry.severity ?? "medium") || "medium";
+    const domain =
+      sanitizeContextText(entry.domain ?? "workflow") || "workflow";
     const section = `[Heuristic - ${severity} severity, ${domain}]\n${snippet}${
       (entry.rule?.length ?? 0) > 500 ? "..." : ""
     }`;

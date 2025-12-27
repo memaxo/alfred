@@ -36,7 +36,9 @@ const ticketInputSchema = z.object({
   ephemeral: z.boolean().optional(),
   url: z.string().url().optional(),
   relatedIssueId: z.string().optional(),
-  relationType: z.enum(["blocks", "duplicate", "related", "similar"]).optional(),
+  relationType: z
+    .enum(["blocks", "duplicate", "related", "similar"])
+    .optional(),
   authz: z.string().optional(),
 });
 
@@ -89,7 +91,12 @@ describe("ticket tool schema validation", () => {
     });
 
     it("accepts agent activity actions", () => {
-      const actions = ["activity.thought", "activity.action", "activity.response", "activity.error"];
+      const actions = [
+        "activity.thought",
+        "activity.action",
+        "activity.response",
+        "activity.error",
+      ];
 
       for (const action of actions) {
         const result = ticketInputSchema.safeParse({

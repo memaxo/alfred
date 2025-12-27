@@ -363,7 +363,7 @@ export function startVoiceStreamingPrototype(): void {
 
         // Send ready
         try {
-          ws.send(JSON.stringify({ type: "ready", sessionId: null }));
+          ws.send(JSON.stringify({ _: "ready", sessionId: null }));
         } catch (error) {
           logger.error("voice_stream_proto_send_failed", {
             sessionId: null,

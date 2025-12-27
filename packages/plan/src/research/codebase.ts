@@ -10,7 +10,9 @@ export async function gatherCodebaseContext(options: {
   topK?: number;
 }): Promise<string[]> {
   try {
-    const { gatherCodeContext } = await import("@alfred/agent/orchestrator/flow/context");
+    const { gatherCodeContext } = await import(
+      "@alfred/agent/orchestrator/flow/context"
+    );
     const receipt = await gatherCodeContext({
       requirement: options.requirement,
       cw: options.workspace ?? process.cwd(),

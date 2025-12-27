@@ -340,9 +340,11 @@ export const worktreeManager = {
    * Invoke git worktree prune to drop leftover references.
    */
   prune: async (repoRoot: string) => {
-    await runGit(repoRoot, repoRoot, ["worktree", "prune", "--expire=now"]).catch(
-      () => {}
-    );
+    await runGit(repoRoot, repoRoot, [
+      "worktree",
+      "prune",
+      "--expire=now",
+    ]).catch(() => {});
   },
 
   /**

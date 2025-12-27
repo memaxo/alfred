@@ -7,26 +7,26 @@
  * - Resource limits (memory, PIDs, timeout)
  */
 
-import { spawn } from "bun";
 import { rmSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
-import path from "node:path";
 import { tmpdir } from "node:os";
-import {
-  type PoofMode,
-  type PoofProfile,
-  POOF_PROFILES,
-  buildPoofArgs,
-  getPoofBinary,
-  isPoofAvailable,
-  isPoofTimeout,
-  isCommandNotFound,
-} from "./poof.js";
+import path from "node:path";
+import { spawn } from "bun";
 import type { PoofChange } from "./diff.js";
 import { parseUpperLayer } from "./diff.js";
+import {
+  buildPoofArgs,
+  getPoofBinary,
+  isCommandNotFound,
+  isPoofAvailable,
+  isPoofTimeout,
+  POOF_PROFILES,
+  type PoofMode,
+  type PoofProfile,
+} from "./poof.js";
 
 /** Options for isolated spawn */
-export interface IsolatedSpawnOptions {
+export type IsolatedSpawnOptions = {
   /** Poof mode: exec (ephemeral) or run (reviewable) */
   mode: PoofMode;
   /** Directory for capturing changes (required for run mode review) */
@@ -45,10 +45,10 @@ export interface IsolatedSpawnOptions {
   captureStdout?: boolean;
   /** Collect stderr */
   captureStderr?: boolean;
-}
+};
 
 /** Result from isolated spawn */
-export interface IsolatedSpawnResult {
+export type IsolatedSpawnResult = {
   /** Process exit code */
   exitCode: number;
   /** Upper directory containing changes (if mode='run') */
@@ -63,7 +63,7 @@ export interface IsolatedSpawnResult {
   stdout?: string;
   /** Captured stderr */
   stderr?: string;
-}
+};
 
 /**
  * Spawn a command inside poof isolation.

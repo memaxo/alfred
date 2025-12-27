@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { ThreadEvent } from "@alfred/codex";
 import {
+  type EventProcessorContext,
   formatArtifactReasoning,
   processThreadEvent,
-  type EventProcessorContext,
 } from "../src/orchestrator/tool/codex/event-processor";
 import { createReasoningAccumulator } from "../src/orchestrator/tool/shared/reasoning";
 
@@ -97,10 +97,7 @@ describe("processThreadEvent", () => {
 
   describe("error", () => {
     it("extracts stream error", () => {
-      const event: ThreadEvent = {
-        type: "error",
-        message: "Connection lost",
-      };
+      const event: ThreadEvent = { type: "error", message: "Connection lost" };
       const result = processThreadEvent(event, createContext());
       expect(result.error).toEqual({
         message: "Connection lost",

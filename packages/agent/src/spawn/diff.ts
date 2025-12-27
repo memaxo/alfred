@@ -9,8 +9,8 @@
 
 import {
   accessSync,
-  constants as fsConstants,
   cpSync,
+  constants as fsConstants,
   readdirSync,
   rmSync,
   statSync,

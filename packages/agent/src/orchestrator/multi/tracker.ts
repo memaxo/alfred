@@ -44,7 +44,13 @@ export type AgentStatus =
   | "paused";
 
 export type AgentEvent =
-  | { type: "codex/thought"; agentId: AgentId; text: string; ts: number; embedding?: number[] }
+  | {
+      type: "codex/thought";
+      agentId: AgentId;
+      text: string;
+      ts: number;
+      embedding?: number[];
+    }
   | {
       type: "codex/command";
       agentId: AgentId;
@@ -121,7 +127,8 @@ export function createTrackerContext(
     options: {
       noProgressMs: options?.noProgressMs ?? defaults.noProgressMs,
       maxTransitions: options?.maxTransitions ?? defaults.maxTransitions,
-      similarityThreshold: options?.similarityThreshold ?? defaults.similarityThreshold,
+      similarityThreshold:
+        options?.similarityThreshold ?? defaults.similarityThreshold,
     },
   };
 }
@@ -132,8 +139,12 @@ export function createTrackerContext(
 export function cloneTrackerContext(ctx: TrackerContext): TrackerContext {
   return {
     state: cloneState(ctx.state),
-    blockedBy: new Map(Array.from(ctx.blockedBy.entries()).map(([k, v]) => [k, new Set(v)])),
-    dependsOn: new Map(Array.from(ctx.dependsOn.entries()).map(([k, v]) => [k, new Set(v)])),
+    blockedBy: new Map(
+      Array.from(ctx.blockedBy.entries()).map(([k, v]) => [k, new Set(v)])
+    ),
+    dependsOn: new Map(
+      Array.from(ctx.dependsOn.entries()).map(([k, v]) => [k, new Set(v)])
+    ),
     detectors: ctx.detectors, // Detectors are mutable singletons, shared intentionally
     options: { ...ctx.options },
   };
@@ -236,7 +247,9 @@ export function updateTrackerWithContext(
     case "codex/thought": {
       ensureAgent(next.state, event.agentId, undefined, ts);
       const agent = next.state.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
 
       agent.status = agent.status === "created" ? "running" : agent.status;
       agent.lastEventTs = ts;
@@ -250,7 +263,9 @@ export function updateTrackerWithContext(
     case "codex/command": {
       ensureAgent(next.state, event.agentId, undefined, ts);
       const agent = next.state.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
 
       agent.lastEventTs = ts;
 
@@ -269,7 +284,9 @@ export function updateTrackerWithContext(
     case "codex/file": {
       ensureAgent(next.state, event.agentId, undefined, ts);
       const agent = next.state.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
 
       agent.lastEventTs = ts;
 
@@ -282,7 +299,9 @@ export function updateTrackerWithContext(
     case "notice": {
       ensureAgent(next.state, event.agentId, undefined, ts);
       const agent = next.state.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
 
       agent.lastEventTs = ts;
       break;

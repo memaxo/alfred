@@ -49,7 +49,9 @@ describeFn("workflow dreaming (integration)", () => {
     const pendingBefore = await db
       .select()
       .from(workflowRuns)
-      .where(and(eq(workflowRuns.status, "failed"), isNull(workflowRuns.dreamedAt)));
+      .where(
+        and(eq(workflowRuns.status, "failed"), isNull(workflowRuns.dreamedAt))
+      );
     expect(pendingBefore.length).toBe(1);
 
     await db
@@ -60,8 +62,9 @@ describeFn("workflow dreaming (integration)", () => {
     const pendingAfter = await db
       .select()
       .from(workflowRuns)
-      .where(and(eq(workflowRuns.status, "failed"), isNull(workflowRuns.dreamedAt)));
+      .where(
+        and(eq(workflowRuns.status, "failed"), isNull(workflowRuns.dreamedAt))
+      );
     expect(pendingAfter.length).toBe(0);
   });
 });
-

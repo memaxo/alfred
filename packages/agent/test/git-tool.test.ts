@@ -160,7 +160,7 @@ describe("git tool schema validation", () => {
     it("validates timeout range - too long", () => {
       const result = gitInputSchema.safeParse({
         action: "status",
-        timeoutSec: 100000,
+        timeoutSec: 100_000,
       });
       expect(result.success).toBe(false);
     });

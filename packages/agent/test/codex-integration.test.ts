@@ -4,7 +4,16 @@
  * Tests the full flow: input validation -> policy enforcement -> execution -> output
  */
 
-import { afterAll, afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
 // Track all events written during execution
 type WrittenEvent = { type: string; [key: string]: unknown };
@@ -53,17 +62,27 @@ mock.module("../src/assistant/src/graphstore.js", () => ({
 // Track thread events for runStreamed mock
 type ThreadEvent = { type: string; [key: string]: unknown };
 let mockThreadEvents: ThreadEvent[] = [];
-let capturedSpawnFn: ((args: { cmd: string; args: string[]; env?: Record<string, string> }) => unknown) | null = null;
+let _capturedSpawnFn:
+  | ((args: {
+      cmd: string;
+      args: string[];
+      env?: Record<string, string>;
+    }) => unknown)
+  | null = null;
 
 mock.module("@alfred/codex", () => ({
-  runStreamed: async function* (opts: {
+  async *runStreamed(opts: {
     cmd: string;
     prompt: string;
     env?: Record<string, string>;
-    spawn?: (args: { cmd: string; args: string[]; env?: Record<string, string> }) => unknown;
+    spawn?: (args: {
+      cmd: string;
+      args: string[];
+      env?: Record<string, string>;
+    }) => unknown;
     signal?: AbortSignal;
   }) {
-    capturedSpawnFn = opts.spawn ?? null;
+    _capturedSpawnFn = opts.spawn ?? null;
     for (const event of mockThreadEvents) {
       yield event;
     }
@@ -94,7 +113,7 @@ describe("toolCodex.execute() integration", () => {
   beforeEach(() => {
     writtenEvents.length = 0;
     mockThreadEvents = [];
-    capturedSpawnFn = null;
+    _capturedSpawnFn = null;
 
     requireToolScopesAndPolicyMock.mockClear();
     requireToolScopesAndPolicyMock.mockResolvedValue({
@@ -135,7 +154,11 @@ describe("toolCodex.execute() integration", () => {
         },
         {
           type: "turn.completed",
-          usage: { input_tokens: 100, output_tokens: 50, cached_input_tokens: 10 },
+          usage: {
+            input_tokens: 100,
+            output_tokens: 50,
+            cached_input_tokens: 10,
+          },
         },
       ]);
 
@@ -173,11 +196,17 @@ describe("toolCodex.execute() integration", () => {
 
       // Verify events were written
       const notices = writtenEvents.filter((e) => e.type === "notice");
-      expect(notices.some((n) => n.message === "codex_turn_started")).toBe(true);
-      expect(notices.some((n) => n.message === "codex_turn_completed")).toBe(true);
+      expect(notices.some((n) => n.message === "codex_turn_started")).toBe(
+        true
+      );
+      expect(notices.some((n) => n.message === "codex_turn_completed")).toBe(
+        true
+      );
 
       const outputs = writtenEvents.filter((e) => e.type === "stdout");
-      expect(outputs.some((o) => o.text === "Task completed successfully")).toBe(true);
+      expect(
+        outputs.some((o) => o.text === "Task completed successfully")
+      ).toBe(true);
     });
 
     it("collects artifacts through the pipeline", async () => {
@@ -218,8 +247,14 @@ describe("toolCodex.execute() integration", () => {
       });
 
       expect(result.artifacts).toHaveLength(2);
-      expect(result.artifacts).toContainEqual({ path: "src/new-file.ts", kind: "add" });
-      expect(result.artifacts).toContainEqual({ path: "src/modified.ts", kind: "update" });
+      expect(result.artifacts).toContainEqual({
+        path: "src/new-file.ts",
+        kind: "add",
+      });
+      expect(result.artifacts).toContainEqual({
+        path: "src/modified.ts",
+        kind: "update",
+      });
 
       // Verify artifact events were emitted
       const codexEvents = writtenEvents.filter((e) => e.type === "codex_event");
@@ -272,10 +307,14 @@ describe("toolCodex.execute() integration", () => {
 
       expect(result.reasoning).toBeDefined();
       expect(result.reasoning?.length).toBeGreaterThanOrEqual(2);
-      expect(result.reasoning?.some((r) => r.text.includes("Analyzing"))).toBe(true);
+      expect(result.reasoning?.some((r) => r.text.includes("Analyzing"))).toBe(
+        true
+      );
 
       // Verify reasoning was written in debug mode
-      const reasoningEvents = writtenEvents.filter((e) => e.type === "reasoning");
+      const reasoningEvents = writtenEvents.filter(
+        (e) => e.type === "reasoning"
+      );
       expect(reasoningEvents.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -322,7 +361,9 @@ describe("toolCodex.execute() integration", () => {
         (e) => (e.event as { type: string })?.type === "command"
       );
       expect(commandEvents).toHaveLength(1);
-      expect((commandEvents[0]?.event as { command: string })?.command).toBe("ls -la");
+      expect((commandEvents[0]?.event as { command: string })?.command).toBe(
+        "ls -la"
+      );
     });
   });
 
@@ -468,10 +509,7 @@ describe("toolCodex.execute() integration", () => {
     it("propagates stream errors", async () => {
       setMockEvents([
         { type: "thread.started", thread_id: "thread-stream-error" },
-        {
-          type: "error",
-          message: "Connection reset",
-        },
+        { type: "error", message: "Connection reset" },
       ]);
 
       await expect(
@@ -557,7 +595,7 @@ describe("toolCodex.execute() integration", () => {
           status: "active",
           createdAt: Date.now(),
           lastAccessedAt: Date.now(),
-          expiresAt: Date.now() + 86400000,
+          expiresAt: Date.now() + 86_400_000,
         },
       });
 

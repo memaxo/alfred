@@ -1,15 +1,15 @@
 import { clearTimeout, setTimeout as scheduleTimeout } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-import type { ToolExecuteArgs } from "./shared/context.js";
 import {
-  exaSearch,
-  exaGetContents,
-  exaResearch,
-  exaPollResearch,
-  hasExaApiKey,
   type ExaSearchOptions,
+  exaGetContents,
+  exaPollResearch,
+  exaResearch,
+  exaSearch,
+  hasExaApiKey,
 } from "./exa.js";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 type WebProvider = "ddg" | "serpapi" | "tavily" | "exa";
 
@@ -87,7 +87,10 @@ const exaConfigSchema = z
 
 const exaResearchSchema = z.object({
   instructions: z.string().min(10).describe("Research instructions/query"),
-  outputSchema: z.record(z.string(), z.any()).optional().describe("Expected JSON output schema"),
+  outputSchema: z
+    .record(z.string(), z.any())
+    .optional()
+    .describe("Expected JSON output schema"),
   model: z.enum(["exa-research", "exa-research-gpt-4o"]).optional(),
   numResults: z.number().int().min(1).max(50).optional(),
 });
@@ -134,7 +137,9 @@ type WebSearchResultType = z.infer<typeof webSearchResultSchema> & {
 
 const webSearchResultWithSubpagesSchema: z.ZodType<WebSearchResultType> =
   webSearchResultSchema.extend({
-    subpages: z.lazy(() => z.array(webSearchResultWithSubpagesSchema)).optional(),
+    subpages: z
+      .lazy(() => z.array(webSearchResultWithSubpagesSchema))
+      .optional(),
   });
 
 const webOutputSchema = z.object({
@@ -411,15 +416,18 @@ async function performExaSearch(
   };
 
   // Use SDK for search
-  const { results: sdkResults, searchType, context, cost } = await exaSearch(
-    query,
-    sdkOptions
-  );
+  const {
+    results: sdkResults,
+    searchType,
+    context,
+    cost,
+  } = await exaSearch(query, sdkOptions);
 
   const scoredResults = sdkResults
     .slice(0, fetchCount)
     .map((entry, index) => {
-      const snippetSource = entry.summary ?? entry.highlights?.[0] ?? entry.text;
+      const snippetSource =
+        entry.summary ?? entry.highlights?.[0] ?? entry.text;
       const relevance = scoreExaResult({
         entry: {
           score: entry.score,
@@ -758,31 +766,28 @@ export const toolWeb = {
       if (!input.research) {
         throw new Error("web_research_config_required");
       }
+      const { researchId } = await exaResearch({
+        instructions: input.research.instructions,
+        outputSchema: input.research.outputSchema,
+        model: input.research.model,
+        numResults: input.research.numResults,
+      });
 
-      try {
-        const { researchId } = await exaResearch({
-          instructions: input.research.instructions,
-          outputSchema: input.research.outputSchema,
-          model: input.research.model,
-          numResults: input.research.numResults,
-        });
+      // For now, we poll until completion as the tool is expected to return data
+      const result = await exaPollResearch(researchId);
 
-        // For now, we poll until completion as the tool is expected to return data
-        const result = await exaPollResearch(researchId);
-
-        return {
-          ok: true,
-          action: "research",
-          provider: "exa",
-          researchId,
-          researchStatus: result.status,
-          researchData: result.data,
-          results: result.results,
-          cost: result.costDollars ? { total: result.costDollars.total } : undefined,
-        } satisfies WebOutput;
-      } catch (error) {
-        throw error;
-      }
+      return {
+        ok: true,
+        action: "research",
+        provider: "exa",
+        researchId,
+        researchStatus: result.status,
+        researchData: result.data,
+        results: result.results,
+        cost: result.costDollars
+          ? { total: result.costDollars.total }
+          : undefined,
+      } satisfies WebOutput;
     }
 
     const url = ensureFetchUrl(input.url);

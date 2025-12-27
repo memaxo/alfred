@@ -33,7 +33,9 @@ export async function gatherInternalResearch(
     });
 
     // 2. Import analysis
-    const { analyzeImports } = await import("@alfred/agent/orchestrator/reasoning/decompose-semantic");
+    const { analyzeImports } = await import(
+      "@alfred/agent/orchestrator/reasoning/decompose-semantic"
+    );
     const imports = await analyzeImports({
       workspace: intent.context.workspace,
       requirement: intent.description,

@@ -1,10 +1,10 @@
-import type { GitInput } from "../tool/git";
-import type { ToolWriter } from "../tool/shared/context.js";
-import { worktreeManager } from "../tool/worktree";
-import { conflictArbiter } from "../conflict.js";
 import type { DirectoryHandle } from "../../security/filesystem.js";
 import { openDirectorySecure } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
+import { conflictArbiter } from "../conflict.js";
+import type { GitInput } from "../tool/git";
+import type { ToolWriter } from "../tool/shared/context.js";
+import { worktreeManager } from "../tool/worktree";
 import type { MergePlan } from "./merge";
 
 type GitResult = {

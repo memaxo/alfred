@@ -51,7 +51,9 @@ function clamp01(value: number): number {
  * Computes prediction error between expected and actual outcomes.
  * Returns 0 if no expected value is provided.
  */
-async function computePredictionError(input: LearnRecordInput): Promise<number> {
+async function computePredictionError(
+  input: LearnRecordInput
+): Promise<number> {
   const expected = input.expected?.trim();
   if (!expected) {
     return 0;

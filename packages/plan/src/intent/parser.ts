@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { getModelId, getOpenAI } from "../ai.js";
 import { generateObject } from "ai";
+import { getModelId, getOpenAI } from "../ai.js";
 import { intentParserOutputSchema } from "./schema.js";
 import type {
   ClarificationQuestion,
@@ -30,7 +30,7 @@ export async function parseIntent(
   | { type: "multiIntent"; intents: WorkflowIntent[] }
 > {
   const model = getOpenAI()(getModelId());
-  
+
   const result = await generateObject({
     // biome-ignore lint/suspicious/noExplicitAny: AI SDK version mismatch across monorepo packages requires cast
     model: model as any,

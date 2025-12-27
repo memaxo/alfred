@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -41,7 +41,9 @@ describe("createCodexSpawn", () => {
     tempDir = mkdtempSync(path.join(os.tmpdir(), "codex-spawn-test-"));
     spawnWithSecureCwdMock.mockClear();
     resolveExecutableMock.mockClear();
-    resolveExecutableMock.mockImplementation((cmd: string) => `/usr/bin/${cmd}`);
+    resolveExecutableMock.mockImplementation(
+      (cmd: string) => `/usr/bin/${cmd}`
+    );
   });
 
   afterEach(() => {
@@ -53,7 +55,11 @@ describe("createCodexSpawn", () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn({}, cwdHandle);
 
-      spawn({ cmd: "/usr/bin/codex", args: ["--version"], env: { PATH: "/usr/bin" } });
+      spawn({
+        cmd: "/usr/bin/codex",
+        args: ["--version"],
+        env: { PATH: "/usr/bin" },
+      });
 
       expect(spawnWithSecureCwdMock).toHaveBeenCalledTimes(1);
       const call = spawnWithSecureCwdMock.mock.calls[0]?.[0];
@@ -115,7 +121,11 @@ describe("createCodexSpawn", () => {
         cwdHandle
       );
 
-      spawn({ cmd: "/usr/bin/codex", args: ["exec", "--prompt", "test"], env: { CODEX_API_KEY: "key" } });
+      spawn({
+        cmd: "/usr/bin/codex",
+        args: ["exec", "--prompt", "test"],
+        env: { CODEX_API_KEY: "key" },
+      });
 
       expect(resolveExecutableMock).toHaveBeenCalledWith("docker");
       expect(spawnWithSecureCwdMock).toHaveBeenCalledTimes(1);

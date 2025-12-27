@@ -39,8 +39,12 @@ export function hasCycles(phases: Phase[]): boolean {
   const recStack = new Set<string>();
 
   function isCyclic(phaseId: string): boolean {
-    if (recStack.has(phaseId)) return true;
-    if (visited.has(phaseId)) return false;
+    if (recStack.has(phaseId)) {
+      return true;
+    }
+    if (visited.has(phaseId)) {
+      return false;
+    }
 
     visited.add(phaseId);
     recStack.add(phaseId);
@@ -48,7 +52,9 @@ export function hasCycles(phases: Phase[]): boolean {
     const phase = phases.find((p) => p.id === phaseId);
     if (phase) {
       for (const depId of phase.dependsOn) {
-        if (isCyclic(depId)) return true;
+        if (isCyclic(depId)) {
+          return true;
+        }
       }
     }
 
@@ -57,7 +63,9 @@ export function hasCycles(phases: Phase[]): boolean {
   }
 
   for (const phase of phases) {
-    if (isCyclic(phase.id)) return true;
+    if (isCyclic(phase.id)) {
+      return true;
+    }
   }
 
   return false;

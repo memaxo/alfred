@@ -21,8 +21,8 @@ import { randomUUID } from "node:crypto";
 import { accessSync, constants as fsConstants } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
-import { issueAccessToken } from "@alfred/auth/token";
 import { redactSecrets } from "@alfred/agent/utils/redaction";
+import { issueAccessToken } from "@alfred/auth/token";
 import {
   cleanupCodexLiveWorkspace,
   createCodexLiveWorkspace,
@@ -47,7 +47,9 @@ function ensureCodexApiKey(): void {
     process.env.CODEX_API_KEY = openai;
     console.log("NOTE: Using OPENAI_API_KEY as CODEX_API_KEY (runtime alias).");
   }
-  if (!process.env.CODEX_API_KEY?.trim() && !process.env.OPENAI_API_KEY?.trim()) {
+  if (
+    !(process.env.CODEX_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim())
+  ) {
     throw new Error("missing_env:CODEX_API_KEY_or_OPENAI_API_KEY");
   }
 }
@@ -83,19 +85,22 @@ async function checkPostgresAvailable(databaseUrl: string): Promise<void> {
   try {
     // Quick TCP check before attempting full connection
     const url = new URL(databaseUrl);
-    const host = url.hostname || "localhost";
-    const port = Number(url.port) || 5432;
+    const _host = url.hostname || "localhost";
+    const _port = Number(url.port) || 5432;
 
-    const proc = Bun.spawn(["docker", "exec", "alfred-postgres", "pg_isready", "-U", "alfred"], {
-      stdin: "ignore",
-      stdout: "ignore",
-      stderr: "ignore",
-    });
+    const proc = Bun.spawn(
+      ["docker", "exec", "alfred-postgres", "pg_isready", "-U", "alfred"],
+      {
+        stdin: "ignore",
+        stdout: "ignore",
+        stderr: "ignore",
+      }
+    );
     const exitCode = await proc.exited;
     if (exitCode !== 0) {
       throw new Error(
-        `postgres_not_ready: Container alfred-postgres is not responding. ` +
-        `Start it with 'bun run db:start' and wait for health check.`
+        "postgres_not_ready: Container alfred-postgres is not responding. " +
+          `Start it with 'bun run db:start' and wait for health check.`
       );
     }
   } catch (error) {
@@ -103,8 +108,8 @@ async function checkPostgresAvailable(databaseUrl: string): Promise<void> {
       throw error;
     }
     throw new Error(
-      `postgres_check_failed: Unable to verify Postgres availability. ` +
-      `Ensure Docker is running and container alfred-postgres exists.`
+      "postgres_check_failed: Unable to verify Postgres availability. " +
+        "Ensure Docker is running and container alfred-postgres exists."
     );
   }
 }
@@ -118,14 +123,21 @@ function checkCodexBinaryAvailable(): string {
     } catch {
       throw new Error(
         `codex_binary_not_executable: CODEX_BIN=${override} is not executable. ` +
-        `Check file permissions or path.`
+          "Check file permissions or path."
       );
     }
   }
 
   const candidates = [
     path.resolve(process.cwd(), ".cache", "codex", "bin", "codex"),
-    path.resolve(process.cwd(), "vendor", "codex", "target", "release", "codex"),
+    path.resolve(
+      process.cwd(),
+      "vendor",
+      "codex",
+      "target",
+      "release",
+      "codex"
+    ),
     path.resolve(process.cwd(), "vendor", "codex", "target", "debug", "codex"),
   ];
 
@@ -139,7 +151,9 @@ function checkCodexBinaryAvailable(): string {
   }
 
   // Check PATH
-  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  const pathEntries = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
   for (const entry of pathEntries) {
     const candidate = path.join(entry, "codex");
     try {
@@ -152,8 +166,8 @@ function checkCodexBinaryAvailable(): string {
 
   throw new Error(
     `codex_binary_not_found: Could not find 'codex' executable. ` +
-    `Set CODEX_BIN=/path/to/codex or ensure 'codex' is in PATH. ` +
-    `Build with: cd vendor/codex && cargo build --release`
+      `Set CODEX_BIN=/path/to/codex or ensure 'codex' is in PATH. ` +
+      "Build with: cd vendor/codex && cargo build --release"
   );
 }
 
@@ -168,14 +182,18 @@ async function main() {
   // Live verification must be non-interactive; otherwise Codex can block waiting
   // for approval prompts in a headless context.
   const existingApproval = process.env.ORCH_CODEX_APPROVAL;
-  if (!existingApproval) {
+  if (existingApproval) {
+    console.log(
+      `✓ Using configured approval mode (ORCH_CODEX_APPROVAL=${existingApproval})`
+    );
+    if (existingApproval !== "never") {
+      console.log(
+        "  NOTE: codex exec mode ignores non-'never' approval modes; prompts will not appear"
+      );
+    }
+  } else {
     process.env.ORCH_CODEX_APPROVAL = "never";
     console.log("✓ Non-interactive mode enabled (ORCH_CODEX_APPROVAL=never)");
-  } else {
-    console.log(`✓ Using configured approval mode (ORCH_CODEX_APPROVAL=${existingApproval})`);
-    if (existingApproval !== "never") {
-      console.log("  NOTE: codex exec mode ignores non-'never' approval modes; prompts will not appear");
-    }
   }
 
   // Step 1: Check Codex binary availability first (fast, no network)
@@ -209,7 +227,7 @@ async function main() {
 
   const repoRoot = process.cwd();
   const dockerImage = process.env.ORCH_DOCKER_IMAGE;
-  
+
   // Always use container isolation (production standard)
   const kind = "container" as const;
   console.log(`Workspace isolation: ${kind}`);
@@ -220,7 +238,9 @@ async function main() {
   // Watchdog timeout: defaults to 5 minutes, configurable via env
   const timeoutMsRaw = process.env.RUN_CODEX_LIVE_TIMEOUT_MS?.trim();
   const timeoutMs = timeoutMsRaw ? Number(timeoutMsRaw) : 5 * 60 * 1000;
-  const watchdogMs = Number.isFinite(timeoutMs) ? Math.max(60_000, timeoutMs) : 5 * 60 * 1000;
+  const watchdogMs = Number.isFinite(timeoutMs)
+    ? Math.max(60_000, timeoutMs)
+    : 5 * 60 * 1000;
   console.log(`Watchdog timeout: ${watchdogMs / 1000}s`);
 
   const watchdog = new AbortController();
@@ -233,15 +253,20 @@ async function main() {
 
   // Issue a fresh token for each prompt to avoid replay protection
   async function issueToken(): Promise<string> {
-    const token = await issueAccessToken(userId, ["droid.exec", "codex.read"], undefined, {
-      ttlSec: 300,
-      elevated: true,
-      mfa: "passkey",
-      roles: ["owner"],
-    });
+    const token = await issueAccessToken(
+      userId,
+      ["droid.exec", "codex.read"],
+      undefined,
+      {
+        ttlSec: 300,
+        elevated: true,
+        mfa: "passkey",
+        roles: ["owner"],
+      }
+    );
     return `Bearer ${token}`;
   }
-  
+
   const authz1 = await issueToken();
 
   const ws = await createCodexLiveWorkspace({
@@ -279,13 +304,20 @@ async function main() {
     console.log("✓ Artifact created with correct content");
 
     // DB assertions (essential)
-    const run1 = await codexRunRepo.getLatestRunBySession({ userId, sessionId });
+    const run1 = await codexRunRepo.getLatestRunBySession({
+      userId,
+      sessionId,
+    });
     if (!run1) {
       throw new Error("codex_run_not_persisted_initial");
     }
     console.log(`✓ Run persisted: ${run1.id}`);
 
-    const events1 = await codexRunRepo.listEvents({ runId: run1.id, order: "asc", limit: 5000 });
+    const events1 = await codexRunRepo.listEvents({
+      runId: run1.id,
+      order: "asc",
+      limit: 5000,
+    });
     if (!events1 || events1.length === 0) {
       throw new Error("codex_events_missing_initial");
     }
@@ -310,8 +342,8 @@ async function main() {
     const authz2 = await issueToken();
 
     const prompt2 = [
-      "Append exactly: \" world\" to codex_live_artifact.txt (so it becomes hello world).",
-      "Then print exactly: \"resume_ok\".",
+      'Append exactly: " world" to codex_live_artifact.txt (so it becomes hello world).',
+      'Then print exactly: "resume_ok".',
     ].join("\n");
 
     const r2 = await runCodexLiveInWorkspace({
@@ -331,7 +363,10 @@ async function main() {
     console.log("✓ Artifact updated to 'hello world'");
 
     // DB assertions for resume (essential)
-    const run2 = await codexRunRepo.getLatestRunBySession({ userId, sessionId });
+    const run2 = await codexRunRepo.getLatestRunBySession({
+      userId,
+      sessionId,
+    });
     if (!run2) {
       throw new Error("codex_run_not_persisted_resume");
     }
@@ -339,10 +374,12 @@ async function main() {
 
     // Note: Codex creates new thread IDs for each API call, even when resuming.
     // The important relationships are: parent_run_id and resume_count.
-    if (!run1.threadId || !run2.threadId) {
+    if (!(run1.threadId && run2.threadId)) {
       throw new Error("codex_thread_id_missing");
     }
-    console.log(`✓ Thread IDs present: run1=${run1.threadId}, run2=${run2.threadId}`);
+    console.log(
+      `✓ Thread IDs present: run1=${run1.threadId}, run2=${run2.threadId}`
+    );
 
     if (!run2.parentRunId || run2.parentRunId !== run1.id) {
       throw new Error("codex_parent_run_mismatch");
@@ -354,7 +391,11 @@ async function main() {
     }
     console.log(`✓ Resume count: ${run2.resumeCount}`);
 
-    const events2 = await codexRunRepo.listEvents({ runId: run2.id, order: "asc", limit: 5000 });
+    const events2 = await codexRunRepo.listEvents({
+      runId: run2.id,
+      order: "asc",
+      limit: 5000,
+    });
     if (!events2 || events2.length === 0) {
       throw new Error("codex_events_missing_resume");
     }
@@ -408,19 +449,27 @@ if (import.meta.main) {
   main().catch((error) => {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`\n❌ codex_live_verify_failed: ${msg}`);
-    
+
     // Provide actionable hints for common failures
     if (msg.includes("docker_daemon_not_running")) {
-      console.error("\nFix: Start Docker Desktop with 'open -a Docker' and wait for it to be ready.");
+      console.error(
+        "\nFix: Start Docker Desktop with 'open -a Docker' and wait for it to be ready."
+      );
     } else if (msg.includes("postgres_not_ready")) {
-      console.error("\nFix: Run 'bun run db:start' and wait for the container to be healthy.");
+      console.error(
+        "\nFix: Run 'bun run db:start' and wait for the container to be healthy."
+      );
     } else if (msg.includes("codex_binary_not_found")) {
-      console.error("\nFix: Build Codex with 'cd vendor/codex && cargo build --release'");
+      console.error(
+        "\nFix: Build Codex with 'cd vendor/codex && cargo build --release'"
+      );
       console.error("     Or set CODEX_BIN=/path/to/codex");
     } else if (msg.includes("missing_env")) {
-      console.error("\nFix: Ensure required environment variables are set in .env or the shell.");
+      console.error(
+        "\nFix: Ensure required environment variables are set in .env or the shell."
+      );
     }
-    
+
     process.exit(1);
   });
 }

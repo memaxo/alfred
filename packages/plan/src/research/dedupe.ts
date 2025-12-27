@@ -33,11 +33,15 @@ export function deduplicateSources(
     const sourceStr = ext.source.toLowerCase();
     if (sourceStr.startsWith("file://")) {
       const path = sourceStr.replace("file://", "");
-      if (codeSet.has(path)) return false;
+      if (codeSet.has(path)) {
+        return false;
+      }
     }
     // Also check if the ID or source matches an existing internal path
-    if (codeSet.has(ext.source) || codeSet.has(ext.id)) return false;
-    
+    if (codeSet.has(ext.source) || codeSet.has(ext.id)) {
+      return false;
+    }
+
     return true;
   });
 

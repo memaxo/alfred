@@ -9,7 +9,9 @@ export function coerceRecord(val: unknown): Record<string, unknown> {
   if (typeof val === "string") {
     try {
       const parsed = JSON.parse(val);
-      return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      return typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed)
         ? (parsed as Record<string, unknown>)
         : {};
     } catch {
@@ -32,7 +34,10 @@ export function coerceNonEmptyString(val: unknown): string | null {
 /**
  * Coerces a string env var to boolean with fallback.
  */
-export function coerceBool(val: string | undefined, fallback: boolean): boolean {
+export function coerceBool(
+  val: string | undefined,
+  fallback: boolean
+): boolean {
   if (val === undefined) {
     return fallback;
   }

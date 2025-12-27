@@ -1,6 +1,6 @@
 import { logger } from "@alfred/logger";
 import { deduplicateSources } from "./dedupe.js";
-import { prioritizeSources, type PriorityMode } from "./prioritize.js";
+import { type PriorityMode, prioritizeSources } from "./prioritize.js";
 import { researchResultSchema } from "./schema.js";
 import type { ResearchResult } from "./types.js";
 
@@ -25,7 +25,7 @@ export async function aggregateResearch(
   // 1. Deduplicate if requested
   let processedExt = external;
   let processedInt = internal;
-  
+
   if (doDedupe) {
     const deduped = deduplicateSources(external, internal);
     processedExt = deduped.external;
@@ -45,7 +45,8 @@ export async function aggregateResearch(
     external: prioritized.external,
     internal: prioritized.internal,
     metadata: {
-      totalSources: prioritized.external.length + prioritized.internal.existingCode.length,
+      totalSources:
+        prioritized.external.length + prioritized.internal.existingCode.length,
       tokenCount: prioritized.totalTokens,
       researchDurationMs: Date.now() - startTime,
     },

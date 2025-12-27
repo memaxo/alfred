@@ -114,7 +114,7 @@ describe("stopFocus", () => {
   it("transitions active to idle", () => {
     const active: FocusState = {
       _: "active",
-      since: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
+      since: new Date(Date.now() - 60_000).toISOString(), // 1 minute ago
       duration: 25,
     };
     const result = stopFocus(active);
@@ -144,7 +144,7 @@ describe("stopFocus", () => {
   });
 
   it("records last session with calculated duration", () => {
-    const startTime = new Date(Date.now() - 120000).toISOString(); // 2 minutes ago
+    const startTime = new Date(Date.now() - 120_000).toISOString(); // 2 minutes ago
     const active: FocusState = {
       _: "active",
       since: startTime,
@@ -156,7 +156,7 @@ describe("stopFocus", () => {
   });
 
   it("uses calculated duration when state duration not set", () => {
-    const startTime = new Date(Date.now() - 180000).toISOString(); // 3 minutes ago
+    const startTime = new Date(Date.now() - 180_000).toISOString(); // 3 minutes ago
     const active: FocusState = {
       _: "active",
       since: startTime,
@@ -182,8 +182,12 @@ describe("updateFocus", () => {
 
   it("clamps updated duration to bounds", () => {
     const state: FocusState = { _: "idle" };
-    expect(updateFocus(state, { durationMin: 1 }).duration).toBe(FOCUS_MIN_DURATION);
-    expect(updateFocus(state, { durationMin: 2000 }).duration).toBe(FOCUS_MAX_DURATION);
+    expect(updateFocus(state, { durationMin: 1 }).duration).toBe(
+      FOCUS_MIN_DURATION
+    );
+    expect(updateFocus(state, { durationMin: 2000 }).duration).toBe(
+      FOCUS_MAX_DURATION
+    );
   });
 
   it("updates note when provided", () => {

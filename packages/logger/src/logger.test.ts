@@ -3,7 +3,7 @@ import { configure, logger } from "./index";
 
 describe("logger", () => {
   let consoleLogSpy: ReturnType<typeof spyOn>;
-  const originalEnv = process.env.NODE_ENV;
+  const _originalEnv = process.env.NODE_ENV;
 
   beforeEach(() => {
     consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});

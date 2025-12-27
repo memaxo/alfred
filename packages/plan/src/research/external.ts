@@ -3,7 +3,7 @@ import type { WorkflowIntent } from "../intent/types.js";
 import { aggregateResearch } from "./aggregate.js";
 import { applyDateFilter, detectFrameworkVersion } from "./filter.js";
 import { gatherInternalResearch } from "./internal.js";
-import { calculateReliability, calculateRelevance } from "./score.js";
+import { calculateRelevance, calculateReliability } from "./score.js";
 import type {
   ResearchOptions,
   ResearchResult,
@@ -14,7 +14,9 @@ import type {
  * Lazy load agent tools to break circular dependency
  */
 async function getAgentTools() {
-  const { gatherWebContext } = await import("@alfred/agent/orchestrator/flow/context");
+  const { gatherWebContext } = await import(
+    "@alfred/agent/orchestrator/flow/context"
+  );
   const { toolWeb } = await import("@alfred/agent/orchestrator/tool/web");
   return { gatherWebContext, toolWeb };
 }

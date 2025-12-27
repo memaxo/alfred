@@ -15,7 +15,11 @@ import {
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
-import { installLoggerMock, loggerMocks, resetLoggerMocks } from "@alfred/test-kit/logger";
+import {
+  installLoggerMock,
+  loggerMocks,
+  resetLoggerMocks,
+} from "@alfred/test-kit/logger";
 
 // Install shared mocks
 installAuthTokenMock();
@@ -24,7 +28,7 @@ installLoggerMock();
 // Use shared mocks for assertions
 const requireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
 const loggerWarn = loggerMocks.warn;
-const loggerError = loggerMocks.error;
+const _loggerError = loggerMocks.error;
 
 const metrics = await import("../src/metrics");
 const recordPolicyCheckFailureSpy = vi.spyOn(

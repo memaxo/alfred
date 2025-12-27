@@ -3,8 +3,8 @@
  * Exposes explicit learning/feedback capabilities as agent tools.
  */
 
-import type { ToolExecuteArgs } from "../shared/context.js";
 import { withPolicyApproval } from "../approval.js";
+import type { ToolExecuteArgs } from "../shared/context.js";
 import type {
   LearnMistakeInput,
   LearnPatternInput,

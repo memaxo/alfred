@@ -1,22 +1,16 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
-import path from "node:path";
 import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   applyUpperLayer,
   discardUpperLayer,
   formatChanges,
   hasChanges,
+  type PoofChange,
   parseUpperLayer,
   summarizeChanges,
-  type PoofChange,
 } from "./diff.js";
 
 describe("diff", () => {

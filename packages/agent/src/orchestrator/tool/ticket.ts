@@ -1,11 +1,9 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import { linearRepo } from "@alfred/db";
+import { getLinearByWorkspace } from "@alfred/db/repo/linear";
 import { LinearClient } from "@linear/sdk";
 import { z } from "zod";
 import { withPolicyApproval } from "./approval.js";
 import type { ToolExecuteArgs } from "./shared/context.js";
-
-const { getLinearByWorkspace } = linearRepo;
 
 const ticketInputSchema = z.object({
   space: z.string().min(1),
@@ -321,9 +319,7 @@ async function runAddRelation(client: LinearClient, input: TicketInput) {
     throw new Error("ticket_add_relation_failed");
   }
 
-  const relation = response.issueRelation
-    ? await response.issueRelation
-    : null;
+  const relation = response.issueRelation ? await response.issueRelation : null;
   return { ok: true, id: relation?.id ?? undefined };
 }
 

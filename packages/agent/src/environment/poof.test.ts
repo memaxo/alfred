@@ -1,17 +1,16 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  mock,
-  test,
-} from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdtemp } from "node:fs/promises";
-import path from "node:path";
 import { tmpdir } from "node:os";
+import path from "node:path";
+import { POOF_PROFILES, resetPoofCache } from "../spawn/poof.js";
 import { PoofWorkspace } from "./poof.js";
-import { resetPoofCache, isPoofAvailable, POOF_PROFILES } from "../spawn/poof.js";
 
 describe("PoofWorkspace", () => {
   let testDir: string;
@@ -85,21 +84,18 @@ describe("PoofWorkspace", () => {
       }
     );
 
-    test.skipIf(process.platform !== "linux")(
-      "is idempotent",
-      async () => {
-        const ws = new PoofWorkspace("agent-1", "run-123", repoBase);
-        await ws.initialize();
-        const upperDir1 = ws.getUpperDir();
+    test.skipIf(process.platform !== "linux")("is idempotent", async () => {
+      const ws = new PoofWorkspace("agent-1", "run-123", repoBase);
+      await ws.initialize();
+      const upperDir1 = ws.getUpperDir();
 
-        await ws.initialize(); // Should not create new directory
-        const upperDir2 = ws.getUpperDir();
+      await ws.initialize(); // Should not create new directory
+      const upperDir2 = ws.getUpperDir();
 
-        expect(upperDir1).toBe(upperDir2);
+      expect(upperDir1).toBe(upperDir2);
 
-        await ws.cleanup();
-      }
-    );
+      await ws.cleanup();
+    });
   });
 
   describe("cleanup", () => {
@@ -216,13 +212,19 @@ describe("PoofWorkspace", () => {
         // Restore to v1
         await ws.restore("v1");
         expect(
-          readFileSync(path.join(ws.getUpperDir()!, repoBase, "counter.txt"), "utf8")
+          readFileSync(
+            path.join(ws.getUpperDir()!, repoBase, "counter.txt"),
+            "utf8"
+          )
         ).toBe("1");
 
         // Restore to v3
         await ws.restore("v3");
         expect(
-          readFileSync(path.join(ws.getUpperDir()!, repoBase, "counter.txt"), "utf8")
+          readFileSync(
+            path.join(ws.getUpperDir()!, repoBase, "counter.txt"),
+            "utf8"
+          )
         ).toBe("3");
 
         await ws.cleanup();

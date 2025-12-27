@@ -358,14 +358,11 @@ function makeBundle(paths: string[]): ContextBundle {
 
 function toChunks(defs: AgentEventDef[]): WriterChunk[] {
   return defs.map((def, index) => {
+    const timestamp = Date.now() + index;
     if (def.kind === "thought") {
       return {
         type: "stdout",
-        event: {
-          type: "thought",
-          content: def.text,
-          timestamp: Date.now() + index,
-        },
+        event: { type: "thought", content: def.text, timestamp },
       };
     }
     if (def.kind === "command") {
@@ -374,19 +371,14 @@ function toChunks(defs: AgentEventDef[]): WriterChunk[] {
         event: {
           type: "command",
           command: def.command,
-          status: def.status ?? "running",
-          timestamp: Date.now() + index,
+          status: def.status ?? "completed",
+          timestamp,
         },
       };
     }
     return {
       type: "stdout",
-      event: {
-        type: "artifact",
-        path: def.path,
-        kind: "file",
-        timestamp: Date.now() + index,
-      },
+      event: { type: "artifact", path: def.path, timestamp },
     };
   });
 }

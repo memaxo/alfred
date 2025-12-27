@@ -17,122 +17,116 @@
  * ```
  */
 
-// Pipeline (state machine for orchestration)
+// Conflict detection
 export {
-  type OrchestratorPipeline,
-  type PipelineStage,
-  type PipelineTransition,
-  type PipelineSummary,
-  type PipelineExecutionContext,
-  type PipelineTrackerState,
-  type WaveExecutionContext,
-  type MergeContext,
-  type ReviewContext,
-  type ExecPlanTracking,
-  type PipelineMetrics,
-  createPipeline,
-  transitionPipeline,
-  buildPipelineSummary,
-  initializePipelineTracker,
-  isInitStage,
-  isPlanningStage,
-  isWavesStage,
-  isMergingStage,
-  isReviewingStage,
-  isCompletedStage,
-  isEscalatedStage,
-  isAbortedStage,
-  isTerminalStage,
-} from "./pipeline";
+  aggregateConflictMarkers,
+  type ConflictScanResult,
+  countConflictMarkers,
+  generateConflictExecPlanSkeleton,
+} from "./conflict";
 
 // Decomposition
 export {
-  type SubTask,
-  type SubTaskId,
   type DecomposeContext,
   decomposeTask,
+  type SubTask,
+  type SubTaskId,
 } from "./decompose";
-
-// Spawn & Wave Planning
+// ExecPlan utilities
 export {
-  type AgentId,
-  type WaveId,
-  type AgentSpec,
-  type WavePlan,
-  buildAgentSpec,
-  buildFixerAgentSpec,
-  planWaves,
-} from "./spawn";
-
-// Tracker (state tracking for agents and waves)
+  appendDecisionLogEntry,
+  appendSurpriseEntry,
+  applyProgressUpdate,
+  type DecisionLogEntry,
+  type ExecPlanSnapshot,
+  generateSubtaskExecPlanSkeleton,
+  interpretExecPlan,
+  type PlanProgressUpdate,
+  planProgressUpdate,
+  type SurpriseEntry,
+} from "./execplan";
+// Linear sync
 export {
-  type TrackerState,
-  type TrackerContext,
-  type TrackerAgentState,
-  type TrackerWaveState,
-  type AgentStatus,
-  type AgentEvent,
-  type StuckDetectionOptions,
-  createTrackerContext,
-  cloneTrackerContext,
-  resetTrackerContext,
-  updateTrackerWithContext,
-  detectStuckWithContext,
-  getBlockedTasksWithContext,
-  areAllDepsCompletedWithContext,
-  propagateCompletionWithContext,
-  clearAgentDetectorWithContext,
-  clearAllDetectorsWithContext,
-  getStuckDetectionDefaults,
-} from "./tracker";
+  buildTaskIssueMap,
+  type LinearSyncConfig,
+  type LinearSyncResult,
+  syncDepsToLinear,
+} from "./linear-sync";
 
 // Merge
 export {
   type AgentOutcome,
-  type MergePlan,
   buildMergePlan,
   generateMergeExecPlanSkeleton,
+  type MergePlan,
 } from "./merge";
-
+// Pipeline (state machine for orchestration)
+export {
+  buildPipelineSummary,
+  createPipeline,
+  type ExecPlanTracking,
+  initializePipelineTracker,
+  isAbortedStage,
+  isCompletedStage,
+  isEscalatedStage,
+  isInitStage,
+  isMergingStage,
+  isPlanningStage,
+  isReviewingStage,
+  isTerminalStage,
+  isWavesStage,
+  type MergeContext,
+  type OrchestratorPipeline,
+  type PipelineExecutionContext,
+  type PipelineMetrics,
+  type PipelineStage,
+  type PipelineSummary,
+  type PipelineTrackerState,
+  type PipelineTransition,
+  type ReviewContext,
+  transitionPipeline,
+  type WaveExecutionContext,
+} from "./pipeline";
 // Review
 export {
-  type ReviewPlan,
+  buildFixerSubTask,
+  buildReviewPlan,
+  formatReviewFailureDetails,
+  generateFixerExecPlanSkeleton,
+  generateReviewExecPlanSkeleton,
   type ReviewCheck,
   type ReviewCheckType,
   type ReviewFailureDetail,
-  buildReviewPlan,
-  buildFixerSubTask,
-  generateReviewExecPlanSkeleton,
-  generateFixerExecPlanSkeleton,
-  formatReviewFailureDetails,
+  type ReviewPlan,
 } from "./review";
-
-// ExecPlan utilities
+// Spawn & Wave Planning
 export {
-  type ExecPlanSnapshot,
-  type PlanProgressUpdate,
-  type DecisionLogEntry,
-  type SurpriseEntry,
-  interpretExecPlan,
-  applyProgressUpdate,
-  appendDecisionLogEntry,
-  appendSurpriseEntry,
-  planProgressUpdate,
-  generateSubtaskExecPlanSkeleton,
-} from "./execplan";
-
-// Conflict detection
+  type AgentId,
+  type AgentSpec,
+  buildAgentSpec,
+  buildFixerAgentSpec,
+  planWaves,
+  type WaveId,
+  type WavePlan,
+} from "./spawn";
+// Tracker (state tracking for agents and waves)
 export {
-  type ConflictScanResult,
-  countConflictMarkers,
-  aggregateConflictMarkers,
-  generateConflictExecPlanSkeleton,
-} from "./conflict";
-
-// Linear sync
-export {
-  type LinearSyncConfig,
-  type LinearSyncResult,
-  syncDepsToLinear,
-  buildTaskIssueMap,
-} from "./linear-sync";
+  type AgentEvent,
+  type AgentStatus,
+  areAllDepsCompletedWithContext,
+  clearAgentDetectorWithContext,
+  clearAllDetectorsWithContext,
+  cloneTrackerContext,
+  createTrackerContext,
+  detectStuckWithContext,
+  getBlockedTasksWithContext,
+  getStuckDetectionDefaults,
+  propagateCompletionWithContext,
+  resetTrackerContext,
+  type StuckDetectionOptions,
+  type TrackerAgentState,
+  type TrackerContext,
+  type TrackerState,
+  type TrackerWaveState,
+  updateTrackerWithContext,
+} from "./tracker";

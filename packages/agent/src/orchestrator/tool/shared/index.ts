@@ -7,10 +7,10 @@
  */
 
 // Context types (unified execute signature)
-export {
-  type ToolExecuteArgs,
-  type ToolExecuteContext,
-  type ToolWriter,
+export type {
+  ToolExecuteArgs,
+  ToolExecuteContext,
+  ToolWriter,
 } from "./context";
 // Metrics utilities
 export {

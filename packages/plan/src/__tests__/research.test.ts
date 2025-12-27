@@ -95,7 +95,7 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
     summary: "No files found",
   }),
   buildContextBundle: async () => ({
-    maxTokens: 24000,
+    maxTokens: 24_000,
     estimatedTokens: 0,
     files: [],
   }),
@@ -137,16 +137,10 @@ const { calculateReliability, calculateRelevance } = await import(
 const { detectFrameworkVersion, applyDateFilter } = await import(
   "../research/filter.js"
 );
-const {
-  researchSourceSchema,
-  researchResultSchema,
-  researchOptionsSchema,
-} = await import("../research/schema.js");
-const {
-  exaSearchResultSchema,
-  exaSearchResponseSchema,
-  exaCostSchema,
-} = await import("@alfred/type");
+const { researchSourceSchema, researchResultSchema, researchOptionsSchema } =
+  await import("../research/schema.js");
+const { exaSearchResultSchema, exaSearchResponseSchema, exaCostSchema } =
+  await import("@alfred/type");
 
 describe("Research Aggregator", () => {
   const mockIntent = {
@@ -283,9 +277,7 @@ describe("Research Aggregator", () => {
 
     it("should preserve Exa-specific fields like author and highlights", async () => {
       const results = await gatherExternalResearch(mockIntent);
-      const reactDoc = results.find((r) =>
-        r.source.includes("react.dev")
-      );
+      const reactDoc = results.find((r) => r.source.includes("react.dev"));
       expect(reactDoc).toBeDefined();
       expect(reactDoc?.author).toBe("React Team");
       expect(reactDoc?.highlights).toBeDefined();
@@ -295,18 +287,14 @@ describe("Research Aggregator", () => {
 
     it("should preserve extracted links from Exa", async () => {
       const results = await gatherExternalResearch(mockIntent);
-      const reactDoc = results.find((r) =>
-        r.source.includes("react.dev")
-      );
+      const reactDoc = results.find((r) => r.source.includes("react.dev"));
       expect(reactDoc?.links).toBeDefined();
       expect(reactDoc?.links).toContain("https://github.com/facebook/react");
     });
 
     it("should transform subpages into nested ResearchSource", async () => {
       const results = await gatherExternalResearch(mockIntent);
-      const reactDoc = results.find((r) =>
-        r.source.includes("react.dev")
-      );
+      const reactDoc = results.find((r) => r.source.includes("react.dev"));
       expect(reactDoc?.subpages).toBeDefined();
       expect(reactDoc?.subpages?.length).toBeGreaterThan(0);
       expect(reactDoc?.subpages?.[0].title).toBe("React 18 Upgrade Guide");
@@ -467,8 +455,12 @@ describe("Research Aggregator", () => {
         ],
         internal: {
           existingCode: ["/src/components/Button.tsx"],
-          patterns: [{ id: "pattern-1", name: "Component Pattern", confidence: 0.95 }],
-          conventions: [{ id: "conv-1", description: "Use TypeScript", confidence: 0.9 }],
+          patterns: [
+            { id: "pattern-1", name: "Component Pattern", confidence: 0.95 },
+          ],
+          conventions: [
+            { id: "conv-1", description: "Use TypeScript", confidence: 0.9 },
+          ],
         },
         metadata: {
           totalSources: 1,

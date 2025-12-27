@@ -6,9 +6,9 @@ import { TRPCError } from "@trpc/server";
 import type { LanguageModel, ModelMessage, Tool } from "ai";
 import { validateUIMessages } from "ai";
 import {
-  runtimeHistorySelectionDurationSeconds,
   historyContextTierDropsTotal,
   historyContextTokensTotal,
+  runtimeHistorySelectionDurationSeconds,
 } from "../metrics";
 
 type PrepareMessagesArgs = {

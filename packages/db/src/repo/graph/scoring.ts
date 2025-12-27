@@ -46,7 +46,6 @@ export type ScoredResult<T> = {
   matchType: "exact" | "semantic" | "fuzzy" | "hybrid";
 };
 
-
 /**
  * Compute relevance score for a node given a query embedding.
  * Combines semantic similarity with optional recency and access boosts.

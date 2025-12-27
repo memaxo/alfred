@@ -12,17 +12,16 @@
  * - @alfred/cognitive/util - Math utilities and branded types
  */
 
-export * from "./flows.js";
-export { LoopDetector, type LoopConfig, type LoopResult } from "./loop.js";
-export * from "./metrics.js";
-export * from "./schemas.js";
-export * from "./state.js";
-export * from "./transition.js";
-
 // Re-export domain modules for subpath imports
 export * as autonomy from "./autonomy/index.js";
+export * from "./flows.js";
 export * as focus from "./focus/index.js";
+export { type LoopConfig, LoopDetector, type LoopResult } from "./loop.js";
+export * from "./metrics.js";
 export * as physiology from "./physiology/index.js";
 export * as plan from "./plan/index.js";
+export * from "./schemas.js";
 export * as state from "./state/index.js";
+export * from "./state.js";
+export * from "./transition.js";
 export * as util from "./util/index.js";

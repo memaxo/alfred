@@ -45,9 +45,7 @@ export async function getPatternCentroid(
   return centroidCache.get(pattern)!;
 }
 
-export async function embedTextSamples(
-  texts: string[]
-): Promise<number[][]> {
+export async function embedTextSamples(texts: string[]): Promise<number[][]> {
   const sanitized = texts
     .map((text) => text.trim())
     .filter((text) => text.length > 0);
@@ -58,7 +56,9 @@ export async function embedTextSamples(
 
   try {
     const vectors = await embedMany(sanitized);
-    return vectors.filter((vector): vector is number[] => Array.isArray(vector));
+    return vectors.filter((vector): vector is number[] =>
+      Array.isArray(vector)
+    );
   } catch (error) {
     logger.warn("knowledge_reasoning_embed_failed", {
       error: error instanceof Error ? error.message : String(error),

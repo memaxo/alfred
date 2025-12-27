@@ -32,11 +32,7 @@ export class CodexError extends Error {
   readonly isRetryable: boolean;
   readonly detail?: string;
 
-  constructor(
-    stage: CodexErrorStage,
-    code: CodexErrorCode,
-    detail?: string
-  ) {
+  constructor(stage: CodexErrorStage, code: CodexErrorCode, detail?: string) {
     const message = detail ? `${code}:${detail}` : code;
     super(message);
     this.name = "CodexError";

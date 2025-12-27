@@ -6,8 +6,11 @@
  */
 
 import type { ThreadEvent, ThreadItem } from "@alfred/codex";
+import {
+  extractReasoningText,
+  type ReasoningAccumulator,
+} from "../shared/index.js";
 import type { AlfredCodexEvent, CodexArtifactSummary } from "./definition.js";
-import { extractReasoningText, type ReasoningAccumulator } from "../shared/index.js";
 
 export type EventProcessorContext = {
   outputDebug: boolean;

@@ -43,10 +43,16 @@ describe("Anti-Pattern Extraction", () => {
   } as any;
 
   it("should extract anti-pattern with failure reason", async () => {
-    const pattern = await extractAntiPatternFromRun(mockRun, mockPlan, "Arbiter failed to resolve conflict");
+    const pattern = await extractAntiPatternFromRun(
+      mockRun,
+      mockPlan,
+      "Arbiter failed to resolve conflict"
+    );
 
     expect(pattern.trigger).toBe("fix-bug-failure");
     expect(pattern.successRate).toBe("0.0000");
-    expect((pattern.planTemplate as any).failureReason).toBe("Arbiter failed to resolve conflict");
+    expect((pattern.planTemplate as any).failureReason).toBe(
+      "Arbiter failed to resolve conflict"
+    );
   });
 });

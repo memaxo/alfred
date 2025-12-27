@@ -47,7 +47,12 @@ describe("Conflict Arbiter (smoke)", () => {
     const codexStub = mock(async () => ({ ok: true }));
     toolCodex.execute = codexStub as unknown as typeof toolCodex.execute;
 
-    const result = await conflictArbiter.resolve(repoRoot, "run-smoke", "main", "branch-clean");
+    const result = await conflictArbiter.resolve(
+      repoRoot,
+      "run-smoke",
+      "main",
+      "branch-clean"
+    );
 
     expect(result.status).toBe("resolved");
     expect(codexStub).toHaveBeenCalledTimes(0);

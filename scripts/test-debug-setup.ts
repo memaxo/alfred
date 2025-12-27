@@ -9,7 +9,7 @@ console.log("✓ Debug setup test started");
 
 // Test 1: Verify inspector is available
 try {
-  const inspector = Bun.inspect;
+  const _inspector = Bun.inspect;
   console.log("✓ Bun.inspect is available");
 } catch (e) {
   console.error("✗ Bun.inspect not available:", e);

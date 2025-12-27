@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const mockGetPlanById = mock();
 const mockUpdatePlanStatus = mock();
@@ -38,7 +38,11 @@ describe("Plan Persistence & Approval", () => {
           agentType: "codex",
         },
       ],
-      resources: { agentCount: 1, strategy: "parallel", isolation: "container" },
+      resources: {
+        agentCount: 1,
+        strategy: "parallel",
+        isolation: "container",
+      },
       evaluationCriteria: [],
     },
   };
@@ -60,7 +64,11 @@ describe("Plan Persistence & Approval", () => {
     const result = await approvePlan("plan-123", "user-123");
 
     expect(result.runId).toBeDefined();
-    expect(mockUpdatePlanStatus).toHaveBeenCalledWith("plan-123", "approved", "user-123");
+    expect(mockUpdatePlanStatus).toHaveBeenCalledWith(
+      "plan-123",
+      "approved",
+      "user-123"
+    );
     expect(mockUpdatePlanStatus).toHaveBeenCalledWith("plan-123", "executed");
     expect(mockCreateRun).toHaveBeenCalled();
   });

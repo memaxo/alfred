@@ -226,7 +226,7 @@ export class AISDKAdapter {
   public mapEvent(sdkEvent: AISDKStreamEvent): WorkflowEvent | null {
     if (isTextDeltaEvent(sdkEvent)) {
       return {
-        type: "text-delta",
+        _: "text-delta",
         id: sdkEvent.id,
         delta: sdkEvent.delta,
       };
@@ -234,7 +234,7 @@ export class AISDKAdapter {
 
     if (isToolCallEvent(sdkEvent)) {
       return {
-        type: "tool-call",
+        _: "tool-call",
         toolCallId: sdkEvent.toolCallId,
         toolName: sdkEvent.toolName,
         input: sdkEvent.input,
@@ -243,7 +243,7 @@ export class AISDKAdapter {
 
     if (isToolResultEvent(sdkEvent)) {
       return {
-        type: "tool-result",
+        _: "tool-result",
         toolCallId: sdkEvent.toolCallId,
         toolName: sdkEvent.toolName,
         input: sdkEvent.input,
@@ -253,7 +253,7 @@ export class AISDKAdapter {
 
     if (isFinishEvent(sdkEvent)) {
       return {
-        type: "finish",
+        _: "finish",
         finishReason: sdkEvent.finishReason,
         usage: sdkEvent.usage,
       };
@@ -261,7 +261,7 @@ export class AISDKAdapter {
 
     if (isErrorEvent(sdkEvent)) {
       return {
-        type: "error",
+        _: "error",
         message:
           sdkEvent.error instanceof Error
             ? sdkEvent.error.message
@@ -270,7 +270,7 @@ export class AISDKAdapter {
     }
 
     if (forwardedEventTypes.has(sdkEvent.type)) {
-      return sdkEvent as WorkflowEvent;
+      return { ...sdkEvent, _: sdkEvent.type } as any;
     }
 
     return null;

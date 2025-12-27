@@ -12,10 +12,7 @@ import {
 import { memoryNodes } from "@alfred/db/schema/graph";
 import { workflowRuns } from "@alfred/db/schema/workflow";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
-import {
-  knowledgeHash,
-  type Knowledge,
-} from "@alfred/knowledge/hypergraph";
+import { type Knowledge, knowledgeHash } from "@alfred/knowledge/hypergraph";
 import {
   getOntologyKnowledge,
   SEED_CONFIDENCE,
@@ -483,7 +480,9 @@ async function processFailedRuns(limit: number) {
   const runs = await db
     .select()
     .from(workflowRuns)
-    .where(and(eq(workflowRuns.status, "failed"), isNull(workflowRuns.dreamedAt)))
+    .where(
+      and(eq(workflowRuns.status, "failed"), isNull(workflowRuns.dreamedAt))
+    )
     .orderBy(desc(workflowRuns.created))
     .limit(limit);
 

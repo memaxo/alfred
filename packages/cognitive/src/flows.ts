@@ -248,7 +248,10 @@ export async function synthesize(
       const embedding = await embedFact(fact.content);
       if (embedding) {
         for (const [nodeId, nodeEmbedding] of embeddingEntries) {
-          const similarity = cosineSimilarity(toNumberArray(embedding), toNumberArray(nodeEmbedding));
+          const similarity = cosineSimilarity(
+            toNumberArray(embedding),
+            toNumberArray(nodeEmbedding)
+          );
           if (similarity <= SEMANTIC_SIMILARITY_THRESHOLD) {
             continue;
           }

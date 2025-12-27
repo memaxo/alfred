@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { BrainstemSupervisor } from "../src/brainstem";
 
 describe("BrainstemSupervisor Loop Detection Integration", () => {
@@ -12,7 +12,9 @@ describe("BrainstemSupervisor Loop Detection Integration", () => {
     it("triggers interrupt on repeated similar thoughts with embeddings", () => {
       // Create similar embeddings
       const baseEmbedding = new Array(1024).fill(0).map(() => Math.random());
-      const similarEmbedding = baseEmbedding.map((v) => v + 0.001 * Math.random());
+      const similarEmbedding = baseEmbedding.map(
+        (v) => v + 0.001 * Math.random()
+      );
 
       let result = supervisor.observe({
         type: "thought",

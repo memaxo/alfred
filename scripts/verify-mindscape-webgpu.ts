@@ -1,18 +1,22 @@
 /**
  * Verify Mindscape WebGPU Gating
- * 
+ *
  * This script builds the web app with VITE_MINDSCAPE_WEBGPU=0
  * and asserts that the resulting bundles do not contain WGSL strings
  * or WebGPU initialization tokens.
  */
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const DIST_DIR = join(process.cwd(), "apps/web/dist");
 
-function scanDirectory(dir: string, forbidden: string[], isMainOnly = false): string[] {
+function scanDirectory(
+  dir: string,
+  forbidden: string[],
+  isMainOnly = false
+): string[] {
   const results: string[] = [];
   const files = readdirSync(dir);
 
@@ -24,7 +28,12 @@ function scanDirectory(dir: string, forbidden: string[], isMainOnly = false): st
       results.push(...scanDirectory(path, forbidden, isMainOnly));
     } else if (file.endsWith(".js") || file.endsWith(".mjs")) {
       // If isMainOnly is true, only scan main and index chunks
-      if (isMainOnly && !file.startsWith("main-") && !file.startsWith("index-") && !file.startsWith("start-")) {
+      if (
+        isMainOnly &&
+        !file.startsWith("main-") &&
+        !file.startsWith("index-") &&
+        !file.startsWith("start-")
+      ) {
         continue;
       }
 
@@ -73,7 +82,9 @@ async function run() {
     process.exit(1);
   }
 
-  console.log("✅ Success! No WebGPU tokens found in the main application chunks.");
+  console.log(
+    "✅ Success! No WebGPU tokens found in the main application chunks."
+  );
 }
 
 run().catch((err) => {

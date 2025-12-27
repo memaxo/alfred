@@ -736,7 +736,9 @@ const dockerOutputSchema = z.object({
       running: z.boolean().optional(),
       containerPort: z.number().optional(),
       hostPort: z.number().nullable().optional(),
-      ports: z.array(z.object({ host: z.number(), container: z.number() })).optional(),
+      ports: z
+        .array(z.object({ host: z.number(), container: z.number() }))
+        .optional(),
       exitCode: z.number().optional(),
       text: z.string().optional(),
       error: z.string().optional(),

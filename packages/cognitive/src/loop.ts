@@ -9,9 +9,9 @@
  */
 
 import {
-  quantizeToInt8,
-  quantizedCosineSimilarity,
   type QuantizedEmbedding,
+  quantizedCosineSimilarity,
+  quantizeToInt8,
 } from "@alfred/embed";
 
 /**
@@ -97,7 +97,9 @@ export class LoopDetector {
       quantized = quantizeToInt8(embedding);
 
       for (const entry of this.window) {
-        if (!entry.quantized) continue;
+        if (!entry.quantized) {
+          continue;
+        }
         const sim = quantizedCosineSimilarity(quantized, entry.quantized);
         if (sim > this.config.similarityThreshold) {
           return {

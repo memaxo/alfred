@@ -4,10 +4,21 @@ import { embedMany } from "@alfred/rag";
 import type { DomainName } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
 
-const DOMAIN_NAMES = ["general", "proxmox", "git", "docker", "kubernetes"] as const;
+const DOMAIN_NAMES = [
+  "general",
+  "proxmox",
+  "git",
+  "docker",
+  "kubernetes",
+] as const;
 const DOMAIN_SET = new Set<string>(DOMAIN_NAMES);
 type EmbedDomain = Exclude<DomainName, "general">;
-const EMBED_DOMAINS = ["proxmox", "git", "docker", "kubernetes"] as const satisfies ReadonlyArray<EmbedDomain>;
+const EMBED_DOMAINS = [
+  "proxmox",
+  "git",
+  "docker",
+  "kubernetes",
+] as const satisfies readonly EmbedDomain[];
 
 const DOMAIN_PROTOTYPES: Record<EmbedDomain, string[]> = {
   proxmox: [
@@ -197,7 +208,10 @@ function normalizeMessageText(messages: UIMessage[]): string[] {
   return out;
 }
 
-function buildEmbeddingInput(messages: UIMessage[], toolNames: string[]): string {
+function buildEmbeddingInput(
+  messages: UIMessage[],
+  toolNames: string[]
+): string {
   const segments: string[] = [];
   if (toolNames.length) {
     segments.push(`Tools: ${toolNames.slice(0, 50).join(", ")}`);

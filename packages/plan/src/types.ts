@@ -1,4 +1,4 @@
-import type { SubTask, WavePlan, NodeId } from "@alfred/type/plan";
+import type { NodeId, SubTask, WavePlan } from "@alfred/type/plan";
 
 /**
  * Pattern: A learned template for workflow execution
@@ -20,7 +20,13 @@ export type Phase = {
   tasks: SubTask[];
   dependsOn: string[];
   estimatedDurationMs: number;
-  agentType: "codex" | "droid" | "claude-code" | "research" | "review" | "orchestrator";
+  agentType:
+    | "codex"
+    | "droid"
+    | "claude-code"
+    | "research"
+    | "review"
+    | "orchestrator";
 };
 
 /**

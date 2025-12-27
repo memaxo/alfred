@@ -19,7 +19,9 @@ describe("router tool", () => {
   beforeEach(() => {
     mockRequireToolScopesAndPolicy.mockClear();
     mockFetch = mock(() =>
-      Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), { status: 200 })
+      )
     );
     globalThis.fetch = mockFetch;
   });
@@ -95,7 +97,9 @@ describe("router tool", () => {
         expect(mockFetch).toHaveBeenCalledTimes(1);
 
         const [url, options] = mockFetch.mock.calls[0];
-        expect(url.toString()).toContain("/config/apps/http/servers/srv0/routes/");
+        expect(url.toString()).toContain(
+          "/config/apps/http/servers/srv0/routes/"
+        );
         expect(url.toString()).toContain("alfred-route-app.example.com");
         expect(options.method).toBe("PUT");
         expect(options.headers["content-type"]).toBe("application/json");
@@ -142,7 +146,9 @@ describe("router tool", () => {
         });
 
         const [url] = mockFetch.mock.calls[0];
-        expect(url.toString()).toContain("alfred-route-app-test-special-chars.com");
+        expect(url.toString()).toContain(
+          "alfred-route-app-test-special-chars.com"
+        );
       });
     });
 

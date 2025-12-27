@@ -1,7 +1,11 @@
 // packages/db/src/repo/plan.ts
 import { eq, sql } from "drizzle-orm";
 import { db } from "../client";
-import { type NewWorkflowPlan, type WorkflowPlan, workflowPlans } from "../schema/plan";
+import {
+  type NewWorkflowPlan,
+  type WorkflowPlan,
+  workflowPlans,
+} from "../schema/plan";
 
 /**
  * Create a new workflow plan
@@ -59,7 +63,9 @@ export async function updatePlanStatus(
 /**
  * List plans for a user
  */
-export async function getPlansByUserId(userId: string): Promise<WorkflowPlan[]> {
+export async function getPlansByUserId(
+  userId: string
+): Promise<WorkflowPlan[]> {
   return await db
     .select()
     .from(workflowPlans)

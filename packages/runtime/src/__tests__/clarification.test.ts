@@ -8,6 +8,7 @@ import type { OrchestratorContext } from "../orchestrator/types.js";
 // Mock @alfred/db
 mock.module("@alfred/db", () => ({
   workflowRepo: {
+    getRun: async () => ({ id: "run-123", inputData: {} }),
     updateRun: async () => ({}),
   },
   clarificationRepo: {

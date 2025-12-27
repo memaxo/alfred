@@ -436,9 +436,13 @@ describeFn("graphRepo", () => {
       beforeConfidence + 0.05
     );
     // Node without confidence gets 1.0
-    expect((after2?.properties as Record<string, unknown>)?.confidence).toBe(1.0);
+    expect((after2?.properties as Record<string, unknown>)?.confidence).toBe(
+      1.0
+    );
     // Confidence capped at 1.0
-    expect((after3?.properties as Record<string, unknown>)?.confidence).toBe(1.0);
+    expect((after3?.properties as Record<string, unknown>)?.confidence).toBe(
+      1.0
+    );
     // Updated timestamp changed (verify it's a different time)
     expect(after1?.updated).not.toEqual(beforeUpdated);
     // Verify timestamp is actually updated (not null)

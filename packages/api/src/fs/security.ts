@@ -7,7 +7,7 @@ const PROJECT_ROOT = realpathSync.native(process.cwd());
 
 function isWithinRoot(root: string, candidate: string): boolean {
   const rel = path.relative(root, candidate);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+  return rel === "" || !(rel.startsWith("..") || path.isAbsolute(rel));
 }
 
 function resolveWithinRoot(requestedPath: string): string {
@@ -56,7 +56,8 @@ export function validateWriteFilePath(requestedPath: string): string {
   if (!isWithinRoot(PROJECT_ROOT, parentRealPath)) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "Access denied: Parent directory resolves outside the project root.",
+      message:
+        "Access denied: Parent directory resolves outside the project root.",
     });
   }
 
@@ -88,4 +89,3 @@ export function validateWriteFilePath(requestedPath: string): string {
 export function resolveWithinProjectRoot(requestedPath: string): string {
   return resolveWithinRoot(requestedPath);
 }
-

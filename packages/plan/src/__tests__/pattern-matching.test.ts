@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { matchPatterns, categorizePatterns } from "../pattern/match.js";
+import { categorizePatterns, matchPatterns } from "../pattern/match.js";
 
 // Mock AI and DB
 mock.module("@alfred/rag", () => ({

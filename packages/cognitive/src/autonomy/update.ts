@@ -8,16 +8,16 @@ import { cognitiveAutonomyUpdateDuration } from "../metrics.js";
 import type { Physiology } from "../physiology/types.js";
 import {
   autonomy,
+  CONFIDENCE_DECAY_RATE,
   clamp01,
   confidence,
-  CONFIDENCE_DECAY_RATE,
   MS_PER_DAY,
   timestamp,
 } from "../util/math.js";
 import { bayesianUpdate, betaMode, betaVariance } from "./bayesian.js";
 import {
-  DEFAULT_BETA_PRIOR,
   type AutonomyGradient,
+  DEFAULT_BETA_PRIOR,
   type Evidence,
 } from "./types.js";
 
@@ -113,9 +113,6 @@ export function updateAutonomy(
     cognitiveAutonomyUpdateDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.05) {
-      console.warn(
-        `cognitive_autonomy_update_slow: ${durationMs.toFixed(3)}ms (budget: 0.05ms)`
-      );
     }
   }
 }

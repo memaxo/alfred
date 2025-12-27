@@ -1,11 +1,19 @@
-import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  test,
+} from "bun:test";
 import { randomUUID } from "node:crypto";
+import { memoryNodes } from "@alfred/db/schema/graph";
+import { workflowRuns } from "@alfred/db/schema/workflow";
 import {
   startLearningWorker,
   stopLearningWorker,
 } from "../src/orchestrator/learning-worker";
-import { memoryNodes } from "@alfred/db/schema/graph";
-import { workflowRuns } from "@alfred/db/schema/workflow";
 
 // Mock extraction to avoid NLU overhead in integration test
 mock.module("@alfred/knowledge/extractor", () => ({
@@ -106,7 +114,8 @@ mock.module("@alfred/db", () => ({
                 workflowSelectIndex += 1;
                 if (idx % 2 === 0) {
                   return mockRuns.filter(
-                    (run) => run.status === "completed" && run.learnedAt === null
+                    (run) =>
+                      run.status === "completed" && run.learnedAt === null
                   );
                 }
                 return mockRuns.filter(
@@ -223,7 +232,9 @@ describe("Learning Worker Integration", () => {
     startLearningWorker({ intervalMs: 50, batchSize: 1 });
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(mockRuns[1].dreamedAt).not.toBeNull();
-    const heuristicSeed = upsertedSeeds.find((seed) => (seed as any).kind === "heuristic");
+    const heuristicSeed = upsertedSeeds.find(
+      (seed) => (seed as any).kind === "heuristic"
+    );
     expect(heuristicSeed).toBeTruthy();
     expect((heuristicSeed as any).resource).toBe("user");
   });

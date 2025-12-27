@@ -3,8 +3,8 @@
  * Zero-allocation design with content-addressed nodes
  */
 
-import { EMBEDDING_DIM } from "@alfred/embed";
 import { createHash } from "node:crypto";
+import { EMBEDDING_DIM } from "@alfred/embed";
 import { BTreeIndex } from "./indices/btree.js";
 import { IntervalTree } from "./indices/interval-tree.js";
 import { RTreeND } from "./indices/rtree.js";
@@ -79,9 +79,8 @@ const knowledgeHashInput = (k: Knowledge): string => {
   return s;
 };
 
-export const knowledgeHash = (k: Knowledge): string => {
-  return hashString(knowledgeHashInput(k));
-};
+export const knowledgeHash = (k: Knowledge): string =>
+  hashString(knowledgeHashInput(k));
 
 const hashStringLegacy = (input: string): string => {
   let h = 2_166_136_261;

@@ -7,33 +7,33 @@
 
 import { cpSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
-import path from "node:path";
 import { tmpdir } from "node:os";
-import type { ProjectConfig } from "../utils/project-detector.js";
+import path from "node:path";
 import {
-  type PoofChange,
-  type PoofMode,
-  type PoofProfile,
-  POOF_PROFILES,
   applyUpperLayer,
   formatChanges,
   hasChanges,
   isPoofAvailable,
+  POOF_PROFILES,
+  type PoofChange,
+  type PoofMode,
+  type PoofProfile,
   parseUpperLayer,
   spawnIsolated,
   summarizeChanges,
 } from "../spawn/index.js";
+import type { ProjectConfig } from "../utils/project-detector.js";
 import type { ExecOptions, ExecResult, Workspace } from "./types.js";
 
 /** PoofWorkspace configuration */
-export interface PoofWorkspaceConfig {
+export type PoofWorkspaceConfig = {
   /** Resource profile for poof */
   profile?: PoofProfile;
   /** Default poof mode */
   mode?: PoofMode;
   /** Enable verbose poof output */
   verbose?: boolean;
-}
+};
 
 /**
  * Workspace implementation using poof for ephemeral filesystem isolation.
@@ -97,7 +97,10 @@ export class PoofWorkspace implements Workspace {
     }
 
     // Create upper directory for capturing changes
-    const prefix = `poof-${this.runId}-${this.id}`.replace(/[^a-zA-Z0-9-]/g, "-");
+    const prefix = `poof-${this.runId}-${this.id}`.replace(
+      /[^a-zA-Z0-9-]/g,
+      "-"
+    );
     this._upperDir = path.join(tmpdir(), prefix);
     await mkdir(this._upperDir, { recursive: true });
 
@@ -150,7 +153,10 @@ export class PoofWorkspace implements Workspace {
     // Create a snapshot directory
     const snapshotDir = path.join(
       tmpdir(),
-      `poof-checkpoint-${this.runId}-${this.id}-${label}`.replace(/[^a-zA-Z0-9-]/g, "-")
+      `poof-checkpoint-${this.runId}-${this.id}-${label}`.replace(
+        /[^a-zA-Z0-9-]/g,
+        "-"
+      )
     );
 
     await mkdir(snapshotDir, { recursive: true });
@@ -203,7 +209,7 @@ export class PoofWorkspace implements Workspace {
     this.ensureInitialized();
 
     const cwd = options?.cwd ? path.join(this.root, options.cwd) : this.root;
-    const timeoutMs = options?.timeoutMs ?? 300000; // 5 minutes default
+    const timeoutMs = options?.timeoutMs ?? 300_000; // 5 minutes default
 
     // Resolve command via projectConfig (e.g., "test" -> "npm test")
     let finalCommand = command;

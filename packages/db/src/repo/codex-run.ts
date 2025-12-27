@@ -82,7 +82,12 @@ export async function getLatestRunBySession(args: {
   const [row] = await db
     .select()
     .from(codexRuns)
-    .where(and(eq(codexRuns.userId, args.userId), eq(codexRuns.sessionId, args.sessionId)))
+    .where(
+      and(
+        eq(codexRuns.userId, args.userId),
+        eq(codexRuns.sessionId, args.sessionId)
+      )
+    )
     .orderBy(desc(codexRuns.startedAt))
     .limit(1);
   return row ?? null;
@@ -160,10 +165,16 @@ export async function finalizeRun(
         ? { errorCode: (patch.errorCode ?? null) as RunInsert["errorCode"] }
         : {}),
       ...(Object.hasOwn(patch, "errorMessage")
-        ? { errorMessage: (patch.errorMessage ?? null) as RunInsert["errorMessage"] }
+        ? {
+            errorMessage: (patch.errorMessage ??
+              null) as RunInsert["errorMessage"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "completedAt")
-        ? { completedAt: (patch.completedAt ?? null) as RunInsert["completedAt"] }
+        ? {
+            completedAt: (patch.completedAt ??
+              null) as RunInsert["completedAt"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "artifacts")
         ? { artifacts: (patch.artifacts ?? null) as RunInsert["artifacts"] }
@@ -172,7 +183,10 @@ export async function finalizeRun(
         ? { resultText: (patch.resultText ?? null) as RunInsert["resultText"] }
         : {}),
       ...(Object.hasOwn(patch, "structuredOutput")
-        ? { structuredOutput: (patch.structuredOutput ?? null) as RunInsert["structuredOutput"] }
+        ? {
+            structuredOutput: (patch.structuredOutput ??
+              null) as RunInsert["structuredOutput"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "structuredOutputStatus")
         ? {
@@ -236,7 +250,11 @@ export async function listEvents(args: {
     conditions.push(gt(codexEvents.seq, args.afterSeq));
   }
 
-  const base = db.select().from(codexEvents).where(and(...conditions)).limit(limit);
+  const base = db
+    .select()
+    .from(codexEvents)
+    .where(and(...conditions))
+    .limit(limit);
   return order === "desc"
     ? base.orderBy(desc(codexEvents.seq))
     : base.orderBy(asc(codexEvents.seq));
@@ -250,9 +268,10 @@ export async function searchEvents(args: {
   limit?: number;
   offset?: number;
 }): Promise<
-  Array<
-    Pick<CodexEventRow, "id" | "runId" | "seq" | "eventType" | "eventData" | "text" | "createdAt">
-  >
+  Pick<
+    CodexEventRow,
+    "id" | "runId" | "seq" | "eventType" | "eventData" | "text" | "createdAt"
+  >[]
 > {
   const limit = Math.max(1, Math.min(args.limit ?? 100, 500));
   const offset = Math.max(0, args.offset ?? 0);
@@ -283,7 +302,9 @@ export async function searchEvents(args: {
     })
     .from(codexEvents)
     .innerJoin(codexRuns, eq(codexRuns.id, codexEvents.runId))
-    .where(and(...conditions, sql`${codexEvents.contentTsvector} @@ ${tsQuery}`))
+    .where(
+      and(...conditions, sql`${codexEvents.contentTsvector} @@ ${tsQuery}`)
+    )
     .orderBy(desc(codexEvents.createdAt))
     .limit(limit)
     .offset(offset);
@@ -292,14 +313,18 @@ export async function searchEvents(args: {
 export async function pruneOldRuns(
   retentionDays = 30
 ): Promise<{ deletedRuns: number; deletedEvents: number }> {
-  const days = Number.isFinite(retentionDays) && retentionDays >= 0 ? retentionDays : 30;
+  const days =
+    Number.isFinite(retentionDays) && retentionDays >= 0 ? retentionDays : 30;
   const result = await db.execute(
     sql`SELECT * FROM prune_old_codex_data(${days}::integer)`
   );
 
   const row =
-    (result as unknown as { rows?: Array<{ deleted_runs?: unknown; deleted_events?: unknown }> })
-      .rows?.[0] ?? null;
+    (
+      result as unknown as {
+        rows?: Array<{ deleted_runs?: unknown; deleted_events?: unknown }>;
+      }
+    ).rows?.[0] ?? null;
 
   const deletedRuns = Number(row?.deleted_runs ?? 0);
   const deletedEvents = Number(row?.deleted_events ?? 0);
@@ -309,4 +334,3 @@ export async function pruneOldRuns(
     deletedEvents: Number.isFinite(deletedEvents) ? deletedEvents : 0,
   };
 }
-

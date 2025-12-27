@@ -5,9 +5,9 @@
 import type { AutonomyGradient } from "../autonomy/types.js";
 import { defaultPhysiology, type Physiology } from "../physiology/index.js";
 import {
-  defaultCriteria,
   type Criteria,
   type Decision,
+  defaultCriteria,
   type Outcome,
   type Plan,
 } from "../plan/types.js";

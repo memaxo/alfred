@@ -3,8 +3,8 @@
  * Exposes RAG capabilities as agent tools for document ingestion and retrieval
  */
 
-import type { ToolExecuteArgs } from "../shared/context.js";
 import { withPolicyApproval } from "../approval.js";
+import type { ToolExecuteArgs } from "../shared/context.js";
 import {
   type RagDeleteInput,
   type RagIngestInput,

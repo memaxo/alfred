@@ -8,7 +8,7 @@ import type { Workspace, WorkspaceKind } from "./types.js";
  * Legacy options (poofProfile, poofMode, poofVerbose, enableSessions) are only
  * used when built with --feature=LEGACY_POOF or --feature=LEGACY_WORKTREE.
  */
-export interface WorkspaceFactoryOptions {
+export type WorkspaceFactoryOptions = {
   authz?: string;
   image?: string;
   enableSessions?: boolean;
@@ -18,7 +18,7 @@ export interface WorkspaceFactoryOptions {
   poofMode?: "exec" | "run";
   /** Enable verbose poof output (legacy) */
   poofVerbose?: boolean;
-}
+};
 
 /**
  * WorkspaceFactory creates isolated execution environments for agents.
@@ -42,13 +42,12 @@ export const WorkspaceFactory = {
     // This code block is tree-shaken in production builds
     if (feature("LEGACY_POOF") && kind === "poof") {
       const { PoofWorkspace } = await import("./poof.js");
-      const { POOF_PROFILES, isPoofAvailable } = await import("../spawn/poof.js");
+      const { POOF_PROFILES, isPoofAvailable } = await import(
+        "../spawn/poof.js"
+      );
 
       // Check if poof is available, fallback to container if not
       if (!isPoofAvailable()) {
-        console.warn(
-          `poof not available (platform: ${process.platform}), falling back to container`
-        );
         return new ContainerWorkspace(
           id,
           runId,
@@ -70,7 +69,10 @@ export const WorkspaceFactory = {
 
     // Feature-flagged legacy path: git worktree isolation
     // This code block is tree-shaken in production builds
-    if (feature("LEGACY_WORKTREE") && (kind === "worktree" || kind === "host")) {
+    if (
+      feature("LEGACY_WORKTREE") &&
+      (kind === "worktree" || kind === "host")
+    ) {
       const { WorktreeWorkspace } = await import("./worktree.js");
       return new WorktreeWorkspace(id, runId, repoBase, {
         enableSessions: options?.enableSessions,

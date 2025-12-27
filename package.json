@@ -67,7 +67,7 @@
     "db:watch": "turbo -F @alfred/db db:watch",
     "db:stop": "turbo -F @alfred/db db:stop",
     "db:down": "turbo -F @alfred/db db:down",
-    "test:fast": "turbo run test --filter='!@alfred/voice' --filter='!@alfred/embed' --filter='!@alfred/cortex' --filter='!@alfred/tune' --filter='!native' --filter='!web'",
+    "test:fast": "turbo run test --filter='!@alfred/voice' --filter='!@alfred/embed' --filter='!@alfred/cortex' --filter='!@alfred/tune' --filter='!native' --filter='!web' -- -t '!integration|performance|perf|slow'",
     "test:slow": "turbo run test --filter='@alfred/voice' --filter='@alfred/embed' --filter='@alfred/cortex' --filter='@alfred/tune' --filter='native' --filter='web'",
     "test:sqlite": "turbo run test --cache-dir .turbo/sqlite",
     "test:postgres": "turbo run test:postgres --cache-dir .turbo/postgres",

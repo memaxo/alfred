@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createLifecycle } from "../workflow/lifecycle.js";
 
 // Mock dependencies
@@ -52,24 +52,30 @@ describe("Workflow Lifecycle Hooks (Learning)", () => {
 
   it("should trigger learning on successful completion", async () => {
     const lifecycle = createLifecycle(mockArgs);
-    
-    mockGetRun.mockImplementation(async () => ({
-      id: "run-123",
-      status: "completed",
-      userId: "user-123",
-      projectId: "proj-123",
-      inputData: { planId: "plan-123" },
-    }) as any);
 
-    mockGetPlanById.mockImplementation(async () => ({
-      id: "plan-123",
-      plan: { intent: "test" },
-    }) as any);
+    mockGetRun.mockImplementation(
+      async () =>
+        ({
+          id: "run-123",
+          status: "completed",
+          userId: "user-123",
+          projectId: "proj-123",
+          inputData: { planId: "plan-123" },
+        }) as any
+    );
+
+    mockGetPlanById.mockImplementation(
+      async () =>
+        ({
+          id: "plan-123",
+          plan: { intent: "test" },
+        }) as any
+    );
 
     await lifecycle.markCompleted("run-123");
 
     // Wait for async learning block
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(mockExtractPatternFromRun).toHaveBeenCalled();
     expect(mockLearnProjectConventions).toHaveBeenCalled();
@@ -78,17 +84,23 @@ describe("Workflow Lifecycle Hooks (Learning)", () => {
   it("should trigger anti-pattern learning on failure", async () => {
     const lifecycle = createLifecycle(mockArgs);
 
-    mockGetRun.mockImplementation(async () => ({
-      id: "run-failed",
-      status: "failed",
-      userId: "user-123",
-      inputData: { planId: "plan-123" },
-    }) as any);
+    mockGetRun.mockImplementation(
+      async () =>
+        ({
+          id: "run-failed",
+          status: "failed",
+          userId: "user-123",
+          inputData: { planId: "plan-123" },
+        }) as any
+    );
 
-    mockGetPlanById.mockImplementation(async () => ({
-      id: "plan-123",
-      plan: { intent: "test" },
-    }) as any);
+    mockGetPlanById.mockImplementation(
+      async () =>
+        ({
+          id: "plan-123",
+          plan: { intent: "test" },
+        }) as any
+    );
 
     await lifecycle.markFailed({
       runId: "run-failed",
@@ -99,7 +111,7 @@ describe("Workflow Lifecycle Hooks (Learning)", () => {
     });
 
     // Wait for async learning block
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(mockExtractAntiPatternFromRun).toHaveBeenCalled();
   });

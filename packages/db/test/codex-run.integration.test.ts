@@ -9,7 +9,9 @@ let db: typeof import("@alfred/db").db;
 let codexRunRepo: typeof import("@alfred/db").codexRunRepo;
 
 async function resetCodexRuns() {
-  await db.execute(sql`TRUNCATE codex_events, codex_runs RESTART IDENTITY CASCADE`);
+  await db.execute(
+    sql`TRUNCATE codex_events, codex_runs RESTART IDENTITY CASCADE`
+  );
 }
 
 describeFn("codexRunRepo (integration)", () => {
@@ -69,7 +71,10 @@ describeFn("codexRunRepo (integration)", () => {
     });
     expect(dup.inserted).toBe(0);
 
-    const eventsAsc = await codexRunRepo.listEvents({ runId: run.id, order: "asc" });
+    const eventsAsc = await codexRunRepo.listEvents({
+      runId: run.id,
+      order: "asc",
+    });
     expect(eventsAsc.map((e) => e.seq)).toEqual([1, 2]);
     expect(eventsAsc[0]?.eventType).toBe("stdout");
 
@@ -118,4 +123,3 @@ describeFn("codexRunRepo (integration)", () => {
     expect(fetched).toBeNull();
   });
 });
-

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
-
-import { evaluateReasoningQuality } from "../src/state/reasoning";
 import type { Outcome } from "../src/plan/types";
+import { evaluateReasoningQuality } from "../src/state/reasoning";
 
 const successOutcome: Outcome = { _: "success", result: null, duration: 100 };
 const failureOutcome: Outcome = {
@@ -46,9 +45,14 @@ describe("evaluateReasoningQuality", () => {
 
   it("increases score for decision point keywords", () => {
     const withoutDecision = ["I looked at the data"];
-    const withDecision = ["I am considering the options and choosing carefully"];
+    const withDecision = [
+      "I am considering the options and choosing carefully",
+    ];
 
-    const noDecision = evaluateReasoningQuality(withoutDecision, successOutcome);
+    const noDecision = evaluateReasoningQuality(
+      withoutDecision,
+      successOutcome
+    );
     const hasDecision = evaluateReasoningQuality(withDecision, successOutcome);
 
     expect(hasDecision.strength).toBeGreaterThan(noDecision.strength);
@@ -56,7 +60,9 @@ describe("evaluateReasoningQuality", () => {
 
   it("increases score for alternative exploration keywords", () => {
     const withoutAlternatives = ["I will do this"];
-    const withAlternatives = ["However, alternatively I could try something else"];
+    const withAlternatives = [
+      "However, alternatively I could try something else",
+    ];
 
     const noAlt = evaluateReasoningQuality(withoutAlternatives, successOutcome);
     const hasAlt = evaluateReasoningQuality(withAlternatives, successOutcome);

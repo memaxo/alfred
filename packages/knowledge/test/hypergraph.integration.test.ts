@@ -33,14 +33,16 @@ beforeAll(async () => {
   if (!SHOULD_RUN) {
     return;
   }
-  
+
   // Import db module
   const dbModule = await import("@alfred/db");
   db = dbModule.db;
-  
+
   // Verify db has required methods (Postgres only)
   if (typeof db.delete !== "function") {
-    console.warn("Skipping hypergraph integration tests: db.delete not available");
+    console.warn(
+      "Skipping hypergraph integration tests: db.delete not available"
+    );
     return;
   }
 
@@ -53,7 +55,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  if (!dbInitialized || !db || typeof db.delete !== "function") {
+  if (!(dbInitialized && db) || typeof db.delete !== "function") {
     return;
   }
   try {

@@ -1,15 +1,8 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  mock,
-  test,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
-import path from "node:path";
 import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   cleanupUpperDir,
   createUpperDir,
@@ -17,7 +10,7 @@ import {
   spawnIsolated,
   spawnReviewable,
 } from "./isolated.js";
-import { resetPoofCache, POOF_PROFILES } from "./poof.js";
+import { POOF_PROFILES, resetPoofCache } from "./poof.js";
 
 describe("isolated", () => {
   let testDir: string;
@@ -63,7 +56,9 @@ describe("isolated", () => {
         expect(result.timedOut).toBe(false);
         expect(result.commandNotFound).toBe(false);
         // File should not exist after ephemeral execution
-        expect(existsSync(path.join(testDir, "ephemeral-file.txt"))).toBe(false);
+        expect(existsSync(path.join(testDir, "ephemeral-file.txt"))).toBe(
+          false
+        );
       }
     );
 
@@ -217,9 +212,9 @@ describe("isolated", () => {
   describe("spawnEphemeral", () => {
     test("throws when poof not available", async () => {
       if (process.platform !== "linux") {
-        await expect(
-          spawnEphemeral(["echo", "test"], testDir)
-        ).rejects.toThrow("poof_not_available");
+        await expect(spawnEphemeral(["echo", "test"], testDir)).rejects.toThrow(
+          "poof_not_available"
+        );
       }
     });
 

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { toolSession, __sessionInternals } from "../src/orchestrator/tool/session";
+import {
+  __sessionInternals,
+  toolSession,
+} from "../src/orchestrator/tool/session";
 
 describe("session tool", () => {
   let mockRunner: ReturnType<typeof mock>;
@@ -15,13 +18,17 @@ describe("session tool", () => {
 
   describe("input schema validation", () => {
     it("requires action and sessionId", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const result = sessionInputSchema.safeParse({});
       expect(result.success).toBe(false);
     });
 
     it("accepts valid start action", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const result = sessionInputSchema.safeParse({
         action: "start",
         sessionId: "test-session",
@@ -31,7 +38,9 @@ describe("session tool", () => {
     });
 
     it("accepts valid stop action", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const result = sessionInputSchema.safeParse({
         action: "stop",
         sessionId: "test-session",
@@ -40,7 +49,9 @@ describe("session tool", () => {
     });
 
     it("accepts valid list action", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const result = sessionInputSchema.safeParse({
         action: "list",
         sessionId: "any",
@@ -49,7 +60,9 @@ describe("session tool", () => {
     });
 
     it("accepts valid peek action with lines", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const result = sessionInputSchema.safeParse({
         action: "peek",
         sessionId: "test-session",
@@ -59,7 +72,9 @@ describe("session tool", () => {
     });
 
     it("accepts valid send action", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const result = sessionInputSchema.safeParse({
         action: "send",
         sessionId: "test-session",
@@ -69,7 +84,9 @@ describe("session tool", () => {
     });
 
     it("validates sessionId length", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const tooShort = sessionInputSchema.safeParse({
         action: "start",
         sessionId: "",
@@ -86,7 +103,9 @@ describe("session tool", () => {
     });
 
     it("validates lines range for peek", async () => {
-      const { sessionInputSchema } = await import("../src/orchestrator/tool/session");
+      const { sessionInputSchema } = await import(
+        "../src/orchestrator/tool/session"
+      );
       const tooFew = sessionInputSchema.safeParse({
         action: "peek",
         sessionId: "test",

@@ -1,7 +1,7 @@
 import { patternRepo } from "@alfred/db";
-import { embed } from "@alfred/rag";
 import type { WorkflowPattern } from "@alfred/db/repo/pattern";
-import { type StructuredPlan } from "../types.js";
+import { embed } from "@alfred/rag";
+import type { StructuredPlan } from "../types.js";
 
 export type MatchOptions = {
   minSimilarity?: number;
@@ -38,13 +38,14 @@ export async function matchPatterns(
   );
 
   // 3. Structural validation (heuristic)
-  const validated = options?.requireStructuralMatch !== false
-    ? await validateStructural(matches, intent)
-    : matches;
+  const validated =
+    options?.requireStructuralMatch !== false
+      ? await validateStructural(matches, intent)
+      : matches;
 
   // 4. Sort and limit
   const results = validated
-    .map(m => ({
+    .map((m) => ({
       ...m,
       similarity: m.score, // score is similarity from searchPatterns
     }))
@@ -76,7 +77,7 @@ export function categorizePatterns(
   };
 
   for (const pattern of patterns) {
-    const successRate = parseFloat(pattern.successRate);
+    const successRate = Number.parseFloat(pattern.successRate);
     const confidence = pattern.similarity * successRate;
 
     if (confidence >= 0.85) {
@@ -101,15 +102,19 @@ async function validateStructural(
 ): Promise<Array<WorkflowPattern & { score: number }>> {
   // Simple complexity estimate: number of lines or words
   const intentWordCount = intent.split(/\s+/).length;
-  
-  return patterns.filter(pattern => {
+
+  return patterns.filter((pattern) => {
     const template = pattern.planTemplate as unknown as StructuredPlan;
     const phaseCount = template.phases?.length ?? 0;
-    
+
     // Heuristic: More complex intents should have more phases
-    if (intentWordCount > 20 && phaseCount < 2) return false;
-    if (intentWordCount < 5 && phaseCount > 5) return false;
-    
+    if (intentWordCount > 20 && phaseCount < 2) {
+      return false;
+    }
+    if (intentWordCount < 5 && phaseCount > 5) {
+      return false;
+    }
+
     return true;
   });
 }

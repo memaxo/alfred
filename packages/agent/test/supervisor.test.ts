@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { BrainstemSupervisor } from "../src/orchestrator/loops/supervisor";
 import { LoopDetector } from "@alfred/cognitive";
+import { BrainstemSupervisor } from "../src/orchestrator/loops/supervisor";
 
 describe("Brainstem Supervisor", () => {
   describe("LoopDetector (recommended)", () => {
@@ -22,7 +22,9 @@ describe("Brainstem Supervisor", () => {
     it("detects semantic loops with embeddings", () => {
       const detector = new LoopDetector();
       const baseEmbedding = new Array(1024).fill(0).map(() => Math.random());
-      const similarEmbedding = baseEmbedding.map((v) => v + 0.001 * Math.random());
+      const similarEmbedding = baseEmbedding.map(
+        (v) => v + 0.001 * Math.random()
+      );
 
       let result = detector.check("thought 1", baseEmbedding);
       expect(result.loop).toBe(false);

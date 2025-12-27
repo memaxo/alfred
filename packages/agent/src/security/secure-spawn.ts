@@ -42,10 +42,10 @@ export type SecureSpawnOptions = {
 
 /**
  * Spawns a process with a secure working directory.
- * 
+ *
  * Uses a native wrapper with fd-based cwd to prevent TOCTOU attacks.
  * Falls back to path-based cwd when the wrapper fails (e.g., fd inheritance issues).
- * 
+ *
  * Set ORCH_SKIP_SECURE_SPAWN=1 to use path-based cwd directly (less secure, for testing).
  */
 export function spawnWithSecureCwd(options: SecureSpawnOptions): Subprocess {
@@ -59,7 +59,7 @@ export function spawnWithSecureCwd(options: SecureSpawnOptions): Subprocess {
   const skipSecureSpawn =
     process.env.ORCH_SKIP_SECURE_SPAWN === "1" ||
     (inBunTest && process.env.ORCH_SKIP_SECURE_SPAWN !== "0");
-  
+
   if (skipSecureSpawn) {
     // Fallback: Use path-based cwd directly (less secure but works everywhere)
     const childEnv: Record<string, string> = {};
@@ -90,8 +90,18 @@ export function spawnWithSecureCwd(options: SecureSpawnOptions): Subprocess {
         | null
         | number
         | ReadableStream,
-      stdout: (stdout ?? "pipe") as "inherit" | "pipe" | "ignore" | null | number,
-      stderr: (stderr ?? "pipe") as "inherit" | "pipe" | "ignore" | null | number,
+      stdout: (stdout ?? "pipe") as
+        | "inherit"
+        | "pipe"
+        | "ignore"
+        | null
+        | number,
+      stderr: (stderr ?? "pipe") as
+        | "inherit"
+        | "pipe"
+        | "ignore"
+        | null
+        | number,
     });
   }
 

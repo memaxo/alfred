@@ -43,7 +43,8 @@ export function calculateReliability(params: {
   // 3. Freshness (decay after 1 year)
   if (params.publishedDate) {
     const ageInYears =
-      (Date.now() - params.publishedDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+      (Date.now() - params.publishedDate.getTime()) /
+      (1000 * 60 * 60 * 24 * 365);
     if (ageInYears < 1) {
       // Keep score (1.0 factor)
     } else if (ageInYears > 3) {

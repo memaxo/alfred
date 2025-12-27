@@ -4,7 +4,7 @@
  * Monitors cognitive processes for loops and stalls using embedding-centric detection.
  */
 
-import { LoopDetector, type LoopConfig } from "./loop";
+import { type LoopConfig, LoopDetector } from "./loop";
 
 export type SupervisorEvent =
   | { type: "thought"; content: string; embedding?: number[] }
@@ -44,7 +44,10 @@ export class BrainstemSupervisor {
    */
   observe(event: SupervisorEvent): InterruptResult {
     if (event.type === "thought") {
-      const result = this.detector.check(event.content, event.embedding ?? null);
+      const result = this.detector.check(
+        event.content,
+        event.embedding ?? null
+      );
 
       if (result.loop) {
         return {

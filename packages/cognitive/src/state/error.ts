@@ -46,9 +46,6 @@ export const calculateError = (expected: string, actual: string): number => {
     cognitiveErrorCalculationDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.1) {
-      console.warn(
-        `cognitive_error_calculation_slow: ${durationMs.toFixed(3)}ms (budget: 0.1ms)`
-      );
     }
   }
 };

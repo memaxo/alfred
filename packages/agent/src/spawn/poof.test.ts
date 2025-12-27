@@ -1,13 +1,13 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
-  POOF_EXIT_CODES,
-  POOF_PROFILES,
-  POOF_SANDBOX_ENV,
   buildPoofArgs,
   isCommandNotFound,
   isInsideSandbox,
   isPoofAvailable,
   isPoofTimeout,
+  POOF_EXIT_CODES,
+  POOF_PROFILES,
+  POOF_SANDBOX_ENV,
   resetPoofCache,
   resolvePoofBinary,
 } from "./poof.js";
@@ -20,7 +20,7 @@ describe("poof", () => {
   afterEach(() => {
     resetPoofCache();
     // Reset env vars
-    delete process.env.POOF_BIN;
+    process.env.POOF_BIN = undefined;
     delete process.env[POOF_SANDBOX_ENV];
   });
 

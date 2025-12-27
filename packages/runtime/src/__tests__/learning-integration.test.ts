@@ -1,10 +1,10 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { orchestrateWorkflowStream } from "../workflow/orchestrator.js";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import { z } from "zod";
 
 // Mock dependencies
 const mockGetRun = mock(async () => ({}));
-const mockUpdateRun = mock(async () => ({}));
+const mockUpdateRun = mock(async (_runId: string, _patch: unknown) => ({}));
 const mockGetPlanById = mock(async () => ({}));
 const mockExtractPatternFromRun = mock(async () => ({}));
 const mockExtractAntiPatternFromRun = mock(async () => ({}));
@@ -16,50 +16,77 @@ mock.module("@alfred/db/repo/workflow", () => ({
   createRun: async () => ({}),
 }));
 
-mock.module("@alfred/db", () => ({
-  planRepo: {
-    getPlanById: mockGetPlanById,
-  },
-  workflowRepo: {
-    getRun: mockGetRun,
-    updateRun: mockUpdateRun,
-    createRun: async () => ({}),
-  },
+mock.module("@alfred/db/repo/plan", () => ({
+  getPlanById: mockGetPlanById,
+}));
+
+mock.module("@alfred/agent/utils/audit", () => ({
+  recordAudit: async () => {},
+}));
+
+mock.module("@alfred/agent/workflow/linear", () => ({
+  ensureLinearTicket: async () => ({ linear: null, ticket: null }),
 }));
 
 mock.module("@alfred/plan", () => ({
+  structuredPlanSchema: z.object({}).passthrough(),
+}));
+
+mock.module("@alfred/plan/pattern", () => ({
   extractPatternFromRun: mockExtractPatternFromRun,
   extractAntiPatternFromRun: mockExtractAntiPatternFromRun,
+}));
+
+mock.module("@alfred/plan/project", () => ({
   learnProjectConventions: mockLearnProjectConventions,
 }));
 
 // Mock executor
 const mockStream = (async function* () {
-  yield { type: "progress", pct: 0.1 };
+  yield { _: "progress", pct: 10, message: "starting" };
   yield {
     type: "event",
     kind: "agent-handoff",
-    data: { summary: "Aggregated changes summary.", changes: { modified: [], created: [], deleted: [] } },
+    data: {
+      summary: "Aggregated changes summary.",
+      changes: { modified: [], created: [], deleted: [] },
+    },
   };
-  yield { type: "progress", pct: 1.0 };
+  yield { _: "progress", pct: 100, message: "completed" };
 })();
 
-mock.module("./executor.js", () => ({
+mock.module("../workflow/executor.js", () => ({
   createWorkflowExecutor: () => ({
     runId: "run-123",
     stream: mockStream,
   }),
   deriveWorkflowTitle: () => "Test Workflow",
-  ensureWorkflowConversation: async () => ({ conversation: { id: "conv-123" }, created: true }),
+  ensureWorkflowConversation: async () => ({
+    conversation: { id: "conv-123" },
+    created: true,
+  }),
   persistWorkflowMessages: async () => 1,
   createRequirementMessage: () => ({ id: "msg-1", role: "user", parts: [] }),
 }));
+
+mock.module("../workflow/history.js", () => ({
+  loadHistory: async () => [],
+}));
+
+mock.module("../workflow/persist.js", () => ({
+  persistStreamEvent: async () => null,
+}));
+
+const { orchestrateWorkflowStream } = await import(
+  "../workflow/orchestrator.js"
+);
 
 describe("End-to-End Learning Lifecycle", () => {
   const mockInput: WorkflowInputPayload = {
     requirement: "Test requirement",
     auto: "low",
     mode: "sequential",
+    runId: "run-123",
   };
 
   const mockSession = { user: { id: "user-123" } };
@@ -81,28 +108,50 @@ describe("End-to-End Learning Lifecycle", () => {
   });
 
   it("should collect handoffs and trigger completion learning with summary", async () => {
-    mockGetRun.mockImplementation(async () => ({
-      id: "run-123",
-      status: "completed",
-      userId: "user-123",
-      projectId: "proj-123",
-      inputData: { planId: "plan-123" },
-    }) as any);
+    const workflowRepo = await import("@alfred/db/repo/workflow");
+    expect(workflowRepo.updateRun).toBeDefined();
 
-    mockGetPlanById.mockImplementation(async () => ({
-      id: "plan-123",
-      plan: { intent: "test" },
-    }) as any);
+    mockGetRun.mockImplementation(
+      async () =>
+        ({
+          id: "run-123",
+          status: "completed",
+          userId: "user-123",
+          projectId: "proj-123",
+          inputData: { planId: "plan-123" },
+        }) as any
+    );
+
+    mockGetPlanById.mockImplementation(
+      async () =>
+        ({
+          id: "plan-123",
+          plan: { intent: "test" },
+        }) as any
+    );
 
     await orchestrateWorkflowStream(mockInput, mockSession, mockCallbacks);
-    
-    // Wait for async task to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
 
-    expect(mockUpdateRun).toHaveBeenCalledWith("run-123", expect.objectContaining({
-      status: "completed",
-      stateData: { executionSummary: "Aggregated changes summary." }
-    }));
+    // Wait for async task to complete
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(mockUpdateRun).toHaveBeenCalled();
+    const calledWithCompleted = mockUpdateRun.mock.calls.some((call) => {
+      const [runId, patch] = call as [unknown, unknown];
+      if (runId !== "run-123") {
+        return false;
+      }
+      if (!patch || typeof patch !== "object") {
+        return false;
+      }
+      const obj = patch as { status?: unknown; stateData?: unknown };
+      if (obj.status !== "completed") {
+        return false;
+      }
+      const state = obj.stateData as { executionSummary?: unknown } | undefined;
+      return state?.executionSummary === "Aggregated changes summary.";
+    });
+    expect(calledWithCompleted).toBe(true);
 
     expect(mockExtractPatternFromRun).toHaveBeenCalled();
     expect(mockLearnProjectConventions).toHaveBeenCalledWith(

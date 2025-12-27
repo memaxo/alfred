@@ -2,17 +2,17 @@ import { describe, expect, it } from "bun:test";
 
 import {
   type AutonomyGradient,
-  capturing,
   type CognitiveState,
+  capturing,
   deciding,
-  executing,
   type Event,
+  executing,
   idle,
   initialAutonomy,
   type Outcome,
+  type Plan,
   reflecting,
   thinking,
-  type Plan,
 } from "../src/state";
 import { applyTransition } from "../src/transition";
 

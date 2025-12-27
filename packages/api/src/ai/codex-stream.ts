@@ -16,11 +16,7 @@ export function codexEventToUiMessagePart(
 ): UIMessage["parts"][number] | null {
   switch (event.type) {
     case "thought":
-      return {
-        type: "reasoning",
-        text: event.content,
-        state: "streaming",
-      };
+      return { type: "reasoning", text: event.content };
     case "command":
       return {
         type: "text",

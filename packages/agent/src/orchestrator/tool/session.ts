@@ -34,8 +34,12 @@ async function runTmux(args: string[]) {
     );
   }
 
-  const stdout = proc.stdout ? await new Response(proc.stdout as ReadableStream<Uint8Array>).text() : "";
-  const stderr = proc.stderr ? await new Response(proc.stderr as ReadableStream<Uint8Array>).text() : "";
+  const stdout = proc.stdout
+    ? await new Response(proc.stdout as ReadableStream<Uint8Array>).text()
+    : "";
+  const stderr = proc.stderr
+    ? await new Response(proc.stderr as ReadableStream<Uint8Array>).text()
+    : "";
 
   const exitCode = await proc.exited.catch((error) => {
     throw new Error(

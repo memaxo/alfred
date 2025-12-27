@@ -1,4 +1,3 @@
-import { logger } from "@alfred/logger";
 import type {
   AgentMessageItem,
   CommandExecutionItem,
@@ -19,11 +18,12 @@ import type {
   TurnStartedEvent,
   WebSearchItem,
 } from "@alfred/codex";
+import { logger } from "@alfred/logger";
 import {
-  agentMetadataSchema,
-  responseSessionStateSchema,
   type AgentMetadata,
+  agentMetadataSchema,
   type ResponseSessionState,
+  responseSessionStateSchema,
 } from "@alfred/protocol";
 import Ajv from "ajv";
 import Ajv2019 from "ajv/dist/2019";

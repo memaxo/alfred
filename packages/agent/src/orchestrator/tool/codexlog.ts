@@ -1,9 +1,8 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import * as codexRunRepo from "@alfred/db/repo/codex-run";
 import { z } from "zod";
 import { redactEventData, redactSecrets } from "../../utils/redaction.js";
 import type { ToolExecuteArgs } from "./shared/context.js";
-
-import * as codexRunRepo from "@alfred/db/repo/codex-run";
 
 const listInputSchema = z.object({
   action: z.literal("list").describe("List Codex runs for the current user."),
@@ -12,8 +11,18 @@ const listInputSchema = z.object({
     .enum(["running", "completed", "failed", "cancelled"])
     .optional()
     .describe("Filter by run status."),
-  sessionId: z.string().min(1).max(255).optional().describe("Filter by session id."),
-  threadId: z.string().min(1).max(255).optional().describe("Filter by Codex thread id."),
+  sessionId: z
+    .string()
+    .min(1)
+    .max(255)
+    .optional()
+    .describe("Filter by session id."),
+  threadId: z
+    .string()
+    .min(1)
+    .max(255)
+    .optional()
+    .describe("Filter by Codex thread id."),
   environmentKind: z
     .enum(["host", "worktree", "container", "poof"])
     .optional()
@@ -28,8 +37,20 @@ const listInputSchema = z.object({
     .datetime()
     .optional()
     .describe("ISO datetime filter (inclusive upper bound)."),
-  limit: z.number().int().min(1).max(200).optional().describe("Max rows to return."),
-  offset: z.number().int().min(0).max(10_000).optional().describe("Offset for paging."),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe("Max rows to return."),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .max(10_000)
+    .optional()
+    .describe("Offset for paging."),
 });
 
 const getInputSchema = z.object({
@@ -42,8 +63,19 @@ const eventsInputSchema = z.object({
   action: z.literal("events").describe("Fetch persisted events for a run."),
   authz: z.string().optional().describe("Tool token for policy enforcement."),
   runId: z.string().uuid().describe("Codex run id."),
-  afterSeq: z.number().int().min(0).optional().describe("Return events after this seq."),
-  limit: z.number().int().min(1).max(5000).optional().describe("Max events to return."),
+  afterSeq: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe("Return events after this seq."),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(5000)
+    .optional()
+    .describe("Max events to return."),
   order: z.enum(["asc", "desc"]).optional().describe("Sort order by seq."),
 });
 
@@ -57,21 +89,43 @@ const searchInputSchema = z.object({
     .max(20)
     .optional()
     .describe("Optional event type filters."),
-  limit: z.number().int().min(1).max(500).optional().describe("Max rows to return."),
-  offset: z.number().int().min(0).max(10_000).optional().describe("Offset for paging."),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(500)
+    .optional()
+    .describe("Max rows to return."),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .max(10_000)
+    .optional()
+    .describe("Offset for paging."),
 });
 
 const artifactsInputSchema = z.object({
-  action: z.literal("artifacts").describe("Fetch artifacts recorded for a run."),
+  action: z
+    .literal("artifacts")
+    .describe("Fetch artifacts recorded for a run."),
   authz: z.string().optional().describe("Tool token for policy enforcement."),
   runId: z.string().uuid().describe("Codex run id."),
 });
 
 const reasoningInputSchema = z.object({
-  action: z.literal("reasoning").describe("Extract reasoning traces from persisted events."),
+  action: z
+    .literal("reasoning")
+    .describe("Extract reasoning traces from persisted events."),
   authz: z.string().optional().describe("Tool token for policy enforcement."),
   runId: z.string().uuid().describe("Codex run id."),
-  limit: z.number().int().min(1).max(5000).optional().describe("Max events to scan."),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(5000)
+    .optional()
+    .describe("Max events to scan."),
 });
 
 export const codexlogInputSchema = z.discriminatedUnion("action", [
@@ -165,8 +219,12 @@ export const toolCodexlog = {
 
     switch (input.action) {
       case "list": {
-        const startedAfter = input.startedAfter ? new Date(input.startedAfter) : undefined;
-        const startedBefore = input.startedBefore ? new Date(input.startedBefore) : undefined;
+        const startedAfter = input.startedAfter
+          ? new Date(input.startedAfter)
+          : undefined;
+        const startedBefore = input.startedBefore
+          ? new Date(input.startedBefore)
+          : undefined;
         const runs = await codexRunRepo.listRuns({
           userId,
           status: input.status,
@@ -232,7 +290,10 @@ export const toolCodexlog = {
         requireRunOwner(run, userId);
         const raw = run.artifacts;
         const artifacts = Array.isArray(raw) ? raw : [];
-        return { action: "artifacts", artifacts: artifacts.map((a) => redactEventData(a)) };
+        return {
+          action: "artifacts",
+          artifacts: artifacts.map((a) => redactEventData(a)),
+        };
       }
 
       case "reasoning": {
@@ -248,7 +309,11 @@ export const toolCodexlog = {
           limit: input.limit ?? 5000,
         });
 
-        const reasoning: Array<{ seq: number; text: string; createdAt: string }> = [];
+        const reasoning: Array<{
+          seq: number;
+          text: string;
+          createdAt: string;
+        }> = [];
         for (const evt of events) {
           if (evt.eventType !== "alfred_event") {
             continue;
@@ -281,4 +346,3 @@ export const toolCodexlog = {
     }
   },
 } as const;
-

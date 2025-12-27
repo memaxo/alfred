@@ -11,7 +11,9 @@ type TrpcLabels = {
 type TrpcErrorLabels = TrpcLabels & { code: string };
 type RateLimitLabels = { procedure: string };
 type Metrics = {
-  trpcRequestDurationSeconds: { startTimer: (labels: TrpcLabels) => () => void };
+  trpcRequestDurationSeconds: {
+    startTimer: (labels: TrpcLabels) => () => void;
+  };
   trpcRequestErrorsTotal: { inc: (labels: TrpcErrorLabels) => void };
   trpcRequestsTotal: { inc: (labels: TrpcLabels) => void };
   rateLimitHitsTotal: { inc: (labels: RateLimitLabels) => void };

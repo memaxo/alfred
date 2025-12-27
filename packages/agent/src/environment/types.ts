@@ -84,7 +84,9 @@ export type ContainerWorkspace = Workspace & {
   readonly containerCw: string;
 };
 
-export function isContainerWorkspace(workspace: Workspace): workspace is ContainerWorkspace {
+export function isContainerWorkspace(
+  workspace: Workspace
+): workspace is ContainerWorkspace {
   return (
     workspace.kind === "container" &&
     "containerId" in workspace &&

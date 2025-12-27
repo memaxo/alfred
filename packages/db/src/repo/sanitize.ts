@@ -84,7 +84,7 @@ function stripHtml(input: string): string {
     const nameStart = j;
     while (j < s.length) {
       const c = lower[j];
-      if (c === undefined || (c < "a" || c > "z")) {
+      if (c === undefined || c < "a" || c > "z") {
         break;
       }
       j += 1;
@@ -93,25 +93,24 @@ function stripHtml(input: string): string {
     const isClosing = lower.startsWith("</", i);
 
     // Block tags: remove tag + contents.
-    if (!isClosing) {
-      if (
-        tag === "script" ||
+    if (
+      !isClosing &&
+      (tag === "script" ||
         tag === "style" ||
         tag === "iframe" ||
         tag === "object" ||
-        tag === "embed"
-      ) {
-        const closeIdx = lower.indexOf(`</${tag}`, j);
-        if (closeIdx === -1) {
-          // No closing tag: skip until the end of this tag.
-          const gt = lower.indexOf(">", j);
-          i = gt === -1 ? s.length : gt + 1;
-          continue;
-        }
-        const closeGt = lower.indexOf(">", closeIdx + 2 + tag.length);
-        i = closeGt === -1 ? s.length : closeGt + 1;
+        tag === "embed")
+    ) {
+      const closeIdx = lower.indexOf(`</${tag}`, j);
+      if (closeIdx === -1) {
+        // No closing tag: skip until the end of this tag.
+        const gt = lower.indexOf(">", j);
+        i = gt === -1 ? s.length : gt + 1;
         continue;
       }
+      const closeGt = lower.indexOf(">", closeIdx + 2 + tag.length);
+      i = closeGt === -1 ? s.length : closeGt + 1;
+      continue;
     }
 
     // Non-block tags: remove the tag itself.
@@ -135,7 +134,8 @@ export function sanitizeContextText(text: string): string {
     return "";
   }
 
-  const capped = text.length > MAX_INPUT_LENGTH ? text.slice(0, MAX_INPUT_LENGTH) : text;
+  const capped =
+    text.length > MAX_INPUT_LENGTH ? text.slice(0, MAX_INPUT_LENGTH) : text;
   let cleaned = capped.replace(/\r\n?/g, "\n");
 
   // XSS hardening: strip HTML tags and comments. (See docs/implementation/sanitize.md for rationale.)
@@ -145,9 +145,7 @@ export function sanitizeContextText(text: string): string {
     cleaned = removeAllCaseInsensitive(cleaned, token);
   }
 
-  cleaned = cleaned
-    .replace(/\[/g, "(")
-    .replace(/\]/g, ")");
+  cleaned = cleaned.replace(/\[/g, "(").replace(/\]/g, ")");
 
   // Remove randomized context delimiters produced by codex-learning.
   cleaned = removeAllCaseInsensitive(cleaned, "CONTEXT_START_");

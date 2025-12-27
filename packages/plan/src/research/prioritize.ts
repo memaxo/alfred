@@ -43,7 +43,7 @@ export function prioritizeSources(
       selectedExternal.push(source);
       currentExtTokens += tokens;
     } else if (currentExtTokens < extBudget) {
-      // Potentially truncate if it's the last one? 
+      // Potentially truncate if it's the last one?
       // For now, let's just skip if it doesn't fit the sub-budget
       // The ticket says "Truncate last source if needed" - we'll handle that in aggregation
       break;
@@ -89,17 +89,21 @@ export function prioritizeSources(
   if (remainingBudget > 0) {
     // Fill with more external if available
     for (const source of sortedExternal) {
-      if (selectedExternal.includes(source)) continue;
+      if (selectedExternal.includes(source)) {
+        continue;
+      }
       const tokens = estimateSourceTokens(source);
       if (currentExtTokens + currentIntTokens + tokens <= maxTokens) {
         selectedExternal.push(source);
         currentExtTokens += tokens;
       }
     }
-    
+
     // Fill with more internal if available
     for (const path of internal.existingCode) {
-      if (selectedCode.includes(path)) continue;
+      if (selectedCode.includes(path)) {
+        continue;
+      }
       const tokens = estimateTextTokens(path);
       if (currentExtTokens + currentIntTokens + tokens <= maxTokens) {
         selectedCode.push(path);

@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
 const createRunMock = vi.fn().mockResolvedValue({ id: "run-123" });
 const getLatestRunBySessionMock = vi.fn().mockResolvedValue(null);
@@ -264,7 +272,10 @@ describe("CodexRunRecorder", () => {
         outputSchema: undefined,
       });
 
-      recorder.recordWriterChunk({ type: "notice", message: "codex_turn_started" });
+      recorder.recordWriterChunk({
+        type: "notice",
+        message: "codex_turn_started",
+      });
       await recorder.flush();
 
       expect(appendEventsBatchMock).toHaveBeenCalledWith(

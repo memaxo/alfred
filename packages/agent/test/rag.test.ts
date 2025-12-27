@@ -1,11 +1,4 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type {
-  RagDeleteInput,
-  RagIngestInput,
-  RagListInput,
-  RagQueryInput,
-} from "../src/orchestrator/tool/rag/definition";
-
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
@@ -13,13 +6,20 @@ import {
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
+import type {
+  RagDeleteInput,
+  RagIngestInput,
+  RagListInput,
+  RagQueryInput,
+} from "../src/orchestrator/tool/rag/definition";
 
 // Install shared mocks
 installAuthTokenMock();
 installLoggerMock();
 
 // Use shared mock for assertions
-const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+const mockRequireToolScopesAndPolicy =
+  authTokenMocks.requireToolScopesAndPolicy;
 
 const mockIngest = mock();
 const mockRetrieve = mock();

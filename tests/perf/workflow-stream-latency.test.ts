@@ -94,7 +94,7 @@ describe("workflow stream latency", () => {
   });
 });
 
-function mockImmediateWorkflow(delayMs = 0) {
+function mockImmediateWorkflow(_delayMs = 0) {
   if (useRealLatencyMode || !orchestrateWorkflowStreamMock) {
     return;
   }

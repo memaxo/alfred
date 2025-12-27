@@ -95,13 +95,21 @@ describe("executeMergePlan conflict arbiter integration", () => {
     await git(repoRoot, ["commit", "-m", "init"]);
 
     await git(repoRoot, ["checkout", "-b", "branch1"]);
-    await fs.writeFile(`${repoRoot}/conflict.txt`, "line1\nline2-branch1\n", "utf8");
+    await fs.writeFile(
+      `${repoRoot}/conflict.txt`,
+      "line1\nline2-branch1\n",
+      "utf8"
+    );
     await git(repoRoot, ["add", "."]);
     await git(repoRoot, ["commit", "-m", "branch1"]);
 
     await git(repoRoot, ["checkout", "main"]);
     await git(repoRoot, ["checkout", "-b", "branch2"]);
-    await fs.writeFile(`${repoRoot}/conflict.txt`, "line1\nline2-branch2\n", "utf8");
+    await fs.writeFile(
+      `${repoRoot}/conflict.txt`,
+      "line1\nline2-branch2\n",
+      "utf8"
+    );
     await git(repoRoot, ["add", "."]);
     await git(repoRoot, ["commit", "-m", "branch2"]);
 
@@ -145,13 +153,21 @@ describe("executeMergePlan conflict arbiter integration", () => {
     await git(repoRoot, ["commit", "-m", "init"]);
 
     await git(repoRoot, ["checkout", "-b", "branch1"]);
-    await fs.writeFile(`${repoRoot}/conflict.txt`, "line1\nline2-branch1\n", "utf8");
+    await fs.writeFile(
+      `${repoRoot}/conflict.txt`,
+      "line1\nline2-branch1\n",
+      "utf8"
+    );
     await git(repoRoot, ["add", "."]);
     await git(repoRoot, ["commit", "-m", "branch1"]);
 
     await git(repoRoot, ["checkout", "main"]);
     await git(repoRoot, ["checkout", "-b", "branch2"]);
-    await fs.writeFile(`${repoRoot}/conflict.txt`, "line1\nline2-branch2\n", "utf8");
+    await fs.writeFile(
+      `${repoRoot}/conflict.txt`,
+      "line1\nline2-branch2\n",
+      "utf8"
+    );
     await git(repoRoot, ["add", "."]);
     await git(repoRoot, ["commit", "-m", "branch2"]);
 

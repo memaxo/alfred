@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
-import { extractPatternFromRun } from "../pattern/extract.js";
 import type { StructuredPlan } from "../generate/types.js";
+import { extractPatternFromRun } from "../pattern/extract.js";
 
 // Mock AI and DB
 mock.module("ai", () => ({
@@ -41,7 +41,7 @@ describe("Pattern Extraction", () => {
     userId: "user-123",
     status: "completed",
     projectId: "proj-123",
-    created: new Date(Date.now() - 10000),
+    created: new Date(Date.now() - 10_000),
     completedAt: new Date(),
   };
 

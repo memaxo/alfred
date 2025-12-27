@@ -1,15 +1,13 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
-import path from "node:path";
 import { tmpdir } from "node:os";
-import { WaveHandoff, createWaveHandoff, type WaveAgentResult } from "./handoff.js";
+import path from "node:path";
+import {
+  createWaveHandoff,
+  type WaveAgentResult,
+  type WaveHandoff,
+} from "./handoff.js";
 
 describe("WaveHandoff", () => {
   let testDir: string;
@@ -293,11 +291,11 @@ describe("WaveHandoff", () => {
             upperDir: null,
             exitCode: 124,
             timedOut: true,
-            durationMs: 30000,
+            durationMs: 30_000,
           },
         ],
         1000,
-        31000
+        31_000
       );
 
       const report = await handoff.generateSynthesisReport();

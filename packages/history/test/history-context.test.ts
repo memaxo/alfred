@@ -59,6 +59,19 @@ describe("buildHistoryContext", () => {
   });
 
   it("preserves the latest tool chain as an anchor", async () => {
+    type ToolCallPart = {
+      type: "tool-call";
+      toolCallId: string;
+      toolName: string;
+      input: unknown;
+    };
+    type ToolResultPart = {
+      type: "tool-result";
+      toolCallId: string;
+      toolName: string;
+      output: unknown;
+    };
+
     const toolCall: UIMessage = {
       id: "tool-call",
       role: "assistant",
@@ -66,10 +79,10 @@ describe("buildHistoryContext", () => {
         {
           type: "tool-call",
           toolCallId: "call-1",
-          toolName: "fs.stat",
-          input: { path: "." },
-        } as UIMessage["parts"][number],
-      ],
+          toolName: "search",
+          input: { query: "hello" },
+        } satisfies ToolCallPart,
+      ] as unknown as UIMessage["parts"],
     };
     const toolResult: UIMessage = {
       id: "tool-result",
@@ -78,10 +91,10 @@ describe("buildHistoryContext", () => {
         {
           type: "tool-result",
           toolCallId: "call-1",
-          toolName: "fs.stat",
-          output: { size: 1 },
-        } as UIMessage["parts"][number],
-      ],
+          toolName: "search",
+          output: { ok: true },
+        } satisfies ToolResultPart,
+      ] as unknown as UIMessage["parts"],
     };
     const filler = Array.from({ length: 20 }, (_, index) =>
       textMessage(

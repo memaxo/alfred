@@ -1,7 +1,7 @@
-import { projectRepo, linearRepo } from "@alfred/db";
+import { linearRepo, projectRepo } from "@alfred/db";
+import { logger } from "@alfred/logger";
 import { LinearClient } from "@linear/sdk";
 import type { Project } from "./types.js";
-import { logger } from "@alfred/logger";
 
 /**
  * Get a Linear client for a given project or space
@@ -69,11 +69,15 @@ export async function syncProjectMetadata(
   linearProjectId: string
 ): Promise<void> {
   const project = await projectRepo.getProjectById(projectId);
-  if (!project) return;
+  if (!project) {
+    return;
+  }
 
   const client = await getLinearClient(project.workspace);
   const linearProject = await client.project(linearProjectId);
-  if (!linearProject) return;
+  if (!linearProject) {
+    return;
+  }
 
   const state = await linearProject.state;
 
@@ -107,7 +111,7 @@ export async function syncOnWorkflowStart(
   _workflowId: string
 ): Promise<void> {
   const project = await projectRepo.getProjectById(projectId);
-  if (!project || !project.linearProjectId) {
+  if (!project?.linearProjectId) {
     return; // No Linear link, skip sync
   }
 
