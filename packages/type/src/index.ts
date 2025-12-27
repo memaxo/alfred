@@ -8,9 +8,9 @@ export * from "./build-constants";
 // Cognitive domain types
 export * from "./cognitive";
 export * from "./envelope";
+export * from "./envelope.zod";
 // Exa API types
 export * from "./exa";
-export * from "./envelope.zod";
 export * from "./guards";
 export * from "./history";
 // Knowledge graph types
