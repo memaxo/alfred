@@ -16,6 +16,10 @@ import { flushPreviewCleanupBacklog } from "@alfred/agent/orchestrator/tool/work
 import { rehydrateSuspendedRuns } from "@alfred/agent/workflow/session-recovery";
 import { logger } from "@alfred/logger";
 import { resumeInterruptedPlans } from "@alfred/runtime";
+import {
+  startIdleLoopScheduler,
+  stopIdleLoopScheduler,
+} from "./scheduler/idle-loop";
 import { isDbAvailable, isUvAvailable } from "./utils/service-availability";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
 import {
@@ -100,6 +104,9 @@ export function initApiServices(): void {
           error: error instanceof Error ? error.message : String(error),
         });
       });
+
+      // Start idle loop scheduler (if enabled via IDLE_LOOP_ENABLED=1)
+      startIdleLoopScheduler();
     })
     .catch((error) => {
       logger.warn("db_availability_check_error", {
@@ -184,6 +191,7 @@ export function shutdownApiServices(): void {
     stopCompressionWorker();
     stopLearningWorker();
     stopCodexSessionCleanupWorker();
+    stopIdleLoopScheduler();
     logger.info("compression_worker_stopped");
   } catch (error) {
     logger.error("compression_worker_stop_failed", {
