@@ -131,9 +131,10 @@ export async function executeList(input: RagListInput): Promise<RagListOutput> {
 
   // Filter by source pattern if specified
   const filteredDocs = input.source
-    ? documents.filter((doc) =>
-        doc.source.toLowerCase().includes(input.source!.toLowerCase())
-      )
+    ? documents.filter((doc) => {
+        const sourcePattern = input.source?.toLowerCase() ?? "";
+        return doc.source.toLowerCase().includes(sourcePattern);
+      })
     : documents;
 
   // Get chunk counts for each document
