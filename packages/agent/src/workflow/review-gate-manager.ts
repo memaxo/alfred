@@ -1,7 +1,7 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import { coerceNonEmptyString, coerceRecord } from "../utils/coerce";
-import { ReviewGate, type ReviewCheckStatus } from "./review-gate";
+import { type ReviewCheckStatus, ReviewGate } from "./review-gate";
 
 type ReviewGateState = {
   checks: ReviewCheckStatus[];

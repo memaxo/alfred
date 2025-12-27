@@ -18,7 +18,7 @@ import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 installLoggerMock();
 
 // Use shared mocks for assertions
-const loggerMock = loggerMocks;
+const _loggerMock = loggerMocks;
 
 const createWorkflowExecutorMock = vi.fn();
 const ensureWorkflowConversationMock = vi

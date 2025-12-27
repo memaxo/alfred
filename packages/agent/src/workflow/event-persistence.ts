@@ -21,7 +21,7 @@ const VALID_EVENT_TYPES = [
 ] as const;
 
 function getEventType(event: WorkflowEvent): string {
-  const type = event.type;
+  const type = event._;
   return (VALID_EVENT_TYPES as readonly string[]).includes(type)
     ? type
     : "event";

@@ -10,11 +10,11 @@ import { unwrapEventEnvelope } from "../utils/envelope";
 import { persistEventSafe } from "./event-persistence";
 import { ensureLinearTicket } from "./linear";
 import { LinearActivityService } from "./linear-activity";
-import { recordMultiAgentEvent } from "./metrics-recorder";
 import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "./metrics";
+import { recordMultiAgentEvent } from "./metrics-recorder";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
 import { ReviewGateManager } from "./review-gate-manager";
 import {
@@ -93,7 +93,9 @@ export async function orchestrateWorkflowStream(
 
   const stopStreamTimer = workflowStreamDurationSeconds.startTimer();
   const closeTimer = (status: "ok" | "error" | "cancel") => {
-    if (timerClosed) return;
+    if (timerClosed) {
+      return;
+    }
     stopStreamTimer({ status });
     timerClosed = true;
   };
@@ -105,8 +107,10 @@ export async function orchestrateWorkflowStream(
   };
 
   const push = (event: WorkflowEvent) => {
-    if (cancelled) return;
-    recordEvent(event.type === "progress" ? "progress" : "chunk");
+    if (cancelled) {
+      return;
+    }
+    recordEvent(event._ === "progress" ? "progress" : "chunk");
     callbacks.emitNext(event);
   };
 
@@ -141,7 +145,9 @@ export async function orchestrateWorkflowStream(
       callbacks.triggerPreferenceRefresh(session.user.id, { reason });
 
     const markCancelled = async () => {
-      if (!runId) return;
+      if (!runId) {
+        return;
+      }
       try {
         await workflowRepo.updateRun(runId, {
           status: "cancelled",
@@ -169,7 +175,9 @@ export async function orchestrateWorkflowStream(
     };
 
     const markSuspended = async () => {
-      if (!runId) return;
+      if (!runId) {
+        return;
+      }
       await reviewGateManager.persistState(runId);
       try {
         await workflowRepo.updateRun(runId, {
@@ -197,7 +205,9 @@ export async function orchestrateWorkflowStream(
     };
 
     const markCompleted = async () => {
-      if (!runId) return;
+      if (!runId) {
+        return;
+      }
       try {
         await workflowRepo.updateRun(runId, {
           status: "completed",
@@ -222,12 +232,16 @@ export async function orchestrateWorkflowStream(
     };
 
     const addReasoning = (event: WorkflowEvent) => {
-      if (event.type !== "reasoning") return;
+      if (event._ !== "reasoning") {
+        return;
+      }
       const payload = coerceRecord(event);
       const text =
         coerceNonEmptyString(payload.text) ??
         coerceNonEmptyString(payload.reasoning);
-      if (!text) return;
+      if (!text) {
+        return;
+      }
       reasonTraces.push({ text, timestamp: Date.now() });
     };
 
@@ -258,7 +272,7 @@ export async function orchestrateWorkflowStream(
               unwrapped.data && typeof unwrapped.data === "object"
                 ? (unwrapped.data as Record<string, unknown>)
                 : {};
-            return { ...payload, type: e.eventType } as WorkflowEvent;
+            return { ...payload, _: e.eventType } as WorkflowEvent;
           });
       }
 
@@ -381,7 +395,9 @@ export async function orchestrateWorkflowStream(
       // Register run handle for resume/cancel
       await registerRunHandle(activeRunId, {
         resume: async ({ resumeData }) => {
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
           await executor.resume(resumeData);
         },
         cancel: async () => {
@@ -446,7 +462,7 @@ export async function orchestrateWorkflowStream(
               persistedKeys: persistedMessageKeys,
               runId: activeRunId,
               baseId: eventId,
-              eventType: event.type,
+              eventType: event._,
               eventId,
             });
             if (persisted > 0) {
@@ -467,7 +483,7 @@ export async function orchestrateWorkflowStream(
 
           // Check for suspension notice
           if (
-            event.type === "notice" &&
+            event._ === "notice" &&
             coerceNonEmptyString(coerceRecord(event).message) ===
               "workflow_suspended"
           ) {
@@ -475,7 +491,7 @@ export async function orchestrateWorkflowStream(
           }
 
           // Emit Linear error activity
-          if (linearActivity && event.type === "error") {
+          if (linearActivity && event._ === "error") {
             const message =
               coerceNonEmptyString(coerceRecord(event).message) ??
               "Workflow error occurred";

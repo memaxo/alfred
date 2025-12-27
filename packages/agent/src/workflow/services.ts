@@ -6,8 +6,8 @@ import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-import { workflowInput, type WorkflowInputPayload } from "./schema.js";
+import type { z } from "zod";
+import type { WorkflowInputPayload, workflowInput } from "./schema.js";
 export type { WorkflowInputPayload };
 
 // Type for the runtime executor (defined here to avoid circular dependency)
@@ -85,7 +85,9 @@ type WorkflowResourceDescriptor = {
   attrs: Record<string, unknown>;
 };
 
-export const mapWorkflowResource = (raw: unknown): WorkflowResourceDescriptor => {
+export const mapWorkflowResource = (
+  raw: unknown
+): WorkflowResourceDescriptor => {
   const input = raw as Partial<z.infer<typeof workflowInput>>;
   return {
     kind: "workflow" as const,
@@ -97,7 +99,9 @@ export const mapWorkflowResource = (raw: unknown): WorkflowResourceDescriptor =>
   };
 };
 
-export const mapWorkflowRunResource = (raw: unknown): WorkflowResourceDescriptor => {
+export const mapWorkflowRunResource = (
+  raw: unknown
+): WorkflowResourceDescriptor => {
   const input = raw as { runId?: string };
   return {
     kind: "workflow" as const,

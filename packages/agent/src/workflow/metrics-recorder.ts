@@ -73,11 +73,7 @@ export function recordMultiAgentEvent(event: unknown): void {
     const role = coerceNonEmptyString(data.role) ?? "worker";
     const rawStatus = coerceNonEmptyString(data.status);
     const outcome: "ok" | "error" | "stuck" =
-      rawStatus === "stuck"
-        ? "stuck"
-        : rawStatus === "failed"
-          ? "error"
-          : "ok";
+      rawStatus === "stuck" ? "stuck" : rawStatus === "failed" ? "error" : "ok";
 
     const dur = data.durationSeconds;
     if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {

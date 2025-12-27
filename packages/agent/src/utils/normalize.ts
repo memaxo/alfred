@@ -20,7 +20,7 @@ type ToolResultShape = ToolCallShape & {
 };
 
 type AssistantEventPayload = WorkflowEvent & {
-  type: "assistant";
+  _: "assistant";
   text?: string;
   reasoning?: string;
   parts?: MessagePart[];
@@ -28,22 +28,21 @@ type AssistantEventPayload = WorkflowEvent & {
   toolResults?: ToolResultShape[];
 };
 
-type ToolCallEventPayload = WorkflowEvent &
-  ToolCallShape & { type: "tool-call" };
+type ToolCallEventPayload = WorkflowEvent & ToolCallShape & { _: "tool-call" };
 type ToolResultEventPayload = WorkflowEvent &
-  ToolResultShape & { type: "tool-result" };
+  ToolResultShape & { _: "tool-result" };
 type ReasoningEventPayload = WorkflowEvent & {
-  type: "reasoning";
+  _: "reasoning";
   text?: string;
   reasoning?: string;
 };
 type DataStatusEventPayload = WorkflowEvent & {
-  type: "data-status";
+  _: "data-status";
   data?: unknown;
   transient?: boolean;
 };
 type FileEventPayload = WorkflowEvent & {
-  type: "file";
+  _: "file";
   mediaType?: string;
   mimeType?: string;
   url?: string;
@@ -52,7 +51,7 @@ type FileEventPayload = WorkflowEvent & {
   name?: string;
 };
 type DataCacheEventPayload = WorkflowEvent & {
-  type: "data-cache-handoff";
+  _: "data-cache-handoff";
   receipts?: SearchReceipt | SerializedReceipt;
 };
 
@@ -72,9 +71,10 @@ function isMessagePart(part: unknown): part is MessagePart {
 
 function isUiMessageEvent(
   event: WorkflowEvent
-): event is WorkflowEvent & { type: "ui-message"; messages: UIMessage[] } {
+): event is WorkflowEvent & { _: "ui-message"; messages: UIMessage[] } {
   return (
-    event.type === "ui-message" &&
+    "_" in event &&
+    event._ === "ui-message" &&
     Array.isArray((event as { messages?: unknown }).messages)
   );
 }
@@ -82,39 +82,39 @@ function isUiMessageEvent(
 function isAssistantEvent(
   event: WorkflowEvent
 ): event is AssistantEventPayload {
-  return event.type === "assistant";
+  return "_" in event && event._ === "assistant";
 }
 
 function isToolCallEvent(event: WorkflowEvent): event is ToolCallEventPayload {
-  return event.type === "tool-call";
+  return "_" in event && event._ === "tool-call";
 }
 
 function isToolResultEvent(
   event: WorkflowEvent
 ): event is ToolResultEventPayload {
-  return event.type === "tool-result";
+  return "_" in event && event._ === "tool-result";
 }
 
 function isReasoningEvent(
   event: WorkflowEvent
 ): event is ReasoningEventPayload {
-  return event.type === "reasoning";
+  return "_" in event && event._ === "reasoning";
 }
 
 function isDataStatusEvent(
   event: WorkflowEvent
 ): event is DataStatusEventPayload {
-  return event.type === "data-status";
+  return "_" in event && event._ === "data-status";
 }
 
 function isFileEvent(event: WorkflowEvent): event is FileEventPayload {
-  return event.type === "file";
+  return "_" in event && event._ === "file";
 }
 
 function isDataCacheEvent(
   event: WorkflowEvent
 ): event is DataCacheEventPayload {
-  return event.type === "data-cache-handoff";
+  return "_" in event && event._ === "data-cache-handoff";
 }
 
 export type NormalizableGenerate = {
@@ -411,5 +411,3 @@ function getToolOutput(shape: ToolResultShape): unknown {
   }
   return;
 }
-
-

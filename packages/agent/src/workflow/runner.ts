@@ -96,30 +96,30 @@ const DEFAULT_WORKFLOW_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const RESUME_TIMEOUT_MS = 10_000; // 10 seconds for resume
 
 function createRunEvent(runId: string): WorkflowEvent {
-  return { type: "run", id: runId } as WorkflowEvent;
+  return { _: "run", id: runId } as WorkflowEvent;
 }
 
 function createErrorEvent(message: string): WorkflowEvent {
-  return { type: "error", message } as WorkflowEvent;
+  return { _: "error", message } as WorkflowEvent;
 }
 
 function createNoticeEvent(message: string): WorkflowEvent {
-  return { type: "notice", message } as WorkflowEvent;
+  return { _: "notice", message } as WorkflowEvent;
 }
 
 function createProgressEvent(pct: number, message: string): WorkflowEvent {
-  return { type: "progress", pct, message } as WorkflowEvent;
+  return { _: "progress", pct, message } as WorkflowEvent;
 }
 
 function createContextEvent(phase: string, message: string): WorkflowEvent {
-  return { type: "context", phase, message } as WorkflowEvent;
+  return { _: "context", phase, message } as WorkflowEvent;
 }
 
 function createRequireScopeEvent(
   scopes: string[],
   event: string
 ): WorkflowEvent {
-  return { type: "require-scope", scopes, event } as WorkflowEvent;
+  return { _: "require-scope", scopes, event } as WorkflowEvent;
 }
 
 type WorkflowPhase = "scan" | "plan" | "act" | "report";
@@ -136,7 +136,7 @@ async function* executePhaseWithTimeout(
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const start = Date.now();
   (await metrics()).runnerStepsTotal.inc({ phase, outcome: "start" });
-  yield { type: "step-start", phase } as WorkflowEvent;
+  yield { _: "step-start", phase } as WorkflowEvent;
 
   try {
     for await (const evt of generator()) {
@@ -149,7 +149,7 @@ async function* executePhaseWithTimeout(
       yield evt;
     }
     (await metrics()).runnerStepsTotal.inc({ phase, outcome: "complete" });
-    yield { type: "step-complete", phase } as WorkflowEvent;
+    yield { _: "step-complete", phase } as WorkflowEvent;
   } catch (error) {
     (await metrics()).runnerStepsTotal.inc({ phase, outcome: "error" });
     (await metrics()).runnerErrorsTotal.inc({
@@ -356,7 +356,7 @@ export function runPlanV6(
           }
         );
       } else {
-        yield { type: "step-skip", phase: scanPhase.name } as WorkflowEvent;
+        yield { _: "step-skip", phase: scanPhase.name } as WorkflowEvent;
       }
 
       if (input.auto === "medium" || input.auto === "high") {
@@ -430,7 +430,7 @@ export function runPlanV6(
         // biome-ignore lint/suspicious/useAwait: Async generator required by type signature
         async function* () {
           yield {
-            type: "assistant",
+            _: "assistant",
             text: `Draft plan for: ${input.requirement}`,
           } as WorkflowEvent;
           yield createProgressEvent(60, "plan_drafted");
@@ -450,7 +450,7 @@ export function runPlanV6(
           const toolName = "echo";
           const args = { text: "hello" };
           yield {
-            type: "tool-call",
+            _: "tool-call",
             id: tcId,
             toolName,
             args,
@@ -459,7 +459,7 @@ export function runPlanV6(
           await delay(20);
           const result = { text: "hello" };
           yield {
-            type: "tool-result",
+            _: "tool-result",
             id: tcId,
             toolName,
             result,
@@ -507,7 +507,7 @@ export function runPlanV6(
         // biome-ignore lint/suspicious/useAwait: Async generator required by type signature
         async function* () {
           const reportText = "Report complete.";
-          yield { type: "assistant", text: reportText } as WorkflowEvent;
+          yield { _: "assistant", text: reportText } as WorkflowEvent;
           reportSummary = reportText;
           yield createProgressEvent(95, "report_complete");
         }
