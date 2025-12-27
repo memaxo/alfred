@@ -49,23 +49,23 @@ export type UIMessageAction = {
  * Mirroring @ai-sdk/core definitions for shared usage.
  */
 export type StreamEvent =
-  | { type: "text-delta"; textDelta: string }
+  | { _: "text-delta"; textDelta: string }
   | {
-      type: "tool-call";
+      _: "tool-call";
       toolCallId: string;
       toolName: string;
       args: unknown;
     }
   | {
-      type: "tool-result";
+      _: "tool-result";
       toolCallId: string;
       result: unknown;
       isError?: boolean;
     }
-  | { type: "reasoning"; textDelta: string }
+  | { _: "reasoning"; textDelta: string }
   | {
-      type: "finish";
+      _: "finish";
       finishReason: string;
       usage?: { promptTokens: number; completionTokens: number };
     }
-  | { type: "error"; error: unknown };
+  | { _: "error"; error: unknown };

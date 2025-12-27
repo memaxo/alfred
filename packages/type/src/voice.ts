@@ -8,7 +8,7 @@ export type VoiceStreamSurface =
   | "unknown";
 
 export type VoiceStreamStartPayload = {
-  type: "start";
+  _: "start";
   sessionId?: string;
   language?: string;
   codec?: VoiceStreamCodec;
@@ -21,7 +21,7 @@ export type VoiceStreamStartPayload = {
 };
 
 export type VoiceStreamAudioChunkPayload = {
-  type: "audio_chunk";
+  _: "audio_chunk";
   audioBase64?: string;
   audio?: Uint8Array | ArrayBuffer; // Binary support
   mimeType: string;
@@ -29,75 +29,75 @@ export type VoiceStreamAudioChunkPayload = {
 };
 
 export type VoiceStreamStopPayload = {
-  type: "stop";
+  _: "stop";
   reason?: "manual" | "silence" | "timeout";
 };
 
 export type VoiceStreamStatusEvent = {
-  type: "status";
+  _: "status";
   sessionId: string | null;
   state: "recording" | "processing" | "playing" | "idle";
 };
 
 export type VoiceStreamAutoStopEvent = {
-  type: "auto_stop";
+  _: "auto_stop";
   sessionId: string;
   reason: "manual" | "silence" | "timeout";
 };
 
 export type VoiceStreamServerEvent =
-  | { type: "ready"; sessionId: null }
+  | { _: "ready"; sessionId: null }
   | {
-      type: "session_started";
+      _: "session_started";
       sessionId: string;
       codec: VoiceStreamCodec;
       negotiatedCodec: VoiceStreamCodec;
     }
   | {
-      type: "partial_transcript";
+      _: "partial_transcript";
       sessionId: string;
       text: string;
     }
   | {
-      type: "final_transcript";
+      _: "final_transcript";
       sessionId: string;
       text: string;
     }
   | {
-      type: "vad_state";
+      _: "vad_state";
       sessionId: string;
       vadConfidence: number | null;
       isEmpty: boolean | null;
       endOfUtterance: boolean | null;
     }
   | VoiceStreamAutoStopEvent
-  | { type: "interrupt"; sessionId: string }
+  | { _: "interrupt"; sessionId: string }
   | {
-      type: "assistant_message";
+      _: "assistant_message";
       sessionId: string;
       text: string;
       replayId?: string | null;
       raw?: unknown;
     }
   | {
-      type: "tts_chunk";
+      _: "tts_chunk";
       sessionId: string;
       audioBase64: string;
       mimeType: string;
       sequence: number;
       isLast?: boolean;
     }
-  | { type: "tts_complete"; sessionId: string }
+  | { _: "tts_complete"; sessionId: string }
   | VoiceStreamStatusEvent
   | {
-      type: "error";
+      _: "error";
       sessionId: string | null;
       message: string;
       code?: string;
     }
-  | { type: "pong"; sessionId?: string | null }
+  | { _: "pong"; sessionId?: string | null }
   | {
-      type: "telemetry_report";
+      _: "telemetry_report";
       sessionId: string;
       packetLoss: number;
       jitter: number;

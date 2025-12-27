@@ -379,56 +379,56 @@ type WorkflowEventBase = {
 };
 
 export type WorkflowEvent =
-  | (WorkflowEventBase & { type: "progress"; pct?: number; message?: string })
-  | (WorkflowEventBase & { type: "stdout"; text: string })
-  | (WorkflowEventBase & { type: "stderr"; text: string })
-  | (WorkflowEventBase & { type: "droid"; chunk: unknown })
-  | (WorkflowEventBase & { type: "notice"; message: string })
+  | (WorkflowEventBase & { _: "progress"; pct?: number; message?: string })
+  | (WorkflowEventBase & { _: "stdout"; text: string })
+  | (WorkflowEventBase & { _: "stderr"; text: string })
+  | (WorkflowEventBase & { _: "droid"; chunk: unknown })
+  | (WorkflowEventBase & { _: "notice"; message: string })
   | (WorkflowEventBase & {
-      type: "obligation";
+      _: "obligation";
       runId: string;
       obligations: Obligation[];
       resumeEvents?: ObligationResumeEvent[];
     })
   | (WorkflowEventBase & {
-      type: "data-cache-handoff";
+      _: "data-cache-handoff";
       receipts?: SearchReceipt;
     })
   | (WorkflowEventBase & {
-      type: "context";
+      _: "context";
       phase: "scan" | "web" | "bundle";
       message?: string;
       receipts?: SearchReceipt;
       bundle?: ContextBundle;
     })
-  | (WorkflowEventBase & { type: "plan-selected"; plan: unknown })
+  | (WorkflowEventBase & { _: "plan-selected"; plan: unknown })
   | (WorkflowEventBase & {
-      type: "phase-start";
+      _: "phase-start";
       phaseId: string;
       phase: unknown;
     })
   | (WorkflowEventBase & {
-      type: "phase-complete";
+      _: "phase-complete";
       phaseId: string;
       result: unknown;
     })
   | (WorkflowEventBase & {
-      type: "phase-progress";
+      _: "phase-progress";
       phaseId: string;
       progress: number;
     })
   | (WorkflowEventBase & {
-      type: "agent-start";
+      _: "agent-start";
       agentId: string;
       phaseId: string;
     })
   | (WorkflowEventBase & {
-      type: "agent-complete";
+      _: "agent-complete";
       agentId: string;
       phaseId: string;
       result: unknown;
     })
-  | (WorkflowEventBase & { type: "wave-start"; waveId: string })
-  | (WorkflowEventBase & { type: "wave-complete"; waveId: string })
-  | (WorkflowEventBase & { type: "agent-handoff"; data: unknown })
-  | (WorkflowEventBase & { type: string; [key: string]: unknown });
+  | (WorkflowEventBase & { _: "wave-start"; waveId: string })
+  | (WorkflowEventBase & { _: "wave-complete"; waveId: string })
+  | (WorkflowEventBase & { _: "agent-handoff"; data: unknown })
+  | (WorkflowEventBase & { _: string; [key: string]: unknown });

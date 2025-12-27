@@ -74,6 +74,10 @@
     "./build-constants": {
       "types": "./dist/build-constants.d.ts",
       "default": "./src/build-constants.ts"
+    },
+    "./id": {
+      "types": "./dist/id.d.ts",
+      "default": "./src/id.ts"
     }
   },
   "scripts": {
@@ -85,8 +89,9 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "zod": "catalog:",
-    "ai": "catalog:"
+    "ai": "catalog:",
+    "ulid": "^3.0.2",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",
