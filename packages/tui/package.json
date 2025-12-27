@@ -1,0 +1,44 @@
+{
+  "name": "@alfred/tui",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "description": "Unified CLI/TUI infrastructure for ALFRED",
+  "bin": {
+    "alfred": "./src/bin/alfred.ts"
+  },
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "default": "./src/index.ts",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "bun": "./src/*.ts",
+      "default": "./src/*.ts",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "typecheck": "tsc -b --pretty false",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "trpc-cli": "^0.12.1",
+    "omelette": "^0.4.17",
+    "@inquirer/prompts": "^7.5.0",
+    "better-auth": "catalog:",
+    "@alfred/api": "workspace:*",
+    "@alfred/auth": "workspace:*",
+    "@alfred/type": "workspace:*",
+    "@alfred/logger": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

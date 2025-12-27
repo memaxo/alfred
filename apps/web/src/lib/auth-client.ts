@@ -1,3 +1,4 @@
+import { deviceAuthorizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { createTestModeFetch, installTestAuthClient } from "@/lib/test-auth";
 
@@ -6,7 +7,7 @@ const customFetchImpl = createTestModeFetch();
 // Note: passkeyClient plugin should be imported from better-auth/client/plugins
 // but the export is missing in version 1.4.5. Using type assertion to extend the client.
 const baseClient = createAuthClient({
-  plugins: [],
+  plugins: [deviceAuthorizationClient()],
   ...(customFetchImpl ? { customFetchImpl } : {}),
 });
 

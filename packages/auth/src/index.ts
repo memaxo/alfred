@@ -5,6 +5,7 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
+import { deviceAuthorization } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { autoGrantBiometricIfBypassed, setBiometricTicket } from "./biometric";
 
@@ -83,5 +84,11 @@ export const auth = betterAuth({
     },
     expo(),
     tanstackStartCookies(),
+    deviceAuthorization({
+      verificationUri: "/device",
+      userCodeLength: 8,
+      expiresIn: "15m",
+      interval: "5s",
+    }),
   ],
 });

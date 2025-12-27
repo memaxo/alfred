@@ -1,0 +1,18 @@
+{
+  "extends": "@alfred/tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": false,
+    "composite": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "references": [
+    { "path": "../type" },
+    { "path": "../api" },
+    { "path": "../auth" },
+    { "path": "../logger" }
+  ]
+}
