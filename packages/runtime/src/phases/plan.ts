@@ -112,7 +112,7 @@ export async function* executePlanPhase(
     createAiAdapter?: (runId: string) => AiAdapter;
   }
 ): AsyncGenerator<WorkflowEvent, string | null, void> {
-  yield { type: "notice", message: "planning_started" } as WorkflowEvent;
+  yield { _: "notice", message: "planning_started" } as WorkflowEvent;
 
   if (signal.aborted) {
     throw new DOMException("Phase aborted", "AbortError");
@@ -138,7 +138,7 @@ export async function* executePlanPhase(
 
   if (reusedContext) {
     yield {
-      type: "notice",
+      _: "notice",
       message: "plan_using_cached_context",
     } as WorkflowEvent;
   }
@@ -278,7 +278,7 @@ export async function* executePlanPhase(
   let planSummary = "";
 
   try {
-    yield { type: "notice", message: "planning_llm_stream_started" } as any;
+    yield { _: "notice", message: "planning_llm_stream_started" } as any;
 
     for await (const event of aiAdapter.stream({
       model,
@@ -287,10 +287,9 @@ export async function* executePlanPhase(
       system: PLAN_SYSTEM_PROMPT,
       temperature: 0.2,
     })) {
-      if (
-        event.type === "text-delta" &&
-        typeof (event as any).delta === "string"
-      ) {
+      const kind =
+        (event as { _?: unknown; type?: unknown })._ ?? (event as any).type;
+      if (kind === "text-delta" && typeof (event as any).delta === "string") {
         planSummary += (event as any).delta;
       }
 
@@ -307,7 +306,7 @@ export async function* executePlanPhase(
     });
 
     yield {
-      type: "notice",
+      _: "notice",
       message: "planning_stream_failed",
       error: error instanceof Error ? error.message : String(error),
     } as WorkflowEvent;
@@ -317,12 +316,12 @@ export async function* executePlanPhase(
   const trimmedPlanSummary = planSummary.trim();
   if (trimmedPlanSummary.length > 0) {
     yield {
-      type: "event",
+      _: "event",
       kind: "plan-summary",
       data: { text: trimmedPlanSummary },
     } as any;
   }
 
-  yield { type: "notice", message: "planning_completed" } as any;
+  yield { _: "notice", message: "planning_completed" } as any;
   return trimmedPlanSummary || null;
 }

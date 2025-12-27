@@ -19,7 +19,7 @@ export async function loadHistory(runId: string): Promise<WorkflowEvent[]> {
       const payload = coerceRecord(unwrapped.data);
       const hydrated: WorkflowEvent = {
         ...payload,
-        type: e.eventType,
+        _: e.eventType,
       };
       return hydrated;
     });

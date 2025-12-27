@@ -101,7 +101,7 @@ export async function* executeActPhase(
   userId?: string,
   deps?: ActPhaseDeps
 ): AsyncGenerator<WorkflowEvent, ActResult, void> {
-  yield { type: "notice", message: "execution_started" } as WorkflowEvent;
+  yield { _: "notice", message: "execution_started" } as WorkflowEvent;
 
   if (signal.aborted) {
     throw new DOMException("Phase aborted", "AbortError");
@@ -118,7 +118,7 @@ export async function* executeActPhase(
     process.env.RUNTIME_DISABLE_CODEX === "1";
 
   if (disableAgents) {
-    yield { type: "notice", message: "execution_placeholder" } as WorkflowEvent;
+    yield { _: "notice", message: "execution_placeholder" } as WorkflowEvent;
     return { escalated: false };
   }
 
@@ -157,7 +157,7 @@ export async function* executeActPhase(
 
   try {
     yield {
-      type: "notice",
+      _: "notice",
       message: "execution_llm_stream_started",
     } as WorkflowEvent;
     for await (const event of aiAdapter.stream({
@@ -176,7 +176,7 @@ export async function* executeActPhase(
       error: error instanceof Error ? error.message : String(error),
     });
     yield {
-      type: "notice",
+      _: "notice",
       message: "execution_stream_failed",
       error: error instanceof Error ? error.message : String(error),
     } as WorkflowEvent;

@@ -256,12 +256,12 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     try {
       // Emit run start event
-      const runEvent = { type: "run", id: this.runId } as WorkflowEvent;
+      const runEvent = { _: "run", id: this.runId } as WorkflowEvent;
       recordEvent(runEvent);
       yield runEvent;
       this.pulseSupervisor(runEvent);
       const initEvent = {
-        type: "progress",
+        _: "progress",
         pct: 0,
         message: "initializing",
       } as WorkflowEvent;
@@ -272,7 +272,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       // Check for cancellation
       if (this.state.cancelled) {
         const cancelledStartEvent = {
-          type: "notice",
+          _: "notice",
           message: "workflow_cancelled_before_start",
         } as WorkflowEvent;
         recordEvent(cancelledStartEvent);
@@ -312,7 +312,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       const checkCancelled = function* (this: WorkflowRuntime) {
         if (this.state.cancelled) {
           const cancelledEvent = {
-            type: "notice",
+            _: "notice",
             message: "workflow_cancelled_during_execution",
           } as WorkflowEvent;
           recordEvent(cancelledEvent);
@@ -357,7 +357,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         if (this.state.cancelled) {
           await pipelineIterator.return?.();
           const cancelledEvent = {
-            type: "notice",
+            _: "notice",
             message: "workflow_cancelled_during_execution",
           } as WorkflowEvent;
           recordEvent(cancelledEvent);
@@ -380,7 +380,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       // Workflow completed successfully
       this.state.finalStatus = "completed";
       const completionEvent = {
-        type: "progress",
+        _: "progress",
         pct: 100,
         message: "completed",
       } as WorkflowEvent;
@@ -426,7 +426,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           : String(reportedError);
 
       const errorEvent = {
-        type: "error",
+        _: "error",
         message: this.state.finalMessage,
       } as WorkflowEvent;
       recordEvent(errorEvent);
@@ -582,7 +582,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     // Reset loop window after each model call completes to avoid false positives
     // across distinct phases/steps.
-    if (event.type === "finish") {
+    const kind =
+      (event as { _?: unknown; type?: unknown })._ ?? (event as any).type;
+    if (kind === "finish") {
       this.supervisor.resetLoop();
     }
   }
@@ -638,7 +640,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
   }
 
   private isReasoningEvent(event: WorkflowEvent): boolean {
-    return event.type === "reasoning" || event.type === "reasoning-delta";
+    const kind =
+      (event as { _?: unknown; type?: unknown })._ ?? (event as any).type;
+    return kind === "reasoning" || kind === "reasoning-delta";
   }
 
   private extractReasoningText(event: WorkflowEvent): string | null {

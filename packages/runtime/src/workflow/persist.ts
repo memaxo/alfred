@@ -35,7 +35,9 @@ const VALID_EVENT_TYPES = new Set([
 ]);
 
 function getEventType(event: WorkflowEvent): string {
-  return VALID_EVENT_TYPES.has(event.type) ? event.type : "event";
+  const eventType =
+    "_" in event && typeof event._ === "string" ? event._ : "event";
+  return VALID_EVENT_TYPES.has(eventType) ? eventType : "event";
 }
 
 function maybeUiMessages(event: WorkflowEvent): UIMessage[] | null {
@@ -87,10 +89,14 @@ export async function persistStreamEvent(args: {
     });
 
     const redactedRecord = coerceRecord(redactedEventData);
+    const eventDiscriminant =
+      "_" in args.event && typeof args.event._ === "string"
+        ? args.event._
+        : "event";
     const redactedEvent: WorkflowEvent = {
       ...redactedRecord,
-      type: coerceNonEmptyString(redactedRecord.type) ?? args.event.type,
-    };
+      _: coerceNonEmptyString(redactedRecord._) ?? eventDiscriminant,
+    } as WorkflowEvent;
 
     const uiMessages = maybeUiMessages(redactedEvent);
     if (uiMessages && uiMessages.length > 0) {
@@ -120,7 +126,7 @@ export async function persistStreamEvent(args: {
         persistedKeys: args.persistedMessageKeys,
         runId: args.runId,
         baseId: eventId,
-        eventType: args.event.type,
+        eventType: getEventType(args.event),
         eventId,
       });
       if (persisted > 0) {
@@ -140,7 +146,11 @@ export async function persistStreamEvent(args: {
     }
 
     let suspended = false;
-    switch (redactedEvent.type) {
+    const redactedEventType =
+      "_" in redactedEvent && typeof redactedEvent._ === "string"
+        ? redactedEvent._
+        : "event";
+    switch (redactedEventType) {
       case "notice": {
         suspended =
           coerceNonEmptyString(coerceRecord(redactedEvent).message) ===

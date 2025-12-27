@@ -40,7 +40,7 @@ function emitBundleEvent(bundle: ContextBundle | null): WorkflowEvent | null {
   }
 
   return {
-    type: "context",
+    _: "context",
     phase: "bundle",
     bundle,
   } as WorkflowEvent;
@@ -51,10 +51,16 @@ function normalizeWriterChunk(chunk: unknown): WorkflowEvent | null {
     return null;
   }
   const maybe = chunk as Record<string, unknown>;
-  if (typeof maybe.type !== "string") {
+  const kind =
+    typeof maybe._ === "string"
+      ? maybe._
+      : typeof maybe.type === "string"
+        ? maybe.type
+        : null;
+  if (!kind) {
     return null;
   }
-  return { ...maybe } as WorkflowEvent;
+  return { ...maybe, _: kind } as WorkflowEvent;
 }
 
 function drainWriterEvents(queue: WorkflowEvent[]): WorkflowEvent[] {
@@ -86,7 +92,7 @@ export async function* executeScanPhase(
   };
 
   yield {
-    type: "context",
+    _: "context",
     phase: "scan",
     message: "gathering_context",
   } as WorkflowEvent;
@@ -99,7 +105,7 @@ export async function* executeScanPhase(
       reason: "disabled",
     });
     yield {
-      type: "notice",
+      _: "notice",
       message: "context_gathering_disabled",
     } as WorkflowEvent;
     return null;
@@ -172,7 +178,7 @@ export async function* executeScanPhase(
     }
 
     yield {
-      type: "context",
+      _: "context",
       phase: "scan",
       message: "context_gathered",
       receipts: context.receipts,
@@ -180,7 +186,7 @@ export async function* executeScanPhase(
 
     if (context.receipts.web && context.receipts.web.length > 0) {
       yield {
-        type: "context",
+        _: "context",
         phase: "web",
         message: "web_context_gathered",
         receipts: createWebReceipt(context.receipts),
@@ -201,7 +207,7 @@ export async function* executeScanPhase(
     });
 
     yield {
-      type: "notice",
+      _: "notice",
       message: "context_gathering_completed",
     } as WorkflowEvent;
 
@@ -213,7 +219,7 @@ export async function* executeScanPhase(
     });
 
     yield {
-      type: "notice",
+      _: "notice",
       message: "context_gathering_failed",
       error: error instanceof Error ? error.message : String(error),
     } as WorkflowEvent;

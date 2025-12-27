@@ -130,7 +130,7 @@ export async function orchestrateWorkflowStream(
     if (cancelled) {
       return;
     }
-    recordEvent(event.type === "progress" ? "progress" : "chunk");
+    recordEvent(event._ === "progress" ? "progress" : "chunk");
     callbacks.emitNext(event);
   };
 
@@ -313,7 +313,7 @@ export async function orchestrateWorkflowStream(
         observeEvent({ event, reviewGate, reasonTraces });
 
         // Collect handoffs for final learning summary
-        if (event.type === "event" && (event as any).kind === "agent-handoff") {
+        if (event._ === "event" && (event as any).kind === "agent-handoff") {
           handoffs.push((event as any).data);
         }
 

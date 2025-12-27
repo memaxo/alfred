@@ -70,20 +70,20 @@ export async function* runOrchestrator(
     ) {
       if (wavesResult.suspended) {
         yield {
-          type: "notice",
+          _: "notice",
           message: "workflow_suspended_waiting_for_clarification",
         } as WorkflowEvent;
       }
       if (wavesResult.escalated) {
         yield {
-          type: "notice",
+          _: "notice",
           message: "workflow_escalated",
           reason: wavesResult.escalationReason,
         } as WorkflowEvent;
       }
       if (wavesResult.interrupted) {
         yield {
-          type: "notice",
+          _: "notice",
           message: "workflow_interrupted",
         } as WorkflowEvent;
       }

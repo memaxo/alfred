@@ -14,7 +14,7 @@ export async function* executeReportPhase(
   signal: AbortSignal,
   artifacts: ReportArtifacts
 ): AsyncGenerator<WorkflowEvent, void, void> {
-  yield { type: "notice", message: "reporting_started" } as WorkflowEvent;
+  yield { _: "notice", message: "reporting_started" } as WorkflowEvent;
 
   if (signal.aborted) {
     throw new DOMException("Phase aborted", "AbortError");
@@ -23,7 +23,7 @@ export async function* executeReportPhase(
   const reportEvent = buildReportEvent(input, artifacts);
   yield reportEvent;
 
-  yield { type: "notice", message: "reporting_completed" } as WorkflowEvent;
+  yield { _: "notice", message: "reporting_completed" } as WorkflowEvent;
 }
 
 function buildReportEvent(
@@ -31,9 +31,11 @@ function buildReportEvent(
   artifacts: ReportArtifacts
 ): WorkflowEvent {
   const events = Array.isArray(artifacts.events) ? artifacts.events : [];
-  const errors = events.filter((event) => event.type === "error");
-  const toolCalls = events.filter((event) => event.type === "tool-call");
-  const toolResults = events.filter((event) => event.type === "tool-result");
+  const kindOf = (event: WorkflowEvent): unknown =>
+    (event as { _?: unknown; type?: unknown })._ ?? (event as any).type;
+  const errors = events.filter((event) => kindOf(event) === "error");
+  const toolCalls = events.filter((event) => kindOf(event) === "tool-call");
+  const toolResults = events.filter((event) => kindOf(event) === "tool-result");
   const durationMs = artifacts.startedAt
     ? Math.max(0, Date.now() - artifacts.startedAt)
     : undefined;
@@ -52,7 +54,7 @@ function buildReportEvent(
     durationMs,
     totals: {
       events: events.length,
-      notices: events.filter((event) => event.type === "notice").length,
+      notices: events.filter((event) => kindOf(event) === "notice").length,
       errors: errors.length,
     },
     tools: {
@@ -68,7 +70,7 @@ function buildReportEvent(
   };
 
   return {
-    type: "report",
+    _: "report",
     summary,
   } as WorkflowEvent;
 }

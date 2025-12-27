@@ -92,7 +92,7 @@ export async function* runWaves(
   if (cachedExecutionContext) {
     context = cachedExecutionContext;
     yield {
-      type: "notice",
+      _: "notice",
       message: "waves_using_cached_context",
     } as WorkflowEvent;
   } else {
@@ -134,7 +134,7 @@ export async function* runWaves(
     waves = convertPlanToWavePlan(ctx.plan);
 
     yield {
-      type: "notice",
+      _: "notice",
       message: "waves_using_phased_plan",
       data: { planId: ctx.plan.id, phaseCount: ctx.plan.phases.length },
     } as any;
@@ -146,7 +146,7 @@ export async function* runWaves(
     });
 
     if (subTasks.length === 0) {
-      yield { type: "notice", message: "no_subtasks_to_execute" } as any;
+      yield { _: "notice", message: "no_subtasks_to_execute" } as any;
       return {
         trackerContext: createTrackerContext([]),
         allAgentOutcomes: [],
@@ -229,7 +229,7 @@ export async function* runWaves(
     ) {
       logger.info("wave_hydrated_skipping", { waveId: wave.id });
       yield {
-        type: "notice",
+        _: "notice",
         message: `wave_${wave.id}_skipped_already_completed`,
       } as any;
       continue;
@@ -242,7 +242,7 @@ export async function* runWaves(
     });
 
     yield {
-      type: "notice",
+      _: "notice",
       message: `wave_${wave.id}_start`,
     } as any;
 
@@ -327,7 +327,7 @@ export async function* runWaves(
             error: error instanceof Error ? error.message : String(error),
           });
           queue.enqueue({
-            type: "notice",
+            _: "notice",
             message: `agent_failed_unhandled:${spec.agentId}`,
           } as any);
           return {

@@ -28,7 +28,9 @@ export async function detectFileChanges(
       const status = line.slice(0, 2).trim();
       const path = line.slice(3).trim();
 
-      if (!path) continue;
+      if (!path) {
+        continue;
+      }
 
       if (status === "M") {
         modified.push(path);
@@ -40,8 +42,7 @@ export async function detectFileChanges(
     }
 
     return { modified, created, deleted };
-  } catch (error) {
-    console.warn("Failed to detect file changes via git:", error);
+  } catch (_error) {
     return { modified: [], created: [], deleted: [] };
   }
 }

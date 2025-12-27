@@ -9,7 +9,7 @@ export type PhaseResult = {
 
 export function makePlanSelectedEvent(plan: StructuredPlan): WorkflowEvent {
   return {
-    type: "plan-selected",
+    _: "plan-selected",
     plan,
   } as any;
 }
@@ -19,7 +19,7 @@ export function makePhaseStartEvent(
   phase: Phase
 ): WorkflowEvent {
   return {
-    type: "phase-start",
+    _: "phase-start",
     phaseId,
     phase,
   } as any;
@@ -30,7 +30,7 @@ export function makePhaseCompleteEvent(
   result: PhaseResult
 ): WorkflowEvent {
   return {
-    type: "phase-complete",
+    _: "phase-complete",
     phaseId,
     result,
   } as any;
@@ -41,7 +41,7 @@ export function makePhaseProgressEvent(
   progress: number
 ): WorkflowEvent {
   return {
-    type: "phase-progress",
+    _: "phase-progress",
     phaseId,
     progress,
   } as any;
@@ -52,7 +52,7 @@ export function makeAgentStartEvent(
   phaseId: string
 ): WorkflowEvent {
   return {
-    type: "agent-start",
+    _: "agent-start",
     agentId,
     phaseId,
   } as any;
@@ -64,7 +64,7 @@ export function makeAgentCompleteEvent(
   result: AgentOutcome
 ): WorkflowEvent {
   return {
-    type: "agent-complete",
+    _: "agent-complete",
     agentId,
     phaseId,
     result,
@@ -73,14 +73,14 @@ export function makeAgentCompleteEvent(
 
 export function makeWaveStartEvent(waveId: string): WorkflowEvent {
   return {
-    type: "wave-start",
+    _: "wave-start",
     waveId,
   } as any;
 }
 
 export function makeWaveCompleteEvent(waveId: string): WorkflowEvent {
   return {
-    type: "wave-complete",
+    _: "wave-complete",
     waveId,
   } as any;
 }

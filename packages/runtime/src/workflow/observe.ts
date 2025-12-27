@@ -23,7 +23,7 @@ function maybeCaptureReasoning(args: {
   event: WorkflowEvent;
   reasonTraces: ReasonTrace[];
 }): void {
-  if (args.event.type !== "reasoning") {
+  if (args.event._ !== "reasoning") {
     return;
   }
   const payload = coerceRecord(args.event);

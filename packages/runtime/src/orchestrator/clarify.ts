@@ -10,7 +10,9 @@ export async function detectClarification(
 ): Promise<ClarificationRequest | null> {
   // Check for explicit clarification metadata in agent result
   const result = outcome.result;
-  if (!result) return null;
+  if (!result) {
+    return null;
+  }
 
   // Placeholder logic for detecting clarification from summary or notes.
   // In a real scenario, the agent would return a structured field.

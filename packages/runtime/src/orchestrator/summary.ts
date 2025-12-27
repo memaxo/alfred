@@ -37,8 +37,7 @@ Summary (max 200 characters):`;
     } as any);
 
     return text.trim();
-  } catch (error) {
-    console.warn("Failed to generate wave summary via AI:", error);
+  } catch (_error) {
     return outcomes
       .map((o) => o.result?.summary)
       .filter(Boolean)

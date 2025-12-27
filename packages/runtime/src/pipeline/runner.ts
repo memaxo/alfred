@@ -92,7 +92,7 @@ export class PipelineRunner {
       this.state.currentPhaseId = phaseId;
 
       logger.info("pipeline_phase_start", { phaseId });
-      yield { type: "step-start", phase: phaseId } as any;
+      yield { _: "step-start", phase: phaseId } as any;
       const timeoutMs = this.resolvePhaseTimeout(phaseId);
       const timeoutGuard = this.createPhaseTimeoutGuard(phaseId, timeoutMs);
       const generator = phase.run(currentInput, this.state.context);
@@ -125,7 +125,7 @@ export class PipelineRunner {
         if (result.status === "success") {
           logger.info("pipeline_phase_success", { phaseId });
           runtimePhasesTotal.inc({ phase: phaseId, status: "success" });
-          yield { type: "step-complete", phase: phaseId } as any;
+          yield { _: "step-complete", phase: phaseId } as any;
           const nextId = this.nextPhaseId(phaseId);
           if (!nextId) {
             return;

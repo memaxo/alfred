@@ -162,8 +162,8 @@ export function createLifecycle(args: {
             const inputData = run.inputData as Record<string, unknown>;
             const planId = inputData?.planId as string | undefined;
             if (planId) {
-              const { planRepo } = await import("@alfred/db");
-              const savedPlan = await planRepo.getPlanById(planId);
+              const { getPlanById } = await import("@alfred/db/repo/plan");
+              const savedPlan = await getPlanById(planId);
               if (savedPlan) {
                 const { structuredPlanSchema } = await import("@alfred/plan");
                 const parsed = structuredPlanSchema.safeParse(savedPlan.plan);
@@ -283,8 +283,8 @@ export function createLifecycle(args: {
               const inputData = run.inputData as Record<string, unknown>;
               const planId = inputData?.planId as string | undefined;
               if (planId) {
-                const { planRepo } = await import("@alfred/db");
-                const savedPlan = await planRepo.getPlanById(planId);
+                const { getPlanById } = await import("@alfred/db/repo/plan");
+                const savedPlan = await getPlanById(planId);
                 if (savedPlan) {
                   const { structuredPlanSchema } = await import("@alfred/plan");
                   const parsed = structuredPlanSchema.safeParse(savedPlan.plan);
