@@ -89,14 +89,12 @@ describe("recordMultiAgentEvent", () => {
         },
       });
 
-      expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-        { role: "planner", outcome: "ok" },
-        5.5
-      );
-      expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-        { role: "worker", outcome: "error" },
-        2.0
-      );
+      expect(
+        metricsMock.multiAgentAgentDurationSeconds.observe
+      ).toHaveBeenCalledWith({ role: "planner", outcome: "ok" }, 5.5);
+      expect(
+        metricsMock.multiAgentAgentDurationSeconds.observe
+      ).toHaveBeenCalledWith({ role: "worker", outcome: "error" }, 2.0);
     });
 
     it("records stuck agent errors", () => {
@@ -120,10 +118,9 @@ describe("recordMultiAgentEvent", () => {
         },
       });
 
-      expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-        { role: "worker", outcome: "stuck" },
-        10
-      );
+      expect(
+        metricsMock.multiAgentAgentDurationSeconds.observe
+      ).toHaveBeenCalledWith({ role: "worker", outcome: "stuck" }, 10);
     });
 
     it("defaults role to worker when missing", () => {
@@ -134,10 +131,9 @@ describe("recordMultiAgentEvent", () => {
         },
       });
 
-      expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-        { role: "worker", outcome: "ok" },
-        1
-      );
+      expect(
+        metricsMock.multiAgentAgentDurationSeconds.observe
+      ).toHaveBeenCalledWith({ role: "worker", outcome: "ok" }, 1);
     });
 
     it("skips duration observation for invalid durations", () => {
@@ -146,13 +142,19 @@ describe("recordMultiAgentEvent", () => {
         data: {
           agents: [
             { role: "worker", status: "completed", durationSeconds: -1 },
-            { role: "worker", status: "completed", durationSeconds: NaN },
+            {
+              role: "worker",
+              status: "completed",
+              durationSeconds: Number.NaN,
+            },
             { role: "worker", status: "completed" },
           ],
         },
       });
 
-      expect(metricsMock.multiAgentAgentDurationSeconds.observe).not.toHaveBeenCalled();
+      expect(
+        metricsMock.multiAgentAgentDurationSeconds.observe
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -200,8 +202,14 @@ describe("recordMultiAgentEvent", () => {
     const agentResultKinds = [
       { kind: "merge-agent-result", errorKind: "merge_failed" },
       { kind: "review-agent-result", errorKind: "review_failed" },
-      { kind: "conflict-agent-result", errorKind: "merge_conflict_analysis_failed" },
-      { kind: "conflict-resolution-result", errorKind: "merge_conflict_resolution_failed" },
+      {
+        kind: "conflict-agent-result",
+        errorKind: "merge_conflict_analysis_failed",
+      },
+      {
+        kind: "conflict-resolution-result",
+        errorKind: "merge_conflict_resolution_failed",
+      },
       { kind: "review-exec-result", errorKind: "review_exec_failed" },
     ];
 
@@ -210,13 +218,16 @@ describe("recordMultiAgentEvent", () => {
         it("observes duration for successful agent", () => {
           recordMultiAgentEvent({
             kind,
-            data: { role: "reviewer", status: "completed", durationSeconds: 3.5 },
+            data: {
+              role: "reviewer",
+              status: "completed",
+              durationSeconds: 3.5,
+            },
           });
 
-          expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-            { role: "reviewer", outcome: "ok" },
-            3.5
-          );
+          expect(
+            metricsMock.multiAgentAgentDurationSeconds.observe
+          ).toHaveBeenCalledWith({ role: "reviewer", outcome: "ok" }, 3.5);
           expect(metricsMock.multiAgentErrorsTotal.inc).not.toHaveBeenCalled();
         });
 
@@ -226,10 +237,9 @@ describe("recordMultiAgentEvent", () => {
             data: { role: "reviewer", status: "failed", durationSeconds: 2.0 },
           });
 
-          expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-            { role: "reviewer", outcome: "error" },
-            2.0
-          );
+          expect(
+            metricsMock.multiAgentAgentDurationSeconds.observe
+          ).toHaveBeenCalledWith({ role: "reviewer", outcome: "error" }, 2.0);
           expect(metricsMock.multiAgentErrorsTotal.inc).toHaveBeenCalledWith({
             kind: errorKind,
           });
@@ -241,10 +251,9 @@ describe("recordMultiAgentEvent", () => {
             data: { role: "reviewer", status: "stuck", durationSeconds: 5.0 },
           });
 
-          expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-            { role: "reviewer", outcome: "stuck" },
-            5.0
-          );
+          expect(
+            metricsMock.multiAgentAgentDurationSeconds.observe
+          ).toHaveBeenCalledWith({ role: "reviewer", outcome: "stuck" }, 5.0);
           expect(metricsMock.multiAgentErrorsTotal.inc).toHaveBeenCalledWith({
             kind: errorKind,
           });
@@ -256,10 +265,9 @@ describe("recordMultiAgentEvent", () => {
             data: { status: "completed", durationSeconds: 1.0 },
           });
 
-          expect(metricsMock.multiAgentAgentDurationSeconds.observe).toHaveBeenCalledWith(
-            { role: "worker", outcome: "ok" },
-            1.0
-          );
+          expect(
+            metricsMock.multiAgentAgentDurationSeconds.observe
+          ).toHaveBeenCalledWith({ role: "worker", outcome: "ok" }, 1.0);
         });
       });
     }
@@ -273,7 +281,9 @@ describe("recordMultiAgentEvent", () => {
 
       expect(metricsMock.multiAgentTasksTotal.inc).not.toHaveBeenCalled();
       expect(metricsMock.multiAgentWavesTotal.inc).not.toHaveBeenCalled();
-      expect(metricsMock.multiAgentAgentDurationSeconds.observe).not.toHaveBeenCalled();
+      expect(
+        metricsMock.multiAgentAgentDurationSeconds.observe
+      ).not.toHaveBeenCalled();
       expect(metricsMock.multiAgentErrorsTotal.inc).not.toHaveBeenCalled();
     });
   });

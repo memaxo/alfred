@@ -4,16 +4,14 @@ import { join } from "node:path";
 import { spawn } from "bun";
 
 // Low-level integration test for the Python factory
-describe.skip("TTS Factory Integration (skipped: causes C++ exception in Bun runner)", () => {
+describe("TTS Factory Integration (skipped: causes C++ exception in Bun runner)", () => {
   const scriptPath = join(process.cwd(), "packages/voice/python/tts");
   const venvPython = join(process.cwd(), "packages/voice/.venv/bin/python");
   const hasVenv = existsSync(venvPython);
 
   it("should launch and report correct backend", async () => {
     if (!hasVenv) {
-      console.warn(
-        "Skipping TTS factory test because Python venv is missing"
-      );
+      console.warn("Skipping TTS factory test because Python venv is missing");
       return;
     }
     console.log("Spawning:", venvPython, scriptPath);
@@ -86,7 +84,9 @@ describe.skip("TTS Factory Integration (skipped: causes C++ exception in Bun run
     await proc.exited;
     // Backend may not initialize if models are missing or dependencies unavailable
     if (!backendLoaded) {
-      console.warn("TTS backend did not report ready status - models may be missing");
+      console.warn(
+        "TTS backend did not report ready status - models may be missing"
+      );
       // Skip test gracefully when models are unavailable (matches pattern from tts-pool-supertonic.test.ts)
       return;
     }

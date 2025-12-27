@@ -18,7 +18,7 @@ import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 installLoggerMock();
 
 // Use shared mocks for assertions
-const loggerMock = loggerMocks;
+const _loggerMock = loggerMocks;
 
 const metricsMock = {
   workflowStreamDurationSeconds: { startTimer: () => () => {} },
@@ -36,8 +36,12 @@ mock.module("../../src/workflow/metrics-recorder", () => ({
 }));
 
 mock.module("../../src/workflow/event-persistence", () => ({
-  persistEventSafe: vi.fn().mockImplementation((_runId, event) => 
-    Promise.resolve({ eventId: `${event.type}-id`, eventType: event.type, uiMessages: null })
+  persistEventSafe: vi.fn().mockImplementation((_runId, event) =>
+    Promise.resolve({
+      eventId: `${event.type}-id`,
+      eventType: event.type,
+      uiMessages: null,
+    })
   ),
 }));
 
@@ -151,7 +155,9 @@ mock.module("../../src/workflow/review-gate-manager", () => ({
     }));
     restoreFromRun = vi.fn().mockResolvedValue(undefined);
     persistState = vi.fn().mockResolvedValue(undefined);
-    recordEscalation = vi.fn().mockReturnValue({ metricKind: "review_fixer_exhausted" });
+    recordEscalation = vi
+      .fn()
+      .mockReturnValue({ metricKind: "review_fixer_exhausted" });
     getEscalationReason = vi.fn().mockReturnValue(undefined);
     constructor() {
       reviewGateManagerInstances.push(this);
@@ -407,7 +413,7 @@ describe("workflow orchestrator review gate persistence", () => {
   });
 
   it("persists ReviewGate state to stateData on suspend", async () => {
-    const serializedState = {
+    const _serializedState = {
       checks: [
         { id: "tests", type: "test", status: "passed", attempts: 1 },
         { id: "lint", type: "lint", status: "pending", attempts: 0 },

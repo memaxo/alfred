@@ -13,7 +13,7 @@ describe("TTSPool with Supertonic Streaming", () => {
     voice: "dummy",
   };
 
-  it.skip("should stream chunks (skipped: causes C++ exception in Bun runner)", async () => {
+  it("should stream chunks (skipped: causes C++ exception in Bun runner)", async () => {
     if (!hasModels) {
       console.warn(
         "Skipping Supertonic streaming test because models are missing"

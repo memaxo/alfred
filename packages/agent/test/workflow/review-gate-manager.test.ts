@@ -15,6 +15,7 @@ afterAll(() => {
 });
 
 import { installLoggerMock } from "@alfred/test-kit/logger";
+
 installLoggerMock();
 
 const { ReviewGateManager } = await import(

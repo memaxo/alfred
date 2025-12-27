@@ -8,20 +8,11 @@ import { ContextBuilder } from "../src/context";
 const codexExecute = mock(async ({ writer }: { writer: any }) => {
   await writer.write({
     type: "stdout",
-    event: {
-      type: "thought",
-      content: "starting",
-      timestamp: Date.now(),
-    },
+    event: { type: "output", content: "first" },
   });
   await writer.write({
     type: "stdout",
-    event: {
-      type: "artifact",
-      path: "src/task.ts",
-      kind: "file",
-      timestamp: Date.now(),
-    },
+    event: { type: "artifact", path: "src/task.ts", kind: "file" },
   });
 });
 
@@ -183,11 +174,7 @@ describe("runWaves execution", () => {
           await Promise.race([bothStarted, abortPromise(signal)]);
           await writer.write({
             type: "stdout",
-            event: {
-              type: "thought",
-              content: "done",
-              timestamp: Date.now(),
-            },
+            event: { type: "output", content: "parallel" },
           });
         }
       );

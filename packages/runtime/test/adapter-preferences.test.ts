@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
 
 const streamTextMock = vi.fn(() => ({
   fullStream: (async function* () {
-    yield { type: "text-delta", id: "delta-1", delta: "Hello" };
+    yield { type: "text-delta", id: "text-1", delta: "hello" };
     yield { type: "finish", finishReason: "stop" };
   })(),
 }));

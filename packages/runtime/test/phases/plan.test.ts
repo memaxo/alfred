@@ -18,12 +18,8 @@ mock.module("@alfred/agent/assistant/graphstore", () => ({
 }));
 
 const streamMock = mock(async function* () {
-  yield {
-    type: "text-delta",
-    id: "delta-1",
-    delta: "Plan step",
-  } as WorkflowEvent;
-  yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+  yield { _: "text-delta", id: "text-1", delta: "Plan step" } as WorkflowEvent;
+  yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
 });
 
 mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
@@ -55,8 +51,12 @@ beforeEach(() => {
   streamMock.mockReset();
   streamMock.mockImplementation(() =>
     (async function* () {
-      yield { type: "text-delta", delta: "Plan step" } as WorkflowEvent;
-      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+      yield {
+        _: "text-delta",
+        id: "text-1",
+        delta: "Plan step",
+      } as WorkflowEvent;
+      yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
     })()
   );
 });

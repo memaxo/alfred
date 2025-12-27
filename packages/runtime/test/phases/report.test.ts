@@ -24,10 +24,10 @@ describe("executeReportPhase", () => {
   it("emits report summary with metrics", async () => {
     const artifacts = {
       events: [
-        { type: "notice", message: "start" } as WorkflowEvent,
-        { type: "tool-call", toolName: "echo", toolCallId: "1" } as any,
-        { type: "tool-result", toolName: "echo", toolCallId: "1" } as any,
-        { type: "error", message: "boom" } as WorkflowEvent,
+        { _: "notice", message: "ok" } as WorkflowEvent,
+        { _: "tool-call", toolCallId: "call-1" } as any,
+        { _: "tool-result", toolCallId: "call-1" } as any,
+        { _: "error", message: "boom" } as WorkflowEvent,
       ],
       planSummary: "Plan summary",
       scanContext,
@@ -45,7 +45,7 @@ describe("executeReportPhase", () => {
       events.push(event);
     }
 
-    const reportEvent = events.find((event) => event.type === "report");
+    const reportEvent = events.find((event) => event._ === "report");
     expect(reportEvent).toBeDefined();
     const summary = (reportEvent as any).summary;
     expect(summary.requirement).toBe(input.requirement);
@@ -55,7 +55,7 @@ describe("executeReportPhase", () => {
     expect(summary.context.files).toBe(0);
     expect(summary.planSummary).toBe("Plan summary");
     expect(events.at(-1)).toMatchObject({
-      type: "notice",
+      _: "notice",
       message: "reporting_completed",
     });
   });
@@ -69,7 +69,7 @@ describe("executeReportPhase", () => {
 
     const first = await generator.next();
     expect(first.value).toMatchObject({
-      type: "notice",
+      _: "notice",
       message: "reporting_started",
     });
     await expect(generator.next()).rejects.toBeInstanceOf(DOMException);

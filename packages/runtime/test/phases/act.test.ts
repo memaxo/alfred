@@ -10,7 +10,7 @@ async function* runOrchestratorMock(
   _signal?: AbortSignal
 ) {
   orchestratorCallCount += 1;
-  yield { type: "notice", message: "orchestrator" } as WorkflowEvent;
+  yield { _: "notice", message: "orchestrator_notice" } as WorkflowEvent;
 }
 
 const buildToolsMock = mock(() => ({
@@ -26,18 +26,18 @@ let streamCallCount = 0;
 const streamMock = () => {
   streamCallCount += 1;
   return (async function* () {
-    yield { type: "text-delta", delta: "Work" } as WorkflowEvent;
+    yield { _: "text-delta", id: "text-1", delta: "hello" } as WorkflowEvent;
     yield {
-      type: "tool-call",
+      _: "tool-call",
+      toolCallId: "call-1",
       toolName: "echo",
-      toolCallId: "1",
-      input: { msg: "hi" },
+      input: { message: "hi" },
     } as any;
     yield {
-      type: "tool-result",
+      _: "tool-result",
+      toolCallId: "call-1",
       toolName: "echo",
-      toolCallId: "1",
-      output: { msg: "hi" },
+      output: { ok: true },
     } as any;
   })();
 };
@@ -125,7 +125,7 @@ describe("executeActPhase", () => {
 
     expect(orchestratorCallCount).toBe(0);
     expect(streamCallCount).toBe(1);
-    expect(events.some((event) => event.type === "text-delta")).toBe(true);
+    expect(events.some((event) => event._ === "text-delta")).toBe(true);
     expect(result?.escalated).toBe(false);
   });
 

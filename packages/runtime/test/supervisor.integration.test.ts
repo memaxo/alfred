@@ -36,12 +36,9 @@ describe("WorkflowRuntime supervisor integration", () => {
     const createAiAdapter = () => ({
       async *stream() {
         for (let i = 0; i < 6; i++) {
-          yield {
-            type: "reasoning",
-            text: "Repeating the same plan",
-          } as WorkflowEvent;
+          yield { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
         }
-        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+        yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
       },
     });
 
@@ -104,12 +101,9 @@ describe("WorkflowRuntime supervisor integration", () => {
       async *stream() {
         // Emit nearly identical reasoning traces
         for (let i = 0; i < 5; i++) {
-          yield {
-            type: "reasoning",
-            text: "Analyzing the same pattern repeatedly",
-          } as WorkflowEvent;
+          yield { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
         }
-        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+        yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
       },
     });
 
@@ -134,7 +128,7 @@ describe("WorkflowRuntime supervisor integration", () => {
         const signal = options.abortSignal;
 
         // Emit one event then stall
-        yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
+        yield { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
         eventCount++;
 
         // Wait indefinitely (simulating a zombie process)
@@ -171,14 +165,11 @@ describe("WorkflowRuntime supervisor integration", () => {
     const createAiAdapter = () => ({
       async *stream() {
         for (let i = 0; i < 6; i++) {
-          const event = {
-            type: "reasoning",
-            text: `Loop iteration ${i}`,
-          } as WorkflowEvent;
+          const event = { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
           events.push(event);
           yield event;
         }
-        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+        yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
       },
     });
 
@@ -213,12 +204,9 @@ describe("WorkflowRuntime supervisor integration", () => {
       async *stream() {
         // Emit repeated identical reasoning to trigger loop detection
         for (let i = 0; i < 6; i++) {
-          yield {
-            type: "reasoning",
-            text: "Repeating the same thought",
-          } as WorkflowEvent;
+          yield { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
         }
-        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+        yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
       },
     });
 
@@ -276,7 +264,7 @@ describe("WorkflowRuntime supervisor integration", () => {
       async *stream(options: { abortSignal?: AbortSignal }) {
         const signal = options.abortSignal;
         // Emit one event then stall (simulating zombie process)
-        yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
+        yield { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
 
         // Wait indefinitely until aborted
         await new Promise<never>((_, reject) => {
@@ -350,12 +338,9 @@ describe("WorkflowRuntime supervisor integration", () => {
         ];
 
         for (const text of distinctReasons) {
-          yield {
-            type: "reasoning",
-            text,
-          } as WorkflowEvent;
+          yield { _: "reasoning", textDelta: text } as WorkflowEvent;
         }
-        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+        yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
       },
     });
 
@@ -388,19 +373,13 @@ describe("WorkflowRuntime supervisor integration", () => {
         const signal = options.abortSignal;
 
         // Yield immediately to show progress
-        yield {
-          type: "reasoning",
-          text: "Starting task analysis",
-        } as WorkflowEvent;
+        yield { _: "reasoning", textDelta: "first" } as WorkflowEvent;
 
         // Count how many times the stream is accessed
         _checkCount++;
 
         // Yield another event quickly to show continuous progress
-        yield {
-          type: "reasoning",
-          text: "Evaluating approach options",
-        } as WorkflowEvent;
+        yield { _: "reasoning", textDelta: "second" } as WorkflowEvent;
 
         // Very short wait to respect check interval
         await new Promise((resolve) => setTimeout(resolve, 10));
@@ -409,11 +388,8 @@ describe("WorkflowRuntime supervisor integration", () => {
           throw signal.reason;
         }
 
-        yield {
-          type: "reasoning",
-          text: "Finalizing solution",
-        } as WorkflowEvent;
-        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+        yield { _: "reasoning", textDelta: "third" } as WorkflowEvent;
+        yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
       },
     });
 

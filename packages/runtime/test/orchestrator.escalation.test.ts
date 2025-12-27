@@ -37,7 +37,7 @@ let runMergeAnalysisCalled = false;
 
 // Mock runWaves to simulate escalation scenarios
 const mockRunWaves = mock(function* (_ctx: unknown) {
-  yield { type: "notice", message: "waves_started" } as WorkflowEvent;
+  yield { _: "notice", message: "waves_started" } as WorkflowEvent;
 
   // Return result based on test configuration
   return {
@@ -58,7 +58,7 @@ const mockRunMergePhase = mock(function* (
   _wavesResult: unknown
 ) {
   runMergePhaseCalled = true;
-  yield { type: "notice", message: "merge_phase_started" } as WorkflowEvent;
+  yield { _: "notice", message: "merge_started" } as WorkflowEvent;
   return { mergePlan: {}, conflictScanResult: null };
 });
 
@@ -68,7 +68,7 @@ const mockRunConflictPhase = mock(function* (
   _conflictResult: unknown
 ) {
   runConflictPhaseCalled = true;
-  yield { type: "notice", message: "conflict_phase_started" } as WorkflowEvent;
+  yield { _: "notice", message: "conflict_started" } as WorkflowEvent;
 });
 
 // Mock merge analysis
@@ -77,16 +77,13 @@ const mockRunMergeAnalysis = mock(function* (
   _mergePlan: unknown
 ) {
   runMergeAnalysisCalled = true;
-  yield {
-    type: "notice",
-    message: "merge_analysis_started",
-  } as WorkflowEvent;
+  yield { _: "notice", message: "merge_analysis_started" } as WorkflowEvent;
 });
 
 // Mock review phase
 const mockRunReviewPhase = mock(function* (_ctx: unknown, _mergePlan: unknown) {
   runReviewPhaseCalled = true;
-  yield { type: "notice", message: "review_phase_started" } as WorkflowEvent;
+  yield { _: "notice", message: "review_started" } as WorkflowEvent;
 });
 
 // Mock worktree manager
@@ -194,7 +191,7 @@ function findEscalationEvent(
 ): (WorkflowEvent & { message: string; reason?: string }) | undefined {
   return events.find(
     (e): e is WorkflowEvent & { message: string; reason?: string } =>
-      e.type === "notice" && (e as any).message === "workflow_escalated"
+      (e as any)._ === "notice" && (e as any).message === "workflow_escalated"
   );
 }
 
@@ -331,7 +328,7 @@ describe("runOrchestrator escalation", () => {
     expect((escalationEvent as any).reason).toBe("architecture_mismatch");
 
     // Verify event structure is correct for persistence
-    expect(escalationEvent).toHaveProperty("type", "notice");
+    expect(escalationEvent).toHaveProperty("_", "notice");
     expect(escalationEvent).toHaveProperty("message", "workflow_escalated");
     expect(escalationEvent).toHaveProperty("reason");
   });
@@ -388,7 +385,7 @@ describe("runOrchestrator escalation", () => {
 
     // Override mock to also set interrupted
     mockRunWaves.mockImplementationOnce(function* (_ctx: unknown) {
-      yield { type: "notice", message: "waves_started" } as WorkflowEvent;
+      yield { _: "notice", message: "waves_started" } as WorkflowEvent;
       return {
         trackerState: { agents: {}, waves: {} },
         allAgentOutcomes: [],
@@ -431,7 +428,8 @@ describe("runOrchestrator escalation", () => {
     const escalationEvent = findEscalationEvent(events);
     const interruptEvent = events.find(
       (e) =>
-        e.type === "notice" && (e as any).message === "workflow_interrupted"
+        (e as any)._ === "notice" &&
+        (e as any).message === "workflow_interrupted"
     );
 
     expect(escalationEvent).toBeDefined();
@@ -497,7 +495,7 @@ describe("runOrchestrator escalation", () => {
 
     // Configure mock with active workspaces
     mockRunWaves.mockImplementationOnce(function* (_ctx: unknown) {
-      yield { type: "notice", message: "waves_started" } as WorkflowEvent;
+      yield { _: "notice", message: "waves_started" } as WorkflowEvent;
       return {
         trackerState: { agents: {}, waves: {} },
         allAgentOutcomes: [],
@@ -594,7 +592,7 @@ describe("runOrchestrator escalation", () => {
     // - message: "workflow_escalated" (for event filtering)
     // - reason: the escalation reason (for notification body)
     expect(escalationEvent).toMatchObject({
-      type: "notice",
+      _: "notice",
       message: "workflow_escalated",
       reason: escalationReason,
     });
@@ -623,7 +621,7 @@ describe("runOrchestrator escalation", () => {
     // Override mock to capture the context
     mockRunWaves.mockImplementationOnce(function* (ctx: unknown) {
       capturedContext = ctx;
-      yield { type: "notice", message: "waves_started" } as WorkflowEvent;
+      yield { _: "notice", message: "waves_started" } as WorkflowEvent;
       return {
         trackerState: { agents: {}, waves: {} },
         allAgentOutcomes: [],

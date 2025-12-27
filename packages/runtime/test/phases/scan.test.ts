@@ -12,7 +12,7 @@ const gatherCodeContextMock = mock(
     writer?: { write?: (chunk: unknown) => Promise<void> | void };
   }) => {
     await params.writer?.write?.({
-      type: "context",
+      _: "context",
       phase: "scan",
       message: "code_context_mock",
     });
@@ -37,7 +37,7 @@ const gatherWebContextMock = mock(
     writer?: { write?: (chunk: unknown) => Promise<void> | void };
   }) => {
     await params.writer?.write?.({
-      type: "context",
+      _: "context",
       phase: "web",
       message: "web_context_mock",
     });
@@ -62,6 +62,12 @@ const gatherWebContextMock = mock(
 mock.module("@alfred/agent/orchestrator/flow/context", () => ({
   gatherCodeContext: gatherCodeContextMock,
   gatherWebContext: gatherWebContextMock,
+  buildContextBundle: async () => ({
+    maxTokens: 24_000,
+    estimatedTokens: 0,
+    files: [],
+    links: [],
+  }),
 }));
 
 const { executeScanPhase } = await import("../../src/phases/scan");
@@ -176,7 +182,7 @@ describe("executeScanPhase", () => {
     gatherCodeContextMock.mockReset();
     gatherCodeContextMock.mockImplementation(async (params: any) => {
       await params?.writer?.write?.({
-        type: "context",
+        _: "context",
         phase: "scan",
         message: "code_context_mock",
       });
@@ -189,7 +195,7 @@ describe("executeScanPhase", () => {
     gatherWebContextMock.mockReset();
     gatherWebContextMock.mockImplementation(async (params: any) => {
       await params?.writer?.write?.({
-        type: "context",
+        _: "context",
         phase: "web",
         message: "web_context_mock",
       });
@@ -215,13 +221,12 @@ describe("executeScanPhase", () => {
 
     const writerEvents = events.filter(
       (event) =>
-        event.type === "context" &&
-        (event as any).message === "code_context_mock"
+        event._ === "context" && (event as any).message === "code_context_mock"
     );
     expect(writerEvents.length).toBeGreaterThan(0);
 
     const scanEvents = events.filter(
-      (event) => event.type === "context" && (event as any).phase === "scan"
+      (event) => event._ === "context" && (event as any).phase === "scan"
     );
     expect(scanEvents.length).toBeGreaterThanOrEqual(2);
     expect(scanEvents.some((event) => Boolean((event as any).receipts))).toBe(
@@ -229,17 +234,17 @@ describe("executeScanPhase", () => {
     );
 
     const webEvent = events.find(
-      (event) => event.type === "context" && (event as any).phase === "web"
+      (event) => event._ === "context" && (event as any).phase === "web"
     );
     expect(webEvent).toBeDefined();
 
     const bundleEvent = events.find(
-      (event) => event.type === "context" && (event as any).phase === "bundle"
+      (event) => event._ === "context" && (event as any).phase === "bundle"
     );
     expect(bundleEvent).toBeDefined();
 
     expect(events.at(-1)).toMatchObject({
-      type: "notice",
+      _: "notice",
       message: "context_gathering_completed",
     });
 
@@ -260,7 +265,7 @@ describe("executeScanPhase", () => {
     expect(gatherCodeContextMock).not.toHaveBeenCalled();
     expect(gatherWebContextMock).not.toHaveBeenCalled();
     expect(events[0]).toMatchObject({
-      type: "context",
+      _: "context",
       phase: "scan",
       message: "gathering_context",
     });
@@ -282,7 +287,7 @@ describe("executeScanPhase", () => {
 
     const failureEvent = events.find(
       (event) =>
-        event.type === "notice" &&
+        event._ === "notice" &&
         (event as any).message === "context_gathering_failed"
     );
 
@@ -313,7 +318,7 @@ describe("executeScanPhase", () => {
     expect(gatherWebContextMock).not.toHaveBeenCalled();
     const disabledNotice = events.find(
       (event) =>
-        event.type === "notice" &&
+        event._ === "notice" &&
         (event as any).message === "context_gathering_disabled"
     );
     expect(disabledNotice).toBeDefined();

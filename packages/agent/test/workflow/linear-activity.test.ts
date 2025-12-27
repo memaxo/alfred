@@ -14,6 +14,7 @@ const linearMocks = {
 mock.module("../../src/orchestrator/linear", () => linearMocks);
 
 import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
+
 installLoggerMock();
 
 const { LinearActivityService } = await import(
@@ -79,7 +80,9 @@ describe("LinearActivityService", () => {
         workflowUrl: null,
       });
 
-      expect(linearMocks.extractIssueIdFromSession).toHaveBeenCalledWith("sess-1");
+      expect(linearMocks.extractIssueIdFromSession).toHaveBeenCalledWith(
+        "sess-1"
+      );
       expect(linearMocks.setLinearCompleted).toHaveBeenCalledWith(
         expect.objectContaining({ issueId: "ISS-FROM-SESSION" })
       );

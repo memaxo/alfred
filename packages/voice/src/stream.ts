@@ -6,8 +6,8 @@ import type {
   VoiceStreamStatusEvent,
 } from "@alfred/type/voice";
 
-type StartPayload = Omit<VoiceStreamStartPayload, "type">;
-type AudioChunkPayload = Omit<VoiceStreamAudioChunkPayload, "type">;
+type StartPayload = Omit<VoiceStreamStartPayload, "_">;
+type AudioChunkPayload = Omit<VoiceStreamAudioChunkPayload, "_">;
 
 export type VoiceStreamClientOptions = {
   url: string;
@@ -19,32 +19,28 @@ export type VoiceStreamClientOptions = {
 };
 
 export type VoiceStreamClientHandlers = {
-  onReady?(event: Extract<VoiceStreamServerEvent, { type: "ready" }>): void;
+  onReady?(event: Extract<VoiceStreamServerEvent, { _: "ready" }>): void;
   onSessionStarted?(
-    event: Extract<VoiceStreamServerEvent, { type: "session_started" }>
+    event: Extract<VoiceStreamServerEvent, { _: "session_started" }>
   ): void;
   onPartialTranscript?(
-    event: Extract<VoiceStreamServerEvent, { type: "partial_transcript" }>
+    event: Extract<VoiceStreamServerEvent, { _: "partial_transcript" }>
   ): void;
   onFinalTranscript?(
-    event: Extract<VoiceStreamServerEvent, { type: "final_transcript" }>
+    event: Extract<VoiceStreamServerEvent, { _: "final_transcript" }>
   ): void;
-  onVadState?(
-    event: Extract<VoiceStreamServerEvent, { type: "vad_state" }>
-  ): void;
+  onVadState?(event: Extract<VoiceStreamServerEvent, { _: "vad_state" }>): void;
   onAutoStop?(event: VoiceStreamAutoStopEvent): void;
   onAssistantMessage?(
-    event: Extract<VoiceStreamServerEvent, { type: "assistant_message" }>
+    event: Extract<VoiceStreamServerEvent, { _: "assistant_message" }>
   ): void;
-  onTtsChunk?(
-    event: Extract<VoiceStreamServerEvent, { type: "tts_chunk" }>
-  ): void;
+  onTtsChunk?(event: Extract<VoiceStreamServerEvent, { _: "tts_chunk" }>): void;
   onTtsComplete?(
-    event: Extract<VoiceStreamServerEvent, { type: "tts_complete" }>
+    event: Extract<VoiceStreamServerEvent, { _: "tts_complete" }>
   ): void;
-  onInterrupt?(event: { type: "interrupt"; sessionId: string }): void;
+  onInterrupt?(event: { _: "interrupt"; sessionId: string }): void;
   onStatus?(event: VoiceStreamStatusEvent): void;
-  onError?(event: Extract<VoiceStreamServerEvent, { type: "error" }>): void;
+  onError?(event: Extract<VoiceStreamServerEvent, { _: "error" }>): void;
   onClose?(code: number, reason: string): void;
 };
 
@@ -146,6 +142,7 @@ export class VoiceStreamClient {
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private sessionId: string | undefined;
   private closed = false;
+  private ttsSeq = 0;
 
   constructor(
     options: VoiceStreamClientOptions,
@@ -176,7 +173,7 @@ export class VoiceStreamClient {
       this.rejectSession = reject;
     });
     const payload: VoiceStreamStartPayload = {
-      type: "start",
+      _: "start",
       ...this.options.start,
       ...overrides,
     };
@@ -212,9 +209,11 @@ export class VoiceStreamClient {
       return Promise.resolve();
     }
     this.send({
-      type: "telemetry_report",
+      _: "telemetry_report",
       sessionId: this.sessionId,
-      ...metrics,
+      packetLoss: metrics.packetLoss,
+      jitter: metrics.jitter,
+      rtt: metrics.rtt,
       timestamp: Date.now(),
     });
     return Promise.resolve();
@@ -224,7 +223,7 @@ export class VoiceStreamClient {
     reason: "manual" | "silence" | "timeout" = "manual"
   ): Promise<void> {
     await this.ensureConnection();
-    this.send({ type: "stop", reason });
+    this.send({ _: "stop", reason });
   }
 
   close(): Promise<void> {
@@ -328,12 +327,11 @@ export class VoiceStreamClient {
                 : event.data;
             const audioBase64 = Buffer.from(bytes).toString("base64");
             this.handlers.onTtsChunk?.({
-              type: "tts_chunk",
-              sessionId: this.sessionId ?? "",
+              _: "tts_chunk",
+              sessionId: this.sessionId ?? "unknown",
               audioBase64,
-              mimeType: "audio/pcm",
-              sequence: 0,
-              isLast: false,
+              mimeType: "application/octet-stream",
+              sequence: this.ttsSeq++,
             });
             return;
           }
@@ -354,7 +352,7 @@ export class VoiceStreamClient {
         ws.onerror = () => {
           const err = new Error("voice_stream_socket_error");
           this.handlers.onError?.({
-            type: "error",
+            _: "error",
             sessionId: this.sessionId ?? null,
             message: err.message,
           });
@@ -381,7 +379,7 @@ export class VoiceStreamClient {
   }
 
   private handleServerEvent(event: VoiceStreamServerEvent) {
-    switch (event.type) {
+    switch (event._) {
       case "ready":
         this.handlers.onReady?.(event);
         return;

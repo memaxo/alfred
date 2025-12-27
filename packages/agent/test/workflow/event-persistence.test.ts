@@ -1,8 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import type { WorkflowEvent } from "@alfred/type";
-
 // Install shared logger mock first
 import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
+import type { WorkflowEvent } from "@alfred/type";
+
 installLoggerMock();
 
 // Create mocks with default exports pattern for better mock isolation
@@ -16,7 +16,10 @@ const workflowRepoMock = {
 };
 
 const envelopeMock = {
-  wrapEventEnvelope: vi.fn((data: unknown) => ({ wrapped: true, ...(data as object) })),
+  wrapEventEnvelope: vi.fn((data: unknown) => ({
+    wrapped: true,
+    ...(data as object),
+  })),
   unwrapEventEnvelope: vi.fn((data: unknown) => data),
 };
 
@@ -59,7 +62,11 @@ describe("event-persistence", () => {
 
   describe("persistWorkflowEvent", () => {
     it("persists event with redaction and envelope wrapping", async () => {
-      const event: WorkflowEvent = { type: "progress", data: "test" } as any;
+      const event: WorkflowEvent = {
+        type: "progress",
+        pct: 10,
+        message: "starting",
+      } as any;
 
       const result = await persistWorkflowEvent("run-123", event);
 
@@ -141,7 +148,11 @@ describe("event-persistence", () => {
 
     it("persists UI messages when available", async () => {
       const uiMessages = [
-        { id: "msg-1", role: "assistant", parts: [{ type: "text", text: "Hi" }] },
+        {
+          id: "msg-1",
+          role: "assistant",
+          parts: [{ type: "text", text: "Hi" }],
+        },
       ];
       normalizeMock.eventToUiMessages.mockReturnValue(uiMessages);
       const event = { type: "assistant" } as WorkflowEvent;

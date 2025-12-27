@@ -95,10 +95,10 @@ function normalizeCodec(value?: string): StreamCodec {
 }
 
 function getEventType(payload: unknown): string {
-  if (!(typeof payload === "object" && payload !== null && "type" in payload)) {
+  if (!(typeof payload === "object" && payload !== null && "_" in payload)) {
     return "unknown";
   }
-  const value = (payload as { type?: unknown }).type;
+  const value = (payload as { _?: unknown })._;
   return typeof value === "string" ? value : "unknown";
 }
 
@@ -186,7 +186,7 @@ export class VoiceSocketHandler {
           message instanceof ArrayBuffer)
       ) {
         await this.handleChunk(ws, {
-          type: "audio_chunk",
+          _: "audio_chunk",
           audioBase64: toBufferFromBinary(message).toString("base64"),
           mimeType:
             ws.data.codec === "opus" ? "audio/ogg;codecs=opus" : PCM_MIME_TYPE, // Assume negotiated codec
@@ -196,12 +196,15 @@ export class VoiceSocketHandler {
       }
 
       const event = parseMessage(message);
-      const type = typeof event.type === "string" ? event.type : null;
-      if (!type) {
+      const kind =
+        typeof (event as any)._ === "string"
+          ? ((event as any)._ as string)
+          : null;
+      if (!kind) {
         throw new Error("event_type_missing");
       }
 
-      switch (type) {
+      switch (kind) {
         case "start":
           await this.handleStart(
             ws,
@@ -221,13 +224,16 @@ export class VoiceSocketHandler {
           );
           break;
         case "ping":
-          this.sendWithErrorHandling(ws, { type: "pong" });
+          this.sendWithErrorHandling(ws, {
+            _: "pong",
+            sessionId: ws.data.sessionId ?? null,
+          });
           break;
 
         case "telemetry_report": {
           const report = event as unknown as Extract<
             VoiceStreamServerEvent,
-            { type: "telemetry_report" }
+            { _: "telemetry_report" }
           >;
           if (report.sessionId) {
             voiceSessionPacketLossTotal.inc(
@@ -247,12 +253,12 @@ export class VoiceSocketHandler {
         }
 
         default:
-          throw new Error(`unknown_event_type:${type}`);
+          throw new Error(`unknown_event_type:${kind}`);
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       send(ws, {
-        type: "error",
+        _: "error",
         sessionId: ws.data.sessionId ?? null,
         message: msg,
       });
@@ -298,7 +304,7 @@ export class VoiceSocketHandler {
     ws.data.ttsInProgress = false;
 
     this.sendWithErrorHandling(ws, {
-      type: "session_started",
+      _: "session_started",
       sessionId,
       codec: requestedCodec,
       negotiatedCodec,
@@ -344,7 +350,7 @@ export class VoiceSocketHandler {
           await this.hooks.onSessionError(ws.data.sessionRegistryId, msg);
         }
         this.sendWithErrorHandling(ws, {
-          type: "error",
+          _: "error",
           sessionId,
           message: msg,
         });
@@ -368,7 +374,7 @@ export class VoiceSocketHandler {
     if (payload.emitPartial !== false) {
       const transcript = session.getTranscript();
       this.sendWithErrorHandling(ws, {
-        type: "partial_transcript",
+        _: "partial_transcript",
         sessionId,
         text: transcript,
       });
@@ -382,16 +388,16 @@ export class VoiceSocketHandler {
 
     if (result) {
       this.sendWithErrorHandling(ws, {
-        type: "vad_state",
+        _: "vad_state",
         sessionId,
-        vadConfidence: result.vadConfidence ?? null,
-        isEmpty: result.isEmpty ?? null,
-        endOfUtterance: result.endOfUtterance ?? null,
+        vadConfidence: (result as any).vadConfidence ?? null,
+        isEmpty: (result as any).isEmpty ?? null,
+        endOfUtterance: (result as any).endOfUtterance ?? null,
       });
 
       if (ws.data.autoStop && result.endOfUtterance) {
         this.sendWithErrorHandling(ws, {
-          type: "auto_stop",
+          _: "auto_stop",
           sessionId,
           reason: "silence",
         });
@@ -407,7 +413,7 @@ export class VoiceSocketHandler {
       Date.now() - ws.data.utteranceStartedAt > ws.data.maxUtteranceMs
     ) {
       this.sendWithErrorHandling(ws, {
-        type: "auto_stop",
+        _: "auto_stop",
         sessionId,
         reason: "timeout",
       });
@@ -432,7 +438,7 @@ export class VoiceSocketHandler {
 
     const transcript = session.getTranscript();
     this.sendWithErrorHandling(ws, {
-      type: "final_transcript",
+      _: "final_transcript",
       sessionId,
       text: transcript,
     });
@@ -495,11 +501,11 @@ export class VoiceSocketHandler {
       );
 
       this.sendWithErrorHandling(ws, {
-        type: "assistant_message",
+        _: "assistant_message",
         sessionId,
         text: assistant.text,
         replayId: assistant.replayId ?? null,
-        raw: assistant.raw ?? null,
+        raw: assistant.raw,
       });
 
       if (ws.data.sessionRegistryId) {
@@ -517,8 +523,8 @@ export class VoiceSocketHandler {
         await this.hooks.onSessionError(ws.data.sessionRegistryId, msg);
       }
       this.sendWithErrorHandling(ws, {
-        type: "error",
-        sessionId,
+        _: "error",
+        sessionId: ws.data.sessionId ?? null,
         message: msg,
       });
       await this.updateStatus(ws, "idle");
@@ -592,15 +598,15 @@ export class VoiceSocketHandler {
         */
       });
 
-      this.sendWithErrorHandling(ws, { type: "tts_complete", sessionId });
+      this.sendWithErrorHandling(ws, { _: "tts_complete", sessionId });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (ws.data.sessionRegistryId) {
         await this.hooks.onSessionError(ws.data.sessionRegistryId, msg);
       }
       this.sendWithErrorHandling(ws, {
-        type: "error",
-        sessionId,
+        _: "error",
+        sessionId: ws.data.sessionId ?? null,
         message: msg,
       });
     } finally {
@@ -625,7 +631,11 @@ export class VoiceSocketHandler {
     } as const;
     const sessionId = ws.data.sessionId;
     if (sessionId) {
-      this.sendWithErrorHandling(ws, { type: "status", sessionId, state });
+      this.sendWithErrorHandling(ws, {
+        _: "status",
+        sessionId,
+        state,
+      });
     }
     if (ws.data.sessionRegistryId) {
       await this.hooks.onSessionStatus(
