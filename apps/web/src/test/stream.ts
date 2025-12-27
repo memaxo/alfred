@@ -6,7 +6,7 @@ export type MockStreamController = {
   emit(event: StreamEvent): void;
   error(error: Error): void;
   close(): void;
-  next(kind?: StreamEvent["type"], timeoutMs?: number): Promise<StreamEvent>;
+  next(kind?: StreamEvent["_"], timeoutMs?: number): Promise<StreamEvent>;
 };
 
 export function createMockStream(
@@ -52,11 +52,11 @@ export function createMockStream(
       queue.length = 0;
       listeners.length = 0;
     },
-    next(kind?: StreamEvent["type"], timeoutMs = 1000): Promise<StreamEvent> {
+    next(kind?: StreamEvent["_"], timeoutMs = 1000): Promise<StreamEvent> {
       if (isClosed) {
         throw new Error("stream_closed");
       }
-      const match = (event: StreamEvent) => (kind ? event.type === kind : true);
+      const match = (event: StreamEvent) => (kind ? event._ === kind : true);
       const existingIndex = queue.findIndex(match);
       if (existingIndex >= 0) {
         const [event] = queue.splice(existingIndex, 1);
@@ -91,7 +91,7 @@ export function createMockStream(
 
 export function waitForStreamMessage(
   controller: MockStreamController,
-  kind: StreamEvent["type"],
+  kind: StreamEvent["_"],
   timeoutMs = 1000
 ): Promise<StreamEvent> {
   return controller.next(kind, timeoutMs);

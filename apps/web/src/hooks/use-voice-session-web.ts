@@ -1,10 +1,10 @@
+import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { createVoiceSession } from "@alfred/voice/session";
 import type {
   SpeechToSpeechResponse,
   VoiceClient,
   VoiceSessionDescriptor,
 } from "@alfred/voice/types";
-import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
 import { trpc } from "@/utils/trpc";

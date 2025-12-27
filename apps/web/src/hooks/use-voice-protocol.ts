@@ -29,7 +29,7 @@ export function useVoiceProtocol(
   sessionIdRef: React.MutableRefObject<string>,
   handlers: {
     onAudioChunk: (
-      chunk: Extract<VoiceStreamServerEvent, { type: "tts_chunk" }>
+      chunk: Extract<VoiceStreamServerEvent, { _: "tts_chunk" }>
     ) => void;
     onInterrupt: () => void;
   }
