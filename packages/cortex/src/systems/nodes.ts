@@ -47,9 +47,9 @@ export class NodeSystem implements RenderSystem {
   private renderPipeline: GPURenderPipeline | null = null;
   private focusedPipeline: GPURenderPipeline | null = null;
   private bindGroup: GPUBindGroup | null = null;
-  private focusedNodeId: string | null = null;
 
   private nodes: NodeData[] = [];
+  private focusedNodeId: string | null = null;
   private readonly maxNodes: number;
 
   constructor(maxNodes = 200) {
