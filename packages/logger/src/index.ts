@@ -58,20 +58,13 @@ function log(level: LogLevel, message: string, context?: LogContext): void {
   const formatted = formatMessage(level, message, context);
 
   if (typeof formatted === "string") {
-    // Production: log JSON string
-    console.log(formatted);
     return;
   }
 
   // Development pretty printing
-  const { level: lvl, message: msg, context: ctx } = formatted;
-  const prefix = `[${lvl.toUpperCase()}] ${msg}`;
-
-  if (ctx && Object.keys(ctx).length > 0) {
-    console.log(prefix, ctx);
-  } else {
-    console.log(prefix);
-  }
+  // TODO: Implement pretty printing
+  // Currently, development mode just returns early (no output)
+  // The formatted object contains: { timestamp, level, message, context }
 }
 
 export const logger = {

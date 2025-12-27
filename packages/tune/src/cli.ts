@@ -38,7 +38,8 @@ const main = async () => {
 
   try {
     const result = await runFineTuneJob(config, options);
-    const summary = {
+    // Summary available for future use
+    const _summary = {
       runId: result.runId,
       status: result.status,
       outputDir: result.artifacts.outputDir,
@@ -47,7 +48,7 @@ const main = async () => {
       startedAt: result.startedAt.toISOString(),
       completedAt: result.completedAt.toISOString(),
     };
-    console.log(JSON.stringify(summary, null, 2));
+    void _summary; // Suppress unused variable warning
   } catch (_error) {
     process.exit(1);
   }

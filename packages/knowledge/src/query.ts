@@ -147,7 +147,7 @@ const executeInternal = (query: Query, graph: Hypergraph): Result[] => {
 export const semanticQuery = (
   naturalLanguage: string,
   graph: Hypergraph,
-  limit = 10,
+  limit: number,
   options: SemanticQueryOptions
 ): NodeId[] =>
   measureSync("knowledge.query.semantic", SEMANTIC_BUDGET_MS, () =>
