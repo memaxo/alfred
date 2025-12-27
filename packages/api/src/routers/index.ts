@@ -2,7 +2,6 @@ import { protectedProcedure, publicProcedure, router } from "../trpc";
 import { adminRouter } from "./admin";
 import { assistantRouter } from "./assistant";
 import { bookRouter } from "./book";
-import { budgetRouter } from "./budget";
 import { codexRouter } from "./codex";
 import { codexIntentRouter } from "./codex-intent";
 import { cognitiveRouter } from "./cognitive";
@@ -16,7 +15,6 @@ import { knowledgeRouter } from "./knowledge";
 import { linearRouter } from "./linear";
 import { noteRouter } from "./note";
 import { orchestratorRouter } from "./orchestrator";
-import { personalityRouter } from "./personality";
 import { planRouter } from "./plan";
 import { preferenceRouter } from "./preference";
 import { privacyRouter } from "./privacy";
@@ -48,7 +46,6 @@ export const appRouter = router({
   remind: remindRouter,
   timer: timerRouter,
   book: bookRouter,
-  budget: budgetRouter,
   codex: codexRouter,
   codexIntent: codexIntentRouter,
   cognitive: cognitiveRouter,
@@ -61,7 +58,6 @@ export const appRouter = router({
   linear: linearRouter,
   assistant: assistantRouter,
   orchestrator: orchestratorRouter,
-  personality: personalityRouter,
   plan: planRouter,
   profile: profileRouter,
   project: projectRouter,

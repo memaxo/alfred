@@ -15,16 +15,45 @@ const authClient = createAuthClient({
   plugins: [deviceAuthorizationClient()],
 });
 
+type DeviceCode = {
+  verificationUri: string;
+  verificationUriComplete?: string;
+  deviceCode: string;
+  interval: number;
+  expiresIn: number;
+};
+
+type DeviceToken = {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: unknown;
+  session: { id: string };
+};
+
+type DeviceAuthClient = {
+  oauth2: {
+    requestDeviceCode: (input: {
+      scope: string[];
+    }) => Promise<{ data?: DeviceCode; error?: unknown }>;
+    pollDeviceToken: (input: {
+      deviceCode: string;
+      interval: number;
+      expiresIn: number;
+    }) => Promise<{ data?: DeviceToken; error?: unknown }>;
+  };
+};
+
 export async function deviceLogin(): Promise<void> {
+  const oauth2 = (authClient as unknown as DeviceAuthClient).oauth2;
+
   // 1. Request device code
-  const { data: deviceCode, error } = await (
-    authClient as any
-  ).oauth2.requestDeviceCode({
+  const { data: deviceCode, error } = await oauth2.requestDeviceCode({
     scope: ["openid", "profile", "offline_access"],
   });
 
   if (error || !deviceCode) {
-    process.exit(1);
+    throw new Error("tui_auth_device_code_request_failed");
   }
 
   // 3. Open browser automatically
@@ -38,16 +67,14 @@ export async function deviceLogin(): Promise<void> {
   process.stdout.write("  Waiting for authorization");
 
   // 4. Poll for authorization
-  const { data: tokens, error: pollError } = await (
-    authClient as any
-  ).oauth2.pollDeviceToken({
+  const { data: tokens, error: pollError } = await oauth2.pollDeviceToken({
     deviceCode: deviceCode.deviceCode,
     interval: deviceCode.interval,
     expiresIn: deviceCode.expiresIn,
   });
 
   if (pollError || !tokens) {
-    process.exit(1);
+    throw new Error("tui_auth_device_token_poll_failed");
   }
 
   // 5. Store credentials

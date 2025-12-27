@@ -1,16 +1,26 @@
-import { appRouter } from "@alfred/api";
+import { appRouter } from "@alfred/api/router";
 import omelette from "omelette";
+
+type RouterWithProcedures = {
+  _def: { procedures: Record<string, unknown> };
+};
+
+function getProceduresMap(): Record<string, unknown> {
+  return (appRouter as unknown as RouterWithProcedures)._def.procedures;
+}
 
 // Extract router names from appRouter
 function getRouterNames(): string[] {
-  const procedures = (appRouter as any)._def.procedures;
-  const routerKeys = Object.keys(procedures);
+  const routerKeys = Object.keys(getProceduresMap());
   const routers = new Set<string>();
 
   for (const key of routerKeys) {
     const parts = key.split(".");
     if (parts.length > 1) {
-      routers.add(parts[0]!);
+      const head = parts[0];
+      if (head) {
+        routers.add(head);
+      }
     }
   }
 
@@ -19,7 +29,7 @@ function getRouterNames(): string[] {
 
 // Get procedures for a router
 function getProcedures(routerName: string): string[] {
-  const procedures = Object.keys(appRouter._def.procedures);
+  const procedures = Object.keys(getProceduresMap());
   return procedures
     .filter((p) => p.startsWith(`${routerName}.`))
     .map((p) => p.replace(`${routerName}.`, ""));

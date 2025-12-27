@@ -21,6 +21,6 @@ export async function authCommands(args: string[]): Promise<void> {
       await elevate();
       break;
     default:
-      process.exit(1);
+      throw new Error("tui_auth_command_invalid");
   }
 }

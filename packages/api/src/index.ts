@@ -1,7 +1,10 @@
 // Auto-initialize API services when module is imported (backward compatibility)
 import { initApiServices } from "./init";
 
-initApiServices();
+const autoInit = (process.env.ALFRED_API_AUTO_INIT ?? "true").toLowerCase();
+if (!(autoInit === "0" || autoInit === "false" || autoInit === "no")) {
+  initApiServices();
+}
 
 // Export internal utilities needed by runtime
 export { generateText } from "./ai/generate";

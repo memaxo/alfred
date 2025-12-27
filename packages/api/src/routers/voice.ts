@@ -15,20 +15,14 @@ import {
   resolveSttLanguagePreference,
   resolveVoicePreference,
 } from "@alfred/voice/services/config";
-import {
-  downloadModel,
-  listAvailableModels,
-  listVoices,
-} from "@alfred/voice/services/models";
-import { type SttInput, transcribeLocal } from "@alfred/voice/services/stt";
-import { synthesizeLocal, type TtsInput } from "@alfred/voice/services/tts";
+import type { SttInput } from "@alfred/voice/services/stt";
+import type { TtsInput } from "@alfred/voice/services/tts";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
-import { runAssistantForVoice } from "../voice/assistant";
 import { getVoicePools } from "../voice/pools";
 import {
   claimVoiceSession,
@@ -145,6 +139,10 @@ export const voiceRouter = router({
       }
 
       try {
+        const [{ transcribeLocal }, { getVoicePools }] = await Promise.all([
+          import("@alfred/voice/services/stt"),
+          import("../voice/pools"),
+        ]);
         const { sttPool } = getVoicePools();
         return await transcribeLocal(sttPool, { ...input, language });
       } catch (error) {
@@ -167,6 +165,10 @@ export const voiceRouter = router({
       const voice = await resolveVoicePreference(session.user.id, input.voice);
 
       try {
+        const [{ synthesizeLocal }, { getVoicePools }] = await Promise.all([
+          import("@alfred/voice/services/tts"),
+          import("../voice/pools"),
+        ]);
         const { ttsPool } = getVoicePools();
         return await synthesizeLocal(ttsPool, { ...input, voice });
       } catch (error) {
@@ -225,6 +227,17 @@ export const voiceRouter = router({
           prompt: input.prompt,
         };
 
+        const [
+          { transcribeLocal },
+          { synthesizeLocal },
+          { getVoicePools },
+          { runAssistantForVoice },
+        ] = await Promise.all([
+          import("@alfred/voice/services/stt"),
+          import("@alfred/voice/services/tts"),
+          import("../voice/pools"),
+          import("../voice/assistant"),
+        ]);
         const { sttPool, ttsPool } = getVoicePools();
         const sttResult = await transcribeLocal(sttPool, sttPayload);
 
@@ -310,24 +323,37 @@ export const voiceRouter = router({
       }
     }),
 
-  listAvailableModels: authedProcedure.query(async () => listAvailableModels()),
+  listAvailableModels: authedProcedure.query(async () => {
+    const { listAvailableModels } = await import(
+      "@alfred/voice/services/models"
+    );
+    return listAvailableModels();
+  }),
 
   downloadModel: authedProcedure
     .input(voiceDownloadInput)
     .mutation(async ({ input }) => {
       try {
+        const { downloadModel } = await import("@alfred/voice/services/models");
         return await downloadModel(input.voiceId);
       } catch (error) {
         throw toTRPCError(error, "voice_download_failed");
       }
     }),
 
-  listVoices: authedProcedure.query(async () => listVoices()),
+  listVoices: authedProcedure.query(async () => {
+    const { listVoices } = await import("@alfred/voice/services/models");
+    return listVoices();
+  }),
 
   previewVoice: authedProcedure
     .input(voicePreviewInput)
     .mutation(async ({ input }) => {
       try {
+        const [{ synthesizeLocal }, { getVoicePools }] = await Promise.all([
+          import("@alfred/voice/services/tts"),
+          import("../voice/pools"),
+        ]);
         const { ttsPool } = getVoicePools();
         return await synthesizeLocal(ttsPool, {
           text: input.text,

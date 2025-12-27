@@ -91,7 +91,7 @@ export async function ensureBiometricForAdmin(
 export async function elevate(): Promise<void> {
   const creds = await loadCredentials();
   if (!creds) {
-    process.exit(1);
+    throw new Error("tui_auth_required");
   }
 
   await ensureBiometricForAdmin(creds.sessionId);
