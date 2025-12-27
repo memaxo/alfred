@@ -219,7 +219,6 @@ export function createSemanticPoint4D(
   };
 }
 
-
 /**
  * Find k nearest neighbors by semantic similarity
  */

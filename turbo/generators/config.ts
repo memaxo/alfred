@@ -21,7 +21,10 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
         message: "Package boundary tag:",
         choices: [
           { name: "core (shared across server and client)", value: "core" },
-          { name: "server-only (DB, API, runtime packages)", value: "server-only" },
+          {
+            name: "server-only (DB, API, runtime packages)",
+            value: "server-only",
+          },
           { name: "client (UI, browser packages)", value: "client" },
         ],
         default: "core",
@@ -77,7 +80,7 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
     ],
     actions: (answers) => {
       const actions: PlopTypes.ActionType[] = [];
-      
+
       if (answers?.type === "web") {
         actions.push({
           type: "add",
@@ -94,7 +97,7 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
 }`,
         });
       }
-      
+
       return actions;
     },
   });
