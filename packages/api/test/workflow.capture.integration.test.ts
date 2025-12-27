@@ -193,7 +193,7 @@ describe("workflow capture integration (sqlite)", () => {
       streamObservable.subscribe({
         next: (event) => {
           events.push(event);
-          if (event.type === "run" && typeof (event as any).id === "string") {
+          if (event._ === "run" && typeof (event as any).id === "string") {
             observedRunId = (event as any).id;
           }
           if (event.type === "require-scope") {
@@ -217,7 +217,7 @@ describe("workflow capture integration (sqlite)", () => {
     expect(observedRunId).toBe(streamRunId);
     expect(
       events.some(
-        (event) => event.type === "progress" && (event as any).pct === 100
+        (event) => event._ === "progress" && (event as any).pct === 100
       )
     ).toBe(true);
 
@@ -283,11 +283,7 @@ type StreamingExecutorOptions = {
 function createStartExecutor(runId: string) {
   const stream = (async function* () {
     yield { type: "run", id: runId } as WorkflowEvent;
-    yield {
-      type: "progress",
-      pct: 100,
-      message: "start_complete",
-    } as WorkflowEvent;
+    yield { type: "progress", pct: 10, message: "starting" } as WorkflowEvent;
   })();
 
   return {
@@ -311,8 +307,8 @@ function createStreamingExecutor(options: StreamingExecutorOptions) {
     });
     yield {
       type: "context",
-      phase: "capture",
-      message: "knowledge_persisted",
+      phase: "scan",
+      message: "capture_context",
     } as WorkflowEvent;
     yield {
       type: "assistant",

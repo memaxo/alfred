@@ -378,7 +378,11 @@ describe("Workflow → Cognitive Integration", () => {
       // Verify event payload contains reason
       const interruptPayload = interruptEvents[0]?.payload;
       expect(interruptPayload).toBeDefined();
-      if (interruptPayload && typeof interruptPayload === "object" && "data" in interruptPayload) {
+      if (
+        interruptPayload &&
+        typeof interruptPayload === "object" &&
+        "data" in interruptPayload
+      ) {
         const data = (interruptPayload as any).data;
         expect(data.reason).toContain("boredom_loop_detected");
         expect(data.priority).toBe(2); // Supervisor interrupts use priority 2
@@ -630,7 +634,7 @@ describe("Cross-Boundary Event Flow", () => {
       const timeout = setTimeout(() => resolve(), 10_000);
       const sub = observable.subscribe({
         next: (event) => {
-          if (event.type === "run" && (event as any).id) {
+          if (event._ === "run" && (event as any).id) {
             runId = (event as any).id;
           }
         },

@@ -34,7 +34,6 @@ mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: async () => {},
 }));
 
-
 type VoiceFixtureHandle = Awaited<ReturnType<typeof installVoiceTestPools>>;
 
 describe("voice streaming integration", () => {

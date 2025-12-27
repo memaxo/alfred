@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import {
   isContainerWorkspace,
   type Workspace,
 } from "@alfred/agent/environment/types";
-import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 
 /**
@@ -77,7 +77,9 @@ export async function createCodexLiveWorkspace(options: {
 /**
  * Clean up a Codex live workspace.
  */
-export async function cleanupCodexLiveWorkspace(ws: CodexLiveWorkspace): Promise<void> {
+export async function cleanupCodexLiveWorkspace(
+  ws: CodexLiveWorkspace
+): Promise<void> {
   await ws.workspace.cleanup();
 }
 

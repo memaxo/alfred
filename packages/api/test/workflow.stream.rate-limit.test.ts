@@ -71,7 +71,11 @@ describe("workflow.stream rate limit", () => {
     const mockRunId = "rate-run";
     const mkStream = async function* () {
       yield { type: "run", id: mockRunId } as WorkflowEvent;
-      yield { type: "progress", pct: 100, message: "done" } as WorkflowEvent;
+      yield {
+        type: "progress",
+        pct: 100,
+        message: "completed",
+      } as WorkflowEvent;
     };
 
     workflowRunnerMocks.runPlanV6.mockReturnValue({

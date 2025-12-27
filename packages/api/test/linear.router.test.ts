@@ -1,10 +1,10 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
+import { dbModuleStub } from "./utils/mock-db-client";
 import {
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -14,16 +14,16 @@ mockPolicyAudit();
 import {
   authTokenMocks,
   installAuthTokenMock,
-  resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
 
 // Install shared mocks
 installAuthTokenMock();
 
 const upsertLinearMock = dbModuleStub.linearRepo.upsertLinear;
-const getLinearByOAuthMock = dbModuleStub.linearRepo.getLinearByOAuth;
-const cacheJTIMock = authTokenMocks.cacheJTI;
-const requireToolScopesAndPolicyMock = authTokenMocks.requireToolScopesAndPolicy;
+const _getLinearByOAuthMock = dbModuleStub.linearRepo.getLinearByOAuth;
+const _cacheJTIMock = authTokenMocks.cacheJTI;
+const _requireToolScopesAndPolicyMock =
+  authTokenMocks.requireToolScopesAndPolicy;
 
 process.env.LINEAR_CLIENT_ID = "test-client-id";
 process.env.LINEAR_CLIENT_SECRET = "test-secret";

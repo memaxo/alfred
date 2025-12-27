@@ -234,9 +234,9 @@ describeFn("workflow persistence", () => {
 
       const events: WorkflowEvent[] = [
         { type: "run", id: run.id } as WorkflowEvent,
-        { type: "progress", pct: 25 } as WorkflowEvent,
-        { type: "progress", pct: 50 } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+        { type: "progress", pct: 10, message: "p10" } as WorkflowEvent,
+        { type: "progress", pct: 50, message: "p50" } as WorkflowEvent,
+        { type: "progress", pct: 100, message: "p100" } as WorkflowEvent,
       ];
 
       for (const event of events) {

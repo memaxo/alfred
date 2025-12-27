@@ -1,13 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { TRPCError } from "@trpc/server";
+import { nodePtySpawnMock } from "./utils/mock-node-pty";
 import { toObservable } from "./utils/stream";
 import { createTestCaller } from "./utils/trpc";
-import { nodePtySpawnMock } from "./utils/mock-node-pty";
 
 describe("terminal router", () => {
   let caller: Awaited<ReturnType<typeof createTestCaller>>;
   const originalPlatform = process.platform;
-  const bun = Bun as unknown as { spawn: (...args: unknown[]) => Bun.Subprocess };
+  const bun = Bun as unknown as {
+    spawn: (...args: unknown[]) => Bun.Subprocess;
+  };
 
   type TerminalSpawnOptions = {
     terminal?: {
@@ -62,17 +72,16 @@ describe("terminal router", () => {
       };
 
       const spawnImpl: unknown = (...args: unknown[]) => {
-        const options =
-          (args.length > 1 ? args[1] : args[0]) as TerminalSpawnOptions | undefined;
+        const options = (args.length > 1 ? args[1] : args[0]) as
+          | TerminalSpawnOptions
+          | undefined;
         if (options?.terminal?.data) {
           _dataCallback = options.terminal.data;
           subscribers.add(() => {});
         }
         return mockProc as unknown as Bun.Subprocess;
       };
-      vi
-        .spyOn(bun, "spawn")
-        .mockImplementation(spawnImpl as typeof bun.spawn);
+      vi.spyOn(bun, "spawn").mockImplementation(spawnImpl as typeof bun.spawn);
 
       const result = await caller.terminal.createSession({
         cols: 80,
@@ -103,9 +112,7 @@ describe("terminal router", () => {
         throw new Error("PTY not available");
       });
       const throwImpl: unknown = (..._args: unknown[]) => spawnSpy();
-      vi
-        .spyOn(bun, "spawn")
-        .mockImplementation(throwImpl as typeof bun.spawn);
+      vi.spyOn(bun, "spawn").mockImplementation(throwImpl as typeof bun.spawn);
 
       const result = await caller.terminal.createSession({
         cols: 80,
@@ -152,9 +159,9 @@ describe("terminal router", () => {
       const bunFailImpl: unknown = (..._args: unknown[]) => {
         throw new Error("Bun PTY unavailable");
       };
-      vi
-        .spyOn(bun, "spawn")
-        .mockImplementation(bunFailImpl as typeof bun.spawn);
+      vi.spyOn(bun, "spawn").mockImplementation(
+        bunFailImpl as typeof bun.spawn
+      );
 
       // Create a caller without the global node-pty test mock, and force node-pty to be unusable.
       mock.module("node-pty", () => ({ default: {} }));
@@ -193,16 +200,17 @@ describe("terminal router", () => {
       };
 
       const bunSpawnImpl: unknown = (...args: unknown[]) => {
-        const options =
-          (args.length > 1 ? args[1] : args[0]) as TerminalSpawnOptions | undefined;
+        const options = (args.length > 1 ? args[1] : args[0]) as
+          | TerminalSpawnOptions
+          | undefined;
         if (options?.terminal?.data) {
           dataCallback = options.terminal.data;
         }
         return mockProc as unknown as Bun.Subprocess;
       };
-      vi
-        .spyOn(bun, "spawn")
-        .mockImplementation(bunSpawnImpl as typeof bun.spawn);
+      vi.spyOn(bun, "spawn").mockImplementation(
+        bunSpawnImpl as typeof bun.spawn
+      );
 
       const { sessionId } = await caller.terminal.createSession({
         cols: 80,

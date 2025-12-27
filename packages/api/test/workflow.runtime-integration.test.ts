@@ -1,9 +1,4 @@
 // Import Redis mocks BEFORE any other imports (via workflow fixture)
-import {
-  installWorkflowRuntimeFixture,
-  type WorkflowRuntimeFixtureHandle,
-  workflowMetricsStub,
-} from "@alfred/test-kit/workflow/runtime-fixture";
 
 import {
   afterAll,
@@ -18,6 +13,11 @@ import {
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  installWorkflowRuntimeFixture,
+  type WorkflowRuntimeFixtureHandle,
+  workflowMetricsStub,
+} from "@alfred/test-kit/workflow/runtime-fixture";
 import type { WorkflowEvent } from "@alfred/type";
 import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
@@ -240,7 +240,7 @@ describe("workflow runtime integration (minimal-mock)", () => {
     });
 
     const runEvent = events.find(
-      (event) => event.type === "run"
+      (event) => event._ === "run"
     ) as WorkflowEvent & { id: string };
     expect(runEvent?.id).toBeDefined();
     return { runId: runEvent.id, events, workspace };

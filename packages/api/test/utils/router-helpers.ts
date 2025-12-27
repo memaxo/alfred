@@ -10,8 +10,8 @@ import type { TRPCError } from "@trpc/server";
 // Re-export Redis mocks from test-kit for convenience
 export {
   installRedisMocks,
-  resetRedisMocks,
   redisMocks,
+  resetRedisMocks,
   runRegistryMocks,
 } from "@alfred/test-kit/redis";
 

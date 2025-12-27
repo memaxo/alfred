@@ -34,7 +34,9 @@ dbModuleStub.conversationRepo.getMessage = getMessageMock;
 dbModuleStub.conversationRepo.messageRowToUIMessage = messageRowToUIMessageMock;
 dbModuleStub.conversationRepo.getActiveUserIds = vi.fn().mockResolvedValue([]);
 dbModuleStub.conversationRepo.getConversations = vi.fn().mockResolvedValue([]);
-dbModuleStub.conversationRepo.getConversationHistory = vi.fn().mockResolvedValue(null);
+dbModuleStub.conversationRepo.getConversationHistory = vi
+  .fn()
+  .mockResolvedValue(null);
 dbModuleStub.conversationRepo.createConversation = vi.fn();
 dbModuleStub.conversationRepo.createMessage = vi.fn();
 

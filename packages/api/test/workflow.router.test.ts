@@ -184,8 +184,8 @@ describe("workflow router", () => {
         yield { type: "run", id: mockRunId } as WorkflowEvent;
         yield {
           type: "progress",
-          pct: 100,
-          message: "completed",
+          pct: 10,
+          message: "starting",
         } as WorkflowEvent;
       };
 
@@ -314,7 +314,7 @@ describe("workflow router", () => {
       const events: WorkflowEvent[] = [
         { type: "run", id: mockRunId } as WorkflowEvent,
         { type: "assistant", text: "Workflow complete" } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+        { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
       ];
 
       const mockStream = async function* () {
@@ -498,7 +498,7 @@ describe("workflow router", () => {
             resolveObligation(event.runId);
             resolveObligation = undefined;
           }
-          if (event.type === "progress" && (event.pct ?? 0) === 100) {
+          if (event._ === "progress" && (event.pct ?? 0) === 100) {
             stop?.();
             resolveComplete?.();
           }
@@ -530,8 +530,7 @@ describe("workflow router", () => {
       await completionPromise;
 
       const progressEvent = receivedEvents.find(
-        (event) =>
-          event.type === "progress" && (event as any).message === "done"
+        (event) => event._ === "progress" && (event as any).message === "done"
       );
       expect(progressEvent).toBeDefined();
 
@@ -558,17 +557,18 @@ describe("workflow router", () => {
         { type: "run", id: mockRunId } as WorkflowEvent,
         {
           type: "tool-call",
-          toolCallId: "call-42",
-          toolName: "git.status",
-          input: { repo: "alfred" },
+          toolCallId: "tc-1",
+          toolName: "test",
+          input: { ok: true },
         } as WorkflowEvent,
         {
           type: "tool-result",
-          toolCallId: "call-42",
-          toolName: "git.status",
-          output: { clean: true },
+          toolCallId: "tc-1",
+          toolName: "test",
+          input: { ok: true },
+          output: { ok: true },
         } as WorkflowEvent,
-        { type: "progress", pct: 25, message: "checking" } as WorkflowEvent,
+        { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
       ];
 
       const mockStream = async function* () {
@@ -677,8 +677,8 @@ describe("workflow router", () => {
           while (active) {
             yield {
               type: "progress",
-              pct: 5,
-              message: "working",
+              pct: 1,
+              message: "tick",
             } as WorkflowEvent;
             await new Promise((resolve) => setTimeout(resolve, 0));
           }
@@ -931,7 +931,7 @@ describe("workflow router", () => {
         const mockRunId = "test-run-id";
         const events: WorkflowEvent[] = [
           { type: "run", id: mockRunId } as WorkflowEvent,
-          { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+          { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
         ];
 
         const mockExecutor = createMockExecutor(mockRunId, "test", events);
@@ -1003,7 +1003,7 @@ describe("workflow router", () => {
         const mockRunId = "test-run-id";
         const events: WorkflowEvent[] = [
           { type: "run", id: mockRunId } as WorkflowEvent,
-          { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+          { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
         ];
 
         const mockExecutor = createMockExecutor(mockRunId, "test", events);
@@ -1118,8 +1118,8 @@ describe("workflow router", () => {
     it("produces identical event streams", async () => {
       const events: WorkflowEvent[] = [
         { type: "run", id: "test-run-id" } as WorkflowEvent,
-        { type: "progress", pct: 50, message: "halfway" } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+        { type: "progress", pct: 10, message: "p10" } as WorkflowEvent,
+        { type: "progress", pct: 100, message: "p100" } as WorkflowEvent,
       ];
 
       // Test with runner

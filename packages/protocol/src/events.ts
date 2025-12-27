@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import { threadItemSchema, type ThreadItem } from "./items.js";
+import { type ThreadItem, threadItemSchema } from "./items.js";
 
 export const usageSchema = z
   .object({

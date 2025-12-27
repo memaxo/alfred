@@ -1,5 +1,11 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { createTestCaller } from "./utils/trpc";
 
@@ -27,7 +33,9 @@ describe("fs router (security boundaries)", () => {
 
   it("rejects path traversal outside the project root", async () => {
     const caller = await createTestCaller();
-    await expect(caller.fs.read({ path: "../etc/hosts" })).rejects.toMatchObject({
+    await expect(
+      caller.fs.read({ path: "../etc/hosts" })
+    ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
     await expect(
@@ -108,4 +116,3 @@ describe("fs router (security boundaries)", () => {
     expect(result).toEqual({ content: "plain" });
   });
 });
-

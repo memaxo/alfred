@@ -1,11 +1,11 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { recordMemoryUpdateMock, resetAgentMocks } from "./utils/agent-mock";
+import { dbModuleStub } from "./utils/mock-db-client";
 import {
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();

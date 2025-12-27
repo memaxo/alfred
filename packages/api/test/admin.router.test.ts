@@ -40,18 +40,42 @@ const collectPerformanceTelemetryMock = vi.fn().mockResolvedValue({
   generatedAt: Date.now(),
   graph: {
     queriesTotal: 10,
-    queryLatency: { average: 0.1, p50: 0.05, p95: 0.2, count: 10, unit: "seconds" },
-    contextLatency: { average: 0.2, p50: 0.1, p95: 0.4, count: 5, unit: "seconds" },
+    queryLatency: {
+      average: 0.1,
+      p50: 0.05,
+      p95: 0.2,
+      count: 10,
+      unit: "seconds",
+    },
+    contextLatency: {
+      average: 0.2,
+      p50: 0.1,
+      p95: 0.4,
+      count: 5,
+      unit: "seconds",
+    },
     ragHits: 8,
     ragEmpty: 2,
   },
   assistant: {
     requestsTotal: 5,
-    generateLatency: { average: 1.5, p50: 1.2, p95: 2.5, count: 5, unit: "seconds" },
+    generateLatency: {
+      average: 1.5,
+      p50: 1.2,
+      p95: 2.5,
+      count: 5,
+      unit: "seconds",
+    },
   },
   tools: {
     droidRunsTotal: 3,
-    droidDuration: { average: 2.0, p50: 1.8, p95: 3.5, count: 3, unit: "seconds" },
+    droidDuration: {
+      average: 2.0,
+      p50: 1.8,
+      p95: 3.5,
+      count: 3,
+      unit: "seconds",
+    },
   },
   system: {
     healthChecksTotal: 100,

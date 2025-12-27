@@ -126,7 +126,7 @@ describe("toolOutputWithMetadataSchema", () => {
     const output = {
       result: "Task completed successfully",
       artifacts: [{ path: "/src/new-file.ts", kind: "add" }],
-      reasoning: [{ text: "Created new file", timestamp: 1234567890 }],
+      reasoning: [{ text: "Created new file", timestamp: 1_234_567_890 }],
       metadata: {
         agentName: "codex",
         threadId: "thread-123",

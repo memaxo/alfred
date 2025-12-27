@@ -20,7 +20,12 @@ describe("reasoningItemSchema", () => {
   });
 
   it("preserves passthrough fields", () => {
-    const item = { id: "item-1", type: "reasoning", text: "Thinking...", extra: "data" };
+    const item = {
+      id: "item-1",
+      type: "reasoning",
+      text: "Thinking...",
+      extra: "data",
+    };
     const result = reasoningItemSchema.safeParse(item);
     expect(result.success).toBe(true);
     if (result.success) {
@@ -29,7 +34,7 @@ describe("reasoningItemSchema", () => {
   });
 
   it("rejects missing id", () => {
-    const item = { type: "reasoning", text: "Thinking..." };
+    const item = { type: "reasoning", text: "missing id" };
     const result = reasoningItemSchema.safeParse(item);
     expect(result.success).toBe(false);
   });
@@ -191,7 +196,11 @@ describe("mcpToolCallItemSchema", () => {
 
 describe("webSearchItemSchema", () => {
   it("validates web search item", () => {
-    const item = { id: "item-6", type: "web_search", query: "bun test framework" };
+    const item = {
+      id: "item-6",
+      type: "web_search",
+      query: "bun test framework",
+    };
     const result = webSearchItemSchema.safeParse(item);
     expect(result.success).toBe(true);
   });
@@ -220,7 +229,11 @@ describe("todoListItemSchema", () => {
 
 describe("errorItemSchema", () => {
   it("validates error item", () => {
-    const item = { id: "item-8", type: "error", message: "Something went wrong" };
+    const item = {
+      id: "item-8",
+      type: "error",
+      message: "Something went wrong",
+    };
     const result = errorItemSchema.safeParse(item);
     expect(result.success).toBe(true);
   });
@@ -231,9 +244,26 @@ describe("threadItemSchema", () => {
     const items = [
       { id: "1", type: "reasoning", text: "..." },
       { id: "2", type: "agent_message", text: "..." },
-      { id: "3", type: "command_execution", command: "ls", status: "completed" },
-      { id: "4", type: "file_change", status: "completed", changes: [{ path: "/a", kind: "add" }] },
-      { id: "5", type: "mcp_tool_call", server: "s", tool: "t", arguments: {}, status: "completed" },
+      {
+        id: "3",
+        type: "command_execution",
+        command: "ls",
+        status: "completed",
+      },
+      {
+        id: "4",
+        type: "file_change",
+        status: "completed",
+        changes: [{ path: "/a", kind: "add" }],
+      },
+      {
+        id: "5",
+        type: "mcp_tool_call",
+        server: "s",
+        tool: "t",
+        arguments: {},
+        status: "completed",
+      },
       { id: "6", type: "web_search", query: "q" },
       { id: "7", type: "todo_list", items: [] },
       { id: "8", type: "error", message: "err" },

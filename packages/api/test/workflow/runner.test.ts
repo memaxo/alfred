@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { type RunPlanInput, runPlanV6 } from "@alfred/agent/workflow/runner";
 import type { WorkflowEvent } from "@alfred/type";
-import { type RunPlanInput, runPlanV6 } from "../../src/workflow/runner";
 
 describe("workflow runner", () => {
   describe("runPlanV6", () => {
@@ -50,7 +50,7 @@ describe("workflow runner", () => {
         }
       }
 
-      const progressEvents = events.filter((e) => e.type === "progress");
+      const progressEvents = events.filter((e) => e._ === "progress");
       expect(progressEvents.length).toBeGreaterThan(0);
     });
 
@@ -230,7 +230,7 @@ describe("workflow runner", () => {
 
       const lastEvent = events.at(-1);
       expect(lastEvent).toMatchObject({
-        type: "progress",
+        _: "progress",
         pct: 100,
         message: "workflow_completed",
       });

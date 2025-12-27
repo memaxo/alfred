@@ -85,11 +85,16 @@ export const terminalRouter = router({
                   }
                 },
               },
-            } as Parameters<typeof Bun.spawn<"ignore", "pipe", "inherit">>[1] & {
+            } as Parameters<
+              typeof Bun.spawn<"ignore", "pipe", "inherit">
+            >[1] & {
               terminal?: {
                 cols: number;
                 rows: number;
-                data: (terminal: Bun.Terminal, data: string | Uint8Array) => void;
+                data: (
+                  terminal: Bun.Terminal,
+                  data: string | Uint8Array
+                ) => void;
               };
             });
 

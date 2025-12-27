@@ -183,7 +183,7 @@ export const knowledgeRouter = router({
       }
 
       const nodeMap = await upsertNodes(nodeSeeds);
-      
+
       // Active Recall: Reinforce newly created/updated nodes
       try {
         const nodeIds = Array.from(nodeMap.values()).map((n) => n.id);

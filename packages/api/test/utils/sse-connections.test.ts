@@ -14,10 +14,10 @@ describe("SSE Connection Tracking", () => {
     clearAllConnections();
     stopCleanupTimer();
     // Reset env vars to defaults
-    delete process.env.SSE_MAX_CONNECTIONS_PER_USER;
-    delete process.env.SSE_MAX_GLOBAL_CONNECTIONS;
-    delete process.env.SSE_CONNECTION_TIMEOUT_MS;
-    delete process.env.SSE_RATE_LIMIT_PER_MINUTE;
+    process.env.SSE_MAX_CONNECTIONS_PER_USER = undefined;
+    process.env.SSE_MAX_GLOBAL_CONNECTIONS = undefined;
+    process.env.SSE_CONNECTION_TIMEOUT_MS = undefined;
+    process.env.SSE_RATE_LIMIT_PER_MINUTE = undefined;
   });
 
   afterEach(() => {
@@ -75,7 +75,7 @@ describe("SSE Connection Tracking", () => {
         results.push(createConnection("user1", "assistant"));
         // Remove immediately to test rate limit, not connection limit
         if (results[i]?.connectionId) {
-          removeConnection(results[i]!.connectionId);
+          removeConnection(results[i]?.connectionId);
         }
       }
 

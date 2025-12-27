@@ -153,16 +153,8 @@ export const aiStreamTextMock = vi.fn(() => {
   }
   return {
     fullStream: (async function* () {
-      yield {
-        type: "text-delta",
-        id: `delta-${randomUUID()}`,
-        delta: "Working...",
-      };
-      yield {
-        type: "finish",
-        finishReason: "stop",
-        usage: { inputTokens: 10, outputTokens: 5 },
-      };
+      yield { type: "text-delta", id: "text-1", delta: "hello" };
+      yield { type: "finish", finishReason: "stop" };
     })(),
   };
 });

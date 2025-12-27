@@ -3,16 +3,7 @@ process.env.USE_WORKFLOW_RUNTIME = "0";
 // Import Redis mocks BEFORE any other imports
 import "@alfred/test-kit/redis";
 
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
+import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 
 // Ensure metrics are mocked for both package and source paths BEFORE any dynamic imports
@@ -239,7 +230,10 @@ describe("workflow router resume flow (integration)", () => {
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-1",
       summary: "ok",
-      resume: async (payload: { event: string; authz: string }): Promise<void> => {
+      resume: async (payload: {
+        event: string;
+        authz: string;
+      }): Promise<void> => {
         resumeGate.resolve(payload);
       },
       cancel: () => {
@@ -325,7 +319,10 @@ describe("workflow router resume flow (integration)", () => {
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-2",
       summary: "ok",
-      resume: async (payload: { event: string; authz: string }): Promise<void> => {
+      resume: async (payload: {
+        event: string;
+        authz: string;
+      }): Promise<void> => {
         resumeGate.resolve(payload);
       },
       cancel: () => {

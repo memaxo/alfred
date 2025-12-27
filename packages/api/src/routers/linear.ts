@@ -1,10 +1,7 @@
-import { cacheJTI } from "@alfred/auth/token";
-import { linearRepo } from "@alfred/db";
-
-const { upsertLinear, getLinearByOAuth } = linearRepo;
-
 import crypto from "node:crypto";
 import { URLSearchParams } from "node:url";
+import { cacheJTI } from "@alfred/auth/token";
+import { getLinearByOAuth, upsertLinear } from "@alfred/db/repo/linear";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";

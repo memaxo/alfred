@@ -1,32 +1,32 @@
 import { describe, expect, it } from "bun:test";
+import type {
+  AcpStopReason,
+  AcpToolKind,
+  ContentBlock,
+  Plan,
+  SessionId,
+  ToolCall,
+} from "./acp";
 import {
+  AGENT_METHODS,
+  // SDK exports
+  AgentSideConnection,
+  CLIENT_METHODS,
+  ClientSideConnection,
+  mapAcpModeToAutonomy,
   // Legacy schemas (deprecated but still exported for backwards compatibility)
   mapAutonomyToAcpMode,
-  mapAcpModeToAutonomy,
+  PROTOCOL_VERSION,
   permissionOptionKindSchema,
   permissionOptionSchema,
   permissionOutcomeSchema,
   permissionRequestSchema,
+  RequestError,
   sessionModeSchema,
   stopReasonSchema,
+  TerminalHandle,
   toolCallStatusSchema,
   toolKindSchema,
-  // SDK exports
-  AgentSideConnection,
-  ClientSideConnection,
-  TerminalHandle,
-  RequestError,
-  AGENT_METHODS,
-  CLIENT_METHODS,
-  PROTOCOL_VERSION,
-} from "./acp";
-import type {
-  SessionId,
-  ToolCall,
-  Plan,
-  ContentBlock,
-  AcpStopReason,
-  AcpToolKind,
 } from "./acp";
 
 describe("toolCallStatusSchema", () => {
@@ -46,7 +46,17 @@ describe("toolCallStatusSchema", () => {
 
 describe("toolKindSchema", () => {
   it("validates all kind values", () => {
-    const kinds = ["read", "edit", "delete", "move", "search", "execute", "think", "fetch", "other"];
+    const kinds = [
+      "read",
+      "edit",
+      "delete",
+      "move",
+      "search",
+      "execute",
+      "think",
+      "fetch",
+      "other",
+    ];
     for (const kind of kinds) {
       const result = toolKindSchema.safeParse(kind);
       expect(result.success).toBe(true);
@@ -56,7 +66,12 @@ describe("toolKindSchema", () => {
 
 describe("permissionOptionKindSchema", () => {
   it("validates all permission option kinds", () => {
-    const kinds = ["allow_once", "allow_always", "reject_once", "reject_always"];
+    const kinds = [
+      "allow_once",
+      "allow_always",
+      "reject_once",
+      "reject_always",
+    ];
     for (const kind of kinds) {
       const result = permissionOptionKindSchema.safeParse(kind);
       expect(result.success).toBe(true);
@@ -144,7 +159,13 @@ describe("sessionModeSchema", () => {
 
 describe("stopReasonSchema", () => {
   it("validates all stop reasons", () => {
-    const reasons = ["end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled"];
+    const reasons = [
+      "end_turn",
+      "max_tokens",
+      "max_turn_requests",
+      "refusal",
+      "cancelled",
+    ];
     for (const reason of reasons) {
       const result = stopReasonSchema.safeParse(reason);
       expect(result.success).toBe(true);
@@ -240,8 +261,8 @@ describe("SDK exports", () => {
   it("exports RequestError class", () => {
     expect(RequestError).toBeDefined();
 
-    const error = new RequestError(-32600, "Invalid Request");
-    expect(error.code).toBe(-32600);
+    const error = new RequestError(-32_600, "Invalid Request");
+    expect(error.code).toBe(-32_600);
     expect(error.message).toBe("Invalid Request");
   });
 

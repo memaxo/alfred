@@ -129,7 +129,6 @@ const toTtsResource = (raw: unknown) => {
   };
 };
 
-
 export const voiceRouter = router({
   sttTranscribe: authedProcedure
     .use(requirePolicy("voice.stt", toSttResource))
@@ -402,11 +401,7 @@ export const voiceRouter = router({
             input.language
           );
 
-          emit.next({
-            type: "status",
-            status: "connected",
-            timestamp: Date.now(),
-          } as any);
+          emit.next({ _: "status", sessionId, state: "idle" });
           voiceStreamEventsTotal.inc({ event: "status", status: "connected" });
           markVoice("voice_stream_connected");
 
@@ -422,11 +417,7 @@ export const voiceRouter = router({
             });
             markVoice("voice_stream_end");
             voiceRegistry.removeSession(sessionId);
-            emit.next({
-              type: "status",
-              status: "disconnected",
-              timestamp: Date.now(),
-            } as any);
+            emit.next({ _: "status", sessionId, state: "idle" });
           };
         } catch (error) {
           voiceStreamEventsTotal.inc({ event: "error", status: "error" });

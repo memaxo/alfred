@@ -1,5 +1,4 @@
 import {
-  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
@@ -42,8 +41,10 @@ const loggerErrorMock = loggerMocks.error;
 const loggerDebugMock = loggerMocks.debug;
 
 // Types for the dynamically imported module
-type MemoryRunRegistryType = import("@alfred/agent/workflow/registry").MemoryRunRegistry;
-type ResumePayloadType = import("@alfred/agent/workflow/registry").ResumePayload;
+type MemoryRunRegistryType =
+  import("@alfred/agent/workflow/registry").MemoryRunRegistry;
+type ResumePayloadType =
+  import("@alfred/agent/workflow/registry").ResumePayload;
 type RunHandleType = import("@alfred/agent/workflow/registry").RunHandle;
 
 let MemoryRunRegistry: new () => MemoryRunRegistryType;

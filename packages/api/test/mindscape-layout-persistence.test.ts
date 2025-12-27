@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 const RUN_DB_TESTS = process.env.RUN_DB_TESTS === "1";
 
 describe("Mindscape Layout Persistence", () => {
-  let db: Awaited<ReturnType<typeof import("../test/utils/db").createTestDb>> | null = null;
+  let db: Awaited<
+    ReturnType<typeof import("../test/utils/db").createTestDb>
+  > | null = null;
   let userRepo: typeof import("@alfred/db").userRepo;
 
   beforeEach(async () => {
@@ -30,7 +32,7 @@ describe("Mindscape Layout Persistence", () => {
 
   describe("save layout", () => {
     it("saves layout snapshot to user_preferences", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const layout = {
@@ -62,7 +64,7 @@ describe("Mindscape Layout Persistence", () => {
     });
 
     it("overwrites existing layout (last-write-wins)", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const firstLayout = {
@@ -106,7 +108,7 @@ describe("Mindscape Layout Persistence", () => {
     });
 
     it("handles large layouts (50+ nodes)", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const largeLayout = {
@@ -135,7 +137,7 @@ describe("Mindscape Layout Persistence", () => {
 
   describe("load layout", () => {
     it("loads saved layout from user_preferences", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const layout = {
@@ -162,7 +164,7 @@ describe("Mindscape Layout Persistence", () => {
     });
 
     it("returns empty array when no layout exists", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const prefs = await userRepo.getPreferences(TEST_USER_ID);
@@ -172,6 +174,9 @@ describe("Mindscape Layout Persistence", () => {
     });
 
     it("handles corrupted layout data gracefully", async () => {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
+        return;
+      }
       // Save invalid data
       await userRepo.setPreference(
         TEST_USER_ID,
@@ -192,7 +197,7 @@ describe("Mindscape Layout Persistence", () => {
 
   describe("schema validation", () => {
     it("rejects layouts without nodes array", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const invalidLayout = {
@@ -217,7 +222,7 @@ describe("Mindscape Layout Persistence", () => {
     });
 
     it("validates node position format", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const layoutWithInvalidPositions = {
@@ -247,7 +252,7 @@ describe("Mindscape Layout Persistence", () => {
 
   describe("concurrent updates", () => {
     it("handles concurrent layout saves (last-write-wins)", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const layout1 = {
@@ -291,7 +296,7 @@ describe("Mindscape Layout Persistence", () => {
 
   describe("user isolation", () => {
     it("isolates layouts per user", async () => {
-      if (!RUN_DB_TESTS || !db || !userRepo) {
+      if (!(RUN_DB_TESTS && db && userRepo)) {
         return;
       }
       const USER_1_ID = "user-1";

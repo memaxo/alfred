@@ -19,12 +19,10 @@ function getPolicyPath(raw: unknown): string {
 export const fsRouter = router({
   read: authedProcedure
     .use(
-      requirePolicy("fs.read", (raw) => {
-        return {
-          kind: "file",
-          id: getPolicyPath(raw),
-        };
-      })
+      requirePolicy("fs.read", (raw) => ({
+        kind: "file",
+        id: getPolicyPath(raw),
+      }))
     )
     .input(z.object({ path: z.string() }))
     .query(async ({ input }) => {
@@ -68,12 +66,10 @@ export const fsRouter = router({
 
   write: authedProcedure
     .use(
-      requirePolicy("fs.write", (raw) => {
-        return {
-          kind: "file",
-          id: getPolicyPath(raw),
-        };
-      })
+      requirePolicy("fs.write", (raw) => ({
+        kind: "file",
+        id: getPolicyPath(raw),
+      }))
     )
     .input(z.object({ path: z.string(), content: z.string() }))
     .mutation(async ({ input }) => {

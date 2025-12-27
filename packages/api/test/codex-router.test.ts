@@ -156,7 +156,7 @@ describe("codex router", () => {
 
   it("completes streams and supports cleanup", async () => {
     toolCodexExecuteMock.mockImplementation(async ({ writer }) => {
-      await writer?.write({ type: "stdout", text: "hi" });
+      await writer?.write({ type: "stdout", text: "done" });
       return { result: "done", artifacts: [] };
     });
 

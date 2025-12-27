@@ -30,7 +30,7 @@ describe("sessionStateSchema", () => {
       status: "active",
       createdAt: Date.now(),
       lastAccessedAt: Date.now(),
-      expiresAt: Date.now() + 86400000,
+      expiresAt: Date.now() + 86_400_000,
     };
     const result = sessionStateSchema.safeParse(state);
     expect(result.success).toBe(true);
@@ -46,7 +46,7 @@ describe("sessionStateSchema", () => {
       linearIssueId: "ALF-123",
       createdAt: Date.now(),
       lastAccessedAt: Date.now(),
-      expiresAt: Date.now() + 86400000,
+      expiresAt: Date.now() + 86_400_000,
     };
     const result = sessionStateSchema.safeParse(state);
     expect(result.success).toBe(true);
@@ -70,7 +70,7 @@ describe("sessionStateSchema", () => {
       status: "active",
       createdAt: Date.now(),
       lastAccessedAt: Date.now(),
-      expiresAt: Date.now() + 86400000,
+      expiresAt: Date.now() + 86_400_000,
     };
     const result = sessionStateSchema.safeParse(state);
     expect(result.success).toBe(false);
@@ -89,7 +89,7 @@ describe("sessionResumeResultSchema", () => {
         status: "active",
         createdAt: Date.now(),
         lastAccessedAt: Date.now(),
-        expiresAt: Date.now() + 86400000,
+        expiresAt: Date.now() + 86_400_000,
       },
     };
     const parsed = sessionResumeResultSchema.safeParse(result);

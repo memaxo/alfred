@@ -60,31 +60,18 @@ const mockModel = {
       stream: new ReadableStream({
         start(controller) {
           // 1. Text delta
-          controller.enqueue({
-            type: "text-delta",
-            textDelta: "Creating verification file.",
-          });
+          controller.enqueue({ type: "text-delta", id: "text-1", delta: "ok" });
 
           // 2. Tool call
           controller.enqueue({
             type: "tool-call",
-            toolCallType: "function",
-            toolCallId: "call_1",
-            toolName: "codex",
-            args: JSON.stringify({
-              action: "exec",
-              prompt: `echo "${VERIFICATION_CONTENT}" > "${VERIFICATION_FILE}"`,
-              auto: "high",
-              cw: process.cwd(),
-            }),
+            toolCallId: "call-1",
+            toolName: "droid.exec",
+            input: { prompt: "noop" },
           });
 
           // 3. Finish
-          controller.enqueue({
-            type: "finish",
-            finishReason: "stop",
-            usage: { promptTokens: 10, completionTokens: 10 },
-          });
+          controller.enqueue({ type: "finish", finishReason: "stop" });
 
           controller.close();
         },
@@ -117,18 +104,22 @@ async function verify() {
 
   try {
     for await (const event of runtime.stream) {
-      if (event.type === "progress") {
-        console.log(`[Progress]: ${event.pct}% - ${event.message}`);
-      } else if (event.type === "notice") {
-        const noticeEvent = event as WorkflowEvent & { type: "notice" };
+      const kind =
+        (event as { _?: unknown; type?: unknown })._ ?? (event as any).type;
+      if (kind === "progress") {
+        console.log(
+          `[Progress]: ${(event as any).pct}% - ${(event as any).message}`
+        );
+      } else if (kind === "notice") {
+        const noticeEvent = event as WorkflowEvent & { _: "notice" };
         console.log(`[Notice]: ${noticeEvent.message}`);
         if (noticeEvent.message === "execution_placeholder") {
           console.log("⚡ Simulating agent execution...");
           await fs.writeFile(VERIFICATION_FILE, VERIFICATION_CONTENT);
         }
-      } else if (event.type === "error") {
+      } else if (kind === "error") {
         const errorEvent = event as WorkflowEvent & {
-          type: "error";
+          _: "error";
           message: string;
         };
         console.error(`[Error]: ${errorEvent.message}`);

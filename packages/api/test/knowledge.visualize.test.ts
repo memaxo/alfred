@@ -3,7 +3,15 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "bun:test";
 import "./utils/mock-hypergraph";
 import { createTestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
@@ -177,7 +185,9 @@ describe("knowledge.visualize (sqlite)", () => {
 
     // Spy on touchNodes (works with both sqlite and postgres)
     const graphWrite = await import("@alfred/db/repo/graph/write");
-    const touchNodesSpy = vi.spyOn(graphWrite, "touchNodes").mockResolvedValue(0);
+    const touchNodesSpy = vi
+      .spyOn(graphWrite, "touchNodes")
+      .mockResolvedValue(0);
 
     const result = await caller.visualize({
       resource,

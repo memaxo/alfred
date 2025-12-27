@@ -55,11 +55,15 @@ for (const match of metricsSource.matchAll(reExportRegex)) {
 try {
   const metricsDir = join(import.meta.dir, "../../src/metrics");
   for (const file of readdirSync(metricsDir)) {
-    if (!file.endsWith(".ts")) continue;
+    if (!file.endsWith(".ts")) {
+      continue;
+    }
     const source = readFileSync(join(metricsDir, file), "utf8");
     for (const match of source.matchAll(exportConstRegex)) {
       const name = match[1];
-      if (!name) continue;
+      if (!name) {
+        continue;
+      }
       if (!metricsStub[name]) {
         metricsStub[name] = createMetricStub();
       }
@@ -73,15 +77,25 @@ try {
 // We only hydrate stubs for `*/metrics` modules to avoid importing heavy non-metrics modules.
 for (const match of metricsSource.matchAll(exportStarRegex)) {
   const spec = match[1]?.trim();
-  if (!spec) continue;
-  if (!spec.endsWith("/metrics")) continue;
-  if (spec === "@alfred/agent/workflow/metrics") continue;
+  if (!spec) {
+    continue;
+  }
+  if (!spec.endsWith("/metrics")) {
+    continue;
+  }
+  if (spec === "@alfred/agent/workflow/metrics") {
+    continue;
+  }
 
   try {
     const mod = await import(spec);
     for (const [name, value] of Object.entries(mod)) {
-      if (name === "default") continue;
-      if (metricsStub[name]) continue;
+      if (name === "default") {
+        continue;
+      }
+      if (metricsStub[name]) {
+        continue;
+      }
       if (typeof value === "function") {
         metricsStub[name] = vi.fn();
         continue;
@@ -140,11 +154,7 @@ export const aiStub = {
   generateObject: vi.fn().mockResolvedValue({ object: {} }),
   streamText: vi.fn(() => ({
     fullStream: (async function* () {
-      yield {
-        type: "finish",
-        finishReason: "stop",
-        usage: { inputTokens: 0, outputTokens: 0 },
-      };
+      yield { type: "finish", finishReason: "stop" };
     })(),
   })),
 } as const;

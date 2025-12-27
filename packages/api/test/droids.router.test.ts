@@ -12,14 +12,14 @@ import {
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
 } from "@alfred/agent/orchestrator/tool/codex/definition";
-import type { Obligation } from "@alfred/type";
-import { TRPCError } from "@trpc/server";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
+import type { Obligation } from "@alfred/type";
+import { TRPCError } from "@trpc/server";
 import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
@@ -36,7 +36,8 @@ setupTestEnv();
 mockPolicyAudit();
 
 // Use shared mock for assertions
-const requireToolScopesAndPolicyMock = authTokenMocks.requireToolScopesAndPolicy;
+const requireToolScopesAndPolicyMock =
+  authTokenMocks.requireToolScopesAndPolicy;
 const droidExecRunsTotalMock = {
   labels: vi.fn().mockReturnValue({
     inc: vi.fn(),

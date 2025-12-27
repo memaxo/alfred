@@ -62,7 +62,8 @@ export const projectRouter = router({
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "linear_link_failed",
+          message:
+            error instanceof Error ? error.message : "linear_link_failed",
         });
       }
     }),

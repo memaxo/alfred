@@ -65,7 +65,7 @@ describe("parseThreadEvent", () => {
   });
 
   it("parses error events", () => {
-    const event = { type: "error", message: "An error occurred" };
+    const event = { type: "error", message: "boom" };
     const result = parseThreadEvent(event);
     expect(result).toEqual(event);
   });
@@ -90,15 +90,18 @@ describe("parseThreadEvent", () => {
   });
 
   it("calls onWarning for invalid events", () => {
-    const warnings: Array<{ message: string; context: Record<string, unknown> }> = [];
+    const warnings: Array<{
+      message: string;
+      context: Record<string, unknown>;
+    }> = [];
     const invalid = { type: "bad_event", foo: "bar" };
-    
+
     parseThreadEvent(invalid, {
       onWarning: (message, context) => {
         warnings.push({ message, context });
       },
     });
-    
+
     expect(warnings.length).toBe(1);
     expect(warnings[0].message).toBe("invalid_thread_event");
   });
@@ -113,7 +116,9 @@ describe("threadEventSchema", () => {
     const result = threadEventSchema.safeParse(event);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect((result.data as Record<string, unknown>).extra_field).toBe("should be preserved");
+      expect((result.data as Record<string, unknown>).extra_field).toBe(
+        "should be preserved"
+      );
     }
   });
 });

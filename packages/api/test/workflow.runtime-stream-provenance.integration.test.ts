@@ -217,7 +217,7 @@ describe("workflow runtime stream provenance (sqlite)", () => {
     expect(
       events.some(
         (event) =>
-          event.type === "progress" &&
+          event._ === "progress" &&
           (event as any).pct === 100 &&
           (event as any).message === "completed"
       )
@@ -264,11 +264,7 @@ function createRuntimeExecutor(options: RuntimeExecutorOptions) {
       } as any;
     }
 
-    yield {
-      type: "progress",
-      pct: 100,
-      message: "completed",
-    } as WorkflowEvent;
+    yield { type: "progress", pct: 100, message: "completed" } as WorkflowEvent;
   })();
 
   return {

@@ -99,11 +99,7 @@ describe("eventToUiMessages (stream)", () => {
     const now = new Date().toISOString();
     const msgs = eventToUiMessages({
       type: "data-cache-handoff",
-      receipts: {
-        summary: "Cache hit",
-        created: now,
-        code: [{ id: "code:src/app.ts", kind: "code", score: 0.9 }],
-      },
+      receipts: { created: now, summary: "cache handoff", code: [] },
     } as any);
     expect(msgs).toBeTruthy();
     const parts = msgs?.[0]?.parts ?? [];

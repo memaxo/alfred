@@ -237,7 +237,11 @@ describe("Cognitive Full Pipeline Integration", () => {
       expect(result1.state._).toBe("capturing");
 
       // Input → thinking
-      const result1b = await runCognitiveLoop(ctx, streamId, inputEvent("Task"));
+      const result1b = await runCognitiveLoop(
+        ctx,
+        streamId,
+        inputEvent("Task")
+      );
       stateHistory.push(result1b.state._);
       expect(result1b.state._).toBe("thinking");
 

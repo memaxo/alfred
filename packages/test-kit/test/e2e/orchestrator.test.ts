@@ -45,13 +45,10 @@ const createVCRModel = (vcr: CognitiveVCR) => {
             start(controller) {
               controller.enqueue({
                 type: "text-delta",
-                textDelta: "Simulated Live Response",
+                id: "text-1",
+                delta: "hello",
               });
-              controller.enqueue({
-                type: "finish",
-                finishReason: "stop",
-                usage: { promptTokens: 0, completionTokens: 0 },
-              });
+              controller.enqueue({ type: "finish" });
               controller.close();
             },
           }),
@@ -67,16 +64,13 @@ const createVCRModel = (vcr: CognitiveVCR) => {
             if (match.output.text) {
               controller.enqueue({
                 type: "text-delta",
-                textDelta: match.output.text,
+                id: "text-1",
+                delta: String(match.output.text),
               });
             }
             // 2. Tools? (Not yet in simple VCR schema, need to expand)
 
-            controller.enqueue({
-              type: "finish",
-              finishReason: "stop",
-              usage: { promptTokens: 10, completionTokens: 10 },
-            });
+            controller.enqueue({ type: "finish" });
             controller.close();
           },
         }),

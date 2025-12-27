@@ -1,3 +1,4 @@
+import { planRepo } from "@alfred/db";
 import {
   agentTypeSchema,
   approvePlan,
@@ -13,10 +14,9 @@ import {
   researchOptionsSchema,
   researchResultSchema,
   structuredPlanSchema,
-  workflowIntentSchema,
   type WorkflowIntent,
+  workflowIntentSchema,
 } from "@alfred/plan";
-import { planRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc.js";
@@ -24,7 +24,10 @@ import { authedProcedure, router } from "../trpc.js";
 /**
  * Validates that all userId fields in an intent (including nested intents) match the authenticated user
  */
-function validateIntentUserId(intent: WorkflowIntent, authenticatedUserId: string): void {
+function validateIntentUserId(
+  intent: WorkflowIntent,
+  authenticatedUserId: string
+): void {
   if (intent.userId !== authenticatedUserId) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -381,7 +384,8 @@ export const planRouter = router({
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "plan_approval_failed",
+          message:
+            error instanceof Error ? error.message : "plan_approval_failed",
         });
       }
     }),

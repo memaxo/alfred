@@ -47,9 +47,6 @@
     "typescript": "^5.7.2"
   },
   "peerDependencies": {
-    "@alfred/api": "workspace:*",
-    "@alfred/auth": "workspace:*",
-    "@alfred/db": "workspace:*",
-    "@alfred/type": "workspace:*"
+    "@alfred/auth": "workspace:*"
   }
 }

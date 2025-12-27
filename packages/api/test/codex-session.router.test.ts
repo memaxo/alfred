@@ -99,7 +99,7 @@ describe("codex session router", () => {
       listSessionsMock.mockResolvedValueOnce([]);
 
       const result = await caller.codex.listSessions({});
-      
+
       expect(result).toEqual([]);
       expect(listSessionsMock).toHaveBeenCalledTimes(1);
       expect(listSessionsMock).toHaveBeenCalledWith({
@@ -120,13 +120,13 @@ describe("codex session router", () => {
           status: "active",
           createdAt: new Date(),
           lastAccessedAt: new Date(),
-          expiresAt: new Date(Date.now() + 86400000),
+          expiresAt: new Date(Date.now() + 86_400_000),
         },
       ];
       listSessionsMock.mockResolvedValueOnce(sessions);
 
       const result = await caller.codex.listSessions({ status: "active" });
-      
+
       expect(result).toEqual(sessions);
       expect(listSessionsMock).toHaveBeenCalledWith({
         userId: expect.any(String),
@@ -140,7 +140,7 @@ describe("codex session router", () => {
       listSessionsMock.mockResolvedValueOnce([]);
 
       await caller.codex.listSessions({ limit: 10, offset: 20 });
-      
+
       expect(listSessionsMock).toHaveBeenCalledWith({
         userId: expect.any(String),
         status: undefined,
@@ -160,14 +160,19 @@ describe("codex session router", () => {
         status: "active",
         createdAt: new Date(),
         lastAccessedAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 86_400_000),
       };
       getSessionMock.mockResolvedValueOnce(session);
 
-      const result = await caller.codex.getSession({ sessionId: "session-123" });
-      
+      const result = await caller.codex.getSession({
+        sessionId: "session-123",
+      });
+
       expect(result).toEqual(session);
-      expect(getSessionMock).toHaveBeenCalledWith("session-123", expect.any(String));
+      expect(getSessionMock).toHaveBeenCalledWith(
+        "session-123",
+        expect.any(String)
+      );
     });
 
     it("throws NOT_FOUND when session does not exist", async () => {
@@ -193,10 +198,15 @@ describe("codex session router", () => {
       };
       getSessionRepoMock.mockResolvedValueOnce(session);
 
-      const result = await caller.codex.terminateSession({ sessionId: "session-123" });
-      
+      const result = await caller.codex.terminateSession({
+        sessionId: "session-123",
+      });
+
       expect(result).toEqual({ success: true });
-      expect(getSessionRepoMock).toHaveBeenCalledWith("session-123", expect.any(String));
+      expect(getSessionRepoMock).toHaveBeenCalledWith(
+        "session-123",
+        expect.any(String)
+      );
     });
 
     it("throws NOT_FOUND when session does not exist", async () => {

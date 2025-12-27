@@ -1,10 +1,10 @@
 import { requireRecentBiometric } from "@alfred/auth/biometric";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { collectPerformanceTelemetry } from "../performance/telemetry";
 import { protectedProcedure, router } from "../trpc";
 import { getVoicePools } from "../voice/pools";
 import { collectVoiceTelemetry } from "../voice/telemetry";
-import { collectPerformanceTelemetry } from "../performance/telemetry";
 
 type SessionRecord = {
   id?: string;

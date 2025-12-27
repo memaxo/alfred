@@ -21,10 +21,10 @@ mock.module("@alfred/db/repo/policy", () => ({
 // Use shared logger mock from mock-metrics (already imported)
 import { loggerStub } from "./utils/mock-metrics";
 
-const loggerInfoMock = loggerStub.info;
-const loggerWarnMock = loggerStub.warn;
-const loggerErrorMock = loggerStub.error;
-const loggerDebugMock = loggerStub.debug;
+const _loggerInfoMock = loggerStub.info;
+const _loggerWarnMock = loggerStub.warn;
+const _loggerErrorMock = loggerStub.error;
+const _loggerDebugMock = loggerStub.debug;
 
 const { authorizeVoiceStreamRequest, VoiceStreamAuthError } = await import(
   "../src/voice/streaming"

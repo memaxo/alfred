@@ -1,6 +1,4 @@
-import {
-  configureLinearMetrics,
-} from "@alfred/agent/orchestrator/linearmetrics";
+import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
 import { recordAudit } from "@alfred/agent/utils/audit";
 import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
@@ -44,7 +42,6 @@ import {
   codexLinearIntegrationLatencySeconds,
   codexSessionContinuityTotal,
 } from "@alfred/api/metrics";
-import { syncOnWorkflowStart } from "@alfred/plan";
 import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type {
@@ -52,6 +49,7 @@ import type {
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
+import { syncOnWorkflowStart } from "@alfred/plan";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -109,9 +107,7 @@ configureLinearMetrics({
 
 const workflowInputDataSchema = z.record(z.string(), z.unknown());
 
-export function parseWorkflowInputData(
-  val: unknown
-): Record<string, unknown> {
+export function parseWorkflowInputData(val: unknown): Record<string, unknown> {
   if (val === null || val === undefined) {
     return {};
   }
@@ -329,7 +325,7 @@ export const workflowRouter = router({
           auditContext: { auto: input.auto, mode: input.mode },
           emitObligation: async ({ runId, obligations, resumeEvents }) => {
             emit.next({
-              type: "obligation",
+              _: "obligation",
               runId,
               obligations,
               resumeEvents,
@@ -422,7 +418,10 @@ export const workflowRouter = router({
           });
 
           if (!delivered) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "run_not_found",
+            });
           }
         } catch (error) {
           if (error instanceof StreamNotAttachedError) {

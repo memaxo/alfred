@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { beforeAll, describe, expect, it, mock } from "bun:test";
 
 // Install shared stubs used by router tests (db + agent) to keep this test
 // isolated from real Postgres / OpenAI.

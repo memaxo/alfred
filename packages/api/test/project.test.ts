@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const mockProjectRepo = {
   getProjectById: mock(),
@@ -94,10 +94,12 @@ describe("projectRouter", () => {
       } as any;
       mockProjectRepo.getProjectById.mockResolvedValue(mockProject);
       mockGetLinearByWorkspace.mockResolvedValue({ token: "tk" });
-      mockProjectRepo.updateProject.mockImplementation(async (_id: string, data: any) => ({
-        ...mockProject,
-        ...data,
-      }));
+      mockProjectRepo.updateProject.mockImplementation(
+        async (_id: string, data: any) => ({
+          ...mockProject,
+          ...data,
+        })
+      );
 
       const caller = createCaller();
       const result = await caller.linkLinear({

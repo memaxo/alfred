@@ -19,7 +19,6 @@ import {
   requireToolScopesAndPolicy,
   type TokenClaims,
 } from "@alfred/auth/token";
-import { resolveObligationResumeEvents } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
@@ -650,12 +649,7 @@ const droidProcedures = {
             });
             emit.next({
               type: "obligation",
-              data: JSON.stringify({
-                reason: "droid_execution",
-                obligations,
-                runId,
-                resumeEvents: resolveObligationResumeEvents(obligations),
-              }),
+              data: JSON.stringify({ runId, obligations }),
             });
             return;
           }

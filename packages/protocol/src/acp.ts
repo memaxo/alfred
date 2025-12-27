@@ -13,14 +13,14 @@
 // ============================================================================
 
 export {
-  AgentSideConnection,
-  ClientSideConnection,
-  TerminalHandle,
-  RequestError,
   type Agent,
+  AgentSideConnection,
   type Client,
-  type Stream,
+  ClientSideConnection,
   ndJsonStream,
+  RequestError,
+  type Stream,
+  TerminalHandle,
 } from "@agentclientprotocol/sdk";
 
 // ============================================================================
@@ -38,101 +38,91 @@ export {
 // ============================================================================
 
 export type {
-  // Session Types
-  SessionId,
-  SessionInfo,
-  SessionMode as AcpSessionMode,
-  SessionModeId,
-  SessionModeState,
-  SessionNotification,
-  SessionUpdate,
-  SessionCapabilities,
-  SessionConfigOption,
-  SessionModelState,
-
-  // Request/Response Types
-  InitializeRequest,
-  InitializeResponse,
-  NewSessionRequest,
-  NewSessionResponse,
-  LoadSessionRequest,
-  LoadSessionResponse,
-  PromptRequest,
-  PromptResponse,
+  _Error as AcpError,
+  // Capabilities
+  AgentCapabilities,
+  AudioContent,
   AuthenticateRequest,
   AuthenticateResponse,
   CancelNotification,
-
+  ClientCapabilities,
+  // Content Types
+  ContentBlock,
+  ContentChunk,
+  // Terminal Types
+  CreateTerminalRequest,
+  CreateTerminalResponse,
+  Diff,
+  EmbeddedResource,
+  ErrorCode,
+  FileSystemCapability,
+  ImageContent,
+  Implementation,
+  // Request/Response Types
+  InitializeRequest,
+  InitializeResponse,
+  KillTerminalCommandRequest,
+  KillTerminalCommandResponse,
+  LoadSessionRequest,
+  LoadSessionResponse,
+  McpCapabilities,
+  // MCP Types
+  McpServer,
+  McpServerHttp,
+  McpServerSse,
+  McpServerStdio,
+  NewSessionRequest,
+  NewSessionResponse,
   // Permission Types
   PermissionOption as AcpPermissionOption,
   PermissionOptionId,
   PermissionOptionKind as AcpPermissionOptionKind,
-  RequestPermissionRequest,
-  RequestPermissionResponse,
-  RequestPermissionOutcome,
-
-  // Content Types
-  ContentBlock,
-  ContentChunk,
-  TextContent,
-  ImageContent,
-  AudioContent,
-  EmbeddedResource,
-  ResourceLink,
-
-  // Tool Types
-  ToolCall,
-  ToolCallContent,
-  ToolCallId,
-  ToolKind as AcpToolKind,
-  ToolCallStatus as AcpToolCallStatus,
-  ToolCallUpdate,
-
   // Plan Types
   Plan,
   PlanEntry,
   PlanEntryPriority,
   PlanEntryStatus,
-
-  // Terminal Types
-  CreateTerminalRequest,
-  CreateTerminalResponse,
-  TerminalOutputRequest,
-  TerminalOutputResponse,
-  ReleaseTerminalRequest,
-  ReleaseTerminalResponse,
-  WaitForTerminalExitRequest,
-  WaitForTerminalExitResponse,
-  KillTerminalCommandRequest,
-  KillTerminalCommandResponse,
-  TerminalExitStatus,
-
+  PromptCapabilities,
+  PromptRequest,
+  PromptResponse,
   // File System Types
   ReadTextFileRequest,
   ReadTextFileResponse,
-  WriteTextFileRequest,
-  WriteTextFileResponse,
-
-  // MCP Types
-  McpServer,
-  McpServerStdio,
-  McpServerHttp,
-  McpServerSse,
-  McpCapabilities,
-
-  // Capabilities
-  AgentCapabilities,
-  ClientCapabilities,
-  FileSystemCapability,
-  PromptCapabilities,
-
+  ReleaseTerminalRequest,
+  ReleaseTerminalResponse,
+  RequestPermissionOutcome,
+  RequestPermissionRequest,
+  RequestPermissionResponse,
+  ResourceLink,
+  Role,
+  SessionCapabilities,
+  SessionConfigOption,
+  // Session Types
+  SessionId,
+  SessionInfo,
+  SessionMode as AcpSessionMode,
+  SessionModeId,
+  SessionModelState,
+  SessionModeState,
+  SessionNotification,
+  SessionUpdate,
   // Other Types
   StopReason as AcpStopReason,
-  Implementation,
-  Role,
-  Diff,
-  _Error as AcpError,
-  ErrorCode,
+  TerminalExitStatus,
+  TerminalOutputRequest,
+  TerminalOutputResponse,
+  TextContent,
+  // Tool Types
+  ToolCall,
+  ToolCallContent,
+  ToolCallId,
+  ToolCallStatus as AcpToolCallStatus,
+  ToolCallUpdate,
+  ToolKind as AcpToolKind,
+  WaitForTerminalExitRequest,
+  WaitForTerminalExitResponse,
+  WriteTextFileRequest,
+  WriteTextFileResponse,
 } from "@agentclientprotocol/sdk";
 
 // ============================================================================

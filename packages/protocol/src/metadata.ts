@@ -75,7 +75,9 @@ export const toolOutputWithMetadataSchema = z.object({
     .optional(),
 });
 
-export type ToolOutputWithMetadata = z.infer<typeof toolOutputWithMetadataSchema>;
+export type ToolOutputWithMetadata = z.infer<
+  typeof toolOutputWithMetadataSchema
+>;
 
 /**
  * Create metadata from execution context
@@ -96,17 +98,33 @@ export function createAgentMetadata(params: {
     agentName: params.agentName,
   };
 
-  if (params.agentVersion) metadata.agentVersion = params.agentVersion;
-  if (params.modelUsed) metadata.modelUsed = params.modelUsed;
-  if (params.threadId) metadata.threadId = params.threadId;
-  if (params.sessionId) metadata.sessionId = params.sessionId;
-  if (params.turnDurationMs !== undefined)
+  if (params.agentVersion) {
+    metadata.agentVersion = params.agentVersion;
+  }
+  if (params.modelUsed) {
+    metadata.modelUsed = params.modelUsed;
+  }
+  if (params.threadId) {
+    metadata.threadId = params.threadId;
+  }
+  if (params.sessionId) {
+    metadata.sessionId = params.sessionId;
+  }
+  if (params.turnDurationMs !== undefined) {
     metadata.turnDurationMs = params.turnDurationMs;
-  if (params.tokenUsage) metadata.tokenUsage = params.tokenUsage;
-  if (params.resumedFromThread !== undefined)
+  }
+  if (params.tokenUsage) {
+    metadata.tokenUsage = params.tokenUsage;
+  }
+  if (params.resumedFromThread !== undefined) {
     metadata.resumedFromThread = params.resumedFromThread;
-  if (params.workingDirectory) metadata.workingDirectory = params.workingDirectory;
-  if (params.autonomyLevel) metadata.autonomyLevel = params.autonomyLevel;
+  }
+  if (params.workingDirectory) {
+    metadata.workingDirectory = params.workingDirectory;
+  }
+  if (params.autonomyLevel) {
+    metadata.autonomyLevel = params.autonomyLevel;
+  }
 
   return metadata;
 }
