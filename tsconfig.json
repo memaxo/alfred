@@ -24,6 +24,7 @@
     { "path": "packages/knowledge" },
     { "path": "packages/learning" },
     { "path": "packages/logger" },
+    { "path": "packages/tui" },
     { "path": "packages/test-kit" },
     { "path": "packages/ui" },
     { "path": "apps/web" },

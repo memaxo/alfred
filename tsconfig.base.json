@@ -50,7 +50,9 @@
       "@alfred/voice": ["packages/voice/src/index.ts"],
       "@alfred/voice/*": ["packages/voice/src/*"],
       "@alfred/test-kit": ["packages/test-kit/src/index.ts"],
-      "@alfred/test-kit/*": ["packages/test-kit/src/*"]
+      "@alfred/test-kit/*": ["packages/test-kit/src/*"],
+      "@alfred/tui": ["packages/tui/src/index.ts"],
+      "@alfred/tui/*": ["packages/tui/src/*"]
     }
   }
 }
