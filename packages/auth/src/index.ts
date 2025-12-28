@@ -5,7 +5,7 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { deviceAuthorization } from "better-auth/plugins";
+import { deviceAuthorization, oidcProvider } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { autoGrantBiometricIfBypassed, setBiometricTicket } from "./biometric";
 
@@ -89,6 +89,26 @@ export const auth = betterAuth({
       userCodeLength: 8,
       expiresIn: "15m",
       interval: "5s",
+    }),
+    // OIDC Provider for MCP and external integrations
+    // Enables OAuth 2.1/OIDC compliance for AI agent authentication
+    oidcProvider({
+      loginPage: "/sign-in",
+      consentPage: "/consent",
+      // Trusted clients can skip consent (e.g., internal tools)
+      trustedClients: [],
+      // Custom metadata
+      metadata: {
+        issuer: origin,
+        scopes_supported: [
+          "openid",
+          "profile",
+          "email",
+          "read:*",
+          "write:*",
+          "admin:*",
+        ],
+      },
     }),
   ],
 });
