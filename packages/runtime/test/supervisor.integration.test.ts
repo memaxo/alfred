@@ -37,6 +37,7 @@ describe("WorkflowRuntime supervisor integration", () => {
 
   it("interrupts reasoning loops", async () => {
     const createAiAdapter = () => ({
+      // biome-ignore lint/suspicious/useAwait: async generator for AsyncGenerator type
       async *stream() {
         for (let i = 0; i < 6; i++) {
           yield { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
@@ -101,6 +102,7 @@ describe("WorkflowRuntime supervisor integration", () => {
   it("detects low entropy (semantic loops)", async () => {
     // Test that repeated similar outputs trigger entropy detection
     const createAiAdapter = () => ({
+      // biome-ignore lint/suspicious/useAwait: async generator for AsyncGenerator type
       async *stream() {
         // Emit nearly identical reasoning traces
         for (let i = 0; i < 5; i++) {
@@ -166,6 +168,7 @@ describe("WorkflowRuntime supervisor integration", () => {
     const events: WorkflowEvent[] = [];
 
     const createAiAdapter = () => ({
+      // biome-ignore lint/suspicious/useAwait: async generator for AsyncGenerator type
       async *stream() {
         for (let i = 0; i < 6; i++) {
           const event = { _: "reasoning", textDelta: "loop" } as WorkflowEvent;
@@ -204,6 +207,7 @@ describe("WorkflowRuntime supervisor integration", () => {
     const runId = randomUUID();
 
     const createAiAdapter = () => ({
+      // biome-ignore lint/suspicious/useAwait: async generator for AsyncGenerator type
       async *stream() {
         // Emit repeated identical reasoning to trigger loop detection
         for (let i = 0; i < 6; i++) {
@@ -331,6 +335,7 @@ describe("WorkflowRuntime supervisor integration", () => {
   it("handles multiple reasoning traces correctly", async () => {
     // Test that distinct reasoning traces don't trigger false positives
     const createAiAdapter = () => ({
+      // biome-ignore lint/suspicious/useAwait: async generator for AsyncGenerator type
       async *stream() {
         const distinctReasons = [
           "First: Analyzing user requirements",
