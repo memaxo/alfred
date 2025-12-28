@@ -5,6 +5,7 @@
     "ignoreUnknown": false,
     "includes": [
       "**",
+      "!vendor",
       "!tmp-policy-test",
       "!**/.next",
       "!**/dist",
@@ -130,6 +131,16 @@
       }
     },
     {
+      "includes": ["packages/tsconfig/types/bun.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNamespace": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": [
         "**/*.test.ts",
         "**/*.spec.ts",
@@ -143,6 +154,9 @@
         "rules": {
           "performance": {
             "useTopLevelRegex": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
           }
         }
       }

@@ -3,35 +3,10 @@ import {
   clearAllConnections,
   getConnectionCount,
 } from "@alfred/api/utils/sse-connections";
-import type { auth } from "@alfred/auth";
-import { createTestSession } from "@alfred/test-kit/auth";
-
-// Mock the stream handler dependencies
-const _mockStreamText = {
-  toUIMessageStreamResponse: () =>
-    new Response("", {
-      headers: { "Content-Type": "text/event-stream" },
-    }),
-};
-
-const _mockGetDefaults = () => ({
-  model: "test-model",
-  tools: {},
-});
-
-const _mockAnalyzeContext = async () => ({
-  system: "test system",
-  activation: {},
-});
 
 describe("SSE stream rate limiting", () => {
-  let session: Awaited<ReturnType<typeof auth.api.getSession>>;
-
   beforeEach(async () => {
     clearAllConnections();
-    session = createTestSession({
-      user: { id: "test-user-1" },
-    });
   });
 
   afterEach(() => {
@@ -39,39 +14,6 @@ describe("SSE stream rate limiting", () => {
   });
 
   it("allows connection within rate limit", async () => {
-    // Mock the stream handler
-    const streamHandlerPkg = "@/lib/api/stream-handler";
-    const { handleStreamRequest } = await import(streamHandlerPkg);
-
-    // Mock dependencies
-    const _mockAuth = {
-      api: {
-        getSession: async () => session,
-      },
-    };
-
-    // Create a request
-    const _request = new Request("http://localhost/api/assistant", {
-      method: "POST",
-      headers: {
-        cookie: "session=test",
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            id: "1",
-            role: "user",
-            parts: [{ type: "text", text: "test" }],
-          },
-        ],
-      }),
-    });
-
-    // Mock auth module
-    const _originalAuth = await import("@alfred/auth");
-    // Note: This is a simplified test - in practice, we'd need to mock the auth module
-    // For now, we'll test the connection utility directly
-
     // Test that connection creation works
     const { createConnection } = await import(
       "@alfred/api/utils/sse-connections"

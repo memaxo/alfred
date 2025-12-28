@@ -7,8 +7,8 @@ export type HardwareCapabilities = {
   voiceServer: boolean; // Is python/stt running?
 };
 
-export class HardwareProbe {
-  static async check(): Promise<HardwareCapabilities> {
+export const HardwareProbe = {
+  async check(): Promise<HardwareCapabilities> {
     const caps: HardwareCapabilities = {
       gpu: false,
       voiceServer: false,
@@ -63,5 +63,5 @@ export class HardwareProbe {
 
     logger.info("hardware_probe_result", caps);
     return caps;
-  }
-}
+  },
+};

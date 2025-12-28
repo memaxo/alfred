@@ -38,6 +38,8 @@ export const BUDGET_DEFAULTS = {
   "tts-processing": 500,
   /** Full voice round-trip */
   "voice-roundtrip": 1000,
+  /** State reconstruction from event streams (10k events target) */
+  "state-reconstruction": 100,
 } as const;
 
 export type BudgetCategory = keyof typeof BUDGET_DEFAULTS;
@@ -213,14 +215,14 @@ export class PerformanceTracker {
     const sum = sorted.reduce((a, b) => a + b, 0);
 
     const percentile = (p: number): number => {
-      const idx = Math.ceil((p / 100) * count) - 1;
-      return sorted[Math.max(0, idx)]!;
+      const idx = Math.max(0, Math.ceil((p / 100) * count) - 1);
+      return sorted[idx] ?? 0;
     };
 
     return {
       count,
-      min: sorted[0]!,
-      max: sorted[count - 1]!,
+      min: sorted[0] ?? 0,
+      max: sorted[count - 1] ?? 0,
       avg: sum / count,
       p50: percentile(50),
       p95: percentile(95),

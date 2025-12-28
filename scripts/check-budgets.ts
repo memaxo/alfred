@@ -23,6 +23,7 @@ const REQUIRED_CATEGORIES: BudgetCategory[] = [
   "graph-lookup",
   "fact-extraction",
   "plan-generation",
+  "state-reconstruction",
 ];
 
 // Future candidates (not required yet):

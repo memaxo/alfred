@@ -55,9 +55,10 @@ Return a list of NEW or REFINED conventions in JSON format.`,
 
       for (const newConv of object.conventions) {
         const index = updatedConventions.findIndex((c) => c.id === newConv.id);
-        if (index !== -1) {
+        const existing = updatedConventions[index];
+        if (index !== -1 && existing) {
           updatedConventions[index] = {
-            ...updatedConventions[index]!,
+            ...existing,
             ...newConv,
           };
         } else {

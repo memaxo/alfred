@@ -164,8 +164,8 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
 
         if (onPlanChange) {
           const updatedPhases = plan.phases.map((phase) => {
-            if (phase.id === params.target) {
-              const deps = new Set([...phase.dependsOn, params.source!]);
+            if (phase.id === params.target && params.source) {
+              const deps = new Set([...phase.dependsOn, params.source]);
               return { ...phase, dependsOn: Array.from(deps) };
             }
             return phase;

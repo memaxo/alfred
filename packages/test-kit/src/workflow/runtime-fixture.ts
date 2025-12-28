@@ -147,6 +147,7 @@ export const aiStreamTextMock = vi.fn(() => {
   if (aiStreamState.mode === "error") {
     return {
       fullStream: (async function* () {
+        yield* [];
         throw new Error("ai_stub_failure");
       })(),
     };

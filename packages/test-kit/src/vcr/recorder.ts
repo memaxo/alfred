@@ -159,7 +159,12 @@ export class VCRRecorder {
    * Creates the fetch interceptor
    */
   private createInterceptor() {
-    const originalFetch = this.originalFetch!;
+    const originalFetch = this.originalFetch;
+    if (!originalFetch) {
+      throw new Error(
+        "VCR: originalFetch is missing during interception setup"
+      );
+    }
 
     const interceptedFetch = async (
       input: string | URL | Request,

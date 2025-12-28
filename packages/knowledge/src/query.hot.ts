@@ -117,7 +117,10 @@ function buildWhereClause(resources: string[]) {
   }
 
   if (uniqueResources.length === 1) {
-    return and(basePredicate, eq(memoryNodes.resource, uniqueResources[0]!));
+    const first = uniqueResources[0];
+    if (first) {
+      return and(basePredicate, eq(memoryNodes.resource, first));
+    }
   }
 
   return and(
