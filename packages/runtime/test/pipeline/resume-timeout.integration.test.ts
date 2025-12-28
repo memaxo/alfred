@@ -93,7 +93,7 @@ describe("PipelineRunner resume integration", () => {
       events.push(event);
     }
 
-    expect(events.some((event) => event.type === "step-complete")).toBe(true);
+    expect(events.some((event) => event._ === "step-complete")).toBe(true);
     expect(state.history.at(-1)).toMatchObject({
       phaseId: "report",
       result: "success",

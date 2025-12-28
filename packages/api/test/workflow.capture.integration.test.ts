@@ -196,7 +196,7 @@ describe("workflow capture integration (sqlite)", () => {
           if (event._ === "run" && typeof (event as any).id === "string") {
             observedRunId = (event as any).id;
           }
-          if (event.type === "require-scope") {
+          if (event._ === "require-scope") {
             const runId = observedRunId ?? streamRunId;
             resumeCalls.push(
               resumeCaller.resume({
@@ -282,8 +282,8 @@ type StreamingExecutorOptions = {
 
 function createStartExecutor(runId: string) {
   const stream = (async function* () {
-    yield { type: "run", id: runId } as WorkflowEvent;
-    yield { type: "progress", pct: 10, message: "starting" } as WorkflowEvent;
+    yield { _: "run", id: runId } as WorkflowEvent;
+    yield { _: "progress", pct: 10, message: "starting" } as WorkflowEvent;
   })();
 
   return {
@@ -300,31 +300,35 @@ function createStreamingExecutor(options: StreamingExecutorOptions) {
   const resumeGate = deferred<{ event: string; authz: string }>();
 
   const stream = (async function* () {
-    yield { type: "run", id: runId } as WorkflowEvent;
+    yield { _: "run", id: runId } as WorkflowEvent;
     await persistReasoning(resource, traces, {
       executionId: runId,
       auto,
     });
     yield {
-      type: "context",
+      _: "context",
       phase: "scan",
       message: "capture_context",
     } as WorkflowEvent;
     yield {
-      type: "assistant",
+      _: "assistant",
       text: "Captured context and persisted knowledge",
     } as WorkflowEvent;
     yield {
-      type: "require-scope",
+      _: "require-scope",
       scopes: ["workflow.resume"],
       event: "bio-authz",
     } as WorkflowEvent;
     const resumeData = await resumeGate.promise;
     yield {
-      type: "notice",
+      _: "notice",
       message: `resume_ack:${resumeData.authz}`,
     } as WorkflowEvent;
-    yield { type: "progress", pct: 100, message: "completed" } as WorkflowEvent;
+    yield {
+      _: "progress",
+      pct: 100,
+      message: "completed",
+    } as WorkflowEvent;
   })();
 
   return {

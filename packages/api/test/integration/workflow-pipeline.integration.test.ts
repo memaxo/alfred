@@ -117,7 +117,7 @@ describe("Workflow Pipeline Integration", () => {
     expect(events.length).toBeGreaterThan(0);
 
     // Should have a run event with the workflow ID
-    const runEvent = events.find((e) => e.type === "run");
+    const runEvent = events.find((e) => e._ === "run");
     expect(runEvent).toBeDefined();
     expect(runEvent?.id).toBeDefined();
 
@@ -125,11 +125,11 @@ describe("Workflow Pipeline Integration", () => {
     // Note: "status" events may not be emitted by all workflow configurations
     const meaningfulEvents = events.filter(
       (e) =>
-        e.type === "run" ||
-        e.type === "ui-message" ||
-        e.type === "complete" ||
-        e.type === "status" ||
-        e.type === "phase"
+        e._ === "run" ||
+        e._ === "ui-message" ||
+        e._ === "complete" ||
+        e._ === "status" ||
+        e._ === "phase"
     );
     expect(meaningfulEvents.length).toBeGreaterThanOrEqual(1);
   });
@@ -174,7 +174,7 @@ describe("Workflow Pipeline Integration", () => {
     });
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.some((e) => e.type === "run")).toBeTruthy();
+    expect(events.some((e) => e._ === "run")).toBeTruthy();
   });
 
   it("persists workflow run to database", async () => {
@@ -195,7 +195,7 @@ describe("Workflow Pipeline Integration", () => {
 
       const sub = observable.subscribe({
         next: (event) => {
-          if (event.type === "run" && event.id) {
+          if (event._ === "run" && event.id) {
             runId = event.id;
           }
         },
@@ -254,7 +254,7 @@ describe("Workflow Pipeline Integration", () => {
     await new Promise<void>((resolve) => {
       const sub = observable.subscribe({
         next: (event) => {
-          if (event.type === "run" && event.id) {
+          if (event._ === "run" && event.id) {
             runId = event.id;
             sub.unsubscribe?.();
             resolve();
@@ -321,7 +321,7 @@ describe("Workflow Event Types", () => {
 
       const sub = observable.subscribe({
         next: (event) => {
-          eventTypes.add(event.type);
+          eventTypes.add(event._);
         },
         error: () => {
           clearTimeout(timeout);

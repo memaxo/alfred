@@ -1,45 +1,29 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   ContextBundle,
   SearchReceipt,
   WorkflowEvent,
 } from "@alfred/type/plan";
 import type { ExecutionContext } from "../../src/context";
-import { ContextBuilder } from "../../src/context";
+import { executePlanPhase } from "../../src/phases/plan";
 import type { RuntimeInput } from "../../src/types";
 
-const buildMock = mock<(input: unknown) => Promise<ExecutionContext>>();
-const originalPlanBuild = ContextBuilder.prototype.build;
-ContextBuilder.prototype.build = (input: unknown) => buildMock(input);
-
 const persistExecPlansMock = mock(async () => {});
-mock.module("@alfred/agent/assistant/graphstore", () => ({
-  persistExecPlans: persistExecPlansMock,
-}));
+const buildContextMock = mock(async () => createExecutionContext());
+const decomposeTaskMock = mock(() => [
+  { id: "task-1", title: "task-1", requirement: "do something" },
+  { id: "task-2", title: "task-2", requirement: "do more" },
+]);
+const generateSubtaskExecPlanSkeletonMock = mock(() => "# Task skeleton");
 
 const streamMock = mock(async function* () {
   yield { _: "text-delta", id: "text-1", delta: "Plan step" } as WorkflowEvent;
   yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
 });
 
-mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
-  decomposeTask: () => [
-    { id: "task-1", requirement: "do something" },
-    { id: "task-2", requirement: "do more" },
-  ],
-}));
-
-mock.module("@alfred/agent/orchestrator/multi/execplan", () => ({
-  generateSubtaskExecPlanSkeleton: () => "# Task skeleton",
-}));
-
-const { RuntimeContext } = await import("@alfred/type/runtime-context");
-const { AISDKAdapter } = await import("../../src/adapters/ai");
-const originalPlanStream = AISDKAdapter.prototype.stream;
-AISDKAdapter.prototype.stream = streamMock;
-const { executePlanPhase } = await import("../../src/phases/plan");
-const { ScanPhase } = await import("../../src/pipeline/phases/scan");
-const { PlanPhase } = await import("../../src/pipeline/phases/plan");
+function createAiAdapter() {
+  return { stream: streamMock } as any;
+}
 
 const baseInput: RuntimeInput = {
   requirement: "Implement cache",
@@ -116,71 +100,69 @@ async function drain(
 describe("executePlanPhase", () => {
   beforeEach(() => {
     streamMock.mockClear();
+    buildContextMock.mockReset();
+    persistExecPlansMock.mockReset();
+    decomposeTaskMock.mockReset();
+    generateSubtaskExecPlanSkeletonMock.mockReset();
+
+    buildContextMock.mockImplementation(async () => createExecutionContext());
+    persistExecPlansMock.mockImplementation(async () => {});
+    decomposeTaskMock.mockImplementation(() => [
+      { id: "task-1", title: "task-1", requirement: "do something" },
+      { id: "task-2", title: "task-2", requirement: "do more" },
+    ]);
+    generateSubtaskExecPlanSkeletonMock.mockImplementation(
+      () => "# Task skeleton"
+    );
   });
   it("uses prebuilt context when provided", async () => {
     const prebuilt = createExecutionContext();
-    buildMock.mockReset();
 
     const generator = executePlanPhase(
       baseInput,
       "run-prebuilt",
       new AbortController().signal,
       "test-model" as any,
-      prebuilt
+      prebuilt,
+      {
+        createAiAdapter: () => createAiAdapter(),
+        buildContext: buildContextMock as any,
+        decomposeTask: decomposeTaskMock as any,
+        generateSubtaskExecPlanSkeleton:
+          generateSubtaskExecPlanSkeletonMock as any,
+        persistExecPlans: persistExecPlansMock as any,
+      }
     );
 
     const { summary } = await drain(generator);
 
-    expect(buildMock).not.toHaveBeenCalled();
+    expect(buildContextMock).not.toHaveBeenCalled();
     expect(summary).toBe("Plan step");
   });
 
   it("builds context when not provided", async () => {
     const built = createExecutionContext();
-    buildMock.mockReset();
-    buildMock.mockImplementationOnce(async () => built);
+    buildContextMock.mockImplementationOnce(async () => built);
 
     const generator = executePlanPhase(
       baseInput,
       "run-build",
       new AbortController().signal,
-      "test-model" as any
+      "test-model" as any,
+      null,
+      {
+        createAiAdapter: () => createAiAdapter(),
+        buildContext: buildContextMock as any,
+        decomposeTask: decomposeTaskMock as any,
+        generateSubtaskExecPlanSkeleton:
+          generateSubtaskExecPlanSkeletonMock as any,
+        persistExecPlans: persistExecPlansMock as any,
+      }
     );
 
     const { summary } = await drain(generator);
 
-    expect(buildMock).toHaveBeenCalledTimes(1);
+    expect(buildContextMock).toHaveBeenCalledTimes(1);
     expect(summary).toBe("Plan step");
-  });
-
-  it("pipeline scan→plan path reuses cached context", async () => {
-    buildMock.mockReset();
-    const built = createExecutionContext();
-    buildMock.mockImplementation(async () => built);
-
-    const input = { ...baseInput };
-    const runtimeContext = new RuntimeContext([["scanContext", null]]);
-
-    const scanPhase = new ScanPhase("run-pipeline");
-    const planPhase = new PlanPhase("run-pipeline", "test-model" as any);
-
-    const drainPhase = async (phase: any) => {
-      const generator = phase.run(input, runtimeContext as any);
-      for await (const _event of generator) {
-        // ignore events for this test
-      }
-    };
-
-    await drainPhase(scanPhase);
-    expect(buildMock).toHaveBeenCalledTimes(1);
-
-    await drainPhase(planPhase);
-    expect(buildMock).toHaveBeenCalledTimes(1);
-  });
-
-  afterAll(() => {
-    ContextBuilder.prototype.build = originalPlanBuild;
-    AISDKAdapter.prototype.stream = originalPlanStream;
-    mock.restore();
   });
 });

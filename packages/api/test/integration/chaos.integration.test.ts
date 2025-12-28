@@ -148,7 +148,7 @@ describe("Service Degradation", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
         const sub = obs1.subscribe({
           next: (event) => {
-            if (event.type === "run" && (event as any).id) {
+            if (event._ === "run" && (event as any).id) {
               runId1 = (event as any).id;
             }
           },
@@ -180,7 +180,7 @@ describe("Service Degradation", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
         const sub = obs2.subscribe({
           next: (event) => {
-            if (event.type === "run" && (event as any).id) {
+            if (event._ === "run" && (event as any).id) {
               runId2 = (event as any).id;
             }
           },
@@ -275,7 +275,7 @@ describe("Network Failures", () => {
     await new Promise<void>((resolve) => {
       const sub = observable.subscribe({
         next: (event) => {
-          if (event.type === "run" && (event as any).id) {
+          if (event._ === "run" && (event as any).id) {
             runId = (event as any).id;
             // Abort after getting run ID
             sub.unsubscribe?.();
@@ -322,7 +322,7 @@ describe("Network Failures", () => {
 
           const sub = observable.subscribe({
             next: (event) => {
-              if (event.type === "run" && (event as any).id) {
+              if (event._ === "run" && (event as any).id) {
                 results.push((event as any).id);
               }
             },
@@ -390,7 +390,7 @@ describe("Timeout Handling", () => {
 
       const sub = observable.subscribe({
         next: (event) => {
-          if (event.type === "run" && (event as any).id) {
+          if (event._ === "run" && (event as any).id) {
             runId = (event as any).id;
           }
         },
@@ -551,7 +551,7 @@ describe("Graceful Degradation", () => {
         next: (event) => {
           events.push(event);
           // Check for notice events (warnings)
-          if (event.type === "notice") {
+          if (event._ === "notice") {
             // Warnings are acceptable, not failures
           }
         },

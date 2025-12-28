@@ -1,7 +1,7 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { ExecutionPlan } from "@alfred/cognitive";
+import { PlanRunner } from "../src/loops/plan-runner";
 
-// Mock Agent Defaults
 const mockTools = {
   "test-tool": {
     execute: mock(async (params: any) => `executed with ${params.value}`),
@@ -13,13 +13,6 @@ const mockTools = {
   },
 };
 
-mock.module("@alfred/agent", () => ({
-  getAssistantAgentDefaults: () => ({
-    tools: mockTools,
-  }),
-}));
-
-// Mock Cognitive Repo
 type SnapshotLike = {
   lastEventId: string;
   state: Record<string, unknown>;
@@ -45,6 +38,12 @@ mock.module("@alfred/db", () => ({
   },
 }));
 
+const repo = {
+  getLatestSnapshot: getLatestSnapshotMock,
+  saveSnapshot: saveSnapshotMock,
+  appendEvent: appendEventMock,
+} as any;
+
 beforeEach(() => {
   process.env.RUNTIME_DISABLE_SAFETY_EMBED = "1";
   process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL = undefined;
@@ -66,8 +65,7 @@ describe("PlanRunner", () => {
       lastEventId: "00000000-0000-0000-0000-000000000000",
       state: { auto: { level: 0.5 } },
     }));
-    const { PlanRunner } = await import("../src/loops/plan-runner");
-    const runner = new PlanRunner(streamId, mockTools);
+    const runner = new PlanRunner(streamId, mockTools, repo);
     const plan: ExecutionPlan = {
       steps: [
         {
@@ -113,8 +111,7 @@ describe("PlanRunner", () => {
       lastEventId: "00000000-0000-0000-0000-000000000000",
       state: { auto: { level: 0.5 } },
     }));
-    const { PlanRunner } = await import("../src/loops/plan-runner");
-    const runner = new PlanRunner(streamId, mockTools);
+    const runner = new PlanRunner(streamId, mockTools, repo);
     const plan: ExecutionPlan = {
       steps: [
         {
@@ -214,8 +211,7 @@ describe("PlanRunner", () => {
   it("blocks execution when autonomy is insufficient for assessed risk", async () => {
     process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL = "high";
 
-    const { PlanRunner } = await import("../src/loops/plan-runner");
-    const runner = new PlanRunner(streamId, mockTools);
+    const runner = new PlanRunner(streamId, mockTools, repo);
     const plan: ExecutionPlan = {
       steps: [
         {
@@ -232,9 +228,5 @@ describe("PlanRunner", () => {
     };
     await expect(runner.executePlan(plan)).rejects.toThrow(/Execution gated/);
     process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL = undefined;
-  });
-
-  afterAll(() => {
-    mock.restore();
   });
 });

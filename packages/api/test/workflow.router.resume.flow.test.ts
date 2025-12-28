@@ -240,9 +240,9 @@ describe("workflow router resume flow (integration)", () => {
         resumeGate.reject(new Error("cancelled"));
       },
       stream: (async function* () {
-        yield { type: "run", id: "resume-run-1" } as any;
+        yield { _: "run", id: "resume-run-1" } as any;
         yield {
-          type: "require-scope",
+          _: "require-scope",
           scopes: ["repo.write"],
           event: "deploy-authz",
         } as any;
@@ -250,10 +250,10 @@ describe("workflow router resume flow (integration)", () => {
         await resumeGate.promise;
         // Emit notice + completion after resume
         yield {
-          type: "notice",
+          _: "notice",
           message: "Authorization 'deploy-authz' acknowledged.",
         } as any;
-        yield { type: "report", summary: { status: "completed" } } as any;
+        yield { _: "report", summary: { status: "completed" } } as any;
       })(),
     });
     const input = { requirement: "test", auto: "medium" as const };
@@ -269,11 +269,11 @@ describe("workflow router resume flow (integration)", () => {
       sub.subscribe({
         next: (ev: WorkflowEvent) => {
           events.push(ev);
-          if ((ev as any).type === "run") {
+          if ((ev as any)._ === "run") {
             runIdRef.id = (ev as any).id;
           }
           // When we see the require-scope, immediately post resume
-          if ((ev as any).type === "require-scope" && runIdRef.id) {
+          if ((ev as any)._ === "require-scope" && runIdRef.id) {
             caller.workflow
               .resume({
                 runId: runIdRef.id,
@@ -292,21 +292,22 @@ describe("workflow router resume flow (integration)", () => {
 
     await done;
     if (!runIdRef.id) {
-      const firstRun = (events.find((e: any) => e?.type === "run") as any)?.id;
+      const firstRun = (events.find((e: any) => e?._ === "run") as any)?.id;
       if (firstRun) {
         runIdRef.id = firstRun;
       }
     }
     const completed = events.some(
-      (e: any) =>
-        e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
+      (e: any) => e?._ === "report" || (e?._ === "progress" && e?.pct === 100)
     );
     expect(completed).toBe(true);
     expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
     expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
       "user",
       expect.arrayContaining([
-        expect.objectContaining({ kind: "workflow_run", id: "resume-run-1" }),
+        expect.objectContaining({
+          kind: "workflow_run",
+        }),
       ])
     );
   });
@@ -329,19 +330,19 @@ describe("workflow router resume flow (integration)", () => {
         resumeGate.reject(new Error("cancelled"));
       },
       stream: (async function* () {
-        yield { type: "run", id: "resume-run-2" } as any;
+        yield { _: "run", id: "resume-run-2" } as any;
         yield {
-          type: "require-scope",
+          _: "require-scope",
           scopes: ["repo.write"],
           event: "linear-authz",
         } as any;
         // Wait for resume to be called
         await resumeGate.promise;
         yield {
-          type: "notice",
+          _: "notice",
           message: "Authorization 'linear-authz' acknowledged.",
         } as any;
-        yield { type: "report", summary: { status: "completed" } } as any;
+        yield { _: "report", summary: { status: "completed" } } as any;
       })(),
     });
 
@@ -354,10 +355,10 @@ describe("workflow router resume flow (integration)", () => {
       sub.subscribe({
         next: (ev: WorkflowEvent) => {
           events.push(ev);
-          if ((ev as any).type === "run") {
+          if ((ev as any)._ === "run") {
             runIdRef.id = (ev as any).id;
           }
-          if ((ev as any).type === "require-scope" && runIdRef.id) {
+          if ((ev as any)._ === "require-scope" && runIdRef.id) {
             caller.workflow
               .resume({
                 runId: runIdRef.id,
@@ -376,14 +377,13 @@ describe("workflow router resume flow (integration)", () => {
 
     await done;
     if (!runIdRef.id) {
-      const firstRun = (events.find((e: any) => e?.type === "run") as any)?.id;
+      const firstRun = (events.find((e: any) => e?._ === "run") as any)?.id;
       if (firstRun) {
         runIdRef.id = firstRun;
       }
     }
     const completed = events.some(
-      (e: any) =>
-        e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
+      (e: any) => e?._ === "report" || (e?._ === "progress" && e?.pct === 100)
     );
     expect(completed).toBe(true);
   });

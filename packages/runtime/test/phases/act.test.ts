@@ -171,7 +171,7 @@ describe("executeActPhase", () => {
     expect(
       events.find(
         (event) =>
-          event.type === "notice" &&
+          (event as any)._ === "notice" &&
           (event as any).message === "execution_placeholder"
       )
     ).toBeDefined();

@@ -121,19 +121,19 @@ describe("workflow failure modes (runtime)", () => {
   it("persists wave-aborted events and records error metrics", async () => {
     const mockRunId = "failure-mode-run";
     const events: WorkflowEvent[] = [
-      { type: "run", id: mockRunId } as WorkflowEvent,
+      { _: "run", id: mockRunId } as WorkflowEvent,
       {
-        type: "event",
+        _: "event",
         kind: "data-subtasks",
         data: [{ id: "T1" }, { id: "T2" }],
       } as any,
       {
-        type: "event",
+        _: "event",
         kind: "data-wave-plan",
         data: { waveId: "wave_0" },
       } as any,
       {
-        type: "event",
+        _: "event",
         kind: "wave-result",
         data: {
           waveId: "wave_0",
@@ -157,7 +157,7 @@ describe("workflow failure modes (runtime)", () => {
         },
       } as any,
       {
-        type: "event",
+        _: "event",
         kind: "wave-aborted",
         data: { waveId: "wave_0", waveFailRate: 1, overallFailRate: 1 },
       } as any,
@@ -215,9 +215,9 @@ describe("workflow failure modes (runtime)", () => {
   it("records merge-conflict metrics when merge-conflict event is emitted", async () => {
     const mockRunId = "conflict-run";
     const events: WorkflowEvent[] = [
-      { type: "run", id: mockRunId } as WorkflowEvent,
+      { _: "run", id: mockRunId } as WorkflowEvent,
       {
-        type: "event",
+        _: "event",
         kind: "merge-conflict",
         data: {
           files: ["a.ts", "b.ts"],

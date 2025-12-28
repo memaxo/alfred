@@ -181,9 +181,9 @@ describe("workflow router", () => {
       const mockRunId = "test-run-id";
       const mockSummary = "Plan initialized for test requirement";
       const mockStream = async function* () {
-        yield { type: "run", id: mockRunId } as WorkflowEvent;
+        yield { _: "run", id: mockRunId } as WorkflowEvent;
         yield {
-          type: "progress",
+          _: "progress",
           pct: 10,
           message: "starting",
         } as WorkflowEvent;
@@ -312,9 +312,9 @@ describe("workflow router", () => {
     it("streams workflow events and persists them", async () => {
       const mockRunId = "test-run-id";
       const events: WorkflowEvent[] = [
-        { type: "run", id: mockRunId } as WorkflowEvent,
-        { type: "assistant", text: "Workflow complete" } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
+        { _: "run", id: mockRunId } as WorkflowEvent,
+        { _: "assistant", text: "Workflow complete" } as WorkflowEvent,
+        { _: "progress", pct: 100, message: "done" } as WorkflowEvent,
       ];
 
       const mockStream = async function* () {
@@ -436,8 +436,8 @@ describe("workflow router", () => {
         .mockResolvedValueOnce({ obligations: [] });
 
       const runEvents: WorkflowEvent[] = [
-        { type: "run", id: resumedRunId } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
+        { _: "run", id: resumedRunId } as WorkflowEvent,
+        { _: "progress", pct: 100, message: "done" } as WorkflowEvent,
       ];
 
       workflowRunnerMocks.runPlanV6.mockReturnValue({
@@ -494,7 +494,7 @@ describe("workflow router", () => {
       const subscriptionHandle = observable.subscribe({
         next: (event: WorkflowEvent) => {
           receivedEvents.push(event);
-          if (event.type === "obligation" && resolveObligation) {
+          if (event._ === "obligation" && resolveObligation) {
             resolveObligation(event.runId);
             resolveObligation = undefined;
           }
@@ -516,7 +516,7 @@ describe("workflow router", () => {
             : undefined;
 
       const suspendedRunId = await obligationPromise;
-      expect(receivedEvents[0]?.type).toBe("obligation");
+      expect(receivedEvents[0]?._).toBe("obligation");
       expect((receivedEvents[0] as any).obligations).toEqual([
         biometricObligation,
       ]);
@@ -554,21 +554,21 @@ describe("workflow router", () => {
     it("persists tool-call and tool-result metadata", async () => {
       const mockRunId = "tool-run-id";
       const events: WorkflowEvent[] = [
-        { type: "run", id: mockRunId } as WorkflowEvent,
+        { _: "run", id: mockRunId } as WorkflowEvent,
         {
-          type: "tool-call",
+          _: "tool-call",
           toolCallId: "tc-1",
           toolName: "test",
           input: { ok: true },
         } as WorkflowEvent,
         {
-          type: "tool-result",
+          _: "tool-result",
           toolCallId: "tc-1",
           toolName: "test",
           input: { ok: true },
           output: { ok: true },
         } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
+        { _: "progress", pct: 100, message: "done" } as WorkflowEvent,
       ];
 
       const mockStream = async function* () {
@@ -636,7 +636,7 @@ describe("workflow router", () => {
     it("handles persistence failures gracefully", async () => {
       const mockRunId = "test-run-id";
       const mockStream = async function* () {
-        yield { type: "run", id: mockRunId } as WorkflowEvent;
+        yield { _: "run", id: mockRunId } as WorkflowEvent;
       };
 
       workflowRunnerMocks.runPlanV6.mockReturnValue({
@@ -676,7 +676,7 @@ describe("workflow router", () => {
         stream: (async function* () {
           while (active) {
             yield {
-              type: "progress",
+              _: "progress",
               pct: 1,
               message: "tick",
             } as WorkflowEvent;
@@ -903,7 +903,7 @@ describe("workflow router", () => {
         const mockRunId = "test-run-id";
         const mockSummary = "Test summary";
         const mockExecutor = createMockExecutor(mockRunId, mockSummary, [
-          { type: "run", id: mockRunId } as WorkflowEvent,
+          { _: "run", id: mockRunId } as WorkflowEvent,
         ]);
 
         workflowRunnerMocks.runPlanV6.mockReturnValue(mockExecutor);
@@ -930,8 +930,8 @@ describe("workflow router", () => {
 
         const mockRunId = "test-run-id";
         const events: WorkflowEvent[] = [
-          { type: "run", id: mockRunId } as WorkflowEvent,
-          { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
+          { _: "run", id: mockRunId } as WorkflowEvent,
+          { _: "progress", pct: 100, message: "done" } as WorkflowEvent,
         ];
 
         const mockExecutor = createMockExecutor(mockRunId, "test", events);
@@ -968,7 +968,7 @@ describe("workflow router", () => {
         const mockRunId = "test-run-id";
         const mockSummary = "Test summary";
         const mockExecutor = createMockExecutor(mockRunId, mockSummary, [
-          { type: "run", id: mockRunId } as WorkflowEvent,
+          { _: "run", id: mockRunId } as WorkflowEvent,
         ]);
 
         workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
@@ -1002,8 +1002,8 @@ describe("workflow router", () => {
 
         const mockRunId = "test-run-id";
         const events: WorkflowEvent[] = [
-          { type: "run", id: mockRunId } as WorkflowEvent,
-          { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
+          { _: "run", id: mockRunId } as WorkflowEvent,
+          { _: "progress", pct: 100, message: "done" } as WorkflowEvent,
         ];
 
         const mockExecutor = createMockExecutor(mockRunId, "test", events);
@@ -1117,9 +1117,9 @@ describe("workflow router", () => {
 
     it("produces identical event streams", async () => {
       const events: WorkflowEvent[] = [
-        { type: "run", id: "test-run-id" } as WorkflowEvent,
-        { type: "progress", pct: 10, message: "p10" } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "p100" } as WorkflowEvent,
+        { _: "run", id: "test-run-id" } as WorkflowEvent,
+        { _: "progress", pct: 10, message: "p10" } as WorkflowEvent,
+        { _: "progress", pct: 100, message: "p100" } as WorkflowEvent,
       ];
 
       // Test with runner

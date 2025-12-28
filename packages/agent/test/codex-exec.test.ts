@@ -1,6 +1,7 @@
 import {
   afterAll,
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -33,59 +34,63 @@ const assessSessionResumeEligibilityMock = mock(() =>
 const getSessionMock = mock(() => {});
 const createSessionMock = mock(() => {});
 
-mock.module("../src/orchestrator/codex-session.js", () => ({
-  assessSessionResumeEligibility: assessSessionResumeEligibilityMock,
-  sessionManager: {
-    getSession: (...args: Parameters<typeof getSessionMock>) =>
-      getSessionMock(...args),
-    createSession: (...args: Parameters<typeof createSessionMock>) =>
-      createSessionMock(...args),
-  },
-}));
-
 // Ensure the exec.ts dependency on definition.js is resolved to the TS module.
 const definitionModule = await import(
   "../src/orchestrator/tool/codex/definition.ts"
 );
-mock.module(
-  "../src/orchestrator/tool/codex/definition.js",
-  () => definitionModule
-);
+beforeAll(async () => {
+  // Keep module mocks inside beforeAll so we don't poison unrelated test files
+  // during Bun's initial module load pass.
+  mock.module("../src/orchestrator/codex-session.js", () => ({
+    assessSessionResumeEligibility: assessSessionResumeEligibilityMock,
+    sessionManager: {
+      getSession: (...args: Parameters<typeof getSessionMock>) =>
+        getSessionMock(...args),
+      createSession: (...args: Parameters<typeof createSessionMock>) =>
+        createSessionMock(...args),
+    },
+  }));
 
-mock.module("@alfred/codex", () => ({
-  async *runStreamed(opts: {
-    cmd: string;
-    prompt: string;
-    env?: Record<string, string>;
-    spawn?: (args: {
+  mock.module(
+    "../src/orchestrator/tool/codex/definition.js",
+    () => definitionModule
+  );
+
+  mock.module("@alfred/codex", () => ({
+    async *runStreamed(opts: {
       cmd: string;
-      args: string[];
+      prompt: string;
       env?: Record<string, string>;
-    }) => unknown;
-  }) {
-    observedPrompt = opts.prompt;
-    if (shouldInvokeSpawn) {
-      // Exercise the tool-provided spawn wrapper (docker/poof/host selection).
-      // This lets tests assert docker `--workdir` behavior deterministically.
-      const spawned = opts.spawn?.({
-        cmd: opts.cmd,
-        args: ["--version"],
-        env: opts.env,
-      });
-      if (
-        spawned &&
-        typeof spawned === "object" &&
-        "exited" in spawned &&
-        (spawned as { exited?: unknown }).exited instanceof Promise
-      ) {
-        await (spawned as { exited: Promise<unknown> }).exited;
+      spawn?: (args: {
+        cmd: string;
+        args: string[];
+        env?: Record<string, string>;
+      }) => unknown;
+    }) {
+      observedPrompt = opts.prompt;
+      if (shouldInvokeSpawn) {
+        // Exercise the tool-provided spawn wrapper (docker/poof/host selection).
+        // This lets tests assert docker `--workdir` behavior deterministically.
+        const spawned = opts.spawn?.({
+          cmd: opts.cmd,
+          args: ["--version"],
+          env: opts.env,
+        });
+        if (
+          spawned &&
+          typeof spawned === "object" &&
+          "exited" in spawned &&
+          (spawned as { exited?: unknown }).exited instanceof Promise
+        ) {
+          await (spawned as { exited: Promise<unknown> }).exited;
+        }
       }
-    }
-    for (const event of pendingEvents) {
-      yield { ...event };
-    }
-  },
-}));
+      for (const event of pendingEvents) {
+        yield { ...event };
+      }
+    },
+  }));
+});
 
 const buildCodexLearningContextMock = mock(() =>
   Promise.resolve<string | null>(null)
@@ -94,18 +99,22 @@ const buildCodexHeuristicContextMock = mock(() =>
   Promise.resolve<string | null>(null)
 );
 
-mock.module("@alfred/db/repo/codex-learning", () => ({
-  buildCodexLearningContext: (
-    ...args: Parameters<typeof buildCodexLearningContextMock>
-  ) => buildCodexLearningContextMock(...args),
-  buildCodexHeuristicContext: (
-    ...args: Parameters<typeof buildCodexHeuristicContextMock>
-  ) => buildCodexHeuristicContextMock(...args),
-}));
+let executeWithCodex: typeof import("@alfred/agent/orchestrator/tool/codex/exec").executeWithCodex;
 
-const { executeWithCodex } = await import(
-  "@alfred/agent/orchestrator/tool/codex/exec"
-);
+beforeAll(async () => {
+  mock.module("@alfred/db/repo/codex-learning", () => ({
+    buildCodexLearningContext: (
+      ...args: Parameters<typeof buildCodexLearningContextMock>
+    ) => buildCodexLearningContextMock(...args),
+    buildCodexHeuristicContext: (
+      ...args: Parameters<typeof buildCodexHeuristicContextMock>
+    ) => buildCodexHeuristicContextMock(...args),
+  }));
+
+  ({ executeWithCodex } = await import(
+    "@alfred/agent/orchestrator/tool/codex/exec"
+  ));
+});
 
 beforeEach(() => {
   assessSessionResumeEligibilityMock.mockReset();

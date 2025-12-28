@@ -11,7 +11,7 @@ import * as workflowRepo from "@alfred/db/repo/workflow";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import type { WorkflowEvent } from "@alfred/type";
 import { sql } from "drizzle-orm";
-import { closeTestDb, createTestDb, truncateTables } from "./utils/db";
+import { closeTestDb, createTestDb, truncateTables } from "../utils/db";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
@@ -233,16 +233,16 @@ describeFn("workflow persistence", () => {
       });
 
       const events: WorkflowEvent[] = [
-        { type: "run", id: run.id } as WorkflowEvent,
-        { type: "progress", pct: 10, message: "p10" } as WorkflowEvent,
-        { type: "progress", pct: 50, message: "p50" } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "p100" } as WorkflowEvent,
+        { _: "run", id: run.id } as WorkflowEvent,
+        { _: "progress", pct: 10, message: "p10" } as WorkflowEvent,
+        { _: "progress", pct: 50, message: "p50" } as WorkflowEvent,
+        { _: "progress", pct: 100, message: "p100" } as WorkflowEvent,
       ];
 
       for (const event of events) {
         await workflowRepo.appendEvent({
           runId: run.id,
-          eventType: event.type ?? "event",
+          eventType: event._ ?? "event",
           eventData: event,
         });
       }

@@ -185,7 +185,7 @@ describe("Voice → Workflow Integration", () => {
       });
 
       expect(events.length).toBeGreaterThan(0);
-      expect(events.some((e) => e.type === "run")).toBe(true);
+      expect(events.some((e) => e._ === "run")).toBe(true);
     });
 
     it("voice session context persists across workflow", async () => {
@@ -251,7 +251,7 @@ describe("Voice → Workflow Integration", () => {
         const sub = observable.subscribe({
           next: (event) => {
             events.push(event);
-            if (event.type === "ui-message") {
+            if (event._ === "ui-message") {
               const msg = event as any;
               if (msg.content) {
                 workflowResult += msg.content;
@@ -355,7 +355,7 @@ describe("Voice → Workflow Integration", () => {
       await new Promise<void>((resolve) => {
         const sub = observable.subscribe({
           next: (event) => {
-            if (event.type === "run" && (event as any).id) {
+            if (event._ === "run" && (event as any).id) {
               runId = (event as any).id;
               sub.unsubscribe?.();
               resolve();
@@ -418,7 +418,7 @@ describe("Voice → Workflow Integration", () => {
       await new Promise<void>((resolve) => {
         const sub = observable.subscribe({
           next: (event) => {
-            if (event.type === "run" && (event as any).id) {
+            if (event._ === "run" && (event as any).id) {
               runId = (event as any).id;
               sub.unsubscribe?.();
               resolve();
@@ -544,7 +544,7 @@ describe("Full Voice-Workflow Round Trip", () => {
       const sub = observable.subscribe({
         next: (event) => {
           workflowEvents.push(event);
-          if (event.type === "ui-message") {
+          if (event._ === "ui-message") {
             const msg = event as any;
             if (msg.content) {
               workflowOutput += msg.content;
@@ -647,7 +647,7 @@ describe("Full Voice-Workflow Round Trip", () => {
     await new Promise<void>((resolve) => {
       const sub = observable.subscribe({
         next: (event) => {
-          if (event.type === "run" && (event as any).id) {
+          if (event._ === "run" && (event as any).id) {
             runId = (event as any).id;
           }
         },

@@ -42,12 +42,12 @@ describe("PipelineRunner", () => {
     }
 
     expect(events).toHaveLength(3); // start + test + complete
-    expect(events[0]).toEqual({ type: "step-start", phase: "phase1" });
+    expect(events[0]).toEqual({ _: "step-start", phase: "phase1" });
     expect(events[1]).toEqual({
       type: "test",
       message: "Running phase1 with input",
     });
-    expect(events[2]).toEqual({ type: "step-complete", phase: "phase1" });
+    expect(events[2]).toEqual({ _: "step-complete", phase: "phase1" });
 
     expect(state.history).toHaveLength(1);
     expect(state.history[0].result).toBe("success");
@@ -71,11 +71,11 @@ describe("PipelineRunner", () => {
 
     // phase1 (start, test, escalate) -> phase2 (start, test, complete)
     expect(events).toHaveLength(5);
-    expect(events[0]).toEqual({ type: "step-start", phase: "phase1" });
+    expect(events[0]).toEqual({ _: "step-start", phase: "phase1" });
     expect(events[1].type).toBe("test");
-    expect(events[2]).toEqual({ type: "step-start", phase: "phase2" });
+    expect(events[2]).toEqual({ _: "step-start", phase: "phase2" });
     expect(events[3].type).toBe("test");
-    expect(events[4]).toEqual({ type: "step-complete", phase: "phase2" });
+    expect(events[4]).toEqual({ _: "step-complete", phase: "phase2" });
 
     expect(state.history).toHaveLength(2);
     expect(state.history[0].phaseId).toBe("phase1");
@@ -102,10 +102,10 @@ describe("PipelineRunner", () => {
     }
 
     expect(events).toHaveLength(6);
-    expect(events[0]).toEqual({ type: "step-start", phase: "phase1" });
-    expect(events[2]).toEqual({ type: "step-complete", phase: "phase1" });
-    expect(events[3]).toEqual({ type: "step-start", phase: "phase2" });
-    expect(events[5]).toEqual({ type: "step-complete", phase: "phase2" });
+    expect(events[0]).toEqual({ _: "step-start", phase: "phase1" });
+    expect(events[2]).toEqual({ _: "step-complete", phase: "phase1" });
+    expect(events[3]).toEqual({ _: "step-start", phase: "phase2" });
+    expect(events[5]).toEqual({ _: "step-complete", phase: "phase2" });
 
     expect(state.history).toHaveLength(2);
     expect(state.history[0].phaseId).toBe("phase1");

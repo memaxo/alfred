@@ -154,25 +154,37 @@ export const dbModuleStub = {
 
 const dbAbs = new URL("../../../db/src/index.ts", import.meta.url).pathname;
 const realDb = await import(dbAbs);
-mock.module("@alfred/db", () => ({
-  ...realDb,
-  codexRunRepo: dbModuleStub.codexRunRepo,
-  userRepo: dbModuleStub.userRepo,
-  deployRepo: dbModuleStub.deployRepo,
-  linearRepo: dbModuleStub.linearRepo,
-}));
-mock.module("@alfred/db/repo/conversation", () => conversationRepoShim);
-mock.module("@alfred/db/src/repo/conversation", () => conversationRepoShim);
-mock.module("@alfred/db/repo/user", () => dbModuleStub.userRepo);
-mock.module("@alfred/db/src/repo/user", () => dbModuleStub.userRepo);
-mock.module("@alfred/db/repo/deploy", () => dbModuleStub.deployRepo);
-mock.module("@alfred/db/src/repo/deploy", () => dbModuleStub.deployRepo);
-mock.module("@alfred/db/repo/linear", () => dbModuleStub.linearRepo);
-mock.module("@alfred/db/src/repo/linear", () => dbModuleStub.linearRepo);
-mock.module("@alfred/db/repo/codex-run", () => dbModuleStub.codexRunRepo);
-mock.module("@alfred/db/src/repo/codex-run", () => dbModuleStub.codexRunRepo);
 
-// No-op policy audit logging during tests
-mock.module("@alfred/db/repo/policy", () => ({
-  createAuditLog: async () => {},
-}));
+function applyMockDbClient(): void {
+  mock.module("@alfred/db", () => ({
+    ...realDb,
+    codexRunRepo: dbModuleStub.codexRunRepo,
+    userRepo: dbModuleStub.userRepo,
+    deployRepo: dbModuleStub.deployRepo,
+    linearRepo: dbModuleStub.linearRepo,
+  }));
+  mock.module("@alfred/db/repo/conversation", () => conversationRepoShim);
+  mock.module("@alfred/db/src/repo/conversation", () => conversationRepoShim);
+  mock.module("@alfred/db/repo/user", () => dbModuleStub.userRepo);
+  mock.module("@alfred/db/src/repo/user", () => dbModuleStub.userRepo);
+  mock.module("@alfred/db/repo/deploy", () => dbModuleStub.deployRepo);
+  mock.module("@alfred/db/src/repo/deploy", () => dbModuleStub.deployRepo);
+  mock.module("@alfred/db/repo/linear", () => dbModuleStub.linearRepo);
+  mock.module("@alfred/db/src/repo/linear", () => dbModuleStub.linearRepo);
+  mock.module("@alfred/db/repo/codex-run", () => dbModuleStub.codexRunRepo);
+  mock.module("@alfred/db/src/repo/codex-run", () => dbModuleStub.codexRunRepo);
+
+  // No-op policy audit logging during tests
+  mock.module("@alfred/db/repo/policy", () => ({
+    createAuditLog: async () => {},
+  }));
+}
+
+applyMockDbClient();
+
+// Allow the shared test preload to re-apply baseline module mocks between tests.
+(
+  globalThis as unknown as {
+    __alfredRegisterModuleResetter?: (fn: () => void) => void;
+  }
+).__alfredRegisterModuleResetter?.(applyMockDbClient);

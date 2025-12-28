@@ -32,45 +32,70 @@ mock.module("@alfred/db/repo/workflow", () => ({
 }));
 
 const generateTextMock = vi.fn();
-mock.module("@alfred/api/ai/generate", async () => {
-  const { normalizeToUiMessages } = await import("@alfred/agent");
-  const { wrapEventEnvelope } = await import("@alfred/agent/utils/envelope");
-  const workflowRepo = await import("@alfred/db/repo/workflow");
+function normalizeToUiMessagesForTest(result: any): any[] {
+  const parts: any[] = [];
 
-  return {
-    generateText: generateTextMock,
-    persistResult: async (args: {
-      userId: string;
-      kind: "assistant" | "orchestrator";
-      input: unknown;
-      result: unknown;
-    }) => {
-      const runId = crypto.randomUUID();
-      await workflowRepo.createRun({
-        id: runId,
-        userId: args.userId,
-        workflowId: `${args.kind}-generate`,
-        status: "completed",
-        inputData: args.input,
-        stateData: null,
-      });
-      const uiMessages = normalizeToUiMessages((args.result ?? {}) as any);
-      const eventId = crypto.randomUUID();
-      await workflowRepo.appendEvent({
-        runId,
-        eventId,
-        eventType: "ui-message",
-        eventData: wrapEventEnvelope({
-          id: eventId,
-          type: "ui-message",
-          resource: "user",
-          data: uiMessages,
-        }),
-      });
-      return runId;
-    },
-  };
-});
+  if (typeof result?.text === "string" && result.text.length > 0) {
+    parts.push({ type: "text", text: result.text });
+  }
+
+  const toolCalls = Array.isArray(result?.toolCalls) ? result.toolCalls : [];
+  for (const c of toolCalls) {
+    const toolCallId = String(c?.id ?? crypto.randomUUID());
+    const toolName = String(c?.name ?? c?.toolName ?? "tool");
+    const input = (c?.args ?? c?.input ?? {}) as unknown;
+    parts.push({ type: "tool-call", toolCallId, toolName, input });
+  }
+
+  const toolResults = Array.isArray(result?.toolResults)
+    ? result.toolResults
+    : [];
+  for (const r of toolResults) {
+    const toolCallId = String(r?.id ?? r?.toolCallId ?? crypto.randomUUID());
+    const toolName = String(r?.name ?? r?.toolName ?? "tool");
+    const output = (r?.result ?? r?.output ?? {}) as unknown;
+    parts.push({
+      type: "tool-result",
+      toolCallId,
+      toolName,
+      output,
+      isError: false,
+    });
+  }
+
+  return [{ id: crypto.randomUUID(), role: "assistant", parts }];
+}
+
+mock.module("@alfred/api/ai/generate", () => ({
+  generateText: generateTextMock,
+  persistResult: async (args: {
+    userId: string;
+    kind: "assistant" | "orchestrator";
+    input: unknown;
+    result: unknown;
+  }) => {
+    const workflowRepo = await import("@alfred/db/repo/workflow");
+    const runId = crypto.randomUUID();
+    await workflowRepo.createRun({
+      id: runId,
+      userId: args.userId,
+      workflowId: `${args.kind}-generate`,
+      status: "completed",
+      inputData: args.input,
+      stateData: null,
+    });
+
+    const uiMessages = normalizeToUiMessagesForTest(args.result);
+    const eventId = crypto.randomUUID();
+    await workflowRepo.appendEvent({
+      runId,
+      eventId,
+      eventType: "ui-message",
+      eventData: { data: uiMessages },
+    });
+    return runId;
+  },
+}));
 
 const { createTestCaller } = await import("./utils/trpc");
 

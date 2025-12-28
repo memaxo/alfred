@@ -32,7 +32,7 @@ describe("workflow runner", () => {
       }
 
       expect(events[0]).toMatchObject({
-        type: "run",
+        _: "run",
       });
     });
 
@@ -68,7 +68,7 @@ describe("workflow runner", () => {
         events.push(event);
       }
 
-      const contextEvents = events.filter((e) => e.type === "context");
+      const contextEvents = events.filter((e) => e._ === "context");
       expect(contextEvents.length).toBeGreaterThan(0);
     });
 
@@ -86,7 +86,7 @@ describe("workflow runner", () => {
         events.push(event);
       }
 
-      const contextEvents = events.filter((e) => e.type === "context");
+      const contextEvents = events.filter((e) => e._ === "context");
       expect(contextEvents.length).toBe(0);
     });
 
@@ -108,9 +108,7 @@ describe("workflow runner", () => {
         }
       }
 
-      const requireScopeEvents = events.filter(
-        (e) => e.type === "require-scope"
-      );
+      const requireScopeEvents = events.filter((e) => e._ === "require-scope");
       expect(requireScopeEvents.length).toBeGreaterThan(0);
     });
 
@@ -132,9 +130,7 @@ describe("workflow runner", () => {
         }
       }
 
-      const requireScopeEvents = events.filter(
-        (e) => e.type === "require-scope"
-      );
+      const requireScopeEvents = events.filter((e) => e._ === "require-scope");
       expect(requireScopeEvents.length).toBeGreaterThan(0);
     });
 
@@ -149,9 +145,7 @@ describe("workflow runner", () => {
         events.push(event);
       }
 
-      const requireScopeEvents = events.filter(
-        (e) => e.type === "require-scope"
-      );
+      const requireScopeEvents = events.filter((e) => e._ === "require-scope");
       expect(requireScopeEvents.length).toBe(0);
     });
 
@@ -194,7 +188,7 @@ describe("workflow runner", () => {
         events.push(event);
       }
 
-      const noticeEvents = events.filter((e) => e.type === "notice");
+      const noticeEvents = events.filter((e) => e._ === "notice");
       const acknowledged = noticeEvents.some((e) =>
         e.message?.includes("acknowledged")
       );

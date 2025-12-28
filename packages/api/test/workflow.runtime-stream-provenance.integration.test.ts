@@ -246,11 +246,11 @@ function createRuntimeExecutor(options: RuntimeExecutorOptions) {
   const { runId, ragDocumentId, traces } = options;
 
   const stream = (async function* () {
-    yield { type: "run", id: runId } as WorkflowEvent;
+    yield { _: "run", id: runId } as WorkflowEvent;
 
     // Emit runtime context with ragDocumentIds so the router can attach provenance
     yield {
-      type: "event",
+      _: "event",
       kind: "runtime-context",
       data: { ragDocumentIds: [ragDocumentId] },
     } as any;
@@ -258,13 +258,17 @@ function createRuntimeExecutor(options: RuntimeExecutorOptions) {
     // Emit explicit reasoning events so the router accumulates traces
     for (const trace of traces) {
       yield {
-        type: "reasoning",
+        _: "reasoning",
         text: trace.text,
         timestamp: trace.timestamp,
       } as any;
     }
 
-    yield { type: "progress", pct: 100, message: "completed" } as WorkflowEvent;
+    yield {
+      _: "progress",
+      pct: 100,
+      message: "completed",
+    } as WorkflowEvent;
   })();
 
   return {

@@ -1,9 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-// Mock the secure spawn to avoid actual process spawning
+// NOTE: Use beforeAll for module mocks so this file does not poison other test files
+// during Bun's initial module load phase.
 const spawnWithSecureCwdMock = mock(() => ({
   stdout: null,
   stderr: null,
@@ -11,20 +21,27 @@ const spawnWithSecureCwdMock = mock(() => ({
   kill: () => {},
 }));
 
-mock.module("../src/security/secure-spawn.js", () => ({
-  spawnWithSecureCwd: spawnWithSecureCwdMock,
-}));
-
-// Mock resolveExecutable to return predictable paths
 const resolveExecutableMock = mock((cmd: string) => `/usr/bin/${cmd}`);
 
-mock.module("../src/orchestrator/tool/codex/policy.js", () => ({
-  resolveExecutable: resolveExecutableMock,
-}));
+let createCodexSpawn: typeof import("../src/orchestrator/tool/codex/spawn-process").createCodexSpawn;
 
-const { createCodexSpawn } = await import(
-  "../src/orchestrator/tool/codex/spawn-process"
-);
+beforeAll(async () => {
+  mock.module("../src/security/secure-spawn.js", () => ({
+    spawnWithSecureCwd: spawnWithSecureCwdMock,
+  }));
+
+  mock.module("../src/orchestrator/tool/codex/policy.js", () => ({
+    resolveExecutable: resolveExecutableMock,
+  }));
+
+  ({ createCodexSpawn } = await import(
+    "../src/orchestrator/tool/codex/spawn-process"
+  ));
+});
+
+afterAll(() => {
+  mock.restore();
+});
 
 function createMockCwdHandle(dirPath: string) {
   return {

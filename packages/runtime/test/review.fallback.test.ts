@@ -32,7 +32,7 @@ describe("review fallback integration", () => {
 
   it("creates debugger plan and emits fallback events", async () => {
     const runId = `review-run-${Date.now().toString(36)}`;
-    await preparePlanDir(runId);
+    const planDir = await preparePlanDir(runId);
 
     const commands: string[] = [];
     restoreRunner = mockRunner(async ({ command }) => {
@@ -81,13 +81,8 @@ describe("review fallback integration", () => {
         events.push(event);
       }
 
-      const reviewPlanPath = path.join(".agent", "plans", runId, "review.md");
-      const debuggerPlanPath = path.join(
-        ".agent",
-        "plans",
-        runId,
-        "review-debugger.md"
-      );
+      const reviewPlanPath = path.join(planDir, "review.md");
+      const debuggerPlanPath = path.join(planDir, "review-debugger.md");
       reviewContent = await fs.readFile(reviewPlanPath, "utf8");
       debuggerContent = await fs.readFile(debuggerPlanPath, "utf8");
     } finally {

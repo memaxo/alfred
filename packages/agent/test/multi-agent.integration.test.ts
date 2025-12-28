@@ -4,6 +4,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import {
+  plansPath,
+  rootPlanPath,
+  runPlansDir,
+  subtaskPlanPath,
+} from "@alfred/agent/orchestrator/plans";
 import type { OrchestratorContext } from "@alfred/runtime/src/orchestrator/types";
 import { withWorkflowRuntime } from "@alfred/test-kit/workflow/runtime-fixture";
 import type { ContextBundle, WorkflowEvent } from "@alfred/type/plan";
@@ -157,10 +163,10 @@ describe("multi-agent orchestrator integration", () => {
         result.agentFileHints.get(`${runId}:${tasks[0]?.id}`)?.has("src/cli.ts")
       ).toBe(true);
 
-      const rootPlan = resolve(workspace, `.agent/plans/${runId}.root.md`);
+      const rootPlan = resolve(workspace, rootPlanPath(workspace, runId));
       const subPlan = resolve(
         workspace,
-        `.agent/plans/${runId}/${tasks[0]?.id}.md`
+        subtaskPlanPath(workspace, runId, tasks[0]?.id ?? "")
       );
       const rootContent = await readFile(rootPlan, "utf8");
       expect(rootContent).toContain("Wave wave_0 started");
@@ -255,12 +261,16 @@ describe("multi-agent orchestrator integration", () => {
           runMergeAnalysis(scenario.ctx, mergeDrain.value.mergePlan)
         );
         const mergePlanPath = resolve(
-          `.agent/plans/${scenario.runId}/merge.md`
+          workspace,
+          plansPath(workspace, scenario.runId, "merge.md")
         );
         const mergePlanContent = await readFile(mergePlanPath, "utf8");
         expect(mergePlanContent).toContain("# Merge ExecPlan");
 
-        const reviewDir = resolve(`.agent/plans/${scenario.runId}`);
+        const reviewDir = resolve(
+          workspace,
+          runPlansDir(workspace, scenario.runId)
+        );
         await mkdir(reviewDir, { recursive: true });
         const reviewSeedPath = join(reviewDir, "review.md");
         await writeFile(
@@ -280,7 +290,8 @@ describe("multi-agent orchestrator integration", () => {
             runReviewPhase(scenario.ctx, mergeDrain.value.mergePlan)
           );
           const reviewPlanPath = resolve(
-            `.agent/plans/${scenario.runId}/review.md`
+            workspace,
+            plansPath(workspace, scenario.runId, "review.md")
           );
           const reviewContent = await readFile(reviewPlanPath, "utf8");
           expect(reviewContent.length).toBeGreaterThan(0);
@@ -432,7 +443,7 @@ async function runScenario(options: {
 
   const events: WorkflowEvent[] = [];
   const iterator = runWaves(ctx);
-  let result;
+  let result: Awaited<ReturnType<typeof runWaves>> | undefined;
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const next = await iterator.next();

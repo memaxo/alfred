@@ -7,17 +7,20 @@ import {
   expect,
   it,
 } from "bun:test";
-import { createTestSession } from "@alfred/test-kit/auth";
-import { RuntimeContext } from "@alfred/type/runtime-context";
-import { sql } from "drizzle-orm";
-import { shutdownApiServices } from "../src/init";
-import { shutdownVoicePools } from "../src/voice/pools";
-import { resetAgentMocks } from "./utils/agent-mock";
-import { closeTestDb, createTestDb } from "./utils/db";
 
 const SHOULD_RUN =
   process.env.RUN_DB_TESTS === "1" && Boolean(process.env.DATABASE_URL);
 const describeFn = SHOULD_RUN ? describe : describe.skip;
+
+// Dynamic imports to avoid side effects when tests are skipped
+let createTestSession: typeof import("@alfred/test-kit/auth").createTestSession;
+let RuntimeContext: typeof import("@alfred/type/runtime-context").RuntimeContext;
+let sql: typeof import("drizzle-orm").sql;
+let shutdownApiServices: typeof import("../src/init").shutdownApiServices;
+let shutdownVoicePools: typeof import("../src/voice/pools").shutdownVoicePools;
+let resetAgentMocks: typeof import("./utils/agent-mock").resetAgentMocks;
+let closeTestDb: typeof import("./utils/db").closeTestDb;
+let createTestDb: typeof import("./utils/db").createTestDb;
 
 const TEST_USER = "api-assistant-test-user";
 let appRouter: typeof import("@alfred/api/routers/index").appRouter;
@@ -69,9 +72,35 @@ describeFn("assistant routers", () => {
         "assistant router tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
       );
     }
-    const [{ appRouter: router }] = await Promise.all([
+    // Load modules dynamically to avoid side effects when tests are skipped
+    const [
+      testKitAuth,
+      runtimeContextModule,
+      drizzleOrm,
+      initModule,
+      poolsModule,
+      agentMockModule,
+      dbModule,
+      { appRouter: router },
+    ] = await Promise.all([
+      import("@alfred/test-kit/auth"),
+      import("@alfred/type/runtime-context"),
+      import("drizzle-orm"),
+      import("../src/init"),
+      import("../src/voice/pools"),
+      import("./utils/agent-mock"),
+      import("./utils/db"),
       import("@alfred/api/routers/index"),
     ]);
+    createTestSession = testKitAuth.createTestSession;
+    RuntimeContext = runtimeContextModule.RuntimeContext;
+    sql = drizzleOrm.sql;
+    shutdownApiServices = initModule.shutdownApiServices;
+    shutdownVoicePools = poolsModule.shutdownVoicePools;
+    resetAgentMocks = agentMockModule.resetAgentMocks;
+    closeTestDb = dbModule.closeTestDb;
+    createTestDb = dbModule.createTestDb;
+
     appRouter = router;
     testDbHarness = await createTestDb();
   });

@@ -86,6 +86,7 @@ const collectPerformanceTelemetryMock = vi.fn().mockResolvedValue({
 mock.module("@alfred/auth/biometric", () => ({
   requireRecentBiometric: requireRecentBiometricMock,
   setBiometricTicket: vi.fn(),
+  autoGrantBiometricIfBypassed: vi.fn(),
 }));
 
 mock.module("../src/voice/pools", () => ({

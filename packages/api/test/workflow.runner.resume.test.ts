@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 // Import mock-metrics first - it provides metrics stubs including runnerStepsTotal/runnerErrorsTotal
 import "./utils/mock-metrics";
 
-import { runPlanV6 } from "@alfred/api/workflow/runner";
+import { runPlanV6 } from "@alfred/agent/workflow/runner";
 
 async function* _takeUntil<T>(
   gen: AsyncGenerator<T>,
@@ -31,7 +31,7 @@ describe("workflow runner resume", () => {
         break;
       }
       collected.push(value);
-      if ((value as any)?.type === "require-scope") {
+      if ((value as any)?._ === "require-scope") {
         break;
       }
     }
@@ -47,11 +47,11 @@ describe("workflow runner resume", () => {
 
     const hasAck = collected.some(
       (e) =>
-        e?.type === "notice" &&
+        e?._ === "notice" &&
         /Authorization 'bio-authz' acknowledged/i.test(e?.message ?? "")
     );
     const completed = collected.some(
-      (e) => e?.type === "progress" && e?.pct === 100
+      (e) => e?._ === "progress" && e?.pct === 100
     );
     expect(hasAck).toBe(true);
     expect(completed).toBe(true);

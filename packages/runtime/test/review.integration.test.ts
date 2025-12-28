@@ -32,7 +32,7 @@ describe("review integration happy path", () => {
 
   it("marks review checks as PASS and avoids fallback", async () => {
     const runId = `review-ok-${Date.now().toString(36)}`;
-    await preparePlanDir(runId);
+    const planDir = await preparePlanDir(runId);
 
     const runnerCommands: string[] = [];
     restoreRunner = mockRunner(async ({ command }) => {
@@ -75,7 +75,7 @@ describe("review integration happy path", () => {
         events.push(event);
       }
 
-      const reviewPlanPath = path.join(".agent", "plans", runId, "review.md");
+      const reviewPlanPath = path.join(planDir, "review.md");
       reviewContent = await fs.readFile(reviewPlanPath, "utf8");
     } finally {
       await cleanupPlanDir(runId);

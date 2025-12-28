@@ -140,7 +140,7 @@ describe("WorkflowRuntime", () => {
       ).toBe(true);
 
       // Should not execute phases
-      const stepStarts = events.filter((e) => e.type === "step-start");
+      const stepStarts = events.filter((e) => e._ === "step-start");
       expect(stepStarts.length).toBe(0);
     });
 

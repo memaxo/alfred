@@ -113,6 +113,7 @@ metricsStub.recordVoiceTts = vi.fn();
 metricsStub.recordStreamEvent = vi.fn();
 metricsStub.startStreamTimer = vi.fn(() => vi.fn());
 metricsStub.getMetricsSnapshot = vi.fn(() => "metrics");
+metricsStub.initMetricsHooks = vi.fn();
 
 // Workflow runner metrics commonly needed by workflow tests
 metricsStub.runnerStepsTotal = createMetricStub();
@@ -126,14 +127,16 @@ metricsStub.policyCheckFailuresTotal = createMetricStub();
 
 export { metricsStub, createMetricStub };
 
-mock.module("@alfred/api/metrics", () => ({
-  ...metricsStub,
-}));
+function applyMockMetrics(): void {
+  mock.module("@alfred/api/metrics", () => ({
+    ...metricsStub,
+  }));
 
-// Some modules import via source path; mock that too.
-mock.module("@alfred/api/src/metrics", () => ({
-  ...metricsStub,
-}));
+  // Some modules import via source path; mock that too.
+  mock.module("@alfred/api/src/metrics", () => ({
+    ...metricsStub,
+  }));
+}
 
 // AI SDK is used across routers/history/runtime. Provide a stable stub so any test
 // file can safely import modules that depend on `ai` without needing ad-hoc mocks.
@@ -159,7 +162,9 @@ export const aiStub = {
   })),
 } as const;
 
-mock.module("ai", () => aiStub);
+function applyMockAi(): void {
+  mock.module("ai", () => aiStub);
+}
 
 // Policy hooks used by metrics: provide default no-op implementations.
 const defaultPolicyEvaluate = vi
@@ -178,9 +183,11 @@ export const policyStub = {
   recordCacheHit: vi.fn(),
 } as const;
 
-mock.module("@alfred/policy", () => ({
-  ...policyStub,
-}));
+function applyMockPolicy(): void {
+  mock.module("@alfred/policy", () => ({
+    ...policyStub,
+  }));
+}
 
 // Logger mock - commonly needed across all test files
 export const loggerStub = {
@@ -190,13 +197,15 @@ export const loggerStub = {
   debug: vi.fn(),
 };
 
-mock.module("@alfred/logger", () => ({
-  logger: loggerStub,
-}));
+function applyMockLogger(): void {
+  mock.module("@alfred/logger", () => ({
+    logger: loggerStub,
+  }));
+}
 
 // Workflow metrics from @alfred/agent - needed by workflow runner tests
 // Include all metrics that are re-exported from @alfred/api/metrics
-mock.module("@alfred/agent/workflow/metrics", () => ({
+const workflowMetricsStub = {
   __esModule: true,
   runnerStepsTotal: createMetricStub(),
   runnerErrorsTotal: createMetricStub(),
@@ -218,4 +227,25 @@ mock.module("@alfred/agent/workflow/metrics", () => ({
   workflowProvenanceEdgesTotal: createMetricStub(),
   workflowStreamDurationSeconds: createMetricStub(),
   workflowStreamEventsTotal: createMetricStub(),
-}));
+} as const;
+
+function applyMockWorkflowMetrics(): void {
+  mock.module("@alfred/agent/workflow/metrics", () => workflowMetricsStub);
+}
+
+function applyAllModuleMocks(): void {
+  applyMockMetrics();
+  applyMockAi();
+  applyMockPolicy();
+  applyMockLogger();
+  applyMockWorkflowMetrics();
+}
+
+applyAllModuleMocks();
+
+// Allow the shared test preload to re-apply baseline module mocks between tests.
+(
+  globalThis as unknown as {
+    __alfredRegisterModuleResetter?: (fn: () => void) => void;
+  }
+).__alfredRegisterModuleResetter?.(applyAllModuleMocks);

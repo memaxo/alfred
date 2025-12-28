@@ -80,17 +80,17 @@ describe("Workflow Event Emission", () => {
       events.push(event);
     }
 
-    expect(events.some((e) => e.type === "plan-selected")).toBe(true);
+    expect(events.some((e) => e._ === "plan-selected")).toBe(true);
     expect(
-      events.some((e) => e.type === "phase-start" && e.phaseId === "phase-1")
+      events.some((e) => e._ === "phase-start" && e.phaseId === "phase-1")
     ).toBe(true);
-    expect(events.some((e) => e.type === "wave-start")).toBe(true);
-    expect(events.some((e) => e.type === "agent-start")).toBe(true);
-    expect(events.some((e) => e.type === "agent-complete")).toBe(true);
+    expect(events.some((e) => e._ === "wave-start")).toBe(true);
+    expect(events.some((e) => e._ === "agent-start")).toBe(true);
+    expect(events.some((e) => e._ === "agent-complete")).toBe(true);
     expect(
-      events.some((e) => e.type === "phase-progress" && e.progress === 1.0)
+      events.some((e) => e._ === "phase-progress" && e.progress === 1.0)
     ).toBe(true);
-    expect(events.some((e) => e.type === "wave-complete")).toBe(true);
-    expect(events.some((e) => e.type === "phase-complete")).toBe(true);
+    expect(events.some((e) => e._ === "wave-complete")).toBe(true);
+    expect(events.some((e) => e._ === "phase-complete")).toBe(true);
   });
 });

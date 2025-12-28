@@ -107,7 +107,7 @@ describe("Workflow Full Pipeline Integration", () => {
             events.push(event);
             // Check for scan phase context events
             if (
-              event.type === "context" &&
+              event._ === "context" &&
               (event as { phase?: string }).phase === "scan"
             ) {
               clearTimeout(timeout);
@@ -132,7 +132,7 @@ describe("Workflow Full Pipeline Integration", () => {
       expect(events.length).toBeGreaterThan(0);
 
       // Should have a run event
-      const runEvent = events.find((e) => e.type === "run");
+      const runEvent = events.find((e) => e._ === "run");
       expect(runEvent).toBeDefined();
     });
 
@@ -158,7 +158,7 @@ describe("Workflow Full Pipeline Integration", () => {
           next: (event) => {
             events.push(event);
             // Check for phase events
-            if (event.type === "phase") {
+            if (event._ === "phase") {
               const phaseEvent = event as { phase?: string };
               if (phaseEvent.phase === "plan") {
                 // Plan phase started
@@ -181,9 +181,9 @@ describe("Workflow Full Pipeline Integration", () => {
       expect(events.length).toBeGreaterThan(0);
 
       // Verify phase events exist
-      const _phaseEvents = events.filter((e) => e.type === "phase");
+      const _phaseEvents = events.filter((e) => e._ === "phase");
       // May or may not have phase events depending on orchestrator configuration
-      expect(events.some((e) => e.type === "run")).toBe(true);
+      expect(events.some((e) => e._ === "run")).toBe(true);
     });
 
     it("completes full pipeline with status transitions", async () => {
@@ -208,7 +208,7 @@ describe("Workflow Full Pipeline Integration", () => {
         const sub = observable.subscribe({
           next: (event) => {
             events.push(event);
-            if (event.type === "status") {
+            if (event._ === "status") {
               const statusEvent = event as { status?: string };
               if (statusEvent.status) {
                 statusHistory.push(statusEvent.status);
@@ -229,7 +229,7 @@ describe("Workflow Full Pipeline Integration", () => {
       });
 
       expect(events.length).toBeGreaterThan(0);
-      expect(events.some((e) => e.type === "run")).toBe(true);
+      expect(events.some((e) => e._ === "run")).toBe(true);
     });
   });
 
@@ -308,7 +308,7 @@ describe("Workflow Full Pipeline Integration", () => {
           next: (event) => {
             events.push(event);
             // Check for interrupt events
-            if (event.type === "interrupt" || event.type === "notice") {
+            if (event._ === "interrupt" || event._ === "notice") {
               const msg = (event as { message?: string }).message ?? "";
               if (
                 msg.includes("boredom") ||
@@ -358,7 +358,7 @@ describe("Workflow Full Pipeline Integration", () => {
 
         const sub = observable.subscribe({
           next: (event) => {
-            if (event.type === "run" && (event as { id?: string }).id) {
+            if (event._ === "run" && (event as { id?: string }).id) {
               runId = (event as { id: string }).id;
             }
           },
@@ -439,7 +439,7 @@ describe("Workflow Full Pipeline Integration", () => {
       await new Promise<void>((resolve) => {
         const sub = observable.subscribe({
           next: (event) => {
-            if (event.type === "run" && (event as { id?: string }).id) {
+            if (event._ === "run" && (event as { id?: string }).id) {
               runId = (event as { id: string }).id;
               sub.unsubscribe?.();
               resolve();
@@ -499,7 +499,7 @@ describe("Workflow Full Pipeline Integration", () => {
         const sub = observable.subscribe({
           next: (event) => {
             events.push(event);
-            if (event.type === "context") {
+            if (event._ === "context") {
               _hasContextEvent = true;
             }
           },
@@ -556,9 +556,7 @@ describe("Workflow Full Pipeline Integration", () => {
       expect(events.length).toBeGreaterThan(0);
 
       // Check for data-cache-handoff events
-      const _cacheEvents = events.filter(
-        (e) => e.type === "data-cache-handoff"
-      );
+      const _cacheEvents = events.filter((e) => e._ === "data-cache-handoff");
       // Cache handoff may or may not be present depending on context
     });
   });
@@ -640,7 +638,7 @@ describe("Workflow Suspend/Resume", () => {
       const sub = observable.subscribe({
         next: (event) => {
           events.push(event);
-          if (event.type === "obligation") {
+          if (event._ === "obligation") {
             _hasObligationEvent = true;
           }
         },
@@ -717,6 +715,6 @@ describe("Linear Activity Integration", () => {
     });
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.some((e) => e.type === "run")).toBe(true);
+    expect(events.some((e) => e._ === "run")).toBe(true);
   });
 });

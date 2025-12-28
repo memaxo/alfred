@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 // Import mock-metrics first - it provides metrics stubs including runnerStepsTotal/runnerErrorsTotal
 import "./utils/mock-metrics";
 
-import { runPlanV6 } from "@alfred/api/workflow/runner";
+import { runPlanV6 } from "@alfred/agent/workflow/runner";
 
 async function collectEvents<T>(gen: AsyncGenerator<T>): Promise<T[]> {
   const results: T[] = [];
@@ -24,7 +24,7 @@ describe("workflow runner phases", () => {
       workflowTimeoutMs: 5000,
     });
     const evts = await collectEvents(runner.stream);
-    const types = evts.map((e: any) => e.type);
+    const types = evts.map((e: any) => e._);
     // Basic order checks
     expect(types[0]).toBe("run");
     expect(types).toContain("context");
@@ -50,10 +50,10 @@ describe("workflow runner phases", () => {
     });
     const evts = await collectEvents(runner.stream);
     const hasError = evts.some(
-      (e: any) => e.type === "error" && e.message === "step_timeout"
+      (e: any) => e._ === "error" && e.message === "step_timeout"
     );
     const hasTerminal = evts.some(
-      (e: any) => e.type === "progress" && e.pct === 100
+      (e: any) => e._ === "progress" && e.pct === 100
     );
     expect(hasError || hasTerminal).toBeTruthy();
   });

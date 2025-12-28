@@ -63,7 +63,7 @@ describe("workflowRouter.stream integration", () => {
     });
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.some((event) => event.type === "run")).toBeTruthy();
+    expect(events.some((event) => event._ === "run")).toBeTruthy();
   });
 
   it("rejects unauthenticated callers", async () => {

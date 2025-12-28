@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { ContextBuilder } from "../src/context";
+import { runOrchestrator } from "../src/orchestrator/index";
 
 /**
  * Tests for orchestrator escalation handling.
@@ -26,10 +27,6 @@ import { ContextBuilder } from "../src/context";
 // Mock tracking
 let mockEscalationResult = false;
 let mockEscalationReason: string | undefined;
-let emitLinearActivityCalls: Array<{
-  type: string;
-  payload: unknown;
-}> = [];
 let runMergePhaseCalled = false;
 let runReviewPhaseCalled = false;
 let runConflictPhaseCalled = false;
@@ -86,56 +83,13 @@ const mockRunReviewPhase = mock(function* (_ctx: unknown, _mergePlan: unknown) {
   yield { _: "notice", message: "review_started" } as WorkflowEvent;
 });
 
-// Mock worktree manager
-const mockWorktreeManager = {
-  cleanup: mock(async () => {}),
-  safeMerge: mock(async () => ({ success: true, conflictFiles: [] })),
-};
-
-// Mock Linear activity emission
-const mockEmitLinearActivity = mock(
-  (type: string, payload: unknown): Promise<{ ok: boolean }> => {
-    emitLinearActivityCalls.push({ type, payload });
-    return Promise.resolve({ ok: true });
-  }
-);
-
-// Set up all mocks before importing the module
-mock.module("../src/orchestrator/waves", () => ({
-  runWaves: mockRunWaves,
-}));
-
-mock.module("../src/orchestrator/merge", () => ({
-  runMergePhase: mockRunMergePhase,
-  runMergeAnalysis: mockRunMergeAnalysis,
-}));
-
-mock.module("../src/orchestrator/conflict", () => ({
-  runConflictPhase: mockRunConflictPhase,
-}));
-
-mock.module("../src/orchestrator/review", () => ({
-  runReviewPhase: mockRunReviewPhase,
-}));
-
-mock.module("@alfred/agent/orchestrator/tool/worktree", () => ({
-  worktreeManager: mockWorktreeManager,
-}));
-
-mock.module("@alfred/agent/orchestrator/linear", () => ({
-  emitLinearActivity: mockEmitLinearActivity,
-  extractIssueIdFromSession: (sessionId: string) =>
-    sessionId.includes(":") ? sessionId.split(":")[0] : sessionId,
-  setLinearCancelled: async () => {},
-  setLinearCompleted: async () => {},
-  setLinearDelegate: async () => {},
-  setLinearSessionExternalUrl: async () => {},
-  setLinearStarted: async () => {},
-  commentOnLinearIssue: async () => {},
-}));
-
-// Import the orchestrator module after mocks are set up
-const { runOrchestrator } = await import("../src/orchestrator/index");
+const deps = {
+  runWaves: mockRunWaves as any,
+  runMergePhase: mockRunMergePhase as any,
+  runConflictPhase: mockRunConflictPhase as any,
+  runMergeAnalysis: mockRunMergeAnalysis as any,
+  runReviewPhase: mockRunReviewPhase as any,
+} as const;
 
 // Store original ContextBuilder.build
 const originalBuild = ContextBuilder.prototype.build;
@@ -155,13 +109,10 @@ beforeEach(() => {
   mockRunConflictPhase.mockClear();
   mockRunMergeAnalysis.mockClear();
   mockRunReviewPhase.mockClear();
-  mockWorktreeManager.cleanup.mockClear();
-  mockEmitLinearActivity.mockClear();
 
   // Reset tracking variables
   mockEscalationResult = false;
   mockEscalationReason = undefined;
-  emitLinearActivityCalls = [];
   runMergePhaseCalled = false;
   runReviewPhaseCalled = false;
   runConflictPhaseCalled = false;
@@ -179,7 +130,6 @@ afterEach(async () => {
 
 afterAll(() => {
   ContextBuilder.prototype.build = originalBuild;
-  mock.restore();
 });
 
 /**
@@ -222,7 +172,8 @@ describe("runOrchestrator escalation", () => {
       undefined, // escalationContext
       undefined, // authz
       undefined, // scanContext
-      undefined // userId
+      undefined, // userId
+      deps
     );
 
     const events: WorkflowEvent[] = [];
@@ -272,7 +223,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      deps
     );
 
     const events: WorkflowEvent[] = [];
@@ -312,7 +264,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      deps
     );
 
     const events: WorkflowEvent[] = [];
@@ -359,7 +312,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      deps
     );
 
     const events: WorkflowEvent[] = [];
@@ -416,7 +370,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      deps
     );
 
     const events: WorkflowEvent[] = [];
@@ -465,7 +420,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      deps
     );
 
     const events: WorkflowEvent[] = [];
@@ -526,7 +482,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      deps
     );
 
     // Drain the generator
@@ -573,7 +530,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       undefined,
       undefined,
-      undefined
+      undefined,
+      deps
     );
 
     const events: WorkflowEvent[] = [];
@@ -660,7 +618,8 @@ describe("runOrchestrator escalation", () => {
       undefined,
       "authz-token-for-tools",
       undefined,
-      "user-123"
+      "user-123",
+      deps
     );
 
     // Drain the generator

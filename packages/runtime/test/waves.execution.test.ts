@@ -1,9 +1,22 @@
-import { afterAll, afterEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { WorkspaceFactory } from "@alfred/agent/environment/factory";
+import { subtaskPlanPath } from "@alfred/agent/orchestrator/plans";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import { worktreeManager } from "@alfred/agent/orchestrator/tool/worktree";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { ContextBuilder } from "../src/context";
+import { runWaves } from "../src/orchestrator/waves";
 
 const codexExecute = mock(async ({ writer }: { writer: any }) => {
   await writer.write({
@@ -37,26 +50,10 @@ const worktreeSafeMerge = mock(
   async () => ({ success: true, conflictFiles: [] }) as const
 );
 
-mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
-  toolCodex: {
-    execute: codexExecute,
-  },
-}));
-
-mock.module("@alfred/agent/environment/factory", () => ({
-  WorkspaceFactory: {
-    create: workspaceFactoryCreate,
-  },
-}));
-
-mock.module("@alfred/agent/orchestrator/tool/worktree", () => ({
-  worktreeManager: {
-    safeMerge: worktreeSafeMerge,
-    cleanup: async () => {},
-  },
-}));
-
-const { runWaves } = await import("../src/orchestrator/waves");
+const originalCodexExecute = toolCodex.execute;
+const originalWorkspaceCreate = WorkspaceFactory.create;
+const originalWorktreeSafeMerge = worktreeManager.safeMerge;
+const originalWorktreeCleanup = worktreeManager.cleanup;
 
 const originalExecutionContextBuild = ContextBuilder.prototype.build;
 ContextBuilder.prototype.build = async () =>
@@ -67,6 +64,13 @@ ContextBuilder.prototype.build = async () =>
   }) as any;
 
 const tempDirs: string[] = [];
+
+beforeEach(() => {
+  toolCodex.execute = codexExecute as any;
+  WorkspaceFactory.create = workspaceFactoryCreate as any;
+  worktreeManager.safeMerge = worktreeSafeMerge as any;
+  worktreeManager.cleanup = async () => {};
+});
 
 afterEach(async () => {
   codexExecute.mockReset();
@@ -81,7 +85,10 @@ afterEach(async () => {
 
 afterAll(() => {
   ContextBuilder.prototype.build = originalExecutionContextBuild;
-  mock.restore();
+  toolCodex.execute = originalCodexExecute;
+  WorkspaceFactory.create = originalWorkspaceCreate;
+  worktreeManager.safeMerge = originalWorktreeSafeMerge;
+  worktreeManager.cleanup = originalWorktreeCleanup;
 });
 
 describe("runWaves execution", () => {
@@ -119,7 +126,7 @@ describe("runWaves execution", () => {
     expect(outcome).toBeTruthy();
     const subTaskId = outcome.agentId.split(":")[1];
     expect(subTaskId).toBeTruthy();
-    expect(prompt).toContain(`.agent/plans/run-1/${subTaskId}.md`);
+    expect(prompt).toContain(subtaskPlanPath(workspace, "run-1", subTaskId));
     const hints = result.agentFileHints as Map<string, Set<string>>;
     expect(hints.get(outcome.agentId)?.has("src/task.ts")).toBe(true);
     expect(
@@ -130,7 +137,10 @@ describe("runWaves execution", () => {
       )
     ).toBe(true);
 
-    const planPath = path.join(workspace, `.agent/plans/run-1/${subTaskId}.md`);
+    const planPath = path.resolve(
+      workspace,
+      subtaskPlanPath(workspace, "run-1", subTaskId)
+    );
     const planContent = await readFile(planPath, "utf8");
     expect(planContent).toContain("ExecPlan");
   });

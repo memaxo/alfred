@@ -8,6 +8,7 @@ import {
   buildAgentSpec,
   planWaves,
 } from "@alfred/agent/orchestrator/multi/spawn";
+import { subtaskPlanPath } from "@alfred/agent/orchestrator/plans";
 
 const makeTask = (id: string, deps: string[] = [], priority = 1): SubTask => ({
   id,
@@ -51,7 +52,9 @@ describe("buildAgentSpec", () => {
     });
 
     expect(spec.agentId).toBe("run-123:sub-1");
-    expect(spec.execPlanPath).toBe(".agent/plans/run-123/sub-1.md");
+    expect(spec.execPlanPath).toBe(
+      subtaskPlanPath(testDir, "run-123", "sub-1")
+    );
     expect(spec.auto).toBe("medium");
     expect(spec.context.relevantFiles).toEqual([]);
     expect(spec.context.linearSessionId).toBe("LIN-1");
