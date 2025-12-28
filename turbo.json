@@ -70,13 +70,33 @@
         "**/__tests__/**"
       ],
       "outputs": [],
-      "env": ["RUN_DB_TESTS", "NODE_ENV", "VITE_TEST_MODE"]
+      "env": [
+        "ALFRED_TEST_SCOPE",
+        "ALFRED_TEST_TIMEOUT_MS",
+        "ALFRED_TEST_WATCHDOG_MS",
+        "ALFRED_TEST_RUN_TIMEOUT_MS",
+        "ALFRED_TEST_FILE_TIMEOUT_MS",
+        "ALFRED_TEST_RUNNER_TIMEOUT_MS",
+        "RUN_DB_TESTS",
+        "NODE_ENV",
+        "VITE_TEST_MODE"
+      ]
     },
     "test:postgres": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$"],
       "outputs": [],
-      "env": ["RUN_DB_TESTS", "DATABASE_URL", "NODE_ENV"]
+      "env": [
+        "ALFRED_TEST_SCOPE",
+        "ALFRED_TEST_TIMEOUT_MS",
+        "ALFRED_TEST_WATCHDOG_MS",
+        "ALFRED_TEST_RUN_TIMEOUT_MS",
+        "ALFRED_TEST_FILE_TIMEOUT_MS",
+        "ALFRED_TEST_RUNNER_TIMEOUT_MS",
+        "RUN_DB_TESTS",
+        "DATABASE_URL",
+        "NODE_ENV"
+      ]
     },
     "setup": {
       "cache": false,

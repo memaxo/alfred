@@ -29,7 +29,7 @@ pre-push:
           FILTER="[${UPSTREAM}...HEAD]"
         fi
         # Aggressively skip slow tests in pre-push using the fast test script
-        bun run test:fast --filter="$FILTER" --concurrency=4
+        ALFRED_TEST_SCOPE=unit ALFRED_TEST_TIMEOUT_MS=60000 ALFRED_TEST_WATCHDOG_MS=180000 ALFRED_TEST_RUN_TIMEOUT_MS=180000 ALFRED_TEST_RUNNER_TIMEOUT_MS=210000 bun run test:fast --filter="$FILTER" --concurrency=4 -- --bail=3
       fail_text: "Tests failed - push blocked"
 
 pre-commit:

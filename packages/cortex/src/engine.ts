@@ -45,6 +45,8 @@ export class CortexEngine {
   private bufferPool: BufferPool | null = null;
   private uniformBuffer: UniformBuffer | null = null;
 
+  private readonly frameGraph = buildStandardFrameGraph();
+
   private readonly lodManager: LODManager;
   private readonly camera: Camera;
   private readonly temporal: TemporalState;
@@ -75,7 +77,6 @@ export class CortexEngine {
   constructor(config: CortexConfig) {
     this.canvas = config.canvas;
     this.lodManager = config.lodManager ?? new LODManager();
-    this._frameGraph = buildStandardFrameGraph();
     this.camera = createCamera({ x: 0, y: 0 });
     this.temporal = createTemporalState();
   }

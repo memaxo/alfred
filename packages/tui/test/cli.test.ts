@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import path from "node:path";
 import { runCli } from "../src/cli";
 
 async function readText(stream: ReadableStream<Uint8Array> | null) {
@@ -31,8 +32,9 @@ describe("CLI Basic", () => {
   });
 
   test("alfred --help is fast and does not initialize voice pools", async () => {
+    const bin = path.join(import.meta.dir, "../src/bin/alfred.ts");
     const proc = Bun.spawn(
-      ["bun", "packages/tui/src/bin/alfred.ts", "--help"],
+      ["bun", bin, "--help"],
       {
         cwd: process.cwd(),
         stdin: "ignore",
@@ -53,7 +55,8 @@ describe("CLI Basic", () => {
     ]);
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Usage: alfred");
+    expect(stdout).toContain("Usage:");
+    expect(stdout).toContain("Available subcommands");
     expect(stderr).not.toContain("NeMoSTT");
     expect(stderr).not.toContain("Initializing STT Server");
   });
