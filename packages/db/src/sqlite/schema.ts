@@ -138,10 +138,20 @@ const statements = [
     stream_id TEXT NOT NULL,
     type TEXT NOT NULL,
     payload TEXT NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    parent_id TEXT,
+    seq INTEGER,
+    lamport INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES cognitive_events(id)
   );`,
   `CREATE INDEX IF NOT EXISTS cognitive_events_stream_idx
     ON cognitive_events(stream_id);`,
+  `CREATE INDEX IF NOT EXISTS cognitive_events_stream_seq_idx
+    ON cognitive_events(stream_id, seq);`,
+  `CREATE INDEX IF NOT EXISTS cognitive_events_parent_id_idx
+    ON cognitive_events(parent_id);`,
+  `CREATE INDEX IF NOT EXISTS cognitive_events_lamport_idx
+    ON cognitive_events(lamport);`,
   `CREATE TABLE IF NOT EXISTS cognitive_snapshots (
     id TEXT PRIMARY KEY,
     stream_id TEXT NOT NULL,
