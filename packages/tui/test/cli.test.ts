@@ -33,20 +33,17 @@ describe("CLI Basic", () => {
 
   test("alfred --help is fast and does not initialize voice pools", async () => {
     const bin = path.join(import.meta.dir, "../src/bin/alfred.ts");
-    const proc = Bun.spawn(
-      ["bun", bin, "--help"],
-      {
-        cwd: process.cwd(),
-        stdin: "ignore",
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...process.env,
-          // Extra safety: even if something imports `@alfred/api`, prevent auto-init.
-          ALFRED_API_AUTO_INIT: "false",
-        },
-      }
-    );
+    const proc = Bun.spawn(["bun", bin, "--help"], {
+      cwd: process.cwd(),
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...process.env,
+        // Extra safety: even if something imports `@alfred/api`, prevent auto-init.
+        ALFRED_API_AUTO_INIT: "false",
+      },
+    });
 
     const [stdout, stderr, exitCode] = await Promise.all([
       readText(proc.stdout),
