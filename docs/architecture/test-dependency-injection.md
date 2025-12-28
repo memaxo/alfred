@@ -8,126 +8,81 @@ Bun's `mock.module()` is process-global and pollutes other test files in the sam
 
 Replace `mock.module()` with dependency injection via tRPC context.
 
-## Pattern
+## Implementation (packages/api/src/deps.ts)
 
-### 1. Define Dependencies Interface
+The `RouterDeps` type and utilities are defined in `packages/api/src/deps.ts`:
 
 ```typescript
-// packages/api/src/deps.ts
-import type { CognitiveRepo } from "@alfred/db";
-import type { PolicyEvaluator } from "@alfred/policy";
-import type { EmbedService } from "@alfred/embed";
+// Dependency interfaces
+export type EmbedDeps = {
+  embedMany: (texts: string[]) => Promise<number[][]>;
+  cosineSimilarity: (a: number[], b: number[]) => number;
+};
 
+export type CognitiveDeps = {
+  cognitiveRepo: CognitiveRepo;
+};
+
+export type PolicyDeps = {
+  evaluate: (resource: unknown, context: unknown) => Promise<{ allow: boolean; obligations: unknown[] }>;
+};
+
+// Combined type
 export type RouterDeps = {
-  cognitiveRepo: typeof import("@alfred/db").cognitiveRepo;
-  policy: {
-    evaluate: typeof import("@alfred/policy").evaluate;
-  };
-  embed: {
-    embedMany: typeof import("@alfred/embed").embedMany;
-    cosineSimilarity: typeof import("@alfred/embed").cosineSimilarity;
-  };
-  runtime: {
-    runCognitiveLoop: typeof import("@alfred/runtime").runCognitiveLoop;
-  };
+  embed?: Partial<EmbedDeps>;
+  cognitive?: Partial<CognitiveDeps>;
+  policy?: Partial<PolicyDeps>;
+  runtime?: Partial<RuntimeDeps>;
+  workflow?: Partial<WorkflowDeps>;
+  plan?: Partial<PlanDeps>;
 };
+
+// Create mocks for testing
+export function createMockDeps(overrides: Partial<RouterDeps> = {}): RouterDeps;
 ```
 
-### 2. Create Default Dependencies
+## Context Integration (packages/api/src/context.ts)
 
 ```typescript
-// packages/api/src/deps.ts
-import { cognitiveRepo } from "@alfred/db";
-import { evaluate } from "@alfred/policy";
-import { embedMany, cosineSimilarity } from "@alfred/embed";
-import { runCognitiveLoop } from "@alfred/runtime";
-
-export const defaultDeps: RouterDeps = {
-  cognitiveRepo,
-  policy: { evaluate },
-  embed: { embedMany, cosineSimilarity },
-  runtime: { runCognitiveLoop },
-};
-```
-
-### 3. Inject via Context
-
-```typescript
-// packages/api/src/context.ts
 export type Context = {
-  session: Session | null;
-  runtime: RuntimeContext;
-  deps: RouterDeps; // Add deps to context
+  session: AuthSession | null;
+  runtime: RuntimeMetadata;
+  runtimeContext: RuntimeContext;
+  policy?: { obligations: Obligation[] };
+  deps?: RouterDeps;  // Injectable dependencies
 };
-
-export function createContext(opts: { deps?: Partial<RouterDeps> }): Context {
-  return {
-    session: null,
-    runtime: createRuntimeContext(),
-    deps: { ...defaultDeps, ...opts.deps },
-  };
-}
 ```
 
-### 4. Use in Router
+## Test Caller (packages/api/test/utils/trpc.ts)
 
 ```typescript
-// packages/api/src/routers/cognitive.ts
-export const cognitiveRouter = router({
-  state: authedProcedure
-    .input(z.object({ streamId: z.string().default("default") }))
-    .query(async ({ ctx, input }) => {
-      // Use deps from context instead of direct imports
-      const snapshot = await ctx.deps.cognitiveRepo.getLatestSnapshot(input.streamId);
-      // ...
-    }),
+type CreateCallerOptions = {
+  userId?: string;
+  deps?: RouterDeps;  // Pass deps here
+};
 
-  feedback: authedProcedure
-    .input(feedbackInput)
-    .use(requirePolicy(mapResource, buildContext))
-    .mutation(async ({ ctx, input }) => {
-      // Use deps from context
-      const vectors = await ctx.deps.embed.embedMany([input.expected, input.actual]);
-      // ...
-    }),
+const caller = await createTestCaller({
+  deps: {
+    embed: {
+      embedMany: vi.fn().mockResolvedValue([[1, 0]]),
+      cosineSimilarity: vi.fn().mockReturnValue(0.8),
+    },
+  },
 });
 ```
 
-### 5. Test with Mock Dependencies
+## Router Usage Pattern
 
 ```typescript
-// packages/api/test/cognitive.router.test.ts
-import { describe, expect, it, vi } from "bun:test";
-import { createTestCaller } from "./utils/trpc";
-
-describe("cognitive router", () => {
-  it("submits feedback", async () => {
-    // Create mock deps
-    const mockDeps = {
-      cognitiveRepo: {
-        getLatestSnapshot: vi.fn().mockResolvedValue(null),
-        appendEvent: vi.fn().mockResolvedValue(undefined),
-      },
-      embed: {
-        embedMany: vi.fn().mockResolvedValue([[1, 0], [0, 1]]),
-        cosineSimilarity: vi.fn().mockReturnValue(0.8),
-      },
-      policy: {
-        evaluate: vi.fn().mockResolvedValue({ allow: true, obligations: [] }),
-      },
-    };
-
-    // Pass mock deps to test caller
-    const caller = await createTestCaller({ deps: mockDeps });
-    
-    const result = await caller.cognitive.feedback({
-      streamId: "test",
-      expected: "hello",
-      actual: "hi",
-    });
-
-    expect(mockDeps.embed.embedMany).toHaveBeenCalledWith(["hello", "hi"]);
-  });
+// In router: Use ctx.deps with fallback to direct import
+export const cognitiveRouter = router({
+  feedback: authedProcedure
+    .mutation(async ({ ctx, input }) => {
+      // Use injected dep or fall back to direct import
+      const embedFn = ctx.deps?.embed?.embedMany ?? embedMany;
+      const vectors = await embedFn([input.expected, input.actual]);
+      // ...
+    }),
 });
 ```
 

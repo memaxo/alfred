@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { auth } from "@alfred/auth";
 import type { Obligation } from "@alfred/type";
 import { RuntimeContext } from "@alfred/type/runtime-context";
+import type { RouterDeps } from "./deps";
 import { getSessionUser } from "./utils/session";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
@@ -35,6 +36,8 @@ export type Context = {
   policy?: {
     obligations: Obligation[];
   };
+  /** Injectable dependencies for testing */
+  deps?: RouterDeps;
 };
 
 function parseForwardedFor(headers: Headers) {

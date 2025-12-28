@@ -16,12 +16,16 @@ import { RuntimeContext } from "@alfred/type/runtime-context";
 
 // type RouterInputs = inferRouterInputs<TRPCAppRouter>;
 
+import type { RouterDeps } from "@alfred/api/deps";
+
 type CreateCallerOptions = {
   userId?: string;
   roles?: string[];
   scopes?: string[];
   requestId?: string;
   obligations?: string[];
+  /** Injectable dependencies for testing (replaces mock.module) */
+  deps?: RouterDeps;
 };
 
 /**
@@ -114,6 +118,7 @@ export async function createTestCaller(options: CreateCallerOptions = {}) {
     policy: {
       obligations: options.obligations ?? [],
     },
+    deps: options.deps,
   } as unknown as Parameters<typeof mod.appRouter.createCaller>[0]);
 }
 
