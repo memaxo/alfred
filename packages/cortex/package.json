@@ -43,7 +43,7 @@
     "lint": "biome check .",
     "check-types": "tsc --noEmit",
     "typecheck": "tsc -b",
-    "test": "bun test"
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "dependencies": {
     "@alfred/embed": "workspace:*",

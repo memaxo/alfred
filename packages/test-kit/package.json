@@ -11,6 +11,8 @@
     "./physical": "./src/physical/index.ts",
     "./env": "./src/env/index.ts",
     "./auth": "./src/auth/index.ts",
+    "./auth/token": "./src/auth/token.ts",
+    "./auth/session": "./src/auth/session.ts",
     "./auth/*": "./src/auth/*",
     "./logger": "./src/logger/index.ts",
     "./redis": "./src/redis/index.ts",
@@ -26,7 +28,7 @@
     "./workflow/runtime-fixture": "./src/workflow/runtime-fixture.ts"
   },
   "scripts": {
-    "test": "bun test",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ./src/bun/preload.ts",
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {

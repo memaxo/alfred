@@ -34,7 +34,7 @@
     "build": "tsc -b",
     "dev": "tsc -b -w",
     "typecheck": "tsc -b --pretty false",
-    "test": "bun test"
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.12.0",

@@ -9,7 +9,7 @@
     "dev": "tsc -b -w",
     "build": "tsc -b",
     "typecheck": "tsc -b",
-    "test": "bun test src test",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
     "install-deps": "bash scripts/install.sh",
     "download-models": "uv run python scripts/download.py",
     "verify": "uv run python scripts/download.py --verify-only",

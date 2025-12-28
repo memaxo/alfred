@@ -3,7 +3,7 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "test": "bun test",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts",
     "typecheck": "tsc -b",
     "build": "tsc -b --emitDeclarationOnly",
     "build:bundle": "bun build ./src/index.ts --outdir ./dist/bundle --target=bun",

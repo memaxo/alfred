@@ -25,7 +25,7 @@
     "build": "tsc -b",
     "dev": "tsc -b -w",
     "typecheck": "tsc -b",
-    "test": "bun test",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
     "install-deps": "bash scripts/install-deps.sh",
     "download-model": "uv run python scripts/download_model.py"
   }

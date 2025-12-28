@@ -93,7 +93,7 @@
     "typecheck": "tsc -b --pretty false",
     "build": "tsc -b",
     "dev": "tsc -b -w",
-    "test": "bun test"
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "dependencies": {
     "@alfred/db": "workspace:*",

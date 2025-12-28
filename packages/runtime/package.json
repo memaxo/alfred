@@ -7,7 +7,7 @@
     "build": "tsc -b",
     "dev": "echo 'Skipping runtime dev watch'",
     "typecheck": "tsc -b --pretty false",
-    "test": "bun test --max-concurrency=1"
+    "test": "ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=2 ALFRED_TEST_WATCHDOG_MS=60000 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts --max-concurrency=1"
   },
   "exports": {
     ".": {
