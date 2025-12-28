@@ -10,6 +10,7 @@ import {
   generateMergeExecPlanSkeleton,
 } from "@alfred/agent/orchestrator/multi/merge";
 import { executeMergePlan } from "@alfred/agent/orchestrator/multi/merge-executor";
+import { plansPath } from "@alfred/agent/orchestrator/plans";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolGit } from "@alfred/agent/orchestrator/tool/git";
 import { logger } from "@alfred/logger";
@@ -271,15 +272,16 @@ export async function* runMergeAnalysis(
   } as any;
 
   // Merge analysis agent (analysis-only)
-  const mergeExecPlanPath = `.agent/plans/${runId}/merge.md`;
+  const mergeExecPlanPath = plansPath(workspace, runId, "merge.md");
+  const mergeExecPlanAbsPath = path.resolve(workspace, mergeExecPlanPath);
   try {
-    const dir = path.dirname(mergeExecPlanPath);
+    const dir = path.dirname(mergeExecPlanAbsPath);
     await fs.mkdir(dir, { recursive: true });
     try {
-      await fs.access(mergeExecPlanPath);
+      await fs.access(mergeExecPlanAbsPath);
     } catch {
       const skeleton = generateMergeExecPlanSkeleton(runId, mergePlan);
-      await Bun.write(mergeExecPlanPath, skeleton);
+      await Bun.write(mergeExecPlanAbsPath, skeleton);
     }
 
     const promptLines = [

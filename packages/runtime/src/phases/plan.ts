@@ -4,6 +4,10 @@ import { persistExecPlans } from "@alfred/agent/assistant/graphstore";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
+import {
+  rootPlanPath,
+  subtaskPlanPath,
+} from "@alfred/agent/orchestrator/plans";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
@@ -110,6 +114,21 @@ export async function* executePlanPhase(
   prebuiltContext?: ExecutionContext | null,
   deps?: {
     createAiAdapter?: (runId: string) => AiAdapter;
+    buildContext?: (args: {
+      requirement: string;
+      workspace: string;
+      repoBase?: string;
+      web?: unknown;
+      topK?: number;
+      maxTokens?: number;
+      exts?: string[];
+      ignore?: string[];
+      seeds?: string[];
+      authz?: string;
+    }) => Promise<ExecutionContext>;
+    decomposeTask?: typeof decomposeTask;
+    generateSubtaskExecPlanSkeleton?: typeof generateSubtaskExecPlanSkeleton;
+    persistExecPlans?: typeof persistExecPlans;
   }
 ): AsyncGenerator<WorkflowEvent, string | null, void> {
   yield { _: "notice", message: "planning_started" } as WorkflowEvent;
@@ -121,9 +140,15 @@ export async function* executePlanPhase(
   const workspace = input.workspace ?? process.cwd();
 
   const reusedContext = Boolean(prebuiltContext);
+  const buildContext =
+    deps?.buildContext ??
+    ((args) =>
+      new ContextBuilder().build(
+        args as Parameters<ContextBuilder["build"]>[0]
+      ));
   const context =
     prebuiltContext ??
-    (await new ContextBuilder().build({
+    (await buildContext({
       requirement: input.requirement,
       workspace,
       repoBase: input.repoBase,
@@ -143,7 +168,8 @@ export async function* executePlanPhase(
     } as WorkflowEvent;
   }
 
-  const subTasks: SubTask[] = decomposeTask(input.requirement, {
+  const decompose = deps?.decomposeTask ?? decomposeTask;
+  const subTasks: SubTask[] = decompose(input.requirement, {
     requirement: input.requirement,
     bundle: context.bundle,
   });
@@ -181,7 +207,7 @@ export async function* executePlanPhase(
     "",
   ].join("\n");
 
-  const execplanRootPath = `.agent/plans/${runId}.root.md`;
+  const execplanRootPath = rootPlanPath(workspace, runId);
 
   const execplanPayload = {
     type: "event",
@@ -192,8 +218,11 @@ export async function* executePlanPhase(
       content: rootPlan,
       subtasks: subTasks.map((task) => ({
         id: task.id,
-        path: `.agent/plans/${runId}/${task.id}.md`,
-        skeleton: generateSubtaskExecPlanSkeleton(task, runId),
+        path: subtaskPlanPath(workspace, runId, task.id),
+        skeleton: (
+          deps?.generateSubtaskExecPlanSkeleton ??
+          generateSubtaskExecPlanSkeleton
+        )(task, runId),
       })),
     },
   } as any;
@@ -214,12 +243,17 @@ export async function* executePlanPhase(
 
   await Promise.all(
     subTasks.map(async (task) => {
-      const relativePath = `.agent/plans/${runId}/${task.id}.md`;
-      const absolutePath = path.resolve(workspace, relativePath);
+      const absolutePath = path.resolve(
+        workspace,
+        subtaskPlanPath(workspace, runId, task.id)
+      );
       try {
         await ensureExecPlanFile(
           absolutePath,
-          generateSubtaskExecPlanSkeleton(task, runId)
+          (
+            deps?.generateSubtaskExecPlanSkeleton ??
+            generateSubtaskExecPlanSkeleton
+          )(task, runId)
         );
       } catch (error) {
         logger.warn("execplan_subtask_write_failed", {
@@ -255,13 +289,13 @@ export async function* executePlanPhase(
 
   // Best-effort ExecPlan graph persistence; failures are logged but non-fatal.
   try {
-    await persistExecPlans({
+    await (deps?.persistExecPlans ?? persistExecPlans)({
       resource: workspace,
       runId,
       rootPath: execplanRootPath,
       subtasks: subTasks.map((task) => ({
         id: task.id,
-        path: `.agent/plans/${runId}/${task.id}.md`,
+        path: subtaskPlanPath(workspace, runId, task.id),
       })),
     });
   } catch (error) {

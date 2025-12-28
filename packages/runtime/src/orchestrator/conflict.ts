@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { generateConflictExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/conflict";
+import { plansPath } from "@alfred/agent/orchestrator/plans";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
@@ -21,18 +22,22 @@ export async function* runConflictPhase(
     } as any;
 
     // Conflict analysis agent (analysis-only; no edits)
-    const conflictExecPlanPath = `.agent/plans/${runId}/conflict.md`;
+    const conflictExecPlanPath = plansPath(workspace, runId, "conflict.md");
+    const conflictExecPlanAbsPath = path.resolve(
+      workspace,
+      conflictExecPlanPath
+    );
     try {
-      const dir = path.dirname(conflictExecPlanPath);
+      const dir = path.dirname(conflictExecPlanAbsPath);
       await fs.mkdir(dir, { recursive: true });
       try {
-        await fs.access(conflictExecPlanPath);
+        await fs.access(conflictExecPlanAbsPath);
       } catch {
         const skeleton = generateConflictExecPlanSkeleton(
           runId,
           conflictScanResult
         );
-        await Bun.write(conflictExecPlanPath, skeleton);
+        await Bun.write(conflictExecPlanAbsPath, skeleton);
       }
 
       const promptLines = [
@@ -156,11 +161,19 @@ export async function* runConflictPhase(
     ) {
       yield { type: "notice", message: "conflict_resolution_started" } as any;
 
-      const resolutionExecPlanPath = `.agent/plans/${runId}/conflict-resolution.md`;
+      const resolutionExecPlanPath = plansPath(
+        workspace,
+        runId,
+        "conflict-resolution.md"
+      );
+      const resolutionExecPlanAbsPath = path.resolve(
+        workspace,
+        resolutionExecPlanPath
+      );
 
       // Create a resolution plan skeleton if it doesn't exist
       try {
-        const dir = path.dirname(resolutionExecPlanPath);
+        const dir = path.dirname(resolutionExecPlanAbsPath);
         await fs.mkdir(dir, { recursive: true });
 
         const skeleton = [
@@ -178,7 +191,7 @@ export async function* runConflictPhase(
           "- [ ] (pending) Resolution started.",
         ].join("\n");
 
-        await Bun.write(resolutionExecPlanPath, skeleton);
+        await Bun.write(resolutionExecPlanAbsPath, skeleton);
       } catch (_e) {
         // Ignore
       }

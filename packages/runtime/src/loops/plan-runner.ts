@@ -23,6 +23,11 @@ type ToolLike = {
   execute: (input: unknown, ctx: ToolExecuteContext) => Promise<unknown>;
 };
 
+type CognitiveRepo = Pick<
+  typeof cognitiveRepo,
+  "getLatestSnapshot" | "saveSnapshot" | "appendEvent"
+>;
+
 type CognitiveStepCompleteEvent = {
   _: "cognitive_step_complete";
   ts: number;
@@ -38,7 +43,8 @@ type CognitiveStepCompleteEvent = {
 export class PlanRunner {
   constructor(
     private readonly streamId: string,
-    private readonly tools: Record<string, ToolLike>
+    private readonly tools: Record<string, ToolLike>,
+    private readonly repo: CognitiveRepo = cognitiveRepo
   ) {}
 
   async executePlan(plan: ExecutionPlan, startStep = 0): Promise<void> {
@@ -46,7 +52,7 @@ export class PlanRunner {
       typeof value === "object" && value !== null && !Array.isArray(value);
 
     // Get initial lastEventId (needed for snapshots)
-    const latestSnapshot = await cognitiveRepo.getLatestSnapshot(this.streamId);
+    const latestSnapshot = await this.repo.getLatestSnapshot(this.streamId);
     let lastEventId =
       latestSnapshot?.lastEventId || "00000000-0000-0000-0000-000000000000";
     const snapshotState = latestSnapshot?.state;
@@ -92,7 +98,7 @@ export class PlanRunner {
           retryCount,
         };
 
-        await cognitiveRepo.saveSnapshot(
+        await this.repo.saveSnapshot(
           this.streamId,
           persistedState,
           lastEventId
@@ -124,7 +130,7 @@ export class PlanRunner {
           resource: "user",
           data: event,
         });
-        const inserted = await cognitiveRepo.appendEvent(
+        const inserted = await this.repo.appendEvent(
           this.streamId,
           "cognitive_step_complete",
           {

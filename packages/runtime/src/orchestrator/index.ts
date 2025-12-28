@@ -20,6 +20,14 @@ export * from "./types.js";
 export type { WavesResult } from "./waves.js";
 export { runWaves } from "./waves.js";
 
+export type OrchestratorDeps = {
+  runWaves?: typeof runWaves;
+  runMergePhase?: typeof runMergePhase;
+  runConflictPhase?: typeof runConflictPhase;
+  runMergeAnalysis?: typeof runMergeAnalysis;
+  runReviewPhase?: typeof runReviewPhase;
+};
+
 export async function* runOrchestrator(
   input: RuntimeInput,
   runId: string,
@@ -29,7 +37,8 @@ export async function* runOrchestrator(
   escalationContext?: string,
   authz?: string,
   scanContext?: ExecutionContext | null,
-  userId?: string
+  userId?: string,
+  deps?: OrchestratorDeps
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const workspace = input.workspace ?? process.cwd();
 
@@ -58,9 +67,15 @@ export async function* runOrchestrator(
 
   let wavesResult: WavesResult | null = null;
   try {
+    const runWavesFn = deps?.runWaves ?? runWaves;
+    const runMergePhaseFn = deps?.runMergePhase ?? runMergePhase;
+    const runConflictPhaseFn = deps?.runConflictPhase ?? runConflictPhase;
+    const runMergeAnalysisFn = deps?.runMergeAnalysis ?? runMergeAnalysis;
+    const runReviewPhaseFn = deps?.runReviewPhase ?? runReviewPhase;
+
     // Phase A: Multi-Agent Waves
     // Decompose task, plan waves, and execute agents in parallel
-    wavesResult = yield* runWaves(ctx);
+    wavesResult = yield* runWavesFn(ctx);
 
     if (
       wavesResult.aborted ||
@@ -91,19 +106,19 @@ export async function* runOrchestrator(
     }
 
     // Phase B: Merge Execution & Conflict Detection
-    const { mergePlan, conflictScanResult } = yield* runMergePhase(
+    const { mergePlan, conflictScanResult } = yield* runMergePhaseFn(
       ctx,
       wavesResult
     );
 
     // Phase C: Conflict Analysis & Resolution
-    yield* runConflictPhase(ctx, conflictScanResult);
+    yield* runConflictPhaseFn(ctx, conflictScanResult);
 
     // Phase D: Merge Analysis
-    yield* runMergeAnalysis(ctx, mergePlan);
+    yield* runMergeAnalysisFn(ctx, mergePlan);
 
     // Phase E: Review & Self-Correction
-    yield* runReviewPhase(ctx, mergePlan);
+    yield* runReviewPhaseFn(ctx, mergePlan);
 
     return; // Placeholder for result type
   } finally {

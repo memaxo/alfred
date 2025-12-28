@@ -10,6 +10,7 @@ import {
   type ReviewFailureDetail,
 } from "@alfred/agent/orchestrator/multi/review";
 import { buildFixerAgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
+import { plansPath } from "@alfred/agent/orchestrator/plans";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // Import smoke test
@@ -19,7 +20,8 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
 import type { OrchestratorContext } from "./types";
 
-const REVIEW_PLAN_FILE = (runId: string) => `.agent/plans/${runId}/review.md`;
+const REVIEW_PLAN_FILE = (workspace: string, runId: string) =>
+  plansPath(workspace, runId, "review.md");
 function reviewSessionsEnabled() {
   return (
     process.env.ORCH_REVIEW_SESSIONS === "1" ||
@@ -140,19 +142,21 @@ function escapeRegExp(value: string) {
 }
 
 async function ensureReviewExecPlan(
+  workspace: string,
   runId: string,
   reviewPlan: ReturnType<typeof buildReviewPlan>
 ): Promise<string> {
-  const execPlanPath = REVIEW_PLAN_FILE(runId);
-  const dir = path.dirname(execPlanPath);
+  const execPlanPath = REVIEW_PLAN_FILE(workspace, runId);
+  const execPlanAbsPath = path.resolve(workspace, execPlanPath);
+  const dir = path.dirname(execPlanAbsPath);
   await fs.mkdir(dir, { recursive: true });
   try {
-    await fs.access(execPlanPath);
+    await fs.access(execPlanAbsPath);
   } catch {
     const skeleton = generateReviewExecPlanSkeleton(runId, reviewPlan);
-    await fs.writeFile(execPlanPath, skeleton, "utf8");
+    await fs.writeFile(execPlanAbsPath, skeleton, "utf8");
   }
-  return execPlanPath;
+  return execPlanAbsPath;
 }
 
 async function updateReviewProgress(
@@ -213,6 +217,7 @@ async function appendReviewDecision(filePath: string, entry: string) {
 }
 
 async function createDebuggerExecPlan(
+  workspace: string,
   runId: string,
   failures: Array<{
     command: string;
@@ -222,8 +227,9 @@ async function createDebuggerExecPlan(
   }>,
   attempts: number
 ) {
-  const filePath = `.agent/plans/${runId}/review-debugger.md`;
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const filePath = plansPath(workspace, runId, "review-debugger.md");
+  const fileAbsPath = path.resolve(workspace, filePath);
+  await fs.mkdir(path.dirname(fileAbsPath), { recursive: true });
 
   const failureBlocks = failures.length
     ? failures
@@ -257,8 +263,8 @@ async function createDebuggerExecPlan(
     "- Document findings in this file's Decision Log and update review.md once resolved.",
   ];
 
-  await Bun.write(filePath, lines.join("\n"));
-  return filePath;
+  await Bun.write(fileAbsPath, lines.join("\n"));
+  return fileAbsPath;
 }
 
 function buildTestCommandFromPlan(mergePlan: any): string {
@@ -313,22 +319,30 @@ export async function* runReviewPhase(
   const smokeVerify = deps?.smokeVerify ?? smokeTester.verify;
   const codexExecute = deps?.codexExecute ?? toolCodex.execute;
 
-  if (
-    (!reviewPlan.checks || reviewPlan.checks.length === 0) &&
-    ctx.input.linear?.sessionId
-  ) {
+  if (!reviewPlan.checks || reviewPlan.checks.length === 0) {
     reviewPlan.checks = [
-      {
-        id: "linear-default-tests",
-        // historically some runtime callsites/tests used `type`.
-        type: "tests",
-        description:
-          "Run the project's test suite (bun test) to validate the Linear-directed workflow.",
-      } as any,
+      ctx.input.linear?.sessionId
+        ? ({
+            id: "linear-default-tests",
+            // historically some runtime callsites/tests used `type`.
+            type: "tests",
+            description:
+              "Run the project's test suite (bun test) to validate the Linear-directed workflow.",
+          } as any)
+        : ({
+            id: "default-tests",
+            kind: "tests",
+            description:
+              "Run the project's test suite (bun test) to validate the workflow outcome.",
+          } as any),
     ];
   }
 
-  const reviewExecPlanPath = await ensureReviewExecPlan(runId, reviewPlan);
+  const reviewExecPlanPath = await ensureReviewExecPlan(
+    workspace,
+    runId,
+    reviewPlan
+  );
 
   logger.info("multi_agent_review_plan", {
     runId,
@@ -461,8 +475,11 @@ export async function* runReviewPhase(
               } as any;
             }
             continue; // Skip standard runner
-          } else {
-            continue; // Skip manual/scenario checks for automated runner
+          }
+
+          if (!command) {
+            // Unknown/un-runnable check kind for the automated runner.
+            continue;
           }
 
           await updateReviewProgress(
@@ -779,6 +796,7 @@ export async function* runReviewPhase(
 
       if (!reviewPassed) {
         const fallbackPlanPath = await createDebuggerExecPlan(
+          workspace,
           runId,
           reviewFailures.map((f) => ({
             command: f.command ?? "unknown",

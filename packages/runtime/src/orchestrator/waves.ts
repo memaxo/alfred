@@ -15,6 +15,7 @@ import {
   createTrackerContext,
   type TrackerContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
+import { rootPlanPath } from "@alfred/agent/orchestrator/plans";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { ContextBuilder } from "../context";
@@ -72,7 +73,7 @@ export async function* runWaves(
   const activeWorkspaces: Workspace[] = [];
   const rootExecPlanPath = path.resolve(
     workspace,
-    `.agent/plans/${runId}.root.md`
+    rootPlanPath(workspace, runId)
   );
   const workspaceRoot = realpathSync(workspace);
 
