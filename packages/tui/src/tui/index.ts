@@ -209,9 +209,25 @@ export async function runTui(options: TuiOptions = {}): Promise<void> {
 // ─── Re-exports ──────────────────────────────────────────────────────────────
 // Use explicit re-exports to avoid duplicate symbol conflicts
 
+// ─── Phase 4: Interactive Modes ──────────────────────────────────────────────
+export * from "./api";
+export * from "./components";
 export * from "./input";
 export * from "./intro";
 export * from "./layout";
+export {
+  BaseMode,
+  ChatMode,
+  createChatMode,
+  createDebugMode,
+  createPlanMode,
+  DebugMode,
+  PlanMode,
+  runChatMode,
+  runDebugMode,
+  runMode,
+  runPlanMode,
+} from "./modes";
 export {
   // Base panel types
   BasePanel,

@@ -14,6 +14,11 @@ export async function runCli(args: string[]): Promise<void> {
       return await authCommands(args.slice(1));
     }
 
+    // Handle TUI commands
+    if (args[0] === "tui") {
+      return await handleTuiCommand(args.slice(1));
+    }
+
     const wantsHelp =
       args.includes("--help") ||
       args.includes("-h") ||
@@ -42,3 +47,40 @@ export async function runCli(args: string[]): Promise<void> {
     }
   }
 }
+
+// ─── TUI Command Handler ───────────────────────────────────────────────────────
+
+async function handleTuiCommand(args: string[]): Promise<void> {
+  const subCommand = args[0];
+
+  switch (subCommand) {
+    case "chat": {
+      const { runChatMode } = await import("../tui/modes/chat");
+      return await runChatMode();
+    }
+
+    case "plan": {
+      const { runPlanMode } = await import("../tui/modes/plan");
+      return await runPlanMode();
+    }
+
+    case "debug": {
+      const { runDebugMode } = await import("../tui/modes/debug");
+      return await runDebugMode();
+    }
+
+    case "help":
+    case "--help":
+    case "-h":
+      printTuiHelp();
+      return;
+
+    default: {
+      // No subcommand or unknown - run dashboard
+      const { runTui } = await import("../tui");
+      return await runTui({ skipIntro: subCommand === "--skip-intro" });
+    }
+  }
+}
+
+function printTuiHelp(): void {}
