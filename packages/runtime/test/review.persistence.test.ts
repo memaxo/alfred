@@ -58,7 +58,7 @@ const mockUpdateRun = mock(
 // Bun's mock.module() not isolating properly between test files. This causes
 // earlier test files' module mocks to pollute these tests.
 // TODO: Refactor to use dependency injection instead of mock.module()
-describe.skip("review fixAttempts persistence", () => {
+describe("review fixAttempts persistence", () => {
   let originalGetRun: typeof reviewWorkflowRepo.getRun;
   let originalUpdateRun: typeof reviewWorkflowRepo.updateRun;
   let originalCodexExecute: typeof toolCodex.execute;

@@ -118,11 +118,24 @@ export async function refreshIfNeeded(
     baseURL: process.env.ALFRED_API_URL || "http://localhost:3000",
   });
 
+  const oauth2 = (
+    authClient as unknown as {
+      oauth2: {
+        refreshToken: (input: { refresh_token: string }) => Promise<{
+          data: {
+            access_token: string;
+            refresh_token?: string;
+            expires_in: number;
+          };
+          error?: unknown;
+        }>;
+      };
+    }
+  ).oauth2;
+
   // Note: better-auth client might have different method names depending on version
   // This follows the plan's recommendation
-  const { data: newTokens, error } = await (
-    authClient as any
-  ).oauth2.refreshToken({
+  const { data: newTokens, error } = await oauth2.refreshToken({
     refresh_token: creds.refreshToken,
   });
 

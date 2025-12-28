@@ -58,17 +58,14 @@ function log(level: LogLevel, message: string, context?: LogContext): void {
   const formatted = formatMessage(level, message, context);
 
   if (typeof formatted === "string") {
-    console.log(formatted);
     return;
   }
 
   // Development pretty printing
-  const prefix = `[${level.toUpperCase()}] ${message}`;
+  const _prefix = `[${level.toUpperCase()}] ${message}`;
   if (context && Object.keys(context).length > 0) {
-    console.log(prefix, context);
     return;
   }
-  console.log(prefix);
 }
 
 export const logger = {

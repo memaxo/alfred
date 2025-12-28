@@ -35,7 +35,6 @@ export class ParticleSystem implements RenderSystem {
   private computePipeline: GPUComputePipeline | null = null;
   private renderPipeline: GPURenderPipeline | null = null;
   private computeBindGroups: [GPUBindGroup, GPUBindGroup] | null = null;
-  private renderBindGroup: GPUBindGroup | null = null;
 
   private particleCount: number;
 

@@ -39,8 +39,6 @@ export class EdgeSystem implements RenderSystem {
   private linePipeline: GPURenderPipeline | null = null;
 
   private computeBindGroup: GPUBindGroup | null = null;
-  private renderBindGroup: GPUBindGroup | null = null;
-  private lineBindGroup: GPUBindGroup | null = null;
 
   private edges: EdgeData[] = [];
   private readonly maxEdges: number;

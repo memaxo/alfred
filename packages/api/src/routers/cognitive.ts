@@ -4,7 +4,7 @@ import type {
   CognitiveState,
   Event,
 } from "@alfred/cognitive/state";
-import { idle, initialAutonomy } from "@alfred/cognitive/state";
+import { idle, initialAutonomy, timestamp } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import { cosineSimilarity, embedMany } from "@alfred/embed";
@@ -135,13 +135,13 @@ export const cognitiveRouter = router({
       const getStateTimestamp = (): number | undefined => {
         switch (state._) {
           case "idle":
-            return state.since as unknown as number;
+            return state.since;
           case "capturing":
           case "thinking":
           case "executing":
-            return state.started as unknown as number;
+            return state.started;
           case "deciding":
-            return state.deadline as unknown as number;
+            return state.deadline;
           case "reflecting":
             return;
         }
@@ -172,7 +172,7 @@ export const cognitiveRouter = router({
         expected,
         actual,
         similarity: similarity ?? undefined,
-        ts: (input.ts ?? Date.now()) as any,
+        ts: timestamp(input.ts ?? Date.now()),
       };
 
       const { runCognitiveLoop } = await import("@alfred/runtime/cognitive");
@@ -224,7 +224,7 @@ async function handleCognitiveEffects(
           const followUp = await runCognitiveLoop(runtimeCtx, streamId, {
             _: "complete",
             outcome,
-            ts: Date.now() as any,
+            ts: timestamp(Date.now()),
           });
           queue.push(...followUp.effects);
           break;

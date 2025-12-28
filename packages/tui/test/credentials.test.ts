@@ -7,17 +7,28 @@ import {
 
 // Mock Bun.secrets for testing
 const mockSecrets = new Map<string, string>();
-(Bun as any).secrets = {
-  get: mock(
-    async ({ service, name }: any) =>
-      mockSecrets.get(`${service}:${name}`) || null
+(Bun as unknown as { secrets: unknown }).secrets = {
+  get: mock(({ service, name }: { service: string; name: string }) =>
+    Promise.resolve(mockSecrets.get(`${service}:${name}`) || null)
   ),
-  set: mock(async ({ service, name, value }: any) => {
-    mockSecrets.set(`${service}:${name}`, value);
+  set: mock(
+    ({
+      service,
+      name,
+      value,
+    }: {
+      service: string;
+      name: string;
+      value: string;
+    }) => {
+      mockSecrets.set(`${service}:${name}`, value);
+      return Promise.resolve();
+    }
+  ),
+  delete: mock(({ service, name }: { service: string; name: string }) => {
+    mockSecrets.delete(`${service}:${name}`);
+    return Promise.resolve();
   }),
-  delete: mock(async ({ service, name }: any) =>
-    mockSecrets.delete(`${service}:${name}`)
-  ),
 };
 
 describe("Credentials", () => {

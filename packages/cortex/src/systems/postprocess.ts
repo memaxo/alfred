@@ -41,14 +41,12 @@ export class PostProcessSystem implements RenderSystem {
   private blurVPipeline: GPURenderPipeline | null = null;
   private compositePipeline: GPURenderPipeline | null = null;
   private combinedPipeline: GPURenderPipeline | null = null;
-  private aberrationPipeline: GPURenderPipeline | null = null;
 
   private sampler: GPUSampler | null = null;
 
   // Intermediate textures
   private bloomTexture0: GPUTexture | null = null;
   private bloomTexture1: GPUTexture | null = null;
-  private resolution: { x: number; y: number } = { x: 0, y: 0 };
 
   constructor(config: Partial<BloomConfig> = {}) {
     this.config = { ...DEFAULT_BLOOM_CONFIG, ...config };

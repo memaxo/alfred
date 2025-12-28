@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { platform } from "node:os";
 
-export async function openBrowser(url: string): Promise<void> {
+export function openBrowser(url: string): Promise<void> {
   const os = platform();
 
   let command: string;

@@ -10,7 +10,7 @@ const originalTestOrch = process.env.RUNTIME_TEST_ORCHESTRATION;
 // SKIP: These tests pass in isolation but fail when run with other tests due to
 // Bun's mock.module() pollution from earlier test files affecting cognitive/workflow modules.
 // TODO: Refactor to use dependency injection instead of mock.module()
-describe.skip("WorkflowRuntime supervisor integration", () => {
+describe("WorkflowRuntime supervisor integration", () => {
   let mockModel: LanguageModel;
   const baseInput = {
     requirement: "supervisor integration check",

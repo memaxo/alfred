@@ -11,7 +11,6 @@ import {
   createTemporalState,
   type TemporalState,
 } from "./coordinate";
-import { buildStandardFrameGraph } from "./frame-graph";
 import { LODManager } from "./lod";
 import type { Camera, GlobalUniforms, OrbConfig, RenderSystem } from "./types";
 
@@ -44,8 +43,6 @@ export class CortexEngine {
   private readonly systems: Map<string, RenderSystem> = new Map();
   private bufferPool: BufferPool | null = null;
   private uniformBuffer: UniformBuffer | null = null;
-
-  private readonly frameGraph = buildStandardFrameGraph();
 
   private readonly lodManager: LODManager;
   private readonly camera: Camera;
