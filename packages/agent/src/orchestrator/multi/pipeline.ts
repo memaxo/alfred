@@ -1,4 +1,5 @@
 import type { ContextBundle } from "@alfred/type/plan";
+import { rootPlanPath, subtaskPlanPath } from "../plans";
 import type { SubTask, SubTaskId } from "./decompose";
 import type { ExecPlanSnapshot } from "./execplan";
 import type { AgentOutcome, MergePlan } from "./merge";
@@ -284,7 +285,7 @@ export function createPipeline(
     merge: null,
     review: null,
     execPlans: {
-      rootPath: `.agent/plans/${runId}.root.md`,
+      rootPath: rootPlanPath(workspace, runId),
       subtaskPaths: new Map(),
       snapshots: new Map(),
     },
@@ -337,10 +338,11 @@ export function transitionPipeline(
     case "planning": {
       const t = transition as Extract<PipelineTransition, { to: "planning" }>;
       const subTaskById = new Map(t.subTasks.map((st) => [st.id, st]));
+      const workspaceRoot = pipeline.input.workspace;
       const subtaskPaths = new Map(
         t.subTasks.map((st) => [
           st.id,
-          `.agent/plans/${pipeline.runId}/${st.id}.md`,
+          subtaskPlanPath(workspaceRoot, pipeline.runId, st.id),
         ])
       );
       return {

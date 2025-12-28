@@ -1,6 +1,7 @@
 import { feature } from "bun:bundle";
 import type { WorkspaceKind } from "../../environment/types.js";
 import { openDirectorySecure } from "../../security/filesystem.js";
+import { subtaskPlanPath } from "../plans.js";
 import type { SubTask, SubTaskId } from "./decompose";
 import { buildFixerSubTask } from "./review";
 
@@ -112,7 +113,7 @@ export function buildAgentSpec(
   const dirHandle = openDirectorySecure(cwd, { allowedPrefixes: [cwd] });
   const workingDirectory = dirHandle.path;
   dirHandle.close();
-  const execPlanPath = `.agent/plans/${runId}/${subTask.id}.md`;
+  const execPlanPath = subtaskPlanPath(workingDirectory, runId, subTask.id);
 
   return {
     agentId,
