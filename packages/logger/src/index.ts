@@ -58,14 +58,20 @@ function log(level: LogLevel, message: string, context?: LogContext): void {
   const formatted = formatMessage(level, message, context);
 
   if (typeof formatted === "string") {
+    // biome-ignore lint/suspicious/noConsole: Logger must use console
+    console.log(formatted);
     return;
   }
 
   // Development pretty printing
-  const _prefix = `[${level.toUpperCase()}] ${message}`;
+  const prefix = `[${level.toUpperCase()}] ${message}`;
   if (context && Object.keys(context).length > 0) {
+    // biome-ignore lint/suspicious/noConsole: Logger must use console
+    console.log(prefix, context);
     return;
   }
+  // biome-ignore lint/suspicious/noConsole: Logger must use console
+  console.log(prefix);
 }
 
 export const logger = {

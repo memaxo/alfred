@@ -42,6 +42,7 @@ mock.module("@alfred/plan/project", () => ({
 }));
 
 // Mock executor
+// biome-ignore lint/suspicious/useAwait: async function* is needed for AsyncGenerator type
 const mockStream = (async function* () {
   yield { _: "progress", pct: 10, message: "starting" };
   yield {

@@ -36,16 +36,14 @@ const runCommandMock = mock(async () => ({
   durationMs: 0,
 }));
 
-const mockGetRun = mock(async (_runId: string) => mockWorkflowRun);
-const mockUpdateRun = mock(
-  async (runId: string, patch: { stateData?: unknown }) => {
-    updateRunCalls.push({ runId, patch });
-    if (mockWorkflowRun && patch.stateData) {
-      mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
-    }
-    return mockWorkflowRun;
+const mockGetRun = mock((_runId: string) => Promise.resolve(mockWorkflowRun));
+const mockUpdateRun = mock((runId: string, patch: { stateData?: unknown }) => {
+  updateRunCalls.push({ runId, patch });
+  if (mockWorkflowRun && patch.stateData) {
+    mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
   }
-);
+  return Promise.resolve(mockWorkflowRun);
+});
 
 /**
  * ALF-13: Persist fix attempt count (Security)
@@ -91,9 +89,11 @@ describe("review fixAttempts persistence", () => {
       exitCode: 0,
       durationMs: 0,
     }));
-    mockGetRun.mockImplementation(async (_runId: string) => mockWorkflowRun);
+    mockGetRun.mockImplementation((_runId: string) =>
+      Promise.resolve(mockWorkflowRun)
+    );
     mockUpdateRun.mockImplementation(
-      async (runId: string, patch: { stateData?: unknown }) => {
+      (runId: string, patch: { stateData?: unknown }) => {
         updateRunCalls.push({ runId, patch });
         if (mockWorkflowRun && patch.stateData) {
           mockWorkflowRun.stateData = patch.stateData as Record<
@@ -101,7 +101,7 @@ describe("review fixAttempts persistence", () => {
             unknown
           >;
         }
-        return mockWorkflowRun;
+        return Promise.resolve(mockWorkflowRun);
       }
     );
 
@@ -112,7 +112,7 @@ describe("review fixAttempts persistence", () => {
     smokeTester.verify = smokeVerifyMock;
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     process.env.ORCH_TMUX_DISABLED = undefined;
     reviewWorkflowRepo.getRun = originalGetRun;
     reviewWorkflowRepo.updateRun = originalUpdateRun;
@@ -328,13 +328,23 @@ describe("review fixAttempts persistence", () => {
     };
 
     let checkRunCount = 0;
-    runCommandMock.mockImplementation(async () => {
+    runCommandMock.mockImplementation(() => {
       checkRunCount++;
       // Pass once we've burned through initial checks + 1 retry cycle.
       if (checkRunCount > 4) {
-        return { stdout: "ok", stderr: "", exitCode: 0, durationMs: 1 };
+        return Promise.resolve({
+          stdout: "ok",
+          stderr: "",
+          exitCode: 0,
+          durationMs: 1,
+        });
       }
-      return { stdout: "fail", stderr: "error", exitCode: 1, durationMs: 1 };
+      return Promise.resolve({
+        stdout: "fail",
+        stderr: "error",
+        exitCode: 1,
+        durationMs: 1,
+      });
     });
 
     const ctx: OrchestratorContext = {
@@ -386,21 +396,23 @@ describe("review fixAttempts persistence", () => {
     await preparePlanDir(runId);
 
     // Simulate repo error
-    mockGetRun.mockImplementation(async () => {
-      throw new Error("Database connection failed");
-    });
-    mockUpdateRun.mockImplementation(async () => {
-      throw new Error("Database connection failed");
-    });
+    mockGetRun.mockImplementation(() =>
+      Promise.reject(new Error("Database connection failed"))
+    );
+    mockUpdateRun.mockImplementation(() =>
+      Promise.reject(new Error("Database connection failed"))
+    );
     reviewWorkflowRepo.getRun = mockGetRun;
     reviewWorkflowRepo.updateRun = mockUpdateRun;
 
-    runCommandMock.mockImplementation(async () => ({
-      stdout: "fail",
-      stderr: "error",
-      exitCode: 1,
-      durationMs: 1,
-    }));
+    runCommandMock.mockImplementation(() =>
+      Promise.resolve({
+        stdout: "fail",
+        stderr: "error",
+        exitCode: 1,
+        durationMs: 1,
+      })
+    );
 
     const ctx: OrchestratorContext = {
       input: {
