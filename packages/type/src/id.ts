@@ -1,4 +1,6 @@
+import { createHash, randomUUID } from "node:crypto";
 import { ulid } from "ulid";
+import { stableStringify } from "./serialize";
 
 /**
  * Branded Types for ID safety.
@@ -25,6 +27,33 @@ export function makeId(prefix: "usr"): UserId;
 export function makeId(prefix: "prj"): ProjectId;
 export function makeId(prefix: IdPrefix): string {
   return `${prefix}_${ulid()}`;
+}
+
+/**
+ * Generate deterministic or random event IDs.
+ *
+ * When DETERMINISTIC_EVENT_IDS=1, generates content-addressable IDs using SHA256 hash.
+ * Otherwise, generates random UUIDs.
+ *
+ * Used for event sourcing and debugging to enable deterministic replay.
+ */
+export function makeEventId(payload: {
+  runId: string;
+  type: string;
+  data?: unknown;
+}): string {
+  const deterministic = (
+    process.env.DETERMINISTIC_EVENT_IDS || ""
+  ).toLowerCase();
+  if (
+    deterministic === "1" ||
+    deterministic === "true" ||
+    deterministic === "yes"
+  ) {
+    const s = `${payload.runId}|${payload.type}|${stableStringify(payload.data ?? null)}`;
+    return createHash("sha256").update(s).digest("hex");
+  }
+  return randomUUID();
 }
 
 /**

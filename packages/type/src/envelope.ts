@@ -7,7 +7,7 @@ import type { EventSource } from "./source";
  */
 export type EventEnvelope<T = unknown> = {
   /** Schema version */
-  v: 1;
+  v: number;
 
   /** Unique identity (ULID or deterministic hash) */
   id: EventId;

@@ -22,8 +22,11 @@ export const calculateError = (expected: string, actual: string): number => {
         ? [expected, actual]
         : [actual, expected];
 
-    let prevRow = Array.from({ length: shorter.length + 1 }, (_, i) => i);
-    let currRow = new Array<number>(shorter.length + 1);
+    let prevRow = new Int32Array(shorter.length + 1);
+    for (let i = 0; i <= shorter.length; i++) {
+      prevRow[i] = i;
+    }
+    let currRow = new Int32Array(shorter.length + 1);
 
     for (let i = 1; i <= longer.length; i++) {
       currRow[0] = i;
@@ -31,16 +34,16 @@ export const calculateError = (expected: string, actual: string): number => {
 
       for (let j = 1; j <= shorter.length; j++) {
         const cost = longChar === shorter.charCodeAt(j - 1) ? 0 : 1;
-        const insertion = currRow[j - 1]! + 1;
-        const deletion = prevRow[j]! + 1;
-        const substitution = prevRow[j - 1]! + cost;
+        const insertion = (currRow[j - 1] ?? 0) + 1;
+        const deletion = (prevRow[j] ?? 0) + 1;
+        const substitution = (prevRow[j - 1] ?? 0) + cost;
         currRow[j] = Math.min(insertion, deletion, substitution);
       }
 
       [prevRow, currRow] = [currRow, prevRow];
     }
 
-    return prevRow[shorter.length]! / maxLen;
+    return (prevRow[shorter.length] ?? 0) / maxLen;
   } finally {
     const durationMs = performance.now() - start;
     cognitiveErrorCalculationDuration.observe(durationMs / 1000);

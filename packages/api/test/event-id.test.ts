@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { makeEventId } from "@alfred/api/utils/event-id";
+import { makeEventId } from "@alfred/type/id";
 
 const OLD_ENV = { ...process.env } as NodeJS.ProcessEnv;
 
@@ -8,7 +8,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env = { ...OLD_ENV } as any;
+  process.env = OLD_ENV;
 });
 
 describe("makeEventId", () => {

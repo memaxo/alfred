@@ -2,13 +2,14 @@
  * Core cognitive state ADT and event types
  */
 
-import type { AutonomyGradient } from "../autonomy/types.js";
+import type { AutonomyGradient as AutonomyGradientType } from "../autonomy/types.js";
 import type { Physiology } from "../physiology/types.js";
 import type { Criteria, Decision, Outcome, Path, Plan } from "../plan/types.js";
 import type { Confidence, Timestamp } from "../util/math.js";
 
 // Re-export branded types for convenience
 export type { Autonomy, Confidence, Timestamp } from "../util/math.js";
+export type AutonomyGradient = AutonomyGradientType;
 
 // Main cognitive state ADT
 export type CognitiveState =
