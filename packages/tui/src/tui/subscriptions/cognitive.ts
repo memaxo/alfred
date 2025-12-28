@@ -193,3 +193,25 @@ export function setupCognitiveSubscription(
 export function createCognitiveStore(): CognitiveStateStore {
   return new CognitiveStateStore();
 }
+
+// ─── Mock State Factory ───────────────────────────────────────────────────────
+
+export type MockCognitiveState = {
+  phase: CognitivePhase;
+  autonomy: number;
+  physiology: PhysiologyState;
+  timestamp: number;
+};
+
+export function createMockCognitiveState(): MockCognitiveState {
+  return {
+    phase: "thinking",
+    autonomy: 0.72,
+    physiology: {
+      energy: 0.91,
+      boredom: 0.05,
+      frustration: 0.12,
+    },
+    timestamp: Date.now(),
+  };
+}

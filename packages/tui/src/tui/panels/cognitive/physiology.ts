@@ -90,6 +90,13 @@ export function renderPhysiologyMetric(
 
 export function renderPhysiology(
   physiology: PhysiologyState,
+  _width: number
+): string {
+  return renderPhysiologyCompact(physiology);
+}
+
+export function renderPhysiologyIndicators(
+  physiology: PhysiologyState,
   width: number
 ): string[] {
   const lines: string[] = [];

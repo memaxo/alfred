@@ -147,6 +147,41 @@ export function renderRouterLatencyTable(
   return lines;
 }
 
+// ─── Simple Latency Rendering ─────────────────────────────────────────────────
+
+type SimpleLatencyData = {
+  router: string;
+  p50: number;
+  p95: number;
+  p99: number;
+};
+
+export function renderLatency(
+  data: SimpleLatencyData[],
+  width: number
+): string[] {
+  if (data.length === 0) {
+    return [dim("No latency data")];
+  }
+
+  const lines: string[] = [];
+
+  // Header
+  lines.push(dim(`${"Router".padEnd(15)} p50      p95      p99`));
+  lines.push(dim("─".repeat(width)));
+
+  for (const item of data) {
+    const name = item.router.slice(0, 15).padEnd(15);
+    const p50 = coloredLatency(item.p50).padEnd(8);
+    const p95 = coloredLatency(item.p95).padEnd(8);
+    const p99 = coloredLatency(item.p99);
+
+    lines.push(`${name} ${p50} ${p95} ${p99}`);
+  }
+
+  return lines;
+}
+
 // ─── Latency Distribution ────────────────────────────────────────────────────
 
 export function renderLatencyDistribution(

@@ -223,3 +223,62 @@ export function setupWorkflowSubscription(
 export function createWorkflowStore(): WorkflowStore {
   return new WorkflowStore();
 }
+
+// ─── Mock Workflows Factory ───────────────────────────────────────────────────
+
+export type MockWorkflow = {
+  runId: string;
+  intent: string;
+  status: "pending" | "executing" | "completed" | "failed";
+  phase?: string;
+  progress?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+  failedAt?: Date;
+  error?: string;
+  queuedAt?: Date;
+  duration?: number;
+};
+
+export function createMockWorkflows(): MockWorkflow[] {
+  return [
+    {
+      runId: "run_001",
+      intent: "Deploy to staging",
+      status: "executing",
+      phase: "act",
+      progress: 0.6,
+      startedAt: new Date(Date.now() - 60_000),
+    },
+    {
+      runId: "run_002",
+      intent: "Review PR #123",
+      status: "pending",
+      queuedAt: new Date(Date.now() - 30_000),
+    },
+    {
+      runId: "run_003",
+      intent: "Run test suite",
+      status: "completed",
+      startedAt: new Date(Date.now() - 120_000),
+      completedAt: new Date(Date.now() - 60_000),
+      duration: 60_000,
+    },
+    {
+      runId: "run_004",
+      intent: "Update dependencies",
+      status: "failed",
+      startedAt: new Date(Date.now() - 180_000),
+      failedAt: new Date(Date.now() - 150_000),
+      error: "Policy denied: requires approval",
+    },
+    {
+      runId: "run_005",
+      intent: "Analyze codebase",
+      status: "executing",
+      phase: "think",
+      progress: 0.3,
+      startedAt: new Date(Date.now() - 45_000),
+    },
+  ];
+}

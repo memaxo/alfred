@@ -29,6 +29,81 @@ const STATUS_CONFIGS: Record<WorkflowStatus, StatusConfig> = {
   cancelled: { icon: "○", color: colors.muted, label: "Cancelled" },
 };
 
+// ─── Workflow Progress Rendering ─────────────────────────────────────────────
+
+export type WorkflowProgressItem = {
+  runId: string;
+  intent: string;
+  status: "pending" | "executing" | "completed" | "failed";
+  phase?: string;
+  progress?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+  failedAt?: Date;
+  error?: string;
+  queuedAt?: Date;
+};
+
+export function renderWorkflowProgress(
+  workflow: WorkflowProgressItem,
+  width: number
+): string[] {
+  const lines: string[] = [];
+  const statusConfig = getStatusConfig(workflow.status);
+
+  // Header: status icon + intent
+  const statusIcon = fg(statusConfig.color)(statusConfig.icon);
+  const intent = bold(truncate(workflow.intent, width - 10));
+  lines.push(`${statusIcon} ${intent}`);
+
+  // Progress bar for executing workflows
+  if (workflow.status === "executing" && workflow.progress !== undefined) {
+    const barWidth = Math.min(width - 10, 30);
+    const filled = Math.round(workflow.progress * barWidth);
+    const empty = barWidth - filled;
+    const bar =
+      fg(statusConfig.color)(progressChars.filled.repeat(filled)) +
+      dim(progressChars.empty.repeat(empty));
+    const percent = Math.round(workflow.progress * 100);
+    lines.push(`  ${bar} ${fg(statusConfig.color)(`${percent}%`)}`);
+  }
+
+  // Phase indicator
+  if (workflow.phase) {
+    lines.push(dim(`  Phase: ${workflow.phase}`));
+  }
+
+  // Duration for completed/failed
+  if (workflow.startedAt) {
+    const endTime = workflow.completedAt ?? workflow.failedAt ?? new Date();
+    const duration = endTime.getTime() - workflow.startedAt.getTime();
+    const durationStr = formatDuration(duration);
+    lines.push(dim(`  Duration: ${durationStr}`));
+  }
+
+  // Error message for failed workflows
+  if (workflow.status === "failed" && workflow.error) {
+    lines.push(
+      fg(colors.error)(`  Error: ${truncate(workflow.error, width - 10)}`)
+    );
+  }
+
+  return lines;
+}
+
+function getStatusConfig(status: WorkflowProgressItem["status"]): StatusConfig {
+  switch (status) {
+    case "pending":
+      return STATUS_CONFIGS.pending;
+    case "executing":
+      return STATUS_CONFIGS.executing;
+    case "completed":
+      return STATUS_CONFIGS.completed;
+    case "failed":
+      return STATUS_CONFIGS.failed;
+  }
+}
+
 // ─── Workflow Rendering ──────────────────────────────────────────────────────
 
 export function renderWorkflowStatus(status: WorkflowStatus): string {

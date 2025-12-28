@@ -202,6 +202,46 @@ export function renderActivityTimeline(
   return lines;
 }
 
+// ─── Recent Insights ──────────────────────────────────────────────────────────
+
+export type InsightItem = {
+  id: string;
+  text: string;
+  timestamp: Date;
+};
+
+export function renderRecentInsights(
+  insights: InsightItem[],
+  width: number,
+  maxItems = 5
+): string[] {
+  const lines: string[] = [];
+
+  if (insights.length === 0) {
+    lines.push(dim("  No recent insights"));
+    return lines;
+  }
+
+  // Sort by timestamp descending
+  const sorted = [...insights].sort(
+    (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+  );
+  const visible = sorted.slice(0, maxItems);
+
+  for (const insight of visible) {
+    const icon = fg(colors.warning)("★");
+    const time = dim(formatRelativeTime(insight.timestamp.getTime()));
+    const text = truncate(insight.text, width - 15);
+    lines.push(`  ${icon} ${text} ${time}`);
+  }
+
+  if (insights.length > maxItems) {
+    lines.push(dim(`  ... and ${insights.length - maxItems} more`));
+  }
+
+  return lines;
+}
+
 // ─── Mock Recent Items ───────────────────────────────────────────────────────
 
 export function createMockRecentItems(count = 10): RecentKnowledgeItem[] {

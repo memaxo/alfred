@@ -209,6 +209,33 @@ export function renderConnections(active: number, max = 100): string {
   return `${dim("Connections:")} ${fg(color)(active.toString())}${dim(`/${max}`)}`;
 }
 
+// ─── Throughput Chart ─────────────────────────────────────────────────────────
+
+export function renderThroughputChart(data: number[], width: number): string[] {
+  const lines: string[] = [];
+
+  if (data.length === 0) {
+    lines.push(dim("No throughput data"));
+    return lines;
+  }
+
+  // Use sparkline for visualization
+  const spark = sparkline(data, {
+    width: Math.min(width - 20, data.length),
+    color: colors.primary,
+  });
+
+  const max = Math.max(...data);
+  const avg = data.reduce((a, b) => a + b, 0) / data.length;
+
+  lines.push(`${dim("Throughput")} ${spark}`);
+  lines.push(
+    `  ${dim("Max:")} ${formatRate(max)}  ${dim("Avg:")} ${formatRate(avg)}`
+  );
+
+  return lines;
+}
+
 // ─── Resource Usage ──────────────────────────────────────────────────────────
 
 export function renderResourceUsage(
