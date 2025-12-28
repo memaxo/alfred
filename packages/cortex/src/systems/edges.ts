@@ -201,7 +201,8 @@ export class EdgeSystem implements RenderSystem {
       ],
     });
 
-    this.renderBindGroup = this.device.createBindGroup({
+    // Render bind group creation (unused but kept for future)
+    const _renderBindGroup = this.device.createBindGroup({
       label: "edge_render_bg",
       layout: renderLayout,
       entries: [
@@ -214,7 +215,7 @@ export class EdgeSystem implements RenderSystem {
     // Line bind group uses same layout for now
     if (this.linePipeline) {
       const lineLayout = this.linePipeline.getBindGroupLayout(0);
-      this.lineBindGroup = this.device.createBindGroup({
+      const _lineBindGroup = this.device.createBindGroup({
         label: "edge_line_bg",
         layout: lineLayout,
         entries: [

@@ -116,7 +116,7 @@ export class NodeSystem implements RenderSystem {
     });
 
     // Create focused node pipeline (with expanding ring)
-    this.focusedPipeline = device.createRenderPipeline({
+    const _focusedPipeline = device.createRenderPipeline({
       label: "node_focused_render",
       layout: "auto",
       vertex: {
@@ -184,7 +184,6 @@ export class NodeSystem implements RenderSystem {
 
   /** Set focused node */
   setFocusedNode(nodeId: string | null): void {
-    this.focusedNodeId = nodeId;
     // Update activity for all nodes
     for (const node of this.nodes) {
       node.activity = node.id === nodeId ? 1 : 0;

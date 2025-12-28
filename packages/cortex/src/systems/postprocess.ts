@@ -147,7 +147,7 @@ export class PostProcessSystem implements RenderSystem {
       primitive: { topology: "triangle-list" },
     });
 
-    this.aberrationPipeline = device.createRenderPipeline({
+    const _aberrationPipeline = device.createRenderPipeline({
       label: "chromatic_aberration",
       layout: "auto",
       vertex: {
@@ -196,7 +196,7 @@ export class PostProcessSystem implements RenderSystem {
       return;
     }
 
-    this.resolution = { x: width, y: height };
+    const _resolution = { x: width, y: height };
 
     // Destroy old textures
     this.bloomTexture0?.destroy();

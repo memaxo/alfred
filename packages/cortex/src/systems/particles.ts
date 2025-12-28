@@ -160,7 +160,7 @@ export class ParticleSystem implements RenderSystem {
     ];
 
     // Render bind group (reads from current read buffer)
-    this.renderBindGroup = this.device.createBindGroup({
+    const _renderBindGroup = this.device.createBindGroup({
       label: "particle_render_bg",
       layout: renderLayout,
       entries: [
