@@ -18,22 +18,28 @@
 5. **`mock.module()` isolation.** Treat `mock.module()` as process-global. For packages with heavy `mock.module()` usage:
    - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`)
    - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock during module evaluation)
-   - avoid relying on “reset” semantics for module mocks across files; use explicit isolation or well-scoped preloads.
+   - avoid relying on "reset" semantics for module mocks across files; use explicit isolation or well-scoped preloads.
 
-6. **Database Isolation.** Use ephemeral schemas, transactions, or `createTestDb`/`closeTestDb`. Reset tables between cases; no implicit globals or shared state.
+6. **Dependency injection over mock.module().** Prefer DI via tRPC context for new tests:
+   - define `RouterDeps` interface with injectable dependencies
+   - inject deps via `ctx.deps` in routers instead of direct imports
+   - pass mock deps to `createTestCaller({ deps: mockDeps })` in tests
+   - see `docs/architecture/test-dependency-injection.md` for full pattern
 
-7. **UI and E2E.** Use React Testing Library for logic/simple components and Playwright for complex interactions (drag-and-drop, focus). Mock auth (`Better Auth`) and use `VITE_TEST_MODE=true` for heavy visualizations.
+7. **Database Isolation.** Use ephemeral schemas, transactions, or `createTestDb`/`closeTestDb`. Reset tables between cases; no implicit globals or shared state.
 
-8. **Canonical Fixtures.** Use `@alfred/test-kit` (e.g., `voice/runtime-fixture`, `workflow/runtime-fixture`) instead of bespoke mocks for pools, registries, or streaming. Always call cleanup (`restore()`/`stop()`).
+8. **UI and E2E.** Use React Testing Library for logic/simple components and Playwright for complex interactions (drag-and-drop, focus). Mock auth (`Better Auth`) and use `VITE_TEST_MODE=true` for heavy visualizations.
 
-9. **Sandbox and Cleanup.** Use `createTestSandbox()` or `os.tmpdir()` for temporary files. Never write to `packages/*/.*venv*/` or repository directories (except security boundary tests inside `process.cwd()`). Ensure `afterAll` hooks remove artifacts.
+9. **Canonical Fixtures.** Use `@alfred/test-kit` (e.g., `voice/runtime-fixture`, `workflow/runtime-fixture`) instead of bespoke mocks for pools, registries, or streaming. Always call cleanup (`restore()`/`stop()`).
 
-10. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
+10. **Sandbox and Cleanup.** Use `createTestSandbox()` or `os.tmpdir()` for temporary files. Never write to `packages/*/.*venv*/` or repository directories (except security boundary tests inside `process.cwd()`). Ensure `afterAll` hooks remove artifacts.
 
-11. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
+11. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
 
-12. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
+12. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
 
-13. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
+13. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
 
-14. **Autonomy and Logic.** Assert monotonic reactions, zero-effect on zero-reliability, and `[0,1]` clamps in cognitive suites.
+14. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
+
+15. **Autonomy and Logic.** Assert monotonic reactions, zero-effect on zero-reliability, and `[0,1]` clamps in cognitive suites.
