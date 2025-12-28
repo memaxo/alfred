@@ -6,6 +6,8 @@
  */
 
 import { nowNs } from "@alfred/metrics/performance";
+import type { EventEnvelope } from "@alfred/type/envelope";
+import { makeEventId } from "@alfred/type/id";
 
 /**
  * Trace span representing a single operation
@@ -156,5 +158,43 @@ export class RuntimeTracer {
         tags: span.tags,
       })),
     });
+  }
+
+  /**
+   * Transform spans into event envelopes for persistence or streaming.
+   * Preserves causal linking via parentId.
+   */
+  toEvents(): EventEnvelope[] {
+    const spans = this.getSpans();
+    const events: EventEnvelope[] = [];
+
+    for (let i = 0; i < spans.length; i++) {
+      const span = spans[i];
+      if (!span) {
+        continue;
+      }
+      const eventData = {
+        name: span.name,
+        durationMs: this.getSpanDuration(span.id),
+        tags: span.tags,
+      };
+      events.push({
+        v: 1,
+        id: makeEventId({
+          runId: this.runId,
+          type: "trace_span",
+          data: eventData,
+        }) as import("@alfred/type/id").EventId,
+        type: "trace_span",
+        createdAt: new Date(Number(span.startNs / 1_000_000n)).toISOString(),
+        data: eventData,
+        rootId: this.runId as any,
+        parentId: span.parent as any, // Causal link
+        seq: i, // Order
+        source: { _: "system", component: "runtime-tracer" },
+      });
+    }
+
+    return events;
   }
 }

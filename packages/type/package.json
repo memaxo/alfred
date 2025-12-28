@@ -7,17 +7,25 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
-    "./plan": {
-      "types": "./dist/plan.d.ts",
-      "default": "./src/plan.ts"
+    "./ai-adapter": {
+      "types": "./dist/ai-adapter.d.ts",
+      "default": "./src/ai-adapter.ts"
     },
-    "./msg": {
-      "types": "./dist/msg.d.ts",
-      "default": "./src/msg.ts"
+    "./build-constants": {
+      "types": "./dist/build-constants.d.ts",
+      "default": "./src/build-constants.ts"
     },
-    "./personal": {
-      "types": "./dist/personal.d.ts",
-      "default": "./src/personal.ts"
+    "./causal": {
+      "types": "./dist/causal.d.ts",
+      "default": "./src/causal.ts"
+    },
+    "./cognitive": {
+      "types": "./dist/cognitive.d.ts",
+      "default": "./src/cognitive.ts"
+    },
+    "./cognitive.zod": {
+      "types": "./dist/cognitive.zod.d.ts",
+      "default": "./src/cognitive.zod.ts"
     },
     "./envelope": {
       "types": "./dist/envelope.d.ts",
@@ -27,6 +35,74 @@
       "types": "./dist/envelope.zod.d.ts",
       "default": "./src/envelope.zod.ts"
     },
+    "./events": {
+      "types": "./dist/events.d.ts",
+      "default": "./src/events.ts"
+    },
+    "./events.zod": {
+      "types": "./dist/events.zod.d.ts",
+      "default": "./src/events.zod.ts"
+    },
+    "./exa": {
+      "types": "./dist/exa.d.ts",
+      "default": "./src/exa.ts"
+    },
+    "./guards": {
+      "types": "./dist/guards.d.ts",
+      "default": "./src/guards.ts"
+    },
+    "./history": {
+      "types": "./dist/history.d.ts",
+      "default": "./src/history.ts"
+    },
+    "./id": {
+      "types": "./dist/id.d.ts",
+      "default": "./src/id.ts"
+    },
+    "./knowledge": {
+      "types": "./dist/knowledge.d.ts",
+      "default": "./src/knowledge.ts"
+    },
+    "./msg": {
+      "types": "./dist/msg.d.ts",
+      "default": "./src/msg.ts"
+    },
+    "./personal": {
+      "types": "./dist/personal.d.ts",
+      "default": "./src/personal.ts"
+    },
+    "./plan": {
+      "types": "./dist/plan.d.ts",
+      "default": "./src/plan.ts"
+    },
+    "./plan.zod": {
+      "types": "./dist/plan.zod.d.ts",
+      "default": "./src/plan.zod.ts"
+    },
+    "./policy": {
+      "types": "./dist/policy.d.ts",
+      "default": "./src/policy.ts"
+    },
+    "./preference": {
+      "types": "./dist/preference.d.ts",
+      "default": "./src/preference.ts"
+    },
+    "./reconstruct": {
+      "types": "./dist/reconstruct.d.ts",
+      "default": "./src/reconstruct.ts"
+    },
+    "./runtime-context": {
+      "types": "./dist/runtime-context.d.ts",
+      "default": "./src/runtime-context.ts"
+    },
+    "./serialize": {
+      "types": "./dist/serialize.d.ts",
+      "default": "./src/serialize.ts"
+    },
+    "./source": {
+      "types": "./dist/source.d.ts",
+      "default": "./src/source.ts"
+    },
     "./stream": {
       "types": "./dist/stream.d.ts",
       "default": "./src/stream.ts"
@@ -35,59 +111,30 @@
       "types": "./dist/stream.zod.d.ts",
       "default": "./src/stream.zod.ts"
     },
-    "./history": {
-      "types": "./dist/history.d.ts",
-      "default": "./src/history.ts"
+    "./versioning": {
+      "types": "./dist/versioning.d.ts",
+      "default": "./src/versioning.ts"
     },
-    "./guards": {
-      "types": "./dist/guards.d.ts",
-      "default": "./src/guards.ts"
-    },
-    "./preference": {
-      "types": "./dist/preference.d.ts",
-      "default": "./src/preference.ts"
-    },
-    "./runtime-context": {
-      "types": "./dist/runtime-context.d.ts",
-      "default": "./src/runtime-context.ts"
-    },
-    "./cognitive": {
-      "types": "./dist/cognitive.d.ts",
-      "default": "./src/cognitive.ts"
-    },
-    "./knowledge": {
-      "types": "./dist/knowledge.d.ts",
-      "default": "./src/knowledge.ts"
-    },
-    "./policy": {
-      "types": "./dist/policy.d.ts",
-      "default": "./src/policy.ts"
-    },
-    "./ai-adapter": {
-      "types": "./dist/ai-adapter.d.ts",
-      "default": "./src/ai-adapter.ts"
+    "./visual": {
+      "types": "./dist/visual.d.ts",
+      "default": "./src/visual.ts"
     },
     "./voice": {
       "types": "./dist/voice.d.ts",
       "default": "./src/voice.ts"
     },
-    "./build-constants": {
-      "types": "./dist/build-constants.d.ts",
-      "default": "./src/build-constants.ts"
-    },
-    "./id": {
-      "types": "./dist/id.d.ts",
-      "default": "./src/id.ts"
+    "./voice.zod": {
+      "types": "./dist/voice.zod.d.ts",
+      "default": "./src/voice.zod.ts"
     }
   },
   "scripts": {
     "build": "tsc -b",
+    "check-types": "tsc --noEmit",
     "dev": "tsc -b -w",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit",
     "typecheck": "tsc -b"
   },
-  "sideEffects": false,
   "dependencies": {
     "ai": "catalog:",
     "ulid": "^3.0.2",
@@ -97,5 +144,6 @@
     "@alfred/tsconfig": "workspace:*",
     "tsdown": "^0.2.16",
     "typescript": "^5.7.2"
-  }
+  },
+  "sideEffects": false
 }

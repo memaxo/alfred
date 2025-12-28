@@ -20,7 +20,7 @@ type ToolResultShape = ToolCallShape & {
 };
 
 type AssistantEventPayload = WorkflowEvent & {
-  _: "assistant";
+  _: "context" | "assistant";
   text?: string;
   reasoning?: string;
   parts?: MessagePart[];
@@ -72,49 +72,45 @@ function isMessagePart(part: unknown): part is MessagePart {
 function isUiMessageEvent(
   event: WorkflowEvent
 ): event is WorkflowEvent & { _: "ui-message"; messages: UIMessage[] } {
-  return (
-    "_" in event &&
-    event._ === "ui-message" &&
-    Array.isArray((event as { messages?: unknown }).messages)
-  );
+  return event._ === "ui-message";
 }
 
 function isAssistantEvent(
   event: WorkflowEvent
 ): event is AssistantEventPayload {
-  return "_" in event && event._ === "assistant";
+  return event._ === "context" || event._ === "assistant";
 }
 
 function isToolCallEvent(event: WorkflowEvent): event is ToolCallEventPayload {
-  return "_" in event && event._ === "tool-call";
+  return event._ === "tool-call";
 }
 
 function isToolResultEvent(
   event: WorkflowEvent
 ): event is ToolResultEventPayload {
-  return "_" in event && event._ === "tool-result";
+  return event._ === "tool-result";
 }
 
 function isReasoningEvent(
   event: WorkflowEvent
 ): event is ReasoningEventPayload {
-  return "_" in event && event._ === "reasoning";
+  return event._ === "reasoning";
 }
 
 function isDataStatusEvent(
   event: WorkflowEvent
 ): event is DataStatusEventPayload {
-  return "_" in event && event._ === "data-status";
+  return event._ === "data-status";
 }
 
 function isFileEvent(event: WorkflowEvent): event is FileEventPayload {
-  return "_" in event && event._ === "file";
+  return event._ === "file";
 }
 
 function isDataCacheEvent(
   event: WorkflowEvent
 ): event is DataCacheEventPayload {
-  return "_" in event && event._ === "data-cache-handoff";
+  return event._ === "data-cache-handoff";
 }
 
 export type NormalizableGenerate = {
@@ -180,6 +176,10 @@ export function eventToUiMessages(event: WorkflowEvent): UIMessage[] | null {
     return normalizeAssistantEvent(event);
   }
 
+  if (event._ === "text-delta") {
+    return [createAssistantMessage([{ type: "text", text: event.delta }])];
+  }
+
   if (isToolCallEvent(event)) {
     return [createAssistantMessage([createToolCallPart(event)])];
   }
@@ -190,6 +190,10 @@ export function eventToUiMessages(event: WorkflowEvent): UIMessage[] | null {
 
   if (isReasoningEvent(event)) {
     return normalizeReasoningEvent(event);
+  }
+
+  if (event._ === "finish") {
+    return null; // Finish events don't map to messages usually
   }
 
   if (isDataStatusEvent(event)) {

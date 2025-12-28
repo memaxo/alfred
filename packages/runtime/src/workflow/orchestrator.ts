@@ -72,6 +72,7 @@ export type OrchestratorCallbacks = {
   ) => void;
 };
 
+// biome-ignore lint/suspicious/useAwait: orchestrateWorkflowStream is called asynchronously and returns a cleanup function
 export async function orchestrateWorkflowStream(
   input: WorkflowInputPayload,
   session: { user: { id: string } },
@@ -313,8 +314,10 @@ export async function orchestrateWorkflowStream(
         observeEvent({ event, reviewGate, reasonTraces });
 
         // Collect handoffs for final learning summary
-        if (event._ === "event" && (event as any).kind === "agent-handoff") {
-          handoffs.push((event as any).data);
+        if (event._ === "agent-handoff") {
+          handoffs.push(
+            event.data as { summary: string; [key: string]: unknown }
+          );
         }
 
         const persisted = await persistStreamEvent({

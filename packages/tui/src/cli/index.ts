@@ -30,5 +30,5 @@ export async function runCli(args: string[]) {
   });
 
   // Run CLI
-  await cli.run(args);
+  await cli.run({ argv: args });
 }

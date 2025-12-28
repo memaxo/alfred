@@ -451,18 +451,19 @@ export function runPlanV6(
           const args = { text: "hello" };
           yield {
             _: "tool-call",
-            id: tcId,
+            toolCallId: tcId,
             toolName,
-            args,
+            input: args,
           } as WorkflowEvent;
 
           await delay(20);
           const result = { text: "hello" };
           yield {
             _: "tool-result",
-            id: tcId,
+            toolCallId: tcId,
             toolName,
-            result,
+            input: args,
+            output: result,
           } as WorkflowEvent;
 
           if (linear?.sessionId) {

@@ -17,10 +17,10 @@ export async function loadHistory(runId: string): Promise<WorkflowEvent[]> {
     .map((e) => {
       const unwrapped = unwrapEventEnvelope(e.eventData);
       const payload = coerceRecord(unwrapped.data);
-      const hydrated: WorkflowEvent = {
+      const hydrated = {
         ...payload,
         _: e.eventType,
-      };
+      } as WorkflowEvent;
       return hydrated;
     });
 }

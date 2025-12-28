@@ -31,7 +31,7 @@ describe("normalizeToUiMessages (non-stream)", () => {
 describe("eventToUiMessages (stream)", () => {
   it("passthroughs ui-message events", () => {
     const msgs = eventToUiMessages({
-      type: "ui-message",
+      _: "ui-message",
       messages: [{ id: "1", role: "assistant", parts: [] }],
     } as any);
     expect(msgs).not.toBeNull();
@@ -41,7 +41,7 @@ describe("eventToUiMessages (stream)", () => {
 
   it("maps assistant with text/parts/toolCalls/toolResults", () => {
     const msgs = eventToUiMessages({
-      type: "assistant",
+      _: "assistant",
       text: "Hello",
       toolCalls: [{ id: "x", toolName: "cat", args: { path: "README.md" } }],
       toolResults: [{ id: "x", toolName: "cat", result: "contents" }],
@@ -66,7 +66,7 @@ describe("eventToUiMessages (stream)", () => {
 
   it("maps reasoning to reasoning part", () => {
     const msgs = eventToUiMessages({
-      type: "assistant",
+      _: "assistant",
       reasoning: "why",
     } as any);
     if (!msgs) {
@@ -81,7 +81,7 @@ describe("eventToUiMessages (stream)", () => {
 
   it("maps data-status to data-status part", () => {
     const msgs = eventToUiMessages({
-      type: "data-status",
+      _: "data-status",
       data: { ok: true },
       transient: true,
     } as any);
@@ -98,7 +98,7 @@ describe("eventToUiMessages (stream)", () => {
   it("maps data-cache-handoff to data-cache part", () => {
     const now = new Date().toISOString();
     const msgs = eventToUiMessages({
-      type: "data-cache-handoff",
+      _: "data-cache-handoff",
       receipts: { created: now, summary: "cache handoff", code: [] },
     } as any);
     expect(msgs).toBeTruthy();
@@ -108,7 +108,7 @@ describe("eventToUiMessages (stream)", () => {
 
   it("maps file events to file parts", () => {
     const msgs = eventToUiMessages({
-      type: "file",
+      _: "file",
       mediaType: "text/plain",
       url: "https://example",
     } as any);

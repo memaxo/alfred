@@ -1,11 +1,12 @@
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
-import { makeEventId } from "@alfred/agent/utils/event-id";
 import { eventToUiMessages } from "@alfred/agent/utils/normalize";
 import { redactEventData } from "@alfred/agent/utils/redaction";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import type { WorkflowEventType } from "@alfred/db/schema/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
+import { makeEventId } from "@alfred/type/id";
 import type { UIMessage } from "@alfred/type/stream";
 import { persistWorkflowMessages } from "./executor";
 import { emitLinearErrorActivity } from "./linear";
@@ -32,12 +33,41 @@ const VALID_EVENT_TYPES = new Set([
   "stderr",
   "droid",
   "data-cache-handoff",
+  "ui-message",
+  "text-delta",
+  "tool-call",
+  "tool-result",
+  "reasoning",
+  "finish",
+  "data-status",
+  "file",
+  "obligation",
+  "plan-selected",
+  "phase-start",
+  "phase-complete",
+  "phase-progress",
+  "agent-start",
+  "agent-complete",
+  "wave-start",
+  "wave-complete",
+  "agent-handoff",
+  "assistant",
+  "report",
+  "step-start",
+  "step-complete",
+  "step-skip",
+  "step_start",
+  "step_complete",
+  "suspend",
+  "resume",
 ]);
 
-function getEventType(event: WorkflowEvent): string {
+function getEventType(event: WorkflowEvent): WorkflowEventType {
   const eventType =
     "_" in event && typeof event._ === "string" ? event._ : "event";
-  return VALID_EVENT_TYPES.has(eventType) ? eventType : "event";
+  return VALID_EVENT_TYPES.has(eventType)
+    ? (eventType as WorkflowEventType)
+    : "error";
 }
 
 function maybeUiMessages(event: WorkflowEvent): UIMessage[] | null {

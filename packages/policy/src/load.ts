@@ -50,7 +50,7 @@ const policyRoleSchema = z.object({
 });
 
 const policyDocumentSchema = z.object({
-  roles: z.record(policyRoleSchema).default({}),
+  roles: z.record(z.string(), policyRoleSchema).default({}),
   rules: z.array(policyRuleSchema).default([]),
   scopes: z.array(z.string()).default([]),
 });

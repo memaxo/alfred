@@ -1,30 +1,58 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import type { WorkflowEventType } from "@alfred/db/schema/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
+import { makeEventId } from "@alfred/type/id";
 import type { UIMessage } from "@alfred/type/stream";
 import { wrapEventEnvelope } from "../utils/envelope";
-import { makeEventId } from "../utils/event-id";
 import { eventToUiMessages } from "../utils/normalize";
 import { redactEventData } from "../utils/redaction";
 
 const VALID_EVENT_TYPES = [
   "run",
   "progress",
-  "context",
-  "require-scope",
-  "notice",
-  "error",
   "stdout",
   "stderr",
   "droid",
+  "notice",
+  "error",
+  "ui-message",
+  "text-delta",
+  "tool-call",
+  "tool-result",
+  "reasoning",
+  "finish",
+  "data-status",
+  "file",
+  "obligation",
   "data-cache-handoff",
+  "context",
+  "plan-selected",
+  "phase-start",
+  "phase-complete",
+  "phase-progress",
+  "agent-start",
+  "agent-complete",
+  "wave-start",
+  "wave-complete",
+  "agent-handoff",
+  "assistant",
+  "report",
+  "require-scope",
+  "step-start",
+  "step-complete",
+  "step-skip",
+  "step_start",
+  "step_complete",
+  "suspend",
+  "resume",
 ] as const;
 
-function getEventType(event: WorkflowEvent): string {
+function getEventType(event: WorkflowEvent): WorkflowEventType {
   const type = event._;
   return (VALID_EVENT_TYPES as readonly string[]).includes(type)
-    ? type
-    : "event";
+    ? (type as WorkflowEventType)
+    : "error"; // Default to error if unknown
 }
 
 function maybeUiMessages(event: WorkflowEvent): UIMessage[] | null {

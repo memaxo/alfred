@@ -265,11 +265,12 @@ export class AISDKAdapter {
         message:
           sdkEvent.error instanceof Error
             ? sdkEvent.error.message
-            : String(sdkEvent.error),
+            : String(sdkEvent.error || "unknown_error"),
       };
     }
 
     if (forwardedEventTypes.has(sdkEvent.type)) {
+      // biome-ignore lint/suspicious/noExplicitAny: Internal event mapping
       return { ...sdkEvent, _: sdkEvent.type } as any;
     }
 

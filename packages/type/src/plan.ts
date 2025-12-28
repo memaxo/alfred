@@ -379,11 +379,65 @@ type WorkflowEventBase = {
 };
 
 export type WorkflowEvent =
+  | (WorkflowEventBase & { _: "run" })
   | (WorkflowEventBase & { _: "progress"; pct?: number; message?: string })
   | (WorkflowEventBase & { _: "stdout"; text: string })
   | (WorkflowEventBase & { _: "stderr"; text: string })
   | (WorkflowEventBase & { _: "droid"; chunk: unknown })
   | (WorkflowEventBase & { _: "notice"; message: string })
+  | (WorkflowEventBase & { _: "error"; message: string; chunk?: unknown })
+  | (WorkflowEventBase & {
+      _: "ui-message";
+      messages: import("./stream").UIMessage[];
+    })
+  | (WorkflowEventBase & { _: "text-delta"; id: string; delta: string })
+  | (WorkflowEventBase & {
+      _: "tool-call";
+      toolCallId: string;
+      toolName: string;
+      input: unknown;
+    })
+  | (WorkflowEventBase & {
+      _: "tool-result";
+      toolCallId: string;
+      toolName: string;
+      input: unknown;
+      output: unknown;
+    })
+  | (WorkflowEventBase & { _: "reasoning"; text?: string; reasoning?: string })
+  | (WorkflowEventBase & {
+      _: "finish";
+      finishReason?: string;
+      usage?: unknown;
+    })
+  | (WorkflowEventBase & {
+      _: "data-status";
+      data?: unknown;
+      transient?: boolean;
+    })
+  | (WorkflowEventBase & {
+      _: "file";
+      mediaType?: string;
+      mimeType?: string;
+      url?: string;
+      data?: unknown;
+      filename?: string;
+      name?: string;
+    })
+  | (WorkflowEventBase & { _: "assistant"; text: string })
+  | (WorkflowEventBase & { _: "report"; summary: unknown })
+  | (WorkflowEventBase & {
+      _: "require-scope";
+      scopes: string[];
+      event: string;
+    })
+  | (WorkflowEventBase & { _: "step-start"; phase: unknown })
+  | (WorkflowEventBase & { _: "step-complete"; phase: unknown })
+  | (WorkflowEventBase & { _: "step-skip"; phase: unknown })
+  | (WorkflowEventBase & { _: "step_start"; phase?: unknown })
+  | (WorkflowEventBase & { _: "step_complete"; phase?: unknown })
+  | (WorkflowEventBase & { _: "suspend" })
+  | (WorkflowEventBase & { _: "resume" })
   | (WorkflowEventBase & {
       _: "obligation";
       runId: string;
@@ -430,5 +484,37 @@ export type WorkflowEvent =
     })
   | (WorkflowEventBase & { _: "wave-start"; waveId: string })
   | (WorkflowEventBase & { _: "wave-complete"; waveId: string })
-  | (WorkflowEventBase & { _: "agent-handoff"; data: unknown })
-  | (WorkflowEventBase & { _: string; [key: string]: unknown });
+  | (WorkflowEventBase & { _: "agent-handoff"; data: unknown });
+
+/**
+ * State of a workflow run derived from events.
+ */
+export type WorkflowState = {
+  status:
+    | "idle"
+    | "running"
+    | "suspended"
+    | "completed"
+    | "failed"
+    | "cancelled";
+  progress: number;
+  currentPhaseId?: string;
+  currentAgentId?: string;
+  message?: string;
+  error?: string;
+  phases: Record<
+    string,
+    {
+      status: "pending" | "running" | "completed" | "failed";
+      progress: number;
+      result?: unknown;
+    }
+  >;
+  agents: Record<
+    string,
+    {
+      status: "pending" | "running" | "completed" | "failed";
+      result?: unknown;
+    }
+  >;
+};

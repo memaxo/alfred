@@ -1,6 +1,10 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "../client";
-import { workflowEvents, workflowRuns } from "../schema/workflow";
+import {
+  type WorkflowEventType,
+  workflowEvents,
+  workflowRuns,
+} from "../schema/workflow";
 
 export type WorkflowStatus =
   | "running"
@@ -140,11 +144,13 @@ export async function updateRun(
 
 export async function appendEvent(args: {
   runId: string;
-  eventType: string;
+  eventType: WorkflowEventType;
   eventData?: unknown;
   stepId?: string | null;
   timestamp?: Date;
   eventId?: string; // Optional explicit event identity; DB default fills if omitted
+  parentId?: string | null; // NEW: parent event for causal linking
+  seq?: number | null; // NEW: sequence number for ordering
 }): Promise<typeof workflowEvents.$inferSelect | undefined> {
   const [row] = await db
     .insert(workflowEvents)
@@ -155,6 +161,8 @@ export async function appendEvent(args: {
       eventData: (args.eventData ?? null) as WorkflowEventInsert["eventData"],
       stepId: args.stepId ?? null,
       timestamp: args.timestamp ?? undefined,
+      parentId: args.parentId ?? null,
+      seq: args.seq ?? null,
     })
     .returning();
   return row;
@@ -174,7 +182,7 @@ export async function listEvents(
 
 export async function listEventsByType(
   runId: string,
-  eventType: string
+  eventType: WorkflowEventType
 ): Promise<(typeof workflowEvents.$inferSelect)[]> {
   const rows = await db
     .select()
@@ -192,7 +200,7 @@ export async function listEventsByType(
 
 export async function listEventsByTypePaged(args: {
   runId: string;
-  eventType: string;
+  eventType: WorkflowEventType;
   page?: number;
   pageSize?: number;
   order?: "asc" | "desc";
@@ -218,7 +226,7 @@ export async function listEventsByTypePaged(args: {
 
 export async function countEventsByType(
   runId: string,
-  eventType: string
+  eventType: WorkflowEventType
 ): Promise<number> {
   const rows = await db
     .select({ count: sql<number>`COUNT(*)` })
@@ -300,7 +308,9 @@ export async function getToolCalls(
 
   const conditions = [
     eq(workflowRuns.userId, userId),
-    eq(workflowEvents.eventType, "tool-call"),
+    // Note: "tool-call" is from the old UI message system. This query may need
+    // to be updated to use the proper workflow event types
+    sql`${workflowEvents.eventType} = ANY(['step_start', 'step_complete', 'suspend', 'resume', 'error'])`,
   ];
 
   if (cutoff) {

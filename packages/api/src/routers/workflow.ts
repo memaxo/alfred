@@ -1,40 +1,4 @@
-import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
-import { recordAudit } from "@alfred/agent/utils/audit";
-import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
-import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
-import {
-  linearActivityDurationSeconds,
-  linearActivityEmissionsTotal,
-  linearSessionOperationsTotal,
-  replayQueriesTotal,
-  replayQueryDurationSeconds,
-} from "@alfred/agent/workflow/metrics";
-import {
-  type OrchestratorCallbacks,
-  orchestrateWorkflowStream,
-} from "@alfred/agent/workflow/orchestrator";
-import {
-  type ResumePayload,
-  type RunHandle,
-  runRegistry,
-} from "@alfred/agent/workflow/registry";
-import {
-  mapWorkflowResource,
-  mapWorkflowRunResource,
-  workflowInput,
-} from "@alfred/agent/workflow/schema";
-import {
-  createRequirementMessage,
-  createWorkflowExecutor,
-  deriveWorkflowTitle,
-  ensureObligations,
-  ensureWorkflowConversation,
-  persistWorkflowMessages,
-} from "@alfred/agent/workflow/services";
-import {
-  registerRunHandle,
-  StreamNotAttachedError,
-} from "@alfred/agent/workflow/session-recovery";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import {
   codexLinearActivitiesDroppedTotal,
   codexLinearActivitiesEmittedTotal,
@@ -49,7 +13,6 @@ import type {
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
-import { syncOnWorkflowStart } from "@alfred/plan";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -71,22 +34,34 @@ const requiresBiometric = (obligations: Obligation[]): boolean =>
         obligation.metadata.code === "requireBio")
   );
 
-// Feature flag for runtime migration (Phase 3.3)
-configureLinearMetrics({
-  linearActivityEmissionsTotal,
-  linearActivityDurationSeconds,
-  linearSessionOperationsTotal,
-});
-
-// Configure Codex-Linear metrics
-(async () => {
+let workflowMetricsInit = false;
+async function initWorkflowMetrics(): Promise<void> {
+  if (workflowMetricsInit) {
+    return;
+  }
+  workflowMetricsInit = true;
   try {
-    const { configureCodexLinearMetrics } = await import(
-      "@alfred/agent/orchestrator/tool/codex-linear"
-    );
-    const { sessionManager } = await import(
-      "@alfred/agent/orchestrator/codex-session"
-    );
+    const [{ configureLinearMetrics }, metrics] = await Promise.all([
+      import("@alfred/agent/orchestrator/linearmetrics"),
+      import("@alfred/agent/workflow/metrics"),
+    ]);
+    configureLinearMetrics({
+      linearActivityEmissionsTotal: metrics.linearActivityEmissionsTotal,
+      linearActivityDurationSeconds: metrics.linearActivityDurationSeconds,
+      linearSessionOperationsTotal: metrics.linearSessionOperationsTotal,
+    });
+  } catch (error) {
+    logger.warn("workflow_linear_metrics_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    const [{ configureCodexLinearMetrics }, { sessionManager }] =
+      await Promise.all([
+        import("@alfred/agent/orchestrator/tool/codex-linear"),
+        import("@alfred/agent/orchestrator/codex-session"),
+      ]);
     configureCodexLinearMetrics({
       histogram: codexLinearIntegrationLatencySeconds,
       activitiesEmitted: codexLinearActivitiesEmittedTotal,
@@ -103,7 +78,27 @@ configureLinearMetrics({
       error: error instanceof Error ? error.message : String(error),
     });
   }
-})();
+}
+
+function mapWorkflowResourceLocal(raw: unknown) {
+  const input =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const id =
+    typeof input.projectId === "string" && input.projectId.length > 0
+      ? input.projectId
+      : "default";
+  return { kind: "workflow" as const, id, attrs: { scope: "self" } };
+}
+
+function mapWorkflowRunResourceLocal(raw: unknown) {
+  const input =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const id =
+    typeof input.runId === "string" && input.runId.length > 0
+      ? input.runId
+      : "unknown";
+  return { kind: "workflow.run" as const, id, attrs: { scope: "self" } };
+}
 
 const workflowInputDataSchema = z.record(z.string(), z.unknown());
 
@@ -120,11 +115,24 @@ export function parseWorkflowInputData(val: unknown): Record<string, unknown> {
   return result.data;
 }
 
+const workflowInputSchema = z
+  .object({
+    requirement: z.string().min(1),
+    auto: z.enum(["read", "low", "medium", "high"]).optional(),
+    mode: z.string().optional(),
+    projectId: z.string().optional(),
+    planId: z.string().optional(),
+    runId: z.string().optional(),
+    linear: z.unknown().optional(),
+    authzLinear: z.string().optional(),
+  })
+  .passthrough();
+
 export const workflowRouter = router({
   start: authedProcedure
     .use(rateLimit)
-    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
-    .input(workflowInput)
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
+    .input(workflowInputSchema)
     .mutation(async ({ input, ctx }) => {
       const session = ctx.session;
       if (!session?.user?.id) {
@@ -134,31 +142,54 @@ export const workflowRouter = router({
         });
       }
 
+      await initWorkflowMetrics();
+      const { workflowInput } = await import("@alfred/agent/workflow/schema");
+      const workflow = workflowInput.parse(input) as WorkflowInputPayload;
+
       // Enforce obligations for medium/high autonomy workflows
-      if (input.auto === "medium" || input.auto === "high") {
+      if (workflow.auto === "medium" || workflow.auto === "high") {
         const obligations = ctx.policy?.obligations ?? [];
         if (obligations.length > 0 && requiresBiometric(obligations)) {
           throw new PolicyObligationError("workflow.plan", obligations, {
             reason: "workflow_autonomy",
-            auto: input.auto,
+            auto: workflow.auto,
           });
         }
       }
 
       try {
+        const [
+          { ensureLinearTicket },
+          {
+            createRequirementMessage,
+            createWorkflowExecutor,
+            deriveWorkflowTitle,
+            ensureWorkflowConversation,
+            persistWorkflowMessages,
+          },
+          { recordAudit },
+          { registerRunHandle },
+        ] = await Promise.all([
+          import("@alfred/agent/workflow/linear"),
+          import("@alfred/agent/workflow/services"),
+          import("@alfred/agent/utils/audit"),
+          import("@alfred/agent/workflow/session-recovery"),
+        ]);
+
         const abortController = new AbortController();
         const { linear: preparedLinear, ticket } = await ensureLinearTicket({
-          linear: input.linear,
-          authzLinear: input.authzLinear,
-          requirement: input.requirement,
+          linear: workflow.linear,
+          authzLinear: workflow.authzLinear,
+          requirement: workflow.requirement,
         });
         const workflowPayload = {
-          ...input,
+          ...workflow,
           linear: preparedLinear,
-        } as typeof input;
+        } as typeof workflow;
 
         const executor = await createWorkflowExecutor(
-          workflowPayload,
+          // biome-ignore lint/suspicious/noExplicitAny: Internal payload compatibility
+          workflowPayload as any,
           abortController,
           undefined,
           ctx.runtimeContext
@@ -177,9 +208,9 @@ export const workflowRouter = router({
         await workflowRepo.createRun({
           id: executor.runId,
           userId: session.user.id,
-          projectId: input.projectId,
-          planId: input.planId,
-          requirement: input.requirement,
+          projectId: workflow.projectId,
+          planId: workflow.planId,
+          requirement: workflow.requirement,
           workflowId: "plan",
           status: "running",
           inputData: storedInput,
@@ -190,8 +221,14 @@ export const workflowRouter = router({
         });
 
         // Trigger Linear metadata sync if project is associated
-        if (input.projectId) {
-          void syncOnWorkflowStart(input.projectId, executor.runId);
+        if (workflow.projectId) {
+          void (async () => {
+            const { syncOnWorkflowStart } = await import("@alfred/plan");
+            await syncOnWorkflowStart(
+              workflow.projectId as string,
+              executor.runId
+            );
+          })();
         }
 
         await ensureMirrorNodes("user", [
@@ -245,13 +282,14 @@ export const workflowRouter = router({
           action: "workflow.start",
           resource: { kind: "workflow", id: executor.runId },
           decision: "allow",
-          context: { auto: input.auto, mode: input.mode },
+          context: { auto: workflow.auto, mode: workflow.mode },
         });
 
         await registerRunHandle(executor.runId, {
-          resume: async ({ resumeData }: { resumeData: ResumePayload }) => {
+          resume: async ({ resumeData }: { resumeData: unknown }) => {
             await executor.resume(resumeData);
           },
+          // biome-ignore lint/suspicious/useAwait: Cancel is synchronous or returns a promise
           cancel: async () => {
             executor.cancel();
           },
@@ -276,7 +314,7 @@ export const workflowRouter = router({
 
   stream: authedProcedure
     .use(rateLimit)
-    .input(workflowInput)
+    .input(workflowInputSchema)
     .subscription(({ input, ctx }) =>
       observable<WorkflowEvent>((emit) => {
         const session = ctx.session;
@@ -293,7 +331,18 @@ export const workflowRouter = router({
           obligations: Obligation[];
           runId?: string;
         }) => {
-          const callbacks: OrchestratorCallbacks = {
+          await initWorkflowMetrics();
+          const [
+            { orchestrateWorkflowStream },
+            { ensureObligations },
+            { workflowInput },
+          ] = await Promise.all([
+            import("@alfred/agent/workflow/orchestrator"),
+            import("@alfred/agent/workflow/services"),
+            import("@alfred/agent/workflow/schema"),
+          ]);
+
+          const callbacks = {
             triggerPreferenceRefresh,
             ensureObligations: (ctx: unknown) => {
               ensureObligations(
@@ -301,16 +350,19 @@ export const workflowRouter = router({
               );
             },
             context: { ...ctx, policy: { obligations: options.obligations } },
-            emitError: (error) => {
+            emitError: (error: unknown) => {
               emit.error(toTRPCError(error, "workflow_execution_error"));
             },
-            emitNext: (event) => emit.next(event),
+            emitNext: (event: WorkflowEvent) => emit.next(event),
             emitComplete: () => emit.complete(),
-          };
+            // biome-ignore lint/suspicious/noExplicitAny: Internal callback compatibility
+          } as any;
 
           const payload = options.runId
-            ? { ...input, runId: options.runId }
-            : input;
+            ? // biome-ignore lint/suspicious/noExplicitAny: Payload contains defaults from Zod
+              (workflowInput.parse({ ...input, runId: options.runId }) as any)
+            : // biome-ignore lint/suspicious/noExplicitAny: Payload contains defaults from Zod
+              (workflowInput.parse(input) as any);
           cleanup = await orchestrateWorkflowStream(
             payload,
             session,
@@ -320,9 +372,14 @@ export const workflowRouter = router({
 
         const suspension = createWorkflowSuspension({
           sessionUserId: session.user.id,
-          input,
+          // biome-ignore lint/suspicious/noExplicitAny: Input schema compatibility
+          input: input as any,
           transport: "trpc",
-          auditContext: { auto: input.auto, mode: input.mode },
+          auditContext: {
+            auto: input.auto ?? "low",
+            mode: input.mode ?? "sequential",
+          },
+          // biome-ignore lint/suspicious/useAwait: Emit is called asynchronously but doesn't need await here
           emitObligation: async ({ runId, obligations, resumeEvents }) => {
             emit.next({
               _: "obligation",
@@ -334,7 +391,12 @@ export const workflowRouter = router({
           policyCheck: async () => {
             const { obligations } = await enforceWorkflowPlanPolicy({
               session,
-              input,
+              input: {
+                ...input,
+                auto: input.auto ?? "low",
+                // biome-ignore lint/suspicious/noExplicitAny: Internal enum mapping
+                mode: (input.mode as any) ?? "sequential",
+              } as WorkflowInputPayload,
             });
             return obligations;
           },
@@ -349,7 +411,11 @@ export const workflowRouter = router({
           try {
             const { obligations } = await enforceWorkflowPlanPolicy({
               session,
-              input,
+              input: {
+                ...input,
+                auto: input.auto ?? "low",
+                mode: (input.mode as any) ?? "sequential",
+              } as WorkflowInputPayload,
             });
 
             if (obligations.length > 0) {
@@ -412,6 +478,9 @@ export const workflowRouter = router({
       // Handle existing obligation resume
       if (input.event && input.authz) {
         try {
+          const { runRegistry } = await import(
+            "@alfred/agent/workflow/registry"
+          );
           const delivered = await runRegistry.dispatchResume(input.runId, {
             event: input.event,
             authz: input.authz,
@@ -424,6 +493,9 @@ export const workflowRouter = router({
             });
           }
         } catch (error) {
+          const { StreamNotAttachedError } = await import(
+            "@alfred/agent/workflow/session-recovery"
+          );
           if (error instanceof StreamNotAttachedError) {
             throw new TRPCError({
               code: "PRECONDITION_FAILED",
@@ -432,13 +504,16 @@ export const workflowRouter = router({
           }
           throw toTRPCError(error, "workflow_resume_failed");
         }
-        await recordAudit({
-          userId: null,
-          action: "workflow.resume",
-          resource: { kind: "workflow", id: input.runId },
-          decision: "allow",
-          context: { event: input.event },
-        });
+        {
+          const { recordAudit } = await import("@alfred/agent/utils/audit");
+          await recordAudit({
+            userId: null,
+            action: "workflow.resume",
+            resource: { kind: "workflow", id: input.runId },
+            decision: "allow",
+            context: { event: input.event },
+          });
+        }
         return { ok: true };
       }
 
@@ -472,8 +547,9 @@ export const workflowRouter = router({
         return { cancelled: false, reason: "already_finished" };
       }
       // Cancel via registry if still active
+      const { runRegistry } = await import("@alfred/agent/workflow/registry");
       const handle = (
-        runRegistry as { runs?: Map<string, RunHandle> }
+        runRegistry as { runs?: Map<string, { cancel: () => any }> }
       ).runs?.get(input.runId);
       if (handle) {
         try {
@@ -502,7 +578,9 @@ export const workflowRouter = router({
     }),
 
   reasoning: authedProcedure
-    .use(requirePolicy("workflow.read", (raw) => mapWorkflowRunResource(raw)))
+    .use(
+      requirePolicy("workflow.read", (raw) => mapWorkflowRunResourceLocal(raw))
+    )
     .input(
       z.object({
         runId: z.string().min(1),
@@ -693,6 +771,14 @@ export const workflowRouter = router({
       })
     )
     .query(async ({ input }) => {
+      await initWorkflowMetrics();
+      const [
+        { replayQueriesTotal, replayQueryDurationSeconds },
+        { unwrapEventEnvelope },
+      ] = await Promise.all([
+        import("@alfred/agent/workflow/metrics"),
+        import("@alfred/agent/utils/envelope"),
+      ]);
       let stop: (() => void) | null = null;
       try {
         stop = replayQueryDurationSeconds.startTimer({
@@ -703,7 +789,8 @@ export const workflowRouter = router({
       }
       const items = await workflowRepo.listEventsByTypePaged({
         runId: input.runId,
-        eventType: input.eventType,
+        eventType:
+          input.eventType as import("@alfred/db/schema/workflow").WorkflowEventType,
         page: input.page ?? 0,
         pageSize: input.pageSize ?? 500,
         order: input.order,
@@ -719,7 +806,7 @@ export const workflowRouter = router({
       if (input.includeTotal) {
         total = await workflowRepo.countEventsByType(
           input.runId,
-          input.eventType
+          input.eventType as import("@alfred/db/schema/workflow").WorkflowEventType
         );
       }
       const page = input.page ?? 0;

@@ -18,8 +18,10 @@ async function defaultOnFire(
     } | null;
 
     const result = await bridgeReminder(reminder.userId, {
+      type: "reminder",
       id: reminder.id,
       title: reminder.title,
+      when: reminder.remindAt?.toISOString() ?? new Date().toISOString(),
       description: reminder.description ?? undefined,
       intentType: metadata?.intentType,
       intentData: metadata?.intentData,
