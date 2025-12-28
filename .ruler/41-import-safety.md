@@ -11,4 +11,6 @@ Importing a package must be fast, side-effect free, and allow short-lived script
 3. **Metrics are opt-in.** Never call `prom-client.collectDefaultMetrics()` at import time; expose an explicit `startDefaultMetrics()` and invoke it from service init only.
 4. **Gate auto-init.** Any “back-compat auto-init” entrypoint must be gated behind an env var (e.g., `ALFRED_API_AUTO_INIT=false` for import-only scripts).
 5. **Test imports.** Add tests that `import()` key entrypoints and assert they exit quickly (time-bounded) and do not leak handles.
+6. **CLI stdin cleanup.** Any CLI code that may resume `process.stdin` (completion libraries, interactive prompts) must call `process.stdin.pause()` in a `finally` or teardown hook so `bun test` processes can exit.
+7. **Explicit subpath exports.** When a package is consumed via deep imports (e.g. `@pkg/auth/token`), add explicit `exports` entries for those exact paths; do not rely on wildcard exports being resolved consistently in all toolchains.
 

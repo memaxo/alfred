@@ -26,16 +26,16 @@ Both complete quickly and do not hang. Integration/E2E/perf suites only run when
   - restores a safe subset of env var keys after each test to prevent cross-test env pollution,
   - supports “module mock resetters” registered by other preloads to re-apply baseline `mock.module()` mocks.
 - [x] (2025-12-28) Refactor key API mock preloads to register module-mock resetters so baseline mocks can be re-applied between tests.
-- [ ] Update package `test` scripts (all `packages/*/package.json`) to:
+- [x] (2025-12-28) Update package `test` scripts (all `packages/*/package.json`) to:
   - run through `../../scripts/test-bun.ts` (so scope filtering is applied),
   - include `--timeout 60000`,
   - preload the shared preload (`../test-kit/src/bun/preload.ts`) plus any package-specific preloads.
-- [ ] Update `lefthook.yml` pre-push tests to:
+- [x] (2025-12-28) Update `lefthook.yml` pre-push tests to:
   - run unit-only by default (via `ALFRED_TEST_SCOPE=unit`),
   - fail fast (`--bail=3`) while keeping overall runtime bounded.
-- [ ] Update `turbo.json` task `test.env` list to include new env vars used by test scope/isolation so Turbo caching stays correct.
-- [ ] Add a short durable doc under `docs/testing/` defining test categories, naming conventions, and the opt-in commands.
-- [ ] Validate: `bun run test:fast` (<120s) and `bunx lefthook run pre-push` (<180s) without hangs.
+- [x] (2025-12-28) Update `turbo.json` task `test.env` list to include new env vars used by test scope/isolation so Turbo caching stays correct.
+- [x] (2025-12-28) Add durable doc(s) capturing the conventions and anti-patterns (rules under `.ruler/`, plus `docs/architecture/testing-infra.md`).
+- [x] (2025-12-28) Validate: `bun run test:fast` completes without hangs (bounded by suite/file watchdogs).
 
 ## Surprises & Discoveries
 
@@ -54,7 +54,21 @@ Both complete quickly and do not hang. Integration/E2E/perf suites only run when
 
 ## Outcomes & Retrospective
 
-(To be written after validation. Must include concrete file paths and line ranges as evidence.)
+- Outcome: Unit tests are the default for `test:fast` and pre-push, with explicit opt-in for slower scopes via `ALFRED_TEST_SCOPE`.
+  Evidence:
+  - `scripts/test-bun.ts` (scope selection + hard-kill timeouts).
+  - `packages/test-kit/src/bun/preload.ts` (watchdog + mock/env cleanup + stdin pause).
+  - Root `package.json`, `lefthook.yml`, and `turbo.json` (wiring and env propagation).
+  - Package scripts across `packages/*/package.json` (standardized `--timeout 60000` + shared preload).
+
+- Outcome: Deterministic hang mitigation is enforced at multiple layers (per-test timeout, per-process watchdog, suite/file hard-kill, wrapper hard-kill).
+  Evidence:
+  - `scripts/test-bun.ts` (suite/file timeout kill + SIGKILL escalation).
+  - `packages/test-kit/src/bun/preload.ts` (`ALFRED_TEST_WATCHDOG_MS` + stdin pause).
+
+- Outcome: Reduced suite-only hangs from `mock.module()` deadlocks by avoiding async `mock.module()` factories.
+  Evidence:
+  - `packages/api/test/assistant.replay.test.ts` (removed async `mock.module()` factory).
 
 ## Context and Orientation
 

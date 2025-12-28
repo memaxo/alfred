@@ -102,14 +102,27 @@ async function verify() {
   const runId = runtime.runId;
   logger.info("verification_run_started", { runId });
 
+  function kindOfEvent(event: unknown): string | null {
+    if (!event || typeof event !== "object") {
+      return null;
+    }
+    const e = event as Record<string, unknown>;
+    const primary = e._;
+    if (typeof primary === "string") {
+      return primary;
+    }
+    const fallback = e.type;
+    return typeof fallback === "string" ? fallback : null;
+  }
+
   try {
     for await (const event of runtime.stream) {
-      const kind =
-        (event as { _?: unknown; type?: unknown })._ ?? (event as any).type;
+      const kind = kindOfEvent(event);
       if (kind === "progress") {
-        console.log(
-          `[Progress]: ${(event as any).pct}% - ${(event as any).message}`
-        );
+        const e = event as Record<string, unknown>;
+        const pct = typeof e.pct === "number" ? e.pct : null;
+        const msg = typeof e.message === "string" ? e.message : "";
+        console.log(`[Progress]: ${pct ?? "?"}% - ${msg}`);
       } else if (kind === "notice") {
         const noticeEvent = event as WorkflowEvent & { _: "notice" };
         console.log(`[Notice]: ${noticeEvent.message}`);

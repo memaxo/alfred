@@ -210,7 +210,7 @@ describe("Desktop Context Flow Integration", () => {
   });
 
   describe("context cache population", () => {
-    it("records context receipt in store", async () => {
+    it("records context receipt in store", () => {
       const wrapper = createWrapper();
 
       act(() => {
@@ -236,7 +236,7 @@ describe("Desktop Context Flow Integration", () => {
       expect(cache["note-1"]?.ragDocIds).toContain("doc-1");
     });
 
-    it("clears context cache on window removal", async () => {
+    it("clears context cache on window removal", () => {
       act(() => {
         useDesktopStore
           .getState()

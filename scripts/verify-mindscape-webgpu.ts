@@ -49,7 +49,7 @@ function scanDirectory(
   return results;
 }
 
-async function run() {
+function run() {
   console.log("🚀 Starting Mindscape WebGPU build verification...");
 
   // 1. Build with WebGPU disabled
@@ -87,7 +87,9 @@ async function run() {
   );
 }
 
-run().catch((err) => {
+try {
+  run();
+} catch (err) {
   console.error(err);
   process.exit(1);
-});
+}

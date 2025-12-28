@@ -6,6 +6,7 @@ import {
   useDesktopActivations,
 } from "@/hooks/use-desktop-activations";
 import { useDesktopStore } from "@/store/desktop";
+import type { DesktopEdge, WindowInstance, WindowType } from "@/store/desktop/types";
 
 // Inline performance helper
 async function withBudget<T>(
@@ -19,13 +20,13 @@ async function withBudget<T>(
   return { result, durationMs, withinBudget: durationMs <= budgetMs };
 }
 
-function createTestWindow(id: string, type = "note") {
+function createTestWindow(id: string, type: WindowType = "note"): WindowInstance {
   return {
     id,
     type,
     position: { x: 100, y: 100 },
     data: {
-      type: type as any,
+      type,
       label: `Test ${type}`,
       viewMode: "full" as const,
     },
@@ -60,7 +61,7 @@ describe("Desktop Activation Events Integration", () => {
   });
 
   describe("event dispatch → edge activation", () => {
-    it("pulses specific edge when sourceId and targetId match", async () => {
+    it("pulses specific edge when sourceId and targetId match", () => {
       // Setup: Two windows connected by an edge
       act(() => {
         useDesktopStore
@@ -96,7 +97,7 @@ describe("Desktop Activation Events Integration", () => {
       expect(activeEdges.has("edge-chat-note")).toBe(true);
     });
 
-    it("pulses edge regardless of direction", async () => {
+    it("pulses edge regardless of direction", () => {
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("a", "note"));
         useDesktopStore.getState().addWindow(createTestWindow("b", "note"));
@@ -121,7 +122,7 @@ describe("Desktop Activation Events Integration", () => {
       expect(useDesktopStore.getState().activeEdges.has("edge-ab")).toBe(true);
     });
 
-    it("pulses all connected edges when only sourceId provided", async () => {
+    it("pulses all connected edges when only sourceId provided", () => {
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("hub", "chat"));
         useDesktopStore
@@ -153,7 +154,7 @@ describe("Desktop Activation Events Integration", () => {
       expect(activeEdges.has("edge-2")).toBe(true);
     });
 
-    it("pulses all connected edges when only targetId provided", async () => {
+    it("pulses all connected edges when only targetId provided", () => {
       act(() => {
         useDesktopStore
           .getState()
@@ -340,7 +341,7 @@ describe("Desktop Activation Events Integration", () => {
   });
 
   describe("fallback behavior", () => {
-    it("pulses both source and target edges when no direct edge exists", async () => {
+    it("pulses both source and target edges when no direct edge exists", () => {
       // Setup: Three windows, no direct edge between a and c
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("a", "note"));
@@ -445,7 +446,7 @@ describe("Desktop Activation Events Integration", () => {
             .getState()
             .addWindow(createTestWindow(`node-${i}`, "note"));
         }
-        const edges = [];
+        const edges: DesktopEdge[] = [];
         for (let i = 0; i < 9; i++) {
           edges.push({
             id: `edge-${i}`,
@@ -462,13 +463,14 @@ describe("Desktop Activation Events Integration", () => {
       const { withinBudget, durationMs } = await withBudget(
         "rapid-dispatch",
         50, // 50ms for 100 dispatches
-        async () => {
+        () => {
           for (let i = 0; i < 100; i++) {
             dispatchDesktopEvent({
               type: "context-cache",
               sourceId: `node-${i % 10}`,
             });
           }
+          return Promise.resolve();
         }
       );
 

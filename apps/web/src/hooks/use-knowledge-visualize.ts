@@ -60,7 +60,7 @@ export function useKnowledgeVisualize() {
   );
 
   const visualizeFromWindow = useCallback(
-    async (windowId: string) => {
+    (windowId: string) => {
       const window = windows.find((w) => w.id === windowId);
       if (!window) {
         setError("Window not found");

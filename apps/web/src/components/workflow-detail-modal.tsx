@@ -52,8 +52,8 @@ export function WorkflowDetailModal({
   const handleNavigateToMindscape = (documentId: string) => {
     navigate({
       to: "/",
-      search: (prev: any) => ({
-        ...prev,
+      search: (prev: Record<string, unknown> | undefined) => ({
+        ...(prev ?? {}),
         resourceType: "knowledge",
         resourceId: documentId,
       }),

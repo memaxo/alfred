@@ -160,14 +160,15 @@ export function setupCarPlay(
       return null;
     }
 
-    const listenButton = new (VoiceControlButton as any)({
+    type CarplayCtor = new (args: Record<string, unknown>) => unknown;
+    const listenButton = new (VoiceControlButton as CarplayCtor)({
       id: "alfred-voice",
       onPress: async () => {
         await handleVoiceButtonPress(voice, onReply);
       },
     });
 
-    return new (VoiceControlTemplate as any)({
+    return new (VoiceControlTemplate as CarplayCtor)({
       title: "Alfred Drive",
       subtitle: "Tap steering control or say “Hey Alfred”",
       buttons: [listenButton],

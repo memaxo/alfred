@@ -45,7 +45,7 @@ type PasskeyMethods = {
       },
       fetchOptions?: {
         onError?: (error: { error: { message?: string } }) => void;
-        onSuccess?: (context: any) => void;
+        onSuccess?: (context: unknown) => void;
         onFinished?: () => void;
       }
     ) => Promise<{ data?: unknown; error?: unknown }>;

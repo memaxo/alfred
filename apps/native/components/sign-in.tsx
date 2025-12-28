@@ -55,8 +55,8 @@ export function SignIn() {
       await authClient.signIn.passkey(
         { email },
         {
-          onError: (error: any) => {
-            setError(error.error?.message || "Passkey sign-in failed");
+          onError: (error: { error?: { message?: string } }) => {
+            setError(error.error?.message ?? "Passkey sign-in failed");
             setIsPasskeyLoading(false);
           },
           onSuccess: () => {

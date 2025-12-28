@@ -1,4 +1,5 @@
 import type { OrchestratorCallbacks } from "@alfred/agent/workflow/orchestrator";
+import type { ResumePayload } from "@alfred/agent/workflow/registry";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import {
   sseConnectionRateLimitHitsTotal,
@@ -11,7 +12,11 @@ import {
   removeConnection,
   updateConnectionActivity,
 } from "@alfred/api/utils/sse-connections";
-import type { Obligation, WorkflowEvent } from "@alfred/type";
+import type {
+  Obligation,
+  ObligationResumeEvent,
+  WorkflowEvent,
+} from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -318,14 +323,23 @@ export async function handleWorkflowStreamRequest(
             emitObligation: (payload: {
               runId: string;
               obligations: Obligation[];
-              resumeEvents: string[];
+              resumeEvents: ResumePayload["event"][];
             }) => {
               const { runId, obligations, resumeEvents } = payload;
+              // Filter resumeEvents to only valid ObligationResumeEvent values
+              // (WorkflowEvent expects ObligationResumeEvent[], but ResumePayload["event"][] includes additional values)
+              const validResumeEvents: ObligationResumeEvent[] =
+                resumeEvents.filter(
+                  (event): event is ObligationResumeEvent =>
+                    event === "bio-authz" ||
+                    event === "mfa-authz" ||
+                    event === "human-authz"
+                );
               sendWorkflowEvent({
                 _: "obligation",
                 runId,
                 obligations,
-                resumeEvents: resumeEvents as any,
+                resumeEvents: validResumeEvents,
               } as WorkflowEvent);
             },
             policyCheck: async () => {

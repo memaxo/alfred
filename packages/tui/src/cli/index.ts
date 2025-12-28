@@ -9,29 +9,29 @@ export async function runCli(args: string[]) {
   setupCompletions();
 
   try {
-    // Handle auth commands separately (not via trpc-cli)
-    if (args[0] === "auth") {
+  // Handle auth commands separately (not via trpc-cli)
+  if (args[0] === "auth") {
       return await authCommands(args.slice(1));
-    }
+  }
 
-    const wantsHelp =
-      args.includes("--help") ||
-      args.includes("-h") ||
-      args.length === 0 ||
-      (args.length === 1 && args[0]?.trim().length === 0);
+  const wantsHelp =
+    args.includes("--help") ||
+    args.includes("-h") ||
+    args.length === 0 ||
+    (args.length === 1 && args[0]?.trim().length === 0);
 
-    // trpc-cli expects a concrete context object (not a function).
-    // ALFRED's context creation is async (credentials + refresh), so we resolve it once up-front.
-    const ctx = wantsHelp ? createCliHelpContext() : await createCliContext();
+  // trpc-cli expects a concrete context object (not a function).
+  // ALFRED's context creation is async (credentials + refresh), so we resolve it once up-front.
+  const ctx = wantsHelp ? createCliHelpContext() : await createCliContext();
 
-    // Create trpc-cli instance
-    const cli = trpcCli({
-      router: appRouter,
-      context: ctx,
-    });
+  // Create trpc-cli instance
+  const cli = trpcCli({
+    router: appRouter,
+    context: ctx,
+  });
 
-    // Run CLI
-    await cli.run({ argv: args });
+  // Run CLI
+  await cli.run({ argv: args });
   } finally {
     // `omelette(...).init()` can resume stdin; pausing prevents Bun tests from
     // hanging after all tests complete (open stdin handle).
