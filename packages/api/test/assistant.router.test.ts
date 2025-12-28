@@ -158,30 +158,35 @@ describeFn("assistant router", () => {
       next: { kind: "navigate", href: "/orchestrator/run" },
     });
   });
-});
-it("bubbles validation errors", async () => {
-  validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
 
-  const caller = await createTestCaller({
-    scopes: ["assistant.write", "assistant.escalate"],
-  });
+  it("bubbles validation errors", async () => {
+    validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
 
-  await expect(
-    caller.assistant.generate({
-      messages: [
-        {
-          id: "msg-1",
-          role: "user",
-          parts: [{ type: "text", text: "invalid" }],
-        },
-      ],
-    })
-  ).rejects.toThrow(/invalid_message/);
-  expect(generateTextMock).not.toHaveBeenCalled();
-  expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith({
-    status: "started",
-  });
-  expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith({
-    status: "error",
+    const caller = await createTestCaller({
+      scopes: ["assistant.write", "assistant.escalate"],
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "invalid" }],
+          },
+        ],
+      })
+    ).rejects.toThrow(/invalid_message/);
+    expect(generateTextMock).not.toHaveBeenCalled();
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      {
+        status: "started",
+      }
+    );
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      {
+        status: "error",
+      }
+    );
   });
 });
