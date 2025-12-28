@@ -14,7 +14,11 @@ import { cognitiveEvents, cognitiveSnapshots } from "../schema/cognitive";
 export async function appendEvent(
   streamId: string,
   type: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  options?: {
+    parentId?: string | null;
+    seq?: number | null;
+  }
 ): Promise<typeof cognitiveEvents.$inferSelect> {
   const [event] = await db
     .insert(cognitiveEvents)
@@ -22,9 +26,14 @@ export async function appendEvent(
       streamId,
       type,
       payload,
+      parentId: options?.parentId ?? null,
+      seq: options?.seq ?? null,
     })
     .returning();
-  return event!;
+  if (!event) {
+    throw new Error("Failed to append cognitive event");
+  }
+  return event;
 }
 
 export async function saveSnapshot(
@@ -55,7 +64,7 @@ export async function getEventsSince(
   streamId: string,
   since: Date
 ): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
-  return db
+  return await db
     .select()
     .from(cognitiveEvents)
     .where(
@@ -74,7 +83,7 @@ export async function getEventsSince(
 export async function getAllEvents(
   streamId: string
 ): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
-  return db
+  return await db
     .select()
     .from(cognitiveEvents)
     .where(eq(cognitiveEvents.streamId, streamId))
@@ -105,7 +114,7 @@ export async function findActivePlans(): Promise<
       ? sql`${cognitiveSnapshots.state} ->> '_' = ${executing}`
       : sql`json_extract(${cognitiveSnapshots.state}, '$._') = ${executing}`;
 
-  return db
+  return await db
     .select({
       id: cognitiveSnapshots.id,
       streamId: cognitiveSnapshots.streamId,

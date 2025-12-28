@@ -313,21 +313,18 @@ export async function dsaBfs(
       // Check if this is a target node
       const isTarget = targetPredicate?.(neighbor) ?? false;
 
-      if (isTarget) {
-        // Update best result if this is better
-        if (!bestResult || similarity > bestResult.similarity) {
-          bestResult = {
-            node: neighbor,
-            path: newPath,
-            depth: newDepth,
-            similarity,
-            expansions,
-          };
+      if (isTarget && (!bestResult || similarity > bestResult.similarity)) {
+        bestResult = {
+          node: neighbor,
+          path: newPath,
+          depth: newDepth,
+          similarity,
+          expansions,
+        };
 
-          // Early termination if similarity is high enough
-          if (similarity >= earlyTerminationThreshold) {
-            return bestResult;
-          }
+        // Early termination if similarity is high enough
+        if (similarity >= earlyTerminationThreshold) {
+          return bestResult;
         }
       }
 

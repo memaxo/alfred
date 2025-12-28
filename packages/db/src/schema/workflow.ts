@@ -5,6 +5,7 @@
 
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
+  bigint,
   index,
   integer,
   jsonb,
@@ -121,7 +122,7 @@ const _workflowEventsTable = pgTable(
       (): AnyPgColumn => _workflowEventsTable.eventId
     ),
     seq: integer("seq"), // Monotonic sequence number per run (like codex_events.seq)
-    lamport: integer("lamport"), // Lamport clock for cross-run ordering
+    lamport: bigint("lamport", { mode: "number" }), // Lamport clock for cross-run ordering
   },
   (t) => ({
     runSeqIdx: index("workflow_events_run_seq_idx").on(t.runId, t.seq),

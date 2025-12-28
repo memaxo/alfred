@@ -1,5 +1,8 @@
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
+  bigint,
   index,
+  integer,
   jsonb,
   pgTable,
   timestamp,
@@ -7,7 +10,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const cognitiveEvents = pgTable(
+// Self-referential table for cognitive events
+const _cognitiveEventsTable = pgTable(
   "cognitive_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -15,6 +19,12 @@ export const cognitiveEvents = pgTable(
     type: varchar("type", { length: 50 }).notNull(),
     payload: jsonb("payload").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    // Debugger fields
+    parentId: uuid("parent_id").references(
+      (): AnyPgColumn => _cognitiveEventsTable.id
+    ),
+    seq: integer("seq"),
+    lamport: bigint("lamport", { mode: "number" }),
   },
   (t) => ({
     streamIdx: index("cognitive_events_stream_idx").on(t.streamId),
@@ -24,8 +34,16 @@ export const cognitiveEvents = pgTable(
       t.streamId,
       t.createdAt
     ),
+    streamSeqIdx: index("cognitive_events_stream_seq_idx").on(
+      t.streamId,
+      t.seq
+    ),
+    parentIdIdx: index("cognitive_events_parent_id_idx").on(t.parentId),
+    lamportIdx: index("cognitive_events_lamport_idx").on(t.lamport),
   })
 );
+
+export const cognitiveEvents = _cognitiveEventsTable;
 
 export const cognitiveSnapshots = pgTable(
   "cognitive_snapshots",
@@ -33,7 +51,9 @@ export const cognitiveSnapshots = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     streamId: varchar("stream_id", { length: 255 }).notNull(),
     state: jsonb("state").notNull(),
-    lastEventId: uuid("last_event_id").notNull(),
+    lastEventId: uuid("last_event_id")
+      .notNull()
+      .references(() => _cognitiveEventsTable.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
@@ -43,6 +63,9 @@ export const cognitiveSnapshots = pgTable(
     streamCreatedIdx: index("cognitive_snapshots_stream_created_idx").on(
       t.streamId,
       t.createdAt
+    ),
+    lastEventIdIdx: index("cognitive_snapshots_last_event_id_idx").on(
+      t.lastEventId
     ),
   })
 );

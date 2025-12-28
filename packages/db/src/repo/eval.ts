@@ -63,7 +63,10 @@ export async function upsertEvalDef(input: {
     })
     .returning();
 
-  return row!;
+  if (!row) {
+    throw new Error("Failed to upsert eval definition");
+  }
+  return row;
 }
 
 export async function listEvalDefs(
@@ -115,7 +118,10 @@ export async function createDataset(input: {
       description: input.description ?? null,
     })
     .returning();
-  return row!;
+  if (!row) {
+    throw new Error("Failed to create dataset");
+  }
+  return row;
 }
 
 export async function listDatasets(
@@ -191,7 +197,10 @@ export async function createRun(input: {
       variant: input.variant ?? null,
     })
     .returning();
-  return row!;
+  if (!row) {
+    throw new Error("Failed to create eval run");
+  }
+  return row;
 }
 
 export async function updateRun(

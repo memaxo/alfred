@@ -42,7 +42,11 @@ export async function getPatternCentroid(
     );
   }
 
-  return centroidCache.get(pattern)!;
+  const centroid = await centroidCache.get(pattern);
+  if (!centroid) {
+    throw new Error(`Centroid for pattern ${pattern} not found`);
+  }
+  return centroid;
 }
 
 export async function embedTextSamples(texts: string[]): Promise<number[][]> {

@@ -59,7 +59,10 @@ export async function upsertLinear(input: {
       },
     })
     .returning();
-  return row!;
+  if (!row) {
+    throw new Error("Failed to upsert Linear installation");
+  }
+  return row;
 }
 
 export async function getLinearByWorkspace(

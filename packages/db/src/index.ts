@@ -17,9 +17,9 @@ export {
   shutdownDb,
 } from "./client";
 export * from "./metrics";
-export * as assistantRepo from "./repo/assistant";
-export * as budgetRepo from "./repo/budget";
+
 // Export repositories as namespaces
+export * as assistantRepo from "./repo/assistant";
 export * as clarificationRepo from "./repo/clarification";
 export * as codexLearningRepo from "./repo/codex-learning";
 export * as codexRunRepo from "./repo/codex-run";
@@ -31,16 +31,16 @@ export * as evalRepo from "./repo/eval";
 export * as graphRepo from "./repo/graph";
 export * as linearRepo from "./repo/linear";
 export * as patternRepo from "./repo/pattern";
-export * as personalityRepo from "./repo/personality";
 export * as planRepo from "./repo/plan";
 export * as policyRepo from "./repo/policy";
 export * as projectRepo from "./repo/project";
-export * as queueRepo from "./repo/queue";
 export * as ragRepo from "./repo/rag";
 export * as userRepo from "./repo/user";
 export * as workflowRepo from "./repo/workflow";
+
+// Schemas are exposed under namespaces to avoid duplicate export collisions.
 export * as assistantSchema from "./schema/assistant";
-export * as budgetSchema from "./schema/budget";
+export * as authSchema from "./schema/auth";
 export * as clarificationSchema from "./schema/clarification";
 export * as codexSchema from "./schema/codex";
 export * from "./schema/cognitive";
@@ -50,12 +50,10 @@ export * as evalSchema from "./schema/eval";
 export * as graphSchema from "./schema/graph";
 export * as linearSchema from "./schema/linear";
 export * as patternSchema from "./schema/pattern";
-export * as personalitySchema from "./schema/personality";
 export * as planSchema from "./schema/plan";
 export * as policySchema from "./schema/policy";
 export * as projectSchema from "./schema/project";
-export * as queueSchema from "./schema/queue";
 export * as ragSchema from "./schema/rag";
-// Schemas are exposed under namespaces to avoid duplicate export collisions.
+export * as todoSchema from "./schema/todo";
 export * as userSchema from "./schema/user";
 export * as workflowSchema from "./schema/workflow";
