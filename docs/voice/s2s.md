@@ -42,6 +42,20 @@ python3 scripts/download_models.py
 
 The script downloads `large-v3-turbo` for Faster-Whisper and `en_US-lessac-medium` for Piper. Update the env vars above if you change model locations.
 
+## Local validation scripts (macOS)
+
+Use these when validating the local voice runtime on Apple Silicon (MPS) without starting the full web/native stack:
+
+```bash
+cd /path/to/alfred
+export VOICE_PROVIDER=maya1 WHISPER_DEVICE=mps ALFRED_API_AUTO_INIT=false
+bun scripts/voice/validate.ts      # explicit pools + STT/TTS cold/warm + saves tmp/voice/tts.wav
+bun scripts/voice/verify-runtime.ts # stable runtime check (STT via `say`, TTS + PCM decode)
+```
+
+Notes:
+- The Python STT subprocess consumes **PCM16**; prefer `transcribeLocal()`/`voice.sttTranscribe` (they decode containers via `decodeToPCM16`) over calling `STTPool.transcribe` with WAV/WebM bytes.
+
 ## Running the API
 
 ```bash

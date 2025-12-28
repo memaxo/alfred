@@ -36,3 +36,5 @@ The Voice system prioritizes **latency** and **privacy**. Use local models (Maya
 
 15. **Stderr Visibility.** Parent processes must capture and log `stderr` from subprocesses in real-time; silent failures during startup are unacceptable.
 16. **Fixture-driven tests.** Any test that touches `VoiceRegistry`, pools, or the streaming prototype must install the shared fixture from `@alfred/test-kit/voice/runtime-fixture`, letting the real WebSocket server run while only configuring transcripts/chunks via fixture options and cleaning up with `restore()`/`stop()` so `@alfred/voice`, `@alfred/runtime`, and workflow metrics stay real.
+17. **STT PCM contract.** The Python STT subprocess consumes PCM16 bytes; server code must normalize containers/codecs via `decodeToPCM16` (or `transcribeLocal`) before calling `STTPool.transcribe`.
+18. **Init is awaitable.** Voice pool initialization must be idempotent and concurrency-safe; never treat “constructed” pools as “ready” until their `initialize()` calls have completed.

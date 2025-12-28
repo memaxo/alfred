@@ -70,6 +70,17 @@ Environment variables control the behavior:
 - `VOICE_STT_POOL_SIZE`: Number of concurrent STT processes (default: 2).
 - `VOICE_TTS_POOL_SIZE`: Number of concurrent TTS processes (default: 1).
 
+## Local validation (macOS / Apple Silicon)
+
+Validate pools + STT/TTS without the full app stack:
+
+```bash
+cd /path/to/alfred
+export VOICE_PROVIDER=maya1 WHISPER_DEVICE=mps ALFRED_API_AUTO_INIT=false
+bun scripts/voice/validate.ts
+bun scripts/voice/verify-runtime.ts
+```
+
 ## Barge-In Interruptibility
 
 Users can interrupt TTS playback by speaking:
