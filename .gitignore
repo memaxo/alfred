@@ -104,3 +104,5 @@ tmp-policy-test/
 # Build profiling artifacts (heap snapshots, diagnostic reports)
 .profiles/
 **/*.heapsnapshot
+
+design-reference/intro-videos/

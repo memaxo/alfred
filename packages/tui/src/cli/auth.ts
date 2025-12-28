@@ -83,8 +83,8 @@ export async function deviceLogin(): Promise<void> {
     refreshToken: tokens.refreshToken,
     expiresAt: Date.now() + tokens.expiresIn * 1000,
     sessionId: tokens.session.id,
-    user: tokens.user,
-    session: tokens.session,
+    user: tokens.user as any, // Better Auth device auth returns partial user
+    session: tokens.session as any, // Better Auth device auth returns partial session
   });
 }
 
@@ -99,8 +99,17 @@ export async function setupLocalDevAuth(): Promise<void> {
       email: "admin@alfred.local",
       name: "Local Admin",
       emailVerified: true,
-    },
-    session: { id: "local-dev-session" },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any, // Minimal user for local dev
+    session: {
+      id: "local-dev-session",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      userId: "dev-admin-id",
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      token: "local-dev-token",
+    } as any, // Minimal session for local dev
     isLocal: true,
   };
 

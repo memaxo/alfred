@@ -6,7 +6,11 @@ import {
   useDesktopActivations,
 } from "@/hooks/use-desktop-activations";
 import { useDesktopStore } from "@/store/desktop";
-import type { DesktopEdge, WindowInstance, WindowType } from "@/store/desktop/types";
+import type {
+  DesktopEdge,
+  WindowInstance,
+  WindowType,
+} from "@/store/desktop/types";
 
 // Inline performance helper
 async function withBudget<T>(
@@ -20,7 +24,10 @@ async function withBudget<T>(
   return { result, durationMs, withinBudget: durationMs <= budgetMs };
 }
 
-function createTestWindow(id: string, type: WindowType = "note"): WindowInstance {
+function createTestWindow(
+  id: string,
+  type: WindowType = "note"
+): WindowInstance {
   return {
     id,
     type,

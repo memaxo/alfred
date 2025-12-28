@@ -1,4 +1,12 @@
-import type { Event } from "@alfred/cognitive/state";
+import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
+import type {
+  AutonomyGradient,
+  CognitiveState,
+  Event,
+} from "@alfred/cognitive/state";
+import { idle, initialAutonomy } from "@alfred/cognitive/state";
+import { applyTransition } from "@alfred/cognitive/transition";
+import { cognitiveRepo } from "@alfred/db";
 import { cosineSimilarity, embedMany } from "@alfred/embed";
 import { logger } from "@alfred/logger";
 import type { CognitiveEffect } from "@alfred/runtime/cognitive";
@@ -67,7 +75,86 @@ async function computeFeedbackSimilarity(
   }
 }
 
+// Type guard for snapshot state with optional autonomy
+type SnapshotState = CognitiveState & { autonomy?: AutonomyGradient };
+
+/**
+ * Reconstruct current cognitive state from snapshot + events
+ */
+async function reconstructState(
+  streamId: string
+): Promise<{ state: CognitiveState; autonomy: AutonomyGradient }> {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+  const isEventLike = (value: unknown): value is { _: string } =>
+    isRecord(value) && typeof value._ === "string";
+
+  let state: CognitiveState;
+  let autonomy: AutonomyGradient;
+
+  // Load from snapshot first
+  const snapshot = await cognitiveRepo.getLatestSnapshot(streamId);
+  if (snapshot) {
+    const snapState = snapshot.state as SnapshotState;
+    state = snapState;
+    autonomy = snapState.autonomy ?? initialAutonomy(Date.now());
+    // Replay events since snapshot
+    const events = await cognitiveRepo.getEventsSince(
+      streamId,
+      snapshot.createdAt
+    );
+    for (const record of events) {
+      const unwrapped = unwrapEventEnvelope(record.payload);
+      if (!isEventLike(unwrapped.data)) {
+        continue;
+      }
+      const historicalEvent = unwrapped.data as Event;
+      const result = applyTransition(state, autonomy, historicalEvent);
+      state = result.state;
+      autonomy = result.autonomy;
+    }
+  } else {
+    // No snapshot - return initial idle state
+    state = idle(Date.now());
+    autonomy = initialAutonomy(Date.now());
+  }
+
+  return { state, autonomy };
+}
+
 export const cognitiveRouter = router({
+  /**
+   * Get the current cognitive state for a stream
+   */
+  state: authedProcedure
+    .input(z.object({ streamId: z.string().default("default") }))
+    .query(async ({ input }) => {
+      const { state, autonomy } = await reconstructState(input.streamId);
+
+      // Extract timestamp based on state type
+      const getStateTimestamp = (): number | undefined => {
+        switch (state._) {
+          case "idle":
+            return state.since as unknown as number;
+          case "capturing":
+          case "thinking":
+          case "executing":
+            return state.started as unknown as number;
+          case "deciding":
+            return state.deadline as unknown as number;
+          case "reflecting":
+            return;
+        }
+      };
+
+      return {
+        state,
+        autonomy,
+        phase: state._,
+        ts: getStateTimestamp(),
+      };
+    }),
+
   feedback: authedProcedure
     .use(
       requirePolicy("cognitive.feedback", mapResource, buildContext, {

@@ -26,7 +26,7 @@ type GraphEdgeSeed = {
 };
 
 import type { Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
@@ -157,6 +157,46 @@ function makeEdge(
 }
 
 export const knowledgeRouter = router({
+  /**
+   * Get knowledge graph statistics
+   * Returns counts of facts, relations, insights, and patterns
+   */
+  stats: authedProcedure
+    .input(z.object({ resource: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const resource = input?.resource ?? "user";
+
+      // Count nodes by kind
+      const nodeCountsByKind = await db
+        .select({
+          kind: memoryNodes.kind,
+          count: count(),
+        })
+        .from(memoryNodes)
+        .where(eq(memoryNodes.resource, resource))
+        .groupBy(memoryNodes.kind);
+
+      // Count total edges
+      const edgeCountResult = await db
+        .select({ count: count() })
+        .from(memoryEdges)
+        .where(eq(memoryEdges.resource, resource));
+
+      // Extract counts by kind
+      const kindCounts = new Map(
+        nodeCountsByKind.map((row) => [row.kind, Number(row.count)])
+      );
+
+      return {
+        facts: kindCounts.get("fact") ?? 0,
+        relations: edgeCountResult[0]?.count ?? 0,
+        insights: kindCounts.get("insight") ?? 0,
+        patterns: kindCounts.get("pattern") ?? 0,
+        totalNodes: Array.from(kindCounts.values()).reduce((a, b) => a + b, 0),
+        resource,
+      };
+    }),
+
   visualize: authedProcedure
     .input(visualizeInputSchema)
     .mutation(async ({ ctx, input }) => {

@@ -2,6 +2,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createAuthClient } from "better-auth/client";
+import type { Session, User } from "better-auth/types";
 
 const ALFRED_DIR = join(homedir(), ".alfred");
 const CREDENTIALS_PATH = join(ALFRED_DIR, "credentials.json");
@@ -15,8 +16,8 @@ export type StoredCredentials = {
   refreshToken: string;
   expiresAt: number;
   sessionId: string;
-  user: any;
-  session: any;
+  user: User;
+  session: Session;
   isLocal?: boolean;
 };
 
