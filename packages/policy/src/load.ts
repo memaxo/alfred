@@ -171,10 +171,10 @@ export async function loadPolicy(
   const parsed = policyDocumentSchema.parse(YAML.parse(raw) ?? {});
 
   const roles: PolicyDocument["roles"] = Object.fromEntries(
-    Object.entries(parsed.roles).map(([role, value]) => [
-      role,
-      { scopes: dedupe(value.scopes) },
-    ])
+    Object.entries(parsed.roles).map(([role, value]) => {
+      const roleData = value as z.infer<typeof policyRoleSchema>;
+      return [role, { scopes: dedupe(roleData.scopes) }];
+    })
   );
 
   const doc: PolicyDocument = {
