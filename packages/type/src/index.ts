@@ -20,6 +20,8 @@ export * from "./history";
 export * from "./id";
 // Knowledge graph types
 export * from "./knowledge";
+// CLI Manifest types
+export * from "./manifest";
 // Personalization schemas
 export * from "./personal";
 // Personality traits (if exists)

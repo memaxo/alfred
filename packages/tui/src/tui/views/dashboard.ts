@@ -4,6 +4,7 @@
  * Main dashboard composition with multiple panels.
  */
 
+import { getRegistry } from "../../registry";
 import type { CommandPaletteState } from "../input/commands";
 import {
   createCommandPaletteActions,
@@ -63,6 +64,7 @@ export class Dashboard {
   private readonly registry: PanelRegistry;
   private readonly callbacks: DashboardCallbacks;
   private renderInterval: ReturnType<typeof setInterval> | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor(callbacks: DashboardCallbacks = {}) {
     this.callbacks = callbacks;
@@ -84,14 +86,45 @@ export class Dashboard {
       running: false,
     };
 
-    // Register built-in panels
-    this.registerBuiltinPanels();
+    // Register built-in panels asynchronously
+    this.initPromise = this.registerBuiltinPanels();
   }
 
-  private registerBuiltinPanels(): void {
+  private async registerBuiltinPanels(): Promise<void> {
     this.registry.register(new HeaderPanel());
     this.registry.register(new StatusPanel());
     this.registry.register(new ShortcutsPanel());
+
+    // Load panels from package registry
+    await this.loadRegistryPanels();
+  }
+
+  private async loadRegistryPanels(): Promise<void> {
+    try {
+      const packageRegistry = getRegistry();
+
+      // Initialize if not already done
+      if (packageRegistry.getAll().length === 0) {
+        await packageRegistry.initialize();
+      }
+
+      const panels = packageRegistry.getAllPanels();
+
+      for (const panelDef of panels) {
+        try {
+          // Lazy load the panel via the factory function
+          const panelInstance = await panelDef.factory();
+          this.registry.register(panelInstance as BasePanel);
+        } catch (error) {
+          console.error(
+            `[Dashboard] Failed to load panel ${panelDef.id} from ${panelDef.package}:`,
+            error
+          );
+        }
+      }
+    } catch (error) {
+      console.error("[Dashboard] Failed to load registry panels:", error);
+    }
   }
 
   /**
@@ -104,10 +137,17 @@ export class Dashboard {
   /**
    * Start the dashboard
    */
-  start(): void {
+  async start(): Promise<void> {
     if (this.state.running) {
       return;
     }
+
+    // Wait for panel initialization
+    if (this.initPromise) {
+      await this.initPromise;
+      this.initPromise = null;
+    }
+
     this.state.running = true;
 
     // Setup input handling

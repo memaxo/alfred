@@ -2715,18 +2715,23 @@ Extends core packages to enable debugger (can run in parallel with Phase 1):
 - [ ] VoicePanel
 - [ ] KnowledgePanel
 
-### Phase 4: Interactive Modes (Week 4-5)
+### Phase 4: Interactive Modes (Week 4-5) ✅
 
-- [ ] Chat mode (`alfred tui chat`)
-- [ ] Planning mode (`alfred tui plan`)
-- [ ] Debug console (`alfred tui debug`)
+- [x] Chat mode (`alfred tui chat`)
+- [x] Planning mode (`alfred tui plan`)
+- [x] Debug console (`alfred tui debug`)
 
-### Phase 5: Package Integration (Week 5-6)
+### Phase 5: Package Integration (Week 5-6) ✅
 
-- [ ] Define `CliManifest` interface
-- [ ] Update all packages with manifests
-- [ ] Auto-discovery system
-- [ ] Documentation
+- [x] Define `CliManifest` interface (`packages/tui/src/registry/manifest.ts`)
+- [x] Auto-discovery system (`packages/tui/src/registry/discover.ts`)
+- [x] PackageRegistry class (`packages/tui/src/registry/index.ts`)
+- [x] Sample manifests (`@alfred/voice`, `@alfred/cognitive`)
+- [x] Registry tests (`packages/tui/test/registry/`)
+- [x] Update 8 high-value packages with manifests (db, agent, runtime, knowledge, embed, api, metrics, plan)
+- [x] Integration with CLI command dispatch
+- [x] Integration with TUI panel registry
+- [x] Documentation (`docs/guides/package-manifests.md`)
 
 ### Phase 6: MCP Integration (Week 6-7)
 

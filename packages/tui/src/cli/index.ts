@@ -1,6 +1,7 @@
 import { appRouter } from "@alfred/api/router";
 import { trpcCli } from "trpc-cli";
 import { authCommands } from "../commands/auth";
+import { initializeRegistry } from "../registry";
 import { setupCompletions } from "./completions";
 import { createCliContext, createCliHelpContext } from "./context";
 
@@ -9,6 +10,9 @@ export async function runCli(args: string[]): Promise<void> {
   setupCompletions();
 
   try {
+    // Initialize package registry
+    const registry = await initializeRegistry();
+
     // Handle auth commands separately (not via trpc-cli)
     if (args[0] === "auth") {
       return await authCommands(args.slice(1));
@@ -17,6 +21,11 @@ export async function runCli(args: string[]): Promise<void> {
     // Handle TUI commands
     if (args[0] === "tui") {
       return await handleTuiCommand(args.slice(1));
+    }
+
+    // Handle registry commands (e.g., "alfred db:migrate", "alfred voice:test-stt")
+    if (args[0] && (args[0].includes(":") || registry.findCommand(args[0]))) {
+      return await handleRegistryCommand(args, registry);
     }
 
     const wantsHelp =
@@ -83,4 +92,93 @@ async function handleTuiCommand(args: string[]): Promise<void> {
   }
 }
 
-function printTuiHelp(): void {}
+function printTuiHelp(): void {
+  console.log(
+    `
+ALFRED TUI - Terminal User Interface
+
+Usage: alfred tui [subcommand]
+
+Subcommands:
+  chat        Interactive chat mode
+  plan        Planning mode
+  debug       Debug console
+  <none>      Launch dashboard (default)
+
+Options:
+  --skip-intro  Skip intro animation
+  --help, -h    Show this help
+
+Keyboard Shortcuts:
+  q           Quit
+  ?           Show help
+  Tab         Next panel
+  Shift+Tab   Previous panel
+`.trim()
+  );
+}
+
+// ─── Registry Command Handler ─────────────────────────────────────────────────
+
+async function handleRegistryCommand(
+  args: string[],
+  registry: Awaited<ReturnType<typeof initializeRegistry>>
+): Promise<void> {
+  const commandName = args[0];
+  if (!commandName) {
+    console.error("No command specified");
+    process.exit(1);
+  }
+
+  const cmd = registry.findCommand(commandName);
+  if (!cmd) {
+    console.error(`Unknown command: ${commandName}`);
+    console.error("Try 'alfred --help' for available commands");
+    process.exit(1);
+  }
+
+  // Parse arguments (simple implementation - could be enhanced with yargs/commander)
+  const cmdArgs: Record<string, any> = {};
+  const positionalArgs: string[] = [];
+
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg) continue;
+
+    if (arg.startsWith("--")) {
+      const key = arg.slice(2);
+      const nextArg = args[i + 1];
+
+      // Check if next arg is a value or another flag
+      if (nextArg && !nextArg.startsWith("--")) {
+        // Try to parse as number or boolean
+        if (nextArg === "true" || nextArg === "false") {
+          cmdArgs[key] = nextArg === "true";
+        } else if (Number.isNaN(Number(nextArg))) {
+          cmdArgs[key] = nextArg;
+        } else {
+          cmdArgs[key] = Number(nextArg);
+        }
+        i++; // Skip next arg
+      } else {
+        // Boolean flag
+        cmdArgs[key] = true;
+      }
+    } else {
+      positionalArgs.push(arg);
+    }
+  }
+
+  // Validate with Zod schema if available
+  if (cmd.args) {
+    try {
+      const validated = cmd.args.parse(cmdArgs);
+      await cmd.handler(validated);
+    } catch (error) {
+      console.error(`Invalid arguments: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  } else {
+    await cmd.handler(cmdArgs);
+  }
+}
