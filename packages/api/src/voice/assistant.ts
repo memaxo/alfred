@@ -1,4 +1,3 @@
-import { getAssistantAgentDefaults } from "@alfred/agent";
 import type { Event, Outcome } from "@alfred/cognitive/state";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
@@ -92,6 +91,7 @@ export async function runAssistantForVoice(
   if (!ctx.ai) {
     ctx.ai = new DefaultAIAdapter();
   }
+  const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
   const defaults = getAssistantAgentDefaults();
   const threadId = input.thread ?? `voice:${input.userId}`;
   const resourceId = input.resource ?? threadId;

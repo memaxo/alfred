@@ -1,4 +1,4 @@
-import { recordMemoryForget } from "@alfred/agent";
+import { recordMemoryForget } from "@alfred/agent/metrics";
 import {
   deleteFact,
   getEvents,

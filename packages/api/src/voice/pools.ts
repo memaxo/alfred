@@ -10,6 +10,8 @@ export type { ProcessConfig };
 let sttPool: STTPool | null = null;
 let ttsPool: TTSPool | null = null;
 let voiceRegistry: VoiceRegistry | null = null;
+let initPromise: Promise<void> | null = null;
+let initialized = false;
 
 export function getVoicePools(): {
   sttPool: STTPool;
@@ -25,7 +27,11 @@ export function getVoicePools(): {
 }
 
 export async function initializeVoicePools(): Promise<void> {
-  if (sttPool || ttsPool) {
+  if (initialized) {
+    return;
+  }
+  if (initPromise) {
+    await initPromise;
     return;
   }
 
@@ -78,57 +84,73 @@ export async function initializeVoicePools(): Promise<void> {
     voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium", // Will be used as description default if not provided in request
   };
 
-  try {
-    sttPool = new STTPool(sttConfig, sttPoolSize);
-    ttsPool = new TTSPool(ttsConfig, ttsPoolSize);
-
-    await sttPool.initialize();
+  initPromise = (async () => {
     try {
-      await ttsPool.initialize();
-    } catch (error) {
-      logger.error("tts_pool_init_failed", { error });
-      // Don't fail the whole system if TTS fails, as STT might be the priority for testing
-    }
+      sttPool = new STTPool(sttConfig, sttPoolSize);
+      ttsPool = new TTSPool(ttsConfig, ttsPoolSize);
 
-    voiceRegistry = new VoiceRegistry(sttPool, ttsPool);
+      await sttPool.initialize();
+      try {
+        await ttsPool.initialize();
+      } catch (error) {
+        logger.error("tts_pool_init_failed", { error });
+        // Don't fail the whole system if TTS fails, as STT might be the priority for testing
+      }
 
-    // Start health monitoring loop
-    setInterval(() => {
-      if (sttPool) {
-        // Check if pool is saturated
-        const sttActive = sttPool.activeCount ?? 0;
-        const sttSize = sttPool.size ?? 1;
-        if (sttActive >= sttSize) {
-          logger.warn("voice_pool_saturation", {
-            pool: "stt",
-            active: sttActive,
-            size: sttSize,
-          });
+      voiceRegistry = new VoiceRegistry(sttPool, ttsPool);
+
+      // Start health monitoring loop
+      setInterval(() => {
+        if (sttPool) {
+          // Check if pool is saturated
+          const sttActive = sttPool.activeCount ?? 0;
+          const sttSize = sttPool.size ?? 1;
+          if (sttActive >= sttSize) {
+            logger.warn("voice_pool_saturation", {
+              pool: "stt",
+              active: sttActive,
+              size: sttSize,
+            });
+          }
         }
+        if (ttsPool) {
+          const ttsActive = ttsPool.activeCount ?? 0;
+          const ttsSize = ttsPool.size ?? 1;
+          if (ttsActive >= ttsSize) {
+            logger.warn("voice_pool_saturation", {
+              pool: "tts",
+              active: ttsActive,
+              size: ttsSize,
+            });
+          }
+        }
+      }, 15_000).unref();
+
+      initialized = true;
+    } catch (error) {
+      // Clean up partial initialization
+      if (voiceRegistry) {
+        voiceRegistry.shutdown();
+        voiceRegistry = null;
+      }
+      if (sttPool) {
+        await sttPool.shutdown().catch(() => {});
+        sttPool = null;
       }
       if (ttsPool) {
-        const ttsActive = ttsPool.activeCount ?? 0;
-        const ttsSize = ttsPool.size ?? 1;
-        if (ttsActive >= ttsSize) {
-          logger.warn("voice_pool_saturation", {
-            pool: "tts",
-            active: ttsActive,
-            size: ttsSize,
-          });
-        }
+        await ttsPool.shutdown().catch(() => {});
+        ttsPool = null;
       }
-    }, 15_000).unref();
-  } catch (error) {
-    // Clean up partial initialization
-    if (sttPool) {
-      await sttPool.shutdown().catch(() => {});
-      sttPool = null;
+      throw error;
     }
-    if (ttsPool) {
-      await ttsPool.shutdown().catch(() => {});
-      ttsPool = null;
+  })();
+
+  try {
+    await initPromise;
+  } finally {
+    if (!initialized) {
+      initPromise = null;
     }
-    throw error;
   }
 }
 
@@ -145,4 +167,6 @@ export async function shutdownVoicePools(): Promise<void> {
     await ttsPool.shutdown();
     ttsPool = null;
   }
+  initPromise = null;
+  initialized = false;
 }

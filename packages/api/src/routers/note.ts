@@ -6,7 +6,6 @@ import {
 } from "@alfred/db/repo/assistant";
 import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import { logger } from "@alfred/logger";
-import { ingest } from "@alfred/rag";
 import z from "zod";
 import { authedProcedure, router } from "../trpc";
 
@@ -83,12 +82,17 @@ export const noteRouter = router({
       // Skip embedding if content is empty or whitespace only
       const trimmedContent = input.content.trim();
       if (trimmedContent.length > 0) {
-        ingest(`note:${note.id}`, trimmedContent).catch((error) => {
-          logger.warn("note_embedding_failed", {
-            noteId: note.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
+        void (async () => {
+          try {
+            const { ingest } = await import("@alfred/rag");
+            await ingest(`note:${note.id}`, trimmedContent);
+          } catch (error) {
+            logger.warn("note_embedding_failed", {
+              noteId: note.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })();
       }
 
       return note;
@@ -120,12 +124,17 @@ export const noteRouter = router({
     if (input.content) {
       const trimmedContent = input.content.trim();
       if (trimmedContent.length > 0) {
-        ingest(`note:${input.id}`, trimmedContent).catch((error) => {
-          logger.warn("note_reembedding_failed", {
-            noteId: input.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
+        void (async () => {
+          try {
+            const { ingest } = await import("@alfred/rag");
+            await ingest(`note:${input.id}`, trimmedContent);
+          } catch (error) {
+            logger.warn("note_reembedding_failed", {
+              noteId: input.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })();
       }
     }
 

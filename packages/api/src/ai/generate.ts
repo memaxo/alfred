@@ -1,9 +1,9 @@
-import { normalizeToUiMessages } from "@alfred/agent";
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
+import { normalizeToUiMessages } from "@alfred/agent/utils/normalize";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
+import { makeEventId } from "@alfred/type/id";
 import { generateText } from "ai";
-import { makeEventId } from "../utils/event-id";
 
 type PersistArgs = {
   userId: string;

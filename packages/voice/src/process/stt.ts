@@ -68,6 +68,9 @@ export class STTPool {
   }
 
   async transcribe(request: STTRequest): Promise<STTResult> {
+    if (this._activeCount >= this.poolSize) {
+      throw new Error("voice_stt_pool_saturated");
+    }
     const process = this.getNextProcess();
     this._activeCount++;
     try {

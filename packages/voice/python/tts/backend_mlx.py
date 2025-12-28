@@ -192,12 +192,12 @@ class TTSServerMLX(TTSServerBase):
         prompt = self.build_prompt(voice_description, text)
         
         audio_chunks = []
-        
+
         def handle_audio_chunk(chunk_bytes):
             if streaming:
                 self.emit_audio(chunk_bytes, 24000, False, request_id)
             audio_chunks.append(chunk_bytes)
-            
+
         streamer = SNACStreamerMLX(self.snac_decoder, handle_audio_chunk)
         
         t1 = time.time()
@@ -211,6 +211,7 @@ class TTSServerMLX(TTSServerBase):
         
         max_tokens = 2048
         tokens = []
+        snac_tokens = []
         
         for (token, prob), i in zip(
             generate_step(prompt_tokens, self.model, temp=0.8),
@@ -220,12 +221,21 @@ class TTSServerMLX(TTSServerBase):
             if token_val == CODE_END_TOKEN_ID:
                 break 
                 
-            streamer.process(token_val)
+            if streaming:
+                streamer.process(token_val)
+            if SNAC_MIN_ID <= token_val <= SNAC_MAX_ID:
+                snac_tokens.append(token_val)
             tokens.append(token_val)
             
-        streamer.flush()
+        if streaming:
+            streamer.flush()
             
         t4 = time.time()
         logger.info(f"Synthesis timing [id={request_id}]: total={t4-t0:.4f}s")
         
-        return b"".join(audio_chunks)
+        if streaming:
+            return b"".join(audio_chunks)
+
+        # Non-streaming: decode full token buffer once for correct full-utterance audio.
+        full = streamer.decode_to_bytes(snac_tokens, use_sliding_window=False)
+        return full or b""

@@ -25,8 +25,6 @@ type GraphEdgeSeed = {
   metadata?: unknown;
 };
 
-import { parseEntityFactLabel } from "@alfred/knowledge/entity";
-import { extract, toKnowledge } from "@alfred/knowledge/extractor";
 import type { Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -166,6 +164,9 @@ export const knowledgeRouter = router({
       const limit = input.limit ?? 20;
       const source = `mindscape:${ctx.session.user.id}`;
 
+      const { extract, toKnowledge } = await import(
+        "@alfred/knowledge/extractor"
+      );
       const extraction = extract(input.text, source);
       const entries = toKnowledge(extraction);
 
@@ -237,6 +238,8 @@ export const knowledgeRouter = router({
         )
         .orderBy(desc(memoryNodes.created))
         .limit(ENTITY_FETCH_LIMIT);
+
+      const { parseEntityFactLabel } = await import("@alfred/knowledge/entity");
 
       // Further filter by parsed entity label format and extracted labels
       const entityRows = recentEntityFacts.filter((row) => {

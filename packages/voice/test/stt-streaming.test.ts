@@ -9,7 +9,7 @@ mock.module("../src/process/base", () => {
         createRequest: (type: string, payload: unknown) => ({ type, payload }),
       };
       async start() {}
-      async sendRequest(req: any) {
+      sendRequest(req: any) {
         if (req.payload.streaming) {
           // For verification of interface only - STT streaming is usually via VAD chunking
           // which sends separate requests for each chunk, OR a single long-running request.
@@ -53,5 +53,28 @@ describe("STT Streaming Verification", () => {
     const result = await pool.transcribe(request);
     expect(result.text).toBe("streaming result");
     expect(result.isPartial).toBe(true);
+  });
+
+  it("should reject when the pool is saturated", async () => {
+    const pool = new STTPool({ scriptPath: "", modelPath: "" }, 1);
+    await pool.initialize();
+
+    const p1 = pool.transcribe({
+      audioBase64: "test",
+      mimeType: "audio/pcm",
+    });
+    const p2 = pool.transcribe({
+      audioBase64: "test",
+      mimeType: "audio/pcm",
+    });
+
+    const err = await p2.then(
+      () => null,
+      (e) => e
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe("voice_stt_pool_saturated");
+
+    await p1;
   });
 });

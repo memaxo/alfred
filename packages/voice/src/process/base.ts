@@ -48,23 +48,6 @@ export class Process {
     // Resolve Python executable with UV/virtual environment support
     const { cmd, cwd } = await this.resolvePythonExecutable();
 
-    // #region agent log
-    const logData1 = {
-      location: "base.ts:45",
-      message: "Python command resolved",
-      data: { cmd, cwd, scriptPath: this.config.scriptPath },
-      timestamp: Date.now(),
-      sessionId: "debug-session",
-      runId: "run1",
-      hypothesisId: "A",
-    };
-    fetch("http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(logData1),
-    }).catch(() => {});
-    // #endregion
-
     // Verify dependencies before starting
     await this.verifyDependencies(cmd);
 
@@ -78,27 +61,6 @@ export class Process {
       PIPER_VOICE: this.config.voice ?? "en_US-lessac-medium",
       ...this.config.env,
     };
-
-    // #region agent log
-    const logData2 = {
-      location: "base.ts:59",
-      message: "Environment before spawn",
-      data: {
-        pythonPath: env.PYTHONPATH,
-        path: env.PATH?.substring(0, 100),
-        piperModelPath: env.PIPER_MODEL_PATH,
-      },
-      timestamp: Date.now(),
-      sessionId: "debug-session",
-      runId: "run1",
-      hypothesisId: "C",
-    };
-    fetch("http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(logData2),
-    }).catch(() => {});
-    // #endregion
 
     this.process = spawn({
       cmd,
@@ -364,7 +326,7 @@ except ImportError as e:
         // Auto-restart on unexpected exit
         setTimeout(() => {
           this.start().catch((_error) => {});
-        }, 1000);
+        }, 1000).unref();
       }
     });
   }
@@ -419,6 +381,7 @@ except ImportError as e:
         this.lastPing = Date.now();
       } catch (_error) {}
     }, 30_000); // Every 30 seconds
+    this.healthCheckInterval.unref();
   }
 
   async ping(): Promise<void> {

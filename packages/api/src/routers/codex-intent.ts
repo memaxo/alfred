@@ -1,5 +1,4 @@
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import {
   requireToolScopesAndPolicy,
   type TokenClaims,
@@ -129,6 +128,9 @@ const codexIntentProcedures = {
       const prompt = intentToPrompt(input.intent);
 
       try {
+        const { toolCodex } = await import(
+          "@alfred/agent/orchestrator/tool/codex/index"
+        );
         const chunks: string[] = [];
         const events: AlfredCodexEvent[] = [];
 

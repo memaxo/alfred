@@ -1,25 +1,6 @@
-import { getAssistantAgentDefaults } from "@alfred/agent";
-import {
-  startCodexSessionCleanupWorker,
-  stopCodexSessionCleanupWorker,
-} from "@alfred/agent/orchestrator/codex-session";
-import {
-  startCompressionWorker,
-  stopCompressionWorker,
-} from "@alfred/agent/orchestrator/compression-worker";
-import { compressionWorkerOverrides } from "@alfred/agent/orchestrator/config";
-import {
-  startLearningWorker,
-  stopLearningWorker,
-} from "@alfred/agent/orchestrator/learning-worker";
-import { flushPreviewCleanupBacklog } from "@alfred/agent/orchestrator/tool/worktree";
-import { rehydrateSuspendedRuns } from "@alfred/agent/workflow/session-recovery";
 import { logger } from "@alfred/logger";
-import { resumeInterruptedPlans } from "@alfred/runtime";
-import {
-  startIdleLoopScheduler,
-  stopIdleLoopScheduler,
-} from "./scheduler/idle-loop";
+import { startDefaultMetrics } from "@alfred/metrics/default";
+import { initMetricsHooks } from "./metrics";
 import { isDbAvailable, isUvAvailable } from "./utils/service-availability";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
 import {
@@ -45,26 +26,44 @@ export function initApiServices(): void {
   }
   initialized = true;
 
+  // Start Prometheus default metrics collection only in long-lived service mode.
+  // Avoid import-time timers that keep short scripts from exiting (e.g. router import checks).
+  startDefaultMetrics();
+  initMetricsHooks();
+
   // Initialize compression worker (if enabled)
-  const compressionConfig = compressionWorkerOverrides();
-  if (compressionConfig.enabled) {
-    startCompressionWorker(compressionConfig);
-    logger.info("compression_worker_init", {
-      message: "Compression worker started",
-      intervalMs: compressionConfig.intervalMs,
-    });
-  } else {
-    logger.info("compression_worker_disabled", {
-      message: "Compression worker disabled",
-    });
-  }
+  void (async () => {
+    const { compressionWorkerOverrides } = await import(
+      "@alfred/agent/orchestrator/config"
+    );
+    const { startCompressionWorker } = await import(
+      "@alfred/agent/orchestrator/compression-worker"
+    );
+    const compressionConfig = compressionWorkerOverrides();
+    if (compressionConfig.enabled) {
+      startCompressionWorker(compressionConfig);
+      logger.info("compression_worker_init", {
+        message: "Compression worker started",
+        intervalMs: compressionConfig.intervalMs,
+      });
+    } else {
+      logger.info("compression_worker_disabled", {
+        message: "Compression worker disabled",
+      });
+    }
+  })();
 
   // Initialize learning worker (if enabled via env)
   if (process.env.ENABLE_LEARNING_WORKER === "1") {
-    startLearningWorker();
-    logger.info("learning_worker_init", {
-      message: "Learning worker started",
-    });
+    void (async () => {
+      const { startLearningWorker } = await import(
+        "@alfred/agent/orchestrator/learning-worker"
+      );
+      startLearningWorker();
+      logger.info("learning_worker_init", {
+        message: "Learning worker started",
+      });
+    })();
   }
 
   // FIX: Only start DB-dependent workers if DB is available
@@ -80,33 +79,43 @@ export function initApiServices(): void {
       }
 
       // Start codex session cleanup worker
-      startCodexSessionCleanupWorker();
-      logger.info("codex_session_cleanup_worker_started", {
-        intervalMs:
-          Number.parseInt(
-            process.env.CODEX_SESSION_CLEANUP_INTERVAL_MS ?? "",
-            10
-          ) || undefined,
-      });
-
-      // Resume interrupted plans from DB (background)
-      {
+      void (async () => {
+        const { startCodexSessionCleanupWorker } = await import(
+          "@alfred/agent/orchestrator/codex-session"
+        );
+        startCodexSessionCleanupWorker();
+        logger.info("codex_session_cleanup_worker_started", {
+          intervalMs:
+            Number.parseInt(
+              process.env.CODEX_SESSION_CLEANUP_INTERVAL_MS ?? "",
+              10
+            ) || undefined,
+        });
+      })();
+      void (async () => {
+        const [{ getAssistantAgentDefaults }, { resumeInterruptedPlans }] =
+          await Promise.all([
+            import("@alfred/agent/agents"),
+            import("@alfred/runtime/loops/resume"),
+          ]);
         const tools = getAssistantAgentDefaults().tools ?? {};
         resumeInterruptedPlans(tools).catch((error) => {
           logger.error("resume_interrupted_plans_error", {
             error: error instanceof Error ? error.message : String(error),
           });
         });
-      }
+      })();
 
-      rehydrateSuspendedRuns().catch((error) => {
-        logger.error("workflow_rehydrate_failed", {
-          error: error instanceof Error ? error.message : String(error),
+      void (async () => {
+        const { rehydrateSuspendedRuns } = await import(
+          "@alfred/agent/workflow/session-recovery"
+        );
+        rehydrateSuspendedRuns().catch((error) => {
+          logger.error("workflow_rehydrate_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
-      });
-
-      // Start idle loop scheduler (if enabled via IDLE_LOOP_ENABLED=1)
-      startIdleLoopScheduler();
+      })();
     })
     .catch((error) => {
       logger.warn("db_availability_check_error", {
@@ -122,32 +131,42 @@ export function initApiServices(): void {
   const cleanupRoot =
     process.env.WORKTREE_PREVIEW_CLEANUP_ROOT ?? process.cwd();
 
-  flushPreviewCleanupBacklog(cleanupRoot)
-    .then((count) => {
-      if (count > 0) {
-        logger.info("worktree_preview_cleanup_startup", { cleaned: count });
-      }
-    })
-    .catch((error) => {
-      logger.warn("worktree_preview_cleanup_startup_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    });
-
-  worktreeCleanupInterval = setInterval(() => {
+  void (async () => {
+    const { flushPreviewCleanupBacklog } = await import(
+      "@alfred/agent/orchestrator/tool/worktree"
+    );
     flushPreviewCleanupBacklog(cleanupRoot)
       .then((count) => {
         if (count > 0) {
-          logger.info("worktree_preview_cleanup_interval", {
-            cleaned: count,
-          });
+          logger.info("worktree_preview_cleanup_startup", { cleaned: count });
         }
       })
       .catch((error) => {
-        logger.warn("worktree_preview_cleanup_interval_failed", {
+        logger.warn("worktree_preview_cleanup_startup_failed", {
           error: error instanceof Error ? error.message : String(error),
         });
       });
+  })();
+
+  worktreeCleanupInterval = setInterval(() => {
+    void (async () => {
+      const { flushPreviewCleanupBacklog } = await import(
+        "@alfred/agent/orchestrator/tool/worktree"
+      );
+      flushPreviewCleanupBacklog(cleanupRoot)
+        .then((count) => {
+          if (count > 0) {
+            logger.info("worktree_preview_cleanup_interval", {
+              cleaned: count,
+            });
+          }
+        })
+        .catch((error) => {
+          logger.warn("worktree_preview_cleanup_interval_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    })();
   }, cleanupIntervalMs).unref();
   logger.info("worktree_preview_cleanup_interval_started", {
     cleanupIntervalMs,
@@ -188,10 +207,20 @@ export function shutdownApiServices(): void {
 
   // Stop compression worker
   try {
-    stopCompressionWorker();
-    stopLearningWorker();
-    stopCodexSessionCleanupWorker();
-    stopIdleLoopScheduler();
+    void (async () => {
+      const [
+        { stopCompressionWorker },
+        { stopLearningWorker },
+        { stopCodexSessionCleanupWorker },
+      ] = await Promise.all([
+        import("@alfred/agent/orchestrator/compression-worker"),
+        import("@alfred/agent/orchestrator/learning-worker"),
+        import("@alfred/agent/orchestrator/codex-session"),
+      ]);
+      stopCompressionWorker();
+      stopLearningWorker();
+      stopCodexSessionCleanupWorker();
+    })();
     logger.info("compression_worker_stopped");
   } catch (error) {
     logger.error("compression_worker_stop_failed", {

@@ -128,9 +128,24 @@ export const assistantGenerateRequestsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
-// Lazy hook wiring for cross-package metrics
-if (process.env.DISABLE_METRICS_HOOKS !== "1") {
-  (async () => {
+let metricsHooksStarted = false;
+
+/**
+ * Initialize cross-package metrics hooks.
+ *
+ * IMPORTANT: must not run at module import time (router imports must be
+ * side-effect free so short scripts can exit).
+ */
+export function initMetricsHooks(): void {
+  if (metricsHooksStarted) {
+    return;
+  }
+  metricsHooksStarted = true;
+  if (process.env.DISABLE_METRICS_HOOKS === "1") {
+    return;
+  }
+
+  void (async () => {
     try {
       const agent = await import("@alfred/agent");
       const { droidExecRunsTotal, droidExecDurationSeconds } = await import(

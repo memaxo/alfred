@@ -4,7 +4,6 @@ import {
   preferenceCacheInvalidationsTotal,
   preferenceRefreshTotal,
 } from "../metrics";
-import { runPreferenceInference } from "../scheduler/preference-inference";
 
 const pendingUsers = new Set<string>();
 const DEFAULT_DEBOUNCE_MS = 5000;
@@ -17,6 +16,9 @@ async function drainQueue() {
   }
   pendingUsers.clear();
 
+  const { runPreferenceInference } = await import(
+    "../scheduler/preference-inference"
+  );
   for (const userId of batch) {
     try {
       await runPreferenceInference(userId);

@@ -1,6 +1,3 @@
-import { getAssistantAgentDefaults } from "@alfred/agent";
-import { getModelSpec } from "@alfred/agent/models";
-import { getModelId } from "@alfred/agent/v6";
 import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
@@ -78,6 +75,10 @@ function mapResource(raw: unknown) {
 
 export const assistantRouter = router({
   getConfig: authedProcedure.query(async () => {
+    const [{ getModelSpec }, { getModelId }] = await Promise.all([
+      import("@alfred/agent/models"),
+      import("@alfred/agent/v6"),
+    ]);
     const spec = getModelSpec(getModelId());
     return {
       modelId: spec.id,
@@ -93,6 +94,9 @@ export const assistantRouter = router({
       const stopTimer = assistantGenerateDurationSeconds.startTimer();
       assistantGenerateRequestsTotal.inc({ status: "started" });
       try {
+        const { getAssistantAgentDefaults } = await import(
+          "@alfred/agent/agents"
+        );
         const defaults = getAssistantAgentDefaults();
 
         const { systemInstruction } = await buildAssistantContext({

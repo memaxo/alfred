@@ -1,4 +1,4 @@
-import { recordMemoryUpdate } from "@alfred/agent";
+import { recordMemoryUpdate } from "@alfred/agent/metrics";
 import { getProfile, upsertProfile } from "@alfred/db/repo/user";
 import { profileUpdateSchema } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
@@ -28,7 +28,7 @@ function ensureObligations(ctx: Context) {
 }
 
 export const profileRouter = router({
-  get: authedProcedure.query(async ({ ctx }) => {
+  get: authedProcedure.query(({ ctx }) => {
     const session = ctx.session;
     if (!session?.user?.id) {
       throw new TRPCError({

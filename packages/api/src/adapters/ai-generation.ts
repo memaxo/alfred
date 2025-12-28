@@ -1,4 +1,3 @@
-import { getAssistantAgentDefaults } from "@alfred/agent";
 import type { AIAdapter } from "@alfred/type/ai-adapter";
 import type {
   GenerateObjectResult,
@@ -14,6 +13,7 @@ export class DefaultAIAdapter implements AIAdapter {
     system?: string;
     tools?: Record<string, any>;
   }): Promise<GenerateTextResult<Record<string, any>, never>> {
+    const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
     const defaults = getAssistantAgentDefaults();
     return generateText({
       model: defaults.model as any,
@@ -29,6 +29,7 @@ export class DefaultAIAdapter implements AIAdapter {
     schema: z.ZodType<T, any, any>;
     prompt?: string;
   }): Promise<GenerateObjectResult<T>> {
+    const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
     const defaults = getAssistantAgentDefaults();
     // prompt and messages are mutually exclusive in AI SDK v6
     const callParams: any = {

@@ -1,8 +1,7 @@
 import type { Event } from "@alfred/cognitive/state";
 import { cosineSimilarity, embedMany } from "@alfred/embed";
 import { logger } from "@alfred/logger";
-import type { CognitiveEffect } from "@alfred/runtime";
-import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
+import type { CognitiveEffect } from "@alfred/runtime/cognitive";
 import { z } from "zod";
 import type { Context } from "../context";
 import { requirePolicy } from "../gate";
@@ -89,6 +88,7 @@ export const cognitiveRouter = router({
         ts: (input.ts ?? Date.now()) as any,
       };
 
+      const { runCognitiveLoop } = await import("@alfred/runtime/cognitive");
       const { state, effects } = await runCognitiveLoop(
         ctx.runtimeContext,
         input.streamId,
@@ -116,6 +116,9 @@ async function handleCognitiveEffects(
     return;
   }
 
+  const { runAssistantGeneration, runCognitiveLoop } = await import(
+    "@alfred/runtime/cognitive"
+  );
   const queue: CognitiveEffect[] = [...initialEffects];
 
   while (queue.length > 0) {

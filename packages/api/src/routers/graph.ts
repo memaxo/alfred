@@ -1,13 +1,7 @@
 import { createHash } from "node:crypto";
-import { loadHypergraphFromDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import { db } from "@alfred/db";
 import { ensureMirrorNodes, touchNodes } from "@alfred/db/repo/graph/write";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
-import {
-  getExplainingDocuments,
-  runQuery as runUnifiedQuery,
-} from "@alfred/graph";
-import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
 import { logger } from "@alfred/logger";
 import { observable } from "@trpc/server/observable";
 import { and, eq, inArray, or } from "drizzle-orm";
@@ -237,6 +231,7 @@ export const graphRouter = router({
       })
     )
     .query(async ({ input }) => {
+      const { getExplainingDocuments } = await import("@alfred/graph");
       const { nodes, edges } = await getExplainingDocuments(
         input.reasoningNodeId
       );
@@ -325,6 +320,7 @@ export const graphRouter = router({
       let stopTimer: (() => void) | null = null;
 
       try {
+        const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
         try {
           stopTimer = graphQueryDurationSeconds.startTimer({ kind });
         } catch {
@@ -518,6 +514,11 @@ export const graphRouter = router({
           input.kind === "datalog" ||
           (input.kind === "semantic" && input.preferRag !== true)
         ) {
+          const [{ empty: createHypergraph }, { loadHypergraphFromDb }] =
+            await Promise.all([
+              import("@alfred/knowledge/hypergraph"),
+              import("@alfred/agent/assistant/hypergraph-bridge"),
+            ]);
           graphInstance = createHypergraph();
           await loadHypergraphFromDb(resource, graphInstance);
         }

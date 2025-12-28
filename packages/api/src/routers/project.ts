@@ -1,6 +1,5 @@
 // packages/api/src/routers/project.ts
 import { projectRepo } from "@alfred/db";
-import { detectProject, linkLinearProject } from "@alfred/plan";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
@@ -20,6 +19,7 @@ export const projectRouter = router({
         });
       }
 
+      const { detectProject } = await import("@alfred/plan");
       return await detectProject(input.workspace, userId);
     }),
 
@@ -58,6 +58,7 @@ export const projectRouter = router({
       }
 
       try {
+        const { linkLinearProject } = await import("@alfred/plan");
         return await linkLinearProject(input.projectId, input.linearProjectId);
       } catch (error) {
         throw new TRPCError({

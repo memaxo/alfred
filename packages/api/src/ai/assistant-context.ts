@@ -1,9 +1,3 @@
-import {
-  analyzeContext,
-  getPersonaInstruction,
-} from "@alfred/agent/assistant/src/adapter";
-import { KnowledgeEngine } from "@alfred/runtime/engines/knowledge";
-
 type MemoryOptions = {
   semanticRecall?: {
     topK?: number;
@@ -47,6 +41,12 @@ export async function buildAssistantContext(
   if (!query) {
     return { systemInstruction, detectedDomains };
   }
+
+  const [{ analyzeContext, getPersonaInstruction }, { KnowledgeEngine }] =
+    await Promise.all([
+      import("@alfred/agent/assistant/src/adapter"),
+      import("@alfred/runtime/engines/knowledge"),
+    ]);
 
   const analysis = await analyzeContext(
     messages as Array<{ role: string; content: string }>

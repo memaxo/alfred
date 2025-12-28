@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { sessionManager } from "@alfred/agent/orchestrator/codex-session";
 import {
   alfredCodexEventSchema,
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
@@ -7,7 +6,6 @@ import {
   MIN_TIMEOUT_SEC,
 } from "@alfred/agent/orchestrator/tool/codex/definition";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { codexRunRepo, codexSessionRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
@@ -222,6 +220,9 @@ function createCodexStreamObservable({
 
     void (async () => {
       try {
+        const { toolCodex } = await import(
+          "@alfred/agent/orchestrator/tool/codex/index"
+        );
         const result = await toolCodex.execute({
           input: {
             action: "exec" as const,
@@ -395,6 +396,9 @@ const codexProcedures = {
       const events: AlfredCodexEvent[] = [];
 
       try {
+        const { toolCodex } = await import(
+          "@alfred/agent/orchestrator/tool/codex/index"
+        );
         await toolCodex.execute({
           input: {
             action: "exec" as const,
@@ -634,6 +638,9 @@ const codexProcedures = {
           message: "session_required",
         });
       }
+      const { sessionManager } = await import(
+        "@alfred/agent/orchestrator/codex-session"
+      );
       const session = await sessionManager.getSession(input.sessionId, userId);
       if (!session) {
         throw new TRPCError({
@@ -665,6 +672,9 @@ const codexProcedures = {
           message: "codex_session_not_found",
         });
       }
+      const { sessionManager } = await import(
+        "@alfred/agent/orchestrator/codex-session"
+      );
       await sessionManager.terminateSession(input.sessionId);
       return { success: true };
     }),

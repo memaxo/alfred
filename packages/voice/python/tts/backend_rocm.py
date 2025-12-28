@@ -25,12 +25,13 @@ BOS_ID = 128000
 TEXT_EOT_ID = 128009
 
 class SNACStreamerROCm(BaseStreamer):
-    def __init__(self, snac_decoder, callback, device="cpu"):
+    def __init__(self, snac_decoder, callback, device="cpu", emit_chunks=True):
         self.snac_decoder = snac_decoder
         self.callback = callback
         self.device = device
         self.token_buffer = []
         self.generated_tokens = []
+        self.emit_chunks = emit_chunks
         
     def put(self, value):
         if value.dim() > 1:
@@ -48,6 +49,8 @@ class SNACStreamerROCm(BaseStreamer):
         pass
 
     def process_buffer(self):
+        if not self.emit_chunks:
+            return
         if len(self.token_buffer) % 7 == 0 and len(self.token_buffer) > 27:
             window_tokens = self.token_buffer[-28:]
             self.decode_and_emit(window_tokens)
@@ -191,13 +194,18 @@ class TTSServerROCm(TTSServerBase):
         t2 = time.time()
 
         audio_chunks = []
-        
+
         def handle_audio_chunk(chunk_bytes):
             if streaming:
                 self.emit_audio(chunk_bytes, 24000, False, request_id)
             audio_chunks.append(chunk_bytes)
 
-        streamer = SNACStreamerROCm(self.snac_model, handle_audio_chunk, device=self.device)
+        streamer = SNACStreamerROCm(
+            self.snac_model,
+            handle_audio_chunk,
+            device=self.device,
+            emit_chunks=streaming,
+        )
         
         t3 = time.time()
         with torch.inference_mode():
@@ -217,5 +225,10 @@ class TTSServerROCm(TTSServerBase):
         
         logger.info(f"Synthesis timing [id={request_id}]: prompt={t1-t0:.4f}s, tokenization={t2-t1:.4f}s, setup={t3-t2:.4f}s, generation={t4-t3:.4f}s, total={t4-t0:.4f}s")
 
-        # Note: Base class handles isFinal logic for streaming
-        return b"".join(audio_chunks)
+        if streaming:
+            # Note: Base class handles isFinal logic for streaming
+            return b"".join(audio_chunks)
+
+        # Non-streaming: decode full token buffer once for correct full-utterance audio.
+        full = streamer.decode_to_bytes(streamer.token_buffer, use_sliding_window=False)
+        return full or b""

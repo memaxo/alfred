@@ -2,12 +2,12 @@
 name = "alfred-voice"
 version = "0.1.0"
 description = "Voice models dependencies for ALFRED (Faster-Whisper STT, Piper TTS)"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "nemo_toolkit[asr]>=1.23.0",
     "packaging",
     "silero-vad>=4.0.0",
-    "numpy>=1.24.0",
+    "numpy>=1.24.0,<2",
     "torch>=2.5.0",
     "torchvision>=0.20.0",
     "torchaudio>=2.5.0",

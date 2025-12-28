@@ -1,4 +1,3 @@
-import { getOrchestratorAgentDefaults } from "@alfred/agent";
 import { TRPCError } from "@trpc/server";
 import { type LanguageModel, stepCountIs } from "ai";
 import { z } from "zod";
@@ -52,6 +51,9 @@ export const orchestratorRouter = router({
       const stopTimer = orchestratorGenerateDurationSeconds.startTimer();
       orchestratorGenerateRequestsTotal.inc({ status: "started" });
       try {
+        const { getOrchestratorAgentDefaults } = await import(
+          "@alfred/agent/agents"
+        );
         const defaults = getOrchestratorAgentDefaults();
         const model = defaults.model as LanguageModel;
         const system =

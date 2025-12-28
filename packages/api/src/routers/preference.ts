@@ -3,10 +3,7 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 
 type PreferenceRow = typeof userSchema.preferences.$inferSelect;
 
-import { recordMemoryForget, recordMemoryUpdate } from "@alfred/agent";
-import { learnDomainCorrection } from "@alfred/agent/orchestrator/learning-worker";
-import { inferPreferenceFromCorrection } from "@alfred/agent/preference/inference";
-import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
+import { recordMemoryForget, recordMemoryUpdate } from "@alfred/agent/metrics";
 import {
   preferenceDeleteSchema,
   preferenceListSchema,
@@ -209,6 +206,9 @@ export const preferenceRouter = router({
       }
 
       if (updated > 0) {
+        const { invalidatePreferenceCache } = await import(
+          "@alfred/agent/preference/loader"
+        );
         await invalidatePreferenceCache(session.user.id);
         recordMemoryUpdate("preference", "learned");
       }
@@ -262,6 +262,9 @@ export const preferenceRouter = router({
         }),
       ]);
 
+      const { inferPreferenceFromCorrection } = await import(
+        "@alfred/agent/preference/inference"
+      );
       const inferred = await inferPreferenceFromCorrection(
         conversationRepo.messageRowToUIMessage(original),
         conversationRepo.messageRowToUIMessage(corrected),
@@ -279,7 +282,12 @@ export const preferenceRouter = router({
         0.7,
         "inferred"
       );
-      await invalidatePreferenceCache(session.user.id);
+      {
+        const { invalidatePreferenceCache } = await import(
+          "@alfred/agent/preference/loader"
+        );
+        await invalidatePreferenceCache(session.user.id);
+      }
       recordMemoryUpdate("preference", "inferred");
 
       return { inferred: 1 };
@@ -313,11 +321,16 @@ export const preferenceRouter = router({
 
       ensureObligations(ctx);
 
-      await learnDomainCorrection(
-        input.text,
-        input.correctDomain,
-        input.incorrectDomain
-      );
+      {
+        const { learnDomainCorrection } = await import(
+          "@alfred/agent/orchestrator/learning-worker"
+        );
+        await learnDomainCorrection(
+          input.text,
+          input.correctDomain,
+          input.incorrectDomain
+        );
+      }
 
       recordMemoryUpdate("classification", "correction");
 
