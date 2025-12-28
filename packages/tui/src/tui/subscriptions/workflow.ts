@@ -206,7 +206,7 @@ export function setupWorkflowSubscription(
 
         return Promise.resolve({
           unsubscribe: () => clearInterval(interval),
-          onData: (cb) => {
+          onData: (cb: (event: WorkflowEvent) => void) => {
             callback = cb;
           },
           onError: () => {},

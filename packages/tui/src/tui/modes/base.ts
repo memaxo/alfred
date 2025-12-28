@@ -27,7 +27,8 @@ export type ModeCallbacks = {
 export abstract class BaseMode {
   protected running = false;
   protected renderInterval: ReturnType<typeof setInterval> | null = null;
-  protected readonly callbacks: ModeCallbacks;
+  /** Public callbacks for lifecycle hooks */
+  readonly callbacks: ModeCallbacks;
   protected size: TerminalSize = { width: 80, height: 24 };
 
   constructor(callbacks: ModeCallbacks = {}) {

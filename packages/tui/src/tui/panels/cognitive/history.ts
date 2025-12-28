@@ -144,8 +144,8 @@ export function renderTimeline(
   lines.push(connected);
 
   // Time labels
-  if (recentTransitions.length > 0) {
-    const firstTime = formatRelativeTime(recentTransitions[0]?.timestamp);
+  if (recentTransitions.length > 0 && recentTransitions[0]?.timestamp) {
+    const firstTime = formatRelativeTime(recentTransitions[0].timestamp);
     const lastTime = "now";
     const padding = " ".repeat(
       Math.max(0, connected.length - firstTime.length - lastTime.length - 2)
