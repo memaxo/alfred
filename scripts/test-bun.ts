@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Wrapper script for running Bun tests.
  *
@@ -9,8 +10,8 @@
  *   bunx playwright test --config apps/web/playwright.config.ts
  */
 
-import { Glob } from "bun";
 import path from "node:path";
+import { Glob } from "bun";
 
 type Scope = "unit" | "integration" | "e2e" | "perf" | "slow" | "all";
 type Kind = Exclude<Scope, "all">;
@@ -367,15 +368,19 @@ if (!isolateFiles) {
   process.exit(code);
 }
 
-const isolateConc = parsePositiveInt(process.env.ALFRED_TEST_ISOLATE_CONCURRENCY, 1);
+const isolateConc = parsePositiveInt(
+  process.env.ALFRED_TEST_ISOLATE_CONCURRENCY,
+  1
+);
 const bail = hasBailFlag(finalFlags);
 const q = [...picked];
 let failCode = 0;
 
 async function runFile(file: string): Promise<number> {
   const start = Date.now();
-  (globalThis as unknown as { __alfredTestLastFile?: string }).__alfredTestLastFile =
-    file;
+  (
+    globalThis as unknown as { __alfredTestLastFile?: string }
+  ).__alfredTestLastFile = file;
   writeErr(`alfred_test_file_start file=${file}\n`);
   const ms = parseMs(process.env.ALFRED_TEST_FILE_TIMEOUT_MS, 60_000);
   const code = await runBunTestWithTimeout(
@@ -410,4 +415,3 @@ const workers = Array.from({ length: workerCount }, async () => {
 
 await Promise.all(workers);
 process.exit(failCode);
-
