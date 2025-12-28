@@ -12,18 +12,16 @@ class MockPhase implements Phase<any, any> {
     _input: any,
     _context: any
   ): AsyncGenerator<any, PhaseResult<any>, void> {
+    await Promise.resolve();
     yield { type: "step-start", phase: this.id };
 
-    if (this.config.escalate) {
-      // Only escalate once
-      if (!this.config.escalated) {
-        this.config.escalated = true;
-        return {
-          status: "escalate",
-          reason: "test escalation",
-          targetPhase: this.config.target,
-        };
-      }
+    if (this.config.escalate && !this.config.escalated) {
+      this.config.escalated = true;
+      return {
+        status: "escalate",
+        reason: "test escalation",
+        targetPhase: this.config.target,
+      };
     }
 
     return { status: "success", data: "done" };
@@ -46,7 +44,7 @@ describe("PipelineRunner Escalation", () => {
     runner.register(new MockPhase("plan", planConfig));
 
     const generator = runner.run("input");
-    const events = [];
+    const events: any[] = [];
     for await (const event of generator) {
       events.push(event);
     }

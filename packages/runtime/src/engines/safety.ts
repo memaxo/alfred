@@ -48,8 +48,13 @@ function normalizeVector(vector: number[]): Float32Array {
 
 function cosine(a: Float32Array, b: Float32Array): number {
   let dot = 0;
-  for (let i = 0; i < a.length && i < b.length; i += 1) {
-    dot += a[i]! * b[i]!;
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i += 1) {
+    const va = a[i];
+    const vb = b[i];
+    if (va !== undefined && vb !== undefined) {
+      dot += va * vb;
+    }
   }
   return dot;
 }
@@ -80,9 +85,9 @@ async function getRiskCentroids(): Promise<Map<RiskLevel, Float32Array>> {
       const embeddings = await embedMany(descriptions);
       const map = new Map<RiskLevel, Float32Array>();
       for (let i = 0; i < RISK_ANCHORS.length; i += 1) {
-        const anchor = RISK_ANCHORS[i]!;
+        const anchor = RISK_ANCHORS[i];
         const embedding = embeddings[i];
-        if (!embedding) {
+        if (!(anchor && embedding)) {
           continue;
         }
         map.set(anchor.level, normalizeVector(embedding));
@@ -93,7 +98,7 @@ async function getRiskCentroids(): Promise<Map<RiskLevel, Float32Array>> {
       throw error;
     });
   }
-  return centroidPromise;
+  return await centroidPromise;
 }
 
 type StepLike = {

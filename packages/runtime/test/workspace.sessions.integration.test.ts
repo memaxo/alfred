@@ -29,6 +29,7 @@ let mockWorkflowRun: {
 } | null = null;
 
 const codexExecuteMock = mock(async () => {
+  await Promise.resolve();
   throw new Error("fixer-crash");
 });
 
@@ -46,13 +47,14 @@ const mockUpdateRun = mock(
 );
 
 const toolSessionExecuteMock = mock(
-  async ({ input }: { input: { action: string; sessionId: string } }) => ({
+  async (_args: { input: { action: string; sessionId: string } }) => ({
     ok: true,
     output: "mock",
   })
 );
 
 const workspaceCreateMock = mock(async () => {
+  await Promise.resolve();
   const workspace: Workspace = {
     id: "mock-workspace",
     kind: "worktree",
@@ -108,6 +110,7 @@ describe("workspace session coverage", () => {
 
     // Set up default implementations
     codexExecuteMock.mockImplementation(async () => {
+      await Promise.resolve();
       throw new Error("fixer-crash");
     });
     smokeVerifyMock.mockImplementation(async () => ({
@@ -137,6 +140,7 @@ describe("workspace session coverage", () => {
   });
 
   afterEach(async () => {
+    await Promise.resolve();
     process.env.ORCH_ENABLE_SESSIONS = undefined;
     process.env.ORCH_TMUX_DISABLED = undefined;
     leakInternals.resetListHandler();
@@ -160,18 +164,22 @@ describe("workspace session coverage", () => {
     await preparePlanDir(runId);
 
     const startSpy = mock(async (_command: string, sessionId?: string) => {
+      await Promise.resolve();
       const id = sessionId ?? `ws-${runId}-stub-${Date.now().toString(36)}`;
       activeSessions.add(id);
       return id;
     });
     const stopSpy = mock(async (sessionId: string) => {
+      await Promise.resolve();
       activeSessions.delete(sessionId);
     });
     const cleanupSpy = mock(async () => {
+      await Promise.resolve();
       activeSessions.clear();
     });
 
     workspaceCreateMock.mockImplementation(async () => {
+      await Promise.resolve();
       const workspace: Workspace = {
         id: "review-session",
         kind: "worktree",
@@ -245,6 +253,7 @@ describe("workspace session coverage", () => {
 
     toolSessionExecuteMock.mockImplementation(
       async ({ input }: { input: { action: string; sessionId: string } }) => {
+        await Promise.resolve();
         switch (input.action) {
           case "start": {
             sessionTracker.add(input.sessionId);

@@ -239,8 +239,8 @@ export function planWaves(
       readyIndex < readyQueue.length &&
       currentWaveTasks.length < maxParallel
     ) {
-      const id = readyQueue[readyIndex++]!;
-      if (scheduled.has(id)) {
+      const id = readyQueue[readyIndex++];
+      if (id === undefined || scheduled.has(id)) {
         continue;
       }
       currentWaveTasks.push(id);

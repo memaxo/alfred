@@ -80,19 +80,26 @@ export function findBracketingStates(
     throw new Error("Cannot interpolate empty history");
   }
 
-  const first = history[0]!;
+  const first = history[0];
+  if (!first) {
+    throw new Error("Cannot interpolate empty history");
+  }
+
   if (history.length === 1) {
     return [first, first];
   }
 
   // Find states bracketing target time
   let before = first;
-  let after = history.at(-1)!;
+  let after = history.at(-1);
+  if (!after) {
+    throw new Error("History corrupted");
+  }
 
   for (let i = 0; i < history.length - 1; i++) {
-    const curr = history[i]!;
-    const next = history[i + 1]!;
-    if (curr.t <= targetTime && next.t >= targetTime) {
+    const curr = history[i];
+    const next = history[i + 1];
+    if (curr && next && curr.t <= targetTime && next.t >= targetTime) {
       before = curr;
       after = next;
       break;

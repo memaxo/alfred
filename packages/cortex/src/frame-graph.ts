@@ -71,7 +71,10 @@ export class FrameGraph {
     }
 
     while (queue.length > 0) {
-      const name = queue.shift()!;
+      const name = queue.shift();
+      if (name === undefined) {
+        break;
+      }
       result.push(name);
 
       for (const dependent of graph.get(name) ?? []) {

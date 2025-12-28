@@ -22,6 +22,8 @@ describe("PipelineRunner resume integration", () => {
     const scanPhase: Phase<unknown, unknown> = {
       id: "scan",
       async *run() {
+        await Promise.resolve();
+        yield* [];
         return { status: "success", data: null };
       },
     };
@@ -29,6 +31,7 @@ describe("PipelineRunner resume integration", () => {
     const planPhase: Phase<unknown, unknown> = {
       id: "plan",
       async *run() {
+        yield* [];
         await delay(25);
         return { status: "success", data: null };
       },
@@ -64,6 +67,7 @@ describe("PipelineRunner resume integration", () => {
     const planPhase: Phase<unknown, unknown> = {
       id: "plan",
       async *run() {
+        yield* [];
         await delay(5);
         return { status: "success", data: null };
       },
@@ -72,6 +76,8 @@ describe("PipelineRunner resume integration", () => {
     const reportPhase: Phase<unknown, unknown> = {
       id: "report",
       async *run() {
+        await Promise.resolve();
+        yield* [];
         return { status: "success", data: null };
       },
     };
@@ -82,7 +88,7 @@ describe("PipelineRunner resume integration", () => {
       .register(planPhase)
       .register(reportPhase);
 
-    const events = [];
+    const events: any[] = [];
     for await (const event of runner.run({})) {
       events.push(event);
     }

@@ -130,12 +130,12 @@ export class DoubleBuffer {
 
   /** Get current read buffer */
   get read(): GPUBuffer {
-    return this.buffers[this.currentIndex]!;
+    return this.buffers[this.currentIndex] as GPUBuffer;
   }
 
   /** Get current write buffer */
   get write(): GPUBuffer {
-    return this.buffers[1 - this.currentIndex]!;
+    return this.buffers[1 - this.currentIndex] as GPUBuffer;
   }
 
   /** Swap read and write buffers */

@@ -657,11 +657,12 @@ async function runCodexWithCodex({
 
       emitAlfredEvents(safeWriter, processed.alfredEvents);
 
-      if (input.context && processed.alfredEvents.length > 0) {
+      const context = input.context;
+      if (context && processed.alfredEvents.length > 0) {
         import("../codex-linear.js")
           .then(async ({ mapCodexEventToLinearActivity }) => {
             for (const alfredEvent of processed.alfredEvents) {
-              await mapCodexEventToLinearActivity(alfredEvent, input.context!);
+              await mapCodexEventToLinearActivity(alfredEvent, context);
             }
           })
           .catch((err) => logger.debug("codex_linear_emit_error", { err }));

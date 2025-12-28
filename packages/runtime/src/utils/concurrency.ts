@@ -62,8 +62,10 @@ export class AsyncQueue<T> {
       return;
     }
     if (this.resolvers.length > 0) {
-      const resolve = this.resolvers.shift()!;
-      resolve({ value, done: false });
+      const resolve = this.resolvers.shift();
+      if (resolve) {
+        resolve({ value, done: false });
+      }
     } else {
       this.queue.push(value);
     }
@@ -75,16 +77,19 @@ export class AsyncQueue<T> {
     }
     this.closed = true;
     while (this.resolvers.length > 0) {
-      const resolve = this.resolvers.shift()!;
-      resolve({ value: undefined, done: true });
+      const resolve = this.resolvers.shift();
+      if (resolve) {
+        resolve({ value: undefined, done: true });
+      }
     }
   }
 
   [Symbol.asyncIterator](): AsyncIterator<T> {
     return {
       next: (): Promise<IteratorResult<T, undefined>> => {
-        if (this.queue.length > 0) {
-          return Promise.resolve({ value: this.queue.shift()!, done: false });
+        const value = this.queue.shift();
+        if (value !== undefined) {
+          return Promise.resolve({ value, done: false });
         }
         if (this.closed) {
           return Promise.resolve({ value: undefined, done: true });

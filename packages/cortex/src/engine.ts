@@ -11,7 +11,7 @@ import {
   createTemporalState,
   type TemporalState,
 } from "./coordinate";
-import { buildStandardFrameGraph, type FrameGraph } from "./frame-graph";
+import { buildStandardFrameGraph } from "./frame-graph";
 import { LODManager } from "./lod";
 import type { Camera, GlobalUniforms, OrbConfig, RenderSystem } from "./types";
 
@@ -48,7 +48,6 @@ export class CortexEngine {
   private readonly lodManager: LODManager;
   private readonly camera: Camera;
   private readonly temporal: TemporalState;
-  private readonly _frameGraph: FrameGraph;
 
   private lastFrameTime = 0;
   private running = false;

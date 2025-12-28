@@ -21,6 +21,7 @@ describe("PipelineRunner phase timeouts", () => {
     const slowPhase: Phase<unknown, unknown> = {
       id: "start",
       async *run() {
+        yield* [];
         await delay(25);
         return { status: "success", data: null };
       },
@@ -51,6 +52,7 @@ describe("PipelineRunner phase timeouts", () => {
     const fastPhase: Phase<unknown, unknown> = {
       id: "start",
       async *run() {
+        yield* [];
         await delay(5);
         return { status: "success", data: null };
       },
