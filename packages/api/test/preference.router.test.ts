@@ -7,6 +7,11 @@ import {
   mock,
   vi,
 } from "bun:test";
+import {
+  recordMemoryForgetMock,
+  recordMemoryUpdateMock,
+  resetAgentMocks,
+} from "./utils/agent-mock";
 import { dbModuleStub } from "./utils/mock-db-client";
 import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
@@ -21,8 +26,6 @@ const getMessageMock = vi.fn();
 const messageRowToUIMessageMock = vi.fn();
 const invalidatePreferenceCacheMock = vi.fn();
 const inferPreferenceFromCorrectionMock = vi.fn();
-let recordMemoryUpdateSpy: ReturnType<typeof vi.spyOn>;
-let recordMemoryForgetSpy: ReturnType<typeof vi.spyOn>;
 
 dbModuleStub.userRepo.getPreferences = getPreferencesMock;
 dbModuleStub.userRepo.setPreference = setPreferenceMock;
@@ -63,13 +66,6 @@ let caller: Awaited<
 
 beforeAll(async () => {
   const { createTestCaller } = await import("./utils/trpc");
-  const agent = await import("@alfred/agent");
-  recordMemoryUpdateSpy = vi
-    .spyOn(agent, "recordMemoryUpdate")
-    .mockImplementation(() => {});
-  recordMemoryForgetSpy = vi
-    .spyOn(agent, "recordMemoryForget")
-    .mockImplementation(() => {});
   caller = await createTestCaller({
     scopes: ["preference.write"],
   });
@@ -90,8 +86,9 @@ beforeEach(() => {
   getPreferencesMock.mockReset();
   setPreferenceMock.mockReset();
   deletePreferenceMock.mockReset();
-  recordMemoryUpdateSpy?.mockClear();
-  recordMemoryForgetSpy?.mockClear();
+  resetAgentMocks();
+  recordMemoryUpdateMock.mockClear();
+  recordMemoryForgetMock.mockClear();
 });
 
 describe("preference router", () => {
@@ -145,7 +142,7 @@ describe("preference router", () => {
         1.0,
         "user"
       );
-      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith("preference", "user");
+      expect(recordMemoryUpdateMock).toHaveBeenCalledWith("preference", "user");
       expect(result).toEqual(mockPreference);
     });
   });
@@ -159,7 +156,7 @@ describe("preference router", () => {
       });
 
       expect(deletePreferenceMock).toHaveBeenCalledWith("test-user", "theme");
-      expect(recordMemoryForgetSpy).toHaveBeenCalledWith("preference");
+      expect(recordMemoryForgetMock).toHaveBeenCalledWith("preference");
       expect(result).toEqual({ removed: 1 });
     });
 
@@ -172,7 +169,7 @@ describe("preference router", () => {
 
       expect(result).toEqual({ removed: 0 });
       // No forget metrics should be emitted when nothing removed
-      expect(recordMemoryForgetSpy).toHaveBeenCalledTimes(0);
+      expect(recordMemoryForgetMock).toHaveBeenCalledTimes(0);
     });
   });
 
@@ -208,7 +205,7 @@ describe("preference router", () => {
         ["too_verbose"]
       );
       expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
-      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith(
+      expect(recordMemoryUpdateMock).toHaveBeenCalledWith(
         "preference",
         "learned"
       );
@@ -277,7 +274,7 @@ describe("preference router", () => {
         "inferred"
       );
       expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
-      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith(
+      expect(recordMemoryUpdateMock).toHaveBeenCalledWith(
         "preference",
         "inferred"
       );

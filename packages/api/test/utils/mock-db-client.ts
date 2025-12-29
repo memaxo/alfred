@@ -25,6 +25,31 @@ const conversationRepoShim = {
   messageRowToUIMessage: (...args: any[]) =>
     (dbModuleStub.conversationRepo as any).messageRowToUIMessage(...args),
 } as const;
+
+const userRepoShim = {
+  getPreferences: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).getPreferences(...args),
+  setPreference: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).setPreference(...args),
+  deletePreference: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).deletePreference(...args),
+  addFeedback: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).addFeedback(...args),
+  getFeedback: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).getFeedback(...args),
+  getProfile: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).getProfile(...args),
+  upsertProfile: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).upsertProfile(...args),
+  searchFacts: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).searchFacts(...args),
+  listFacts: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).listFacts(...args),
+  deleteFact: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).deleteFact(...args),
+  getEvents: (...args: any[]) =>
+    (dbModuleStub.userRepo as any).getEvents(...args),
+} as const;
 const defaultConversationRow = {
   id: "conversation-default",
   userId: "test-user",
@@ -159,14 +184,14 @@ function applyMockDbClient(): void {
   mock.module("@alfred/db", () => ({
     ...realDb,
     codexRunRepo: dbModuleStub.codexRunRepo,
-    userRepo: dbModuleStub.userRepo,
+    userRepo: userRepoShim,
     deployRepo: dbModuleStub.deployRepo,
     linearRepo: dbModuleStub.linearRepo,
   }));
   mock.module("@alfred/db/repo/conversation", () => conversationRepoShim);
   mock.module("@alfred/db/src/repo/conversation", () => conversationRepoShim);
-  mock.module("@alfred/db/repo/user", () => dbModuleStub.userRepo);
-  mock.module("@alfred/db/src/repo/user", () => dbModuleStub.userRepo);
+  mock.module("@alfred/db/repo/user", () => userRepoShim);
+  mock.module("@alfred/db/src/repo/user", () => userRepoShim);
   mock.module("@alfred/db/repo/deploy", () => dbModuleStub.deployRepo);
   mock.module("@alfred/db/src/repo/deploy", () => dbModuleStub.deployRepo);
   mock.module("@alfred/db/repo/linear", () => dbModuleStub.linearRepo);

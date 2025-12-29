@@ -1,6 +1,7 @@
 import { mock, vi } from "bun:test";
 
 const noop = vi.fn().mockResolvedValue(undefined);
+const noopTimer = vi.fn(() => () => {});
 
 const assistantTools = {};
 const orchestratorTools = {};
@@ -34,6 +35,7 @@ const getAssistantAgentDefaults = vi.fn(() => assistantDefaults);
 const getOrchestratorAgentDefaults = vi.fn(() => orchestratorDefaults);
 const recordMemoryUpdate = vi.fn();
 const recordMemoryForget = vi.fn();
+const recordPolicyCheckFailure = vi.fn();
 
 mock.module("@alfred/agent", async () => {
   const normalizeAbs = new URL(
@@ -79,9 +81,86 @@ mock.module("@alfred/agent", async () => {
   };
 });
 
+// Some API routers import lightweight metrics helpers directly.
+mock.module("@alfred/agent/metrics", () => ({
+  // Keep this export surface wide so any codepath that imports agent metrics
+  // in API tests won't crash due to missing named exports.
+  registerDroidExecCounter: vi.fn(),
+  registerDroidExecHistogram: vi.fn(),
+  recordDroidExecRun: vi.fn(),
+  startDroidExecTimer: noopTimer,
+
+  registerCodexExecCounter: vi.fn(),
+  registerCodexExecHistogram: vi.fn(),
+  recordCodexExecRun: vi.fn(),
+  startCodexExecTimer: noopTimer,
+
+  registerCodexErrorCounter: vi.fn(),
+  recordCodexError: vi.fn(),
+  registerCodexWriterErrorCounter: vi.fn(),
+  recordCodexWriterError: vi.fn(),
+  registerCodexSessionViolationCounter: vi.fn(),
+  recordCodexSessionViolation: vi.fn(),
+  registerCodexSessionValidationHistogram: vi.fn(),
+  startCodexSessionValidationTimer: noopTimer,
+
+  registerEvalRunsCounter: vi.fn(),
+  registerEvalDurationHistogram: vi.fn(),
+  registerEvalScoreCounter: vi.fn(),
+  registerEvalFailureCounter: vi.fn(),
+  registerLaminarDatapointCounter: vi.fn(),
+  registerLaminarErrorCounter: vi.fn(),
+  recordEvalRunStatus: vi.fn(),
+  startEvalRunTimer: noopTimer,
+  recordEvalScore: vi.fn(),
+  recordEvalFailure: vi.fn(),
+  recordLaminarDatapoint: vi.fn(),
+  recordLaminarError: vi.fn(),
+
+  registerAssistantToolCounter: vi.fn(),
+  recordAssistantToolCall: vi.fn(),
+  registerAssistantEscalationCounter: vi.fn(),
+  recordAssistantEscalation: vi.fn(),
+
+  registerPolicyCheckFailureCounter: vi.fn(),
+  recordMemoryUpdate,
+  recordMemoryForget,
+  recordPolicyCheckFailure,
+
+  registerMemoryUpdatesCounter: vi.fn(),
+  registerMemoryForgetsCounter: vi.fn(),
+
+  registerCompressionCycleHistogram: vi.fn(),
+  startCompressionCycleTimer: noopTimer,
+  registerCompressionCycleCounter: vi.fn(),
+  recordCompressionCycle: vi.fn(),
+  registerCompressionNodeCounter: vi.fn(),
+  recordCompressionNodeUpdate: vi.fn(),
+
+  registerMemoryToolCounter: vi.fn(),
+  recordMemoryToolCall: vi.fn(),
+  registerMemorySearchLatencyHistogram: vi.fn(),
+  recordMemorySearchLatency: vi.fn(),
+  registerMemorySearchResultsHistogram: vi.fn(),
+  recordMemorySearchResults: vi.fn(),
+  registerMemoryTraverseDepthHistogram: vi.fn(),
+  recordMemoryTraverseDepth: vi.fn(),
+  registerMemoryBoostCounter: vi.fn(),
+  recordMemoryBoost: vi.fn(),
+  registerMemoryRemovalCounter: vi.fn(),
+  recordMemoryRemoval: vi.fn(),
+}));
+
+// Some API routes import agent defaults via the dedicated module.
+mock.module("@alfred/agent/agents", () => ({
+  getAssistantAgentDefaults,
+  getOrchestratorAgentDefaults,
+}));
+
 // Some runtime modules import the v6 tool builder directly. Provide a stable stub
 // so tests don't pull in the full tool catalog (and its AI SDK dependencies).
 mock.module("@alfred/agent/v6", () => ({
+  buildAssistantTools,
   buildTools,
   getOpenAI,
   getModelId,
@@ -100,8 +179,10 @@ export function resetAgentMocks() {
   assistantDefaults.prepareStep.mockClear();
   orchestratorDefaults.stopWhen.mockClear();
   orchestratorDefaults.prepareStep.mockClear();
+  noopTimer.mockClear();
   recordMemoryUpdate.mockClear();
   recordMemoryForget.mockClear();
+  recordPolicyCheckFailure.mockClear();
 }
 
 export {
@@ -114,4 +195,5 @@ export {
   getModelId as getModelIdMock,
   recordMemoryUpdate as recordMemoryUpdateMock,
   recordMemoryForget as recordMemoryForgetMock,
+  recordPolicyCheckFailure as recordPolicyCheckFailureMock,
 };
