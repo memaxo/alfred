@@ -339,7 +339,7 @@ export async function* runReviewPhase(
 
   logger.info("multi_agent_review_plan", {
     runId,
-    files: reviewPlan.files ?? [],
+    files: reviewFocusFiles,
     checks: reviewPlan.checks?.map((c) => c.type) ?? [],
   });
 
