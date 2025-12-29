@@ -292,6 +292,28 @@ type ToolCallRow = {
   timestamp: Date;
 };
 
+function coerceRecord(val: unknown): Record<string, unknown> {
+  if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+    return val as Record<string, unknown>;
+  }
+  return {};
+}
+
+function unwrapEnvelopeData(val: unknown): unknown {
+  const record = coerceRecord(val);
+  // We store workflow event payloads as EventEnvelope<T> most of the time.
+  // Keep this intentionally loose here to avoid a schema dependency in @alfred/db.
+  if (
+    typeof record.v === "number" &&
+    typeof record.id === "string" &&
+    typeof record.type === "string" &&
+    Object.hasOwn(record, "data")
+  ) {
+    return record.data;
+  }
+  return val;
+}
+
 export async function getToolCalls(
   userId: string,
   options: { days?: number; limit?: number } = {}
@@ -308,9 +330,8 @@ export async function getToolCalls(
 
   const conditions = [
     eq(workflowRuns.userId, userId),
-    // Note: "tool-call" is from the old UI message system. This query may need
-    // to be updated to use the proper workflow event types
-    sql`${workflowEvents.eventType} = ANY(['step_start', 'step_complete', 'suspend', 'resume', 'error'])`,
+    // Use portable SQL (works in Postgres + SQLite test DBs).
+    eq(workflowEvents.eventType, "tool-call"),
   ];
 
   if (cutoff) {
@@ -330,18 +351,18 @@ export async function getToolCalls(
     .limit(limit);
 
   return rows.map((row) => {
-    const data =
-      row.eventData && typeof row.eventData === "object"
-        ? (row.eventData as Record<string, unknown>)
-        : {};
+    const raw = unwrapEnvelopeData(row.eventData);
+    const data = coerceRecord(raw);
     const toolName =
       typeof data.toolName === "string" && data.toolName.length > 0
         ? data.toolName
         : undefined;
     const args =
-      data && typeof data.args === "object"
-        ? (data.args as Record<string, unknown>)
-        : undefined;
+      typeof data.args === "object" && data.args !== null
+        ? coerceRecord(data.args)
+        : typeof data.input === "object" && data.input !== null
+          ? coerceRecord(data.input)
+          : undefined;
     return {
       eventId: row.eventId,
       toolName,
