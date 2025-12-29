@@ -41,7 +41,7 @@ describe("Plan Persistence & Approval", () => {
       resources: {
         agentCount: 1,
         strategy: "parallel",
-        isolation: "container",
+        isolation: "agentfs",
       },
       evaluationCriteria: [],
     },

@@ -21,7 +21,7 @@ describe("@alfred/plan core types", () => {
       resources: {
         agentCount: 1,
         strategy: "sequential",
-        isolation: "container",
+        isolation: "agentfs",
       },
       evaluationCriteria: [
         {
@@ -55,7 +55,7 @@ describe("@alfred/plan core types", () => {
       resources: {
         agentCount: 1,
         strategy: "sequential",
-        isolation: "container",
+        isolation: "agentfs",
       },
       evaluationCriteria: [],
     };

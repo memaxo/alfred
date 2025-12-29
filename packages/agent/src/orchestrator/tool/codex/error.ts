@@ -21,7 +21,6 @@ export type CodexErrorCode =
   | "codex_container_cwd_invalid"
   | "codex_session_user_required"
   | "codex_session_forbidden"
-  | "poof_upper_dir_invalid"
   | "invalid_output_schema";
 
 const RETRYABLE_STAGES = new Set<CodexErrorStage>(["spawn", "timeout"]);

@@ -70,7 +70,7 @@ export async function generatePlan(
     resources: {
       agentCount: countUniqueAgents(estimatedPhases),
       strategy: determineStrategy(estimatedPhases),
-      isolation: "container",
+      isolation: "agentfs",
     },
     evaluationCriteria: generateEvaluationCriteria(intent),
   };

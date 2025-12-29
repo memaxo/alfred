@@ -70,7 +70,7 @@ describe("Plan Critique", () => {
     resources: {
       agentCount: 1,
       strategy: "parallel" as const,
-      isolation: "container" as const,
+      isolation: "agentfs" as const,
     },
     evaluationCriteria: [],
   };

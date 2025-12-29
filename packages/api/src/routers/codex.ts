@@ -678,6 +678,103 @@ const codexProcedures = {
       await sessionManager.terminateSession(input.sessionId);
       return { success: true };
     }),
+
+  // AgentFS query procedures
+  getAgentFSInfo: authedProcedure
+    .input(z.object({ runId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      const run = await codexRunRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "codex_run_not_found",
+        });
+      }
+      if (run.userId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "codex_run_access_denied",
+        });
+      }
+      return {
+        runId: run.id,
+        agentfsDbPath: run.agentfsDbPath,
+        agentfsRunId: run.agentfsRunId,
+        environmentKind: run.environmentKind,
+        hasAgentFS: !!run.agentfsDbPath,
+      };
+    }),
+
+  listAgentFSToolCalls: authedProcedure
+    .input(
+      z.object({
+        runId: z.string().uuid(),
+        limit: z.number().int().min(1).max(500).default(100),
+        offset: z.number().int().min(0).default(0),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      const run = await codexRunRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "codex_run_not_found",
+        });
+      }
+      if (run.userId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "codex_run_access_denied",
+        });
+      }
+      if (!run.agentfsDbPath) {
+        return { toolCalls: [], total: 0 };
+      }
+
+      // Query tool calls from AgentFS database
+      try {
+        const { processForLearning } = await import(
+          "@alfred/agent/agentfs/learning-bridge"
+        );
+        // Note: This is a simplified implementation.
+        // For production, consider adding a dedicated tool call query function.
+        const result = await processForLearning(run.agentfsDbPath);
+        const toolCalls = result.patterns.map((p) => ({
+          name: p.toolName,
+          totalCalls: p.totalCalls,
+          successRate: p.successRate,
+          avgDurationMs: p.avgDurationMs,
+        }));
+        return {
+          toolCalls: toolCalls.slice(input.offset, input.offset + input.limit),
+          total: toolCalls.length,
+        };
+      } catch (error) {
+        logger.warn("agentfs_query_failed", {
+          runId: input.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return {
+          toolCalls: [],
+          total: 0,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }),
 };
 
 export const codexRouter = router(codexProcedures);

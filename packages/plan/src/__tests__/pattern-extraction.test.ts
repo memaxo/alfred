@@ -31,7 +31,7 @@ describe("Pattern Extraction", () => {
     resources: {
       agentCount: 1,
       strategy: "parallel",
-      isolation: "container",
+      isolation: "agentfs",
     },
     evaluationCriteria: [],
   };
