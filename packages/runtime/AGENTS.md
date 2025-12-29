@@ -43,6 +43,30 @@ See `packages/api/src/routers/workflow.ts` for implementation reference.
 
 
 
+<!-- Source: .ruler/32-execplan-verification.md -->
+
+# ExecPlan Verification
+
+## Core Principle
+
+ExecPlans must accurately reflect implementation status. When verifying features or completing work, systematically check the codebase and update ExecPlan status immediately.
+
+## Rules
+
+1. **Status verification.** When verifying ExecPlan completion status, use systematic codebase search (`rg`, `grep`, `codebase_search`) to find actual implementation before updating status. Never mark ExecPlans complete based on assumptions.
+
+2. **Linear sync.** When updating ExecPlan status, also update corresponding Linear issues to match. Use `mcp_Linear_update_issue` to sync status, description, and progress.
+
+3. **Immediate updates.** Update ExecPlan `Progress`, `Outcomes & Retrospective`, and status immediately after verification—before moving to the next task. Don't batch updates.
+
+4. **Implementation evidence.** When marking ExecPlans complete, include specific file paths and line numbers in the `Outcomes & Retrospective` section to document evidence.
+
+5. **Partial completion.** Mark ExecPlans as "Mostly Complete ⚠️" when core functionality is done but minor items remain. Document remaining work clearly.
+
+6. **Status accuracy.** ExecPlan status must match actual codebase state. If an ExecPlan says "Proposed" but implementation exists, update it immediately.
+
+
+
 <!-- Source: .ruler/35-workflow-orchestrator.md -->
 
 ## Workflow Orchestrator Modularity
@@ -55,3 +79,114 @@ See `packages/api/src/routers/workflow.ts` for implementation reference.
 6. Make terminal transitions single-shot: exactly one of cancelled/suspended/completed/failed, and `emitComplete` must fire once.
 7. Always pair `registerRunHandle` with `unregisterRunHandle` via `finally`.
 8. Enforce a workflow-level global timeout (30 minutes) that aborts the run and updates status to failed.
+
+
+
+<!-- Source: .ruler/36-poof-patterns.md -->
+
+# Poof Isolation Patterns
+
+> **DEPRECATED**: Poof isolation is legacy. Production uses Docker containers exclusively. Poof code is only available when built with `--feature=LEGACY_POOF`. See `.ruler/37-bun-feature-flags.md` for feature flag patterns.
+
+1. **Feature flag guard.** All poof code paths must be wrapped in `feature("LEGACY_POOF")` guards for tree-shaking in production builds.
+
+2. **Linux-only guard.** Check `isPoofAvailable()` before using poof features. Fall back to container isolation on non-Linux platforms.
+
+3. **Resource profiles.** Use predefined profiles (`minimal`, `standard`, `intensive`) from `POOF_PROFILES` instead of hardcoding limits.
+
+4. **Upper directory lifecycle.** Always clean up upper directories via `cleanupUpperDir()` or `workspace.cleanup()`.
+
+5. **Non-interactive mode.** Always use `--upper=<dir>` flag when spawning poof in automated contexts.
+
+6. **Exit code handling.** Check for `isPoofTimeout()` (exit 124) and `isCommandNotFound()` (exit 127) after spawn.
+
+7. **Sandbox detection.** Use `isInsideSandbox()` to detect when code runs inside poof. Avoid nested poof calls.
+
+8. **Change review flow.** Capture changes with `parseUpperLayer()`, review with `formatChanges()`, then apply with `applyUpperLayer()`.
+
+9. **Network not isolated.** Poof does NOT isolate network access. Use policy enforcement for network-sensitive operations.
+
+10. **Docker compatibility.** When running in Docker, ensure `--device /dev/fuse --security-opt seccomp=unconfined` flags.
+
+
+
+<!-- Source: .ruler/38-workflow-learning.md -->
+
+# Workflow Learning Patterns
+
+## Core Principle
+Every workflow execution is a learning opportunity. The system must automatically capture successes, failures, and conventions to improve future planning and execution accuracy.
+
+## Rules
+
+1. **Terminal learning triggers.** Automatically trigger pattern and convention extraction upon workflow terminal states (completed/failed). Learning must be asynchronous and non-blocking to the primary workflow finalization.
+
+2. **Execution aggregation.** Collect and aggregate `agent-handoff` events across all waves to generate high-fidelity execution summaries. Use these summaries instead of initial intents for learning modules to ensure fidelity to actual implementation.
+
+3. **Pattern vs Anti-Pattern.** Store successful plans as `WorkflowPattern` templates. Store failed plans as anti-patterns with associated failure reasons to enable proactive avoidance in future generations.
+
+4. **Contextual retrieval weights.** Prioritize in-project patterns during semantic matching. Use a 1.0x weight for same-project matches and 0.8x for cross-project fallbacks to maintain architectural consistency.
+
+5. **Convention refinement.** Persist project-specific naming, structural, and architectural conventions extracted from successful runs into `projects.config`. Refine existing conventions incrementally rather than overwriting.
+
+6. **Pattern lifecycle.** Implement automatic confidence decay for unused patterns (retire after 30 days) and quarantine for patterns with low success rates (<30% after 5 uses).
+
+7. **Vector search performance.** Perform vector similarity matches directly in SQL using `pgvector` operators (`<=>`) to maintain <10ms retrieval latency. Use `CASE` expressions for contextual weighting within the query.
+
+
+
+<!-- Source: .ruler/40-versioning.md -->
+
+# Event Versioning & Compatibility
+
+1. **Additive Changes.** Prefer adding optional fields to existing event schemas. Additive changes do not require a version increment if they don't break existing consumers.
+
+2. **Breaking Changes.** Any change that removes, renames, or changes the type of an existing field MUST increment the `v` field in `EventEnvelope`.
+
+3. **Migration Registry.** Every version increment MUST be accompanied by a migration function in `packages/type/src/versioning.ts` that transforms the previous version to the new one.
+
+4. **Historical Replay.** Never remove migration functions from the registry. The system must always be able to reconstruct the latest state from any historical event version.
+
+5. **Serialization.** Always use `stableStringify` for event data to ensure deterministic content-addressable IDs (when enabled) and consistent migration inputs.
+
+
+
+<!-- Source: .ruler/43-tui-patterns.md -->
+
+# TUI (Terminal User Interface) Patterns
+
+## Core Principle
+
+Terminal interfaces must be fast, keyboard-driven, and follow consistent panel/layout patterns. All TUI panels extend BasePanel and implement lifecycle hooks.
+
+## Rules
+
+1. **BasePanel inheritance.** All panels extend `BasePanel` and implement `id`, `label`, `render()`, and `subscribe()` methods.
+
+2. **Panel organization.** Domain panels live in `panels/<domain>/` with index file as main entry and sub-components in separate files (e.g., `panels/cognitive/phase.ts`, `panels/cognitive/autonomy.ts`).
+
+3. **Explicit exports.** Use explicit named exports in panel index files to avoid symbol conflicts between domains. Never use `export *` for domain panels.
+
+4. **Mock data first.** Panels must work with mock data before API integration. Create `createMock*()` functions for each store type.
+
+5. **Subscription lifecycle.** Use `SubscriptionManager` from `subscriptions/manager.ts` to handle tRPC subscription cleanup. Always call cleanup in panel `subscribe()` return value.
+
+6. **Store pattern.** Each domain gets a store file in `subscriptions/<domain>.ts` with `create<Domain>Store()` and `setup<Domain>Subscription()` functions.
+
+7. **Typography imports.** Only import typography functions that exist (`bold`, `dim`, `fg`, `bg`, `truncate`, `padLeft`, `padRight`, `center`, `progressBar`, `sparkline`). Don't assume others exist.
+
+8. **Unused parameters.** Prefix unused function parameters with `_` (e.g., `_width`, `_height`) to pass TypeScript strict mode.
+
+9. **Theme consistency.** Use colors from `theme.ts` only. Dark theme palette is canonical: `bg: #0A0E14`, `text: #E6E6E6`, `primary: #39BAE6`, etc.
+
+10. **Keyboard navigation.** Implement standard keybindings: `q` quit, `ESC` back/cancel, `Tab` next, `Shift+Tab` previous, `Enter` confirm, `?` help, `/` search, `:` command.
+
+11. **Panel lifecycle.** Call `init()` before first render, `subscribe()` returns cleanup function, `onResize()` updates bounds, `onFocus()`/`onBlur()` for state changes.
+
+12. **Layout modes.** Support adaptive layout: single focus (<80 cols), split (80-120 cols), dashboard (>120 cols). Use `layout/adaptive.ts` for detection.
+
+13. **Render performance.** Panels should render in <16ms (60fps). Cache expensive computations. Use sparklines for trends, not full charts.
+
+14. **Error states.** Panels must handle null/undefined state gracefully. Show empty state message, don't crash.
+
+15. **API endpoints.** TUI-specific endpoints go in existing routers (e.g., `cognitive.state`, `knowledge.stats`). Don't create new routers for TUI.
