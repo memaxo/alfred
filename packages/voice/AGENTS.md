@@ -43,3 +43,107 @@ The Voice system prioritizes **latency** and **privacy**. Use local models (Maya
 16. **Fixture-driven tests.** Any test that touches `VoiceRegistry`, pools, or the streaming prototype must install the shared fixture from `@alfred/test-kit/voice/runtime-fixture`, letting the real WebSocket server run while only configuring transcripts/chunks via fixture options and cleaning up with `restore()`/`stop()` so `@alfred/voice`, `@alfred/runtime`, and workflow metrics stay real.
 17. **STT PCM contract.** The Python STT subprocess consumes PCM16 bytes; server code must normalize containers/codecs via `decodeToPCM16` (or `transcribeLocal`) before calling `STTPool.transcribe`.
 18. **Init is awaitable.** Voice pool initialization must be idempotent and concurrency-safe; never treat “constructed” pools as “ready” until their `initialize()` calls have completed.
+
+
+
+<!-- Source: .ruler/audio-codecs.md -->
+
+# Audio Codec Patterns
+
+## Core Principle
+
+PCM16 at 16kHz canonical. Native Opus @ 48kHz when available. Fallback to ffmpeg for transcoding. Binary for pipeline base64 for API.
+
+## Rules
+
+1. **PCM16 format.** Use 16kHz sample rate, 1 channel, 16-bit depth. MIME: `audio/raw;codec=pcm_s16le;rate=16000`.
+
+2. **Decoding to PCM.** Call `decodeToPCM16({ audioBase64, mimeType })`. Strip base64 prefix. Return PCM16 base64 with metadata.
+
+3. **Native Opus decode.** Try `decodeOpus()` from `@discordjs/opus` for Opus audio. Fallback to ffmpeg on exception.
+
+4. **Encoding from PCM.** Call `encodeFromPCM16({ audioBase64, format, bitrate? })`. Input must be PCM16. Use default bitrates when unspecified.
+
+5. **Default bitrates.** MP3: 96k, Opus: 48k, WAV: 256k. Use `DEFAULT_BITRATES` for reference.
+
+6. **Opus constraints.** Native Opus expects 48kHz input. Use ffmpeg for resampling when input is 16kHz. Use `@discordjs/opus` for native encoding/decoding.
+
+7. **FFmpeg path.** Resolve via `VOICE_FFMPEG_PATH` env or default `"ffmpeg"`. Check availability with `ensureFfmpegAvailable()`.
+
+8. **FFmpeg args.** Use `-hide_banner -loglevel error` for quiet mode. Use `-f s16le -ac 1 -ar 16000` for PCM spec. Use `-map_metadata -1` to strip metadata.
+
+9. **FFmpeg execution.** Use `Bun.spawnSync()` for blocking ffmpeg. Pass stdin via `stdin` param. Capture stdout, stderr, exit code.
+
+10. **Base64 handling.** Strip `data:*base64,` prefix via `stripBase64Prefix()`. Use Buffer for encode/decode. Never include MIME prefix in output.
+
+## See Also
+
+- `.ruler/25-voice-architecture.md` for voice architecture
+
+
+
+<!-- Source: .ruler/process-pools.md -->
+
+# Process Pool Patterns
+
+## Core Principle
+
+Voice pools manage persistent Python subprocesses. Registries track sessions. Cleanup interval removes idle sessions.
+
+## Rules
+
+1. **Registry lifecycle.** Create `VoiceRegistry` with STT and TTSPool instances. Call `startCleanup()` in constructor. Call `shutdown()` in application teardown.
+
+2. **Session management.** Call `createSession(userId, sessionId, language?)` for new sessions. Call `removeSession(sessionId)` for cleanup. Call `getSession(sessionId)` to retrieve.
+
+3. **Idle cleanup.** Cleanup interval runs every 60 seconds. Remove sessions idle > 5 minutes. Call `session.isIdle(timeoutMs)` for detection.
+
+4. **Pool health tracking.** Track pool size, active count, utilization. Use `pool.getHealth()` for health status. Return `size`, `active`, `utilization`, `health`.
+
+5. **Process spawning.** Use `Bun.spawn` with array format: `[command, ...args]`. Set `stdin: "pipe"`, `stdout: "pipe"`, `stderr: "pipe"`.
+
+6. **Auto-restart.** Restart crashed processes in exit handler after 1000ms delay. Use `.unref()` on restart timer. Skip restart during shutdown.
+
+7. **Graceful shutdown.** Send shutdown request before `process.kill()`. Send `"shutdown"` type request via IPC. Call `process.kill()` after 2s timeout.
+
+8. **Health checks.** Ping processes every 30 seconds. Track last ping timestamp. Mark unhealthy when no ping > 60s.
+
+## See Also
+
+- `.ruler/python-subprocess.md` for IPC and subprocess details
+
+
+
+<!-- Source: .ruler/python-subprocess.md -->
+
+# Python Subprocess Patterns
+
+## Core Principle
+
+Python processes use stdin/stdout for IPC. stderr pipes to console. UV/virtualenv manage dependencies. JSON lines serialize messages.
+
+## Rules
+
+1. **Python executable resolution.** Prefer `uv run python`. Fall back to `.venv/bin/python` or `python3`. Resolve via `resolvePythonExecutable()`.
+
+2. **UV integration.** Use `uv run` when `VOICE_USE_UV` ≠ "false". UV manages virtual environment automatically. Skip dependency verification when using uv.
+
+3. **Dependency verification.** Skip verification when using uv run. Otherwise import-check nemo.collections.asr, silero_vad, numpy, transformers, snac, soundfile.
+
+4. **IPC protocol.** Send JSON lines via stdin: `JSON.stringify(request) + "\n"`. Read JSON lines from stdout. Parse with `JSON.parse`.
+
+5. **Request/Response types.** Use `IPCRequest` `{ id, type, payload? }`. Use `IPCResponse` `{ id, type, payload?, isFinal? }`. Include `crypto.randomUUID()` for request IDs.
+
+6. **Bridge timeout.** Use `Bridge` class with `requestTimeout` default 10s. Send request via `ipc.sendRequest()`. Reject on timeout.
+
+7. **Partial responses.** Use `isFinal: false` for streaming. Reset timeout on partial responses. Call `onPartial(response)` callback.
+
+8. **stderr pipeline.** Read stderr ReadableStream with decoder. Write to `process.stderr` for visibility. Catch and ignore read errors.
+
+9. **Exit code handling.** Check `await proc.exited` for exit status. Exit 124 = timeout, 127 = command not found.
+
+10. **NumPy sanitization.** Sanitize NumPy types before JSON output. Convert `numpy.ndarray` to list. Convert `numpy.float64` to float.
+
+## See Also
+
+- `.ruler/process-pools.md` for pool lifecycle

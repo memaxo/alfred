@@ -14,3 +14,94 @@
 7. **Policy enforcement.** Wrap sensitive tRPC procedures with `requirePolicy` and record every decision via `policyRepo.createAuditLog`. Tools must call `requireToolScopesAndPolicy` before acting; for medium/high autonomy, reject tokens that lack `mfa="passkey"` and `elevated=true` even if scopes match. Whenever the PDP returns obligations, surface them to the caller (e.g., suspend workflows until biometric elevation completes). New capabilities (e.g., `eval.define`, `eval.dataset`, `eval.run`) must ship with explicit policy actions and owner-only defaults.
 8. **Secure subprocess spawning.** Tools that spawn subprocesses with working directories must use `spawnWithSecureCwd()` with file descriptor handles instead of string-based `cwd`. This prevents TOCTOU (time-of-check-time-of-use) attacks where symlinks are swapped between path validation and process spawn. Reference implementations: `git.ts`, `docker.ts`, `droid.ts`.
 9. **Directory handle lifecycle.** When using `openDirectorySecure()`, always close the handle in a `finally` block or after the subprocess exits. Leaked file descriptors exhaust system resources.
+
+
+
+<!-- Source: .ruler/biometric-patterns.md -->
+
+# Biometric Authentication Patterns
+
+## Core Principle
+
+Bio-tickets enforce MFA before elevated operations. Tickets expire within short TTL. Memory fallback when Redis unavailable.
+
+## Rules
+
+1. **Ticket issuance.** Call `setBiometricTicket(sessionId, ttlSec)` after successful MFA. Default TTL must be ≤ 120 seconds (2 minutes).
+
+2. **Ticket verification.** Call `requireRecentBiometric(sessionId)` before elevated operations. Throw `"biometric_required"` when TTL exceeded.
+
+3. **Dev bypass never in production.** `isBioBypassEnabled()` must return `false` when `NODE_ENV==="production"`. Never auto-grant bio-tickets in production.
+
+4. **Memory fallback.** When Redis unavailable, store tickets in `Map<string,expiresAt>`. Set timer to evict expired entries. Call `.unref()` on timers.
+
+5. **Redis TTL enforcement.** Store bio-tickets at `bio:${sessionId}` key with `EX` option. Check `redis.ttl(key)` ≤ 0 for validation.
+
+6. **Hook placement.** Register bio-ticket hook in `betterAuth` plugins at `/sign-in/passkey` path. Auto-grant only when `BIO_AUTH_BYPASS=true`.
+
+## See Also
+
+- `.ruler/03-security.md` for overall security expectations
+
+
+
+<!-- Source: .ruler/session-management.md -->
+
+# Session Management Patterns
+
+## Core Principle
+
+Better Auth handles sessions via Drizzle adapter. Redis manages bio-tickets and JTI cache. Expo client uses SecureStore.
+
+## Rules
+
+1. **Redis initialization.** Use `getRedis()` for lazy client initialization. Call `getRedisAsync()` when async wait required. Never create direct Redis clients.
+
+2. **Connection retry.** Retry connections with exponential backoff when `REDIS_RETRY_ENABLED=true`. Disable retries in tests to prevent event loop leaks.
+
+3. **Connection cleanup.** Call `client.close()` in error handlers and `resetRedisState()` in test teardowns.
+
+4. **Metrics tracking.** Record connection status via `redisConnectionStatus`, errors via `redisConnectionErrorsTotal`, reconnection attempts via `redisReconnectionAttemptsTotal`.
+
+5. **Health checks.** Call `isRedisHealthy()` for readiness probes. Return `false` when client not connected or `ping()` fails.
+
+6. **Expo integration.** Use `@better-auth/expo` plugin for native clients. Sessions persist via SecureStore through the Expo plugin.
+
+7. **Session invalidation.** Invalidate sessions through Better Auth API. Never manipulate session data directly in database.
+
+## See Also
+
+- `.ruler/03-security.md` for session-related security expectations
+
+
+
+<!-- Source: .ruler/tool-token-patterns.md -->
+
+# Tool Token Patterns
+
+## Core Principle
+
+Tool tokens use Ed25519 with short TTL. JTI caching prevents replay. Tokens integrate with policy evaluation for authorization.
+
+## Rules
+
+1. **Token issuance.** Call `issueAccessToken(sub, scopes, audience, options)`. Must include non-empty `scopes` array. Default TTL must be ≤ 300 seconds (5 minutes).
+
+2. **Ed25519 signing.** Use `importPKCS8` for private key, `importSPKI` for public key. Token algorithm must be `"EdDSA"`. Set `kid` from `AGENT_JWK_KID` env.
+
+3. **Token structure.** Include claims: `sub`, `scopes`, `roles?`, `elevated?`, `mfa?`, `iat`, `exp`, `jti`, `aud`, `iss`. Set `mfa="passkey"` for MFA-authenticated tokens.
+
+4. **Token verification.** Call `verifyAccessToken(token, audience, requiredScopes)`. Throw `"token_invalid_subject"`, `"token_missing_exp"`, `"token_missing_jti"`, `"token_missing_scope"`, `"token_expired"`, `"token_replayed"`.
+
+5. **JTI caching.** Call `cacheJTI(jti, ttlSec)` after verification. Store at `jti:${jti}` with `EX` option and `NX=true`. Throw `"token_replayed"` if key exists.
+
+6. **Memory JTI fallback.** When Redis unavailable, store JTI in `Map<string,expiresAt>` with LRU eviction (max 10,000 entries). Set eviction timers with `.unref()`.
+
+7. **Policy integration.** Call `requireToolScopesAndPolicy(authz, requiredScopes, policyInput)`. Verify Bearer token prefix. Throw `"unauthorized"` for missing authz, `"policy_denied"` for failed policy.
+
+8. **Nanoid JTI.** Generate unique identifiers with `nanoid()` for `jti` claim. Never use sequential or predictable IDs.
+
+## See Also
+
+- `.ruler/03-security.md` for security expectations
+- `.ruler/policy.md` in `packages/policy` for PDP patterns

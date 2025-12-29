@@ -12,3 +12,71 @@
 3. **Context Management.** Codex handles long-term context compression. Use `summarize()` snapshots before thread eviction.
 
 4. **Policy Integration.** Expose `memoryConfidence` to the PDP. High-risk actions should block if they rely on low-confidence memories.
+
+
+
+<!-- Source: .ruler/memory-lifecycle.md -->
+
+# Memory Lifecycle Patterns
+
+## Core Principle
+
+Memory nodes decay exponentially. Archive low-confidence nodes. Active retrieval boosts confidence via touch.
+
+## Rules
+
+1. **Memory decay.** Apply exponential decay with `MEMORY_DECAY_FACTOR`. Nodes decay faster when not accessed. Decrease confidence over time.
+
+2. **Pruning threshold.** Archive nodes when confidence < `MEMORY_PRUNE_CONFIDENCE`. Never automatically delete—archive for potential recovery.
+
+3. **Active recall touch.** Call `touchNodes(nodeIds)` after retrieval. Reset decay timer. Boost confidence by 0.05.
+
+4. **Confidence initialization.** Set initial confidence (0.0-1.0) on memory creation. High confidence for user-created, low for inferred.
+
+5. **Decay calculation.** Calculate decay based on time elapsed since last access. Use exponential formula: `confidence *= factor^elapsedTime`.
+
+6. **Archive separation.** Store archived nodes separately from active nodes. Exclude from default retrieval queries.
+
+7. **Restoration threshold.** Restore archives when re-accessed exceeds confidence threshold. Set decay timer from restoration.
+
+8. **Policy integration.** Expose `memoryConfidence` to policy evaluation. Block high-risk actions when using low-confidence memories.
+
+## See Also
+
+- `.ruler/03-security.md` for security expectations
+
+
+
+<!-- Source: .ruler/retrieval-ordering.md -->
+
+# Retrieval Ordering Patterns
+
+## Core Principle
+
+Retrieval orders by confidence and recency. Combine structured search (graph) and vector similarity. Use 2-hop traversal.
+
+## Rules
+
+1. **Confidence scoring.** Sort retrieval results by confidence descending. Use confidence primary, secondary metrics as tiebreakers.
+
+2. **Recency boost.** Apply positive weight to recently accessed memories. Boost by 0.02-0.05 within last hour.
+
+3. **Semantic ordering.** Use `cosineSimilarity` from `@alfred/embed` for embedding-based similarity. Never duplicate implementations.
+
+4. **Graph traversal.** Retrieve via 2-hop graph traversal from query nodes. Return structured relations (explains, depends).
+
+5. **Hybrid retrieval.** Combine semantic search (vector) and structural search (graph). Merge results with weighted scoring.
+
+6. **Fetch limit accounting.** Use `fetchLimit = k * 3` to account for threshold filtering. Return at most k results after filtering.
+
+7. **Entity fact filtering.** Use `parseEntityFactLabel` from `@alfred/knowledge/entity` for entity extraction. Never duplicate parsing logic.
+
+8. **Scoped retrieval.** Fetch user-scoped and `runtime:<id>` resources first. Fall back to global nodes only when no scoped results exist.
+
+9. **Archive exclusion.** Exclude archived nodes from retrieval by default. Include only when explicitly requested.
+
+10. **Result deduplication.** Deduplicate results by node ID. Never return same memory multiple times.
+
+## See Also
+
+- `.ruler/29-knowledge-graph.md` for knowledge graph patterns

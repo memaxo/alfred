@@ -12,3 +12,68 @@
 3. **Prompt Influence.** Fetch user-scoped heuristics first, then prepend similar past executions (repo-scoped) to enriched prompts.
 
 4. **Provider Registry.** Add new LLM providers through the central registry in `packages/cortex/src/providers`.
+
+
+
+<!-- Source: .ruler/provider-registry.md -->
+
+# Provider Registry Patterns
+
+## Core Principle
+
+LLM providers registered in central registry. Model selection via config. Fallback for reliability. Never raw HTTP to LLM APIs.
+
+## Rules
+
+1. **Provider registration.** Register LLM providers in `packages/cortex/src/providers`. Each provider exports create function returning `LanguageModel` from `ai` package.
+
+2. **Model selection.** Use KaLM-Embedding-Gemma3-12B-2511 for embeddings with 1024 dimensions. Use MRL truncation for storage efficiency.
+
+3. **AI SDK usage.** Never call OpenAI or other providers via raw HTTP. Use `generateText`, `streamText`, `generateObject`, `streamObject` from `ai` package.
+
+4. **Provider registry pattern.** Create provider registry that maps config names to provider instances. Support default provider fallback.
+
+5. **Prompt enhancement.** Fetch user-scoped heuristics first. Prepend similar past executions (repo-scoped). Enhance prompts with project conventions.
+
+6. **Embedding consistency.** Always use `EMBEDDING_DIM` from `@alfred/embed` for dimension validation. Never hardcode dimension values.
+
+7. **Fallback strategy.** Configure fallback providers in provider registry. Implement exponential backoff for provider failures.
+
+8. **Model capabilities.** Match tool calling and structured output to model capabilities. Use `generateObject`/`streamObject` for structured outputs.
+
+## See Also
+
+- `.ruler/15-ai-sdk-v6.md` for AI SDK v6 standards
+- `.ruler/28-embeddings.md` for embedding standards
+
+
+
+<!-- Source: .ruler/token-budgeting.md -->
+
+# Token Budgeting Patterns
+
+## Core Principle
+
+MaxTokens limits response length. Calculate remaining tokens for history. Truncate history to fit budget.
+
+## Rules
+
+1. **MaxTokens setting.** Configure `maxTokens` in model config for response length limit. Never leave unbounded or rely on provider defaults.
+
+2. **History token counting.** Count tokens in message history using tokenizer. Use provider-native tokenizer when available. Fall back to conservative estimate.
+
+3. **Budget calculation.** Calculate remaining tokens: `maxTokens - estimatedResponse - systemPrompt`. Never exceed provider context window.
+
+4. **History truncation.** Truncate oldest messages when history exceeds budget. Preserve system prompt and recent messages.
+
+5. **Chunk-based truncation.** Remove complete messages (all parts) when truncating. Never truncate within a single message part.
+
+6. **System prompt priority.** Always preserve system prompt. Truncate only conversation history and context messages.
+
+7. **Token budget metrics.** Track `token_budget_used` and `token_budget_remaining` metrics. Monitor for budget exhaustion.
+
+8. **Warning thresholds.** Log warning when remaining tokens < 1000. Fail gracefully when exceeding provider context limit.
+
+## See Also
+
+- `.ruler/15-ai-sdk-v6.md` for AI SDK v6 standards
