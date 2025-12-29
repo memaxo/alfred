@@ -19,7 +19,7 @@ describe("codex-stream", () => {
       expect(part?.type).toBe("reasoning");
       if (part?.type === "reasoning") {
         expect(part.text).toBe("Analyzing the problem");
-        expect(part.state).toBe("streaming");
+        expect(part.state).toBeUndefined();
       }
     });
 

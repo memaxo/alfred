@@ -84,7 +84,16 @@ describe("codex router stream", () => {
       complete: () => {},
     });
 
-    expect(toolCodexExecuteMock.mock.calls.length).toBe(1);
+    // createCodexStreamObservable kicks off Codex execution in an async task
+    // so we need to wait a tick for the dynamic import + execute call to start.
+    const startedAt = Date.now();
+    while (toolCodexExecuteMock.mock.calls.length === 0) {
+      if (Date.now() - startedAt > 250) {
+        throw new Error("codex_execute_not_started");
+      }
+      await new Promise((r) => setTimeout(r, 1));
+    }
+    expect(toolCodexExecuteMock).toHaveBeenCalledTimes(1);
 
     subscription.unsubscribe();
     await executionStopped;
