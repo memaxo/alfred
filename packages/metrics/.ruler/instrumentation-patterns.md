@@ -10,7 +10,7 @@ Instruments use nanosecond precision from `process.hrtime.bigint()`. Budget enfo
 
 2. **Budget wrapper.** Use `withBudget(label, budgetMs, fn)` for hot path instrumentation. Log warnings when budget exceeded. Budget breaches are defects.
 
-3. **Mark and measure.** Use `mark(label)` to record timestamps and `measure(startLabel, endLabel)` to calculate elapsed ms. Use for span tracking, not just totals.
+3. **Mark and measure.** Use `mark(label)` to record timestamps. Use `measure(startLabel, endLabel)` to calculate elapsed ms.
 
 4. **Voice-specific markers.** Use `markVoice(label)` with `VoiceMetricLabel` enum for STT/TTS pipeline instrumentation. Labels span capture, stream, STT, and TTS.
 

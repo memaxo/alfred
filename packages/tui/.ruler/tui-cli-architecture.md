@@ -22,7 +22,7 @@ CLI commands and TUI panels are registered via `CliManifest` exports. Discoverab
 
 8. **Performance budgets.** Panels must render in <16ms (60fps). Cache expensive computations in class fields. Avoid allocations in render loops.
 
-9. **Store subscriptions.** Domain panels use `create*Store()` from `subscriptions/<domain>.ts`. Panel `init()` subscribes and adds cleanup to `this.addSubscription()`.
+9. **Store subscriptions.** Domain panels must call `create*Store()` at class level. Panel `init()` must subscribe and call `this.addSubscription()`.
 
 ## See Also
 

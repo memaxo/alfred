@@ -10,9 +10,9 @@ Cognitive transitions must execute within µs budgets. Use `performance.now()` f
 
 2. **Budget enforcement.** Transitions must complete <100 µs. Log warnings when budget exceeded. Budget breaches are defects in CI.
 
-3. **No allocations in transitions.** Reuse objects, avoid spreading arrays, prefer `for` loops. Profile with inspector before optimizing.
+3. **No allocations in transitions.** Reuse objects, avoid spreading arrays, prefer `for` loops.
 
-4. **Pure transition function.** `applyTransition(state, autonomy, event)` returns new state and autonomy without side effects. Emit effects at boundary layer.
+4. **Pure transition function.** `applyTransition` must return new state and autonomy. Never emit side effects. Emit effects at boundary layer.
 
 5. **Timestamp injection.** Event objects must include timestamps. Transitions extract timestamps from events, never call `Date.now()` internally.
 

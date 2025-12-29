@@ -16,7 +16,7 @@ Planning uses vector similarity for pattern matching, LLM generation for new pla
 
 5. **Evaluation.** Use `evaluatePlan()` for validation. Fail fast on missing required fields. Return structured errors with suggested fixes.
 
-6. **Context enhancement.** Enhance prompts with: user-scoped heuristics (fetch first), similar past executions (repo-scoped), project-specific conventions from `projects.config`.
+6. **Context enhancement.** Prompt builders must fetch user-scoped heuristics, repo-scoped similar executions, and `projects.config` conventions. Never build prompts in isolation.
 
 7. **Failure analysis.** Store failed plans as anti-patterns with `failure_reason`. Use anti-patterns for proactive avoidance in future generations.
 
