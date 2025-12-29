@@ -285,7 +285,7 @@ export function searchEvents(args: {
   const offset = Math.max(0, args.offset ?? 0);
   const q = args.query.trim();
   if (!q) {
-    return [];
+    return Promise.resolve([]);
   }
 
   const conditions = [eq(codexRuns.userId, args.userId)];
