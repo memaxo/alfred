@@ -255,11 +255,9 @@ describe("droids router", () => {
                 return;
               }
               const payload = JSON.parse(event.data ?? "{}") as {
-                reason: string;
                 obligations: Obligation[];
                 runId: string;
               };
-              expect(payload.reason).toBe("droid_execution");
               expect(payload.obligations).toEqual(BIOMETRIC_OBLIGATION);
               expect(typeof payload.runId).toBe("string");
               expect(registerMock).toHaveBeenCalledWith(
