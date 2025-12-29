@@ -4,6 +4,10 @@
  * Benchmarks STT/TTS pipeline performance.
  */
 
+import { Buffer } from "node:buffer";
+import { join } from "node:path";
+import type { ProcessConfig } from "../process/tts";
+
 // biome-ignore lint/suspicious/noConsole: CLI output
 const log = console.log;
 
@@ -34,7 +38,24 @@ export async function benchmark(): Promise<BenchmarkResult> {
   log("Testing TTS performance...");
   try {
     const { TTSPool } = await import("../process/tts");
-    const pool = new TTSPool();
+    const whisperModelPath =
+      process.env.WHISPER_MODEL_PATH ?? "./packages/voice/models/whisper";
+    const piperModelPath =
+      process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper";
+
+    const root = process.cwd().endsWith("packages/voice")
+      ? process.cwd()
+      : join(process.cwd(), "packages/voice");
+
+    const ttsConfig: ProcessConfig = {
+      scriptPath: join(root, "python/tts"),
+      modelPath: piperModelPath,
+      env: {
+        WHISPER_MODEL_PATH: whisperModelPath,
+      },
+    };
+
+    const pool = new TTSPool(ttsConfig, 1);
     await pool.initialize();
 
     const testPhrases = [
@@ -44,17 +65,24 @@ export async function benchmark(): Promise<BenchmarkResult> {
     ];
 
     const latencies: number[] = [];
+    const audioLengthsMs: number[] = [];
 
     for (const phrase of testPhrases) {
       const start = performance.now();
-      await pool.synthesize(phrase);
+      const chunk = await pool.synthesize({ text: phrase });
       const latency = performance.now() - start;
       latencies.push(latency);
+      const bytes = Buffer.from(chunk.audioBase64, "base64").byteLength;
+      const sampleRate = chunk.sampleRate ?? 16_000;
+      const durationMs = (bytes / 2 / sampleRate) * 1000;
+      audioLengthsMs.push(durationMs);
       log(`  "${phrase.slice(0, 30)}..." - ${latency.toFixed(1)}ms`);
     }
 
     results.tts.avgLatencyMs =
       latencies.reduce((a, b) => a + b, 0) / latencies.length;
+    results.tts.avgAudioLengthMs =
+      audioLengthsMs.reduce((a, b) => a + b, 0) / audioLengthsMs.length;
     results.tts.samples = latencies.length;
     log(`\nTTS Average: ${results.tts.avgLatencyMs.toFixed(1)}ms\n`);
   } catch (error) {
