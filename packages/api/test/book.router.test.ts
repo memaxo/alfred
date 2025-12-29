@@ -89,12 +89,13 @@ describe("book router", () => {
   describe("delete", () => {
     it("deletes a bookmark", async () => {
       deleteBookmarkMock.mockResolvedValue(true);
+      const id = "00000000-0000-0000-0000-000000000000";
 
       const result = await caller.book.delete({
-        id: "bookmark-id",
+        id,
       });
 
-      expect(deleteBookmarkMock).toHaveBeenCalledWith("bookmark-id");
+      expect(deleteBookmarkMock).toHaveBeenCalledWith(id);
       expect(result).toEqual({ deleted: true });
     });
   });
