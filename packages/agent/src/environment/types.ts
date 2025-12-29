@@ -16,20 +16,9 @@ export type ExecOptions = {
 /**
  * Workspace environment kind.
  *
- * Production builds use "container" only.
- * Development builds with feature flags can include legacy types.
- *
- * Build commands:
- *   Production: bun build ./src/index.ts --outdir ./dist
- *   Development: bun build --feature=LEGACY_WORKTREE --feature=LEGACY_POOF ./src/index.ts
+ * AgentFS is the only supported execution environment.
  */
-export type WorkspaceKind = "container" | "worktree" | "poof" | "host";
-
-/**
- * Production-only workspace kind (container isolation).
- * Use this type when you want to enforce container-only at compile time.
- */
-export type ProductionWorkspaceKind = "container";
+export type WorkspaceKind = "agentfs";
 
 export type Workspace = {
   readonly id: string;
@@ -72,49 +61,4 @@ export type Workspace = {
   startSession?(command: string, sessionId?: string): Promise<string>;
   stopSession?(sessionId: string): Promise<void>;
   listSessions?(): Promise<string[]>;
-};
-
-export type ContainerWorkspace = Workspace & {
-  readonly kind: "container";
-  /** Docker container identifier (or name) used for execution. */
-  readonly containerId: string;
-  /** Stable container name for this run. */
-  readonly containerName: string;
-  /** Working directory inside the container corresponding to `root`. */
-  readonly containerCw: string;
-};
-
-export function isContainerWorkspace(
-  workspace: Workspace
-): workspace is ContainerWorkspace {
-  return (
-    workspace.kind === "container" &&
-    "containerId" in workspace &&
-    "containerName" in workspace &&
-    "containerCw" in workspace
-  );
-}
-
-/**
- * Type guard for PoofWorkspace-specific methods.
- * Only available when built with --feature=LEGACY_POOF.
- */
-export function isPoofWorkspace(
-  workspace: Workspace
-): workspace is Workspace & {
-  hasChanges(): Promise<boolean>;
-  getChanges(): Promise<PoofChange[]>;
-  applyChanges(targetDir?: string): Promise<void>;
-} {
-  return workspace.kind === "poof" && "hasChanges" in workspace;
-}
-
-/**
- * Poof change type (legacy).
- * Only used when built with --feature=LEGACY_POOF.
- */
-export type PoofChange = {
-  path: string;
-  type: "added" | "modified" | "deleted";
-  isDirectory: boolean;
 };

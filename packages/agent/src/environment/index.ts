@@ -1,14 +1,17 @@
 /**
  * Environment module exports for workspace management.
+ *
+ * AgentFS is the only supported workspace type, providing
+ * SQLite-based isolation with full audit trail.
  */
 
-export { ContainerWorkspace } from "./container.js";
+export type { AgentFSWorkspaceConfig } from "../agentfs/types.js";
+export { AgentFSWorkspace, isAgentFSWorkspace } from "./agentfs.js";
 export { WorkspaceFactory, type WorkspaceFactoryOptions } from "./factory.js";
-export { PoofWorkspace, type PoofWorkspaceConfig } from "./poof.js";
+
 export type {
   ExecOptions,
   ExecResult,
   Workspace,
   WorkspaceKind,
 } from "./types.js";
-export { WorktreeWorkspace } from "./worktree.js";

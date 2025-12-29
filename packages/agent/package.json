@@ -7,7 +7,7 @@
     "typecheck": "tsc -b",
     "build": "tsc -b --emitDeclarationOnly",
     "build:bundle": "bun build ./src/index.ts --outdir ./dist/bundle --target=bun",
-    "build:bundle:dev": "bun build --feature=LEGACY_WORKTREE --feature=LEGACY_POOF ./src/index.ts --outdir ./dist/bundle-dev --target=bun"
+    "build:bundle:dev": "bun build --feature=LEGACY_WORKTREE ./src/index.ts --outdir ./dist/bundle-dev --target=bun"
   },
   "exports": {
     ".": {
@@ -80,6 +80,7 @@
     "@alfred/metrics": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/type": "workspace:*",
+    "agentfs-sdk": "^0.3.1",
     "exa-js": "^2.0.12",
     "@linear/sdk": "^53.0.0",
     "@lmnr-ai/lmnr": "^0.7.4",

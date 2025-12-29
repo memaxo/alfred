@@ -54,7 +54,7 @@ describe("Workflow Event Emission", () => {
     resources: {
       agentCount: 1,
       strategy: "parallel",
-      isolation: "container",
+      isolation: "agentfs",
     },
     evaluationCriteria: [],
   };

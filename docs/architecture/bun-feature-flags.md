@@ -94,7 +94,7 @@ bun build --feature=FEATURE_A --feature=FEATURE_B ./src/index.ts --outdir ./dist
 
 - `LEGACY_*` - Deprecated features kept for backward compatibility
 - `DEBUG` - Debug-only code (logging, assertions)
-- Platform-specific flags should use explicit names (e.g., `LINUX_POOF`)
+- Platform-specific flags should use explicit names (e.g., `LINUX_FUSE`, `MACOS_KEYCHAIN`)
 
 ## When to Use
 

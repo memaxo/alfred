@@ -3,7 +3,7 @@ import {
   type WavePlan,
 } from "@alfred/agent/orchestrator/multi/spawn";
 import type { StructuredPlan } from "@alfred/plan";
-import { assignAgentTypes, setIsolation } from "./agents.js";
+import { assignAgentTypes } from "./agents.js";
 import { buildDependencyMap } from "./dependencies.js";
 import { flattenPhases } from "./flatten.js";
 
@@ -39,11 +39,5 @@ export function convertPlanToWavePlan(plan: StructuredPlan): WavePlan[] {
     };
   });
 
-  // 6. Set isolation strategy from plan
-  const wavesWithIsolation = setIsolation(
-    wavesWithPhases,
-    plan.resources.isolation as "container" | "worktree"
-  );
-
-  return wavesWithIsolation;
+  return wavesWithPhases;
 }

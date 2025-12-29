@@ -369,7 +369,7 @@ export type WavePlan = {
   agents: string[];
   dependsOn: string[];
   agentType?: string;
-  isolation?: "container" | "worktree";
+  isolation?: "agentfs";
   phaseId?: string;
 };
 

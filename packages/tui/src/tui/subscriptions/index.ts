@@ -2,6 +2,7 @@
  * ALFRED TUI Subscriptions Module
  */
 
+export * from "./agentfs";
 export * from "./cognitive";
 export * from "./manager";
 export * from "./metrics";

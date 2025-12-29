@@ -356,17 +356,11 @@ async function runCodexWithCodex({
     auto: input.auto,
     model: input.model,
     profile: input.profile,
-    environmentKind: input.poofUpperDir
-      ? "poof"
-      : input.containerId
-        ? "container"
-        : "host",
+    environmentKind: "agentfs",
     workingDirectory: resolvedCw,
     workspaceRoot: process.env.ORCH_WORKSPACE_ROOT,
-    dockerContainerId: input.containerId,
-    dockerImage: process.env.ORCH_DOCKER_IMAGE,
-    poofUpperDir: input.poofUpperDir,
-    poofProfile: input.poofProfile,
+    agentfsDbPath: input.agentfsDbPath,
+    agentfsRunId: process.env.ORCH_RUN_ID,
     outputSchema:
       input.outputSchema && validateOutputSchema(input.outputSchema)
         ? input.outputSchema

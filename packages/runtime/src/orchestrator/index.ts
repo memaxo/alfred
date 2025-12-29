@@ -12,7 +12,7 @@ import { runReviewPhase } from "./review";
 import type { OrchestratorContext, ProjectConfig } from "./types";
 import { runWaves, type WavesResult } from "./waves";
 
-export { assignAgentTypes, setIsolation } from "./agents.js";
+export { assignAgentTypes } from "./agents.js";
 export { convertPlanToWavePlan } from "./convert.js";
 export { buildDependencyMap } from "./dependencies.js";
 export { flattenPhases } from "./flatten.js";

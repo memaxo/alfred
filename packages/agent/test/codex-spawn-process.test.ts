@@ -68,7 +68,7 @@ describe("createCodexSpawn", () => {
   });
 
   describe("host mode", () => {
-    it("creates host spawn function when no container or poof", async () => {
+    it("creates host spawn function when no container", async () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn({}, cwdHandle);
 
@@ -83,6 +83,27 @@ describe("createCodexSpawn", () => {
       expect(call.cmd).toBe("/usr/bin/codex");
       expect(call.args).toEqual(["--version"]);
       expect(call.cwdHandle).toBe(cwdHandle);
+    });
+
+    it("injects AGENTFS_DB_PATH into env when provided", async () => {
+      const cwdHandle = createMockCwdHandle(tempDir);
+      const spawn = await createCodexSpawn(
+        { agentfsDbPath: "/tmp/agentfs.db" },
+        cwdHandle
+      );
+
+      spawn({
+        cmd: "/usr/bin/codex",
+        args: ["--version"],
+        env: { CUSTOM_VAR: "value" },
+      });
+
+      expect(spawnWithSecureCwdMock).toHaveBeenCalledTimes(1);
+      const call = spawnWithSecureCwdMock.mock.calls[0]?.[0];
+      expect(call.env).toMatchObject({
+        CUSTOM_VAR: "value",
+        AGENTFS_DB_PATH: "/tmp/agentfs.db",
+      });
     });
 
     it("returns wrapped process with stdout/stderr/exited/kill", async () => {
@@ -208,6 +229,27 @@ describe("createCodexSpawn", () => {
       expect(call.args).toContain("CUSTOM_VAR");
       // PATH should be filtered out
       expect(call.args).not.toContain("PATH");
+    });
+
+    it("injects AGENTFS_DB_PATH into docker env and -e flags when provided", async () => {
+      const cwdHandle = createMockCwdHandle(tempDir);
+      const spawn = await createCodexSpawn(
+        { containerId: "container-agentfs", agentfsDbPath: "/tmp/agentfs.db" },
+        cwdHandle
+      );
+
+      spawn({
+        cmd: "codex",
+        args: [],
+        env: { CODEX_API_KEY: "key" },
+      });
+
+      const call = spawnWithSecureCwdMock.mock.calls[0]?.[0];
+      expect(call.env).toMatchObject({
+        CODEX_API_KEY: "key",
+        AGENTFS_DB_PATH: "/tmp/agentfs.db",
+      });
+      expect(call.args).toContain("AGENTFS_DB_PATH");
     });
   });
 

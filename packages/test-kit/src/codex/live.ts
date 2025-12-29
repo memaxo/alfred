@@ -1,20 +1,18 @@
 import { randomUUID } from "node:crypto";
+import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
-import {
-  isContainerWorkspace,
-  type Workspace,
-} from "@alfred/agent/environment/types";
+import type { Workspace } from "@alfred/agent/environment/types";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 
 /**
  * Workspace kind for Codex live testing.
- * Production uses container isolation only.
+ * AgentFS inside Docker is the only supported configuration.
  */
-export type CodexLiveWorkspaceKind = "container";
+export type CodexLiveWorkspaceKind = "agentfs";
 
 /**
  * Codex live workspace configuration.
- * Contains workspace instance and container-specific metadata.
+ * Contains workspace instance and AgentFS-specific metadata.
  */
 export type CodexLiveWorkspace = {
   id: string;
@@ -22,8 +20,7 @@ export type CodexLiveWorkspace = {
   kind: CodexLiveWorkspaceKind;
   root: string;
   workspace: Workspace;
-  containerId?: string;
-  containerCw?: string;
+  agentfsDbPath?: string;
 };
 
 export type CodexLiveChunk = unknown;
@@ -37,7 +34,7 @@ export type CodexLiveRunResult = {
 /**
  * Create a Codex live workspace for testing.
  *
- * Uses Docker container isolation (production standard).
+ * Uses AgentFS inside Docker container (production standard).
  */
 export async function createCodexLiveWorkspace(options: {
   repoRoot: string;
@@ -45,6 +42,7 @@ export async function createCodexLiveWorkspace(options: {
   id?: string;
   runId?: string;
   dockerImage?: string;
+  authz?: string;
 }): Promise<CodexLiveWorkspace> {
   const runId = options.runId ?? randomUUID();
   const id = options.id ?? `codex-live-${runId}`;
@@ -56,12 +54,12 @@ export async function createCodexLiveWorkspace(options: {
     options.repoRoot,
     {
       image: options.dockerImage,
+      authz: options.authz,
     }
   );
   await ws.initialize();
 
-  const containerId = isContainerWorkspace(ws) ? ws.containerId : undefined;
-  const containerCw = isContainerWorkspace(ws) ? ws.containerCw : undefined;
+  const agentfsDbPath = isAgentFSWorkspace(ws) ? ws.dbPath : undefined;
 
   return {
     id,
@@ -69,8 +67,7 @@ export async function createCodexLiveWorkspace(options: {
     kind: options.kind,
     root: ws.root,
     workspace: ws,
-    containerId,
-    containerCw,
+    agentfsDbPath,
   };
 }
 
@@ -107,8 +104,7 @@ export async function runCodexLiveInWorkspace(options: {
       auto: options.auto ?? "low",
       cw: options.workspace.root,
       sessionId: options.sessionId,
-      containerId: options.workspace.containerId,
-      containerCw: options.workspace.containerCw,
+      agentfsDbPath: options.workspace.agentfsDbPath,
       model: options.model,
       profile: options.profile,
       authz: options.authz,

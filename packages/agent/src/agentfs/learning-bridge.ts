@@ -13,6 +13,7 @@
 import { existsSync } from "node:fs";
 import { agentfsLearningExtractionsTotal } from "./metrics.js";
 import type { AgentFSInterface } from "./types.js";
+import { AlfredAgentFS } from "./wrapper.js";
 
 /**
  * Analyzed tool call pattern from AgentFS data.
@@ -286,16 +287,8 @@ export async function processForLearning(dbPath: string): Promise<{
     throw new Error(`agentfs_database_not_found: ${dbPath}`);
   }
 
-  // Lazy load AgentFS SDK
   let agent: AgentFSInterface;
-  try {
-    const sdk = (await import("agentfs-sdk")) as any;
-    const AgentFS = sdk.AgentFS ?? sdk.default?.AgentFS ?? sdk;
-    agent = (await AgentFS.open({ path: dbPath })) as AgentFSInterface;
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    throw new Error(`agentfs_sdk_load_failed: ${msg}`);
-  }
+  agent = await AlfredAgentFS.open({ id: "learning", path: dbPath });
 
   try {
     const patterns = await extractToolCallPatterns(agent);

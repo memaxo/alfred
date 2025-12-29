@@ -235,11 +235,8 @@ export const codexInputSchema = z.object({
   env: z.record(z.string(), z.string()).optional(),
   sessionId: z.string().min(1).max(255).optional(),
   userId: z.string().optional(), // Injected server-side identity for session binding
-  containerId: z.string().optional(), // Phase 11: Docker support
-  containerCw: z.string().min(1).max(2048).optional(),
-  poofUpperDir: z.string().min(1).max(1024).optional(),
-  poofProfile: z.enum(["minimal", "standard", "intensive"]).optional(),
-  poofMode: z.enum(["exec", "run"]).optional(),
+  /** AgentFS database path for audit trail */
+  agentfsDbPath: z.string().min(1).max(1024).optional(),
   outputSchema: z
     .union([z.boolean(), z.record(z.string(), z.unknown())])
     .optional(),
@@ -275,8 +272,8 @@ export const toolOutputSchema = z.object({
       })
     )
     .optional(),
-  metadata: (agentMetadataSchema as any).optional(),
-  sessionState: (responseSessionStateSchema as any).optional(),
+  metadata: agentMetadataSchema.optional(),
+  sessionState: responseSessionStateSchema.optional(),
 });
 
 export type { AgentMetadata, ResponseSessionState };

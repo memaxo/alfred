@@ -24,6 +24,8 @@ CLI commands and TUI panels are registered via `CliManifest` exports. Discoverab
 
 9. **Store subscriptions.** Domain panels must call `create*Store()` at class level. Panel `init()` must subscribe and call `this.addSubscription()`.
 
+10. **AgentFS panels.** AgentFS panels live under `src/tui/panels/agentfs/` and read state via `src/tui/subscriptions/agentfs.ts` (polling for now); any polling timers must call `.unref()` so `bun test` can exit.
+
 ## See Also
 
 - `.ruler/43-tui-patterns.md` in `packages/runtime` for detailed TUI patterns

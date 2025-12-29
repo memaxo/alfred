@@ -18,7 +18,6 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
 - (Optional) [UV](https://github.com/astral-sh/uv) for Python dependency management (required for voice/embed packages)
 - (Optional) Python 3.10+ (installed via UV for voice/embed packages)
 - (Optional) Redis for biometric cache
-- (Optional) [poof](https://github.com/Jarred-Sumner/poof) for ephemeral filesystem isolation (Linux only) - install with `bun run install:poof`
 
 ### Initial Setup
 

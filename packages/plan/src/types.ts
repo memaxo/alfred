@@ -42,7 +42,7 @@ export type StructuredPlan = {
   resources: {
     agentCount: number;
     strategy: "sequential" | "parallel" | "topological" | "mixed";
-    isolation: "container" | "worktree";
+    isolation: "agentfs";
   };
   evaluationCriteria: Array<
     | {

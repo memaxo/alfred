@@ -24,7 +24,7 @@ const listInputSchema = z.object({
     .optional()
     .describe("Filter by Codex thread id."),
   environmentKind: z
-    .enum(["host", "worktree", "container", "poof"])
+    .enum(["agentfs"])
     .optional()
     .describe("Filter by isolation environment kind."),
   startedAfter: z

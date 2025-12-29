@@ -8,7 +8,12 @@
     "composite": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "src/tui/subscriptions.backup/**"
+  ],
   "references": [
     { "path": "../type" },
     { "path": "../api" },

@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import type { Workspace } from "@alfred/agent/environment/types";
+import type { MergePlan } from "@alfred/agent/orchestrator/multi/merge";
 import {
   buildReviewPlan,
   formatReviewFailureDetails,
@@ -65,14 +66,13 @@ function createSessionController(
 ): SessionController {
   let workspacePromise: Promise<Workspace | null> | null = null;
 
-  const ensureWorkspace = async () => {
+  const ensureWorkspace = () => {
     if (!workspacePromise) {
       workspacePromise = createWorkspace(
-        "worktree",
+        "agentfs",
         `review-${runId}`,
         runId,
-        repoBase,
-        { enableSessions: true }
+        repoBase
       ).catch((error) => {
         logger.warn("review_session_workspace_failed", {
           runId,
@@ -267,13 +267,10 @@ async function createDebuggerExecPlan(
   return fileAbsPath;
 }
 
-function buildTestCommandFromPlan(mergePlan: any): string {
-  const changed = Array.isArray(mergePlan?.changedPackages)
-    ? (mergePlan.changedPackages as string[])
-    : [];
+function buildTestCommandFromPlan(mergePlan: MergePlan): string {
   const scoped = Array.from(
     new Set(
-      changed.filter(
+      mergePlan.changedPackages.filter(
         (pkg) => pkg.startsWith("packages/") || pkg.startsWith("apps/")
       )
     )
@@ -286,7 +283,7 @@ function buildTestCommandFromPlan(mergePlan: any): string {
 
 export async function* runReviewPhase(
   ctx: OrchestratorContext,
-  mergePlan: any,
+  mergePlan: MergePlan,
   deps?: ReviewDeps
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const { input, runId, workspace, projectConfig, authz, signal, userId } = ctx; // Destructure projectConfig
@@ -296,16 +293,13 @@ export async function* runReviewPhase(
     summary: mergePlan.summary,
   });
 
-  const reviewFocusFiles = Array.isArray(mergePlan?.expectedFiles)
-    ? Array.from(
-        new Set(
-          (mergePlan.expectedFiles as string[]).filter(
-            (file): file is string =>
-              typeof file === "string" && file.length > 0
-          )
-        )
-      ).slice(0, 50)
-    : [];
+  const reviewFocusFiles = Array.from(
+    new Set(
+      mergePlan.expectedFiles.filter(
+        (file): file is string => typeof file === "string" && file.length > 0
+      )
+    )
+  ).slice(0, 50);
 
   const sessionController =
     (deps?.sessionsEnabled ?? reviewSessionsEnabled())
@@ -322,19 +316,18 @@ export async function* runReviewPhase(
   if (!reviewPlan.checks || reviewPlan.checks.length === 0) {
     reviewPlan.checks = [
       ctx.input.linear?.sessionId
-        ? ({
+        ? {
             id: "linear-default-tests",
-            // historically some runtime callsites/tests used `type`.
             type: "tests",
             description:
               "Run the project's test suite (bun test) to validate the Linear-directed workflow.",
-          } as any)
-        : ({
+          }
+        : {
             id: "default-tests",
-            kind: "tests",
+            type: "tests",
             description:
               "Run the project's test suite (bun test) to validate the workflow outcome.",
-          } as any),
+          },
     ];
   }
 
@@ -346,10 +339,8 @@ export async function* runReviewPhase(
 
   logger.info("multi_agent_review_plan", {
     runId,
-    // @ts-expect-error - ReviewPlan typing mismatch in runtime
     files: reviewPlan.files ?? [],
-    // @ts-expect-error - ReviewCheck typing mismatch in runtime
-    checks: reviewPlan.checks?.map((c) => c.kind) ?? [],
+    checks: reviewPlan.checks?.map((c) => c.type) ?? [],
   });
 
   try {
@@ -393,16 +384,14 @@ export async function* runReviewPhase(
               ? "review_execution_started"
               : "review_retry_started",
           attempt: fixAttempts + 1,
-        } as any;
+        } as unknown as WorkflowEvent;
 
         for (const check of reviewPlan.checks) {
           if (!check) {
             continue;
           }
 
-          // Contract: checks may be shaped as `{ kind: "tests" }` (agent),
-          // while older runtime/test code used `{ type: "tests" }`.
-          const checkType = (check as any).type ?? (check as any).kind;
+          const checkType = check.type;
           if (typeof checkType !== "string" || checkType.length === 0) {
             continue;
           }
@@ -417,7 +406,7 @@ export async function* runReviewPhase(
               status: "running",
               attempt: attemptIndex,
             },
-          } as any;
+          } as unknown as WorkflowEvent;
 
           let command = "";
           if (checkType === "static") {
@@ -426,11 +415,14 @@ export async function* runReviewPhase(
             command = "bun run lint";
           } else if (checkType === "tests") {
             command = buildTestCommandFromPlan(mergePlan);
-          } else if (checkType === "verify" && (check as any).script) {
+          } else if (checkType === "verify" && check.script) {
             command = `bun ${check.script}`;
           } else if (checkType === "smoke" && projectConfig) {
             // Phase 5: Ephemeral Verification (Smoke)
-            yield { type: "notice", message: "running_smoke_test" } as any;
+            yield {
+              type: "notice",
+              message: "running_smoke_test",
+            } as unknown as WorkflowEvent;
             await updateReviewProgress(
               reviewExecPlanPath,
               check.id,
@@ -448,7 +440,7 @@ export async function* runReviewPhase(
                   status: "passed",
                   attempt: attemptIndex,
                 },
-              } as any;
+              } as unknown as WorkflowEvent;
             } else {
               currentRunPassed = false;
               reviewFailures.push({
@@ -472,7 +464,7 @@ export async function* runReviewPhase(
                   attempt: attemptIndex,
                   evidence: result.message,
                 },
-              } as any;
+              } as unknown as WorkflowEvent;
             }
             continue; // Skip standard runner
           }
@@ -494,7 +486,7 @@ export async function* runReviewPhase(
               type: "event",
               kind: "tool-call",
               data: { tool: "runner", command },
-            } as any;
+            } as unknown as WorkflowEvent;
 
             const result = await runCommand(
               command,
@@ -513,7 +505,7 @@ export async function* runReviewPhase(
                 stdout: result.stdout.slice(0, 1000), // Truncate for event stream
                 durationMs: result.durationMs,
               },
-            } as any;
+            } as unknown as WorkflowEvent;
 
             if (result.exitCode !== 0) {
               currentRunPassed = false;
@@ -543,7 +535,7 @@ export async function* runReviewPhase(
                   attempt: attemptIndex,
                   evidence: `${result.stdout}\n${result.stderr}`.slice(0, 1000),
                 },
-              } as any;
+              } as unknown as WorkflowEvent;
             } else {
               await updateReviewProgress(
                 reviewExecPlanPath,
@@ -561,7 +553,7 @@ export async function* runReviewPhase(
                   attempt: attemptIndex,
                   durationMs: result.durationMs,
                 },
-              } as any;
+              } as unknown as WorkflowEvent;
             }
           } catch (err) {
             currentRunPassed = false;
@@ -592,7 +584,7 @@ export async function* runReviewPhase(
                 attempt: attemptIndex,
                 evidence: String(err),
               },
-            } as any;
+            } as unknown as WorkflowEvent;
           }
         }
 
@@ -606,7 +598,10 @@ export async function* runReviewPhase(
           fixAttempts < MAX_FIX_ATTEMPTS &&
           (input.auto === "medium" || input.auto === "high")
         ) {
-          yield { type: "notice", message: "self_correction_started" } as any;
+          yield {
+            type: "notice",
+            message: "self_correction_started",
+          } as unknown as WorkflowEvent;
 
           try {
             const fixerSpec = buildFixerAgentSpec({
@@ -671,23 +666,28 @@ export async function* runReviewPhase(
 
             const fixerEvents: WorkflowEvent[] = [];
             const writer = {
-              write: async (chunk: unknown) => {
-                const payload = chunk as { type?: string; event?: unknown };
-                if (!payload || typeof payload !== "object") {
-                  return;
+              write: (chunk: unknown): Promise<void> => {
+                if (!chunk || typeof chunk !== "object") {
+                  return Promise.resolve();
                 }
-                const type = (payload as any).type;
+                const payload = chunk as Record<string, unknown>;
+                const type =
+                  typeof payload.type === "string" ? payload.type : "";
                 if (type === "stdout" || type === "stderr") {
-                  fixerEvents.push({
-                    type,
-                    text: (payload as any).text,
-                  } as any);
+                  const text =
+                    typeof payload.text === "string" ? payload.text : "";
+                  fixerEvents.push({ type, text } as unknown as WorkflowEvent);
                 } else if (type === "notice") {
+                  const message =
+                    typeof payload.message === "string"
+                      ? payload.message
+                      : "fixer_notice";
                   fixerEvents.push({
                     type: "notice",
-                    message: (payload as any).message,
-                  } as any);
+                    message,
+                  } as unknown as WorkflowEvent);
                 }
+                return Promise.resolve();
               },
             } as const;
 
@@ -735,7 +735,7 @@ export async function* runReviewPhase(
                 attempt: fixAttempts + 1,
                 status: "completed",
               },
-            } as any;
+            } as unknown as WorkflowEvent;
           } catch (error) {
             const {
               userMessage,
@@ -750,7 +750,10 @@ export async function* runReviewPhase(
               needsElevation,
               limitExceeded,
             });
-            yield { type: "notice", message: userMessage } as any;
+            yield {
+              type: "notice",
+              message: userMessage,
+            } as unknown as WorkflowEvent;
             // If fixer crashes, we probably can't recover, but let the loop increment and maybe retry or fail.
           }
 
@@ -817,7 +820,7 @@ export async function* runReviewPhase(
           type: "notice",
           message: "review_fallback_triggered",
           plan: fallbackPlanPath,
-        } as any;
+        } as unknown as WorkflowEvent;
 
         yield {
           type: "event",
@@ -826,7 +829,7 @@ export async function* runReviewPhase(
             plan: fallbackPlanPath,
             attempts,
           },
-        } as any;
+        } as unknown as WorkflowEvent;
 
         yield {
           type: "event",
@@ -840,7 +843,7 @@ export async function* runReviewPhase(
             relevantFiles: reviewFocusFiles,
             summary: formatReviewFailureDetails(reviewFailures),
           },
-        } as any;
+        } as unknown as WorkflowEvent;
       }
 
       yield {
@@ -852,7 +855,7 @@ export async function* runReviewPhase(
           durationSeconds,
           attempts,
         },
-      } as any;
+      } as unknown as WorkflowEvent;
     }
   } finally {
     await sessionController?.cleanup();

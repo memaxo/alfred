@@ -36,16 +36,3 @@ export function assignAgentTypes(
     };
   });
 }
-
-/**
- * Set the isolation strategy for all waves in a plan.
- */
-export function setIsolation(
-  waves: WavePlan[],
-  isolation: "container" | "worktree" | "none"
-): WavePlan[] {
-  return waves.map((wave) => ({
-    ...wave,
-    isolation: isolation === "none" ? undefined : isolation,
-  }));
-}

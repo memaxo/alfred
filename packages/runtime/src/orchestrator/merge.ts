@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { isPoofWorkspace } from "@alfred/agent/environment/types";
+import type { ConflictScanResult } from "@alfred/agent/orchestrator/multi/conflict";
 import {
   aggregateConflictMarkers,
   countConflictMarkers,
@@ -8,6 +8,8 @@ import {
 import {
   buildMergePlan,
   generateMergeExecPlanSkeleton,
+  type AgentOutcome as MergeAgentOutcome,
+  type MergePlan,
 } from "@alfred/agent/orchestrator/multi/merge";
 import { executeMergePlan } from "@alfred/agent/orchestrator/multi/merge-executor";
 import { plansPath } from "@alfred/agent/orchestrator/plans";
@@ -72,62 +74,70 @@ export async function* runMergePhase(
   wavesResult: WavesResult
 ): AsyncGenerator<
   WorkflowEvent,
-  { mergePlan: any; conflictScanResult: any },
+  { mergePlan: MergePlan; conflictScanResult: ConflictScanResult | null },
   void
 > {
   const { runId, workspace, authz, input, userId, plan } = ctx;
-  const { allAgentOutcomes, agentFileHints, activeWorkspaces } = wavesResult;
+  const {
+    allAgentOutcomes,
+    agentFileHints,
+    activeWorkspaces: _activeWorkspaces,
+  } = wavesResult;
   const planId = plan?.id ?? runId;
 
-  yield { type: "merge-start", planId } as any;
-  yield { type: "merge-progress", planId, progress: 0.1 } as any;
+  yield { type: "merge-start", planId } as unknown as WorkflowEvent;
+  yield {
+    type: "merge-progress",
+    planId,
+    progress: 0.1,
+  } as unknown as WorkflowEvent;
 
-  const mergeOutcomes = allAgentOutcomes.map((outcome) => ({
-    agentId: outcome.agentId,
-    subTaskId: (outcome as any).subTaskId ?? "unknown",
-    status: outcome.status,
-    result: (outcome as any).result ?? {
+  const mergeOutcomes: MergeAgentOutcome[] = allAgentOutcomes.map((outcome) => {
+    const parts = outcome.agentId.split(":");
+    const subTaskId =
+      parts.length > 1 ? (parts.at(-1) ?? "unknown") : "unknown";
+    const status: MergeAgentOutcome["status"] =
+      outcome.stuck === true
+        ? "stuck"
+        : outcome.status === "failed"
+          ? "failed"
+          : outcome.status === "completed"
+            ? "completed"
+            : "completed";
+
+    const result = outcome.result
+      ? {
+          summary: outcome.result.summary,
+          artifacts: outcome.result.artifacts.map((p) => ({
+            path: p,
+            kind: "file",
+          })),
+          changes: outcome.result.changes,
+          notes: outcome.result.notes,
+          branch: outcome.result.branch,
+        }
+      : undefined;
+
+    return {
+      agentId: outcome.agentId,
+      subTaskId,
+      status,
+      result,
+    };
+  });
+
+  // Note: Poof overlay handling has been removed.
+  // AgentFS workspaces manage state internally via SQLite.
+  // Changes are tracked in the agentfs database for audit/learning.
+
+  // Add fallback for Tier 1 agents
+  for (const o of mergeOutcomes) {
+    o.result ??= {
       summary: "codex agent execution",
       artifacts: [],
       changes: [],
       notes: [],
-    },
-  }));
-
-  // Apply poof overlay changes into the main workspace before merge execution.
-  // This keeps runWaves pure with respect to repository state and consolidates
-  // all "apply changes" behavior into merge/review phases.
-  for (const ws of activeWorkspaces) {
-    if (ws.kind !== "poof" || !isPoofWorkspace(ws)) {
-      continue;
-    }
-    try {
-      const hasChanges = await ws.hasChanges();
-      if (!hasChanges) {
-        continue;
-      }
-      const changes = await ws.getChanges();
-      logger.info("poof_applying_changes", {
-        runId,
-        agentId: ws.id,
-        changeCount: changes.length,
-      });
-      await ws.applyChanges();
-      yield {
-        type: "notice",
-        message: `poof_changes_applied:${ws.id}`,
-      } as any;
-    } catch (error) {
-      logger.error("poof_apply_changes_failed", {
-        runId,
-        agentId: ws.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  // Add fallback for Tier 1 agents
-  for (const o of mergeOutcomes) {
+    };
     if (!o.result.changes || o.result.changes.length === 0) {
       const hints = agentFileHints.get(o.agentId);
       if (hints) {
@@ -137,9 +147,13 @@ export async function* runMergePhase(
   }
 
   const targetBranch = await resolveTargetBranch(workspace, authz);
-  const mergePlan = buildMergePlan(mergeOutcomes as any, { targetBranch });
+  const mergePlan = buildMergePlan(mergeOutcomes, { targetBranch });
 
-  yield { type: "merge-progress", planId, progress: 0.3 } as any;
+  yield {
+    type: "merge-progress",
+    planId,
+    progress: 0.3,
+  } as unknown as WorkflowEvent;
 
   logger.info("multi_agent_merge_plan", {
     runId,
@@ -156,16 +170,29 @@ export async function* runMergePhase(
     mergePlan.branches.length > 0 &&
     (await isGitWorkspace(workspace))
   ) {
-    yield { type: "notice", message: "merge_execution_started" } as any;
-    yield { type: "merge-progress", planId, progress: 0.5 } as any;
+    yield {
+      type: "notice",
+      message: "merge_execution_started",
+    } as unknown as WorkflowEvent;
+    yield {
+      type: "merge-progress",
+      planId,
+      progress: 0.5,
+    } as unknown as WorkflowEvent;
 
     const mergeResult = await executeMergePlan(
       mergePlan,
       workspace,
       toolGit,
       {
-        write: (chunk: any) => {
-          if (chunk?.type === "stdout" || chunk?.type === "stderr") {
+        write: (chunk: unknown) => {
+          if (
+            chunk &&
+            typeof chunk === "object" &&
+            (chunk as { type?: unknown }).type &&
+            (((chunk as { type?: unknown }).type as unknown) === "stdout" ||
+              ((chunk as { type?: unknown }).type as unknown) === "stderr")
+          ) {
             // passthrough for observability
           }
         },
@@ -187,7 +214,10 @@ export async function* runMergePhase(
     });
 
     if (mergeResult.status === "completed") {
-      yield { type: "notice", message: "merge_execution_completed" } as any;
+      yield {
+        type: "notice",
+        message: "merge_execution_completed",
+      } as unknown as WorkflowEvent;
     } else if (mergeResult.status === "conflict") {
       yield {
         type: "notice",
@@ -195,7 +225,7 @@ export async function* runMergePhase(
         branch: mergeResult.conflictBranch,
         files: mergeResult.conflictFiles,
         reason: mergeResult.error,
-      } as any;
+      } as unknown as WorkflowEvent;
       if (mergeResult.error?.startsWith("arbiter_failed:")) {
         yield {
           type: "error",
@@ -203,7 +233,7 @@ export async function* runMergePhase(
           branch: mergeResult.conflictBranch,
           files: mergeResult.conflictFiles,
           reason: mergeResult.error,
-        } as any;
+        } as unknown as WorkflowEvent;
       }
     } else {
       logger.warn("merge_execution_failed", { error: mergeResult.error });
@@ -211,16 +241,12 @@ export async function* runMergePhase(
         type: "error",
         message: "merge_execution_failed",
         reason: mergeResult.error,
-      } as any;
+      } as unknown as WorkflowEvent;
     }
   }
 
   // Passive conflict detection
-  let conflictScanResult: {
-    files: string[];
-    totalMarkers: number;
-    counts: Record<string, number>;
-  } | null = null;
+  let conflictScanResult: ConflictScanResult | null = null;
   try {
     const expectedFiles = mergePlan.expectedFiles ?? [];
     const counts: Record<string, number> = {};
@@ -254,14 +280,14 @@ export async function* runMergePhase(
       status: "completed",
       conflicts: conflictScanResult?.totalMarkers ?? 0,
     },
-  } as any;
+  } as unknown as WorkflowEvent;
 
   return { mergePlan, conflictScanResult };
 }
 
 export async function* runMergeAnalysis(
   ctx: OrchestratorContext,
-  mergePlan: any
+  mergePlan: MergePlan
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const { runId, workspace, authz, signal, userId } = ctx;
 
@@ -269,7 +295,7 @@ export async function* runMergeAnalysis(
     type: "event",
     kind: "merge-plan",
     data: mergePlan,
-  } as any;
+  } as unknown as WorkflowEvent;
 
   // Merge analysis agent (analysis-only)
   const mergeExecPlanPath = plansPath(workspace, runId, "merge.md");
@@ -308,21 +334,25 @@ export async function* runMergeAnalysis(
     const mergeEvents: WorkflowEvent[] = [];
 
     const writer = {
-      write: async (chunk: unknown) => {
-        const payload = chunk as { type?: string; event?: unknown };
-        if (!payload || typeof payload !== "object") {
-          return;
+      write: (chunk: unknown): Promise<void> => {
+        if (!chunk || typeof chunk !== "object") {
+          return Promise.resolve();
         }
-        const type = (payload as any).type;
+        const payload = chunk as Record<string, unknown>;
+        const type = typeof payload.type === "string" ? payload.type : "";
         if (type === "stdout" || type === "stderr") {
-          const text = (payload as any).text ?? "";
-          mergeEvents.push({ type, text } as any);
+          const text = typeof payload.text === "string" ? payload.text : "";
+          mergeEvents.push({ type, text } as unknown as WorkflowEvent);
         } else if (type === "notice") {
           mergeEvents.push({
             type: "notice",
-            message: (payload as any).message ?? "merge_agent_notice",
-          } as any);
+            message:
+              typeof payload.message === "string"
+                ? payload.message
+                : "merge_agent_notice",
+          } as unknown as WorkflowEvent);
         }
+        return Promise.resolve();
       },
     } as const;
 
@@ -360,7 +390,7 @@ export async function* runMergeAnalysis(
           status: "completed",
           durationSeconds,
         },
-      } as any;
+      } as unknown as WorkflowEvent;
     } catch (error) {
       const finishedAt = Date.now();
       const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
@@ -376,7 +406,7 @@ export async function* runMergeAnalysis(
       mergeEvents.push({
         type: "notice",
         message: userMessage,
-      } as any);
+      } as unknown as WorkflowEvent);
       for (const ev of mergeEvents) {
         yield ev;
       }
@@ -388,7 +418,7 @@ export async function* runMergeAnalysis(
           status: "failed",
           durationSeconds,
         },
-      } as any;
+      } as unknown as WorkflowEvent;
     }
   } catch (error) {
     const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
@@ -403,6 +433,6 @@ export async function* runMergeAnalysis(
     yield {
       type: "notice",
       message: userMessage,
-    } as any;
+    } as unknown as WorkflowEvent;
   }
 }

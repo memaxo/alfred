@@ -38,7 +38,7 @@ describe("Plan → WavePlan Conversion", () => {
     resources: {
       agentCount: 2,
       strategy: "parallel",
-      isolation: "container",
+      isolation: "agentfs",
     },
     evaluationCriteria: [],
   });
@@ -86,7 +86,6 @@ describe("Plan → WavePlan Conversion", () => {
     expect(waves[0]?.agents).toContain("T1");
     expect(waves[0]?.agents).toContain("T2");
     expect(waves[0]?.agentType).toBe("research");
-    expect(waves[0]?.isolation).toBe("container");
   });
 
   it("should respect phase dependencies in wave planning", () => {

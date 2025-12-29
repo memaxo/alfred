@@ -1,4 +1,3 @@
-import { feature } from "bun:bundle";
 import type { WorkspaceKind } from "../../environment/types.js";
 import { openDirectorySecure } from "../../security/filesystem.js";
 import { subtaskPlanPath } from "../plans.js";
@@ -8,12 +7,6 @@ import { buildFixerSubTask } from "./review";
 export type AgentId = string;
 
 export type WaveId = string;
-
-/**
- * Poof profile name type (legacy).
- * Only used when built with --feature=LEGACY_POOF.
- */
-type PoofProfileName = "minimal" | "standard" | "intensive";
 
 export type AgentSpec = {
   agentId: AgentId;
@@ -26,8 +19,8 @@ export type AgentSpec = {
   model?: string;
   agentType?: string; // New: Agent role (e.g. codex, research)
   profile?: string;
-  /** Resource profile for poof isolation (legacy, only with --feature=LEGACY_POOF) */
-  poofProfile?: PoofProfileName;
+  /** Enable AgentFS overlay mode (copy-on-write) */
+  agentfsOverlay?: boolean;
   execPlanPath: string;
   context: {
     linearIssueId?: string;
@@ -45,36 +38,16 @@ export type WavePlan = {
   agents: SubTaskId[];
   dependsOn: WaveId[];
   agentType?: string;
-  isolation?: "container" | "worktree";
   phaseId?: string;
 };
 
 /**
  * Determine the execution environment for an agent.
  *
- * Production builds always use Docker containers.
- * Development builds with feature flags can use legacy isolation methods.
+ * AgentFS is the only supported execution environment.
  */
-function determineEnvironment(
-  _subTask: SubTask,
-  _options?: { maxParallel?: number; useIsolation?: boolean }
-): WorkspaceKind {
-  // Feature-flagged legacy path: poof isolation (Linux only)
-  if (
-    feature("LEGACY_POOF") &&
-    process.env.ORCH_USE_POOF === "1" &&
-    process.platform === "linux"
-  ) {
-    return "poof";
-  }
-
-  // Feature-flagged legacy path: git worktree isolation
-  if (feature("LEGACY_WORKTREE") && process.env.ORCH_USE_WORKTREE === "1") {
-    return "worktree";
-  }
-
-  // Production default: Docker container isolation
-  return "container";
+function determineEnvironment(): WorkspaceKind {
+  return "agentfs";
 }
 
 export function buildAgentSpec(
@@ -86,7 +59,8 @@ export function buildAgentSpec(
     model?: string;
     agentType?: string;
     profile?: string;
-    poofProfile?: PoofProfileName; // Resource profile for poof isolation (legacy)
+    /** Enable AgentFS overlay mode (copy-on-write) */
+    agentfsOverlay?: boolean;
     maxParallel?: number;
     mandateTDD?: boolean; // Phase 4
     handoff?: string;
@@ -103,8 +77,7 @@ export function buildAgentSpec(
   const agentId: AgentId = `${runId}:${subTask.id}`;
   const sessionId = agentId;
 
-  // Environment determination - always "container" in production
-  const environment = determineEnvironment(subTask, options);
+  const environment = determineEnvironment();
 
   // `cwd` is provided by the orchestrator/runtime as the workspace root for this run.
   // Default `openDirectorySecure()` prefixes are anchored to `process.cwd()`, which
@@ -126,7 +99,7 @@ export function buildAgentSpec(
     model: options?.model,
     agentType: options?.agentType,
     profile: options?.profile,
-    poofProfile: options?.poofProfile,
+    agentfsOverlay: options?.agentfsOverlay,
     execPlanPath,
     context: {
       linearIssueId: options?.linear?.issueId,

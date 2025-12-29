@@ -60,7 +60,7 @@ export const structuredPlanSchema = z.object({
         agents: z.array(z.string()),
         dependsOn: z.array(z.string()),
         agentType: z.string().optional(),
-        isolation: z.enum(["container", "worktree"]).optional(),
+        isolation: z.enum(["agentfs"]).optional(),
         phaseId: z.string().optional(),
       }) satisfies z.ZodType<WavePlan>
     )
@@ -68,7 +68,7 @@ export const structuredPlanSchema = z.object({
   resources: z.object({
     agentCount: z.number(),
     strategy: z.enum(["sequential", "parallel", "mixed", "topological"]),
-    isolation: z.enum(["container", "worktree"]),
+    isolation: z.enum(["agentfs"]),
   }),
   evaluationCriteria: z.array(
     z.union([

@@ -2,14 +2,13 @@
  * Codex process spawner
  *
  * Handles spawn function creation for different execution modes:
- * - Docker container execution
- * - Poof sandbox execution (feature-flagged)
- * - Direct host execution
+ * - Docker container execution (production)
+ * - Direct host execution (development/testing)
+ *
+ * Note: Poof sandbox execution has been removed.
+ * Use AgentFS for filesystem isolation with audit trails.
  */
 
-import { feature } from "bun:bundle";
-import os from "node:os";
-import path from "node:path";
 import type { SpawnFn } from "@alfred/codex";
 import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
 import { CodexError } from "./error.js";
@@ -24,9 +23,8 @@ type AllowedDirectoryHandle = {
 type SpawnInput = {
   containerId?: string;
   containerCw?: string;
-  poofUpperDir?: string;
-  poofProfile?: "minimal" | "standard" | "intensive";
-  poofMode?: "exec" | "run";
+  /** AgentFS database path for audit trail (optional) */
+  agentfsDbPath?: string;
 };
 
 type SpawnResult = {
@@ -35,11 +33,6 @@ type SpawnResult = {
   exited: Promise<number>;
   kill: (signal?: number | string) => void;
 };
-
-function isWithinDir(base: string, target: string): boolean {
-  const rel = path.relative(base, target);
-  return rel === "" || !(rel.startsWith("..") || path.isAbsolute(rel));
-}
 
 function wrapProcess(proc: ReturnType<typeof spawnWithSecureCwd>): SpawnResult {
   return {
@@ -64,7 +57,8 @@ function createDockerSpawn(
   cwdHandle: AllowedDirectoryHandle,
   dockerBin: string,
   containerId: string,
-  containerCw?: string
+  containerCw?: string,
+  agentfsDbPath?: string
 ): SpawnFn {
   return ({ cmd: _cmd, args, env: childEnv }) => {
     const containerWorkdir = containerCw?.trim();
@@ -80,7 +74,14 @@ function createDockerSpawn(
         ? containerWorkdir
         : "/workspace";
 
-    const envKeys = Object.keys(childEnv ?? {}).filter((k) => k !== "PATH");
+    // Include AgentFS db path in environment if provided
+    const envWithAgentFS = agentfsDbPath
+      ? { ...childEnv, AGENTFS_DB_PATH: agentfsDbPath }
+      : childEnv;
+
+    const envKeys = Object.keys(envWithAgentFS ?? {}).filter(
+      (k) => k !== "PATH"
+    );
     const dockerArgs = [
       "exec",
       "--workdir",
@@ -95,7 +96,7 @@ function createDockerSpawn(
       cwdHandle,
       cmd: dockerBin,
       args: dockerArgs,
-      env: childEnv,
+      env: envWithAgentFS,
       stdout: "pipe",
       stderr: "pipe",
       stdin: "ignore",
@@ -105,64 +106,21 @@ function createDockerSpawn(
   };
 }
 
-async function createPoofSpawn(
+function createHostSpawn(
   cwdHandle: AllowedDirectoryHandle,
-  poofUpperDir: string,
-  poofProfile: "minimal" | "standard" | "intensive",
-  poofMode: "exec" | "run"
-): Promise<SpawnFn> {
-  const poofModule = await import("../../../spawn/poof.js");
-  const poofBin = poofModule.getPoofBinary();
-  const profile =
-    poofProfile in poofModule.POOF_PROFILES
-      ? poofModule.POOF_PROFILES[
-          poofProfile as keyof typeof poofModule.POOF_PROFILES
-        ]
-      : poofModule.POOF_PROFILES.standard;
-
-  const poofUpperResolved = path.resolve(poofUpperDir);
-  const tmpBase = path.resolve(os.tmpdir());
-  if (!isWithinDir(tmpBase, poofUpperResolved)) {
-    throw new CodexError(
-      "spawn",
-      "poof_upper_dir_invalid",
-      "poofUpperDir must be under tmpdir"
-    );
-  }
-
+  agentfsDbPath?: string
+): SpawnFn {
   return ({ cmd, args, env: childEnv }) => {
-    const poofArgs = [
-      ...poofModule.buildPoofArgs({
-        mode: poofMode,
-        upperDir: poofUpperResolved,
-        profile,
-      }),
-      "--",
-      cmd,
-      ...args,
-    ];
+    // Include AgentFS db path in environment if provided
+    const envWithAgentFS = agentfsDbPath
+      ? { ...childEnv, AGENTFS_DB_PATH: agentfsDbPath }
+      : childEnv;
 
-    const proc = spawnWithSecureCwd({
-      cwdHandle,
-      cmd: poofBin,
-      args: poofArgs,
-      env: childEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-      stdin: "ignore",
-    });
-
-    return wrapProcess(proc);
-  };
-}
-
-function createHostSpawn(cwdHandle: AllowedDirectoryHandle): SpawnFn {
-  return ({ cmd, args, env: childEnv }) => {
     const proc = spawnWithSecureCwd({
       cwdHandle,
       cmd,
       args,
-      env: childEnv,
+      env: envWithAgentFS,
       stdout: "pipe",
       stderr: "pipe",
       stdin: "ignore",
@@ -172,28 +130,22 @@ function createHostSpawn(cwdHandle: AllowedDirectoryHandle): SpawnFn {
   };
 }
 
-export async function createCodexSpawn(
+export function createCodexSpawn(
   input: SpawnInput,
   cwdHandle: AllowedDirectoryHandle
 ): Promise<SpawnFn> {
   if (input.containerId) {
     const dockerBin = resolveExecutable("docker");
-    return createDockerSpawn(
-      cwdHandle,
-      dockerBin,
-      input.containerId,
-      input.containerCw
+    return Promise.resolve(
+      createDockerSpawn(
+        cwdHandle,
+        dockerBin,
+        input.containerId,
+        input.containerCw,
+        input.agentfsDbPath
+      )
     );
   }
 
-  if (feature("LEGACY_POOF") && input.poofUpperDir?.trim()) {
-    return createPoofSpawn(
-      cwdHandle,
-      input.poofUpperDir.trim(),
-      input.poofProfile ?? "standard",
-      input.poofMode ?? "run"
-    );
-  }
-
-  return createHostSpawn(cwdHandle);
+  return Promise.resolve(createHostSpawn(cwdHandle, input.agentfsDbPath));
 }

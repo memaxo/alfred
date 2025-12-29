@@ -266,29 +266,43 @@ function levenshteinDistance(a: string, b: string): number {
     Array.from({ length: a.length + 1 }, () => 0)
   );
 
+  const firstRow = matrix[0];
+  if (!firstRow) {
+    return Math.max(a.length, b.length);
+  }
+
   // Fill first column
   for (let i = 0; i <= b.length; i++) {
-    matrix[i][0] = i;
+    const row = matrix[i];
+    if (!row) {
+      continue;
+    }
+    row[0] = i;
   }
   // Fill first row
   for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
+    firstRow[j] = j;
   }
 
   // Calculate distances
   for (let i = 1; i <= b.length; i++) {
     for (let j = 1; j <= a.length; j++) {
+      const row = matrix[i];
+      const prevRow = matrix[i - 1];
+      if (!(row && prevRow)) {
+        continue;
+      }
       if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
+        row[j] = prevRow[j - 1] ?? 0;
       } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1, // insertion
-          matrix[i - 1][j] + 1 // deletion
-        );
+        const sub = (prevRow[j - 1] ?? 0) + 1; // substitution
+        const ins = (row[j - 1] ?? 0) + 1; // insertion
+        const del = (prevRow[j] ?? 0) + 1; // deletion
+        row[j] = Math.min(sub, ins, del);
       }
     }
   }
 
-  return matrix[b.length][a.length];
+  const lastRow = matrix[b.length];
+  return lastRow?.[a.length] ?? Math.max(a.length, b.length);
 }

@@ -21,6 +21,6 @@ export * from "./metrics";
 export type { CodexSessionState } from "./orchestrator/codex-session";
 export { sessionManager } from "./orchestrator/codex-session";
 export type { AlfredCodexEvent } from "./orchestrator/tool/codex/index";
-// Poof ephemeral filesystem isolation
+// AgentFS isolation exports
 export * from "./spawn/index";
 export { eventToUiMessages, normalizeToUiMessages } from "./utils/normalize";

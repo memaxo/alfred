@@ -4,6 +4,11 @@
  * Explicit exports to avoid symbol conflicts between domain panels
  */
 
+// AgentFS panel - explicit exports
+export {
+  AgentFSPanel,
+  createAgentFSPanel,
+} from "./agentfs";
 // Base panel types
 export * from "./base";
 // Cognitive panel - explicit exports
@@ -23,6 +28,7 @@ export {
   createMetricsPanel,
   MetricsPanel,
 } from "./metrics";
+
 export * from "./shortcuts";
 export * from "./status";
 
@@ -31,6 +37,7 @@ export {
   createVoicePanel,
   VoicePanel,
 } from "./voice";
+
 // Workflow panel - explicit exports
 export {
   createWorkflowPanel,

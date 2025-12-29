@@ -1,10 +1,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
-import {
-  isContainerWorkspace,
-  type Workspace,
-} from "@alfred/agent/environment/types";
+import type { Workspace } from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
@@ -22,8 +20,6 @@ import type { AsyncQueue } from "../utils/concurrency";
 import { appendDecisionEntry, appendPlanProgressEntry } from "./execplan";
 import { normalizeWorkingDirectory } from "./hydrate";
 import type { ProjectConfig } from "./types";
-
-const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
 
 export type RunAgentOptions = {
   spec: AgentSpec;
@@ -91,68 +87,45 @@ export async function runAgent({
 
   const task = subTaskById.get(spec.subTaskId);
 
-  // Hybrid Tier: Handle Worktree/Container Environment via WorkspaceFactory
+  // Create AgentFS workspace for agent execution
   let workspaceEnv: Workspace | undefined;
-  let containerId: string | undefined;
-  let containerCw: string | undefined;
-  let poofUpperDir: string | undefined;
-  let poofProfile: "minimal" | "standard" | "intensive" | undefined;
-  let poofMode: "exec" | "run" | undefined;
+  let agentfsDbPath: string | undefined;
 
-  if (
-    spec.environment === "worktree" ||
-    spec.environment === "container" ||
-    spec.environment === "host" ||
-    spec.environment === "poof"
-  ) {
-    try {
-      workspaceEnv = await WorkspaceFactory.create(
-        spec.environment,
-        spec.agentId,
-        runId,
-        workspace,
-        {
-          authz,
-          enableSessions: ENABLE_WORKSPACE_SESSIONS,
-          poofProfile: spec.poofProfile,
-        }
-      );
-
-      await workspaceEnv.initialize();
-      activeWorkspaces.push(workspaceEnv);
-      spec.workingDirectory = normalizeWorkingDirectory(
-        workspaceEnv.root,
-        workspaceRoot
-      );
-
-      logger.info("workspace_created", {
-        runId,
-        agentId: spec.agentId,
-        kind: spec.environment,
-        root: workspaceEnv.root,
-      });
-
-      if (isContainerWorkspace(workspaceEnv)) {
-        containerId = workspaceEnv.containerId;
-        containerCw = workspaceEnv.containerCw;
+  try {
+    workspaceEnv = await WorkspaceFactory.create(
+      spec.environment,
+      spec.agentId,
+      runId,
+      workspace,
+      {
+        agentfsOverlay: spec.agentfsOverlay,
+        authz,
       }
-      if (spec.environment === "poof" && workspaceEnv?.kind === "poof") {
-        const poof = workspaceEnv as any;
-        poofUpperDir = poof.upperDir ?? poof.getUpperDir?.() ?? undefined;
-        poofMode = poof.mode;
-        const name = poof.profile?.name;
-        poofProfile =
-          name === "minimal" || name === "standard" || name === "intensive"
-            ? name
-            : undefined;
-      }
-    } catch (error) {
-      logger.warn("workspace_creation_failed", {
-        runId,
-        agentId: spec.agentId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    );
+
+    await workspaceEnv.initialize();
+    activeWorkspaces.push(workspaceEnv);
+    spec.workingDirectory = normalizeWorkingDirectory(
+      workspaceEnv.root,
+      workspaceRoot
+    );
+
+    logger.info("workspace_created", {
+      runId,
+      agentId: spec.agentId,
+      kind: spec.environment,
+      root: workspaceEnv.root,
+    });
+
+    if (isAgentFSWorkspace(workspaceEnv)) {
+      agentfsDbPath = workspaceEnv.dbPath;
     }
+  } catch (error) {
+    logger.warn("workspace_creation_failed", {
+      runId,
+      agentId: spec.agentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   const execPlanRelativePath = spec.execPlanPath;
@@ -182,9 +155,27 @@ export async function runAgent({
   const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9.-]/g, "_");
   const escalationFile = `ESCALATION-${safeAgentId}.md`;
 
-  const clarifications = (spec.context as any)?.clarifications as
-    | Array<{ response: string }>
-    | undefined;
+  const clarifications = ((): Array<{ response: string }> | undefined => {
+    const ctx = spec.context as unknown;
+    if (!ctx || typeof ctx !== "object") {
+      return;
+    }
+    const raw = (ctx as { clarifications?: unknown }).clarifications;
+    if (!Array.isArray(raw)) {
+      return;
+    }
+    const out: Array<{ response: string }> = [];
+    for (const item of raw) {
+      if (!item || typeof item !== "object") {
+        continue;
+      }
+      const response = (item as { response?: unknown }).response;
+      if (typeof response === "string") {
+        out.push({ response });
+      }
+    }
+    return out.length > 0 ? out : undefined;
+  })();
   const prompt = buildAgentPrompt(
     spec,
     task,
@@ -205,7 +196,7 @@ export async function runAgent({
     queue.enqueue({
       type: "notice",
       message: "tdd_test_generation_started",
-    } as any);
+    } as unknown as WorkflowEvent);
 
     await runTDDLoop(
       {
@@ -218,8 +209,7 @@ export async function runAgent({
         model: spec.model,
         authz,
         signal,
-        containerId,
-        containerCw,
+        agentfsDbPath,
         context: spec.context,
         userId,
       },
@@ -257,11 +247,7 @@ export async function runAgent({
         auto: spec.auto,
         cw: spec.workingDirectory,
         sessionId: spec.sessionId,
-        containerId,
-        containerCw,
-        poofUpperDir,
-        poofProfile,
-        poofMode,
+        agentfsDbPath,
         model: spec.model,
         profile: spec.profile,
         authz,
@@ -277,7 +263,7 @@ export async function runAgent({
       writer,
       signal,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Handle Supervisor Interrupts
     if (String(error).includes("codex_exec_interrupted")) {
       logger.warn("agent_interrupted_by_supervisor", {
@@ -287,7 +273,7 @@ export async function runAgent({
       queue.enqueue({
         type: "notice",
         message: `agent_interrupted: ${String(error)}`,
-      } as any);
+      } as unknown as WorkflowEvent);
 
       if (workspaceEnv) {
         try {
@@ -321,7 +307,7 @@ export async function runAgent({
     queue.enqueue({
       type: "notice",
       message: userMessage,
-    } as any);
+    } as unknown as WorkflowEvent);
     logger.error("codex_agent_failed", {
       agentId: spec.agentId,
       error: rawMessage,
@@ -350,13 +336,14 @@ export async function runAgent({
   const finishedAt = Date.now();
 
   // Use context-aware stuck detection
+  const agentKey =
+    spec.agentId as import("@alfred/agent/orchestrator/multi/spawn").AgentId;
   stuck = detectStuckWithContext(
     trackerContextRef.current,
-    spec.agentId as any,
+    agentKey,
     Date.now()
   );
-  const trackerAgent =
-    trackerContextRef.current.state.agents[spec.agentId as any];
+  const trackerAgent = trackerContextRef.current.state.agents[agentKey];
   if (status !== "failed") {
     status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
   }
@@ -409,6 +396,20 @@ export async function runAgent({
     }
   } catch {
     // No escalation file found
+  }
+
+  // Extract learning data from AgentFS before cleanup
+  if (isAgentFSWorkspace(workspaceEnv)) {
+    try {
+      const { processForLearning } = await import(
+        "@alfred/agent/agentfs/learning-bridge"
+      );
+      await processForLearning(workspaceEnv.dbPath).catch((e: Error) =>
+        logger.warn("agentfs_learning_failed", { err: e.message })
+      );
+    } catch {
+      // Learning extraction is best-effort
+    }
   }
 
   const hints = agentFileHints.get(spec.agentId);
@@ -493,48 +494,45 @@ function createAgentWriter(
   queue: AsyncQueue<WorkflowEvent>
 ) {
   return {
-    write: async (chunk: unknown) => {
-      const payload = chunk as { type?: string; event?: unknown };
-      if (!payload || typeof payload !== "object") {
-        return;
+    write: (chunk: unknown): Promise<void> => {
+      if (!chunk || typeof chunk !== "object") {
+        return Promise.resolve();
       }
-      const type = (payload as any).type;
+      const payload = chunk as Record<string, unknown>;
+      const type = typeof payload.type === "string" ? payload.type : "";
 
       if (type === "stdout" || type === "stderr") {
-        const inner = (payload as any).event as
-          | {
-              type?: string;
-              content?: string;
-              timestamp?: number;
-              command?: string;
-              status?: string;
-              path?: string;
-              kind?: string;
-            }
-          | undefined;
-        if (inner && typeof inner.type === "string") {
+        const innerRaw = payload.event;
+        const inner =
+          innerRaw && typeof innerRaw === "object"
+            ? (innerRaw as Record<string, unknown>)
+            : null;
+        const innerType =
+          inner && typeof inner.type === "string" ? inner.type : "";
+
+        if (inner && innerType) {
           const ts =
             typeof inner.timestamp === "number" &&
             Number.isFinite(inner.timestamp)
               ? inner.timestamp
               : Date.now();
-          if (inner.type === "thought") {
+          if (innerType === "thought") {
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
                 type: "codex/thought",
                 agentId: spec.agentId,
-                text: inner.content ?? "",
+                text: typeof inner.content === "string" ? inner.content : "",
                 ts,
               }
             );
-          } else if (inner.type === "command") {
+          } else if (innerType === "command") {
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
                 type: "codex/command",
                 agentId: spec.agentId,
-                command: inner.command ?? "",
+                command: typeof inner.command === "string" ? inner.command : "",
                 status:
                   inner.status === "failed"
                     ? "failed"
@@ -544,15 +542,15 @@ function createAgentWriter(
                 ts,
               }
             );
-          } else if (inner.type === "artifact") {
-            const filePath = inner.path ?? "";
+          } else if (innerType === "artifact") {
+            const filePath = typeof inner.path === "string" ? inner.path : "";
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
                 type: "codex/file",
                 agentId: spec.agentId,
                 path: filePath,
-                kind: inner.kind ?? "file",
+                kind: typeof inner.kind === "string" ? inner.kind : "file",
                 ts,
               }
             );
@@ -570,13 +568,15 @@ function createAgentWriter(
           type: "event",
           kind: "codex_event",
           data: payload,
-        } as any);
+        } as unknown as WorkflowEvent);
       } else if (type === "notice") {
-        queue.enqueue({
-          type: "notice",
-          message: (payload as any).message ?? "codex_notice",
-        } as any);
+        const message =
+          typeof payload.message === "string"
+            ? payload.message
+            : "codex_notice";
+        queue.enqueue({ type: "notice", message } as unknown as WorkflowEvent);
       }
+      return Promise.resolve();
     },
   } as const;
 }

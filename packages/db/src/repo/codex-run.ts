@@ -29,8 +29,14 @@ export async function createRun(args: {
   workspaceRoot?: string | null;
   dockerContainerId?: string | null;
   dockerImage?: string | null;
+  /** @deprecated Use agentfsDbPath instead */
   poofUpperDir?: string | null;
+  /** @deprecated No longer used */
   poofProfile?: string | null;
+  /** AgentFS database path for audit trail */
+  agentfsDbPath?: string | null;
+  /** AgentFS run identifier */
+  agentfsRunId?: string | null;
   outputSchema?: unknown;
   startedAt?: Date;
 }): Promise<CodexRunRow> {
@@ -55,6 +61,8 @@ export async function createRun(args: {
       dockerImage: args.dockerImage ?? null,
       poofUpperDir: args.poofUpperDir ?? null,
       poofProfile: args.poofProfile ?? null,
+      agentfsDbPath: args.agentfsDbPath ?? null,
+      agentfsRunId: args.agentfsRunId ?? null,
       outputSchema: (args.outputSchema ?? null) as RunInsert["outputSchema"],
       startedAt: args.startedAt ?? undefined,
     })
@@ -93,7 +101,7 @@ export async function getLatestRunBySession(args: {
   return row ?? null;
 }
 
-export async function listRuns(args: {
+export function listRuns(args: {
   userId: string;
   status?: CodexRunStatus;
   sessionId?: string;
@@ -236,7 +244,7 @@ export async function appendEventsBatch(args: {
   return { inserted: rows.length };
 }
 
-export async function listEvents(args: {
+export function listEvents(args: {
   runId: string;
   order?: "asc" | "desc";
   limit?: number;
@@ -260,7 +268,7 @@ export async function listEvents(args: {
     : base.orderBy(asc(codexEvents.seq));
 }
 
-export async function searchEvents(args: {
+export function searchEvents(args: {
   userId: string;
   query: string;
   runId?: string;

@@ -16,10 +16,10 @@ type CodexRunRepo = {
     environmentKind?: string;
     workingDirectory?: string | null;
     workspaceRoot?: string | null;
-    dockerContainerId?: string | null;
-    dockerImage?: string | null;
-    poofUpperDir?: string | null;
-    poofProfile?: string | null;
+    /** AgentFS database path for audit trail */
+    agentfsDbPath?: string | null;
+    /** AgentFS run identifier */
+    agentfsRunId?: string | null;
     outputSchema?: unknown;
   }) => Promise<{ id: string }>;
   getLatestRunBySession: (args: {
@@ -68,13 +68,13 @@ export type CodexRunRecorderOptions = {
   auto: string | undefined;
   model: string | undefined;
   profile: string | undefined;
-  environmentKind: "host" | "worktree" | "container" | "poof";
+  environmentKind: "agentfs";
   workingDirectory: string | undefined;
   workspaceRoot: string | undefined;
-  dockerContainerId: string | undefined;
-  dockerImage: string | undefined;
-  poofUpperDir: string | undefined;
-  poofProfile: string | undefined;
+  /** AgentFS database path for audit trail */
+  agentfsDbPath: string | undefined;
+  /** AgentFS run identifier */
+  agentfsRunId: string | undefined;
   outputSchema: unknown;
 };
 
@@ -163,10 +163,8 @@ export class CodexRunRecorder {
         environmentKind: options.environmentKind,
         workingDirectory: options.workingDirectory ?? null,
         workspaceRoot: options.workspaceRoot ?? null,
-        dockerContainerId: options.dockerContainerId ?? null,
-        dockerImage: options.dockerImage ?? null,
-        poofUpperDir: options.poofUpperDir ?? null,
-        poofProfile: options.poofProfile ?? null,
+        agentfsDbPath: options.agentfsDbPath ?? null,
+        agentfsRunId: options.agentfsRunId ?? null,
         outputSchema: options.outputSchema ?? null,
       })
       .catch((error) => {

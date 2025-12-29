@@ -80,8 +80,15 @@ export const codexRuns = pgTable(
     dockerContainerId: text("docker_container_id"),
     dockerImage: text("docker_image"),
 
+    /** @deprecated Use agentfsDbPath instead. Kept for historical data. */
     poofUpperDir: text("poof_upper_dir"),
+    /** @deprecated No longer used. Kept for historical data. */
     poofProfile: text("poof_profile"),
+
+    /** AgentFS database path for audit trail (replaces poofUpperDir) */
+    agentfsDbPath: text("agentfs_db_path"),
+    /** AgentFS run identifier for cross-referencing */
+    agentfsRunId: text("agentfs_run_id"),
 
     outputSchema: jsonb("output_schema"),
     structuredOutput: jsonb("structured_output"),

@@ -16,8 +16,7 @@ export type TDDContext = {
   model?: string;
   authz?: string;
   signal?: AbortSignal;
-  containerId?: string;
-  containerCw?: string;
+  agentfsDbPath?: string;
   context?: Record<string, unknown>;
   userId?: string;
 };
@@ -39,8 +38,7 @@ export async function runTDDLoop(
     model,
     authz,
     signal,
-    containerId,
-    containerCw,
+    agentfsDbPath,
   } = context;
 
   const cwdHandle = openDirectorySecure(workingDirectory);
@@ -73,8 +71,7 @@ export async function runTDDLoop(
         auto,
         cw: resolvedWorkingDirectory,
         sessionId: `${sessionId}:tdd`, // Separate session
-        containerId,
-        containerCw,
+        agentfsDbPath,
         model,
         authz,
         context: context.context,
