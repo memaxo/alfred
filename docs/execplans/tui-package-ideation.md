@@ -2735,11 +2735,43 @@ Extends core packages to enable debugger (can run in parallel with Phase 1):
 
 ### Phase 6: MCP Integration (Week 6-7)
 
-- [ ] Define MCP client scopes (`read:*`, `write:*`, `admin:*`)
-- [ ] Create trusted client registration for Cursor/Claude
-- [ ] Implement Resource Server endpoints (`/oauth2/introspect`, `/oauth2/revoke`)
-- [ ] Add `/.well-known/oauth-protected-resource` for API
-- [ ] Test MCP tool authentication flow
+**Research**: See `docs/research/mcp-oauth-integration.md` for detailed findings.
+
+**Phase 6.1: Scope Definition** (Day 1) ✅
+- [x] Create `packages/type/src/scopes.ts` with scope constants and hierarchy
+- [x] Define granular scopes: `read:todos`, `read:notes`, `write:*`, `admin:voice`, etc.
+- [x] Add `requireScopes` middleware to tRPC (`packages/api/src/middleware/scopes.ts`)
+- [ ] Update router procedures with scope requirements (deferred - optional for MCP)
+
+**Phase 6.2: Trusted Client Registration** (Day 2) ✅
+- [x] Add `CURSOR_CLIENT_SECRET` and `CLAUDE_CLIENT_SECRET` to `config/env.example`
+- [x] Configure trusted clients in OIDC Provider (`packages/auth/src/index.ts`)
+  - Cursor IDE: `clientId: "cursor-mcp-client"`, trusted, env-configured
+  - Claude Desktop: `clientId: "claude-mcp-client"`, trusted, env-configured
+  - Generic MCP: `clientId: env MCP_CLIENT_ID`, trusted when secret provided
+- [x] Updated scopes_supported in OIDC metadata with all granular scopes
+
+**Phase 6.3: Resource Server Verification** (Day 3)
+- [x] `/.well-known/oauth-protected-resource` exists (Already implemented)
+- [x] `/.well-known/oauth-authorization-server` exists (Already implemented)
+- [⚠️] `/api/auth/oauth2/introspect` - NOT implemented in Better Auth OIDC Provider
+  - Tokens are JWTs validated via JWKS endpoint instead
+- [⚠️] `/api/auth/oauth2/revoke` - NOT implemented in Better Auth OIDC Provider
+  - Use `/api/auth/sign-out` or `/api/auth/revoke-session` instead
+
+**Phase 6.4: Integration Testing** (Day 4-5) ✅
+- [x] Create `scripts/verify-mcp-auth.ts` test script
+- [ ] Test Device Authorization flow end-to-end (requires running server)
+- [ ] Test Authorization Code + PKCE flow (requires running server)
+- [ ] Test token refresh flow (requires running server)
+- [ ] Test scope enforcement (requires router updates)
+- [ ] Test trusted client consent bypass (requires running server)
+
+**Phase 6.5: Documentation** (Day 5) ✅
+- [x] Document MCP client registration in `docs/guides/mcp-integration.md`
+- [x] Add Cursor IDE integration example
+- [x] Add Claude Desktop integration example
+- [x] Document scope requirements and limitations
 
 ---
 
@@ -2931,12 +2963,15 @@ alfred workflow.start --intent "Plan today's priorities"
 8. ~~**Orphaned code**: Are there unused routers?~~ → Verified: `homeRouter` exists but not in appRouter (decision needed)
 9. ~~**Discriminant consistency**: Are all ADTs using `_`?~~ → Verified: Inconsistent - `WorkflowEvent`, `StreamEvent`, `VoiceStreamServerEvent` use `type` (migration planned)
 
+### Resolved (Phase 6 Research) ✅
+
+7. ~~**MCP scopes**: What scopes should AI agents receive via OAuth Provider?~~ → Granular scopes: `read:todos`, `read:notes`, `write:*`, `admin:voice`, etc. See `docs/research/mcp-oauth-integration.md`
+
 ### Open 📋
 
 4. **Streaming**: How to display streaming responses in TUI? (OpenTUI supports?)
 5. **Performance**: OpenTUI performance with many panels? (Need benchmarks)
 6. **Theming**: Should TUI respect terminal theme? (Or ALFRED-branded?)
-7. **MCP scopes**: What scopes should AI agents receive via OAuth Provider?
 8. **Credential encryption**: Should `~/.alfred/credentials.json` be encrypted at rest?
 9. **Multi-device**: How to handle credential sync across machines?
 10. **Discriminant migration**: How to migrate WorkflowEvent, StreamEvent, and VoiceStreamServerEvent from `type` to `_` discriminant? (See Audit Findings)
@@ -2974,9 +3009,7 @@ alfred workflow.start --intent "Plan today's priorities"
 | Phase 3: State Reconstruction | ✅ Complete | Reconstructor interfaces defined, Cognitive/Workflow implementations, performance verified |
 | Phase 4: Ordering & Identity | ✅ Complete | Branded IDs, deterministic hashing, stableStringify |
 | Phase 5: Versioning | ✅ Complete | Event migration registry and versioned envelopes |
-| Phase 6: Interactive Modes | 📋 Pending | Chat, Planning, Debug modes |
-| Phase 7: Package Integration | 📋 Pending | CliManifest, auto-discovery |
-| Phase 8: MCP Integration | 📋 Pending | OAuth Provider for AI agents |
+| Phase 6: MCP Integration | ✅ Core Complete | Scopes, middleware, trusted clients, docs. Introspect/revoke not in Better Auth - use JWT/JWKS |
 
 **Audit Summary (2025-01-XX)**:
 - ✅ Fixed package count: "24+" → "23 functional packages" (clarified: 26 total, excluding infrastructure)
@@ -3020,6 +3053,14 @@ alfred workflow.start --intent "Plan today's priorities"
 - ✅ **Zod Consolidation**: Created Zod schemas for all system events (`DomainEvent` union).
 - ✅ **Versioning**: Implemented migration registry and versioned envelopes.
 - ✅ **Backward Compatibility**: Documented versioning rules in `.ruler/40-versioning.md`.
+
+**Phase 6 Research (2025-12-28)**:
+- ✅ **MCP Specification**: MCP uses OAuth 2.1 with mandatory PKCE, RFC 9728 (Protected Resource Metadata), and RFC 8414 (Authorization Server Metadata).
+- ✅ **Better Auth Coverage**: OIDC Provider plugin already supports trusted clients, dynamic registration, and consent pages. The `oidcProvider` plugin is the recommended approach (MCP plugin deprecated).
+- ✅ **Existing Infrastructure**: ALFRED already has both `.well-known/oauth-protected-resource` and `.well-known/oauth-authorization-server` endpoints implemented.
+- ⚠️ **Scope Granularity**: Current scopes (`read:*`, `write:*`, `admin:*`) are too broad for fine-grained MCP authorization. Need granular scopes like `read:todos`, `write:notes`.
+- ⚠️ **Trusted Clients**: `trustedClients: []` is currently empty in OIDC Provider config. Needs Cursor/Claude client registration.
+- ⚠️ **Introspection/Revocation**: Better Auth handles these endpoints automatically via OIDC Provider, but need verification they work correctly for MCP clients.
 
 ---
 

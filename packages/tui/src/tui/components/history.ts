@@ -50,6 +50,14 @@ export function createMessageHistoryState(): MessageHistoryState {
 
 let messageCounter = 0;
 
+/**
+ * Reset message counter for testing.
+ * @internal Only use in tests
+ */
+export function resetMessageCounter(): void {
+  messageCounter = 0;
+}
+
 export function createMessageHistoryActions(
   getState: () => MessageHistoryState,
   setState: (state: MessageHistoryState) => void

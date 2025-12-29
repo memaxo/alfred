@@ -39,6 +39,8 @@ export * from "./reconstruct";
 export * from "./ref";
 export * from "./ref.zod";
 export { RuntimeContext } from "./runtime-context";
+// OAuth Scopes for MCP integration
+export * from "./scopes";
 export * from "./serialize";
 export * from "./source";
 // Streaming and UI message types

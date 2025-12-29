@@ -5,6 +5,8 @@
  * with the ALFRED TUI package registry.
  */
 
+import { z } from "zod";
+
 // Inline manifest types to avoid tsconfig rootDir issues
 type HealthStatus = {
   status: "healthy" | "degraded" | "unhealthy";
@@ -16,8 +18,10 @@ type HealthStatus = {
 type CommandDef = {
   name: string;
   description: string;
+  args?: z.ZodType;
   handler: (args: unknown) => Promise<void>;
   category?: string;
+  requiresAuth?: boolean;
 };
 
 type TuiPanelDef = {
@@ -47,6 +51,42 @@ type CliManifest = {
   dependencies?: string[];
 };
 
+// Zod schemas for command arguments
+const testSttArgsSchema = z.object({
+  file: z
+    .string()
+    .optional()
+    .default("test.wav")
+    .describe("Path to audio file to transcribe"),
+});
+
+const testTtsArgsSchema = z.object({
+  text: z
+    .string()
+    .optional()
+    .default("Hello, this is a test of the text to speech system.")
+    .describe("Text to synthesize"),
+  output: z
+    .string()
+    .optional()
+    .default("tts-output.wav")
+    .describe("Output file path"),
+});
+
+const benchmarkArgsSchema = z.object({
+  iterations: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .default(3)
+    .describe("Number of benchmark iterations"),
+});
+
+const statusArgsSchema = z.object({
+  json: z.boolean().optional().default(false).describe("Output as JSON"),
+});
+
 /**
  * Voice package CLI manifest
  */
@@ -60,27 +100,44 @@ export const manifest: CliManifest = {
       name: "test-stt",
       description: "Test speech-to-text with an audio file",
       category: "voice",
+      args: testSttArgsSchema,
       handler: async (args) => {
+        const validated = testSttArgsSchema.parse(args);
         const { testSTT } = await import("./commands/test");
-        await testSTT(args as { file?: string });
+        await testSTT(validated);
       },
     },
     {
       name: "test-tts",
       description: "Test text-to-speech with sample text",
       category: "voice",
+      args: testTtsArgsSchema,
       handler: async (args) => {
+        const validated = testTtsArgsSchema.parse(args);
         const { testTTS } = await import("./commands/test");
-        await testTTS(args as { text?: string });
+        await testTTS(validated);
       },
     },
     {
       name: "benchmark",
       description: "Run voice pipeline benchmark",
       category: "voice",
-      handler: async () => {
+      args: benchmarkArgsSchema,
+      handler: async (args) => {
+        benchmarkArgsSchema.parse(args);
         const { benchmark } = await import("./commands/benchmark");
         await benchmark();
+      },
+    },
+    {
+      name: "status",
+      description: "Show voice pool status and active sessions",
+      category: "voice",
+      args: statusArgsSchema,
+      handler: async (args) => {
+        const validated = statusArgsSchema.parse(args);
+        const { status } = await import("./commands/status");
+        await status(validated);
       },
     },
   ],
@@ -93,7 +150,7 @@ export const manifest: CliManifest = {
       shortcut: "v",
       category: "monitoring",
       defaultVisible: true,
-      factory: async () => {
+      factory: () => {
         // TODO: Return actual VoicePanel once it's exported from @alfred/tui
         return class PlaceholderPanel {};
       },

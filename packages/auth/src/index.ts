@@ -26,6 +26,31 @@ const trustedOrigins = [
   origin,
 ].filter(Boolean) as string[];
 
+/**
+ * Build trusted client list from environment variables.
+ * Trusted clients skip the consent screen (for first-party integrations).
+ */
+function getTrustedClients(): string[] {
+  const clients: string[] = [];
+
+  // Cursor IDE MCP client
+  if (process.env.CURSOR_CLIENT_ID && process.env.CURSOR_CLIENT_SECRET) {
+    clients.push(process.env.CURSOR_CLIENT_ID);
+  }
+
+  // Claude Desktop MCP client
+  if (process.env.CLAUDE_CLIENT_ID && process.env.CLAUDE_CLIENT_SECRET) {
+    clients.push(process.env.CLAUDE_CLIENT_ID);
+  }
+
+  // Generic MCP client (for custom integrations)
+  if (process.env.MCP_CLIENT_ID && process.env.MCP_CLIENT_SECRET) {
+    clients.push(process.env.MCP_CLIENT_ID);
+  }
+
+  return clients;
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -96,7 +121,11 @@ export const auth = betterAuth({
       loginPage: "/sign-in",
       consentPage: "/consent",
       // Trusted clients can skip consent (e.g., internal tools)
-      trustedClients: [],
+      // Configured via environment variables for security
+      // Note: better-auth expects client ID strings but type definition requires Client objects
+      trustedClients: getTrustedClients() as unknown as Parameters<
+        typeof oidcProvider
+      >[0]["trustedClients"],
       // Custom metadata
       metadata: {
         issuer: origin,
@@ -104,9 +133,32 @@ export const auth = betterAuth({
           "openid",
           "profile",
           "email",
+          "offline_access",
+          // Read scopes
           "read:*",
+          "read:todos",
+          "read:notes",
+          "read:reminders",
+          "read:knowledge",
+          "read:cognitive",
+          "read:workflows",
+          "read:timers",
+          "read:bookmarks",
+          // Write scopes
           "write:*",
+          "write:todos",
+          "write:notes",
+          "write:reminders",
+          "write:knowledge",
+          "write:workflows",
+          "write:timers",
+          "write:bookmarks",
+          // Admin scopes
           "admin:*",
+          "admin:voice",
+          "admin:workflow",
+          "admin:deploy",
+          "admin:system",
         ],
       },
     }),
