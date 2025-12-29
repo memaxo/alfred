@@ -49,6 +49,9 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS workflow_runs (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    project_id TEXT,
+    plan_id TEXT,
+    requirement TEXT,
     workflow_id TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'running',
     input_data TEXT,
@@ -63,13 +66,18 @@ const statements = [
     resumed_at TEXT,
     completed_at TEXT,
     learned_at TEXT,
+    dreamed_at TEXT,
     error_message TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  "ALTER TABLE workflow_runs ADD COLUMN project_id TEXT;",
+  "ALTER TABLE workflow_runs ADD COLUMN plan_id TEXT;",
+  "ALTER TABLE workflow_runs ADD COLUMN requirement TEXT;",
   "ALTER TABLE workflow_runs ADD COLUMN linear_issue_id TEXT;",
   "ALTER TABLE workflow_runs ADD COLUMN linear_issue_url TEXT;",
   "ALTER TABLE workflow_runs ADD COLUMN learned_at TEXT;",
+  "ALTER TABLE workflow_runs ADD COLUMN dreamed_at TEXT;",
   `CREATE TABLE IF NOT EXISTS workflow_events (
     id TEXT PRIMARY KEY,
     run_id TEXT NOT NULL,
