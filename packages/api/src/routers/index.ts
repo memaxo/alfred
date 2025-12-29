@@ -10,6 +10,7 @@ import { droidsRouter } from "./droids";
 import { evalRouter } from "./eval";
 import { fsRouter } from "./fs";
 import { graphRouter } from "./graph";
+import { homeRouter } from "./home";
 import { jwksRouter } from "./jwks";
 import { knowledgeRouter } from "./knowledge";
 import { linearRouter } from "./linear";
@@ -35,6 +36,7 @@ export const appRouter = router({
   healthCheck: publicProcedure.query(() => "OK"),
   admin: adminRouter,
   graph: graphRouter,
+  home: homeRouter,
   knowledge: knowledgeRouter,
   user: userRouter,
   privateData: protectedProcedure.query(({ ctx }) => ({
