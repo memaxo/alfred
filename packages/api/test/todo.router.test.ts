@@ -13,7 +13,9 @@ const dbDeleteMock = vi.fn();
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
-  caller = await createTestCaller();
+  caller = await createTestCaller({
+    scopes: ["read:todos", "write:todos"],
+  });
 });
 
 afterEach(() => {
