@@ -1,0 +1,25 @@
+# Planning & Research Patterns
+
+## Core Principle
+
+Planning uses vector similarity for pattern matching, LLM generation for new plans, and structured serialization for persistence. Import `ai` SDK for generation, not raw HTTP.
+
+## Rules
+
+1. **Similarity matching.** Use vector search for pattern retrieval. Prioritize in-project matches (1.0x weight) over cross-project fallbacks (0.8x weight).
+
+2. **LLM generation.** Use `generateObject` from `@ai-sdk/core` with `toolChoice: "required"` for new plan generation. Never call OpenAI or other providers via raw HTTP.
+
+3. **Pattern lifecycle.** Implement confidence decay for unused patterns (retire after 30 days). Quarantine patterns with low success rates (<30% after 5 uses).
+
+4. **Serialization.** Use `serializePlan()` and `deserializePlan()` for database persistence. Serialize to `workflow_plans` table with structured schema.
+
+5. **Evaluation.** Use `evaluatePlan()` for validation. Fail fast on missing required fields. Return structured errors with suggested fixes.
+
+6. **Context enhancement.** Enhance prompts with: user-scoped heuristics (fetch first), similar past executions (repo-scoped), project-specific conventions from `projects.config`.
+
+7. **Failure analysis.** Store failed plans as anti-patterns with `failure_reason`. Use anti-patterns for proactive avoidance in future generations.
+
+## See Also
+
+- `.ruler/38-workflow-learning.md` in `packages/runtime` for learning automation
