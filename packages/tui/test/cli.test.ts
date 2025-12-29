@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { Buffer } from "node:buffer";
 import path from "node:path";
 import { runCli } from "../src/cli";
 
@@ -26,9 +27,29 @@ describe("CLI Basic", () => {
   });
 
   test("auth command usage", async () => {
-    // Avoid `alfred auth` (no subcommand) because `authCommands` exits(1) on unknown usage.
-    // `status` is safe and should never call process.exit.
-    await runCli(["auth", "status"]);
+    // Run as subprocess to avoid any commander/process.exit behavior affecting Bun tests.
+    const bin = path.join(import.meta.dir, "../src/bin/alfred.ts");
+    const proc = Bun.spawn(["bun", bin, "auth", "status"], {
+      cwd: process.cwd(),
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...process.env,
+        ALFRED_API_AUTO_INIT: "false",
+      },
+    });
+
+    const [stdout, stderr, exitCode] = await Promise.all([
+      readText(proc.stdout),
+      readText(proc.stderr),
+      proc.exited,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(stderr).not.toContain("tui_cli_failed");
+    expect(stderr).not.toContain("tui_auth_command_invalid");
+    expect(stdout).toBeDefined();
   });
 
   test("alfred --help is fast and does not initialize voice pools", async () => {

@@ -5,34 +5,48 @@ import { initializeRegistry } from "../registry";
 import { setupCompletions } from "./completions";
 import { createCliContext, createCliHelpContext } from "./context";
 
+function writeStdout(text: string): void {
+  process.stdout.write(text);
+}
+
+function writeStderr(text: string): void {
+  process.stderr.write(text);
+}
+
 export async function runCli(args: string[]): Promise<void> {
   // Setup tab completions
   setupCompletions();
 
   try {
-    // Initialize package registry
-    const registry = await initializeRegistry();
-
-    // Handle auth commands separately (not via trpc-cli)
-    if (args[0] === "auth") {
-      return await authCommands(args.slice(1));
-    }
-
-    // Handle TUI commands
-    if (args[0] === "tui") {
-      return await handleTuiCommand(args.slice(1));
-    }
-
-    // Handle registry commands (e.g., "alfred db:migrate", "alfred voice:test-stt")
-    if (args[0] && (args[0].includes(":") || registry.findCommand(args[0]))) {
-      return await handleRegistryCommand(args, registry);
-    }
-
     const wantsHelp =
       args.includes("--help") ||
       args.includes("-h") ||
       args.length === 0 ||
       (args.length === 1 && args[0]?.trim().length === 0);
+
+    // Handle auth commands separately (not via trpc-cli).
+    // Must run BEFORE registry initialization so `alfred auth status` stays fast and never
+    // fails due to optional package manifests (e.g. voice/python deps).
+    if (args[0] === "auth") {
+      return await authCommands(args.slice(1));
+    }
+
+    // Handle TUI commands (also before registry init).
+    if (args[0] === "tui") {
+      return await handleTuiCommand(args.slice(1));
+    }
+
+    // Skip registry initialization for pure help paths to avoid heavy side effects.
+    const registry = wantsHelp ? null : await initializeRegistry();
+
+    // Handle registry commands (e.g., "alfred db:migrate", "alfred voice:test-stt").
+    if (
+      registry &&
+      args[0] &&
+      (args[0].includes(":") || registry.findCommand(args[0]))
+    ) {
+      return await handleRegistryCommand(args, registry);
+    }
 
     // trpc-cli expects a concrete context object (not a function).
     // ALFRED's context creation is async (credentials + refresh), so we resolve it once up-front.
@@ -93,8 +107,8 @@ async function handleTuiCommand(args: string[]): Promise<void> {
 }
 
 function printTuiHelp(): void {
-  console.log(
-    `
+  writeStdout(
+    `${`
 ALFRED TUI - Terminal User Interface
 
 Usage: alfred tui [subcommand]
@@ -114,7 +128,7 @@ Keyboard Shortcuts:
   ?           Show help
   Tab         Next panel
   Shift+Tab   Previous panel
-`.trim()
+`.trim()}\n`
   );
 }
 
@@ -126,24 +140,26 @@ async function handleRegistryCommand(
 ): Promise<void> {
   const commandName = args[0];
   if (!commandName) {
-    console.error("No command specified");
+    writeStderr("No command specified\n");
     process.exit(1);
   }
 
   const cmd = registry.findCommand(commandName);
   if (!cmd) {
-    console.error(`Unknown command: ${commandName}`);
-    console.error("Try 'alfred --help' for available commands");
+    writeStderr(`Unknown command: ${commandName}\n`);
+    writeStderr("Try 'alfred --help' for available commands\n");
     process.exit(1);
   }
 
   // Parse arguments (simple implementation - could be enhanced with yargs/commander)
-  const cmdArgs: Record<string, any> = {};
+  const cmdArgs: Record<string, boolean | number | string> = {};
   const positionalArgs: string[] = [];
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
-    if (!arg) continue;
+    if (!arg) {
+      continue;
+    }
 
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
@@ -175,7 +191,7 @@ async function handleRegistryCommand(
       const validated = cmd.args.parse(cmdArgs);
       await cmd.handler(validated);
     } catch (error) {
-      console.error(`Invalid arguments: ${(error as Error).message}`);
+      writeStderr(`Invalid arguments: ${(error as Error).message}\n`);
       process.exit(1);
     }
   } else {
