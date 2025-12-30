@@ -1,4 +1,4 @@
-import type { Event, Outcome } from "@alfred/cognitive/state";
+import { type Event, type Outcome, timestamp } from "@alfred/cognitive/state";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
 import { buildHistoryContext } from "@alfred/history/history-context";
@@ -32,6 +32,95 @@ type FocusState = {
   note?: string;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseFocusState(value: unknown): FocusState | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const kind = value._;
+  if (kind !== "active" && kind !== "idle") {
+    return null;
+  }
+  const sinceRaw = value.since;
+  if (sinceRaw !== undefined && typeof sinceRaw !== "string") {
+    return null;
+  }
+  const durationRaw = value.duration;
+  if (durationRaw !== undefined && typeof durationRaw !== "number") {
+    return null;
+  }
+  const noteRaw = value.note;
+  if (noteRaw !== undefined && typeof noteRaw !== "string") {
+    return null;
+  }
+  return {
+    _: kind,
+    since: sinceRaw,
+    duration: durationRaw,
+    note: noteRaw,
+  };
+}
+
+function resolveModelId(model: unknown): string {
+  if (typeof model === "string" && model.length > 0) {
+    return model;
+  }
+  if (isRecord(model)) {
+    const modelId = model.modelId;
+    if (typeof modelId === "string" && modelId.length > 0) {
+      return modelId;
+    }
+    const id = model.id;
+    if (typeof id === "string" && id.length > 0) {
+      return id;
+    }
+  }
+  return process.env.AI_MODEL ?? "openai/gpt-4o-mini";
+}
+
+function isJarvisPersonaEnabled(): boolean {
+  const raw =
+    typeof process !== "undefined"
+      ? process.env.ENABLE_JARVIS_PERSONA
+      : undefined;
+  return raw === "1" || raw === "true";
+}
+
+function normalizeStart(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function applyOpening(opening: string, text: string): string {
+  const o = normalizeStart(opening);
+  const t = normalizeStart(text);
+  if (!o) {
+    return t;
+  }
+  if (!t) {
+    return o;
+  }
+  const lo = o.toLowerCase();
+  const lt = t.toLowerCase();
+  if (lt.startsWith(lo)) {
+    return text.trim();
+  }
+  return `${o} ${t}`.trim();
+}
+
+function looksLikeStatusQuery(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    t.includes("status") ||
+    t.includes("health") ||
+    t.includes("systems") ||
+    t.includes("diagnostic") ||
+    t.includes("uptime")
+  );
+}
+
 async function getUserFocusState(userId: string): Promise<FocusState | null> {
   try {
     const preferences = (await userRepo.getPreferences(
@@ -39,21 +128,11 @@ async function getUserFocusState(userId: string): Promise<FocusState | null> {
     )) as unknown as Array<{ key: string; value: unknown }>;
     const entry = preferences.find((pref) => pref.key === "focus");
 
-    if (!entry?.value || typeof entry.value !== "object") {
+    const state = parseFocusState(entry?.value);
+    if (!state) {
       return null;
     }
-
-    const candidate = entry.value as any;
-    if (candidate._ !== "active" && candidate._ !== "idle") {
-      return null;
-    }
-
-    return {
-      _: candidate._,
-      since: candidate.since,
-      duration: candidate.duration,
-      note: candidate.note,
-    };
+    return state;
   } catch {
     return null;
   }
@@ -108,6 +187,24 @@ export async function runAssistantForVoice(
     }
   }
 
+  const jarvisEnabled = isJarvisPersonaEnabled();
+  let jarvisOpening = "";
+  let jarvisPersonaBlock: string | null = null;
+  if (jarvisEnabled) {
+    const { buildJarvisOpening, getPersonaInstruction } = await import(
+      "@alfred/agent/assistant/src/adapter"
+    );
+    jarvisPersonaBlock = getPersonaInstruction([]); // gated inside adapter too
+    jarvisOpening = buildJarvisOpening({
+      sessionStart:
+        input.thread && historyMessages.length > 0
+          ? false
+          : !ctx.has("voiceAssistantLastRunAt"),
+      isSystemStatus: looksLikeStatusQuery(input.text),
+      hour: new Date().getHours(),
+    });
+  }
+
   const newMessage: UIMessage = {
     id: `voice-${Date.now()}`,
     role: "user",
@@ -125,16 +222,18 @@ export async function runAssistantForVoice(
   if (cognitiveContext) {
     systemInstructions += `\n\n${cognitiveContext}`;
   }
+  if (jarvisPersonaBlock) {
+    systemInstructions += `\n\n${jarvisPersonaBlock}`;
+  }
+  if (jarvisOpening) {
+    systemInstructions += `\n\nVoice UX requirement: Begin your reply with exactly: "${jarvisOpening}" (verbatim). Do not repeat this opening later.`;
+  }
 
   // Combine history with the new message
   const allMessages = [...historyMessages, newMessage];
 
-  const modelIdStr =
-    typeof defaults.model === "string"
-      ? defaults.model
-      : ((defaults.model as any).modelId ??
-        (defaults.model as any).id ??
-        "unknown");
+  const model = defaults.model;
+  const modelIdStr = resolveModelId(model);
 
   // Apply history context selection (budgeting)
   const historyContext = await buildHistoryContext({
@@ -148,19 +247,26 @@ export async function runAssistantForVoice(
     rawMessages: historyContext.uiMessages, // Use pruned messages
     tools: defaults.tools,
     source: "assistant",
-    model: defaults.model as any,
+    model,
     system: systemInstructions,
   });
 
   const assistantStart = performance.now();
   const result = await generateText({
-    ...defaults,
-    model: defaults.model as any,
+    model,
+    tools: defaults.tools,
     system: systemInstructions,
     messages: modelMessages,
   });
   const durationSeconds = (performance.now() - assistantStart) / 1000;
   const sanitized = sanitizeResult(result);
+  const textWithOpening = jarvisOpening
+    ? applyOpening(jarvisOpening, sanitized.text ?? "")
+    : (sanitized.text ?? "");
+  const finalSanitized =
+    textWithOpening === (sanitized.text ?? "")
+      ? sanitized
+      : { ...sanitized, text: textWithOpening };
   const replayId = await persistResult({
     userId: input.userId,
     kind: "assistant",
@@ -169,7 +275,7 @@ export async function runAssistantForVoice(
       resource: resourceId,
       messages: [newMessage], // Persist the new interaction
     },
-    result: sanitized,
+    result: finalSanitized,
   });
 
   ctx.set?.("voiceAssistantLastRunAt", new Date().toISOString());
@@ -181,7 +287,7 @@ export async function runAssistantForVoice(
       _: "input",
       content: input.text,
       source: "user",
-      ts: Date.now() as any,
+      ts: timestamp(Date.now()),
     });
 
     await handleVoiceCognitiveEffects({
@@ -189,7 +295,7 @@ export async function runAssistantForVoice(
       runLoop: runCognitiveLoop,
       streamId: threadId,
       effects: result.effects,
-      sanitized,
+      sanitized: finalSanitized,
       durationSeconds,
     });
   } catch (error) {
@@ -199,9 +305,9 @@ export async function runAssistantForVoice(
   }
 
   return {
-    text: sanitized.text ?? "",
+    text: finalSanitized.text ?? "",
     replayId,
-    raw: sanitized,
+    raw: finalSanitized,
     durationSeconds,
   };
 }
@@ -245,7 +351,7 @@ async function handleVoiceCognitiveEffects(params: VoiceEffectParams) {
             {
               _: "complete",
               outcome,
-              ts: Date.now() as any,
+              ts: timestamp(Date.now()),
             }
           );
           queue.push(...followUp.effects);

@@ -31,6 +31,20 @@ export async function runCli(args: string[]): Promise<void> {
       return await authCommands(args.slice(1));
     }
 
+    // JARVIS convenience commands (kept outside registry init for fast UX).
+    if (args[0] === "jarvis") {
+      const { jarvisCommands } = await import("../commands/jarvis");
+      return await jarvisCommands(args.slice(1));
+    }
+    if (args[0] === "ask") {
+      const { askCommand } = await import("../commands/jarvis");
+      return await askCommand(args.slice(1));
+    }
+    if (args[0] === "voice") {
+      const { voiceCommands } = await import("../commands/voice");
+      return await voiceCommands(args.slice(1));
+    }
+
     // Handle TUI commands (also before registry init).
     if (args[0] === "tui") {
       return await handleTuiCommand(args.slice(1));

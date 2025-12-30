@@ -1,4 +1,5 @@
 import { linkEntities } from "../../services/entity-linker";
+import { JARVIS_SYSTEM_ENHANCEMENT } from "./jarvis-persona";
 
 const PERSONAS: Partial<Record<string, string>> = {
   Coding: `
@@ -34,6 +35,21 @@ You are a News Curator.
 `,
 };
 
+function isJarvisPersonaEnabled(): boolean {
+  const raw =
+    typeof process !== "undefined"
+      ? process.env.ENABLE_JARVIS_PERSONA
+      : undefined;
+  return raw === "1" || raw === "true";
+}
+
+function getJarvisEnhancement(): string | null {
+  if (!isJarvisPersonaEnabled()) {
+    return null;
+  }
+  return JARVIS_SYSTEM_ENHANCEMENT.trim();
+}
+
 /**
  * Analyze the conversation context to determine the dominant domain.
  * Uses Graph Topology:
@@ -51,8 +67,10 @@ export function analyzeContext(
  * Merges instructions if multiple domains are detected.
  */
 export function getPersonaInstruction(domains: string[]): string | null {
+  const jarvisEnhancement = getJarvisEnhancement();
+
   if (domains.length === 0) {
-    return null;
+    return jarvisEnhancement;
   }
 
   const instructions: string[] = [];
@@ -66,11 +84,21 @@ export function getPersonaInstruction(domains: string[]): string | null {
   }
 
   if (instructions.length === 0) {
-    return null;
+    return jarvisEnhancement;
   }
 
-  return `
+  const adaptivePersona = `
 ### ADAPTIVE PERSONA ACTIVE
 ${instructions.join("\n\n")}
 `;
+  if (!jarvisEnhancement) {
+    return adaptivePersona;
+  }
+  return `${adaptivePersona.trim()}\n\n${jarvisEnhancement}`;
 }
+
+export {
+  buildJarvisOpening,
+  selectGreeting,
+  selectTransition,
+} from "./jarvis-persona";

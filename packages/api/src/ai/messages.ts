@@ -19,7 +19,7 @@ type PrepareMessagesArgs = {
   system?: string;
 };
 
-export async function prepareModelMessagesForGenerate({
+export function prepareModelMessagesForGenerate({
   rawMessages,
   tools,
   source,
@@ -41,7 +41,7 @@ export async function prepareModelMessagesForGenerate({
       })) as UIMessage[];
       const modelId = resolveModelId(model);
       const stopHistoryTimer =
-        runtimeHistorySelectionDurationSeconds.startTimer({ source });
+        runtimeHistorySelectionDurationSeconds.startTimer();
       const historyContext = await buildHistoryContext({
         messages: validated,
         modelId,

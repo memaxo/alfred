@@ -55,6 +55,11 @@
       "default": "./src/assistant/src/adapter.ts",
       "types": "./src/assistant/src/adapter.ts"
     },
+    "./assistant/src/jarvis-persona": {
+      "bun": "./src/assistant/src/jarvis-persona.ts",
+      "default": "./src/assistant/src/jarvis-persona.ts",
+      "types": "./src/assistant/src/jarvis-persona.ts"
+    },
     "./services/*": {
       "bun": "./src/services/*.ts",
       "default": "./src/services/*.ts",
