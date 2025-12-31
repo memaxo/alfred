@@ -15,18 +15,29 @@ export {
   runRegistryMocks,
 } from "@alfred/test-kit/redis";
 
+// Shared mock references that can be controlled by any test
+export const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
+export const policyEvaluateMock = vi
+  .fn()
+  .mockResolvedValue({ allow: true, obligations: [] as Obligation[] });
+export const consumeRouteRateLimitMock = vi.fn().mockResolvedValue(undefined);
+
 /**
  * Common mock setup for policy audit logging
  */
 export function mockPolicyAudit() {
   mock.module("@alfred/db/repo/policy", () => ({
-    createAuditLog: vi.fn().mockResolvedValue(undefined),
+    createAuditLog: createAuditLogMock,
   }));
   mock.module("@alfred/policy", () => ({
-    evaluate: vi
-      .fn()
-      .mockResolvedValue({ allow: true, obligations: [] as Obligation[] }),
+    evaluate: policyEvaluateMock,
     registerCacheObs: vi.fn(),
+  }));
+}
+
+export function mockRateLimit() {
+  mock.module("@alfred/api/trpc", () => ({
+    consumeRouteRateLimit: consumeRouteRateLimitMock,
   }));
 }
 
