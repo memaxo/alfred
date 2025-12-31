@@ -188,7 +188,6 @@ describe.skipIf(!SHOULD_RUN)("Transaction Wrappers", () => {
 
     it("handles unique constraint violations gracefully", async () => {
       const { db } = await import("@alfred/db");
-      const { workflowRuns } = await import("@alfred/db/schema/workflow");
       const { memoryNodes } = await import("@alfred/db/schema/graph");
 
       const hash = "unique-hash-violation";

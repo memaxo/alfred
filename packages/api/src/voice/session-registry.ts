@@ -211,7 +211,7 @@ export async function updateVoiceSession(
   return clone(updated);
 }
 
-export async function completeVoiceSession(
+export function completeVoiceSession(
   sessionId: string,
   patch?: Partial<Omit<VoiceSessionSnapshot, "id" | "userId" | "createdAt">>
 ): Promise<VoiceSessionSnapshot | null> {

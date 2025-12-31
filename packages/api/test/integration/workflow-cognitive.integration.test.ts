@@ -248,7 +248,7 @@ describe("Workflow → Cognitive Integration", () => {
   });
 
   describe("Physiology affects workflow autonomy", () => {
-    it("low energy state affects workflow decisions", async () => {
+    it("low energy state affects workflow decisions", () => {
       const _streamId = stream("low-energy");
 
       // Simulate multiple events to drain energy

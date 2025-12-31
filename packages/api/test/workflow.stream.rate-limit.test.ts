@@ -14,9 +14,9 @@ describe("workflow.stream rate limit", () => {
 
     let msg = "";
     try {
-      await consumeRouteRateLimit("workflow.stream", "sess-1");
-      await consumeRouteRateLimit("workflow.stream", "sess-1");
-      await consumeRouteRateLimit("workflow.stream", "sess-1");
+      consumeRouteRateLimit("workflow.stream", "sess-1");
+      consumeRouteRateLimit("workflow.stream", "sess-1");
+      consumeRouteRateLimit("workflow.stream", "sess-1");
     } catch (err) {
       msg = err instanceof Error ? err.message : String(err);
     }

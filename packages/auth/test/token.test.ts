@@ -10,8 +10,10 @@ describe("Token Module", () => {
     beforeEach(async () => {
       // Generate test keys once per describe
       if (
-        !process.env.AGENT_ED25519_PRIVATE ||
-        !process.env.AGENT_ED25519_PUBLIC_PEM
+        !(
+          process.env.AGENT_ED25519_PRIVATE &&
+          process.env.AGENT_ED25519_PUBLIC_PEM
+        )
       ) {
         const { privateKey, publicKey } = await crypto.subtle.generateKey(
           "EdDSA",
@@ -22,7 +24,7 @@ describe("Token Module", () => {
           "pkcs8",
           privateKey
         );
-        process.env.AGENT_ED25519_PUBLIC_PEM = await crypto.subtle.subtle.exportKey(
+        process.env.AGENT_ED25519_PUBLIC_PEM = await crypto.subtle.exportKey(
           "spki",
           publicKey
         );

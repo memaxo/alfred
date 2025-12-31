@@ -196,7 +196,7 @@ describe("Autonomy Calculator", () => {
       expect(behavior).toBe("aggressive");
     });
 
-    it("adjusts tool selection based on autonomy", async () => {
+    it("adjusts tool selection based on autonomy", () => {
       // Verify that tool selection is adjusted based on autonomy level
       const autonomyLevel = 0.6;
       const availableTools = {
@@ -219,7 +219,7 @@ describe("Autonomy Calculator", () => {
   });
 
   describe("Autonomy Metrics Tracking", () => {
-    it("tracks autonomy level over time", async () => {
+    it("tracks autonomy level over time", () => {
       // Verify that autonomy level changes are tracked over time
       const history: Array<{ timestamp: number; level: number }> = [];
 
@@ -232,7 +232,7 @@ describe("Autonomy Calculator", () => {
       expect(history[2].level).toBeGreaterThan(history[0].level);
     });
 
-    it("calculates autonomy change rate", async () => {
+    it("calculates autonomy change rate", () => {
       // Verify that the rate of autonomy change is calculated
       const initialLevel = 0.3;
       const finalLevel = 0.7;
@@ -267,7 +267,7 @@ describe("Autonomy Calculator", () => {
       expect(finalConfidence).toBeGreaterThanOrEqual(0);
     });
 
-    it("flags low confidence states", async () => {
+    it("flags low confidence states", () => {
       // Verify that low confidence states are flagged
       const confidence = 0.5;
       const threshold = 0.6;

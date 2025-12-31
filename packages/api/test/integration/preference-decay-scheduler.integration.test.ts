@@ -97,7 +97,7 @@ describe("Preference Decay Scheduler", () => {
       expect(saved[0].properties?.confidence).toBe(initialConfidence);
     });
 
-    it("applies configurable decay factor", async () => {
+    it("applies configurable decay factor", () => {
       // Verify that the decay factor from config is applied correctly
       process.env.MEMORY_DECAY_FACTOR = "0.95";
 
@@ -106,7 +106,7 @@ describe("Preference Decay Scheduler", () => {
   });
 
   describe("Deterministic Time Simulation", () => {
-    it("uses deterministic Date.now() for testing", async () => {
+    it("uses deterministic Date.now() for testing", () => {
       // Verify that decay operations can be tested with
       // deterministic timestamps
       const testTime = Date.now();
@@ -115,7 +115,7 @@ describe("Preference Decay Scheduler", () => {
       expect(typeof testTime).toBe("number");
     });
 
-    it("allows time travel for decay testing", async () => {
+    it("allows time travel for decay testing", () => {
       // In production, this would use a time simulator
       // to advance time and verify decay behavior
       const currentTime = Date.now();
@@ -126,13 +126,13 @@ describe("Preference Decay Scheduler", () => {
   });
 
   describe("Cache Invalidation", () => {
-    it("invalidates graph cache after decay", async () => {
+    it("invalidates graph cache after decay", () => {
       // Verify that when preferences decay, related
       // caches are invalidated
       expect(true).toBe(true);
     });
 
-    it("propagates cache invalidation to routers", async () => {
+    it("propagates cache invalidation to routers", () => {
       // Verify that decay-triggered cache invalidations
       // reach the router layer
       expect(true).toBe(true);
@@ -140,27 +140,27 @@ describe("Preference Decay Scheduler", () => {
   });
 
   describe("Below-Threshold Deletion", () => {
-    it("deletes preferences below confidence threshold", async () => {
+    it("deletes preferences below confidence threshold", () => {
       process.env.MEMORY_PRUNE_CONFIDENCE = "0.2";
 
       expect(process.env.MEMORY_PRUNE_CONFIDENCE).toBe("0.2");
     });
 
-    it("logs deletion events", async () => {
+    it("logs deletion events", () => {
       // Verify that preference deletion events are logged
       expect(true).toBe(true);
     });
   });
 
   describe("Concurrent Decay Runs", () => {
-    it("guards against concurrent decay runs", async () => {
+    it("guards against concurrent decay runs", () => {
       // Verify that only one decay run can execute at a time
       process.env.MEMORY_DECAY_ENABLED = "true";
 
       expect(process.env.MEMORY_DECAY_ENABLED).toBe("true");
     });
 
-    it("handles lock acquisition gracefully", async () => {
+    it("handles lock acquisition gracefully", () => {
       // Verify that if a decay lock is already held,
       // subsequent runs wait or skip
       expect(true).toBe(true);
@@ -168,19 +168,19 @@ describe("Preference Decay Scheduler", () => {
   });
 
   describe("Configuration", () => {
-    it("respects maintenance interval configuration", async () => {
+    it("respects maintenance interval configuration", () => {
       process.env.MEMORY_DECAY_INTERVAL_MS = "3600000"; // 1 hour
 
       expect(process.env.MEMORY_DECAY_INTERVAL_MS).toBe("3600000");
     });
 
-    it("uses configurable decay threshold", async () => {
+    it("uses configurable decay threshold", () => {
       process.env.MEMORY_DECAY_THRESHOLD_MS = "86400000"; // 24 hours
 
       expect(process.env.MEMORY_DECAY_THRESHOLD_MS).toBe("86400000");
     });
 
-    it("respects confidence floor", async () => {
+    it("respects confidence floor", () => {
       // Verify that confidence never falls below the floor
       const confidenceFloor = process.env.MEMORY_CONFIDENCE_FLOOR || "0.01";
 

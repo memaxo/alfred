@@ -92,7 +92,7 @@ describe("Voice-Assistant Pipeline Integration", () => {
     });
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     voiceFixture?.restore();
     voiceFixture = null;
   });
@@ -509,7 +509,7 @@ describe("Voice-Assistant Pipeline Integration", () => {
       }
     });
 
-    it("handles invalid session ID gracefully", async () => {
+    it("handles invalid session ID gracefully", () => {
       if (voiceFixture?.registry) {
         // Getting a non-existent session should return undefined
         const session = voiceFixture.registry.getSession(
@@ -566,7 +566,7 @@ describe("Voice Router Integration", () => {
     });
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     voiceFixture?.restore();
     voiceFixture = null;
   });

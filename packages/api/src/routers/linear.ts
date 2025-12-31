@@ -246,7 +246,7 @@ export const linearRouter = router({
         })
         .optional()
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(({ ctx, input }) => {
       const session = ctx.session;
       if (!session?.user?.id) {
         throw new TRPCError({

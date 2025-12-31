@@ -54,7 +54,7 @@ afterAll(async () => {
 
 describe("RAG Retrieval Integration", () => {
   describe("Embedding Generation", () => {
-    it("generates embeddings for text", async () => {
+    it("generates embeddings for text", () => {
       // With VCR, embedding calls are recorded/replayed
       const _text = "Authentication module for user login";
 
@@ -68,7 +68,7 @@ describe("RAG Retrieval Integration", () => {
       expect(typeof mockEmbedding[0]).toBe("number");
     });
 
-    it("generates embeddings in batches", async () => {
+    it("generates embeddings in batches", () => {
       const texts = [
         "First document about TypeScript",
         "Second document about authentication",
@@ -86,7 +86,7 @@ describe("RAG Retrieval Integration", () => {
       });
     });
 
-    it("embedding within performance budget", async () => {
+    it("embedding within performance budget", () => {
       const start = performance.now();
 
       // Simulate embedding call
@@ -103,7 +103,7 @@ describe("RAG Retrieval Integration", () => {
   });
 
   describe("Hybrid Search", () => {
-    it("combines vector and full-text search", async () => {
+    it("combines vector and full-text search", () => {
       // Simulate hybrid search results
       const vectorResults = [
         { id: "doc-1", score: 0.92, source: "vector" },
@@ -133,7 +133,7 @@ describe("RAG Retrieval Integration", () => {
       expect(results[0]?.score).toBe(0.92);
     });
 
-    it("applies score fusion for hybrid results", async () => {
+    it("applies score fusion for hybrid results", () => {
       const vectorScore = 0.9;
       const fullTextScore = 0.7;
       const vectorWeight = 0.7;
@@ -145,7 +145,7 @@ describe("RAG Retrieval Integration", () => {
       expect(fusedScore).toBeCloseTo(0.84, 2);
     });
 
-    it("filters results below threshold", async () => {
+    it("filters results below threshold", () => {
       const results = [
         { id: "doc-1", score: 0.92 },
         { id: "doc-2", score: 0.75 },
@@ -162,7 +162,7 @@ describe("RAG Retrieval Integration", () => {
   });
 
   describe("Retrieval Performance", () => {
-    it("retrieval within budget", async () => {
+    it("retrieval within budget", () => {
       const start = performance.now();
 
       // Simulate retrieval operation
@@ -179,7 +179,7 @@ describe("RAG Retrieval Integration", () => {
       expect(results.length).toBe(10);
     });
 
-    it("handles topK parameter correctly", async () => {
+    it("handles topK parameter correctly", () => {
       const allResults = Array.from({ length: 100 }, (_, i) => ({
         id: `doc-${i}`,
         score: 1 - i * 0.01,
@@ -193,7 +193,7 @@ describe("RAG Retrieval Integration", () => {
       expect(limited[topK - 1]?.score).toBe(0.96);
     });
 
-    it("fetchLimit accounts for threshold filtering", async () => {
+    it("fetchLimit accounts for threshold filtering", () => {
       const k = 5;
       const fetchLimit = k * 3; // Over-fetch to account for filtering
 
@@ -211,7 +211,7 @@ describe("RAG Retrieval Integration", () => {
   });
 
   describe("Threshold Filtering", () => {
-    it("server-side threshold filtering", async () => {
+    it("server-side threshold filtering", () => {
       const results = [
         { id: "1", score: 0.95 },
         { id: "2", score: 0.82 },
@@ -226,7 +226,7 @@ describe("RAG Retrieval Integration", () => {
       expect(serverFiltered.length).toBe(3);
     });
 
-    it("client-side threshold filtering for correctness", async () => {
+    it("client-side threshold filtering for correctness", () => {
       // Server already filtered at 0.7, client re-filters at 0.75
       const serverResults = [
         { id: "1", score: 0.95 },
@@ -242,7 +242,7 @@ describe("RAG Retrieval Integration", () => {
       expect(clientFiltered.length).toBe(2);
     });
 
-    it("dynamic threshold based on result quality", async () => {
+    it("dynamic threshold based on result quality", () => {
       const results = [
         { id: "1", score: 0.95 },
         { id: "2", score: 0.94 },
@@ -267,7 +267,7 @@ describe("RAG Retrieval Integration", () => {
   });
 
   describe("RAG Context Building", () => {
-    it("builds context from retrieved chunks", async () => {
+    it("builds context from retrieved chunks", () => {
       const chunks = [
         { id: "c1", content: "function authenticate() {}", path: "auth.ts" },
         { id: "c2", content: "class UserService {}", path: "user.ts" },
@@ -282,7 +282,7 @@ describe("RAG Retrieval Integration", () => {
       expect(context).toContain("authenticate");
     });
 
-    it("respects token budget in context building", async () => {
+    it("respects token budget in context building", () => {
       const maxTokens = 1000;
       const _estimatedTokensPerChar = 0.25;
 
@@ -308,7 +308,7 @@ describe("RAG Retrieval Integration", () => {
       expect(totalTokens).toBeLessThanOrEqual(maxTokens);
     });
 
-    it("includes document metadata in context", async () => {
+    it("includes document metadata in context", () => {
       const chunk = {
         id: "chunk-1",
         content: "export function login() {}",
@@ -329,13 +329,13 @@ ${chunk.content}`;
 });
 
 describe("VCR Integration for RAG", () => {
-  it("VCR records/replays embedding API calls", async () => {
+  it("VCR records/replays embedding API calls", () => {
     // VCR should intercept fetch calls to embedding providers
     // This is automatically handled when VCR is started
     expect(vcr).toBeDefined();
   });
 
-  it("deterministic embedding results via VCR", async () => {
+  it("deterministic embedding results via VCR", () => {
     // When VCR is in replay mode, embeddings should be deterministic
     const _text = "Deterministic test input";
 

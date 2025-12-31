@@ -140,10 +140,10 @@ export const rateLimit = t.middleware(async ({ path, next }) => {
  * Simplified for single-user context - just increments global counter.
  * @deprecated Use rateLimit middleware instead
  */
-export async function consumeRouteRateLimit(
+export function consumeRouteRateLimit(
   _routeId: string,
   _sessionId?: string | null
-): Promise<void> {
+): void {
   const now = Date.now();
   if (now > resetTime) {
     requestCount = 0;

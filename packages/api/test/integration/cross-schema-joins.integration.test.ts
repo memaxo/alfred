@@ -124,11 +124,7 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
     it("joins knowledge nodes with workflow events", async () => {
       const { db } = await import("@alfred/db");
       const { graphRepo } = await import("@alfred/db");
-      const { workflowRuns, workflowEvents } = await import(
-        "@alfred/db/schema/workflow"
-      );
-      const { memoryNodes } = await import("@alfred/db/schema/graph");
-      const { sql } = await import("drizzle-orm");
+      const { workflowEvents } = await import("@alfred/db/schema/workflow");
 
       const resource = "join-knowledge-workflow";
 

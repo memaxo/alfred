@@ -191,14 +191,11 @@ describe("Learning Full Pipeline", () => {
       expect(true).toBe(true);
     });
 
-    it.skipIf(isUsingSqlite)(
-      "prioritizes high-confidence knowledge",
-      async () => {
-        // Verify that higher-confidence knowledge is prioritized
-        // in persona instruction injection
-        expect(true).toBe(true);
-      }
-    );
+    it.skipIf(isUsingSqlite)("prioritizes high-confidence knowledge", () => {
+      // Verify that higher-confidence knowledge is prioritized
+      // in persona instruction injection
+      expect(true).toBe(true);
+    });
   });
 
   describe("Knowledge Graph Persistence", () => {
@@ -242,7 +239,7 @@ describe("Learning Full Pipeline", () => {
 
     it.skipIf(isUsingSqlite)(
       "creates edges between related knowledge nodes",
-      async () => {
+      () => {
         // Verify that related knowledge creates graph edges
         expect(true).toBe(true);
       }
@@ -276,13 +273,13 @@ describe("Learning Full Pipeline", () => {
   });
 
   describe("Error Handling", () => {
-    it("handles knowledge extraction failures gracefully", async () => {
+    it("handles knowledge extraction failures gracefully", () => {
       // Verify that workflow completion is not blocked by
       // knowledge extraction failures
       expect(true).toBe(true);
     });
 
-    it("continues operation with partial knowledge", async () => {
+    it("continues operation with partial knowledge", () => {
       // Verify that if some knowledge extraction fails,
       // the rest still succeeds
       expect(true).toBe(true);

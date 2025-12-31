@@ -95,9 +95,7 @@ describe("createVoiceSession", () => {
     const adapter = createAdapter();
     const failingClient: VoiceClient = {
       ...baseClient,
-      speechToSpeech: vi.fn(async () => {
-        throw new Error("upstream_failed");
-      }),
+      speechToSpeech: vi.fn(() => Promise.reject(new Error("upstream_failed"))),
     };
     const session = createVoiceSession(adapter, failingClient);
 

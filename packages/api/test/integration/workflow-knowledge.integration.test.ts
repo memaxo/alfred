@@ -123,7 +123,7 @@ describe("Workflow → Knowledge Integration", () => {
   });
 
   describe("Knowledge graph persistence", () => {
-    it("creates knowledge graph from workflow context", async () => {
+    it("creates knowledge graph from workflow context", () => {
       const _resource = `wf-graph-${Date.now()}`;
       const graph = empty();
 
@@ -143,7 +143,7 @@ describe("Workflow → Knowledge Integration", () => {
       expect(neighbors).toContain(stepFact);
     });
 
-    it("links workflow reasoning to knowledge nodes", async () => {
+    it("links workflow reasoning to knowledge nodes", () => {
       const graph = empty();
 
       // Workflow reasoning creates knowledge
@@ -159,7 +159,7 @@ describe("Workflow → Knowledge Integration", () => {
       expect(graph.get(reasoning)?.content).toContain("JWT");
     });
 
-    it("maintains confidence scores from workflow analysis", async () => {
+    it("maintains confidence scores from workflow analysis", () => {
       const graph = empty();
 
       const highConfidence = graph.add(
@@ -264,7 +264,7 @@ describe("Workflow → Knowledge Integration", () => {
   });
 
   describe("RAG provenance", () => {
-    it("links retrieved chunks to workflow steps", async () => {
+    it("links retrieved chunks to workflow steps", () => {
       // RAG chunks would link back to workflow reasoning
       const graph = empty();
 
@@ -280,7 +280,7 @@ describe("Workflow → Knowledge Integration", () => {
       expect(neighbors).toContain(workflowStep);
     });
 
-    it("maintains provenance chain through workflow", async () => {
+    it("maintains provenance chain through workflow", () => {
       const graph = empty();
 
       // Build provenance chain
@@ -306,7 +306,7 @@ describe("Workflow → Knowledge Integration", () => {
 
 describe("Knowledge → Workflow Integration", () => {
   describe("Knowledge informs workflow planning", () => {
-    it("existing knowledge affects plan generation", async () => {
+    it("existing knowledge affects plan generation", () => {
       const graph = empty();
 
       // Pre-existing knowledge
@@ -320,7 +320,7 @@ describe("Knowledge → Workflow Integration", () => {
       expect(graph.get(existing1)?.confidence).toBe(toConfidence(0.95));
     });
 
-    it("retrieves relevant context for task", async () => {
+    it("retrieves relevant context for task", () => {
       const graph = empty();
 
       // Seed knowledge
@@ -338,7 +338,7 @@ describe("Knowledge → Workflow Integration", () => {
       expect(graph.size()).toBe(3);
     });
 
-    it("updates knowledge based on workflow outcomes", async () => {
+    it("updates knowledge based on workflow outcomes", () => {
       const graph = empty();
 
       // Initial knowledge
@@ -358,7 +358,7 @@ describe("Knowledge → Workflow Integration", () => {
   });
 
   describe("Graph query performance", () => {
-    it("neighbor lookup within budget", async () => {
+    it("neighbor lookup within budget", () => {
       const graph = empty();
 
       // Create a small graph
@@ -376,7 +376,7 @@ describe("Knowledge → Workflow Integration", () => {
       expect(duration).toBeLessThan(10); // 10ms budget
     });
 
-    it("search operation within budget", async () => {
+    it("search operation within budget", () => {
       const graph = empty();
 
       // Create searchable content
@@ -391,7 +391,7 @@ describe("Knowledge → Workflow Integration", () => {
       expect(duration).toBeLessThan(50); // 50ms budget for search
     });
 
-    it("graph traversal within budget", async () => {
+    it("graph traversal within budget", () => {
       const graph = empty();
 
       // Create a chain
@@ -447,7 +447,7 @@ describe("Cross-Boundary Knowledge Flow", () => {
     await harness?.close();
   });
 
-  it("workflow execution creates knowledge artifacts", async () => {
+  it("workflow execution creates knowledge artifacts", () => {
     const graph = empty();
 
     // Simulate workflow creating knowledge
@@ -462,7 +462,7 @@ describe("Cross-Boundary Knowledge Flow", () => {
     expect(artifacts.length).toBe(2);
   });
 
-  it("knowledge persists across workflow executions", async () => {
+  it("knowledge persists across workflow executions", () => {
     const graph = empty();
 
     // First workflow
@@ -476,7 +476,7 @@ describe("Cross-Boundary Knowledge Flow", () => {
     expect(graph.neighbors(wf2)).toContain(wf1);
   });
 
-  it("maintains knowledge graph integrity", async () => {
+  it("maintains knowledge graph integrity", () => {
     const graph = empty();
 
     // Create connected subgraph
@@ -495,7 +495,7 @@ describe("Cross-Boundary Knowledge Flow", () => {
 });
 
 describe("Semantic Knowledge Operations", () => {
-  it("extracts entities from workflow context", async () => {
+  it("extracts entities from workflow context", () => {
     const graph = empty();
 
     // Entity extraction would produce knowledge nodes
@@ -514,7 +514,7 @@ describe("Semantic Knowledge Operations", () => {
     expect(graph.size()).toBe(3);
   });
 
-  it("creates semantic relations between entities", async () => {
+  it("creates semantic relations between entities", () => {
     const graph = empty();
 
     // Create entities
@@ -531,7 +531,7 @@ describe("Semantic Knowledge Operations", () => {
     expect(graph.neighbors(authMethod)).toContain(jwtConcept);
   });
 
-  it("confidence propagates through relations", async () => {
+  it("confidence propagates through relations", () => {
     const graph = empty();
 
     const highConfidence = graph.add(fact("Known fact", 0.95, "source"));

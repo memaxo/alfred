@@ -34,12 +34,10 @@ async function resetTables() {
   }
   try {
     const { db } = await import("@alfred/db");
-    const { user } = await import("@alfred/db/schema/auth");
-    const { workflowRuns } = await import("@alfred/db/schema/workflow");
-    const { memoryNodes, memoryEdges } = await import(
-      "@alfred/db/schema/graph"
-    );
-    const { auditLogs } = await import("@alfred/db/schema/policy");
+    await import("@alfred/db/schema/auth");
+    await import("@alfred/db/schema/workflow");
+    await import("@alfred/db/schema/graph");
+    await import("@alfred/db/schema/policy");
     const { sql } = await import("drizzle-orm");
 
     // Clean up in order (respecting foreign keys)
@@ -219,7 +217,7 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
     it("uses indexes for common queries", async () => {
       const { db } = await import("@alfred/db");
       const { memoryNodes } = await import("@alfred/db/schema/graph");
-      const { eq, and } = await import("drizzle-orm");
+      const { eq } = await import("drizzle-orm");
 
       // Create multiple nodes with the same resource
       await db.insert(memoryNodes).values([

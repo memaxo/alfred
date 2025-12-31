@@ -698,7 +698,7 @@ describe("Voice-Workflow Latency", () => {
     });
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     voiceFixture?.restore();
     voiceFixture = null;
   });

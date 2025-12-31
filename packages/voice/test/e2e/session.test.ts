@@ -61,9 +61,7 @@ describe("VoiceSession server E2E", () => {
   it("raises errors when TTS synthesis fails mid-stream", async () => {
     const session = handle.registry.createSession("user", "tts-error");
     const original = handle.ttsPool.synthesize;
-    handle.ttsPool.synthesize = async () => {
-      throw new Error("tts_failure");
-    };
+    handle.ttsPool.synthesize = () => Promise.reject(new Error("tts_failure"));
 
     await expect(
       session.streamSynthesis("should fail", "maya", () => {})

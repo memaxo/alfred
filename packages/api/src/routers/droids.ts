@@ -544,7 +544,7 @@ const droidProcedures = {
           proc = null;
         };
 
-        const startStreaming = async (execInput: DroidRunInput) => {
+        const startStreaming = (execInput: DroidRunInput) => {
           if (closed) {
             return;
           }
@@ -631,12 +631,13 @@ const droidProcedures = {
           if (obligations.length > 0) {
             runId = randomUUID();
             const streamSession: StreamSession = {
-              start: async (resumedInput) => {
+              start: (resumedInput) => {
                 if (closed) {
-                  return;
+                  return Promise.resolve();
                 }
                 emit.next({ type: "resume", data: JSON.stringify({ runId }) });
-                await startStreaming(resumedInput);
+                startStreaming(resumedInput);
+                return Promise.resolve();
               },
               cancel: () => {
                 stopProcess();
@@ -654,7 +655,7 @@ const droidProcedures = {
             return;
           }
 
-          await startStreaming(normalizedInput);
+          startStreaming(normalizedInput);
         })().catch((error) => {
           if (!closed) {
             emit.error(error);

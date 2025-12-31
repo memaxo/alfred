@@ -15,7 +15,8 @@
 process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
-process.env.BETTER_AUTH_SECRET = "test-secret-key-for-integration-tests-only-not-a-real-secret";
+process.env.BETTER_AUTH_SECRET =
+  "test-secret-key-for-integration-tests-only-not-a-real-secret";
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
 process.env.BIO_AUTH_BYPASS = "true"; // Bypass biometric requirements in tests
 
@@ -30,7 +31,7 @@ async function ensureSigningKeys() {
   const { privateKey, publicKey } = await crypto.subtle.generateKey(
     "EdDSA",
     true,
-    ["sign", "verify"],
+    ["sign", "verify"]
   );
   process.env.AGENT_ED25519_PRIVATE = await crypto.subtle.exportKey(
     "pkcs8",

@@ -469,7 +469,7 @@ const codexProcedures = {
 
   listRuns: authedProcedure
     .input(codexListRunsInputSchema)
-    .query(async ({ input, ctx }) => {
+    .query(({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
         throw new TRPCError({
@@ -498,7 +498,7 @@ const codexProcedures = {
 
   getRun: authedProcedure
     .input(codexGetRunInputSchema)
-    .query(async ({ input, ctx }) => {
+    .query(({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
         throw new TRPCError({
@@ -612,7 +612,7 @@ const codexProcedures = {
   // Session management procedures
   listSessions: authedProcedure
     .input(codexListSessionsInputSchema)
-    .query(async ({ input, ctx }) => {
+    .query(({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
         throw new TRPCError({

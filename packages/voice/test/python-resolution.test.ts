@@ -110,7 +110,7 @@ describe("Python Executable Resolution", () => {
     // These tests use findVenvPython directly to test venv detection
     // without modifying the real packages/voice/.venv
 
-    it("should detect venv Python in custom directory", async () => {
+    it("should detect venv Python in custom directory", () => {
       const { findVenvPython } = __internals;
       const venvPython = createTestVenv(testDir.voiceDir);
 
@@ -119,7 +119,7 @@ describe("Python Executable Resolution", () => {
       expect(result).toBe(venvPython);
     });
 
-    it("should return null when venv missing", async () => {
+    it("should return null when venv missing", () => {
       const { findVenvPython } = __internals;
       // Ensure .venv does not exist in temp dir
       cleanupTestVenv(testDir.voiceDir);
@@ -129,7 +129,7 @@ describe("Python Executable Resolution", () => {
       expect(result).toBeNull();
     });
 
-    it("should handle platform-specific venv paths", async () => {
+    it("should handle platform-specific venv paths", () => {
       const venvPython = createTestVenv(testDir.voiceDir);
 
       if (process.platform === "win32") {

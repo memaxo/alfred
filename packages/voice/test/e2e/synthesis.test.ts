@@ -19,7 +19,7 @@ describe("TTS End-to-End Synthesis (skipped: causes C++ exception in Bun runner)
 
   let pool: TTSPool;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     // Override environment to force Maya1
     process.env.TTS_PROVIDER = undefined;
   });

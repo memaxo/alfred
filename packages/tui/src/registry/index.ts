@@ -188,12 +188,8 @@ export class PackageRegistry {
       const [pkgShort, cmdName] = name.split(":", 2);
       const packageName = `@alfred/${pkgShort}`;
       const pkg = this.packages.get(packageName);
-      return pkg?.manifest.commands?.find((c) => c.name === cmdName)
-        ? {
-            ...pkg.manifest.commands.find((c) => c.name === cmdName)!,
-            package: packageName,
-          }
-        : undefined;
+      const cmd = pkg?.manifest.commands?.find((c) => c.name === cmdName);
+      return cmd ? { ...cmd, package: packageName } : undefined;
     }
 
     // Search all packages for command name

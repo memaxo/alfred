@@ -18,22 +18,21 @@ export const manifest: CliManifest = {
   name: "@alfred/api",
   version: "0.1.0",
   description: "tRPC API layer with routers, context, and metrics",
-  healthCheck: async () => {
+  healthCheck: () => {
     try {
       const start = performance.now();
       const latency = performance.now() - start;
 
-      await Promise.resolve(); // biome-ignore lint/suspicious/useAwait: required to satisfy async return type
-      return {
+      return Promise.resolve({
         status: "healthy",
         message: "API layer operational",
         latencyMs: latency,
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         status: "unhealthy",
         message: `API health check failed: ${(error as Error).message}`,
-      };
+      });
     }
   },
   dependencies: ["@alfred/db"],

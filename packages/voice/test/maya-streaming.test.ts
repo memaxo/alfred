@@ -6,7 +6,7 @@ describe("Maya Streaming", () => {
   it("should stream audio chunks when streaming is enabled", async () => {
     // Mock Process
     const mockProcess = {
-      sendRequest: mock(async (req, _timeout, onPartial) => {
+      sendRequest: mock((req, _timeout, onPartial) => {
         // Simulate streaming responses
         if (req.payload.streaming && onPartial) {
           // Emit chunk 1

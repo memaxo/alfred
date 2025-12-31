@@ -455,13 +455,13 @@ describe("Timeout Handling", () => {
 });
 
 describe("Rate Limit Handling", () => {
-  it("handles rate-limited responses gracefully", async () => {
+  it("handles rate-limited responses gracefully", () => {
     // In a real scenario, VCR would replay a rate-limited response
     // This test verifies the system doesn't crash on such responses
     expect(true).toBe(true);
   });
 
-  it("implements exponential backoff for retries", async () => {
+  it("implements exponential backoff for retries", () => {
     // Test that retry logic uses exponential backoff
     const delays: number[] = [];
     let attempt = 0;

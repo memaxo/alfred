@@ -111,6 +111,7 @@ describe("Correction Learning", () => {
       try {
         const { db } = await import("@alfred/db");
         const { graphRepo } = await import("@alfred/db");
+        const { memoryEdges } = await import("@alfred/db/schema/graph");
 
         // Create two related nodes
         const node1Id = await graphRepo.upsertNodes([
@@ -215,7 +216,7 @@ describe("Correction Learning", () => {
   });
 
   describe("Classification Learning", () => {
-    it("learns from correction patterns", async () => {
+    it("learns from correction patterns", () => {
       // Verify that repeated corrections create
       // learning patterns in the graph
       expect(true).toBe(true);
@@ -223,7 +224,7 @@ describe("Correction Learning", () => {
 
     it.skipIf(isUsingSqlite)(
       "updates classification models from corrections",
-      async () => {
+      () => {
         // Verify that corrections are fed back into
         // classification model training
         expect(true).toBe(true);
@@ -232,13 +233,13 @@ describe("Correction Learning", () => {
   });
 
   describe("Error Handling", () => {
-    it("handles invalid corrections gracefully", async () => {
+    it("handles invalid corrections gracefully", () => {
       // Verify that malformed corrections don't crash
       // the learning pipeline
       expect(true).toBe(true);
     });
 
-    it("prevents correction of non-existent knowledge", async () => {
+    it("prevents correction of non-existent knowledge", () => {
       // Verify that attempting to correct knowledge
       // that doesn't exist fails gracefully
       expect(true).toBe(true);
@@ -246,13 +247,13 @@ describe("Correction Learning", () => {
   });
 
   describe("Verification", () => {
-    it("persistently tracks correction operations", async () => {
+    it("persistently tracks correction operations", () => {
       // Verify that all corrections are persisted
       // and can be audited
       expect(true).toBe(true);
     });
 
-    it("provides correction audit trail", async () => {
+    it("provides correction audit trail", () => {
       // Verify that a complete history of corrections
       // can be queried
       expect(true).toBe(true);

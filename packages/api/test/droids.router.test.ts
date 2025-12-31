@@ -53,11 +53,11 @@ const runHandlers = new Map<
   }
 >();
 
-const registerMock = vi.fn(async (runId, handle) => {
+const registerMock = vi.fn((runId, handle) => {
   runHandlers.set(runId, handle);
 });
 
-const unregisterMock = vi.fn(async (runId) => {
+const unregisterMock = vi.fn((runId) => {
   runHandlers.delete(runId);
 });
 

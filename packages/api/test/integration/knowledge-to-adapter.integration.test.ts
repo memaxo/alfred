@@ -72,7 +72,7 @@ describe("Knowledge to Adapter", () => {
 
     it.skipIf(isUsingSqlite)(
       "triggers adapter rebuild on graph changes",
-      async () => {
+      () => {
         // Verify that significant graph changes trigger
         // a persona adapter rebuild
         expect(true).toBe(true);

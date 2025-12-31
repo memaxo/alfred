@@ -460,7 +460,7 @@ export const deployRouter = router({
         const shouldInclude = (app: string) =>
           appsFilter ? appsFilter.has(app) : true;
 
-        const fetchDeployments = async () => {
+        const fetchDeployments = () => {
           if (appsFilter && appsFilter.size === 1) {
             const [singleApp] = Array.from(appsFilter);
             return deployRepo.listDeployments({

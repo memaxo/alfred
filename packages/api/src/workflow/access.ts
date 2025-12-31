@@ -40,7 +40,7 @@ export async function enforceWorkflowPlanPolicy({
   const user = getSessionUser(session);
   const subjectId = getSessionUserId(user);
 
-  await consumeRouteRateLimit("workflow.stream", session.user.id);
+  consumeRouteRateLimit("workflow.stream", session.user.id);
 
   const resource = mapWorkflowResource(input);
   const evaluation = {

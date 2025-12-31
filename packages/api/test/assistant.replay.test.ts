@@ -8,17 +8,17 @@ const createdRuns: any[] = [];
 const appended: any[] = [];
 
 mock.module("@alfred/db/repo/workflow", () => ({
-  createRun: vi.fn().mockImplementation(async (row) => {
+  createRun: vi.fn().mockImplementation((row) => {
     createdRuns.push(row);
     return row;
   }),
   updateRun: vi.fn().mockResolvedValue(undefined),
-  appendEvent: vi.fn().mockImplementation(async (evt) => {
+  appendEvent: vi.fn().mockImplementation((evt) => {
     appended.push(evt);
     return evt;
   }),
   getRun: vi.fn().mockResolvedValue(null),
-  listEvents: vi.fn().mockImplementation(async (runId: string) =>
+  listEvents: vi.fn().mockImplementation((runId: string) =>
     appended
       .filter((e) => e.runId === runId)
       .map((e) => ({

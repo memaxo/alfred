@@ -6,10 +6,10 @@ import { Buffer } from "node:buffer";
 function applyMockVoice(): void {
   mock.module("@discordjs/opus", () => ({
     OpusEncoder: class {
-      encode(_buffer: any) {
+      encode(_buffer: Uint8Array) {
         return Buffer.from([]);
       }
-      decode(_buffer: any) {
+      decode(_buffer: Uint8Array) {
         return Buffer.from([]);
       }
     },
@@ -31,7 +31,7 @@ function applyMockVoice(): void {
       }
     },
     // Some imports reference ProcessConfig type; export a placeholder
-    ProcessConfig: {} as any,
+    ProcessConfig: {} as Record<string, never>,
   }));
 
   mock.module("@alfred/voice/process/tts", () => ({
@@ -44,7 +44,10 @@ function applyMockVoice(): void {
       shutdown() {
         return Promise.resolve();
       }
-      synthesize(req: any, onChunk: any) {
+      synthesize(
+        req: { streaming?: boolean },
+        onChunk?: (chunk: { audioBase64: string; mimeType: string }) => void
+      ) {
         if (req.streaming && onChunk) {
           // Simulate streaming chunks
           onChunk({ audioBase64: "chunk1", mimeType: "audio/pcm" });

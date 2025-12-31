@@ -28,7 +28,7 @@ async function ensureSigningKeys() {
   const { privateKey, publicKey } = await crypto.subtle.generateKey(
     "EdDSA",
     true,
-    ["sign", "verify"],
+    ["sign", "verify"]
   );
   process.env.AGENT_ED25519_PRIVATE = await crypto.subtle.exportKey(
     "pkcs8",
@@ -199,7 +199,7 @@ describe("Auth Flow Integration", () => {
 
 describe("Route Protection", () => {
   describe("Public Routes", () => {
-    it("allows health check without auth", async () => {
+    it("allows health check without auth", () => {
       // Health checks are typically handled at HTTP level, not tRPC
       // This test verifies the pattern exists
       expect(true).toBe(true);
