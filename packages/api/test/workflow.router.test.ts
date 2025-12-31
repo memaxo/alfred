@@ -70,7 +70,7 @@ mockPolicyAudit();
 
 const workflowRepoMocks = mockWorkflowRepo();
 const runRegistryMocks = mockRunRegistry();
-const workflowRunnerMocks = mockWorkflowRunner();
+const _workflowRunnerMocks = mockWorkflowRunner();
 const workflowRuntimeMocks = mockWorkflowRuntime();
 const createConversationMock = vi.fn();
 const getConversationByWorkflowMock = vi.fn();
@@ -189,7 +189,7 @@ describe("workflow router", () => {
         } as WorkflowEvent;
       };
 
-      workflowRunnerMocks.runPlanV6.mockReturnValue({
+      workflowRuntimeMocks.createRuntime.mockReturnValue({
         runId: mockRunId,
         summary: mockSummary,
         stream: mockStream(),
@@ -225,7 +225,7 @@ describe("workflow router", () => {
         auto: "low",
       });
 
-      expect(workflowRunnerMocks.runPlanV6).toHaveBeenCalledTimes(1);
+      expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
       expect(workflowRepoMocks.createRun).toHaveBeenCalledWith(
         expect.objectContaining({
           id: mockRunId,
@@ -296,7 +296,7 @@ describe("workflow router", () => {
     });
 
     it("handles workflow start errors", async () => {
-      workflowRunnerMocks.runPlanV6.mockImplementation(() => {
+      workflowRuntimeMocks.createRuntime.mockImplementation(() => {
         throw new Error("runner failed");
       });
 
@@ -323,7 +323,7 @@ describe("workflow router", () => {
         }
       };
 
-      workflowRunnerMocks.runPlanV6.mockReturnValue({
+      workflowRuntimeMocks.createRuntime.mockReturnValue({
         runId: mockRunId,
         summary: "test summary",
         stream: mockStream(),
@@ -440,7 +440,7 @@ describe("workflow router", () => {
         { _: "progress", pct: 100, message: "done" } as WorkflowEvent,
       ];
 
-      workflowRunnerMocks.runPlanV6.mockReturnValue({
+      workflowRuntimeMocks.createRuntime.mockReturnValue({
         runId: resumedRunId,
         summary: "resumed",
         stream: (async function* () {
@@ -577,7 +577,7 @@ describe("workflow router", () => {
         }
       };
 
-      workflowRunnerMocks.runPlanV6.mockReturnValue({
+      workflowRuntimeMocks.createRuntime.mockReturnValue({
         runId: mockRunId,
         summary: "tool summary",
         stream: mockStream(),
@@ -639,7 +639,7 @@ describe("workflow router", () => {
         yield { _: "run", id: mockRunId } as WorkflowEvent;
       };
 
-      workflowRunnerMocks.runPlanV6.mockReturnValue({
+      workflowRuntimeMocks.createRuntime.mockReturnValue({
         runId: mockRunId,
         summary: "test",
         stream: mockStream(),
@@ -689,7 +689,7 @@ describe("workflow router", () => {
         }),
       } as ReturnType<typeof createMockExecutor>;
 
-      workflowRunnerMocks.runPlanV6.mockReturnValue(streamingExecutor);
+      workflowRuntimeMocks.createRuntime.mockReturnValue(streamingExecutor);
       workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
       workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
       workflowRepoMocks.updateRun.mockResolvedValue({} as any);
@@ -906,7 +906,7 @@ describe("workflow router", () => {
           { _: "run", id: mockRunId } as WorkflowEvent,
         ]);
 
-        workflowRunnerMocks.runPlanV6.mockReturnValue(mockExecutor);
+        workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
         workflowRepoMocks.createRun.mockResolvedValue({
           id: mockRunId,
           userId: "test-user",
@@ -920,8 +920,7 @@ describe("workflow router", () => {
           auto: "low",
         });
 
-        expect(workflowRunnerMocks.runPlanV6).toHaveBeenCalledTimes(1);
-        expect(workflowRuntimeMocks.createRuntime).not.toHaveBeenCalled();
+        expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
         expect(result.runId).toBe(mockRunId);
       });
 
@@ -935,7 +934,7 @@ describe("workflow router", () => {
         ];
 
         const mockExecutor = createMockExecutor(mockRunId, "test", events);
-        workflowRunnerMocks.runPlanV6.mockReturnValue(mockExecutor);
+        workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
         workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
         workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
         workflowRepoMocks.updateRun.mockResolvedValue({} as any);
@@ -955,8 +954,7 @@ describe("workflow router", () => {
           });
         });
 
-        expect(workflowRunnerMocks.runPlanV6).toHaveBeenCalledTimes(1);
-        expect(workflowRuntimeMocks.createRuntime).not.toHaveBeenCalled();
+        expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
         expect(receivedEvents).toHaveLength(events.length);
       });
     });
@@ -986,7 +984,6 @@ describe("workflow router", () => {
         });
 
         expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
-        expect(workflowRunnerMocks.runPlanV6).not.toHaveBeenCalled();
         expect(result.runId).toBe(mockRunId);
 
         // Verify runtime was called with correct model
@@ -1028,7 +1025,6 @@ describe("workflow router", () => {
         });
 
         expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
-        expect(workflowRunnerMocks.runPlanV6).not.toHaveBeenCalled();
         expect(receivedEvents).toHaveLength(events.length);
       });
 
@@ -1125,7 +1121,7 @@ describe("workflow router", () => {
       // Test with runner
       setupExecutorPath(false);
       const runnerExecutor = createMockExecutor("test-run-id", "test", events);
-      workflowRunnerMocks.runPlanV6.mockReturnValue(runnerExecutor);
+      workflowRuntimeMocks.createRuntime.mockReturnValue(runnerExecutor);
       workflowRepoMocks.createRun.mockResolvedValue({
         id: "test-run-id",
       } as any);

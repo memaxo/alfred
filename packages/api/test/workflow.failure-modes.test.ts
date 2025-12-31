@@ -196,9 +196,10 @@ describe("workflow failure modes (runtime)", () => {
     });
 
     // Ensure wave-aborted event was persisted
+    // Note: events with "_: 'event'" map to eventType 'error' in persist.ts
     const waveAbortCall = workflowRepoMocks.appendEvent.mock.calls.find(
       (c) =>
-        c[0]?.eventType === "event" &&
+        c[0]?.eventType === "error" &&
         (c[0]?.eventData as any)?.data?.kind === "wave-aborted"
     );
     expect(waveAbortCall).toBeTruthy();
