@@ -8,8 +8,6 @@
  * - Factory functions for common patterns
  */
 
-/// <reference path="./sdk.d.ts" />
-
 import { logger } from "@alfred/logger";
 import {
   agentfsActiveWorkspaces,
@@ -17,6 +15,7 @@ import {
   agentfsOperationLatencyMs,
   agentfsToolCallsTotal,
 } from "./metrics.js";
+import type { AgentFSSDK } from "./sdk.js";
 import type {
   AgentFSInitOptions,
   AgentFSInterface,
@@ -26,7 +25,7 @@ import type {
 } from "./types.js";
 
 // Cached SDK module
-let _agentFSModule: typeof import("agentfs-sdk") | null = null;
+let _agentFSModule: AgentFSSDK | null = null;
 
 /**
  * Lazy-load the AgentFS SDK to avoid bundling issues.
@@ -35,7 +34,7 @@ let _agentFSModule: typeof import("agentfs-sdk") | null = null;
  * This prevents issues with tree-shaking and allows the SDK to
  * be an optional dependency.
  */
-async function loadSDK(): Promise<typeof import("agentfs-sdk")> {
+async function loadSDK(): Promise<AgentFSSDK> {
   if (_agentFSModule) {
     return _agentFSModule;
   }
