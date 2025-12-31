@@ -316,7 +316,7 @@ export const graphRouter = router({
     .query(async ({ input }) => {
       const resource = input.resource ?? "user";
       const kind = input.kind;
-      let graphInstance = null;
+      let graphInstance: unknown = null;
       let stopTimer: (() => void) | null = null;
 
       try {

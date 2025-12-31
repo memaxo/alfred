@@ -51,7 +51,12 @@ export const tokenRouter = router({
       if (!userId) {
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
-      const sessionRecord = (ctx.session as any)?.session;
+      const sessionRecord = (
+        ctx.session as
+          | { session?: { id?: string; token?: string } }
+          | null
+          | undefined
+      )?.session;
       const sessionId = sessionRecord?.id ?? sessionRecord?.token;
       if (!sessionId) {
         throw new TRPCError({ code: "UNAUTHORIZED" });

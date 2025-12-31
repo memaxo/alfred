@@ -394,8 +394,12 @@ export const workflowRouter = router({
               input: {
                 ...input,
                 auto: input.auto ?? "low",
-                // biome-ignore lint/suspicious/noExplicitAny: Internal enum mapping
-                mode: (input.mode as any) ?? "sequential",
+                mode:
+                  (input.mode as
+                    | "sequential"
+                    | "parallel"
+                    | null
+                    | undefined) ?? "sequential",
               } as WorkflowInputPayload,
             });
             return obligations;
@@ -414,7 +418,12 @@ export const workflowRouter = router({
               input: {
                 ...input,
                 auto: input.auto ?? "low",
-                mode: (input.mode as any) ?? "sequential",
+                mode:
+                  (input.mode as
+                    | "sequential"
+                    | "parallel"
+                    | null
+                    | undefined) ?? "sequential",
               } as WorkflowInputPayload,
             });
 
@@ -549,7 +558,7 @@ export const workflowRouter = router({
       // Cancel via registry if still active
       const { runRegistry } = await import("@alfred/agent/workflow/registry");
       const handle = (
-        runRegistry as { runs?: Map<string, { cancel: () => any }> }
+        runRegistry as { runs?: Map<string, { cancel: () => void }> }
       ).runs?.get(input.runId);
       if (handle) {
         try {

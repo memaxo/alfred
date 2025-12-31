@@ -6,11 +6,15 @@ import {
   evaluate,
   type PolicyResource,
 } from "@alfred/policy";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
 import {
   type VoiceSocketData,
   VoiceSocketHandler,
 } from "@alfred/voice/server/socket";
 import { createContext } from "../context";
+
+type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
+
 import {
   policyDecisionsTotal,
   policyObligationsTotal,
@@ -70,7 +74,7 @@ const MAX_CONNECTIONS_PER_MINUTE_PER_USER =
 const PING_TIMEOUT_MS = 60_000;
 
 let server: ReturnType<typeof Bun.serve> | null = null;
-const activeSockets = new Set<any>();
+const activeSockets = new Set<ReturnType<typeof Bun.serve>>();
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 type RateLimitBucket = { count: number; resetAt: number };
@@ -122,7 +126,7 @@ export class VoiceStreamAuthError extends Error {
 }
 
 async function evaluateVoicePolicy(
-  session: any,
+  session: AuthSession | null,
   action: (typeof REQUIRED_ACTIONS)[number],
   resource: PolicyResource
 ) {
@@ -182,7 +186,7 @@ export async function authorizeVoiceStreamRequest(req: Request) {
     throw new VoiceStreamAuthError("rate_limit_exceeded", 429);
   }
 
-  let session: any | null = null;
+  let session: AuthSession | null = null;
   try {
     session = await auth.api.getSession({ headers: req.headers });
   } catch {
@@ -275,7 +279,7 @@ export function startVoiceStreamingPrototype(): void {
       await completeVoiceSession(registryId);
     },
     runAssistant: async (userId, text, runtime) => {
-      const result = await runAssistantForVoice(runtime as any, {
+      const result = await runAssistantForVoice(runtime as RuntimeContext, {
         text,
         userId,
         thread: undefined,

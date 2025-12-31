@@ -160,6 +160,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/test/utils/mock-db-client.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
     }
   ]
 }

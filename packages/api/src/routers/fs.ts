@@ -30,7 +30,7 @@ export const fsRouter = router({
         const filePath = validateExistingFilePath(input.path);
 
         // Check file type first (statSync works on directories too)
-        let stats;
+        let stats: ReturnType<typeof statSync> | null;
         try {
           stats = statSync(filePath);
         } catch (error) {

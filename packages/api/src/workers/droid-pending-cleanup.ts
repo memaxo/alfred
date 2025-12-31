@@ -15,15 +15,21 @@ type PendingRunRecord = {
   createdAt: number;
 };
 
-async function scanKeys(redis: ReturnType<typeof getRedis>): Promise<string[]> {
-  if (!redis) {
-    return [];
-  }
+async function scanKeys(
+  redis: NonNullable<ReturnType<typeof getRedis>>
+): Promise<string[]> {
   let cursor = "0";
   const keys: string[] = [];
   do {
     // Bun Redis client has different scan signature than node-redis
-    const result = await (redis as any).scan(cursor, {
+    const result = await (
+      redis as {
+        scan: (
+          cursor: string,
+          options: { MATCH: string; COUNT: number }
+        ) => Promise<[string, string[]]>;
+      }
+    ).scan(cursor, {
       MATCH: `${KEY_PREFIX}*`,
       COUNT: SCAN_COUNT,
     });
