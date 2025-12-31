@@ -13,15 +13,32 @@
 process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
-process.env.BETTER_AUTH_SECRET = "test-secret-key-for-integration-tests";
+process.env.BETTER_AUTH_SECRET =
+  "test-secret-key-for-integration-tests-only-not-a-real-secret-placeholder";
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
-// Test Ed25519 key pair for token signing (generated for tests only)
-process.env.AGENT_ED25519_PRIVATE = `-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIMbwVzM8K7s4xXeXnVvHLO4LRE5yKJ+2NxRxzOyYGFqk
------END PRIVATE KEY-----`;
-process.env.AGENT_ED25519_PUBLIC_PEM = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEADJWbfZHVqE3+g4ZqzxXnYJ2+H6KyXS0N4s7L2g5tqsE=
------END PUBLIC KEY-----`;
+
+// Helper to ensure test Ed25519 keys are available
+async function ensureSigningKeys() {
+  if (
+    process.env.ALFRED_ED25519_PRIVATE &&
+    process.env.AGENT_ED25519_PUBLIC_PEM
+  ) {
+    return;
+  }
+  const { privateKey, publicKey } = await crypto.subtle.generateKey(
+    "EdDSA",
+    true,
+    ["sign", "verify"],
+  );
+  process.env.AGENT_ED25519_PRIVATE = await crypto.subtle.exportKey(
+    "pkcs8",
+    privateKey
+  );
+  process.env.AGENT_ED25519_PUBLIC_PEM = await crypto.subtle.exportKey(
+    "spki",
+    publicKey
+  );
+}
 
 import { beforeAll, describe, expect, it } from "bun:test";
 
@@ -30,6 +47,7 @@ let createTestCaller: typeof import("../utils/trpc").createTestCaller;
 let createUnauthedCaller: typeof import("../utils/trpc").createUnauthedCaller;
 
 beforeAll(async () => {
+  await ensureSigningKeys();
   ({ createTestCaller, createUnauthedCaller } = await import("../utils/trpc"));
 });
 

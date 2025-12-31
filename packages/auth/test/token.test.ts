@@ -7,14 +7,26 @@ mock.module("../src/redis", () => ({
 
 describe("Token Module", () => {
   describe("issueAccessToken", () => {
-    beforeEach(() => {
-      // Set up valid test keys (must be actual Ed25519 keypair)
-      process.env.AGENT_ED25519_PRIVATE = `-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIBqNMQ3K4b8awQK5bSQ9RgKgAdXd8SpNgN7tgYzGOXc+
------END PRIVATE KEY-----`;
-      process.env.AGENT_ED25519_PUBLIC_PEM = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAkF7DlChZpMEWvhzluSH8TZDK0nxLfL7L9P3aMmN7oqo=
------END PUBLIC KEY-----`;
+    beforeEach(async () => {
+      // Generate test keys once per describe
+      if (
+        !process.env.AGENT_ED25519_PRIVATE ||
+        !process.env.AGENT_ED25519_PUBLIC_PEM
+      ) {
+        const { privateKey, publicKey } = await crypto.subtle.generateKey(
+          "EdDSA",
+          true,
+          ["sign", "verify"]
+        );
+        process.env.AGENT_ED25519_PRIVATE = await crypto.subtle.exportKey(
+          "pkcs8",
+          privateKey
+        );
+        process.env.AGENT_ED25519_PUBLIC_PEM = await crypto.subtle.subtle.exportKey(
+          "spki",
+          publicKey
+        );
+      }
       process.env.AGENT_ISSUER = "alfred-test";
       process.env.TOOL_AUDIENCE = "alfred:tools:test";
     });

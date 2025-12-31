@@ -7,7 +7,8 @@
 process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
-process.env.BETTER_AUTH_SECRET = "test-secret-key-for-introspection";
+process.env.BETTER_AUTH_SECRET =
+  "test-secret-key-for-introspection-tests-only-a-placeholder-not-real";
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";

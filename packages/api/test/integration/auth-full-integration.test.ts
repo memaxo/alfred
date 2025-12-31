@@ -15,13 +15,32 @@
 process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
-process.env.BETTER_AUTH_SECRET = "test-secret-key-for-auth-integration";
+process.env.BETTER_AUTH_SECRET = "test-secret-key-for-integration-tests-only-not-a-real-secret";
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
 process.env.BIO_AUTH_BYPASS = "true"; // Bypass biometric requirements in tests
-process.env.AGENT_ED25519_PRIVATE =
-  "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIMbwVzM8K7s4xXeXnVvHLO4LRE5yKJ+2NxRxzOyYGFqk\n-----END PRIVATE KEY-----";
-process.env.AGENT_ED25519_PUBLIC_PEM =
-  "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEADJWbfZHVqE3+g4ZqzxXnYJ2+H6KyXS0N4s7L2g5tqsE=\n-----END PUBLIC KEY-----";
+
+// Helper to ensure test Ed25519 keys are available
+async function ensureSigningKeys() {
+  if (
+    process.env.AGENT_ED25519_PRIVATE &&
+    process.env.AGENT_ED25519_PUBLIC_PEM
+  ) {
+    return;
+  }
+  const { privateKey, publicKey } = await crypto.subtle.generateKey(
+    "EdDSA",
+    true,
+    ["sign", "verify"],
+  );
+  process.env.AGENT_ED25519_PRIVATE = await crypto.subtle.exportKey(
+    "pkcs8",
+    privateKey
+  );
+  process.env.AGENT_ED25519_PUBLIC_PEM = await crypto.subtle.exportKey(
+    "spki",
+    publicKey
+  );
+}
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import path from "node:path";
@@ -62,6 +81,9 @@ beforeAll(async () => {
   ({ createTestCaller } = await import("../utils/trpc"));
   ({ dbModuleStub: _dbModuleStub } = await import("../utils/mock-db-client"));
   ({ resetAllMocks } = await import("../utils/router-helpers"));
+
+  // Ensure test keys are set before starting VCR
+  await ensureSigningKeys();
 
   vcr = createVCR({
     cassettePath,
