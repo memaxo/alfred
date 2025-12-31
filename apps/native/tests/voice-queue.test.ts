@@ -165,8 +165,9 @@ describe("native voice queue + playback", () => {
 
     await ageQueue(2000);
 
-    await queueModule.drain(async (item) => {
+    await queueModule.drain((item) => {
       order.push(item.kind);
+      return Promise.resolve();
     });
 
     expect(order).toEqual(["stt", "tts", "s2s"]);
