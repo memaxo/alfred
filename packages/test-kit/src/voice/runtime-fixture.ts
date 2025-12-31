@@ -20,6 +20,7 @@ export async function installVoiceTestPools(options?: VoiceTestOptions) {
       sttPool: typedStt,
       ttsPool: typedTts,
       voiceRegistry: typedRegistry,
+      sessionManager: typedRegistry,
     });
 
   const initSpy = vi
