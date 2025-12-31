@@ -17,13 +17,19 @@ export function getVoicePools(): {
   sttPool: STTPool;
   ttsPool: TTSPool;
   voiceRegistry: VoiceRegistry;
+  sessionManager: VoiceRegistry;
 } {
   if (!(sttPool && ttsPool && voiceRegistry)) {
     throw new Error(
       "Voice pools not initialized. Call initializeVoicePools() first."
     );
   }
-  return { sttPool, ttsPool, voiceRegistry };
+  return {
+    sttPool,
+    ttsPool,
+    voiceRegistry,
+    sessionManager: voiceRegistry,
+  };
 }
 
 export async function initializeVoicePools(): Promise<void> {
