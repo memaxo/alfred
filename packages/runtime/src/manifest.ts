@@ -68,12 +68,12 @@ export const manifest: CliManifest = {
   description:
     "Workflow execution runtime with cognitive loops and phase management",
   commands: [workflowListCommand, workflowCancelCommand],
-  healthCheck: () => {
+  healthCheck: async () => {
     try {
       const start = performance.now();
-      // Check if runtime is responsive
       const latency = performance.now() - start;
 
+      await Promise.resolve(); // biome-ignore lint/suspicious/useAwait: required to satisfy async return type
       return {
         status: "healthy",
         message: "Runtime ready",

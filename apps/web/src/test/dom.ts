@@ -254,11 +254,13 @@ if (typeof globalThis.PointerEvent === "undefined") {
   }
 
   if (typeof globalThis !== "undefined") {
+    // biome-ignore lint: test scaffold code
     (
       globalThis as typeof globalThis & { PointerEvent: typeof PointerEvent }
     ).PointerEvent = PointerEvent;
   }
   if (typeof window !== "undefined") {
+    // biome-ignore lint: test scaffold code
     (
       window as typeof window & { PointerEvent: typeof PointerEvent }
     ).PointerEvent = PointerEvent;

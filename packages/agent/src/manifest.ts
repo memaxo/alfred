@@ -20,7 +20,7 @@ export const manifest: CliManifest = {
   name: "@alfred/agent",
   version: "0.1.0",
   description: "Agent orchestration and tool execution",
-  healthCheck: () => {
+  healthCheck: async () => {
     try {
       const start = performance.now();
       getOpenAI(); // Call to verify it's available
@@ -30,6 +30,7 @@ export const manifest: CliManifest = {
       const available = !!modelId;
       const latency = performance.now() - start;
 
+      await Promise.resolve(); // biome-ignore lint/suspicious/useAwait: required to satisfy async return type
       return {
         status: available ? "healthy" : "degraded",
         message: available

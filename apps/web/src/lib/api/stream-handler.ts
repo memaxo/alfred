@@ -286,9 +286,7 @@ export async function handleStreamRequest(
         // Track first chunk latency
         if (
           !firstChunkSent &&
-          (part.type === "text" ||
-            part.type === "text-delta" ||
-            isTextPart(part))
+          (part.type === "text-delta" || isTextPart(part))
         ) {
           const textContent =
             typeof part === "object" && part !== null && "text" in part

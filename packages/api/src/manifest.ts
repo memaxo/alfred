@@ -18,12 +18,12 @@ export const manifest: CliManifest = {
   name: "@alfred/api",
   version: "0.1.0",
   description: "tRPC API layer with routers, context, and metrics",
-  healthCheck: () => {
+  healthCheck: async () => {
     try {
       const start = performance.now();
-      // Check if API is responsive
       const latency = performance.now() - start;
 
+      await Promise.resolve(); // biome-ignore lint/suspicious/useAwait: required to satisfy async return type
       return {
         status: "healthy",
         message: "API layer operational",
