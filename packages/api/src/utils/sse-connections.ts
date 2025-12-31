@@ -79,6 +79,9 @@ function startCleanupTimer(): void {
   cleanupTimer = setInterval(() => {
     cleanupExpiredConnections();
   }, 10_000); // Run every 10 seconds
+  if (typeof cleanupTimer.unref === "function") {
+    cleanupTimer.unref();
+  }
 }
 
 export function createConnection(
@@ -151,6 +154,10 @@ export function removeConnection(connectionId: string): void {
     if (userConnSet.size === 0) {
       userConnections.delete(info.userId);
     }
+  }
+
+  if (connections.size === 0) {
+    stopCleanupTimer();
   }
 }
 

@@ -108,31 +108,35 @@ mock.module("@alfred/db", () => ({
       from: (table: unknown) => ({
         where: () => ({
           orderBy: () => ({
-            limit: async () => {
+            limit: () => {
               if (table === workflowRuns) {
                 const idx = workflowSelectIndex;
                 workflowSelectIndex += 1;
                 if (idx % 2 === 0) {
-                  return mockRuns.filter(
-                    (run) =>
-                      run.status === "completed" && run.learnedAt === null
+                  return Promise.resolve(
+                    mockRuns.filter(
+                      (run) =>
+                        run.status === "completed" && run.learnedAt === null
+                    )
                   );
                 }
-                return mockRuns.filter(
-                  (run) => run.status === "failed" && run.dreamedAt === null
+                return Promise.resolve(
+                  mockRuns.filter(
+                    (run) => run.status === "failed" && run.dreamedAt === null
+                  )
                 );
               }
               if (table === memoryNodes) {
-                return [];
+                return Promise.resolve([]);
               }
-              return [];
+              return Promise.resolve([]);
             },
           }),
-          limit: async () => {
+          limit: () => {
             if (table === workflowRuns) {
-              return mockRuns;
+              return Promise.resolve(mockRuns);
             }
-            return [];
+            return Promise.resolve([]);
           },
         }),
       }),

@@ -26,21 +26,21 @@ export const homeRouter = router({
   list: authedProcedure
     .use(requirePolicy("home.read", mapResource))
     .input(listInput)
-    .query(async () => {
+    .query(() => {
       // TODO: integrate selected provider (HOME_PROVIDER, HOME_BASE_URL).
       return [];
     }),
   status: authedProcedure
     .use(requirePolicy("home.read", mapResource))
     .input(statusInput)
-    .query(async ({ input }) => {
+    .query(({ input }) => {
       // TODO: fetch actual entity state from provider.
       return { entity: input.entity, state: null };
     }),
   set: authedProcedure
     .use(requirePolicy("home.control", mapResource))
     .input(setInput)
-    .mutation(async ({ input }) => {
+    .mutation(({ input }) => {
       // TODO: call provider and surface obligations (e.g., biometric) to caller.
       return {
         ok: true as const,

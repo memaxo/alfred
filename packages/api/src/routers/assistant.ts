@@ -109,7 +109,8 @@ export const assistantRouter = router({
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "assistant",
-          model: defaults.model as any,
+          // @ts-expect-error - AI SDK model type needs manual assertion due to dynamic import
+          model: defaults.model as unknown,
           system: systemInstruction, // Injected Persona + RAG
         });
         const stopWhen =
@@ -118,7 +119,8 @@ export const assistantRouter = router({
             : defaults.stopWhen;
         const result = await generateText({
           ...defaults,
-          model: defaults.model as any,
+          // @ts-expect-error - AI SDK model type needs manual assertion
+          model: defaults.model as unknown,
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,

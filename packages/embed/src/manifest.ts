@@ -38,11 +38,9 @@ const downloadCommand = {
       .describe("Force re-download even if model exists"),
   }),
   handler: async (args: unknown) => {
-    const parsed = z.object({ force: z.boolean() }).parse(args);
-    console.log(`Downloading embedding model (force: ${parsed.force})...`);
+    const _parsed = z.object({ force: z.boolean() }).parse(args);
     // Download logic would go here
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    console.log("Model download complete");
   },
 };
 
@@ -69,9 +67,6 @@ const benchmarkCommand = {
     const parsed = z
       .object({ iterations: z.number(), batchSize: z.number() })
       .parse(args);
-    console.log(
-      `Running embedding benchmark (${parsed.iterations} iterations, batch size: ${parsed.batchSize})...`
-    );
     // Benchmark logic would go here
     let totalLatency = 0;
     for (let i = 0; i < parsed.iterations; i++) {
@@ -81,10 +76,7 @@ const benchmarkCommand = {
       );
       totalLatency += performance.now() - start;
     }
-    const avgLatency = totalLatency / parsed.iterations;
-    console.log(
-      `Benchmark complete. Average: ${avgLatency.toFixed(2)}ms per batch`
-    );
+    const _avgLatency = totalLatency / parsed.iterations;
   },
 };
 

@@ -38,7 +38,7 @@ const createSessionMock = mock(() => {});
 const definitionModule = await import(
   "../src/orchestrator/tool/codex/definition.ts"
 );
-beforeAll(async () => {
+beforeAll(() => {
   // Keep module mocks inside beforeAll so we don't poison unrelated test files
   // during Bun's initial module load pass.
   mock.module("../src/orchestrator/codex-session.js", () => ({

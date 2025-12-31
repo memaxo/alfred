@@ -179,7 +179,7 @@ describe("workflow orchestrator self-correction", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-123",
       summary: "ok",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-123" } as WorkflowEvent;
         yield {
           type: "event",
@@ -246,7 +246,7 @@ describe("workflow orchestrator self-correction", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-esc",
       summary: "fail",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-esc" } as WorkflowEvent;
         yield {
           type: "event",
@@ -295,7 +295,7 @@ describe("workflow orchestrator self-correction", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-fail",
       summary: "fail",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-fail" } as WorkflowEvent;
         yield {
           type: "event",
@@ -365,7 +365,7 @@ describe("workflow orchestrator self-correction", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-meta",
       summary: "fail",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-meta" } as WorkflowEvent;
         yield {
           type: "event",
@@ -426,7 +426,7 @@ describe("workflow orchestrator review gate persistence", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-suspend",
       summary: "suspended",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-suspend" } as WorkflowEvent;
         yield {
           type: "notice",
@@ -497,7 +497,7 @@ describe("workflow orchestrator review gate persistence", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-resume",
       summary: "ok",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-resume" } as WorkflowEvent;
       })(),
       resume: vi.fn(),
@@ -539,7 +539,7 @@ describe("workflow orchestrator review gate persistence", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-no-state",
       summary: "ok",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-no-state" } as WorkflowEvent;
       })(),
       resume: vi.fn(),
@@ -581,7 +581,7 @@ describe("workflow orchestrator review gate persistence", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-escalate-suspend",
       summary: "suspended",
-      stream: (async function* () {
+      stream: (function* () {
         yield { type: "run", id: "run-escalate-suspend" } as WorkflowEvent;
         yield {
           type: "event",
@@ -636,8 +636,8 @@ describe("workflow orchestrator review gate persistence", () => {
   });
 });
 
-async function flushMicrotasks() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
+function flushMicrotasks() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 afterAll(() => {

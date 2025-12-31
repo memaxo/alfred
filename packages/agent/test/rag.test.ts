@@ -118,7 +118,7 @@ describe("RAG Tools", () => {
       );
     });
 
-    it("rejects empty content", async () => {
+    it("rejects empty content", () => {
       const input: RagIngestInput = {
         source: "test-doc",
         content: "",

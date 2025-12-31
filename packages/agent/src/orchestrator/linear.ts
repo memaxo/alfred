@@ -111,7 +111,7 @@ export async function setLinearStarted(
   metrics.linearSessionOperationsTotal.inc({ operation: "state" });
   try {
     const result = await withLinearRetry(
-      async () => {
+      () => {
         const input = {
           space: params.space,
           action: "set-started" as const,
@@ -140,7 +140,7 @@ export async function setLinearCompleted(
   metrics.linearSessionOperationsTotal.inc({ operation: "completed" });
   try {
     const result = await withLinearRetry(
-      async () => {
+      () => {
         const input = {
           space: params.space,
           action: "set-completed" as const,
@@ -230,7 +230,7 @@ export async function setLinearCancelled(
   metrics.linearSessionOperationsTotal.inc({ operation: "cancelled" });
   try {
     const result = await withLinearRetry(
-      async () => {
+      () => {
         const input = {
           space: params.space,
           action: "set-cancelled" as const,

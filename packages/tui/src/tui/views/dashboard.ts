@@ -115,16 +115,9 @@ export class Dashboard {
           // Lazy load the panel via the factory function
           const panelInstance = await panelDef.factory();
           this.registry.register(panelInstance as BasePanel);
-        } catch (error) {
-          console.error(
-            `[Dashboard] Failed to load panel ${panelDef.id} from ${panelDef.package}:`,
-            error
-          );
-        }
+        } catch (_error) {}
       }
-    } catch (error) {
-      console.error("[Dashboard] Failed to load registry panels:", error);
-    }
+    } catch (_error) {}
   }
 
   /**

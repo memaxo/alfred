@@ -47,7 +47,7 @@ const graphFixture = new Map<
 ]);
 
 const findNearestConceptMock = mock(
-  async (
+  (
     label: string | undefined,
     targetConcepts: string[],
     maxDepth = 3
@@ -57,24 +57,24 @@ const findNearestConceptMock = mock(
     node: { label: string };
   } | null> => {
     if (!label) {
-      return null;
+      return Promise.resolve(null);
     }
     const entry = lookupFixtureEntry(label);
     if (!entry) {
-      return null;
+      return Promise.resolve(null);
     }
     if (entry.depth > maxDepth) {
-      return null;
+      return Promise.resolve(null);
     }
     const normalizedTargets = targetConcepts.map((c) => c.toLowerCase());
     if (!normalizedTargets.includes(entry.concept.toLowerCase())) {
-      return null;
+      return Promise.resolve(null);
     }
-    return {
+    return Promise.resolve({
       concept: entry.concept,
       path: entry.path,
       node: { label: entry.concept } as { label: string },
-    };
+    });
   }
 );
 

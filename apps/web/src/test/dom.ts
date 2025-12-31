@@ -253,9 +253,15 @@ if (typeof globalThis.PointerEvent === "undefined") {
     }
   }
 
-  (globalThis as any).PointerEvent = PointerEvent;
+  if (typeof globalThis !== "undefined") {
+    (
+      globalThis as typeof globalThis & { PointerEvent: typeof PointerEvent }
+    ).PointerEvent = PointerEvent;
+  }
   if (typeof window !== "undefined") {
-    (window as any).PointerEvent = PointerEvent;
+    (
+      window as typeof window & { PointerEvent: typeof PointerEvent }
+    ).PointerEvent = PointerEvent;
   }
 }
 

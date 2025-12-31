@@ -97,7 +97,7 @@ export type ExaSearchOptions = {
 export type ExaResearchOptions = {
   model?: "exa-research" | "exa-research-gpt-4o";
   instructions: string;
-  outputSchema?: Record<string, any>;
+  outputSchema?: Record<string, unknown>;
   includeDomains?: string[];
   excludeDomains?: string[];
   startPublishedDate?: string;
@@ -171,7 +171,8 @@ export async function exaSearch(
     includeText: options.includeText,
     excludeText: options.excludeText,
     ...(contents ? { contents } : {}),
-  } as any);
+    // @ts-expect-error - Exa SDK v2 types for search options with contents are incomplete
+  } as typeof queryOptions);
 
   // Cast results to access potential fields (SDK v2 structure)
   type ResultWithContents = {
@@ -241,13 +242,18 @@ export async function exaSearch(
     snippet: generateSnippet(result),
   }));
 
-  const responseAny = response as any;
+  // @ts-expect-error - Exa SDK response types are incomplete for searchType, context, and costDollars
+  const responseWithMeta = response as {
+    searchType?: ExaSearchType;
+    context?: string;
+    costDollars?: ExaCost;
+  };
 
   return {
     results,
-    searchType: responseAny.searchType as ExaSearchType | undefined,
-    context: responseAny.context as string | undefined,
-    cost: responseAny.costDollars as ExaCost | undefined,
+    searchType: responseWithMeta.searchType,
+    context: responseWithMeta.context,
+    cost: responseWithMeta.costDollars,
   };
 }
 
@@ -385,7 +391,8 @@ export async function exaFindSimilar(
 
   return {
     results,
-    cost: (response as any).costDollars as ExaCost | undefined,
+    // @ts-expect-error - Exa SDK response types are incomplete for costDollars
+    cost: (response as { costDollars?: ExaCost }).costDollars,
   };
 }
 
@@ -397,8 +404,12 @@ export async function exaResearch(
 ): Promise<ExaResearchResponse> {
   const client = getExaClient();
 
-  // research.create returns an object with researchId
-  const response = await (client as any).research.create({
+  // @ts-expect-error - Exa SDK types for research.create are incomplete
+  const response = await (
+    client as {
+      research: { create: (opts: unknown) => Promise<{ researchId: string }> };
+    }
+  ).research.create({
     model: options.model ?? "exa-research",
     instructions: options.instructions,
     outputSchema: options.outputSchema,
@@ -422,16 +433,23 @@ export async function exaPollResearch(
 ): Promise<ExaResearchResult> {
   const client = getExaClient();
 
-  const result = await (client as any).research.pollUntilFinished(researchId);
+  // @ts-expect-error - Exa SDK types for research.pollUntilFinished are incomplete
+  const result = await (
+    client as {
+      research: { pollUntilFinished: (id: string) => Promise<unknown> };
+    }
+  ).research.pollUntilFinished(researchId);
 
   return {
     researchId,
-    status: result.status,
-    results: result.results?.map((r: any) => ({
-      ...r,
-      snippet: generateSnippet(r),
+    status: (result as { status: string }).status,
+    // @ts-expect-error - Exa SDK result types for research are incomplete
+    results: (result as { results?: unknown[] }).results?.map((r) => ({
+      ...(r as Record<string, unknown>),
+      snippet: generateSnippet(r as Record<string, unknown>),
     })),
-    data: result.data,
-    costDollars: result.costDollars,
+    // @ts-expect-error - Exa SDK result types don't include these fields
+    data: (result as { data?: unknown }).data,
+    costDollars: (result as { costDollars?: number }).costDollars,
   };
 }

@@ -52,7 +52,7 @@ export function ProfileSettingsPage() {
   });
 
   const handleSave = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
       updateProfile.mutate({
         name: formData.name || null,

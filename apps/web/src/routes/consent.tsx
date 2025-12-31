@@ -5,7 +5,7 @@ import { authClient } from "@/lib/auth-client";
 
 // Route path type assertion needed until TanStack Router generates route types
 // TODO: Remove 'as any' once route is registered in router config
-export const Route = createFileRoute("/consent" as any)({
+export const Route = createFileRoute("/consent")({
   validateSearch: z.object({
     consent_code: z.string().optional(),
     client_id: z.string().optional(),

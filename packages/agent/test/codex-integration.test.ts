@@ -71,7 +71,7 @@ let _capturedSpawnFn:
   | null = null;
 
 mock.module("@alfred/codex", () => ({
-  async *runStreamed(opts: {
+  *runStreamed(opts: {
     cmd: string;
     prompt: string;
     env?: Record<string, string>;

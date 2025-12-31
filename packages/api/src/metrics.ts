@@ -20,9 +20,11 @@ if (
   const patchedRegisterMetric: typeof metricsRegistry.registerMetric = (
     metric
   ) => {
-    const existing = metricsRegistry.getSingleMetric((metric as any).name);
+    // @ts-expect-error - prom-client metric types don't expose .name property safely
+    const metricWithName = metric as { name: string };
+    const existing = metricsRegistry.getSingleMetric(metricWithName.name);
     if (existing && existing !== metric) {
-      metricsRegistry.removeSingleMetric((metric as any).name);
+      metricsRegistry.removeSingleMetric(metricWithName.name);
     }
     return originalRegisterMetric(metric);
   };
@@ -175,13 +177,17 @@ export function initMetricsHooks(): void {
       agent.registerDroidExecHistogram?.(droidExecDurationSeconds);
       agent.registerCodexExecCounter?.(codexExecRunsTotal);
       agent.registerCodexExecHistogram?.(codexExecDurationSeconds);
-      agent.registerCodexErrorCounter?.(codexErrorsTotal as any);
+      // @ts-expect-error - Counter type mismatch between prom-client and agent hook期望
+      agent.registerCodexErrorCounter?.(
+        codexErrorsTotal as { [key: string]: number }
+      );
       agent.registerCodexSessionValidationHistogram?.({
         startTimer: () => {
           const done = codexSessionValidationDurationSeconds.startTimer();
+          // @ts-expect-error - startTimer return shape differs between prom-client and agent hooks
           return ({ outcome }: { outcome: string }) => done({ outcome });
         },
-      } as any);
+      } as { startTimer: () => { done: (o: { outcome: string }) => void } });
       agent.registerEvalRunsCounter?.(evalRunsTotal);
       agent.registerEvalDurationHistogram?.(evalDurationSeconds);
       agent.registerEvalScoreCounter?.(evalScoresTotal);
@@ -189,9 +195,10 @@ export function initMetricsHooks(): void {
       agent.registerLaminarDatapointCounter?.(laminarEvalDatapointsTotal);
       agent.registerLaminarErrorCounter?.(laminarEvalErrorsTotal);
       agent.registerCompressionCycleCounter?.(compressionCyclesTotal);
-      agent.registerCompressionCycleHistogram?.({
-        startTimer: () => compressionCycleDurationSeconds.startTimer(),
-      } as any);
+      // @ts-expect-error - Histogram type mismatch between prom-client and agent hooks
+      agent.registerCompressionCycleHistogram?.(
+        compressionCycleDurationSeconds as { startTimer: () => unknown }
+      );
       agent.registerCompressionNodeCounter?.(compressionNodesUpdatedTotal);
       agent.registerAssistantToolCounter?.(assistantToolCallsTotal);
       agent.registerAssistantEscalationCounter?.(assistantEscalationsTotal);

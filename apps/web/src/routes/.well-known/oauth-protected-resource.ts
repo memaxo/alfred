@@ -12,7 +12,7 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/.well-known/oauth-protected-resource")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: () => {
         const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
         const origin = baseUrl.replace(/\/$/, "");
 

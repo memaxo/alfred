@@ -678,7 +678,7 @@ async function executeProbe(input: DockerInput, writer: ToolWriter) {
   }
 }
 
-async function executeExec(input: DockerInput, writer: ToolWriter) {
+function executeExec(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const name = ensure(input.name, "docker_name_required");
     const cmd = ensure(input.cmd, "docker_exec_cmd_required");

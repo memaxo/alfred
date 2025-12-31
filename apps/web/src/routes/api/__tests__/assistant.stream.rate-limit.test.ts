@@ -5,7 +5,7 @@ import {
 } from "@alfred/api/utils/sse-connections";
 
 describe("SSE stream rate limiting", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     clearAllConnections();
   });
 
@@ -29,7 +29,7 @@ describe("SSE stream rate limiting", () => {
     );
 
     // Create 10 connections (rate limit)
-    const connections = [];
+    const connections: string[] = [];
     for (let i = 0; i < 10; i++) {
       const result = createConnection("test-user-1", "assistant");
       expect(result.allowed).toBe(true);
@@ -53,7 +53,7 @@ describe("SSE stream rate limiting", () => {
     );
 
     // Create 5 connections (per-user limit)
-    const connections = [];
+    const connections: string[] = [];
     for (let i = 0; i < 5; i++) {
       const result = createConnection("test-user-1", "assistant");
       expect(result.allowed).toBe(true);

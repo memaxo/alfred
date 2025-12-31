@@ -18,7 +18,7 @@ export const manifest: CliManifest = {
   name: "@alfred/api",
   version: "0.1.0",
   description: "tRPC API layer with routers, context, and metrics",
-  healthCheck: async () => {
+  healthCheck: () => {
     try {
       const start = performance.now();
       // Check if API is responsive

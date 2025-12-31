@@ -31,7 +31,7 @@ describe("router tool", () => {
   });
 
   describe("input schema validation", () => {
-    it("requires action and host", async () => {
+    it("requires action and host", () => {
       const result = toolRouter.inputSchema.safeParse({});
       expect(result.success).toBe(false);
     });

@@ -43,15 +43,11 @@ const workflowListCommand = {
       .describe("Filter by status"),
   }),
   handler: async (args: unknown) => {
-    const parsed = z
+    const _parsed = z
       .object({ limit: z.number(), status: z.string().optional() })
       .parse(args);
-    console.log(
-      `Listing workflows (limit: ${parsed.limit}, status: ${parsed.status || "all"})...`
-    );
     // List logic would go here
     await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log("No active workflows");
   },
 };
 
@@ -62,11 +58,9 @@ const workflowCancelCommand = {
     runId: z.string().uuid().describe("Workflow run ID to cancel"),
   }),
   handler: async (args: unknown) => {
-    const parsed = z.object({ runId: z.string() }).parse(args);
-    console.log(`Cancelling workflow ${parsed.runId}...`);
+    const _parsed = z.object({ runId: z.string() }).parse(args);
     // Cancel logic would go here
     await new Promise((resolve) => setTimeout(resolve, 800));
-    console.log("Workflow cancelled");
   },
 };
 

@@ -46,7 +46,7 @@ describe("Virtual Environment Detection", () => {
     expect(result).not.toContain(".exe");
   });
 
-  it("should find venv Python on Windows", async () => {
+  it("should find venv Python on Windows", () => {
     if (process.platform !== "win32") {
       return; // Skip on non-Windows
     }
@@ -97,7 +97,7 @@ describe("Virtual Environment Detection", () => {
     expect(result).toBeNull();
   });
 
-  it("should handle file system errors gracefully", async () => {
+  it("should handle file system errors gracefully", () => {
     // Create .venv with invalid Python path (directory instead of file)
     const venvBinDir =
       process.platform === "win32"

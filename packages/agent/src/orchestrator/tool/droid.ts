@@ -150,7 +150,7 @@ function streamStdout(
   proc: ReturnType<typeof Bun.spawn>,
   input: DroidToolInput,
   writer: ToolWriter,
-  accumulator: any
+  accumulator: string[]
 ) {
   if (!proc.stdout || typeof proc.stdout === "number") {
     return;
@@ -196,21 +196,29 @@ function streamStdout(
   })();
 }
 
-function extractDroidReasoning(chunk: any): string | null {
+function extractDroidReasoning(chunk: unknown): string | null {
   if (!chunk || typeof chunk !== "object") {
     return null;
   }
 
-  if (chunk.type === "message" && chunk.role === "assistant" && chunk.text) {
-    const text = chunk.text;
+  const chunkObj = chunk as Record<string, unknown>;
+  if (
+    chunkObj.type === "message" &&
+    chunkObj.role === "assistant" &&
+    typeof chunkObj.text === "string"
+  ) {
+    const text = chunkObj.text;
     const markers = ["I'll analyze", "Let me", "Analyzing"];
     if (markers.some((m) => text.includes(m))) {
       return text;
     }
   }
 
-  if (chunk.type === "completion" && chunk.finalText) {
-    return chunk.finalText;
+  if (
+    chunkObj.type === "completion" &&
+    typeof chunkObj.finalText === "string"
+  ) {
+    return chunkObj.finalText;
   }
 
   return null;

@@ -81,14 +81,9 @@ function WorkflowRunRoute() {
   const events = eventsQuery.data ?? [];
   const ragDocs = reasoningQuery.data?.provenance?.ragDocuments ?? [];
   const reasoningError = reasoningQuery.isError ? reasoningQuery.error : null;
-  const handleNavigateToMindscape = (documentId: string) => {
+  const handleNavigateToMindscape = (_documentId: string) => {
     navigate({
       to: "/",
-      search: (prev: any) => ({
-        ...prev,
-        resourceType: "knowledge",
-        resourceId: documentId,
-      }),
     });
   };
 
@@ -152,14 +147,9 @@ function WorkflowRunRoute() {
       <MindscapeWorkflowDrawer
         onClose={() => setDrawer(false)}
         onNavigateFull={() => setDrawer(false)}
-        onNavigateToMindscape={(documentId) =>
+        onNavigateToMindscape={(_documentId) =>
           navigate({
             to: "/",
-            search: (prev: any) => ({
-              ...prev,
-              resourceType: "knowledge",
-              resourceId: documentId,
-            }),
           })
         }
         open={drawerOpen}

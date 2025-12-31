@@ -43,7 +43,7 @@ export { isValidManifest } from "./manifest";
  * Central registry for ALFRED package manifests
  */
 export class PackageRegistry {
-  private packages: Map<string, RegisteredPackage> = new Map();
+  private readonly packages: Map<string, RegisteredPackage> = new Map();
   private initialized = false;
 
   /**

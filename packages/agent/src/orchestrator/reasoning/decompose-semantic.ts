@@ -230,7 +230,7 @@ export function decomposeSemantically(
 /**
  * Analyze imports and detect patterns in the workspace
  */
-export async function analyzeImports(_options: {
+export function analyzeImports(_options: {
   workspace?: string;
   requirement: string;
 }): Promise<{
@@ -238,7 +238,7 @@ export async function analyzeImports(_options: {
 }> {
   // STUB: Initial implementation for P1-4
   // In Phase 4, this will perform deeper AST analysis
-  return {
+  return Promise.resolve({
     detectedPatterns: [],
-  };
+  });
 }

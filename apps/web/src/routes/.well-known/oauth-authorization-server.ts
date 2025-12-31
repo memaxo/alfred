@@ -13,7 +13,7 @@ export const Route = createFileRoute("/.well-known/oauth-authorization-server")(
   {
     server: {
       handlers: {
-        GET: async () => {
+        GET: () => {
           const baseUrl =
             process.env.BETTER_AUTH_URL || "http://localhost:3000";
           const origin = baseUrl.replace(/\/$/, "");

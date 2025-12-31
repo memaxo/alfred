@@ -13,7 +13,7 @@ async function execGit(args: string[], cwd: string): Promise<void> {
   await execFileAsync("git", args, { cwd });
 }
 
-async function readText(filePath: string): Promise<string> {
+function readText(filePath: string): Promise<string> {
   return fs.readFile(filePath, "utf8");
 }
 
@@ -54,7 +54,7 @@ describe("conflictArbiter (integration)", () => {
     })) as unknown as typeof toolCodex.execute;
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     toolCodex.execute = originalExecute;
     sandbox.cleanup();
   });
@@ -173,7 +173,7 @@ describe("conflictArbiter (integration)", () => {
     await execGit(["add", "."], repoRoot);
     await execGit(["commit", "-m", "main-change"], repoRoot);
 
-    const codexStub = mock(async () => {
+    const codexStub = mock(() => {
       throw new Error("Codex crashed");
     });
     toolCodex.execute = codexStub as unknown as typeof toolCodex.execute;

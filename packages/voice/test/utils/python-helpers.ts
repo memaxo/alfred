@@ -670,7 +670,7 @@ export function createFakeExecutable(dir: string, name: string): string {
  * Setup helper for tests that need isolated Python environments
  * Returns everything needed for safe testing
  */
-export async function setupIsolatedPythonTest(): Promise<{
+export function setupIsolatedPythonTest(): Promise<{
   testDir: ReturnType<typeof createIsolatedTestDir>;
   savedEnv: Record<string, string | undefined>;
   cleanup: () => void;

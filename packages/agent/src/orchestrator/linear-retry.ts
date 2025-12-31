@@ -66,7 +66,7 @@ function isRetryableStatusCode(statusCode: number): boolean {
   return statusCode === 429 || (statusCode >= 500 && statusCode < 600);
 }
 
-export async function withLinearRetry<T>(
+export function withLinearRetry<T>(
   operation: () => Promise<T>,
   options: WithLinearRetryOptions
 ): Promise<T> {

@@ -20,7 +20,7 @@ export const manifest: CliManifest = {
   name: "@alfred/agent",
   version: "0.1.0",
   description: "Agent orchestration and tool execution",
-  healthCheck: async () => {
+  healthCheck: () => {
     try {
       const start = performance.now();
       getOpenAI(); // Call to verify it's available

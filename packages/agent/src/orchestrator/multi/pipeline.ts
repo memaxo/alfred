@@ -471,7 +471,10 @@ export function transitionPipeline(
         stage: {
           stage: "escalated",
           reason: t.reason,
-          fromStage: transition.from as any,
+          fromStage: transition.from as Exclude<
+            PipelineStage["stage"],
+            "completed" | "escalated" | "aborted"
+          >,
         },
         metrics: {
           ...baseUpdate.metrics,
@@ -487,7 +490,10 @@ export function transitionPipeline(
         stage: {
           stage: "aborted",
           reason: t.reason,
-          fromStage: transition.from as any,
+          fromStage: transition.from as Exclude<
+            PipelineStage["stage"],
+            "completed" | "escalated" | "aborted"
+          >,
         },
         metrics: {
           ...baseUpdate.metrics,
@@ -497,7 +503,10 @@ export function transitionPipeline(
     }
 
     default: {
-      throw new Error(`Unknown transition target: ${(transition as any).to}`);
+      const _exhaustiveCheck: never = transition;
+      throw new Error(
+        `Unknown transition target: ${(transition as PipelineTransition & { to: string }).to}`
+      );
     }
   }
 }
@@ -598,7 +607,7 @@ export function buildPipelineSummary(
   const failed = outcomes.filter((o) => o.status === "failed").length;
   const stuck = outcomes.filter((o) => o.status === "stuck").length;
   const interrupted = outcomes.filter(
-    (o) => (o as any).status === "interrupted"
+    (o): o is typeof o & { status: "interrupted" } => o.status === "interrupted"
   ).length;
 
   let mergeStatus: PipelineSummary["mergeStatus"] = "skipped";

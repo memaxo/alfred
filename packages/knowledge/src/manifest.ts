@@ -40,15 +40,11 @@ const queryCommand = {
       .describe("Number of graph traversal hops"),
   }),
   handler: async (args: unknown) => {
-    const parsed = z
+    const _parsed = z
       .object({ query: z.string(), hops: z.number() })
       .parse(args);
-    console.log(
-      `Querying knowledge graph: "${parsed.query}" (${parsed.hops} hops)...`
-    );
     // Query logic would go here
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Query complete (0 results)");
   },
 };
 
@@ -64,15 +60,11 @@ const ingestCommand = {
       .describe("Resource scope for ingested knowledge"),
   }),
   handler: async (args: unknown) => {
-    const parsed = z
+    const _parsed = z
       .object({ source: z.string(), scope: z.string() })
       .parse(args);
-    console.log(
-      `Ingesting from ${parsed.source} into scope: ${parsed.scope}...`
-    );
     // Ingest logic would go here
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    console.log("Ingestion complete");
   },
 };
 

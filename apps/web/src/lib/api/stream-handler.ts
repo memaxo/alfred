@@ -23,12 +23,13 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
+import { isTextPart } from "@alfred/ui/chat/parts";
 import { consumeStream, generateId, streamText, type UIMessage } from "ai";
 import { z } from "zod";
 
 const requestSchema = z
   .object({
-    messages: z.array(uiMessageSchema).optional(),
+    messages: z.array(uiMessageSchema).min(1),
     conversationId: z.string().min(1).optional(),
   })
   .passthrough();
@@ -78,47 +79,58 @@ export async function handleStreamRequest(
       );
     }
 
-    const messages = (parsed.data.messages ?? []) as UIMessage[];
+    const messages = parsed.data.messages as UIMessage[];
     const persistedMessageIds = new Set<string>();
 
     const session = await auth.api.getSession({ headers: request.headers });
     userId = session?.user?.id ?? null;
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "session_required" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // Check connection limits and rate limiting
-    if (userId) {
-      const connectionResult = createConnection(userId, errorPrefix);
-      if (!connectionResult.allowed) {
-        sseConnectionRateLimitHitsTotal
-          .labels(errorPrefix, connectionResult.reason ?? "unknown")
-          .inc();
-        return new Response(
-          JSON.stringify({
-            error: "rate_limit_exceeded",
-            reason: connectionResult.reason,
-          }),
-          {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json",
-              "Retry-After": "60",
-            },
-          }
-        );
-      }
-      connectionId = connectionResult.connectionId;
-      // Update connection count metric (global count)
-      const globalConnectionCount = getConnectionCount();
-      sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
+    const connectionResult = createConnection(userId, errorPrefix);
+    if (!connectionResult.allowed) {
+      sseConnectionRateLimitHitsTotal
+        .labels(errorPrefix, connectionResult.reason ?? "unknown")
+        .inc();
+      return new Response(
+        JSON.stringify({
+          error: "rate_limit_exceeded",
+          reason: connectionResult.reason,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "60",
+          },
+        }
+      );
     }
+    connectionId = connectionResult.connectionId;
+    // Update connection count metric (global count)
+    const globalConnectionCount = getConnectionCount();
+    sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
 
     let conversationId =
       typeof parsed.data.conversationId === "string"
         ? parsed.data.conversationId
         : undefined;
 
-    if (userId && !conversationId) {
-      const conversation = await conversationRepo.createConversation(userId);
-      conversationId = conversation.id;
+    if (!conversationId) {
+      try {
+        const conversation = await conversationRepo.createConversation(userId);
+        conversationId = conversation.id;
+      } catch (error) {
+        logger.warn("conversation_create_failed", {
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     const scheduleRefresh = (reason: string, persisted: number) => {
@@ -128,18 +140,27 @@ export async function handleStreamRequest(
       triggerPreferenceRefresh(userId, { reason });
     };
 
-    if (userId && conversationId) {
+    if (conversationId) {
       // If we have messages, we should ensure the DB matches the incoming state.
       // This handles cases like message editing or regeneration where the client
       // might have removed some messages from the end of the history.
       if (messages.length > 0) {
         const lastMessage = messages.at(-1);
         if (lastMessage?.id) {
-          await conversationRepo.deleteMessagesAfter(
-            userId,
-            conversationId,
-            lastMessage.id
-          );
+          try {
+            await conversationRepo.deleteMessagesAfter(
+              userId,
+              conversationId,
+              lastMessage.id
+            );
+          } catch (error) {
+            logger.warn("conversation_delete_after_failed", {
+              userId,
+              conversationId,
+              messageId: lastMessage.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
         }
       }
 
@@ -265,17 +286,24 @@ export async function handleStreamRequest(
         // Track first chunk latency
         if (
           !firstChunkSent &&
-          (part.type === ("text" as any) || part.type === "text-delta") &&
-          (part as any).text
+          (part.type === "text" ||
+            part.type === "text-delta" ||
+            isTextPart(part))
         ) {
-          firstChunkSent = true;
-          const firstChunkLatency =
-            (performance.now() - requestStartTime) / 1000;
-          sseFirstChunkLatencySeconds
-            .labels(errorPrefix)
-            .observe(firstChunkLatency);
-          if (connectionId) {
-            updateConnectionActivity(connectionId);
+          const textContent =
+            typeof part === "object" && part !== null && "text" in part
+              ? (part as { text?: string }).text
+              : undefined;
+          if (textContent !== undefined) {
+            firstChunkSent = true;
+            const firstChunkLatency =
+              (performance.now() - requestStartTime) / 1000;
+            sseFirstChunkLatencySeconds
+              .labels(errorPrefix)
+              .observe(firstChunkLatency);
+            if (connectionId) {
+              updateConnectionActivity(connectionId);
+            }
           }
         }
 
@@ -351,9 +379,9 @@ export async function handleStreamRequest(
     if (connectionId && userId) {
       removeConnection(connectionId);
       connectionId = null;
-      // Update connection count metric
-      const connectionCount = getConnectionCount(userId);
-      sseConnectionsCurrent.labels(errorPrefix).set(connectionCount);
+      // Update connection count metric (global count)
+      const globalConnectionCount = getConnectionCount();
+      sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
     }
 
     if (error instanceof SyntaxError) {

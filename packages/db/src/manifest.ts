@@ -38,10 +38,7 @@ const migrateCommand = {
       .describe("Plan mode: show pending migrations without applying"),
   }),
   handler: async (args: unknown) => {
-    const parsed = z.object({ plan: z.boolean() }).parse(args);
-    console.log(`Running database migrations (plan: ${parsed.plan})...`);
-    // TODO: Import and call migrate function once rootDir constraints are resolved
-    console.log(parsed.plan ? "Migration plan complete" : "Migrations applied");
+    const _parsed = z.object({ plan: z.boolean() }).parse(args);
   },
 };
 
@@ -56,13 +53,11 @@ const seedCommand = {
       .describe("Amount of seed data to generate"),
   }),
   handler: async (args: unknown) => {
-    const parsed = z
+    const _parsed = z
       .object({ dataset: z.enum(["minimal", "standard", "full"]) })
       .parse(args);
-    console.log(`Seeding database with ${parsed.dataset} dataset...`);
     // Seed logic would go here
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Database seeded successfully");
   },
 };
 
@@ -81,10 +76,8 @@ const resetCommand = {
     if (!parsed.confirm) {
       throw new Error("Database reset requires --confirm flag");
     }
-    console.log("Resetting database...");
     // Reset logic would go here
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    console.log("Database reset complete");
   },
 };
 

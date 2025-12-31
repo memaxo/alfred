@@ -1,9 +1,5 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { getPreferences, setPreference } from "@alfred/db/repo/user";
-import {
-  preferenceKeySchema,
-  preferenceValueSchema,
-} from "@alfred/type/preference";
 import { z } from "zod";
 
 import { recordAssistantToolCall } from "../../../src/metrics";
@@ -11,7 +7,7 @@ import { invalidatePreferenceCache } from "../../../src/preference/loader";
 
 const preferenceGetInputSchema = z.object({
   userId: z.string().min(1),
-  key: (preferenceKeySchema as any).optional(),
+  key: z.string().optional(),
   domain: z.string().min(1).optional(),
   authz: z.string().optional(),
 });
@@ -95,8 +91,8 @@ export const toolPreferenceGet = {
 
 const preferenceSetInputSchema = z.object({
   userId: z.string().min(1),
-  key: preferenceKeySchema as any,
-  value: preferenceValueSchema as any,
+  key: z.string(),
+  value: z.unknown(),
   confidence: z.number().min(0).max(1).optional(),
   source: z.enum(["explicit", "inferred"]).optional(),
   authz: z.string().optional(),

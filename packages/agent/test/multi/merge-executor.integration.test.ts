@@ -16,11 +16,11 @@ type MergePlan = {
   targetBranch: string;
 };
 
-async function git(cwd: string, args: string[]) {
-  await execFileAsync("git", args, { cwd });
+function git(cwd: string, args: string[]) {
+  return execFileAsync("git", args, { cwd });
 }
 
-async function readText(path: string) {
+function readText(path: string) {
   return fs.readFile(path, "utf8");
 }
 

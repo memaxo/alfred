@@ -27,13 +27,13 @@ describe("detectDomain", () => {
   });
 
   it("classifies domain from message text via embeddings", async () => {
-    mockEmbedMany.mockImplementation(async (texts: string[]) => {
+    mockEmbedMany.mockImplementation((texts: string[]) => {
       if (texts.length === 1) {
         // input vector
-        return [[1, 0]];
+        return Promise.resolve([[1, 0]]);
       }
       // prototype vectors (shape is irrelevant; cosineSimilarity is mocked)
-      return texts.map(() => [0, 0]);
+      return Promise.resolve(texts.map(() => [0, 0]));
     });
 
     mockCosineSimilarity.mockImplementation((a: number[], b: number[]) => {
@@ -45,11 +45,11 @@ describe("detectDomain", () => {
     // Force centroids: we simulate this by making the second embedMany call
     // return prototype embeddings that average to [1,0] for kubernetes and [0,1] for others.
     let call = 0;
-    mockEmbedMany.mockImplementation(async (texts: string[]) => {
+    mockEmbedMany.mockImplementation((texts: string[]) => {
       call += 1;
       if (call === 1) {
         // input
-        return [[1, 0]];
+        return Promise.resolve([[1, 0]]);
       }
       // prototypes: 8 total (2 per domain), in the internal order:
       // proxmox(2), git(2), docker(2), kubernetes(2)
@@ -61,7 +61,7 @@ describe("detectDomain", () => {
           vectors.push([0, 1]);
         }
       }
-      return vectors;
+      return Promise.resolve(vectors);
     });
 
     const messages: UIMessage[] = [

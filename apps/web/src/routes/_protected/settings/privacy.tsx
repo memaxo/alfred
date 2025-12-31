@@ -90,7 +90,7 @@ export function PrivacySettingsPage() {
     toast.success("Data export started");
   }, [preferences, facts, events]);
 
-  const handlePurge = useCallback(async () => {
+  const handlePurge = useCallback(() => {
     if (!facts || facts.length === 0) {
       toast.info("No facts to delete");
       return;
@@ -174,7 +174,7 @@ export function PrivacySettingsPage() {
                 </div>
               ) : facts && facts.length > 0 ? (
                 <div className="space-y-3">
-                  {facts.map((fact: any) => (
+                  {facts.map((fact) => (
                     <div
                       className="group relative flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/5 p-3 text-sm transition-colors hover:bg-white/10"
                       key={fact.id}
@@ -226,7 +226,7 @@ export function PrivacySettingsPage() {
                 </div>
               ) : events && events.length > 0 ? (
                 <div className="space-y-2">
-                  {events.map((event: any) => (
+                  {events.map((event) => (
                     <div
                       className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 text-xs"
                       key={event.id}

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
 
-export const Route = createFileRoute("/elevate" as any)({
+export const Route = createFileRoute("/elevate")({
   validateSearch: z.object({
     sessionId: z.string().optional(),
   }),
@@ -42,9 +42,11 @@ function ElevatePage() {
       }
 
       setStatus("success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStatus("error");
-      setError(err?.message || "Passkey verification failed");
+      const message =
+        err instanceof Error ? err.message : "Passkey verification failed";
+      setError(message);
     }
   };
 

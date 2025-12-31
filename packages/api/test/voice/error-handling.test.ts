@@ -1,9 +1,9 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import { ModelProcess, type ProcessConfig } from "@alfred/voice/process/base";
 import type { Subprocess } from "bun";
 
 describe("Error Handling", () => {
-  let mockSpawn: ReturnType<typeof mock.fn>;
+  let mockSpawn: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     const mockSubprocess = {
@@ -12,7 +12,7 @@ describe("Error Handling", () => {
       stderr: new ReadableStream(),
     } as unknown as Subprocess;
 
-    mockSpawn = mock.fn(() => mockSubprocess);
+    mockSpawn = vi.fn(() => mockSubprocess);
 
     mock.module("bun", () => ({
       spawn: mockSpawn,

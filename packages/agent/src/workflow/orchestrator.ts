@@ -63,7 +63,7 @@ function workflowUrlFor(
   return `${normalized}/workflow/${id}`;
 }
 
-export async function orchestrateWorkflowStream(
+export function orchestrateWorkflowStream(
   input: WorkflowInputPayload,
   session: { user: { id: string } },
   callbacks: OrchestratorCallbacks

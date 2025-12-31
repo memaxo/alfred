@@ -6,8 +6,9 @@ describe("LinearRateLimiter metrics", () => {
     let currentTime = 0;
     const limiter = new LinearRateLimiter({
       now: () => currentTime,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         currentTime += ms;
+        return Promise.resolve();
       },
       maxRequestsPerMinute: 2,
       startupBufferMs: 0,
@@ -28,8 +29,9 @@ describe("LinearRateLimiter metrics", () => {
     let currentTime = 0;
     const limiter = new LinearRateLimiter({
       now: () => currentTime,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         currentTime += ms;
+        return Promise.resolve();
       },
       startupBufferMs: 0,
       maxRequestsPerMinute: 100,
@@ -48,8 +50,9 @@ describe("LinearRateLimiter metrics", () => {
     let currentTime = 0;
     const limiter = new LinearRateLimiter({
       now: () => currentTime,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         currentTime += ms;
+        return Promise.resolve();
       },
       startupBufferMs: 0,
     });
@@ -63,9 +66,10 @@ describe("LinearRateLimiter metrics", () => {
     const waits: number[] = [];
     const limiter = new LinearRateLimiter({
       now: () => currentTime,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         waits.push(ms);
         currentTime += ms;
+        return Promise.resolve();
       },
       maxRequestsPerMinute: 2,
       startupBufferMs: 0,
