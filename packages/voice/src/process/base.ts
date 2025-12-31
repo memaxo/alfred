@@ -86,7 +86,7 @@ export class Process {
    * 2. Virtual environment Python (if .venv exists)
    * 3. System Python (fallback)
    */
-  protected async resolvePythonExecutable(): Promise<{
+  protected resolvePythonExecutable(): Promise<{
     cmd: string[];
     cwd: string;
   }> {
@@ -107,35 +107,35 @@ export class Process {
     if (useUv && uvPath && isVoiceScript) {
       // Use uv run - automatically manages virtual environment
       // uv run uses the project directory (where pyproject.toml is)
-      return {
+      return Promise.resolve({
         cmd: [uvPath, "run", "python", scriptRelPath],
         cwd: voiceDir,
-      };
+      });
     }
 
     const pythonOverride = process.env.PYTHON_PATH;
     if (pythonOverride) {
-      return {
+      return Promise.resolve({
         cmd: [pythonOverride, scriptPath],
         cwd: process.cwd(),
-      };
+      });
     }
 
     // Check for virtual environment
     const venvPython = this.findVenvPython(voiceDir);
     if (venvPython) {
-      return {
+      return Promise.resolve({
         cmd: [venvPython, scriptPath],
         cwd: process.cwd(),
-      };
+      });
     }
 
     // Fallback to system Python
     const pythonPath = "python3";
-    return {
+    return Promise.resolve({
       cmd: [pythonPath, scriptPath],
       cwd: process.cwd(),
-    };
+    });
   }
 
   /**
