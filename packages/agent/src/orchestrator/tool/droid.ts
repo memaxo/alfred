@@ -18,6 +18,7 @@ import {
   isWithinBase,
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
+  type OutputAccumulator,
   recordToolExecution,
   resolveExecutable,
   startToolTimer,
@@ -150,7 +151,7 @@ function streamStdout(
   proc: ReturnType<typeof Bun.spawn>,
   input: DroidToolInput,
   writer: ToolWriter,
-  accumulator: string[]
+  accumulator: OutputAccumulator
 ) {
   if (!proc.stdout || typeof proc.stdout === "number") {
     return;

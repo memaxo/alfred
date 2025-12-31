@@ -43,9 +43,7 @@ const workflowListCommand = {
       .describe("Filter by status"),
   }),
   handler: async (args: unknown) => {
-    const _parsed = z
-      .object({ limit: z.number(), status: z.string().optional() })
-      .parse(args);
+    z.object({ limit: z.number(), status: z.string().optional() }).parse(args);
     // List logic would go here
     await new Promise((resolve) => setTimeout(resolve, 500));
   },
@@ -58,7 +56,7 @@ const workflowCancelCommand = {
     runId: z.string().uuid().describe("Workflow run ID to cancel"),
   }),
   handler: async (args: unknown) => {
-    const _parsed = z.object({ runId: z.string() }).parse(args);
+    z.object({ runId: z.string() }).parse(args);
     // Cancel logic would go here
     await new Promise((resolve) => setTimeout(resolve, 800));
   },
@@ -70,7 +68,7 @@ export const manifest: CliManifest = {
   description:
     "Workflow execution runtime with cognitive loops and phase management",
   commands: [workflowListCommand, workflowCancelCommand],
-  healthCheck: async () => {
+  healthCheck: () => {
     try {
       const start = performance.now();
       // Check if runtime is responsive

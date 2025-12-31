@@ -37,8 +37,7 @@ const downloadCommand = {
       .default(false)
       .describe("Force re-download even if model exists"),
   }),
-  handler: async (args: unknown) => {
-    const _parsed = z.object({ force: z.boolean() }).parse(args);
+  handler: async () => {
     // Download logic would go here
     await new Promise((resolve) => setTimeout(resolve, 2000));
   },
@@ -68,15 +67,14 @@ const benchmarkCommand = {
       .object({ iterations: z.number(), batchSize: z.number() })
       .parse(args);
     // Benchmark logic would go here
-    let totalLatency = 0;
+    let _totalLatency = 0;
     for (let i = 0; i < parsed.iterations; i++) {
       const start = performance.now();
       await new Promise((resolve) =>
         setTimeout(resolve, 10 + Math.random() * 20)
       );
-      totalLatency += performance.now() - start;
+      _totalLatency += performance.now() - start;
     }
-    const _avgLatency = totalLatency / parsed.iterations;
   },
 };
 
@@ -92,7 +90,8 @@ export const manifest: CliManifest = {
       const latency = performance.now() - start;
 
       const allHealthy =
-        health.length > 0 && health.every((w: any) => w.healthy);
+        health.length > 0 &&
+        health.every((w) => Boolean(w && "healthy" in w && w.healthy));
 
       return {
         status: allHealthy

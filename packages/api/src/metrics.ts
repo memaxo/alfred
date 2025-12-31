@@ -177,17 +177,13 @@ export function initMetricsHooks(): void {
       agent.registerDroidExecHistogram?.(droidExecDurationSeconds);
       agent.registerCodexExecCounter?.(codexExecRunsTotal);
       agent.registerCodexExecHistogram?.(codexExecDurationSeconds);
-      // @ts-expect-error - Counter type mismatch between prom-client and agent hook期望
-      agent.registerCodexErrorCounter?.(
-        codexErrorsTotal as { [key: string]: number }
-      );
+      agent.registerCodexErrorCounter?.(codexErrorsTotal);
       agent.registerCodexSessionValidationHistogram?.({
-        startTimer: () => {
-          const done = codexSessionValidationDurationSeconds.startTimer();
-          // @ts-expect-error - startTimer return shape differs between prom-client and agent hooks
-          return ({ outcome }: { outcome: string }) => done({ outcome });
-        },
-      } as { startTimer: () => { done: (o: { outcome: string }) => void } });
+        startTimer:
+          () =>
+          ({ outcome }: { outcome: string }) =>
+            codexSessionValidationDurationSeconds.startTimer()({ outcome }),
+      });
       agent.registerEvalRunsCounter?.(evalRunsTotal);
       agent.registerEvalDurationHistogram?.(evalDurationSeconds);
       agent.registerEvalScoreCounter?.(evalScoresTotal);
@@ -195,9 +191,8 @@ export function initMetricsHooks(): void {
       agent.registerLaminarDatapointCounter?.(laminarEvalDatapointsTotal);
       agent.registerLaminarErrorCounter?.(laminarEvalErrorsTotal);
       agent.registerCompressionCycleCounter?.(compressionCyclesTotal);
-      // @ts-expect-error - Histogram type mismatch between prom-client and agent hooks
       agent.registerCompressionCycleHistogram?.(
-        compressionCycleDurationSeconds as { startTimer: () => unknown }
+        compressionCycleDurationSeconds
       );
       agent.registerCompressionNodeCounter?.(compressionNodesUpdatedTotal);
       agent.registerAssistantToolCounter?.(assistantToolCallsTotal);

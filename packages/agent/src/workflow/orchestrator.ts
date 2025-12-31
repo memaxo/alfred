@@ -73,7 +73,7 @@ export function orchestrateWorkflowStream(
       callbacks.ensureObligations?.(callbacks.context);
     } catch (error) {
       callbacks.emitError(error);
-      return () => {};
+      return Promise.resolve(() => {});
     }
   }
 
@@ -628,12 +628,12 @@ export function orchestrateWorkflowStream(
     }
   });
 
-  return () => {
+  return Promise.resolve(() => {
     cancelled = true;
     abortController.abort();
     if (!timerClosed) {
       recordEvent("cancel");
       closeTimer("cancel");
     }
-  };
+  });
 }

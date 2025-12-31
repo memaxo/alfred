@@ -242,7 +242,6 @@ export async function exaSearch(
     snippet: generateSnippet(result),
   }));
 
-  // @ts-expect-error - Exa SDK response types are incomplete for searchType, context, and costDollars
   const responseWithMeta = response as {
     searchType?: ExaSearchType;
     context?: string;
@@ -391,7 +390,6 @@ export async function exaFindSimilar(
 
   return {
     results,
-    // @ts-expect-error - Exa SDK response types are incomplete for costDollars
     cost: (response as { costDollars?: ExaCost }).costDollars,
   };
 }
@@ -404,7 +402,6 @@ export async function exaResearch(
 ): Promise<ExaResearchResponse> {
   const client = getExaClient();
 
-  // @ts-expect-error - Exa SDK types for research.create are incomplete
   const response = await (
     client as {
       research: { create: (opts: unknown) => Promise<{ researchId: string }> };
@@ -433,7 +430,6 @@ export async function exaPollResearch(
 ): Promise<ExaResearchResult> {
   const client = getExaClient();
 
-  // @ts-expect-error - Exa SDK types for research.pollUntilFinished are incomplete
   const result = await (
     client as {
       research: { pollUntilFinished: (id: string) => Promise<unknown> };
@@ -442,14 +438,13 @@ export async function exaPollResearch(
 
   return {
     researchId,
-    status: (result as { status: string }).status,
-    // @ts-expect-error - Exa SDK result types for research are incomplete
-    results: (result as { results?: unknown[] }).results?.map((r) => ({
-      ...(r as Record<string, unknown>),
+    status: (result as { status: "completed" | "failed" | "processing" })
+      .status,
+    results: (result as { results?: ExaSearchResult[] }).results?.map((r) => ({
+      ...r,
       snippet: generateSnippet(r as Record<string, unknown>),
     })),
-    // @ts-expect-error - Exa SDK result types don't include these fields
     data: (result as { data?: unknown }).data,
-    costDollars: (result as { costDollars?: number }).costDollars,
+    costDollars: (result as { costDollars?: ExaCost }).costDollars,
   };
 }

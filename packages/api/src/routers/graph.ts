@@ -316,7 +316,7 @@ export const graphRouter = router({
     .query(async ({ input }) => {
       const resource = input.resource ?? "user";
       const kind = input.kind;
-      let graphInstance: unknown = null;
+      let graphInstance: import("@alfred/knowledge").Hypergraph | undefined;
       let stopTimer: (() => void) | null = null;
 
       try {
@@ -524,7 +524,7 @@ export const graphRouter = router({
         }
 
         const result = await runUnifiedQuery(input, {
-          graph: graphInstance ?? undefined,
+          graph: graphInstance,
           resource,
         });
 

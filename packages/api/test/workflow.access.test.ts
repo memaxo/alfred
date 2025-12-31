@@ -58,8 +58,6 @@ describe("enforceWorkflowPlanPolicy", () => {
 
     policyIncMock = vi.fn();
     obligationIncMock = vi.fn();
-    policyLabelsMock.mockReturnValue({ inc: policyIncMock });
-    obligationLabelsMock.mockReturnValue({ inc: obligationIncMock });
 
     // Reset mock state
     consumeRouteRateLimitMock.mockReset();
@@ -68,6 +66,9 @@ describe("enforceWorkflowPlanPolicy", () => {
     policyLabelsMock.mockReset();
     obligationLabelsMock.mockReset();
 
+    // Set return values after resetting
+    policyLabelsMock.mockReturnValue({ inc: policyIncMock });
+    obligationLabelsMock.mockReturnValue({ inc: obligationIncMock });
     consumeRouteRateLimitMock.mockResolvedValue(undefined);
     createAuditLogMock.mockResolvedValue(undefined);
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });

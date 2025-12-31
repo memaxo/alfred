@@ -99,7 +99,7 @@ describe("Correction Learning", () => {
       }
     });
 
-    it("links correction to original knowledge", async () => {
+    it("links correction to original knowledge", () => {
       // Verify that corrections reference the original
       // knowledge they're correcting
       expect(true).toBe(true);
@@ -111,9 +111,6 @@ describe("Correction Learning", () => {
       try {
         const { db } = await import("@alfred/db");
         const { graphRepo } = await import("@alfred/db");
-        const { memoryNodes, memoryEdges } = await import(
-          "@alfred/db/schema/graph"
-        );
 
         // Create two related nodes
         const node1Id = await graphRepo.upsertNodes([
@@ -162,7 +159,7 @@ describe("Correction Learning", () => {
       }
     });
 
-    it("tracks correction history in metadata", async () => {
+    it("tracks correction history in metadata", () => {
       // Verify that correction operations create a
       // trackable history in edge metadata
       expect(true).toBe(true);
@@ -210,7 +207,7 @@ describe("Correction Learning", () => {
       }
     });
 
-    it("applies confidence delta corrections", async () => {
+    it("applies confidence delta corrections", () => {
       // Verify that confidence adjustments use deltas
       // rather than absolute values
       expect(true).toBe(true);

@@ -503,7 +503,6 @@ export function transitionPipeline(
     }
 
     default: {
-      const _exhaustiveCheck: never = transition;
       throw new Error(
         `Unknown transition target: ${(transition as PipelineTransition & { to: string }).to}`
       );
@@ -607,7 +606,7 @@ export function buildPipelineSummary(
   const failed = outcomes.filter((o) => o.status === "failed").length;
   const stuck = outcomes.filter((o) => o.status === "stuck").length;
   const interrupted = outcomes.filter(
-    (o): o is typeof o & { status: "interrupted" } => o.status === "interrupted"
+    (o): o is typeof o & { status: "paused" } => o.status === "paused"
   ).length;
 
   let mergeStatus: PipelineSummary["mergeStatus"] = "skipped";

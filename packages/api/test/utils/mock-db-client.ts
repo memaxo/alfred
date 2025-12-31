@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noExplicitAny: Test mock utility requires flexible typing for dynamic delegation
 import { mock, vi } from "bun:test";
 
 // Prefer sqlite for tests to avoid requiring Postgres.

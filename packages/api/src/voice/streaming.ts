@@ -11,6 +11,7 @@ import {
   type VoiceSocketData,
   VoiceSocketHandler,
 } from "@alfred/voice/server/socket";
+import type { ServerWebSocket } from "bun";
 import { createContext } from "../context";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
@@ -74,7 +75,7 @@ const MAX_CONNECTIONS_PER_MINUTE_PER_USER =
 const PING_TIMEOUT_MS = 60_000;
 
 let server: ReturnType<typeof Bun.serve> | null = null;
-const activeSockets = new Set<ReturnType<typeof Bun.serve>>();
+const activeSockets = new Set<ServerWebSocket<VoiceSocketData>>();
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 type RateLimitBucket = { count: number; resetAt: number };
