@@ -9,24 +9,24 @@ import {
 } from "bun:test";
 import type { Obligation } from "@alfred/type";
 
-const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
-const consumeRouteRateLimitMock = vi.fn().mockResolvedValue(undefined);
+// Use shared policy and rate limit mocks from router-helpers
+import {
+  consumeRouteRateLimitMock,
+  createAuditLogMock,
+  mockPolicyAudit,
+  mockRateLimit,
+  policyEvaluateMock,
+} from "./utils/router-helpers";
+
+// Additional metrics mocks specific to this test
 const policyDecisionIncMock = vi.fn();
 const policyObligationIncMock = vi.fn();
 
-const evaluateMock = vi
-  .fn()
-  .mockResolvedValue({ allow: true, obligations: [] as Obligation[] });
-
 beforeAll(() => {
-  mock.module("@alfred/db/repo/policy", () => ({
-    createAuditLog: createAuditLogMock,
-  }));
+  mockPolicyAudit();
+  mockRateLimit();
 
-  mock.module("@alfred/api/trpc", () => ({
-    consumeRouteRateLimit: consumeRouteRateLimitMock,
-  }));
-
+  // Metrics mocks
   mock.module("../src/metrics", () => ({
     policyDecisionsTotal: {
       labels: vi.fn(() => ({ inc: policyDecisionIncMock })),
@@ -34,11 +34,6 @@ beforeAll(() => {
     policyObligationsTotal: {
       labels: vi.fn(() => ({ inc: policyObligationIncMock })),
     },
-  }));
-
-  mock.module("@alfred/policy", () => ({
-    evaluate: evaluateMock,
-    registerCacheObs: vi.fn(),
   }));
 });
 
@@ -56,13 +51,18 @@ const baseInput = {
 
 describe("enforceWorkflowPlanPolicy", () => {
   beforeEach(async () => {
-    // Re-import to ensure we get the latest mock
-    enforceModule = await import("../src/workflow/access");
+    // Reset mock calls but keep the mock definitions
+    consumeRouteRateLimitMock.mockClear();
+    createAuditLogMock.mockClear();
+    policyEvaluateMock.mockClear();
 
-    vi.clearAllMocks();
-    // Ensure mock behavior is reset to default
-    evaluateMock.mockReset();
-    evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
+    // Re-apply default mock behavior
+    consumeRouteRateLimitMock.mockResolvedValue(undefined);
+    createAuditLogMock.mockResolvedValue(undefined);
+    policyEvaluateMock.mockResolvedValue({ allow: true, obligations: [] });
+
+    // Re-import the module under test to get fresh references
+    enforceModule = await import("../src/workflow/access");
   });
 
   it("throws when session is missing", async () => {
@@ -73,7 +73,7 @@ describe("enforceWorkflowPlanPolicy", () => {
       })
     ).rejects.toMatchObject({ message: "session_required", statusCode: 401 });
     expect(consumeRouteRateLimitMock).not.toHaveBeenCalled();
-    expect(evaluateMock).not.toHaveBeenCalled();
+    expect(policyEvaluateMock).not.toHaveBeenCalled();
   });
 
   const bioObligation: Obligation = {
@@ -83,7 +83,7 @@ describe("enforceWorkflowPlanPolicy", () => {
   };
 
   it("propagates policy denials with status 403", async () => {
-    evaluateMock.mockResolvedValueOnce({
+    policyEvaluateMock.mockResolvedValueOnce({
       allow: false,
       reason: "policy_denied",
       obligations: [bioObligation],
@@ -103,7 +103,7 @@ describe("enforceWorkflowPlanPolicy", () => {
   });
 
   it("returns obligations and consumes the shared rate limit when allowed", async () => {
-    evaluateMock.mockResolvedValueOnce({
+    policyEvaluateMock.mockResolvedValueOnce({
       allow: true,
       obligations: [bioObligation],
     });
