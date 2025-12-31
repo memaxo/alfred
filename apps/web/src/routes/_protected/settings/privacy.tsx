@@ -185,7 +185,9 @@ export function PrivacySettingsPage() {
                           <span>{fact.category || "general"}</span>
                           <span>•</span>
                           <span>
-                            {new Date(fact.created).toLocaleDateString()}
+                            {fact.created
+                              ? new Date(fact.created).toLocaleDateString()
+                              : "—"}
                           </span>
                         </div>
                       </div>
@@ -235,7 +237,9 @@ export function PrivacySettingsPage() {
                         {event.type}
                       </span>
                       <span className="text-biolum-faint">
-                        {new Date(event.timestamp).toLocaleString()}
+                        {event.timestamp
+                          ? new Date(event.timestamp).toLocaleString()
+                          : "—"}
                       </span>
                     </div>
                   ))}

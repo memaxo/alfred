@@ -9,6 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ConsentRouteImport } from './routes/consent'
+import { Route as DeviceRouteImport } from './routes/device'
+import { Route as ElevateRouteImport } from './routes/elevate'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
@@ -55,6 +58,21 @@ const LoginRoute = LoginRouteImport.update({
 const HealthzRoute = HealthzRouteImport.update({
   id: '/healthz',
   path: '/healthz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsentRoute = ConsentRouteImport.update({
+  id: '/consent',
+  path: '/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeviceRoute = DeviceRouteImport.update({
+  id: '/device',
+  path: '/device',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ElevateRoute = ElevateRouteImport.update({
+  id: '/elevate',
+  path: '/elevate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProtectedRoute = ProtectedRouteImport.update({
@@ -207,6 +225,9 @@ const ProtectedAdminMetricsRoute = ProtectedAdminMetricsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/healthz': typeof HealthzRouteWithChildren
+  '/consent': typeof ConsentRoute
+  '/device': typeof DeviceRoute
+  '/elevate': typeof ElevateRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof ProtectedAdminRouteWithChildren
@@ -240,6 +261,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/healthz': typeof HealthzRouteWithChildren
+  '/consent': typeof ConsentRoute
+  '/device': typeof DeviceRoute
+  '/elevate': typeof ElevateRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/book': typeof ProtectedBookRoute
@@ -274,6 +298,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_protected': typeof ProtectedRouteWithChildren
   '/healthz': typeof HealthzRouteWithChildren
+  '/consent': typeof ConsentRoute
+  '/device': typeof DeviceRoute
+  '/elevate': typeof ElevateRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_protected/admin': typeof ProtectedAdminRouteWithChildren
@@ -309,6 +336,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/healthz'
+    | '/consent'
+    | '/device'
+    | '/elevate'
     | '/login'
     | '/onboarding'
     | '/admin'
@@ -342,6 +372,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/healthz'
+    | '/consent'
+    | '/device'
+    | '/elevate'
     | '/login'
     | '/onboarding'
     | '/book'
@@ -375,6 +408,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_protected'
     | '/healthz'
+    | '/consent'
+    | '/device'
+    | '/elevate'
     | '/login'
     | '/onboarding'
     | '/_protected/admin'
@@ -410,6 +446,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   ProtectedRoute: typeof ProtectedRouteWithChildren
   HealthzRoute: typeof HealthzRouteWithChildren
+  ConsentRoute: typeof ConsentRoute
+  DeviceRoute: typeof DeviceRoute
+  ElevateRoute: typeof ElevateRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
@@ -428,6 +467,27 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/consent': {
+      id: '/consent'
+      path: '/consent'
+      fullPath: '/consent'
+      preLoaderRoute: typeof ConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device': {
+      id: '/device'
+      path: '/device'
+      fullPath: '/device'
+      preLoaderRoute: typeof DeviceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/elevate': {
+      id: '/elevate'
+      path: '/elevate'
+      fullPath: '/elevate'
+      preLoaderRoute: typeof ElevateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -728,6 +788,9 @@ const HealthzRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   ProtectedRoute: ProtectedRouteWithChildren,
   HealthzRoute: HealthzRouteWithChildren,
+  ConsentRoute: ConsentRoute,
+  DeviceRoute: DeviceRoute,
+  ElevateRoute: ElevateRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   ApiMetricsRoute: ApiMetricsRoute,

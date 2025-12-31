@@ -165,7 +165,7 @@ describe("native voice queue + playback", () => {
 
     await ageQueue(2000);
 
-    await queueModule.drain((item) => {
+    await queueModule.drain(async (item) => {
       order.push(item.kind);
     });
 
