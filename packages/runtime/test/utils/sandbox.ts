@@ -27,9 +27,8 @@ if (!g.__alfredSandboxWatchdogInstalled) {
 let dir: string | null = null;
 
 beforeAll(() => {
-  if (process.env.ALFRED_PLANS_DIR?.trim()) {
-    return;
-  }
+  // Always redirect ExecPlan writes to a temp directory during tests
+  // This prevents polluting .agent/plans/ which is for ALFRED development only
   dir = mkdtempSync(path.join(os.tmpdir(), "alfred-plans-"));
   process.env.ALFRED_PLANS_DIR = dir;
 });
