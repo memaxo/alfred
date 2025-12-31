@@ -215,6 +215,7 @@
         "@alfred/type": "workspace:*",
         "@linear/sdk": "^53.0.0",
         "@lmnr-ai/lmnr": "^0.7.4",
+        "agentfs-sdk": "^0.3.1",
         "exa-js": "^2.0.12",
         "lru-cache": "^11.0.1",
         "oxc-parser": "^0.98.0",
@@ -1978,6 +1979,18 @@
 
     "@trpc/server": ["@trpc/server@11.7.2", "", { "peerDependencies": { "typescript": ">=5.7.2" } }, "sha512-AgB26PXY69sckherIhCacKLY49rxE2XP5h38vr/KMZTbLCL1p8IuIoKPjALTcugC2kbyQ7Lbqo2JDVfRSmPmfQ=="],
 
+    "@tursodatabase/database": ["@tursodatabase/database@0.4.0-pre.18", "", { "dependencies": { "@tursodatabase/database-common": "^0.4.0-pre.18" }, "optionalDependencies": { "@tursodatabase/database-darwin-arm64": "0.4.0-pre.18", "@tursodatabase/database-linux-arm64-gnu": "0.4.0-pre.18", "@tursodatabase/database-linux-x64-gnu": "0.4.0-pre.18", "@tursodatabase/database-win32-x64-msvc": "0.4.0-pre.18" } }, "sha512-NWmI4AJBK8HjRr5FIzafuNVRue60HKYPmrH6t4gYbGOGNg3sLpsMI/kxvyzdexcyFWZfKZNIhuLJZOgJdN32pQ=="],
+
+    "@tursodatabase/database-common": ["@tursodatabase/database-common@0.4.0-pre.18", "", {}, "sha512-TLrdyC0sGjOgrMW0QgEXVFdMhiB8mQC6lRDJY1ks+i3ykZt+OR6yBAoNzb9AD9k4yMuFVFYgP8u8rdEZvSYr1Q=="],
+
+    "@tursodatabase/database-darwin-arm64": ["@tursodatabase/database-darwin-arm64@0.4.0-pre.18", "", { "os": "darwin", "cpu": "arm64" }, "sha512-McbAv7lRak3bVbDDUCS0QvqmcXPgGGOP6hnGp9k77DjFiH1XNA0lCJ81dY9iMPvOk27ZDx9tQgu0ppW2VrNpBA=="],
+
+    "@tursodatabase/database-linux-arm64-gnu": ["@tursodatabase/database-linux-arm64-gnu@0.4.0-pre.18", "", { "os": "linux", "cpu": "arm64" }, "sha512-dzWwksodFf0fvUY04s7Td8JKqAISqAf4irHa50esTTkq3RhirAwkvycbPrYL3o8KqSnZbxmk3H9sAY6aIA1Ajw=="],
+
+    "@tursodatabase/database-linux-x64-gnu": ["@tursodatabase/database-linux-x64-gnu@0.4.0-pre.18", "", { "os": "linux", "cpu": "x64" }, "sha512-V3QfdsX5iXYD2ceSAme4vPJkmWxmFJMRz7BTjl+5X6gvJcLzWCskTFWC/f/xyzsBOnkKXtfSFf4vxrHS2AwNzA=="],
+
+    "@tursodatabase/database-win32-x64-msvc": ["@tursodatabase/database-win32-x64-msvc@0.4.0-pre.18", "", { "os": "win32", "cpu": "x64" }, "sha512-pRB4N2NMQnqjAJJR1WWhbFDms7EpiS3I8mw5HlKGsc2vhthe5K3guKIWGcoxaK0og5D4cqW0bHf5rPLsWqO2dQ=="],
+
     "@tweenjs/tween.js": ["@tweenjs/tween.js@23.1.3", "", {}, "sha512-vJmvvwFxYuGnF2axRtPYocag6Clbb5YS7kLL+SO/TeVFzHqDIWrNKYtcsPMibjDx9O+bu+psAy9NKfWklassUA=="],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg=="],
@@ -2167,6 +2180,8 @@
     "adm-zip": ["adm-zip@0.5.16", "", {}, "sha512-TGw5yVi4saajsSEgz25grObGHEUaDrniwvA2qwSC060KfqGPdglhvPMA2lPIoxs3PQIItj2iag35fONcQqgUaQ=="],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
+
+    "agentfs-sdk": ["agentfs-sdk@0.3.1", "", { "dependencies": { "@tursodatabase/database": "^0.4.0-pre.17", "@tursodatabase/database-common": "^0.4.0-pre.17", "buffer": "^6.0.3" } }, "sha512-l/2WA7m4WHqXr2AWD+ae3N7g2ffneLHSRLOK2NfOMQTSLubXRMog0LhdyqqYyC4WTPG8s1v4pc1OA8/MYilUhw=="],
 
     "ai": ["ai@6.0.0-beta.137", "", { "dependencies": { "@ai-sdk/gateway": "2.0.0-beta.72", "@ai-sdk/provider": "3.0.0-beta.24", "@ai-sdk/provider-utils": "4.0.0-beta.43", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-e9st1mGQeysHKZ9x4qf48mPNkvbi5EsFLcrABwUGTbcrkq/PGeuiL+yL8tBdcY23VHJ3IvJF4pKh+Ll79RVeig=="],
 
