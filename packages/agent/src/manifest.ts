@@ -20,29 +20,27 @@ export const manifest: CliManifest = {
   name: "@alfred/agent",
   version: "0.1.0",
   description: "Agent orchestration and tool execution",
-  healthCheck: async () => {
+  healthCheck: () => {
     try {
       const start = performance.now();
-      getOpenAI(); // Call to verify it's available
+      getOpenAI();
       const modelId = getModelId();
 
-      // Basic availability check
       const available = !!modelId;
       const latency = performance.now() - start;
 
-      await Promise.resolve(); // biome-ignore lint/suspicious/useAwait: required to satisfy async return type
-      return {
+      return Promise.resolve({
         status: available ? "healthy" : "degraded",
         message: available
           ? `Agent model available: ${modelId}`
           : "Agent model not configured",
         latencyMs: latency,
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         status: "unhealthy",
         message: `Agent health check failed: ${(error as Error).message}`,
-      };
+      });
     }
   },
   dependencies: ["@alfred/db"],

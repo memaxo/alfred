@@ -3,55 +3,50 @@ import type {
   GenerateObjectResult,
   GenerateTextResult,
   ModelMessage,
+  ToolSet,
 } from "ai";
 import { generateObject, generateText } from "ai";
 import type { z } from "zod";
 
 export class DefaultAIAdapter implements AIAdapter {
-  // biome-disable-line lint/suspicious/noExplicitAny: Required by AIAdapter interface definition
   async generateText(params: {
     messages: ModelMessage[];
     system?: string;
-    tools?: Record<string, any>;
-  }): Promise<GenerateTextResult<Record<string, any>, never>> {
+    tools?: ToolSet;
+  }): Promise<GenerateTextResult<ToolSet, never>> {
     const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
     const defaults = getAssistantAgentDefaults();
-    // biome-disable-line lint/suspicious/noExplicitAny: Dynamic model type from agent defaults
     return generateText({
-      model: defaults.model as any,
+      model: defaults.model,
       messages: params.messages,
       system: params.system,
-      // biome-disable-next-line lint/suspicious/noExplicitAny: AI SDK complex type constraints
-    } as any);
+      tools: params.tools,
+    });
   }
 
-  // biome-disable-line lint/suspicious/noExplicitAny: Required by AIAdapter interface definition
   async generateObject<T>(params: {
     messages: ModelMessage[];
     system?: string;
-    schema: z.ZodType<T, any, any>;
+    schema: z.ZodType<T>;
     prompt?: string;
   }): Promise<GenerateObjectResult<T>> {
     const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
     const defaults = getAssistantAgentDefaults();
     // prompt and messages are mutually exclusive in AI SDK v6
     const baseParams = {
-      // biome-disable-line lint/suspicious/noExplicitAny: Dynamic model type from agent defaults
-      model: defaults.model as any,
+      model: defaults.model,
       schema: params.schema,
     } as const;
     if (params.prompt) {
-      // biome-disable-line lint/suspicious/noExplicitAny: AI SDK complex type constraints
       return generateObject({
         ...baseParams,
         prompt: params.prompt,
-      } as any) as any;
+      });
     }
-    // biome-disable-line lint/suspicious/noExplicitAny: AI SDK complex type constraints
     return generateObject({
       ...baseParams,
       messages: params.messages ?? [],
       system: params.system,
-    } as any) as any;
+    });
   }
 }

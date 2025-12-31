@@ -1,9 +1,18 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { ModelProcess, type ProcessConfig } from "@alfred/voice/process/base";
 import type { Subprocess } from "bun";
 
 describe("Error Handling", () => {
   let mockSpawn: ReturnType<typeof vi.fn>;
+  const originalPythonPath = process.env.PYTHON_PATH;
 
   beforeEach(() => {
     const mockSubprocess = {
@@ -17,6 +26,14 @@ describe("Error Handling", () => {
     mock.module("bun", () => ({
       spawn: mockSpawn,
     }));
+  });
+
+  afterEach(() => {
+    if (originalPythonPath === undefined) {
+      process.env.PYTHON_PATH = undefined;
+      return;
+    }
+    process.env.PYTHON_PATH = originalPythonPath;
   });
 
   it("should throw helpful error when dependencies missing", async () => {
@@ -91,7 +108,7 @@ describe("Error Handling", () => {
     await expect(processInstance.start()).rejects.toThrow();
   });
 
-  it("should handle UV run failures gracefully", async () => {
+  it("should handle UV run failures gracefully", () => {
     // Set up UV available but failing
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",

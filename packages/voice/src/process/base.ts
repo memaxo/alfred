@@ -1,6 +1,6 @@
 import { accessSync, constants as fsConstants, statSync } from "node:fs";
 import { join, delimiter as pathDelimiter } from "node:path";
-import { type Subprocess, spawn } from "bun";
+import type { Subprocess } from "bun";
 import { Bridge, type IPCRequest, type IPCResponse } from "./ipc";
 
 export type ProcessConfig = {
@@ -62,6 +62,7 @@ export class Process {
       ...this.config.env,
     };
 
+    const { spawn } = await import("bun");
     this.process = spawn({
       cmd,
       cwd,
@@ -92,6 +93,8 @@ export class Process {
     const voiceDir = join(process.cwd(), "packages/voice");
     const scriptPath = this.config.scriptPath;
 
+    const isVoiceScript = scriptPath.startsWith(voiceDir);
+
     // Get relative path from voiceDir for uv run
     const scriptRelPath = scriptPath.startsWith(voiceDir)
       ? scriptPath.slice(voiceDir.length + 1)
@@ -99,9 +102,9 @@ export class Process {
 
     // Check if UV should be used
     const useUv = process.env.VOICE_USE_UV !== "false";
-    const uvPath = useUv ? await this.findUvPath() : null;
+    const uvPath = useUv ? this.findUvPath() : null;
 
-    if (useUv && uvPath) {
+    if (useUv && uvPath && isVoiceScript) {
       // Use uv run - automatically manages virtual environment
       // uv run uses the project directory (where pyproject.toml is)
       return {
@@ -138,7 +141,7 @@ export class Process {
   /**
    * Find UV executable in PATH
    */
-  protected async findUvPath(): Promise<string | null> {
+  protected findUvPath(): string | null {
     const pathEnv = process.env.PATH ?? "";
     if (!pathEnv) {
       return null;
@@ -209,7 +212,8 @@ export class Process {
     }
 
     try {
-      const proc = Bun.spawn(
+      const { spawn } = await import("bun");
+      const proc = spawn(
         [
           pythonExecutable,
           "-c",
@@ -331,7 +335,7 @@ except ImportError as e:
     });
   }
 
-  private async waitForReady(timeoutMs = 300_000): Promise<void> {
+  private waitForReady(timeoutMs = 300_000): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(
