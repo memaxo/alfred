@@ -134,7 +134,7 @@ describe("agentfs router", () => {
       runId: "run-1",
       dbPath: ".agentfs/run-1/agent.db",
       dir: "/workspace",
-      pollMs: 100,
+      pollMs: 200,
     });
 
     await new Promise<void>((resolve, reject) => {
