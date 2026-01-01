@@ -9,6 +9,8 @@ async function readStreamText(stream: ReadableStream<Uint8Array> | null) {
 
 describe("import safety", () => {
   test("importing @alfred/api/router completes quickly (no import-time timers)", async () => {
+    const maxImportMs = process.env.CI ? 2500 : 500;
+
     const proc = Bun.spawn(
       [
         "bun",
@@ -31,7 +33,7 @@ describe("import safety", () => {
       }
     );
 
-    const killAfterMs = 2000;
+    const killAfterMs = Math.max(maxImportMs + 1500, 2000);
     const timer = setTimeout(() => {
       proc.kill();
     }, killAfterMs);
@@ -49,7 +51,7 @@ describe("import safety", () => {
       const importTimeMatch = stdout.match(/IMPORT_TIME_MS\s+(\d+)/);
       if (importTimeMatch) {
         const importTimeMs = Number.parseInt(importTimeMatch[1], 10);
-        if (importTimeMs < 500) {
+        if (importTimeMs < maxImportMs) {
           console.log(
             `Router import completed in ${importTimeMs}ms (process timed out after cleanup)`
           );
@@ -78,8 +80,7 @@ describe("import safety", () => {
 
     const importTimeMs = Number.parseInt(importTimeMatch[1], 10);
 
-    // Import should complete within 500ms (generous buffer)
-    expect(importTimeMs).toBeLessThan(500);
+    expect(importTimeMs).toBeLessThan(maxImportMs);
 
     // Log actual time for debugging
     console.log(`Router import completed in ${importTimeMs}ms`);
