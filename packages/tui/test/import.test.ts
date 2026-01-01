@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, test } from "bun:test";
 
 function decode(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes);
@@ -30,6 +30,13 @@ async function readAll(
 
 describe("Import safety", () => {
   test("importing TUI entrypoint exits cleanly (no leaked handles)", async () => {
+    // Use a fresh environment to avoid test pollution
+    const cleanEnv: Record<string, string> = {
+      ALFRED_API_AUTO_INIT: "false",
+      ALFRED_TUI_HEADLESS: "true",
+      NODE_ENV: "test",
+    };
+
     const proc = Bun.spawn(
       [
         "bun",
@@ -41,11 +48,7 @@ describe("Import safety", () => {
         stdin: "ignore",
         stdout: "pipe",
         stderr: "pipe",
-        env: {
-          ...process.env,
-          ALFRED_API_AUTO_INIT: "false",
-          ALFRED_TUI_HEADLESS: "true",
-        },
+        env: cleanEnv,
       }
     );
 
@@ -67,16 +70,14 @@ describe("Import safety", () => {
       );
     }
 
-    // Allow non-zero exit codes if stderr contains expected errors (like missing TTY)
-    if (exit.code !== 0 && stderr.includes("TTY")) {
-      // Expected when running without TTY - test passes if it exits quickly
-      expect(exit.code).toBeGreaterThanOrEqual(0);
-      return;
+    // Main assertion: should exit quickly (not hang) - that's the key test
+    // If we got here, it exited within timeout, which means no leaked handles
+    // The stdout check verifies the import actually happened
+    if (!stdout.includes("imported")) {
+      throw new Error(
+        `Import did not produce expected output\nstdout:\n${stdout}\nstderr:\n${stderr}\nexit code: ${exit.code}`
+      );
     }
-
-    // Main assertion: should exit quickly (not hang) and produce expected output
-    // Exit code 0 is ideal, but non-zero is acceptable if it exits quickly (no leaked handles)
-    expect(stdout).toContain("imported");
-    // If we got here, it exited within timeout - that's the key test (no hangs)
+    // Test passes if it exits within timeout (no hangs = no leaked handles)
   });
 });
