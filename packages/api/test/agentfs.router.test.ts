@@ -9,19 +9,19 @@ const closeMock = vi.fn().mockResolvedValue(undefined);
 const readdirMock = vi.fn().mockResolvedValue(["a.txt", "dir"]);
 const statMock = vi.fn((p: string) => {
   if (p.endsWith("/dir")) {
-    return {
+    return Promise.resolve({
       ino: 2,
       size: 0,
       mtime: 1,
       isDirectory: () => true,
-    };
+    });
   }
-  return {
+  return Promise.resolve({
     ino: 1,
     size: 3,
     mtime: 1,
     isDirectory: () => false,
-  };
+  });
 });
 const getRecentMock = vi.fn().mockResolvedValue([
   {
