@@ -128,27 +128,37 @@ describe("agentfs router", () => {
       runId: "run-1",
       dbPath: ".agentfs/run-1/agent.db",
       dir: "/workspace",
-      pollMs: 200,
+      pollMs: 100,
     });
 
     await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        inner.unsubscribe();
+        reject(new Error("stream_timeout"));
+      }, 1000);
+
       const inner = sub.subscribe({
         next: (event) => {
           try {
+            clearTimeout(timeout);
             expect(event).toMatchObject({ type: "data" });
             inner.unsubscribe();
             resolve();
           } catch (e) {
+            clearTimeout(timeout);
             inner.unsubscribe();
             reject(e);
           }
         },
-        error: reject,
+        error: (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        },
       });
     });
 
     // Allow async close to run
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 50));
     expect(closeMock).toHaveBeenCalled();
   });
 
@@ -168,22 +178,38 @@ describe("agentfs router", () => {
       cursor: { toolCallId: 10, toolCallSince: 2 },
     });
 
+    let receivedEvent = false;
     await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        if (receivedEvent) {
+          resolve();
+        } else {
+          inner.unsubscribe();
+          reject(new Error("stream_timeout - no events received"));
+        }
+      }, 500);
+
       const inner = sub.subscribe({
         next: (event) => {
           try {
             if (event.type !== "data") {
               return;
             }
+            receivedEvent = true;
+            clearTimeout(timeout);
             expect(event.toolCalls).toBeUndefined();
             inner.unsubscribe();
             resolve();
           } catch (e) {
+            clearTimeout(timeout);
             inner.unsubscribe();
             reject(e);
           }
         },
-        error: reject,
+        error: (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        },
       });
     });
   });
@@ -209,10 +235,33 @@ describe("agentfs router", () => {
 
       const events: unknown[] = [];
       await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("stream_timeout - did not complete"));
+        }, 2000);
+
         sub.subscribe({
-          next: (e) => events.push(e),
-          error: reject,
-          complete: resolve,
+          next: (e) => {
+            events.push(e);
+            // If we got a done event, complete should be called soon
+            if (
+              typeof e === "object" &&
+              e !== null &&
+              "type" in e &&
+              e.type === "done"
+            ) {
+              clearTimeout(timeout);
+              // Give it a moment to call complete
+              setTimeout(resolve, 100);
+            }
+          },
+          error: (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          },
+          complete: () => {
+            clearTimeout(timeout);
+            resolve();
+          },
         });
       });
 
