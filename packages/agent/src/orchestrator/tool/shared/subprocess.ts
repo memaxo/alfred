@@ -51,7 +51,7 @@ export const DEFAULT_ALLOW_PREFIXES = (() => {
     raw && raw.trim().length > 0
       ? raw
           .split(path.delimiter)
-          .map((entry) => entry.trim())
+          .map((entry: string) => entry.trim())
           .filter(Boolean)
       : [];
 

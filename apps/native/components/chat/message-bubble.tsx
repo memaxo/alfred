@@ -5,7 +5,7 @@ import {
   isReasoningPart,
   isTextPart,
   isToolCallPart,
-} from "@alfred/ui/src/chat/parts";
+} from "@alfred/ui/chat";
 import { Text, View } from "react-native";
 
 export type MessageBubbleProps = {

@@ -231,7 +231,7 @@ function getCompilerCandidates(): string[] {
   if (override) {
     return override
       .split(path.delimiter)
-      .map((entry) => entry.trim())
+      .map((entry: string) => entry.trim())
       .filter(Boolean);
   }
   return ["cc", "clang", "gcc"];
