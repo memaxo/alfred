@@ -87,9 +87,44 @@ export async function runAgent({
 
   const task = subTaskById.get(spec.subTaskId);
 
+  const agentfsDbDir = (() => {
+    const ctx = spec.context as unknown;
+    if (!ctx || typeof ctx !== "object") {
+      return;
+    }
+    const dir = (ctx as { agentfsDbDir?: unknown }).agentfsDbDir;
+    if (typeof dir !== "string" || dir.trim().length === 0) {
+      return;
+    }
+    return dir;
+  })();
+
   // Create AgentFS workspace for agent execution
   let workspaceEnv: Workspace | undefined;
   let agentfsDbPath: string | undefined;
+  let containerName: string | undefined;
+  let containerCw: string | undefined;
+
+  const agentfsDbPathOverride = (() => {
+    if (!agentfsDbDir) {
+      return;
+    }
+
+    const repoBase = path.resolve(workspace);
+    const absDir = path.isAbsolute(agentfsDbDir)
+      ? path.resolve(agentfsDbDir)
+      : path.resolve(repoBase, agentfsDbDir);
+
+    const relDir = path.relative(repoBase, absDir);
+    if (relDir.startsWith("..") || path.isAbsolute(relDir)) {
+      return;
+    }
+
+    const safeRunId = runId.replace(/[^a-zA-Z0-9-]/g, "-");
+    const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9-]/g, "-");
+    const absFile = path.join(absDir, safeRunId, `${safeAgentId}.db`);
+    return path.relative(repoBase, absFile);
+  })();
 
   try {
     workspaceEnv = await WorkspaceFactory.create(
@@ -99,6 +134,7 @@ export async function runAgent({
       workspace,
       {
         agentfsOverlay: spec.agentfsOverlay,
+        agentfsDbPath: agentfsDbPathOverride,
         authz,
       }
     );
@@ -119,6 +155,30 @@ export async function runAgent({
 
     if (isAgentFSWorkspace(workspaceEnv)) {
       agentfsDbPath = workspaceEnv.dbPath;
+
+      const baseCw =
+        typeof (workspaceEnv as unknown as { containerCw?: unknown })
+          .containerCw === "string"
+          ? (workspaceEnv as unknown as { containerCw: string }).containerCw
+          : undefined;
+      const baseId =
+        typeof (workspaceEnv as unknown as { containerName?: unknown })
+          .containerName === "string"
+          ? (workspaceEnv as unknown as { containerName: string }).containerName
+          : undefined;
+
+      if (baseCw && baseId) {
+        // Codex runs inside the AgentFSWorkspace Docker container.
+        // docker exec accepts either container name or container id.
+        containerName = baseId;
+
+        const rel = path.relative(workspaceEnv.root, spec.workingDirectory);
+        const relPosix = rel.split(path.sep).join(path.posix.sep);
+        containerCw =
+          relPosix && !relPosix.startsWith("..") && relPosix !== "."
+            ? path.posix.join(baseCw, relPosix)
+            : baseCw;
+      }
     }
   } catch (error) {
     logger.warn("workspace_creation_failed", {
@@ -248,6 +308,8 @@ export async function runAgent({
         cw: spec.workingDirectory,
         sessionId: spec.sessionId,
         agentfsDbPath,
+        containerName,
+        containerCw,
         model: spec.model,
         profile: spec.profile,
         authz,

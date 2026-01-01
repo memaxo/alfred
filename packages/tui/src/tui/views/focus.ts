@@ -39,6 +39,7 @@ export class FocusView {
   private readonly callbacks: FocusViewCallbacks;
   private running = false;
   private renderInterval: ReturnType<typeof setInterval> | null = null;
+  private keyCleanup: (() => void) | null = null;
 
   constructor(panel: BasePanel, callbacks: FocusViewCallbacks = {}) {
     this.panel = panel;
@@ -56,7 +57,7 @@ export class FocusView {
 
     // Setup input
     const keyInput = getKeyInput();
-    keyInput.onKey(this.handleKey);
+    this.keyCleanup = keyInput.onKey(this.handleKey);
     keyInput.start();
 
     // Initialize panel
@@ -74,9 +75,12 @@ export class FocusView {
     this.renderInterval = setInterval(() => {
       this.render();
     }, 33);
+    this.renderInterval.unref?.();
 
     // Handle resize
-    process.stdout.on("resize", this.handleResize);
+    if (process.stdout.isTTY) {
+      process.stdout.on("resize", this.handleResize);
+    }
 
     // Initial render
     this.render();
@@ -93,6 +97,8 @@ export class FocusView {
 
     // Stop input
     const keyInput = getKeyInput();
+    this.keyCleanup?.();
+    this.keyCleanup = null;
     keyInput.stop();
 
     // Stop render loop
@@ -102,7 +108,9 @@ export class FocusView {
     }
 
     // Remove resize handler
-    process.stdout.off("resize", this.handleResize);
+    if (process.stdout.isTTY) {
+      process.stdout.off("resize", this.handleResize);
+    }
 
     // Cleanup panel
     this.panel.onBlur();

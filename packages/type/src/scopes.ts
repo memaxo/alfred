@@ -23,6 +23,7 @@ export const OIDC_SCOPES = {
 /** Read scopes - allow reading data */
 export const READ_SCOPES = {
   ALL: "read:*",
+  AGENTFS: "read:agentfs",
   TODOS: "read:todos",
   NOTES: "read:notes",
   REMINDERS: "read:reminders",
@@ -149,6 +150,7 @@ export const ROUTER_SCOPES: Record<
   string,
   { read: ReadScope; write?: WriteScope }
 > = {
+  agentfs: { read: READ_SCOPES.AGENTFS },
   todo: { read: READ_SCOPES.TODOS, write: WRITE_SCOPES.TODOS },
   note: { read: READ_SCOPES.NOTES, write: WRITE_SCOPES.NOTES },
   remind: { read: READ_SCOPES.REMINDERS, write: WRITE_SCOPES.REMINDERS },

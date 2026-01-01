@@ -5,9 +5,13 @@
  * - the API server is offline
  * - the AgentFS SDK is unavailable
  *
- * This subscription is intentionally lightweight and currently uses
- * mock/polled data shape. It can be upgraded to use real endpoints later.
+ * This subscription is intentionally lightweight and supports:
+ * - snapshot (initial state)
+ * - stream (live updates via tRPC subscription)
+ * - mock fallback when auth / SDK / runtime wiring is unavailable
  */
+
+import type { AgentFSStreamCursor, AgentFSStreamEvent } from "@alfred/type";
 
 export type DirEntry = {
   name: string;
@@ -20,8 +24,8 @@ export type DirEntry = {
 export type ToolCallInfo = {
   id: number;
   name: string;
-  started_at: number;
-  completed_at: number;
+  started_at: number; // Unix timestamp (seconds)
+  completed_at: number; // Unix timestamp (seconds)
   duration_ms: number;
   error?: string;
   parameters?: unknown;
@@ -64,7 +68,9 @@ class AgentFSSubscription {
   };
 
   private readonly subs = new Set<AgentFSSubscriptionCallback>();
-  private poll: ReturnType<typeof setInterval> | null = null;
+  private unsubscribeStream: (() => void) | null = null;
+  private cursor: AgentFSStreamCursor | null = null;
+  private seq = 0;
 
   subscribe(cb: AgentFSSubscriptionCallback): AgentFSUnsubscribe {
     this.subs.add(cb);
@@ -75,6 +81,7 @@ class AgentFSSubscription {
   }
 
   connect(runId: string, dbPath: string): AgentFSUnsubscribe {
+    const seq = ++this.seq;
     this.setState((prev) => ({
       ...prev,
       runId,
@@ -84,18 +91,15 @@ class AgentFSSubscription {
       error: null,
     }));
 
-    this.stopPolling();
-    this.poll = setInterval(() => {
-      this.refresh();
-    }, 3000);
-    this.poll.unref?.();
-    this.refresh();
+    this.disconnectStreamOnly();
+    void this.connectAsync({ runId, dbPath, seq });
 
     return () => this.disconnect();
   }
 
   disconnect(): void {
-    this.stopPolling();
+    this.seq++;
+    this.disconnectStreamOnly();
     this.setState((prev) => ({
       ...prev,
       runId: null,
@@ -109,11 +113,17 @@ class AgentFSSubscription {
     }));
   }
 
-  private stopPolling(): void {
-    if (this.poll) {
-      clearInterval(this.poll);
-      this.poll = null;
+  private disconnectStreamOnly(): void {
+    if (this.unsubscribeStream) {
+      try {
+        this.unsubscribeStream();
+      } catch {
+        // ignore
+      } finally {
+        this.unsubscribeStream = null;
+      }
     }
+    this.cursor = null;
   }
 
   private setState(
@@ -129,19 +139,156 @@ class AgentFSSubscription {
     }
   }
 
-  private refresh(): void {
-    const runId = this.state.runId;
-    const dbPath = this.state.dbPath;
-    if (!(runId && dbPath)) {
+  private async connectAsync(args: {
+    runId: string;
+    dbPath: string;
+    seq: number;
+  }): Promise<void> {
+    const { runId, dbPath, seq } = args;
+
+    // If user explicitly wants mock data, keep the panels usable.
+    if (process.env.ALFRED_TUI_USE_AGENTFS_MOCK === "true") {
+      if (seq === this.seq) {
+        this.applyMock(runId, dbPath);
+      }
       return;
     }
 
-    // Mock data for now. This can be replaced with API calls later.
+    try {
+      const { appRouter } = await import("@alfred/api/router");
+      const { createCliContext } = await import("../../cli/context");
+      const ctx = await createCliContext();
+      if (seq !== this.seq) {
+        return;
+      }
+      const caller = appRouter.createCaller({
+        ...ctx,
+        policy: { obligations: [] },
+      });
+
+      const snapshot = await caller.agentfs.snapshot({
+        runId,
+        dbPath,
+        dir: "/workspace",
+      });
+      if (seq !== this.seq) {
+        return;
+      }
+
+      this.cursor = snapshot.cursor;
+      this.setState((prev) => ({
+        ...prev,
+        isConnected: true,
+        isLoading: false,
+        error: null,
+        entries: snapshot.entries,
+        toolCalls: snapshot.toolCalls.map((c) => ({
+          id: c.id,
+          name: c.name,
+          started_at: c.startedAt,
+          completed_at: c.completedAt,
+          duration_ms: c.durationMs,
+          error: c.error ?? undefined,
+          parameters: c.parameters,
+          result: c.result,
+        })),
+        kvStore: snapshot.kvStore.map((e) => ({
+          key: e.key,
+          value: e.value,
+          created_at: e.createdAt,
+          updated_at: e.updatedAt,
+        })),
+      }));
+
+      const subscription = await caller.agentfs.stream({
+        runId,
+        dbPath,
+        dir: "/workspace",
+        cursor: this.cursor ?? undefined,
+        pollMs: 500,
+      });
+      if (seq !== this.seq) {
+        return;
+      }
+
+      const inner = subscription.subscribe({
+        next: (event: AgentFSStreamEvent) => {
+          if (seq !== this.seq) {
+            return;
+          }
+          if (event.type === "data") {
+            this.cursor = event.cursor;
+            this.setState((prev) => ({
+              ...prev,
+              isConnected: true,
+              isLoading: false,
+              error: null,
+              entries: event.entries ?? prev.entries,
+              toolCalls: event.toolCalls
+                ? mergeToolCalls(prev.toolCalls, event.toolCalls)
+                : prev.toolCalls,
+              kvStore: event.kvStore
+                ? event.kvStore.map((e) => ({
+                    key: e.key,
+                    value: e.value,
+                    created_at: e.createdAt,
+                    updated_at: e.updatedAt,
+                  }))
+                : prev.kvStore,
+            }));
+            return;
+          }
+
+          if (event.type === "error") {
+            this.setState((prev) => ({
+              ...prev,
+              isLoading: false,
+              error: event.message,
+            }));
+          }
+        },
+        error: (err) => {
+          if (seq !== this.seq) {
+            return;
+          }
+          const msg = err instanceof Error ? err.message : String(err);
+          this.setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: msg,
+          }));
+        },
+      });
+
+      if (seq === this.seq) {
+        this.unsubscribeStream = () => inner.unsubscribe();
+      } else {
+        inner.unsubscribe();
+      }
+    } catch (error) {
+      // Fallback to mock when anything goes wrong (auth not set up, SDK missing, etc.)
+      const msg = error instanceof Error ? error.message : String(error);
+      if (seq === this.seq) {
+        this.setState((prev) => ({
+          ...prev,
+          isConnected: false,
+          isLoading: false,
+          error: msg,
+        }));
+        this.applyMock(runId, dbPath);
+      }
+    }
+  }
+
+  private applyMock(runId: string, dbPath: string): void {
     const now = Math.floor(Date.now() / 1000);
     this.setState((prev) => ({
       ...prev,
+      runId,
+      dbPath,
+      isConnected: false,
       isLoading: false,
-      error: null,
+      error: prev.error,
       entries: [
         { name: ".agent", ino: 1, isDirectory: true, mtime: now - 3600 },
         {
@@ -168,4 +315,39 @@ class AgentFSSubscription {
 
 export function createAgentFSSubscription(): AgentFSSubscription {
   return new AgentFSSubscription();
+}
+
+function mergeToolCalls(
+  prev: ToolCallInfo[],
+  incoming: Array<{
+    id: number;
+    name: string;
+    startedAt: number;
+    completedAt: number;
+    durationMs: number;
+    error?: string | null;
+    parameters?: unknown;
+    result?: unknown;
+  }>
+): ToolCallInfo[] {
+  const seen = new Set(prev.map((c) => c.id));
+  const next = [...prev];
+  for (const c of incoming) {
+    if (seen.has(c.id)) {
+      continue;
+    }
+    seen.add(c.id);
+    next.push({
+      id: c.id,
+      name: c.name,
+      started_at: c.startedAt,
+      completed_at: c.completedAt,
+      duration_ms: c.durationMs,
+      error: c.error ?? undefined,
+      parameters: c.parameters,
+      result: c.result,
+    });
+  }
+  next.sort((a, b) => a.id - b.id);
+  return next;
 }

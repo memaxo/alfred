@@ -7,7 +7,15 @@
 import { renderFarewell } from "./intro/greeting";
 import { runIntroSequence } from "./intro/sequence";
 import {
+  createChatMode,
+  createDebugMode,
+  createHelpMode,
+  createPlanMode,
+  runMode,
+} from "./modes";
+import {
   cleanupTerminal,
+  clearScreen,
   getCurrentSize,
   setupTerminal,
   showCursor,
@@ -33,6 +41,7 @@ import {
   createWorkflowStore,
   setupWorkflowSubscription,
 } from "./subscriptions/workflow";
+import type { DashboardStores } from "./views/dashboard";
 import { createDashboard } from "./views/dashboard";
 import { confirm } from "./views/focus";
 
@@ -49,7 +58,6 @@ export type TuiOptions = {
 export class TuiApp {
   private readonly options: TuiOptions;
   private running = false;
-  private quitResolver?: () => void;
 
   // Stores for data
   private readonly cognitiveStore = createCognitiveStore();
@@ -58,7 +66,14 @@ export class TuiApp {
   private readonly metricsStore = createMetricsStore();
 
   constructor(options: TuiOptions = {}) {
-    this.options = options;
+    this.options = {
+      skipIntro: process.env.ALFRED_TUI_SKIP_INTRO === "true",
+      ...options,
+    };
+    // Ensure env var takes precedence if true, or options take precedence if true
+    if (process.env.ALFRED_TUI_SKIP_INTRO === "true") {
+      this.options.skipIntro = true;
+    }
   }
 
   /**
@@ -69,6 +84,18 @@ export class TuiApp {
       return;
     }
     this.running = true;
+
+    process.on("uncaughtException", (error) => {
+      cleanupTerminal();
+      process.stderr.write(`UNCAUGHT EXCEPTION IN TUI: ${String(error)}\n`);
+      process.exit(1);
+    });
+
+    process.on("unhandledRejection", (reason) => {
+      cleanupTerminal();
+      process.stderr.write(`UNHANDLED REJECTION IN TUI: ${String(reason)}\n`);
+      process.exit(1);
+    });
 
     try {
       // Setup terminal for TUI mode
@@ -85,24 +112,8 @@ export class TuiApp {
       // Setup subscriptions
       this.setupSubscriptions();
 
-      // Create and start dashboard
-      const dashboard = createDashboard({
-        onQuit: () => this.quit(),
-        onHelp: () => this.showHelp(),
-        onRefresh: () => this.refresh(),
-      });
-
-      // Subscribe stores to update panels
-      this.connectStoresToDashboard(dashboard);
-
-      // Start dashboard
-      dashboard.start();
-
-      // Wait for quit signal
-      await this.waitForQuit();
-
-      // Cleanup
-      dashboard.stop();
+      // Main view loop: dashboard <-> modes (bounded by MAX_TRANSITIONS)
+      await this.runLoop();
       await this.cleanup();
     } catch (error) {
       await this.cleanup();
@@ -113,7 +124,7 @@ export class TuiApp {
   /**
    * Quit the application
    */
-  async quit(): Promise<void> {
+  async quit(): Promise<boolean> {
     // Check for active workflows
     const activeWorkflows = this.workflowStore.getActive();
     if (activeWorkflows.length > 0) {
@@ -122,12 +133,12 @@ export class TuiApp {
         "Confirm Exit"
       );
       if (!shouldQuit) {
-        return;
+        return false;
       }
     }
 
     this.running = false;
-    this.quitResolver?.();
+    return true;
   }
 
   // ─── Private Methods ───────────────────────────────────────────────────────
@@ -161,14 +172,14 @@ export class TuiApp {
     });
   }
 
-  private connectStoresToDashboard(
-    _dashboard: ReturnType<typeof createDashboard>
-  ): void {
-    // TODO: Connect stores to dashboard panels
-    // This will be implemented when domain panels are created
+  private connectStoresToDashboard(): DashboardStores {
+    return {
+      cognitive: this.cognitiveStore,
+      workflow: this.workflowStore,
+      metrics: this.metricsStore,
+      voice: this.voiceStore,
+    };
   }
-
-  private showHelp(): void {}
 
   private refresh(): void {
     // Reset subscriptions
@@ -192,10 +203,91 @@ export class TuiApp {
     showCursor();
   }
 
-  private waitForQuit(): Promise<void> {
-    return new Promise((resolve) => {
-      this.quitResolver = resolve;
+  private maxTransitions(): number {
+    const raw = process.env.ALFRED_TUI_MAX_TRANSITIONS;
+    if (!raw) {
+      return 32;
+    }
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 32;
+    }
+    return parsed;
+  }
+
+  private async runLoop(): Promise<void> {
+    type Step =
+      | { type: "dashboard" }
+      | { type: "mode"; mode: "chat" | "debug" | "plan" | "help" }
+      | { type: "quit" };
+
+    let step: Step = { type: "dashboard" };
+    let transitions = 0;
+    const max = this.maxTransitions();
+
+    while (this.running && step.type !== "quit") {
+      transitions++;
+      if (transitions > max) {
+        throw new Error("tui_max_transitions");
+      }
+
+      if (step.type === "dashboard") {
+        step = await this.runDashboardStep();
+        continue;
+      }
+
+      if (step.type === "mode") {
+        await this.runModeStep(step.mode);
+        step = { type: "dashboard" };
+      }
+    }
+  }
+
+  private async runDashboardStep(): Promise<
+    | { type: "quit" }
+    | { type: "mode"; mode: "chat" | "debug" | "plan" | "help" }
+  > {
+    return await new Promise((resolve) => {
+      const stores = this.connectStoresToDashboard();
+      const dashboard = createDashboard({
+        callbacks: {
+          onQuit: async () => {
+            const shouldQuit = await this.quit();
+            if (shouldQuit) {
+              resolve({ type: "quit" });
+            }
+            return shouldQuit;
+          },
+          onRefresh: () => this.refresh(),
+          onMode: (mode) => {
+            resolve({ type: "mode", mode });
+          },
+        },
+        stores,
+      });
+      void dashboard.start();
     });
+  }
+
+  private async runModeStep(
+    mode: "chat" | "debug" | "plan" | "help"
+  ): Promise<void> {
+    clearScreen();
+
+    const callbacks = { managedTerminal: true };
+    if (mode === "chat") {
+      await runMode(createChatMode(callbacks));
+      return;
+    }
+    if (mode === "debug") {
+      await runMode(createDebugMode(callbacks));
+      return;
+    }
+    if (mode === "help") {
+      await runMode(createHelpMode(callbacks));
+      return;
+    }
+    await runMode(createPlanMode(callbacks));
   }
 }
 

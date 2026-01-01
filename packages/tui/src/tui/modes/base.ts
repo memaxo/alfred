@@ -20,6 +20,11 @@ import {
 export type ModeCallbacks = {
   onExit?: () => void;
   onError?: (error: Error) => void;
+  /**
+   * When true, a parent controller (e.g. `TuiApp`) owns terminal setup/cleanup.
+   * This prevents integrated mode switches from tearing down the terminal.
+   */
+  managedTerminal?: boolean;
 };
 
 // ─── Base Mode ───────────────────────────────────────────────────────────────
@@ -30,6 +35,7 @@ export abstract class BaseMode {
   /** Public callbacks for lifecycle hooks */
   readonly callbacks: ModeCallbacks;
   protected size: TerminalSize = { width: 80, height: 24 };
+  private keyCleanup: (() => void) | null = null;
 
   constructor(callbacks: ModeCallbacks = {}) {
     this.callbacks = callbacks;
@@ -57,16 +63,19 @@ export abstract class BaseMode {
 
     // Setup input handling
     const keyInput = getKeyInput();
-    keyInput.onKey(this.handleKeyInternal);
+    this.keyCleanup = keyInput.onKey(this.handleKeyInternal);
     keyInput.start();
 
     // Start render loop at 30 FPS
     this.renderInterval = setInterval(() => {
       this.renderFrame();
     }, 33);
+    this.renderInterval.unref?.();
 
     // Handle resize
-    process.stdout.on("resize", this.handleResize);
+    if (process.stdout.isTTY) {
+      process.stdout.on("resize", this.handleResize);
+    }
 
     // Initial render
     this.renderFrame();
@@ -83,6 +92,8 @@ export abstract class BaseMode {
 
     // Stop input handling
     const keyInput = getKeyInput();
+    this.keyCleanup?.();
+    this.keyCleanup = null;
     keyInput.stop();
 
     // Stop render loop
@@ -92,11 +103,15 @@ export abstract class BaseMode {
     }
 
     // Remove resize handler
-    process.stdout.off("resize", this.handleResize);
+    if (process.stdout.isTTY) {
+      process.stdout.off("resize", this.handleResize);
+    }
 
     // Cleanup
     this.cleanup();
-    cleanupTerminal();
+    if (!this.callbacks.managedTerminal) {
+      cleanupTerminal();
+    }
   }
 
   /**

@@ -3,6 +3,11 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { createAuthClient } from "better-auth/client";
 import type { Session, User } from "better-auth/types";
+import {
+  decryptCredentials,
+  encryptCredentials,
+  isEncrypted,
+} from "./encryption";
 
 const ALFRED_DIR = join(homedir(), ".alfred");
 const CREDENTIALS_PATH = join(ALFRED_DIR, "credentials.json");
@@ -38,10 +43,18 @@ export async function loadCredentials(): Promise<StoredCredentials | null> {
       }
     }
 
-    // 2. Fallback to plaintext file (for backward compatibility and migration)
+    // 2. Fallback to file (with encryption if available)
     const file = Bun.file(CREDENTIALS_PATH);
     if (await file.exists()) {
-      const creds = await file.json();
+      const content = await file.text();
+      let creds: StoredCredentials | null = null;
+
+      if (isEncrypted(content)) {
+        creds = await decryptCredentials<StoredCredentials>(content);
+      } else {
+        // Plaintext fallback for migration
+        creds = JSON.parse(content);
+      }
 
       // 3. Auto-migrate to secure storage if available
       if (typeof Bun.secrets !== "undefined" && creds) {
@@ -72,9 +85,10 @@ export async function storeCredentials(
       value: JSON.stringify(creds),
     });
   } else {
-    // 2. Fallback to file if Bun.secrets is not available (e.g. older Bun version)
+    // 2. Fallback to file with encryption
     await mkdir(ALFRED_DIR, { recursive: true, mode: 0o700 });
-    await Bun.write(CREDENTIALS_PATH, JSON.stringify(creds, null, 2), {
+    const encrypted = await encryptCredentials(creds);
+    await Bun.write(CREDENTIALS_PATH, encrypted, {
       mode: 0o600, // Owner read/write only
     });
   }

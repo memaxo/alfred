@@ -52,6 +52,7 @@ export class KnowledgePanel extends BasePanel {
     const interval = setInterval(() => {
       this.stats = createMockStats();
     }, 10_000);
+    interval.unref?.();
 
     this.addSubscription(() => clearInterval(interval));
   }

@@ -3,6 +3,8 @@
  * Shared type definitions for the entire system
  */
 
+// AgentFS DTOs
+export * from "./agentfs";
 // Build-time constants
 export * from "./build-constants";
 // Cognitive domain types

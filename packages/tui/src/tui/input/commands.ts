@@ -287,6 +287,7 @@ export function createStandardCommands(callbacks: {
   refresh: () => void;
   focusPanel: (id: string) => void;
   toggleFocusMode: () => void;
+  openMode: (mode: "chat" | "debug" | "plan") => void | Promise<void>;
 }): Command[] {
   return [
     {
@@ -312,6 +313,30 @@ export function createStandardCommands(callbacks: {
       shortcut: "Ctrl+R",
       category: "Application",
       action: callbacks.refresh,
+    },
+    {
+      id: "open-chat",
+      label: "Open Chat",
+      description: "Switch to chat mode",
+      shortcut: "Ctrl+T",
+      category: "Modes",
+      action: () => callbacks.openMode("chat"),
+    },
+    {
+      id: "open-debug",
+      label: "Open Debug",
+      description: "Switch to debug mode",
+      shortcut: "Ctrl+D",
+      category: "Modes",
+      action: () => callbacks.openMode("debug"),
+    },
+    {
+      id: "open-plan",
+      label: "Open Planner",
+      description: "Switch to planning mode",
+      shortcut: "Ctrl+P",
+      category: "Modes",
+      action: () => callbacks.openMode("plan"),
     },
     {
       id: "focus-cognitive",

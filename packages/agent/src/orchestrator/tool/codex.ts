@@ -61,7 +61,7 @@ const codexInputSchema = z.object({
   env: z.record(z.string(), z.string()).optional(),
   sessionId: z.string().min(1).max(255).optional(),
   userId: z.string().optional(),
-  containerId: z.string().optional(),
+  containerName: z.string().optional(),
   context: z
     .object({
       linearIssueId: z.string().optional(),

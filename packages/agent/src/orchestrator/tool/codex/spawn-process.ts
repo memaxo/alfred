@@ -9,6 +9,7 @@
  * Use AgentFS for filesystem isolation with audit trails.
  */
 
+import path from "node:path";
 import type { SpawnFn } from "@alfred/codex";
 import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
 import { CodexError } from "./error.js";
@@ -21,7 +22,7 @@ type AllowedDirectoryHandle = {
 };
 
 type SpawnInput = {
-  containerId?: string;
+  containerName?: string;
   containerCw?: string;
   /** AgentFS database path for audit trail (optional) */
   agentfsDbPath?: string;
@@ -56,18 +57,24 @@ function wrapProcess(proc: ReturnType<typeof spawnWithSecureCwd>): SpawnResult {
 function createDockerSpawn(
   cwdHandle: AllowedDirectoryHandle,
   dockerBin: string,
-  containerId: string,
+  containerName: string,
   containerCw?: string,
   agentfsDbPath?: string
 ): SpawnFn {
   return ({ cmd: _cmd, args, env: childEnv }) => {
     const containerWorkdir = containerCw?.trim();
-    if (containerWorkdir && !containerWorkdir.startsWith("/workspace")) {
-      throw new CodexError(
-        "spawn",
-        "codex_container_cwd_invalid",
-        "containerCw must be under /workspace"
-      );
+    if (containerWorkdir) {
+      const normalized = path.posix.normalize(containerWorkdir);
+      if (
+        !normalized.startsWith("/workspace") ||
+        (normalized !== "/workspace" && !normalized.startsWith("/workspace/"))
+      ) {
+        throw new CodexError(
+          "spawn",
+          "codex_container_cwd_invalid",
+          "containerCw must be under /workspace"
+        );
+      }
     }
     const dockerWorkdir =
       containerWorkdir && containerWorkdir.length > 0
@@ -87,7 +94,7 @@ function createDockerSpawn(
       "--workdir",
       dockerWorkdir,
       ...envKeys.flatMap((k) => ["-e", k]),
-      containerId,
+      containerName,
       "codex",
       ...args,
     ];
@@ -134,13 +141,20 @@ export function createCodexSpawn(
   input: SpawnInput,
   cwdHandle: AllowedDirectoryHandle
 ): Promise<SpawnFn> {
-  if (input.containerId) {
+  if (input.containerName) {
+    if (!input.containerName.startsWith("alfred-agentfs-")) {
+      throw new CodexError(
+        "spawn",
+        "codex_container_name_invalid",
+        "containerName must be an AgentFS workspace container"
+      );
+    }
     const dockerBin = resolveExecutable("docker");
     return Promise.resolve(
       createDockerSpawn(
         cwdHandle,
         dockerBin,
-        input.containerId,
+        input.containerName,
         input.containerCw,
         input.agentfsDbPath
       )

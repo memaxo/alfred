@@ -138,7 +138,9 @@ export class KeyInput extends EventEmitter {
     }
     this.listening = true;
 
-    process.stdin.setRawMode?.(true);
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode?.(true);
+    }
     process.stdin.resume();
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", this.handleData);

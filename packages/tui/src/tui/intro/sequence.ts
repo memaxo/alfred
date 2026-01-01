@@ -80,13 +80,17 @@ export async function runIntroSequence(
     skipped = true;
   };
 
-  process.stdin.setRawMode?.(true);
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode?.(true);
+  }
   process.stdin.resume();
   process.stdin.once("data", skipHandler);
 
   try {
     hideCursor();
-    clearScreen();
+    if (process.stdout.isTTY) {
+      clearScreen();
+    }
 
     if (skipAnimation) {
       // Show static logo immediately
@@ -122,7 +126,9 @@ export async function runIntroSequence(
     onComplete?.();
   } finally {
     process.stdin.off("data", skipHandler);
-    process.stdin.setRawMode?.(false);
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode?.(false);
+    }
     showCursor();
   }
 }
@@ -210,6 +216,7 @@ async function runSystemChecks(
       renderState(finalChecks);
     }
   }, TIMING.checkSpinnerDelay);
+  spinnerInterval.unref?.();
 
   try {
     finalChecks = await runChecks(checkDefs, (checks) => {

@@ -1,0 +1,238 @@
+import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { setupTestEnv } from "./utils/router-helpers";
+import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
+
+setupTestEnv();
+
+const openMock = vi.fn();
+const closeMock = vi.fn().mockResolvedValue(undefined);
+const readdirMock = vi.fn().mockResolvedValue(["a.txt", "dir"]);
+const statMock = vi.fn((p: string) => {
+  if (p.endsWith("/dir")) {
+    return {
+      ino: 2,
+      size: 0,
+      mtime: 1,
+      isDirectory: () => true,
+    };
+  }
+  return {
+    ino: 1,
+    size: 3,
+    mtime: 1,
+    isDirectory: () => false,
+  };
+});
+const getRecentMock = vi.fn().mockResolvedValue([
+  {
+    id: 10,
+    name: "tool.a",
+    started_at: 1,
+    completed_at: 2,
+    duration_ms: 12,
+    parameters: { a: 1 },
+    result: { ok: true },
+  },
+]);
+const kvListMock = vi.fn().mockResolvedValue([{ key: "k", value: "v" }]);
+
+mock.module("@alfred/agent/agentfs", () => ({
+  AlfredAgentFS: {
+    open: openMock,
+  },
+}));
+
+let caller: Awaited<ReturnType<typeof createTestCaller>>;
+
+beforeAll(async () => {
+  caller = await createTestCaller({
+    scopes: ["read:agentfs"],
+  });
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+  openMock.mockResolvedValue({
+    fs: { readdir: readdirMock, stat: statMock },
+    tools: { getRecent: getRecentMock },
+    kv: { list: kvListMock },
+    close: closeMock,
+  });
+});
+
+describe("agentfs router", () => {
+  it("requires auth", async () => {
+    const unauthed = await createUnauthedCaller();
+    await expect(
+      unauthed.agentfs.snapshot({
+        runId: "run-1",
+        dbPath: ".agentfs/run-1/agent.db",
+        dir: "/workspace",
+      })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("requires read:agentfs scope", async () => {
+    const noScopes = await createTestCaller({ scopes: [] });
+    await expect(
+      noScopes.agentfs.snapshot({
+        runId: "run-1",
+        dbPath: ".agentfs/run-1/agent.db",
+        dir: "/workspace",
+      })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects invalid dbPath", async () => {
+    await expect(
+      caller.agentfs.snapshot({
+        runId: "run-1",
+        dbPath: ".agentfs/other/agent.db",
+        dir: "/workspace",
+      })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("returns a snapshot", async () => {
+    openMock.mockResolvedValue({
+      fs: { readdir: readdirMock, stat: statMock },
+      tools: { getRecent: getRecentMock },
+      kv: { list: kvListMock },
+      close: closeMock,
+    });
+
+    const res = await caller.agentfs.snapshot({
+      runId: "run-1",
+      dbPath: ".agentfs/run-1/agent.db",
+      dir: "/workspace",
+    });
+
+    expect(res.runId).toBe("run-1");
+    expect(res.dbPath).toBe(".agentfs/run-1/agent.db");
+    expect(res.entries.length).toBe(2);
+    expect(res.toolCalls[0]?.id).toBe(10);
+    expect(res.kvStore[0]?.key).toBe("k");
+    expect(openMock).toHaveBeenCalledTimes(1);
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("streams data and closes on unsubscribe", async () => {
+    openMock.mockResolvedValue({
+      fs: { readdir: readdirMock, stat: statMock },
+      tools: { getRecent: getRecentMock },
+      kv: { list: kvListMock },
+      close: closeMock,
+    });
+
+    const sub = await caller.agentfs.stream({
+      runId: "run-1",
+      dbPath: ".agentfs/run-1/agent.db",
+      dir: "/workspace",
+      pollMs: 200,
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const inner = sub.subscribe({
+        next: (event) => {
+          try {
+            expect(event).toMatchObject({ type: "data" });
+            inner.unsubscribe();
+            resolve();
+          } catch (e) {
+            inner.unsubscribe();
+            reject(e);
+          }
+        },
+        error: reject,
+      });
+    });
+
+    // Allow async close to run
+    await new Promise((r) => setTimeout(r, 10));
+    expect(closeMock).toHaveBeenCalled();
+  });
+
+  it("supports resume via cursor (no duplicate toolCalls)", async () => {
+    openMock.mockResolvedValue({
+      fs: { readdir: readdirMock, stat: statMock },
+      tools: { getRecent: getRecentMock },
+      kv: { list: kvListMock },
+      close: closeMock,
+    });
+
+    const sub = await caller.agentfs.stream({
+      runId: "run-1",
+      dbPath: ".agentfs/run-1/agent.db",
+      dir: "/workspace",
+      pollMs: 200,
+      cursor: { toolCallId: 10, toolCallSince: 2 },
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const inner = sub.subscribe({
+        next: (event) => {
+          try {
+            if (event.type !== "data") {
+              return;
+            }
+            expect(event.toolCalls).toBeUndefined();
+            inner.unsubscribe();
+            resolve();
+          } catch (e) {
+            inner.unsubscribe();
+            reject(e);
+          }
+        },
+        error: reject,
+      });
+    });
+  });
+
+  it("enforces a MAX_EVENTS safeguard", async () => {
+    const prev = process.env.ALFRED_AGENTFS_MAX_EVENTS;
+    process.env.ALFRED_AGENTFS_MAX_EVENTS = "1";
+
+    try {
+      openMock.mockResolvedValue({
+        fs: { readdir: readdirMock, stat: statMock },
+        tools: { getRecent: getRecentMock },
+        kv: { list: kvListMock },
+        close: closeMock,
+      });
+
+      const sub = await caller.agentfs.stream({
+        runId: "run-1",
+        dbPath: ".agentfs/run-1/agent.db",
+        dir: "/workspace",
+        pollMs: 200,
+      });
+
+      const events: unknown[] = [];
+      await new Promise<void>((resolve, reject) => {
+        sub.subscribe({
+          next: (e) => events.push(e),
+          error: reject,
+          complete: resolve,
+        });
+      });
+
+      const hasType = (x: unknown): x is { type: string } => {
+        if (!x || typeof x !== "object") {
+          return false;
+        }
+        return (
+          "type" in x && typeof (x as { type?: unknown }).type === "string"
+        );
+      };
+
+      expect(events.length).toBeGreaterThan(0);
+      expect(events.some((e) => hasType(e) && e.type === "done")).toBe(true);
+    } finally {
+      if (prev === undefined) {
+        process.env.ALFRED_AGENTFS_MAX_EVENTS = undefined;
+      } else {
+        process.env.ALFRED_AGENTFS_MAX_EVENTS = prev;
+      }
+    }
+  });
+});

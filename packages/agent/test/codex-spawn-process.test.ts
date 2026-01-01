@@ -155,7 +155,7 @@ describe("createCodexSpawn", () => {
     it("creates docker spawn with container ID", async () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
-        { containerId: "container-abc" },
+        { containerName: "alfred-agentfs-container-abc" },
         cwdHandle
       );
 
@@ -173,15 +173,22 @@ describe("createCodexSpawn", () => {
       expect(call.args).toContain("exec");
       expect(call.args).toContain("--workdir");
       expect(call.args).toContain("/workspace");
-      expect(call.args).toContain("container-abc");
+      expect(call.args).toContain("alfred-agentfs-container-abc");
       expect(call.args).toContain("codex");
+    });
+
+    it("throws for containerName not matching AgentFS naming", () => {
+      const cwdHandle = createMockCwdHandle(tempDir);
+      expect(() =>
+        createCodexSpawn({ containerName: "container-abc" }, cwdHandle)
+      ).toThrow("codex_container_name_invalid");
     });
 
     it("uses containerCw as workdir when provided", async () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
         {
-          containerId: "container-xyz",
+          containerName: "alfred-agentfs-container-xyz",
           containerCw: "/workspace/subdir/project",
         },
         cwdHandle
@@ -199,7 +206,7 @@ describe("createCodexSpawn", () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
         {
-          containerId: "container-bad",
+          containerName: "alfred-agentfs-container-bad",
           containerCw: "/tmp/escape",
         },
         cwdHandle
@@ -213,7 +220,7 @@ describe("createCodexSpawn", () => {
     it("passes environment variables with -e flags", async () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
-        { containerId: "container-env" },
+        { containerName: "alfred-agentfs-container-env" },
         cwdHandle
       );
 
@@ -234,7 +241,10 @@ describe("createCodexSpawn", () => {
     it("injects AGENTFS_DB_PATH into docker env and -e flags when provided", async () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
-        { containerId: "container-agentfs", agentfsDbPath: "/tmp/agentfs.db" },
+        {
+          containerName: "alfred-agentfs-container-agentfs",
+          agentfsDbPath: "/tmp/agentfs.db",
+        },
         cwdHandle
       );
 

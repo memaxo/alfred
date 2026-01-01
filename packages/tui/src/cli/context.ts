@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "@alfred/api/context";
+import { ADMIN_SCOPES, READ_SCOPES, WRITE_SCOPES } from "@alfred/type";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { loadCredentials, refreshIfNeeded } from "./credentials";
 
@@ -44,6 +45,13 @@ export async function createCliContext(): Promise<Context> {
   const requestId = `cli-${randomUUID()}`;
   const receivedAt = new Date();
 
+  const defaultRoles = ["owner"] as const;
+  const defaultScopes = [
+    READ_SCOPES.ALL,
+    WRITE_SCOPES.ALL,
+    ADMIN_SCOPES.ALL,
+  ] as const;
+
   // 1. Environment variable bypass for local development
   if (process.env.ALFRED_AUTH_BYPASS === "true") {
     return {
@@ -53,6 +61,8 @@ export async function createCliContext(): Promise<Context> {
           email: "admin@alfred.local",
           name: "Bypass Admin",
           emailVerified: true,
+          roles: [...defaultRoles],
+          scopes: [...defaultScopes],
         },
         session: { id: "bypass-session" },
       } as unknown as NonNullable<Context["session"]>,
@@ -89,9 +99,18 @@ export async function createCliContext(): Promise<Context> {
       "cli-local"
     );
 
+    const user = creds.user as unknown as {
+      roles?: unknown;
+      scopes?: unknown;
+    };
+
     return {
       session: {
-        user: creds.user,
+        user: {
+          ...creds.user,
+          roles: Array.isArray(user.roles) ? user.roles : [...defaultRoles],
+          scopes: Array.isArray(user.scopes) ? user.scopes : [...defaultScopes],
+        },
         session: creds.session,
       } as unknown as NonNullable<Context["session"]>,
       runtime,

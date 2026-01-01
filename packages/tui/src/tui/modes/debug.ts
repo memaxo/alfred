@@ -107,6 +107,7 @@ export class DebugMode extends BaseMode {
     this.refreshInterval = setInterval(() => {
       void this.refresh();
     }, 5000);
+    this.refreshInterval.unref?.();
   }
 
   protected cleanup(): void {

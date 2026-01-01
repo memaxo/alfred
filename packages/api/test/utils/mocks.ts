@@ -35,7 +35,7 @@ export function restoreFetch(originalFetch: typeof global.fetch) {
 /**
  * Mock environment variable
  */
-export async function withEnv<T>(
+export function withEnv<T>(
   env: Record<string, string | undefined>,
   fn: () => T | Promise<T>
 ): Promise<T> {

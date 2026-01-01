@@ -60,16 +60,16 @@ describe("linear router", () => {
         expires_in: 3600,
       };
 
-      global.fetch = vi.fn().mockImplementation(async (input: any) => {
+      global.fetch = vi.fn().mockImplementation((input: any) => {
         const url = typeof input === "string" ? input : input?.url;
         if (url === "https://api.linear.app/oauth/token") {
-          return {
+          return Promise.resolve({
             ok: true,
             json: async () => mockTokenResponse,
-          } as any;
+          } as any);
         }
         if (url === "https://api.linear.app/graphql") {
-          return {
+          return Promise.resolve({
             ok: true,
             json: async () => ({
               data: {
@@ -84,9 +84,11 @@ describe("linear router", () => {
                 },
               },
             }),
-          } as any;
+          } as any);
         }
-        throw new Error(`unexpected fetch url: ${String(url)}`);
+        return Promise.reject(
+          new Error(`unexpected fetch url: ${String(url)}`)
+        );
       });
 
       upsertLinearMock.mockResolvedValue({

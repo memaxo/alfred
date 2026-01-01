@@ -5,17 +5,12 @@ import { initializeRegistry } from "../registry";
 import { setupCompletions } from "./completions";
 import { createCliContext, createCliHelpContext } from "./context";
 
-function writeStdout(text: string): void {
-  process.stdout.write(text);
-}
-
-function writeStderr(text: string): void {
-  process.stderr.write(text);
-}
-
 export async function runCli(args: string[]): Promise<void> {
-  // Setup tab completions
-  setupCompletions();
+  const isTui = args[0] === "tui";
+  if (!isTui && process.stdout.isTTY && process.stdin.isTTY) {
+    // Setup tab completions (interactive CLI only; never for TUI).
+    setupCompletions();
+  }
 
   try {
     const wantsHelp =
@@ -88,7 +83,29 @@ export async function runCli(args: string[]): Promise<void> {
 // ─── TUI Command Handler ───────────────────────────────────────────────────────
 
 async function handleTuiCommand(args: string[]): Promise<void> {
-  const subCommand = args[0];
+  const isHeadless =
+    args.includes("--headless") || process.env.ALFRED_TUI_HEADLESS === "true";
+
+  const tuiArgs = args.filter((a) => a !== "--headless");
+  const subCommand = tuiArgs[0];
+  const wantsHelp =
+    subCommand === "help" ||
+    tuiArgs.includes("--help") ||
+    tuiArgs.includes("-h");
+
+  // Help should be printable in any environment.
+  if (wantsHelp) {
+    printTuiHelp();
+    return;
+  }
+
+  if (!(isHeadless || (process.stdout.isTTY && process.stdin.isTTY))) {
+    process.stderr.write(
+      "tui_requires_tty (set ALFRED_TUI_HEADLESS=true or pass --headless for tests)\n"
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   switch (subCommand) {
     case "chat": {
@@ -106,22 +123,24 @@ async function handleTuiCommand(args: string[]): Promise<void> {
       return await runDebugMode();
     }
 
-    case "help":
-    case "--help":
-    case "-h":
-      printTuiHelp();
-      return;
-
     default: {
       // No subcommand or unknown - run dashboard
       const { runTui } = await import("../tui");
-      return await runTui({ skipIntro: subCommand === "--skip-intro" });
+      // Respect skip flags from env or args
+      const skipIntro =
+        tuiArgs.includes("--skip-intro") ||
+        process.env.ALFRED_TUI_SKIP_INTRO === "true";
+      const skipChecks =
+        tuiArgs.includes("--skip-checks") ||
+        process.env.ALFRED_TUI_SKIP_CHECKS === "true";
+
+      return await runTui({ skipIntro, skipChecks });
     }
   }
 }
 
 function printTuiHelp(): void {
-  writeStdout(
+  process.stdout.write(
     `${`
 ALFRED TUI - Terminal User Interface
 
@@ -134,8 +153,10 @@ Subcommands:
   <none>      Launch dashboard (default)
 
 Options:
-  --skip-intro  Skip intro animation
-  --help, -h    Show this help
+  --skip-intro   Skip intro animation
+  --skip-checks  Skip system readiness checks
+  --headless     Allow running without a TTY (intended for tests)
+  --help, -h     Show this help
 
 Keyboard Shortcuts:
   q           Quit
@@ -154,20 +175,19 @@ async function handleRegistryCommand(
 ): Promise<void> {
   const commandName = args[0];
   if (!commandName) {
-    writeStderr("No command specified\n");
+    process.stderr.write("No command specified\n");
     process.exit(1);
   }
 
   const cmd = registry.findCommand(commandName);
   if (!cmd) {
-    writeStderr(`Unknown command: ${commandName}\n`);
-    writeStderr("Try 'alfred --help' for available commands\n");
+    process.stderr.write(`Unknown command: ${commandName}\n`);
+    process.stderr.write("Try 'alfred --help' for available commands\n");
     process.exit(1);
   }
 
   // Parse arguments (simple implementation - could be enhanced with yargs/commander)
   const cmdArgs: Record<string, boolean | number | string> = {};
-  const positionalArgs: string[] = [];
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
@@ -194,8 +214,6 @@ async function handleRegistryCommand(
         // Boolean flag
         cmdArgs[key] = true;
       }
-    } else {
-      positionalArgs.push(arg);
     }
   }
 
@@ -205,7 +223,7 @@ async function handleRegistryCommand(
       const validated = cmd.args.parse(cmdArgs);
       await cmd.handler(validated);
     } catch (error) {
-      writeStderr(`Invalid arguments: ${(error as Error).message}\n`);
+      process.stderr.write(`Invalid arguments: ${(error as Error).message}\n`);
       process.exit(1);
     }
   } else {

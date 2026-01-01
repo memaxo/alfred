@@ -119,10 +119,7 @@ export async function loadManifest(
       }
 
       // Dynamic import the manifest
-      const module = (await import(fullPath)) as {
-        manifest?: unknown;
-        default?: unknown;
-      };
+      const module = await import(fullPath);
 
       // Try named export first, then default
       const manifest = module.manifest ?? module.default;
@@ -204,5 +201,6 @@ export async function discoverAndLoadManifests(): Promise<RegisteredPackage[]> {
   }
 
   const packages = await discoverPackages(packagesDir);
-  return loadAllManifests(packages);
+  const result = await loadAllManifests(packages);
+  return result;
 }

@@ -1,5 +1,6 @@
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 import { adminRouter } from "./admin";
+import { agentfsRouter } from "./agentfs";
 import { assistantRouter } from "./assistant";
 import { bookRouter } from "./book";
 import { codexRouter } from "./codex";
@@ -34,6 +35,7 @@ import { workflowRouter } from "./workflow";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => "OK"),
+  agentfs: agentfsRouter,
   admin: adminRouter,
   graph: graphRouter,
   home: homeRouter,

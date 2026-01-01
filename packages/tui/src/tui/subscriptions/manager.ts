@@ -164,6 +164,7 @@ export class SubscriptionManager extends EventEmitter {
 
     // Start polling
     const intervalId = setInterval(poll, config.interval);
+    intervalId.unref?.();
 
     this.subscriptions.set(config.id, {
       config: config as PollingConfig<unknown>,
@@ -333,6 +334,7 @@ export class SubscriptionManager extends EventEmitter {
           }
         };
         entry.intervalId = setInterval(poll, config.interval);
+        entry.intervalId.unref?.();
       }
     }
   }

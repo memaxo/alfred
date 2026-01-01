@@ -18,6 +18,7 @@ export type CodexErrorCode =
   | "codex_exec_failed"
   | "codex_binary_not_found"
   | "codex_invalid_cwd"
+  | "codex_container_name_invalid"
   | "codex_container_cwd_invalid"
   | "codex_session_user_required"
   | "codex_session_forbidden"

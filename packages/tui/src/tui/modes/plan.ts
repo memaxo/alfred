@@ -116,6 +116,12 @@ export class PlanMode extends BaseMode {
   protected handleKey(event: KeyEvent): boolean {
     // Escape to exit or go back
     if (isEscape(event)) {
+      if (this.state.phase === "generating") {
+        this.state.phase = "input";
+        this.state.error = null;
+        this.updateHints();
+        return true;
+      }
       if (this.state.phase === "review") {
         this.state.phase = "input";
         this.state.plan = null;
@@ -132,6 +138,24 @@ export class PlanMode extends BaseMode {
 
       case "review":
         return this.handleReviewPhase(event);
+
+      case "complete":
+        if (isEnter(event)) {
+          this.resetToInput();
+          return true;
+        }
+        return false;
+
+      case "error":
+        if (isEnter(event)) {
+          if (this.state.requirement.trim().length > 0) {
+            void this.generatePlan();
+            return true;
+          }
+          this.resetToInput();
+          return true;
+        }
+        return false;
 
       case "executing":
         // Can't do much during execution
@@ -296,7 +320,7 @@ export class PlanMode extends BaseMode {
         break;
 
       case "generating":
-        this.state.status.keyHints = [];
+        this.state.status.keyHints = [{ key: "Esc", description: "Cancel" }];
         break;
 
       case "review":
@@ -304,7 +328,7 @@ export class PlanMode extends BaseMode {
         break;
 
       case "executing":
-        this.state.status.keyHints = [];
+        this.state.status.keyHints = [{ key: "Esc", description: "Exit" }];
         break;
 
       case "complete":
@@ -321,6 +345,16 @@ export class PlanMode extends BaseMode {
         ];
         break;
     }
+  }
+
+  private resetToInput(): void {
+    this.state.phase = "input";
+    this.state.error = null;
+    this.state.plan = null;
+    this.state.runId = null;
+    this.state.requirement = "";
+    this.inputActions.setValue("");
+    this.updateHints();
   }
 
   // ─── Rendering ───────────────────────────────────────────────────────────────

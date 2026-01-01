@@ -25,11 +25,20 @@ import {
   createAdaptiveLayoutState,
 } from "../layout/adaptive";
 import { type BasePanel, PanelRegistry } from "../panels/base";
+import { createCognitivePanel } from "../panels/cognitive";
 import { HeaderPanel } from "../panels/header";
+import { createKnowledgePanel } from "../panels/knowledge";
+import { createMetricsPanel } from "../panels/metrics";
 import { ShortcutsPanel } from "../panels/shortcuts";
 import { StatusPanel } from "../panels/status";
+import { createVoicePanel } from "../panels/voice";
+import { createWorkflowPanel } from "../panels/workflow";
 import type { TerminalSize } from "../renderer";
 import { clearScreen, getCurrentSize, writeAt } from "../renderer";
+import type { CognitiveStateStore } from "../subscriptions/cognitive";
+import type { MetricsStore } from "../subscriptions/metrics";
+import type { VoiceStore } from "../subscriptions/voice";
+import type { WorkflowStore } from "../subscriptions/workflow";
 import { colors } from "../theme";
 import {
   boxBottom,
@@ -39,7 +48,6 @@ import {
   fg,
   inverse,
   padRight,
-  visibleLength,
 } from "../typography";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -52,9 +60,19 @@ export type DashboardState = {
 };
 
 export type DashboardCallbacks = {
-  onQuit?: () => void;
-  onHelp?: () => void;
+  /**
+   * Return false to cancel quitting (e.g. user declined confirmation).
+   */
+  onQuit?: () => boolean | Promise<boolean>;
   onRefresh?: () => void;
+  onMode?: (mode: "chat" | "debug" | "plan" | "help") => void | Promise<void>;
+};
+
+export type DashboardStores = {
+  cognitive?: CognitiveStateStore;
+  workflow?: WorkflowStore;
+  metrics?: MetricsStore;
+  voice?: VoiceStore;
 };
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
@@ -63,11 +81,22 @@ export class Dashboard {
   private readonly state: DashboardState;
   private readonly registry: PanelRegistry;
   private readonly callbacks: DashboardCallbacks;
+  private readonly stores: DashboardStores;
+  private readonly loadRegistry: boolean;
   private renderInterval: ReturnType<typeof setInterval> | null = null;
   private initPromise: Promise<void> | null = null;
+  private keyCleanup: (() => void) | null = null;
+  private paused = false;
+  private quitting = false;
 
-  constructor(callbacks: DashboardCallbacks = {}) {
+  constructor(
+    callbacks: DashboardCallbacks = {},
+    stores: DashboardStores = {},
+    loadRegistry = true
+  ) {
     this.callbacks = callbacks;
+    this.stores = stores;
+    this.loadRegistry = loadRegistry;
     this.registry = new PanelRegistry();
 
     // Initialize state
@@ -76,9 +105,16 @@ export class Dashboard {
       navigation: createNavigationState(DEFAULT_PANELS, 0),
       commandPalette: createCommandPaletteState(
         createStandardCommands({
-          quit: () => this.quit(),
-          help: () => callbacks.onHelp?.(),
+          quit: () => {
+            void this.requestQuit();
+          },
+          help: () => {
+            void this.requestMode("help");
+          },
           refresh: () => callbacks.onRefresh?.(),
+          openMode: (mode) => {
+            void this.requestMode(mode);
+          },
           focusPanel: (id) => this.focusPanel(id),
           toggleFocusMode: () => this.toggleFocusMode(),
         })
@@ -87,7 +123,9 @@ export class Dashboard {
     };
 
     // Register built-in panels asynchronously
-    this.initPromise = this.registerBuiltinPanels();
+    this.initPromise = this.registerBuiltinPanels().catch((_error) => {
+      // Ignore init errors
+    });
   }
 
   private async registerBuiltinPanels(): Promise<void> {
@@ -95,8 +133,17 @@ export class Dashboard {
     this.registry.register(new StatusPanel());
     this.registry.register(new ShortcutsPanel());
 
-    // Load panels from package registry
-    await this.loadRegistryPanels();
+    // Register core domain panels explicitly
+    this.registry.register(createCognitivePanel(this.stores.cognitive));
+    this.registry.register(createWorkflowPanel(this.stores.workflow));
+    this.registry.register(createMetricsPanel(this.stores.metrics));
+    this.registry.register(createVoicePanel(this.stores.voice));
+    this.registry.register(createKnowledgePanel());
+
+    // Load additional panels from package registry
+    if (this.loadRegistry) {
+      await this.loadRegistryPanels();
+    }
   }
 
   private async loadRegistryPanels(): Promise<void> {
@@ -111,13 +158,36 @@ export class Dashboard {
       const panels = packageRegistry.getAllPanels();
 
       for (const panelDef of panels) {
+        // Skip if already registered
+        if (this.registry.get(panelDef.id)) {
+          continue;
+        }
+
         try {
           // Lazy load the panel via the factory function
-          const panelInstance = await panelDef.factory();
-          this.registry.register(panelInstance as BasePanel);
-        } catch (_error) {}
+          const PanelClassOrInstance = await panelDef.factory();
+          let panelInstance: BasePanel;
+
+          if (typeof PanelClassOrInstance === "function") {
+            // It's a constructor
+            panelInstance = new (
+              PanelClassOrInstance as unknown as new () => BasePanel
+            )();
+          } else {
+            panelInstance = PanelClassOrInstance as BasePanel;
+          }
+
+          // Basic validation
+          if (panelInstance && typeof panelInstance.id === "string") {
+            this.registry.register(panelInstance);
+          }
+        } catch (_error) {
+          // Skip invalid panels
+        }
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Skip registry loading on failure
+    }
   }
 
   /**
@@ -125,6 +195,13 @@ export class Dashboard {
    */
   registerPanel(panel: BasePanel): void {
     this.registry.register(panel);
+  }
+
+  /**
+   * Access a panel instance (useful for wiring and tests).
+   */
+  getPanel<TPanel extends BasePanel = BasePanel>(id: string): TPanel | null {
+    return (this.registry.get(id) as TPanel | undefined) ?? null;
   }
 
   /**
@@ -145,20 +222,19 @@ export class Dashboard {
 
     // Setup input handling
     const keyInput = getKeyInput();
-    keyInput.onKey(this.handleKey);
+    this.keyCleanup = keyInput.onKey(this.handleKey);
     keyInput.start();
 
     // Initial layout calculation
     const size = getCurrentSize();
     this.updateLayout(size);
 
-    // Start render loop
-    this.renderInterval = setInterval(() => {
-      this.render();
-    }, 33); // ~30 FPS
+    this.startRendering();
 
     // Handle resize
-    process.stdout.on("resize", this.handleResize);
+    if (process.stdout.isTTY) {
+      process.stdout.on("resize", this.handleResize);
+    }
 
     // Initial render
     this.render();
@@ -172,30 +248,105 @@ export class Dashboard {
       return;
     }
     this.state.running = false;
+    this.paused = false;
 
     // Stop input handling
     const keyInput = getKeyInput();
+    this.keyCleanup?.();
+    this.keyCleanup = null;
     keyInput.stop();
 
     // Stop render loop
-    if (this.renderInterval) {
-      clearInterval(this.renderInterval);
-      this.renderInterval = null;
-    }
+    this.stopRendering();
 
     // Remove resize handler
-    process.stdout.off("resize", this.handleResize);
+    if (process.stdout.isTTY) {
+      process.stdout.off("resize", this.handleResize);
+    }
 
     // Cleanup panels
     this.registry.destroy();
   }
 
   /**
-   * Quit the dashboard
+   * Request to quit the dashboard (may be cancelled)
    */
-  quit(): void {
-    this.stop();
-    this.callbacks.onQuit?.();
+  private async requestQuit(): Promise<void> {
+    if (this.quitting) {
+      return;
+    }
+    this.quitting = true;
+
+    // Pause dashboard rendering so modals/confirm prompts can render cleanly.
+    this.pauseRendering();
+    try {
+      const res = this.callbacks.onQuit?.();
+      const shouldQuit = res === undefined ? true : await res;
+
+      if (!shouldQuit) {
+        this.resumeRendering();
+        return;
+      }
+
+      this.stop();
+    } finally {
+      this.quitting = false;
+    }
+  }
+
+  private async requestMode(
+    mode: "chat" | "debug" | "plan" | "help"
+  ): Promise<void> {
+    if (this.quitting) {
+      return;
+    }
+    this.quitting = true;
+
+    this.pauseRendering();
+    try {
+      await this.callbacks.onMode?.(mode);
+      this.stop();
+    } finally {
+      this.quitting = false;
+    }
+  }
+
+  private startRendering(): void {
+    if (this.renderInterval) {
+      return;
+    }
+    this.renderInterval = setInterval(() => {
+      this.render();
+    }, 33); // ~30 FPS
+    this.renderInterval.unref?.();
+  }
+
+  private stopRendering(): void {
+    if (!this.renderInterval) {
+      return;
+    }
+    clearInterval(this.renderInterval);
+    this.renderInterval = null;
+  }
+
+  private pauseRendering(): void {
+    if (!this.state.running || this.paused) {
+      return;
+    }
+    this.paused = true;
+    this.stopRendering();
+  }
+
+  private resumeRendering(): void {
+    if (!(this.state.running && this.paused)) {
+      return;
+    }
+    this.paused = false;
+    clearScreen();
+    const size = getCurrentSize();
+    this.updateLayout(size);
+    this.render();
+    this.startRendering();
   }
 
   // ─── Layout ────────────────────────────────────────────────────────────────
@@ -229,12 +380,28 @@ export class Dashboard {
 
     // Global shortcuts
     if (event.key === "q" && !event.ctrl && !event.alt) {
-      this.quit();
+      void this.requestQuit();
       return true;
     }
 
+    // Mode switches (keyboard-friendly; also available via command palette).
+    if (event.ctrl && !event.alt) {
+      if (event.key === "d") {
+        void this.requestMode("debug");
+        return true;
+      }
+      if (event.key === "t") {
+        void this.requestMode("chat");
+        return true;
+      }
+      if (event.key === "p") {
+        void this.requestMode("plan");
+        return true;
+      }
+    }
+
     if (event.key === "?" && !event.ctrl && !event.alt) {
-      this.callbacks.onHelp?.();
+      void this.requestMode("help");
       return true;
     }
 
@@ -291,9 +458,16 @@ export class Dashboard {
   private handleCommandPaletteKey(event: KeyEvent): boolean {
     const actions = createCommandPaletteActions(
       createStandardCommands({
-        quit: () => this.quit(),
-        help: () => this.callbacks.onHelp?.(),
+        quit: () => {
+          void this.requestQuit();
+        },
+        help: () => {
+          void this.requestMode("help");
+        },
         refresh: () => this.callbacks.onRefresh?.(),
+        openMode: (mode) => {
+          void this.requestMode(mode);
+        },
         focusPanel: (id) => this.focusPanel(id),
         toggleFocusMode: () => this.toggleFocusMode(),
       }),
@@ -364,9 +538,16 @@ export class Dashboard {
   openCommandPalette(): void {
     const actions = createCommandPaletteActions(
       createStandardCommands({
-        quit: () => this.quit(),
-        help: () => this.callbacks.onHelp?.(),
+        quit: () => {
+          void this.requestQuit();
+        },
+        help: () => {
+          void this.requestMode("help");
+        },
         refresh: () => this.callbacks.onRefresh?.(),
+        openMode: (mode) => {
+          void this.requestMode(mode);
+        },
         focusPanel: (id) => this.focusPanel(id),
         toggleFocusMode: () => this.toggleFocusMode(),
       }),
@@ -394,42 +575,36 @@ export class Dashboard {
 
   render(): void {
     const size = getCurrentSize();
-    const lines: string[] = [];
 
-    // Render each panel
+    // Render each panel directly
     for (const panel of this.registry.all()) {
-      const panelLines = panel.render();
-      const bounds = panel.bounds;
+      try {
+        const panelLines = panel.render();
+        const bounds = panel.bounds;
 
-      for (let i = 0; i < panelLines.length; i++) {
-        const y = bounds.y + i;
-        const line = panelLines[i];
-        if (line && y < size.height) {
-          while (lines.length <= y) {
-            lines.push(" ".repeat(size.width));
-          }
-          // Insert panel line at correct position
-          const existingLine = lines[y] ?? " ".repeat(size.width);
-          const before = existingLine.slice(0, bounds.x);
-          const after = existingLine.slice(bounds.x + visibleLength(line));
-          lines[y] = before + line + after;
+        if (panelLines.length === 0) {
+          continue;
         }
+
+        for (let i = 0; i < panelLines.length; i++) {
+          const y = bounds.y + i;
+          const line = panelLines[i];
+          if (line && y < size.height) {
+            writeAt(bounds.x, y, line);
+          }
+        }
+      } catch (_error) {
+        // Ignore panel render errors
       }
     }
 
     // Render command palette overlay if open
     if (this.state.commandPalette.isOpen) {
-      this.renderCommandPalette(lines, size);
-    }
-
-    // Write to terminal
-    clearScreen();
-    for (let y = 0; y < lines.length; y++) {
-      writeAt(0, y, lines[y] ?? "");
+      this.renderCommandPalette(size);
     }
   }
 
-  private renderCommandPalette(lines: string[], size: TerminalSize): void {
+  private renderCommandPalette(size: TerminalSize): void {
     const { query, filteredCommands, selectedIndex } =
       this.state.commandPalette;
 
@@ -478,18 +653,12 @@ export class Dashboard {
     // Bottom border
     paletteLines.push(boxBottom(width, true));
 
-    // Overlay on existing lines
+    // Render palette lines directly
     for (let i = 0; i < paletteLines.length; i++) {
       const lineY = y + i;
       const line = paletteLines[i];
       if (line && lineY < size.height) {
-        while (lines.length <= lineY) {
-          lines.push(" ".repeat(size.width));
-        }
-        const existingLine = lines[lineY] ?? " ".repeat(size.width);
-        const before = existingLine.slice(0, x);
-        const after = existingLine.slice(x + width);
-        lines[lineY] = before + line + after;
+        writeAt(x, lineY, line);
       }
     }
   }
@@ -497,6 +666,16 @@ export class Dashboard {
 
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
-export function createDashboard(callbacks: DashboardCallbacks = {}): Dashboard {
-  return new Dashboard(callbacks);
+export function createDashboard(
+  options: {
+    callbacks?: DashboardCallbacks;
+    stores?: DashboardStores;
+    loadRegistry?: boolean;
+  } = {}
+): Dashboard {
+  return new Dashboard(
+    options.callbacks ?? {},
+    options.stores ?? {},
+    options.loadRegistry ?? true
+  );
 }

@@ -132,6 +132,7 @@ export function scopedProcedure(scope: string | string[]) {
  */
 export const SCOPE_REQUIREMENTS = {
   // Read operations
+  readAgentfs: requireScopes({ required: "read:agentfs" }),
   readTodos: requireScopes({ required: "read:todos" }),
   readNotes: requireScopes({ required: "read:notes" }),
   readReminders: requireScopes({ required: "read:reminders" }),

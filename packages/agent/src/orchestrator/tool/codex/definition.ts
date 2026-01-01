@@ -235,6 +235,10 @@ export const codexInputSchema = z.object({
   env: z.record(z.string(), z.string()).optional(),
   sessionId: z.string().min(1).max(255).optional(),
   userId: z.string().optional(), // Injected server-side identity for session binding
+  /** Docker container name to run codex inside (AgentFSWorkspace container) */
+  containerName: z.string().min(1).max(255).optional(),
+  /** Workdir inside the container (must be under /workspace) */
+  containerCw: z.string().min(1).max(1024).optional(),
   /** AgentFS database path for audit trail */
   agentfsDbPath: z.string().min(1).max(1024).optional(),
   outputSchema: z

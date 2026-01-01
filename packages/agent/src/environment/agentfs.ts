@@ -22,7 +22,7 @@
  * and stores all state in a single portable SQLite file.
  */
 
-import { copyFile, mkdir, stat } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { logger } from "@alfred/logger";
 import {
@@ -46,7 +46,7 @@ import type { ExecOptions, ExecResult, Workspace } from "./types.js";
  * Extended config for AgentFS workspace with Docker options.
  */
 export interface AgentFSWorkspaceConfigExtended extends AgentFSWorkspaceConfig {
-  /** Docker image to use (default: node:18-slim) */
+  /** Docker image to use (default: alfred-agentfs:codex) */
   image?: string;
   /** Authorization token for Docker operations */
   authz?: string;
@@ -63,6 +63,7 @@ export class AgentFSWorkspace implements Workspace {
   private agent: AgentFSInterface | null = null;
   private _initialized = false;
   private readonly _dbPath: string;
+  private readonly _agentfsId: string;
   private readonly checkpoints = new Map<string, string>();
 
   // Docker container state
@@ -77,6 +78,9 @@ export class AgentFSWorkspace implements Workspace {
     readonly repoBase: string,
     private readonly config: AgentFSWorkspaceConfigExtended = {}
   ) {
+    // agentfs-sdk requires IDs to match /^[a-zA-Z0-9_-]+$/
+    this._agentfsId = id.replace(/[^a-zA-Z0-9_-]/g, "-");
+
     // Default path: .agentfs/{runId}/{agentId}.db
     this._dbPath =
       config.dbPath ??
@@ -89,7 +93,7 @@ export class AgentFSWorkspace implements Workspace {
     // Docker container configuration
     this._containerName = `alfred-agentfs-${runId.replace(/[^a-zA-Z0-9]/g, "-")}`;
     this._image =
-      config.image ?? process.env.ORCH_DOCKER_IMAGE ?? "node:18-slim";
+      config.image ?? process.env.ORCH_DOCKER_IMAGE ?? "alfred-agentfs:codex";
     this._authz = config.authz;
   }
 
@@ -149,7 +153,7 @@ export class AgentFSWorkspace implements Workspace {
     // Step 2: Initialize AgentFS (lazy-load SDK via wrapper)
     this.agent = await AlfredAgentFS.open(
       {
-        id: this.id,
+        id: this._agentfsId,
         path: this._dbPath,
       },
       this.runId
@@ -347,24 +351,150 @@ export class AgentFSWorkspace implements Workspace {
         return false;
       }
       const maybe = db as { exec?: unknown; run?: unknown };
+      const escapedPath = snapshotPath.replace(/'/g, "''");
       if (typeof maybe.exec === "function") {
-        await (maybe.exec as (sql: string) => unknown)(
-          `VACUUM INTO '${snapshotPath}'`
-        );
-        return true;
+        try {
+          await (maybe.exec as (sql: string) => unknown)(
+            `VACUUM INTO '${escapedPath}'`
+          );
+          return true;
+        } catch {
+          return false;
+        }
       }
       if (typeof maybe.run === "function") {
-        await (maybe.run as (sql: string) => unknown)(
-          `VACUUM INTO '${snapshotPath}'`
-        );
-        return true;
+        try {
+          await (maybe.run as (sql: string) => unknown)(
+            `VACUUM INTO '${escapedPath}'`
+          );
+          return true;
+        } catch {
+          return false;
+        }
       }
       return false;
     })();
 
     if (!didVacuum) {
-      // Fallback: copy the file directly
-      await copyFile(this._dbPath, snapshotPath);
+      // agentfs-sdk (turso sqlite) does not support VACUUM INTO; file-level snapshots
+      // are not reliable due to WAL + native caching. Use a logical snapshot instead.
+
+      const snapshotAgent = await AlfredAgentFS.open(
+        {
+          id: this._agentfsId,
+          path: snapshotPath,
+        },
+        this.runId
+      );
+
+      try {
+        const srcDb = agent.getDatabase();
+        const dstDb = snapshotAgent.getDatabase();
+
+        if (!(srcDb && typeof srcDb === "object")) {
+          throw new Error("agentfs_checkpoint_db_unavailable");
+        }
+        if (!(dstDb && typeof dstDb === "object")) {
+          throw new Error("agentfs_checkpoint_snapshot_db_unavailable");
+        }
+
+        const src = srcDb as { exec?: unknown; prepare?: unknown };
+        const dst = dstDb as { exec?: unknown; prepare?: unknown };
+
+        if (
+          !(typeof src.exec === "function" && typeof src.prepare === "function")
+        ) {
+          throw new Error("agentfs_checkpoint_db_unsupported");
+        }
+        if (
+          !(typeof dst.exec === "function" && typeof dst.prepare === "function")
+        ) {
+          throw new Error("agentfs_checkpoint_snapshot_db_unsupported");
+        }
+
+        const sqlIdent = (value: string) => `"${value.replace(/"/g, '""')}"`;
+
+        const srcSql = src as unknown as {
+          exec: (sql: string) => Promise<void>;
+          prepare: (sql: string) => {
+            all: (...args: unknown[]) => Promise<Record<string, unknown>[]>;
+          };
+        };
+
+        const dstSql = dst as unknown as {
+          exec: (sql: string) => Promise<void>;
+          prepare: (sql: string) => {
+            run: (...args: unknown[]) => Promise<unknown>;
+          };
+        };
+
+        const tables = await srcSql
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+          )
+          .all();
+
+        await dstSql.exec("PRAGMA foreign_keys=OFF;");
+        await dstSql.exec("BEGIN;");
+
+        try {
+          for (const row of tables) {
+            const name = row.name;
+            if (typeof name !== "string") {
+              continue;
+            }
+
+            const t = sqlIdent(name);
+
+            const cols = await srcSql.prepare(`PRAGMA table_info(${t})`).all();
+            const colNames = cols
+              .map((c) => c.name)
+              .filter((c): c is string => typeof c === "string");
+
+            if (colNames.length === 0) {
+              continue;
+            }
+
+            const colList = colNames.map(sqlIdent).join(", ");
+            const rows = await srcSql
+              .prepare(`SELECT ${colList} FROM ${t}`)
+              .all();
+
+            await dstSql.exec(`DELETE FROM ${t};`);
+
+            if (rows.length === 0) {
+              continue;
+            }
+
+            const placeholders = colNames.map(() => "?").join(", ");
+            const insert = dstSql.prepare(
+              `INSERT INTO ${t} (${colList}) VALUES (${placeholders})`
+            );
+
+            for (const r of rows) {
+              const args = colNames.map((c) => r[c]);
+              await insert.run(...args);
+            }
+          }
+
+          await dstSql.exec("COMMIT;");
+        } catch (err) {
+          try {
+            await dstSql.exec("ROLLBACK;");
+          } catch {
+            // ignore
+          }
+          throw err;
+        } finally {
+          try {
+            await dstSql.exec("PRAGMA foreign_keys=ON;");
+          } catch {
+            // ignore
+          }
+        }
+      } finally {
+        await snapshotAgent.close();
+      }
     }
 
     this.checkpoints.set(label, snapshotPath);
@@ -385,21 +515,122 @@ export class AgentFSWorkspace implements Workspace {
       throw new Error(`agentfs_checkpoint_not_found:${label}`);
     }
 
-    // Close current connection
-    await agent.close();
-    this.agent = null;
-
-    // Replace database with checkpoint
-    await copyFile(snapshotPath, this._dbPath);
-
-    // Reopen connection
-    this.agent = await AlfredAgentFS.open(
+    const snapshotAgent = await AlfredAgentFS.open(
       {
-        id: this.id,
-        path: this._dbPath,
+        id: this._agentfsId,
+        path: snapshotPath,
       },
       this.runId
     );
+
+    try {
+      const dstDb = agent.getDatabase();
+      const srcDb = snapshotAgent.getDatabase();
+
+      if (!(dstDb && typeof dstDb === "object")) {
+        throw new Error("agentfs_restore_db_unavailable");
+      }
+      if (!(srcDb && typeof srcDb === "object")) {
+        throw new Error("agentfs_restore_snapshot_db_unavailable");
+      }
+
+      const dst = dstDb as { exec?: unknown; prepare?: unknown };
+      const src = srcDb as { exec?: unknown; prepare?: unknown };
+
+      if (
+        !(typeof dst.exec === "function" && typeof dst.prepare === "function")
+      ) {
+        throw new Error("agentfs_restore_db_unsupported");
+      }
+
+      if (
+        !(typeof src.exec === "function" && typeof src.prepare === "function")
+      ) {
+        throw new Error("agentfs_restore_snapshot_db_unsupported");
+      }
+
+      const sqlIdent = (value: string) => `"${value.replace(/"/g, '""')}"`;
+
+      const dstSql = dst as unknown as {
+        exec: (sql: string) => Promise<void>;
+        prepare: (sql: string) => {
+          run: (...args: unknown[]) => Promise<unknown>;
+        };
+      };
+
+      const srcSql = src as unknown as {
+        prepare: (sql: string) => {
+          all: (...args: unknown[]) => Promise<Record<string, unknown>[]>;
+        };
+      };
+
+      const tables = await srcSql
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        )
+        .all();
+
+      await dstSql.exec("PRAGMA foreign_keys=OFF;");
+      await dstSql.exec("BEGIN;");
+
+      try {
+        for (const row of tables) {
+          const name = row.name;
+          if (typeof name !== "string") {
+            continue;
+          }
+
+          const t = sqlIdent(name);
+
+          const cols = await srcSql.prepare(`PRAGMA table_info(${t})`).all();
+          const colNames = cols
+            .map((c) => c.name)
+            .filter((c): c is string => typeof c === "string");
+
+          if (colNames.length === 0) {
+            continue;
+          }
+
+          const colList = colNames.map(sqlIdent).join(", ");
+          const rows = await srcSql
+            .prepare(`SELECT ${colList} FROM ${t}`)
+            .all();
+
+          await dstSql.exec(`DELETE FROM ${t};`);
+
+          if (rows.length === 0) {
+            continue;
+          }
+
+          const placeholders = colNames.map(() => "?").join(", ");
+          const insert = dstSql.prepare(
+            `INSERT INTO ${t} (${colList}) VALUES (${placeholders})`
+          );
+
+          for (const r of rows) {
+            const args = colNames.map((c) => r[c]);
+            await insert.run(...args);
+          }
+        }
+
+        await dstSql.exec("COMMIT;");
+      } catch (err) {
+        try {
+          await dstSql.exec("ROLLBACK;");
+        } catch {
+          // ignore
+        }
+        throw err;
+      } finally {
+        try {
+          await dstSql.exec("PRAGMA foreign_keys=ON;");
+        } catch {
+          // ignore
+        }
+      }
+    } finally {
+      await snapshotAgent.close();
+    }
 
     agentfsCheckpointsTotal.inc({ operation: "restore" });
   }

@@ -263,7 +263,7 @@ describe("executeWithCodex container workdir", () => {
           auto: "read",
           out: "text",
           cw: process.cwd(),
-          containerId: "container-123",
+          containerName: "alfred-agentfs-container-123",
           containerCw: "/workspace/.agent/worktrees/run/agent",
         },
       });
@@ -272,7 +272,7 @@ describe("executeWithCodex container workdir", () => {
       expect(argsText).toContain("exec");
       expect(argsText).toContain("--workdir");
       expect(argsText).toContain("/workspace/.agent/worktrees/run/agent");
-      expect(argsText).toContain("container-123");
+      expect(argsText).toContain("alfred-agentfs-container-123");
     } finally {
       process.env.PATH = prevPath;
       await rm(binDir, { recursive: true, force: true });

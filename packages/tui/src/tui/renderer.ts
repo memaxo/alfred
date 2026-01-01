@@ -34,8 +34,11 @@ let terminalSetup = false;
 
 function getTerminalSize(): TerminalSize {
   return {
-    width: process.stdout.columns || 80,
-    height: process.stdout.rows || 24,
+    width:
+      process.stdout.columns ||
+      Number.parseInt(process.env.COLUMNS || "80", 10),
+    height:
+      process.stdout.rows || Number.parseInt(process.env.LINES || "24", 10),
   };
 }
 
@@ -53,10 +56,14 @@ function setupResizeListener(): () => void {
     }
   };
 
-  process.stdout.on("resize", handleResize);
+  if (process.stdout.isTTY) {
+    process.stdout.on("resize", handleResize);
+  }
 
   return () => {
-    process.stdout.off("resize", handleResize);
+    if (process.stdout.isTTY) {
+      process.stdout.off("resize", handleResize);
+    }
   };
 }
 
@@ -171,6 +178,12 @@ export function setupTerminal(): void {
   if (terminalSetup) {
     return;
   }
+
+  // Skip setup in non-TTY environments (e.g. tests)
+  if (!process.stdout.isTTY) {
+    return;
+  }
+
   terminalSetup = true;
 
   enterAlternateScreen();
@@ -220,7 +233,8 @@ export type RenderFn = (size: TerminalSize) => string[];
  * Render a frame to the terminal
  */
 export function renderFrame(lines: string[]): void {
-  clearScreen();
+  // Move cursor to home instead of clearing the whole screen to reduce flickering
+  moveCursor(0, 0);
   for (let y = 0; y < lines.length; y++) {
     writeAt(0, y, lines[y] ?? "");
   }
@@ -250,6 +264,7 @@ export function createRenderLoop(
       running = true;
       render(); // Initial render
       intervalId = setInterval(render, 1000 / fps);
+      intervalId.unref?.();
     },
     stop: () => {
       running = false;

@@ -106,4 +106,6 @@ const streamLog = (event: FineTuneLogEvent) => {
   target.write(`${event.raw}\n`);
 };
 
-await main();
+if (import.meta.main) {
+  await main();
+}

@@ -423,7 +423,10 @@ async function runCodexWithCodex({
       }
     | undefined;
 
-  const codexBin = resolveCodexBin();
+  // When running Codex inside a container (docker exec), the spawn wrapper ignores
+  // the `cmd` we provide to runStreamed, so we must not require a host-installed
+  // codex binary in that mode.
+  const codexBin = input.containerName ? "codex" : resolveCodexBin();
   const threadValidator = resolveThreadValidator();
   let existingSession: CodexSessionState | undefined;
   if (sessionId) {
