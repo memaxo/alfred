@@ -42,6 +42,12 @@ mock.module("@alfred/agent/agentfs", () => ({
   },
 }));
 
+mock.module("@alfred/agent/agentfs/index", () => ({
+  AlfredAgentFS: {
+    open: openMock,
+  },
+}));
+
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
@@ -278,8 +284,11 @@ describe("agentfs router", () => {
         );
       };
 
-      expect(events.length).toBeGreaterThan(0);
-      expect(events.some((e) => hasType(e) && e.type === "done")).toBe(true);
+      // With MAX_EVENTS=1, we should get at least 1 data event and then a done event
+      expect(events.length).toBeGreaterThanOrEqual(1);
+      // The done event should be emitted after MAX_EVENTS is reached
+      const doneEvents = events.filter((e) => hasType(e) && e.type === "done");
+      expect(doneEvents.length).toBeGreaterThanOrEqual(1);
     } finally {
       if (prev === undefined) {
         process.env.ALFRED_AGENTFS_MAX_EVENTS = undefined;
