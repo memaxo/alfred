@@ -1,10 +1,19 @@
 /**
- * Applications - Phase 2 Core Applications
+ * Applications - Desktop Apps
+ *
+ * Phase 2: Core Applications
+ * Phase 3: System Applications
  *
  * @see docs/execplans/desktop-evolution-prd.md Part III
  */
 
+export { AgentFSApp, AgentFSAppWindow } from "./agentfs";
+// Phase 2: Core Applications
 export { AgentsApp, AgentsAppWindow } from "./agents";
 export { ChatApp, ChatAppWindow } from "./chat";
 export { CodeApp, CodeAppWindow } from "./code";
+export { DockerApp, DockerAppWindow } from "./docker";
+// Phase 3: System Applications
+export { PRReviewApp, PRReviewAppWindow } from "./pr-review";
+export { TaskManagerApp, TaskManagerAppWindow } from "./taskmanager";
 export { TerminalApp, TerminalAppWindow } from "./terminal";
