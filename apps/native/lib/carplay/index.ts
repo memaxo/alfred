@@ -3,8 +3,52 @@ import type {
   SpeechToSpeechResponse,
   TtsRequest,
 } from "@alfred/voice/types";
-import CarPlay from "@g4rb4g3/react-native-carplay";
 import { Platform } from "react-native";
+
+// Lazy import CarPlay to avoid initialization errors if native module isn't available
+let CarPlay: any = null;
+let CarPlayChecked = false;
+
+function getCarPlayModule(): any {
+  if (CarPlayChecked) {
+    return CarPlay;
+  }
+  CarPlayChecked = true;
+
+  if (Platform.OS !== "ios") {
+    return null;
+  }
+
+  try {
+    // Use dynamic require with string concatenation to prevent Metro from statically analyzing
+    // This prevents the module from initializing during bundling if native bridge isn't available
+    const modulePath = "@g4rb4g3/react-native-carplay";
+    const carplayModule = require(modulePath);
+    CarPlay = carplayModule?.default || carplayModule;
+
+    // Verify the module has expected methods before using
+    if (!CarPlay || typeof CarPlay.registerOnConnect !== "function") {
+      console.warn("CarPlay module loaded but missing expected methods");
+      CarPlay = null;
+      return null;
+    }
+
+    return CarPlay;
+  } catch (error: any) {
+    // CarPlay module not available, not properly linked, or initialization failed
+    // This is expected if the native module isn't available or bridge isn't initialized
+    if (
+      error?.message?.includes("bridge") ||
+      error?.message?.includes("checkForDashboardConnection")
+    ) {
+      console.warn("CarPlay native bridge not initialized:", error.message);
+    } else {
+      console.warn("CarPlay module not available:", error);
+    }
+    CarPlay = null;
+    return null;
+  }
+}
 
 const POLL_INTERVAL_MS = 100;
 const VOICE_TIMEOUT_MS = 10_000;
@@ -137,53 +181,65 @@ export function setupCarPlay(
   if (Platform.OS !== "ios") {
     return;
   }
-  const carplay = CarPlay as {
-    registerOnConnect?: (handler: () => void) => void;
-    VoiceControlTemplate?: unknown;
-    VoiceControlButton?: unknown;
-    CarPlayButton?: unknown;
-    pushTemplate?: (template: unknown, animated: boolean) => void;
-    connected?: boolean;
-  };
-  if (!carplay || typeof carplay.registerOnConnect !== "function") {
-    return;
-  }
 
-  const buildTemplate = () => {
-    if (typeof carplay.VoiceControlTemplate !== "function") {
-      return null;
-    }
-    const VoiceControlTemplate = carplay.VoiceControlTemplate;
-    const VoiceControlButton =
-      carplay.VoiceControlButton ?? carplay.CarPlayButton;
-    if (typeof VoiceControlButton !== "function") {
-      return null;
+  try {
+    // Lazy load CarPlay if not already loaded
+    const carplayModule = getCarPlayModule();
+    if (!carplayModule) {
+      return;
     }
 
-    type CarplayCtor = new (args: Record<string, unknown>) => unknown;
-    const listenButton = new (VoiceControlButton as CarplayCtor)({
-      id: "alfred-voice",
-      onPress: async () => {
-        await handleVoiceButtonPress(voice, onReply);
-      },
-    });
-
-    return new (VoiceControlTemplate as CarplayCtor)({
-      title: "Alfred Drive",
-      subtitle: "Tap steering control or say “Hey Alfred”",
-      buttons: [listenButton],
-    });
-  };
-
-  const handleConnect = () => {
-    const template = buildTemplate();
-    if (template && typeof carplay.pushTemplate === "function") {
-      carplay.pushTemplate(template, true);
+    const carplay = carplayModule as {
+      registerOnConnect?: (handler: () => void) => void;
+      VoiceControlTemplate?: unknown;
+      VoiceControlButton?: unknown;
+      CarPlayButton?: unknown;
+      pushTemplate?: (template: unknown, animated: boolean) => void;
+      connected?: boolean;
+    };
+    if (!carplay || typeof carplay.registerOnConnect !== "function") {
+      return;
     }
-  };
 
-  carplay.registerOnConnect(handleConnect);
-  if (carplay.connected) {
-    handleConnect();
+    const buildTemplate = () => {
+      if (typeof carplay.VoiceControlTemplate !== "function") {
+        return null;
+      }
+      const VoiceControlTemplate = carplay.VoiceControlTemplate;
+      const VoiceControlButton =
+        carplay.VoiceControlButton ?? carplay.CarPlayButton;
+      if (typeof VoiceControlButton !== "function") {
+        return null;
+      }
+
+      type CarplayCtor = new (args: Record<string, unknown>) => unknown;
+      const listenButton = new (VoiceControlButton as CarplayCtor)({
+        id: "alfred-voice",
+        onPress: async () => {
+          await handleVoiceButtonPress(voice, onReply);
+        },
+      });
+
+      return new (VoiceControlTemplate as CarplayCtor)({
+        title: "Alfred Drive",
+        subtitle: "Tap steering control or say “Hey Alfred”",
+        buttons: [listenButton],
+      });
+    };
+
+    const handleConnect = () => {
+      const template = buildTemplate();
+      if (template && typeof carplay.pushTemplate === "function") {
+        carplay.pushTemplate(template, true);
+      }
+    };
+
+    carplay.registerOnConnect(handleConnect);
+    if (carplay.connected) {
+      handleConnect();
+    }
+  } catch (error) {
+    // Silently fail if CarPlay setup fails (native module not available or not properly initialized)
+    console.warn("CarPlay setup failed:", error);
   }
 }

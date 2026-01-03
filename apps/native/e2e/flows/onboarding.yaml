@@ -1,0 +1,10 @@
+appId: com.alfred.app
+---
+- launchApp
+- assertVisible: "Welcome to ALFRED"
+- tapOn: "Next"
+- assertVisible: "Your Personal AI"
+- tapOn: "Next"
+- assertVisible: "Get Started"
+- tapOn: "Get Started"
+- assertVisible: "Sign In"

@@ -28,16 +28,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="home" />,
+          title: "Chat",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon color={color} name="chatbubbles" />
+          ),
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="library"
         options={{
-          title: "Explore",
+          title: "Library",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="compass" />
+            <TabBarIcon color={color} name="library" />
           ),
         }}
       />
@@ -53,6 +55,24 @@ export default function TabLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => <TabBarIcon color={color} name="user" />,
+        }}
+      />
+      <Tabs.Screen
+        name="workflows"
+        options={{
+          title: "Workflows",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon color={color} name="git-branch" />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon color={color} name="settings" />
+          ),
         }}
       />
     </Tabs>

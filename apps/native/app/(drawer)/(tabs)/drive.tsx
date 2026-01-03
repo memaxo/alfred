@@ -153,10 +153,14 @@ export default function DriveScreen() {
   }, [processPendingItem]);
 
   useEffect(() => {
-    setupCarPlay(voice, (text) => {
-      setStatus("thinking");
-      setReply(text);
-    });
+    try {
+      setupCarPlay(voice, (text) => {
+        setStatus("thinking");
+        setReply(text);
+      });
+    } catch (error) {
+      logError("CarPlay setup", error);
+    }
   }, [voice]);
 
   useEffect(() => {

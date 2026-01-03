@@ -1,6 +1,22 @@
 import { expoClient } from "@better-auth/expo/client";
 import { createAuthClient } from "better-auth/react";
-import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
+
+// SecureStore only works on native platforms, not web
+const getStorage = () => {
+  if (Platform.OS === "web") {
+    // Web fallback using localStorage
+    return {
+      getItem: (key: string) => localStorage.getItem(key),
+      setItem: (key: string, value: string) => localStorage.setItem(key, value),
+      deleteItem: (key: string) => localStorage.removeItem(key),
+    };
+  }
+  // Dynamic import to avoid loading SecureStore on web
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const SecureStore = require("expo-secure-store");
+  return SecureStore;
+};
 
 const baseClient = createAuthClient({
   baseURL: process.env.EXPO_PUBLIC_SERVER_URL,
@@ -8,7 +24,7 @@ const baseClient = createAuthClient({
     expoClient({
       scheme: "mybettertapp",
       storagePrefix: "alfred",
-      storage: SecureStore,
+      storage: getStorage(),
     }),
   ],
 });

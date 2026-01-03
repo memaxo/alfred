@@ -1,34 +1,26 @@
-import {
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
 import { setTimeout as wait } from "node:timers/promises";
 
-const storage = new Map<string, string>();
+const mockStorage = new Map<string, string>();
 const playbackLog: string[] = [];
 const writtenFiles: string[] = [];
 const savedFiles = new Map<string, string>();
 
-mock.module("@react-native-async-storage/async-storage", () => ({
-  default: {
-    getItem: async (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-  },
+// Mock AsyncStorage
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  getItem: jest.fn(async (key: string) => mockStorage.get(key) ?? null),
+  setItem: jest.fn(async (key: string, value: string) => {
+    mockStorage.set(key, value);
+  }),
+  removeItem: jest.fn(async (key: string) => {
+    mockStorage.delete(key);
+  }),
 }));
 
-mock.module("react-native", () => ({}));
-mock.module("react-native/index.js", () => ({}));
-mock.module("react-native/index", () => ({}));
+// Mock react-native
+jest.mock("react-native", () => ({
+  Platform: { OS: "ios" },
+  NativeModules: {},
+}));
 
 class MockSound {
   private onUpdate:
@@ -58,62 +50,54 @@ class MockSound {
   }
 }
 
-const createAsyncMock = vi
-  .fn()
-  .mockImplementation(({ uri }: { uri: string }) => {
-    playbackLog.push(`create:${uri}`);
-    return Promise.resolve({ sound: new MockSound(uri) });
-  });
+const mockCreateAsync = jest.fn(({ uri }: { uri: string }) => {
+  playbackLog.push(`create:${uri}`);
+  return Promise.resolve({ sound: new MockSound(uri) });
+});
 
-mock.module("expo-av", () => ({
+jest.mock("expo-av", () => ({
   Audio: {
     Sound: {
-      createAsync: createAsyncMock,
+      createAsync: (...args: any[]) => mockCreateAsync(...args),
     },
   },
 }));
 
-const writeAsStringAsyncMock = vi.fn(
+const mockWriteAsStringAsync = jest.fn(
   (uri: string, data: string, _options?: unknown) => {
     writtenFiles.push(uri);
     savedFiles.set(uri, data);
     return Promise.resolve();
   }
 );
-const deleteAsyncMock = vi.fn((uri: string) => {
+const mockDeleteAsync = jest.fn((uri: string) => {
   savedFiles.delete(uri);
   return Promise.resolve();
 });
 
-mock.module("expo-file-system", () => ({
+jest.mock("expo-file-system", () => ({
   cacheDirectory: "/tmp/",
   documentDirectory: "/tmp/doc/",
   EncodingType: { Base64: "base64" },
-  writeAsStringAsync: writeAsStringAsyncMock,
-  deleteAsync: deleteAsyncMock,
+  writeAsStringAsync: (...args: any[]) => mockWriteAsStringAsync(...args),
+  deleteAsync: (...args: any[]) => mockDeleteAsync(...args),
 }));
 
-const configureAudioSessionMock = vi.fn(async () => {});
+const mockConfigureAudioSession = jest.fn(async () => {});
 
-mock.module("../lib/voice/config", () => ({
-  configureAudioSession: configureAudioSessionMock,
+jest.mock("../lib/voice/config", () => ({
+  configureAudioSession: (...args: any[]) => mockConfigureAudioSession(...args),
 }));
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as playModule from "../lib/voice/play";
+import * as queueModule from "../lib/voice/queue";
 import type { PendingItem } from "../lib/voice/voice.types";
-
-type QueueModule = typeof import("../lib/voice/queue");
-type PlayModule = typeof import("../lib/voice/play");
-type ConfigModule = typeof import("../lib/voice/config");
-
-let queueModule: QueueModule;
-let playModule: PlayModule;
-let configModule: ConfigModule;
 
 const STORAGE_KEY = "voice:queue:v1";
 
 async function snapshotQueue(): Promise<PendingItem[]> {
-  const raw = await (AsyncStorage as any).getItem(STORAGE_KEY);
+  const raw = await AsyncStorage.getItem(STORAGE_KEY);
   return raw ? (JSON.parse(raw) as PendingItem[]) : [];
 }
 
@@ -126,25 +110,16 @@ async function ageQueue(ms: number): Promise<void> {
     ...item,
     ts: item.ts - ms,
   }));
-  await (AsyncStorage as any).setItem(STORAGE_KEY, JSON.stringify(aged));
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(aged));
 }
 
 describe("native voice queue + playback", () => {
-  beforeAll(async () => {
-    queueModule = await import("../lib/voice/queue");
-    playModule = await import("../lib/voice/play");
-    configModule = await import("../lib/voice/config");
-  });
-
   beforeEach(async () => {
-    storage.clear();
+    mockStorage.clear();
     playbackLog.length = 0;
     writtenFiles.length = 0;
     savedFiles.clear();
-    createAsyncMock.mockClear();
-    writeAsStringAsyncMock.mockClear();
-    deleteAsyncMock.mockClear();
-    configureAudioSessionMock.mockClear();
+    jest.clearAllMocks();
     await queueModule.clearQueue();
   });
 
@@ -165,7 +140,7 @@ describe("native voice queue + playback", () => {
 
     await ageQueue(2000);
 
-    await queueModule.drain((item) => {
+    await queueModule.drain(async (item) => {
       order.push(item.kind);
       return Promise.resolve();
     });
@@ -183,7 +158,7 @@ describe("native voice queue + playback", () => {
       },
     });
 
-    const processor = vi.fn(() => {
+    const processor = jest.fn(() => {
       throw new Error("transient");
     });
     await ageQueue(2000);
@@ -240,7 +215,6 @@ describe("native voice queue + playback", () => {
       Buffer.from("clip-three").toString("base64"),
       "audio/mpeg"
     );
-    expect(configModule.configureAudioSession).toBe(configureAudioSessionMock);
     expect(configureAudioSessionMock).toHaveBeenCalledWith(expect.any(Object), {
       background: true,
     });

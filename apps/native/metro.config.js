@@ -11,7 +11,13 @@ const config = withTurborepoManagedCache(
   })
 );
 
-config.resolver.unstable_enablePackageExports = true;
+// Ensure TypeScript files from node_modules are handled properly
+config.resolver.sourceExts.push("ts", "tsx");
+
+// Temporarily disable package exports to avoid Node.js trying to resolve .ts files
+// Metro will still handle the resolution correctly for runtime bundles
+// TODO: Re-enable once expo-modules-core and other packages provide proper .js exports
+// config.resolver.unstable_enablePackageExports = true;
 
 module.exports = config;
 

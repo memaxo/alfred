@@ -1,0 +1,13 @@
+appId: com.alfred.app
+---
+- launchApp
+- tapOn: "Library"
+- tapOn: "Reminders"
+- tapOn:
+    id: "add-reminder-button"
+- inputText:
+    id: "reminder-title"
+    text: "E2E Task"
+- tapOn:
+    id: "save-reminder"
+- assertVisible: "E2E Task"

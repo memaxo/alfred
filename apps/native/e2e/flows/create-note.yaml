@@ -1,0 +1,15 @@
+appId: com.alfred.app
+---
+- launchApp
+- tapOn: "Library"
+- tapOn: "Notes"
+- tapOn:
+    id: "add-note-button"
+- inputText:
+    id: "note-title"
+    text: "My New Note"
+- inputText:
+    id: "note-content"
+    text: "This is a note created during E2E testing."
+- tapOn: "Save"
+- assertVisible: "My New Note"

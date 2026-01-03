@@ -55,6 +55,18 @@ const DrawerLayout = () => (
         ),
       }}
     />
+    <Drawer.Screen
+      name="call"
+      options={{
+        headerShown: false,
+        drawerLabel: "Call Alfred",
+        drawerIcon: ({ size, color }) => (
+          <Ionicons color={color} name="call-outline" size={size} />
+        ),
+        // Hide from drawer but still accessible via navigation
+        drawerItemStyle: { display: "none" },
+      }}
+    />
   </Drawer>
 );
 

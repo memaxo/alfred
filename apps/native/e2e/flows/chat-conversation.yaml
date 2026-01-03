@@ -1,0 +1,11 @@
+appId: com.alfred.app
+---
+- launchApp
+- tapOn:
+    id: "chat-input"
+- inputText: "Hello ALFRED, how are you?"
+- tapOn:
+    id: "send-button"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "message-assistant"

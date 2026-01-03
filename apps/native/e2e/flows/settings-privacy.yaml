@@ -1,0 +1,9 @@
+appId: com.alfred.app
+---
+- launchApp
+- tapOn: "Settings"
+- tapOn: "Privacy"
+- assertVisible: "Privacy Settings"
+- tapOn: "Clear Local Data"
+- tapOn: "Confirm"
+- assertVisible: "Data cleared successfully"

@@ -230,6 +230,7 @@ export function useVoiceSessionNative(
   const streamClientRef = useRef<VoiceStreamClient | null>(null);
   const streamingActiveRef = useRef(false);
   const streamingStopRef = useRef(false);
+  const streamingMutedRef = useRef(false);
   const currentRecordingRef = useRef<Audio.Recording | null>(null);
   const playbackQueueRef = useRef<string[]>([]);
   const playbackRunningRef = useRef(false);
@@ -565,6 +566,10 @@ export function useVoiceSessionNative(
           if (!clip || streamingStopRef.current) {
             continue;
           }
+          // Skip sending audio if muted
+          if (streamingMutedRef.current) {
+            continue;
+          }
           // Convert base64 to binary for transport
           const binary = Uint8Array.from(atob(clip.audioBase64), (c) =>
             c.charCodeAt(0)
@@ -677,6 +682,19 @@ export function useVoiceSessionNative(
     start: streamState.supported ? startStreaming : startFallback,
     stop: streamState.supported ? stopStreaming : stopFallback,
     isActive: streamState.status === "recording",
+    mute: () => {
+      streamingMutedRef.current = true;
+    },
+    unmute: () => {
+      streamingMutedRef.current = false;
+    },
+    toggleMute: () => {
+      streamingMutedRef.current = !streamingMutedRef.current;
+      return streamingMutedRef.current;
+    },
+    get isMuted() {
+      return streamingMutedRef.current;
+    },
   };
 
   return {

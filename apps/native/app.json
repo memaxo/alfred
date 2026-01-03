@@ -1,69 +1,81 @@
 {
   "expo": {
-    "name": "alfred",
-    "slug": "alfred",
+    "name": "Alfred",
+    "slug": "alfred-native",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "mybettertapp",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.alfred.app",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"],
-        "NSMicrophoneUsageDescription": "Alfred needs microphone access to capture voice commands while driving.",
-        "NSSpeechRecognitionUsageDescription": "Alfred transcribes your voice to keep your hands on the wheel."
-      }
+        "NSMicrophoneUsageDescription": "Alfred needs microphone access for voice interactions.",
+        "NSCameraUsageDescription": "Alfred may need camera access for certain features.",
+        "NSFaceIDUsageDescription": "Alfred uses Face ID for secure authentication."
+      },
+      "associatedDomains": ["applinks:alfred.app", "applinks:*.alfred.app"]
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.mybettertapp",
+      "package": "com.alfred.app",
       "permissions": [
         "RECORD_AUDIO",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+        "CAMERA",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
       ],
-      "foregroundService": {
-        "notificationTitle": "Alfred voice active",
-        "notificationText": "Listening for commands in the background."
-      }
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "alfred.app",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "alfred"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
       [
-        "expo-splash-screen",
+        "expo-notifications",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "icon": "./assets/notification-icon.png",
+          "color": "#00D9FF",
+          "sounds": []
         }
       ],
       [
-        "./plugins/withCarPlay",
+        "expo-local-authentication",
         {
-          "enabled": false
+          "faceIDPermission": "Alfred uses Face ID for secure authentication."
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
     }
   }
 }

@@ -22,13 +22,20 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     }) ?? "";
 
   return (
-    <View className={`mb-4 flex-col ${isUser ? "items-end" : "items-start"}`}>
+    <View
+      accessibilityLabel={`Message from ${agentLabel} at ${timestamp}`}
+      accessibilityRole="text"
+      className={`mb-4 flex-col ${isUser ? "items-end" : "items-start"}`}
+    >
       <View className="mb-1 flex-row items-baseline gap-2 px-2">
         <Text className="font-semibold text-muted-foreground text-xs">
           {agentLabel}
         </Text>
         {timestamp ? (
-          <Text className="text-[10px] text-muted-foreground/60">
+          <Text
+            accessibilityLabel={`Sent at ${timestamp}`}
+            className="text-[10px] text-muted-foreground/60"
+          >
             {timestamp}
           </Text>
         ) : null}
@@ -46,6 +53,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               <Text
                 className={`text-[16px] leading-6 ${isUser ? "text-primary-foreground" : "text-foreground"}`}
                 key={index}
+                selectable
               >
                 {part.text}
               </Text>
@@ -54,6 +62,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           if (isReasoningPart(part)) {
             return (
               <View
+                accessibilityLabel="Assistant reasoning"
                 className="mt-2 rounded-lg border-accent border-l-2 bg-foreground/5 p-3"
                 key={index}
               >
@@ -69,6 +78,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           if (isToolCallPart(part)) {
             return (
               <View
+                accessibilityLabel={`Using tool: ${part.toolName}`}
                 className="mt-2 flex-row items-center gap-2 rounded-lg bg-foreground/5 p-2"
                 key={index}
               >
