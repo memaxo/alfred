@@ -1,132 +1,190 @@
 /**
- * Mindscape Store - ReactFlow Isolated
+ * Mindscape Store - ReactFlow isolated state management
  *
- * This store manages all ReactFlow state for the Mindscape infinite canvas.
- * This is the ONLY store that imports @xyflow/react utilities.
+ * ⚠️ ISOLATION BOUNDARY: This is the ONLY store that imports @xyflow/react.
+ * Desktop store must NOT import ReactFlow types.
  *
- * ⚠️ ISOLATION BOUNDARY: Do not import this store in components/desktop/ or store/desktop/
- *
- * @see docs/execplans/desktop-type-migration.md Section 2.4
+ * @see docs/execplans/desktop-evolution-prd.md Part V
  */
 
-import {
-  applyEdgeChanges,
-  applyNodeChanges,
-  addEdge as rfAddEdge,
+import type {
+  Edge,
+  Node,
+  OnConnect,
+  OnEdgesChange,
+  OnNodesChange,
+  Viewport,
 } from "@xyflow/react";
+import { addEdge, applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import type {
-  MindscapeEdge,
-  MindscapeNode,
-  MindscapeNodeData,
-  MindscapeState,
-  MindscapeViewport,
-} from "./types";
 
-// Re-export types
-export type {
-  MindscapeEdge,
-  MindscapeNode,
-  MindscapeNodeData,
-  MindscapeSlice,
-  MindscapeState,
-  MindscapeViewport,
-} from "./types";
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────────────────────
 
-const DEFAULT_VIEWPORT: MindscapeViewport = { x: 0, y: 0, zoom: 1 };
+export type MindscapeNodeType =
+  | "entity"
+  | "concept"
+  | "note"
+  | "conversation"
+  | "window"
+  | "agent";
 
-export const useMindscapeStore = create<MindscapeState>()(
+export type MindscapeNodeData = {
+  label: string;
+  type: MindscapeNodeType;
+  description?: string;
+  color?: string;
+  icon?: string;
+  sourceWindowId?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type MindscapeEdgeData = {
+  label?: string;
+  type: "relation" | "reference" | "spawn" | "dependency";
+  weight?: number;
+};
+
+export type MindscapeNode = Node<MindscapeNodeData>;
+export type MindscapeEdge = Edge<MindscapeEdgeData>;
+
+export type MindscapeStore = {
+  // State
+  nodes: MindscapeNode[];
+  edges: MindscapeEdge[];
+  viewport: Viewport;
+  selectedNodeIds: string[];
+  isActive: boolean;
+
+  // ReactFlow callbacks
+  onNodesChange: OnNodesChange<MindscapeNode>;
+  onEdgesChange: OnEdgesChange<MindscapeEdge>;
+  onConnect: OnConnect;
+
+  // Node CRUD
+  addNode: (node: MindscapeNode) => void;
+  removeNode: (nodeId: string) => void;
+  updateNode: (nodeId: string, data: Partial<MindscapeNodeData>) => void;
+
+  // Edge CRUD
+  addEdge: (edge: MindscapeEdge) => void;
+  removeEdge: (edgeId: string) => void;
+
+  // Selection
+  selectNode: (nodeId: string) => void;
+  selectNodes: (nodeIds: string[]) => void;
+  clearSelection: () => void;
+
+  // Viewport
+  setViewport: (viewport: Viewport) => void;
+  fitView: () => void;
+  panTo: (x: number, y: number) => void;
+  zoomTo: (zoom: number) => void;
+
+  // Activation
+  activate: () => void;
+  deactivate: () => void;
+  toggle: () => void;
+
+  // Desktop integration
+  spawnFromWindow: (
+    windowId: string,
+    label: string,
+    position?: { x: number; y: number }
+  ) => void;
+  openInDesktop: (nodeId: string) => string | null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INITIAL STATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+const initialNodes: MindscapeNode[] = [
+  {
+    id: "root",
+    type: "entity",
+    position: { x: 0, y: 0 },
+    data: { label: "ALFRED", type: "concept", description: "AI Assistant" },
+  },
+];
+
+const initialEdges: MindscapeEdge[] = [];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STORE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const useMindscapeStore = create<MindscapeStore>()(
   devtools(
     persist(
       (set, get) => ({
         // Initial state
-        nodes: [],
-        edges: [],
-        viewport: DEFAULT_VIEWPORT,
+        nodes: initialNodes,
+        edges: initialEdges,
+        viewport: { x: 0, y: 0, zoom: 1 },
         selectedNodeIds: [],
-        activeEdges: new Set(),
-        highlightedEdgeIds: new Set(),
+        isActive: false,
 
         // ReactFlow callbacks
         onNodesChange: (changes) => {
           set({
-            nodes: applyNodeChanges(changes, get().nodes) as MindscapeNode[],
+            nodes: applyNodeChanges(changes, get().nodes),
           });
         },
 
         onEdgesChange: (changes) => {
           set({
-            edges: applyEdgeChanges(changes, get().edges) as MindscapeEdge[],
+            edges: applyEdgeChanges(changes, get().edges),
           });
         },
 
         onConnect: (connection) => {
+          const newEdge: MindscapeEdge = {
+            ...connection,
+            id: `e-${connection.source}-${connection.target}`,
+            data: { type: "relation" },
+          };
           set({
-            edges: rfAddEdge(connection, get().edges),
+            edges: addEdge(newEdge, get().edges),
           });
         },
 
         // Node CRUD
         addNode: (node) => {
-          set((state) => {
-            if (state.nodes.some((n) => n.id === node.id)) {
-              return state;
-            }
-            return { nodes: [...state.nodes, node] };
-          });
+          set({ nodes: [...get().nodes, node] });
         },
 
         removeNode: (nodeId) => {
-          set((state) => ({
-            nodes: state.nodes.filter((n) => n.id !== nodeId),
-            edges: state.edges.filter(
+          set({
+            nodes: get().nodes.filter((n) => n.id !== nodeId),
+            edges: get().edges.filter(
               (e) => e.source !== nodeId && e.target !== nodeId
             ),
-            selectedNodeIds: state.selectedNodeIds.filter(
-              (id) => id !== nodeId
-            ),
-          }));
+          });
         },
 
         updateNode: (nodeId, data) => {
-          set((state) => ({
-            nodes: state.nodes.map((n) => {
-              if (n.id !== nodeId) {
-                return n;
-              }
-              return {
-                ...n,
-                data: { ...n.data, ...data } as MindscapeNodeData,
-              };
-            }),
-          }));
+          set({
+            nodes: get().nodes.map((n) =>
+              n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
+            ),
+          });
         },
 
         // Edge CRUD
         addEdge: (edge) => {
-          set((state) => {
-            if (state.edges.some((e) => e.id === edge.id)) {
-              return state;
-            }
-            return { edges: [...state.edges, edge] };
-          });
+          set({ edges: [...get().edges, edge] });
         },
 
         removeEdge: (edgeId) => {
-          set((state) => ({
-            edges: state.edges.filter((e) => e.id !== edgeId),
-          }));
+          set({ edges: get().edges.filter((e) => e.id !== edgeId) });
         },
 
         // Selection
         selectNode: (nodeId) => {
-          set((state) => {
-            if (state.selectedNodeIds.includes(nodeId)) {
-              return state;
-            }
-            return { selectedNodeIds: [...state.selectedNodeIds, nodeId] };
-          });
+          set({ selectedNodeIds: [nodeId] });
         },
 
         selectNodes: (nodeIds) => {
@@ -143,95 +201,44 @@ export const useMindscapeStore = create<MindscapeState>()(
         },
 
         fitView: () => {
-          // fitView is typically called via ReactFlow's useReactFlow hook
-          // This is a placeholder for when we need to programmatically fit
+          // Trigger fit view - actual implementation in canvas component
         },
 
         panTo: (x, y) => {
-          set((state) => ({
-            viewport: { ...state.viewport, x, y },
-          }));
+          set({ viewport: { ...get().viewport, x, y } });
         },
 
         zoomTo: (zoom) => {
-          set((state) => ({
-            viewport: {
-              ...state.viewport,
-              zoom: Math.max(0.1, Math.min(4, zoom)),
-            },
-          }));
+          set({ viewport: { ...get().viewport, zoom } });
         },
 
-        // Layout
-        autoLayout: () => {
-          const { nodes } = get();
-          if (nodes.length === 0) {
-            return;
-          }
+        // Activation
+        activate: () => set({ isActive: true }),
+        deactivate: () => set({ isActive: false }),
+        toggle: () => set((state) => ({ isActive: !state.isActive })),
 
-          // Simple radial layout
-          const centerX = 400;
-          const centerY = 300;
-          const radius = 200;
-          const angleStep = (2 * Math.PI) / Math.max(nodes.length, 1);
-
-          const layoutedNodes = nodes.map((node, index) => {
-            const angle = index * angleStep - Math.PI / 2;
-            return {
-              ...node,
-              position: {
-                x: centerX + Math.cos(angle) * radius,
-                y: centerY + Math.sin(angle) * radius,
-              },
-            };
-          });
-
-          set({ nodes: layoutedNodes });
-        },
-
-        // Integration with Desktop
-        spawnFromWindow: (windowId) => {
-          // Create a Mindscape node from a desktop window
-          // This will be connected to the desktop store via a bridge
-          const nodeId = `mindscape-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        // Desktop integration
+        spawnFromWindow: (windowId, label, position) => {
+          const pos = position ?? {
+            x: Math.random() * 400 - 200,
+            y: Math.random() * 400 - 200,
+          };
           const node: MindscapeNode = {
-            id: nodeId,
-            type: "default",
-            position: { x: 400, y: 300 },
+            id: `window-${windowId}`,
+            type: "entity",
+            position: pos,
             data: {
-              entityId: windowId,
-              entityType: "window",
-              label: `Window ${windowId}`,
+              label,
+              type: "window",
+              sourceWindowId: windowId,
             },
           };
           get().addNode(node);
         },
 
-        openInDesktop: (_nodeId) => {
-          // Open a Mindscape node as a desktop window
-          // This will be connected to the desktop store via a bridge
-          // Implementation will trigger desktop store's openWindow
-        },
-
-        // Edge highlighting
-        setHighlightedEdges: (edgeIds) => {
-          set({ highlightedEdgeIds: new Set(edgeIds) });
-        },
-
-        triggerEdgeActivity: (edgeId, durationMs = 2000) => {
-          set((state) => {
-            const next = new Set(state.activeEdges);
-            next.add(edgeId);
-            return { activeEdges: next };
-          });
-
-          setTimeout(() => {
-            set((state) => {
-              const next = new Set(state.activeEdges);
-              next.delete(edgeId);
-              return { activeEdges: next };
-            });
-          }, durationMs);
+        openInDesktop: (nodeId) => {
+          const node = get().nodes.find((n) => n.id === nodeId);
+          return node?.data.sourceWindowId ?? null;
         },
       }),
       {
@@ -246,11 +253,3 @@ export const useMindscapeStore = create<MindscapeState>()(
     { name: "MindscapeStore" }
   )
 );
-
-// Selectors
-export const selectMindscapeNodes = (state: MindscapeState) => state.nodes;
-export const selectMindscapeEdges = (state: MindscapeState) => state.edges;
-export const selectMindscapeViewport = (state: MindscapeState) =>
-  state.viewport;
-export const selectSelectedNodeIds = (state: MindscapeState) =>
-  state.selectedNodeIds;
