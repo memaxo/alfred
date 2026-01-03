@@ -49,8 +49,8 @@ export type PR = {
   comments: number;
   reviewStatus: "pending" | "approved" | "changes_requested";
   ciStatus: "pending" | "success" | "failure" | "running";
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

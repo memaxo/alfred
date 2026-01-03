@@ -4,9 +4,10 @@
  * PR List - Filterable list of pull requests
  */
 
-import { Bot, Check, GitPullRequest, X } from "lucide-react";
+import { Bot, Check, GitPullRequest, Loader2, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 import type { PR } from "./index";
 
 type PRListProps = {
@@ -16,74 +17,22 @@ type PRListProps = {
   className?: string;
 };
 
-// Mock PRs
-const mockPRs: PR[] = [
-  {
-    id: "1",
-    number: 412,
-    title: "Phase 0: Type Migration & Architecture Setup",
-    author: "codex-agent",
-    status: "open",
-    isDraft: false,
-    isAgentCreated: true,
-    repository: "alfred",
-    branch: "feat/phase-0-types",
-    baseBranch: "main",
-    additions: 1500,
-    deletions: 200,
-    comments: 3,
-    reviewStatus: "pending",
-    ciStatus: "success",
-    createdAt: new Date(Date.now() - 3_600_000),
-    updatedAt: new Date(Date.now() - 1_800_000),
-  },
-  {
-    id: "2",
-    number: 413,
-    title: "Phase 1: Desktop Shell Foundation",
-    author: "droid-agent",
-    status: "open",
-    isDraft: false,
-    isAgentCreated: true,
-    repository: "alfred",
-    branch: "feat/phase-1-shell",
-    baseBranch: "main",
-    additions: 1337,
-    deletions: 50,
-    comments: 0,
-    reviewStatus: "pending",
-    ciStatus: "running",
-    createdAt: new Date(Date.now() - 7_200_000),
-    updatedAt: new Date(Date.now() - 3_600_000),
-  },
-  {
-    id: "3",
-    number: 410,
-    title: "Fix voice router streaming",
-    author: "jack",
-    status: "merged",
-    isDraft: false,
-    isAgentCreated: false,
-    repository: "alfred",
-    branch: "fix/voice-streaming",
-    baseBranch: "main",
-    additions: 45,
-    deletions: 12,
-    comments: 2,
-    reviewStatus: "approved",
-    ciStatus: "success",
-    createdAt: new Date(Date.now() - 86_400_000),
-    updatedAt: new Date(Date.now() - 82_800_000),
-  },
-];
-
 export function PRList({
   filter,
   selectedId,
   onSelect,
   className,
 }: PRListProps) {
-  const filteredPRs = mockPRs.filter((pr) => {
+  const state = filter === "agent" ? "all" : filter === "open" ? "open" : "all";
+  const { data, isLoading, error } = trpc.github.pullRequestsList.useQuery(
+    { state, limit: 30 },
+    { refetchInterval: 30_000 }
+  );
+
+  const allPRs: PR[] = data?.pullRequests ?? [];
+
+  // Client-side filter for agent PRs
+  const filteredPRs = allPRs.filter((pr) => {
     if (filter === "open") {
       return pr.status === "open";
     }
@@ -103,6 +52,21 @@ export function PRList({
 
       <ScrollArea className="flex-1">
         <div className="p-2">
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-center text-red-400 text-xs">
+              Failed to load PRs
+            </div>
+          )}
+          {!isLoading && filteredPRs.length === 0 && !error && (
+            <div className="py-4 text-center text-biolum-dim text-sm">
+              No pull requests found
+            </div>
+          )}
           {filteredPRs.map((pr) => (
             <PRItem
               isSelected={pr.id === selectedId}

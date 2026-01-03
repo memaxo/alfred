@@ -12,15 +12,18 @@ import {
   FileText,
   Folder,
   FolderOpen,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type FileTreeProps = {
   onSelect: (path: string) => void;
   selectedPath?: string;
   className?: string;
+  rootPath?: string;
 };
 
 type TreeNode = {
@@ -29,62 +32,6 @@ type TreeNode = {
   type: "file" | "folder";
   children?: TreeNode[];
 };
-
-// Mock file tree
-const mockTree: TreeNode[] = [
-  {
-    name: "src",
-    path: "/src",
-    type: "folder",
-    children: [
-      {
-        name: "components",
-        path: "/src/components",
-        type: "folder",
-        children: [
-          {
-            name: "desktop",
-            path: "/src/components/desktop",
-            type: "folder",
-            children: [
-              {
-                name: "shell.tsx",
-                path: "/src/components/desktop/shell.tsx",
-                type: "file",
-              },
-              {
-                name: "menubar",
-                path: "/src/components/desktop/menubar",
-                type: "folder",
-                children: [
-                  {
-                    name: "index.tsx",
-                    path: "/src/components/desktop/menubar/index.tsx",
-                    type: "file",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        name: "hooks",
-        path: "/src/hooks",
-        type: "folder",
-        children: [
-          {
-            name: "use-chat-logic.ts",
-            path: "/src/hooks/use-chat-logic.ts",
-            type: "file",
-          },
-        ],
-      },
-    ],
-  },
-  { name: "package.json", path: "/package.json", type: "file" },
-  { name: "tsconfig.json", path: "/tsconfig.json", type: "file" },
-];
 
 function getFileIcon(name: string) {
   if (name.endsWith(".tsx") || name.endsWith(".ts")) {
@@ -96,7 +43,20 @@ function getFileIcon(name: string) {
   return FileText;
 }
 
-export function FileTree({ onSelect, selectedPath, className }: FileTreeProps) {
+export function FileTree({
+  onSelect,
+  selectedPath,
+  className,
+  rootPath = process.cwd?.() ?? "/Users/jackmazac/Development/alfred",
+}: FileTreeProps) {
+  // Fetch the file tree from the backend
+  const { data, isLoading, error } = trpc.fs.tree.useQuery(
+    { path: rootPath, depth: 4 },
+    { staleTime: 30_000 } // Cache for 30 seconds
+  );
+
+  const tree = data?.tree ?? [];
+
   return (
     <div className={cn("flex flex-col bg-void", className)}>
       <div className="flex h-9 items-center border-white/5 border-b px-3">
@@ -106,7 +66,22 @@ export function FileTree({ onSelect, selectedPath, className }: FileTreeProps) {
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {mockTree.map((node) => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-center text-red-400 text-xs">
+              Failed to load files
+            </div>
+          )}
+          {!isLoading && tree.length === 0 && !error && (
+            <div className="py-2 text-center text-biolum-dim text-xs">
+              No files found
+            </div>
+          )}
+          {tree.map((node) => (
             <TreeItem
               key={node.path}
               node={node}

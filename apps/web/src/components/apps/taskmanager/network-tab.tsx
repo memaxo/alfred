@@ -4,9 +4,10 @@
  * Network Tab - Network connections and bandwidth
  */
 
-import { ArrowDown, ArrowUp, Globe, Server } from "lucide-react";
+import { ArrowDown, ArrowUp, Globe, Loader2, Server } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type NetworkTabProps = {
   className?: string;
@@ -21,60 +22,34 @@ type Connection = {
   process: string;
 };
 
-// Mock connections
-const mockConnections: Connection[] = [
-  {
-    id: "1",
-    localAddress: "127.0.0.1:3000",
-    remoteAddress: "0.0.0.0:*",
-    protocol: "tcp",
-    state: "listening",
-    process: "api-server",
-  },
-  {
-    id: "2",
-    localAddress: "127.0.0.1:5432",
-    remoteAddress: "0.0.0.0:*",
-    protocol: "tcp",
-    state: "listening",
-    process: "postgres",
-  },
-  {
-    id: "3",
-    localAddress: "127.0.0.1:52341",
-    remoteAddress: "api.openai.com:443",
-    protocol: "tcp",
-    state: "established",
-    process: "codex-agent",
-  },
-  {
-    id: "4",
-    localAddress: "127.0.0.1:52342",
-    remoteAddress: "api.anthropic.com:443",
-    protocol: "tcp",
-    state: "established",
-    process: "droid-agent",
-  },
-];
-
 export function NetworkTab({ className }: NetworkTabProps) {
+  const { data, isLoading, error } = trpc.admin.networkConnections.useQuery(
+    undefined,
+    { refetchInterval: 10_000 }
+  );
+
+  const connections: Connection[] = data?.connections ?? [];
+
   return (
     <div className={cn("flex flex-col", className)}>
-      {/* Bandwidth summary */}
+      {/* Bandwidth summary (static for now - real bandwidth monitoring would need system integration) */}
       <div className="flex items-center gap-8 border-white/5 border-b p-4">
         <div className="flex items-center gap-2">
           <ArrowDown className="h-4 w-4 text-green-400" />
           <div>
-            <div className="font-semibold text-lg">1.2 MB/s</div>
+            <div className="font-semibold text-lg">--</div>
             <div className="text-biolum-dim text-xs">Download</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <ArrowUp className="h-4 w-4 text-orange-400" />
           <div>
-            <div className="font-semibold text-lg">0.8 MB/s</div>
+            <div className="font-semibold text-lg">--</div>
             <div className="text-biolum-dim text-xs">Upload</div>
           </div>
+        </div>
+        <div className="ml-auto text-biolum-dim text-xs">
+          {connections.length} connections
         </div>
       </div>
 
@@ -88,7 +63,22 @@ export function NetworkTab({ className }: NetworkTabProps) {
       </div>
 
       <ScrollArea className="flex-1">
-        {mockConnections.map((conn) => (
+        {isLoading && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+          </div>
+        )}
+        {error && (
+          <div className="py-2 text-center text-red-400 text-xs">
+            Failed to load connections
+          </div>
+        )}
+        {!isLoading && connections.length === 0 && !error && (
+          <div className="py-4 text-center text-biolum-dim text-sm">
+            No connections found
+          </div>
+        )}
+        {connections.map((conn) => (
           <ConnectionRow connection={conn} key={conn.id} />
         ))}
       </ScrollArea>

@@ -4,12 +4,15 @@
  * File Audit - File change history
  */
 
-import { Edit, File, Minus, Plus } from "lucide-react";
+import { Edit, File, Loader2, Minus, Plus } from "lucide-react";
+import { useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
+import type { Workspace } from "./index";
 
 type FileAuditProps = {
-  workspaceId: string;
+  workspace: Workspace;
   className?: string;
 };
 
@@ -21,58 +24,56 @@ type FileChange = {
   operations: number;
 };
 
-// Mock file changes
-const mockFileChanges: FileChange[] = [
-  {
-    path: "src/components/desktop/shell.tsx",
-    changeType: "added",
-    additions: 150,
-    deletions: 0,
-    operations: 1,
-  },
-  {
-    path: "src/components/desktop/menubar.tsx",
-    changeType: "added",
-    additions: 120,
-    deletions: 0,
-    operations: 1,
-  },
-  {
-    path: "src/store/desktop/types.new.ts",
-    changeType: "added",
-    additions: 380,
-    deletions: 0,
-    operations: 2,
-  },
-  {
-    path: "src/store/desktop/windows.ts",
-    changeType: "modified",
-    additions: 45,
-    deletions: 30,
-    operations: 3,
-  },
-  {
-    path: "src/old-component.tsx",
-    changeType: "deleted",
-    additions: 0,
-    deletions: 85,
-    operations: 1,
-  },
-];
+export function FileAudit({ workspace, className }: FileAuditProps) {
+  const { data, isLoading, error } = trpc.agentfs.operationsList.useQuery({
+    runId: workspace.runId,
+    dbPath: workspace.dbPath,
+    limit: 500,
+  });
 
-export function FileAudit({
-  workspaceId: _workspaceId,
-  className,
-}: FileAuditProps) {
-  const totalAdditions = mockFileChanges.reduce((a, f) => a + f.additions, 0);
-  const totalDeletions = mockFileChanges.reduce((a, f) => a + f.deletions, 0);
+  // Group operations by file path and compute change stats
+  const fileChanges = useMemo(() => {
+    const operations = data?.operations ?? [];
+    const byPath = new Map<
+      string,
+      { type: string; count: number; bytes: number }
+    >();
+
+    for (const op of operations) {
+      const path = op.path || "unknown";
+      const existing = byPath.get(path) ?? { type: "read", count: 0, bytes: 0 };
+      existing.count += 1;
+      existing.bytes += op.bytesAffected ?? 0;
+      if (op.type === "write") existing.type = "modified";
+      if (op.type === "delete") existing.type = "deleted";
+      byPath.set(path, existing);
+    }
+
+    return Array.from(byPath.entries()).map(
+      ([path, stats]): FileChange => ({
+        path,
+        changeType:
+          stats.type === "deleted"
+            ? "deleted"
+            : stats.type === "modified"
+              ? "modified"
+              : "added",
+        additions: stats.type !== "deleted" ? stats.bytes : 0,
+        deletions: stats.type === "deleted" ? stats.bytes : 0,
+        operations: stats.count,
+      })
+    );
+  }, [data]);
+
+  const totalAdditions = fileChanges.reduce((a, f) => a + f.additions, 0);
+  const totalDeletions = fileChanges.reduce((a, f) => a + f.deletions, 0);
 
   return (
     <div className={cn("flex flex-col", className)}>
       {/* Summary */}
       <div className="flex items-center gap-4 border-white/5 border-b px-4 py-3">
         <span className="text-biolum-dim text-sm">
-          {mockFileChanges.length} files changed
+          {fileChanges.length} files changed
         </span>
         <span className="text-green-400 text-sm">+{totalAdditions}</span>
         <span className="text-red-400 text-sm">-{totalDeletions}</span>
@@ -81,7 +82,22 @@ export function FileAudit({
       {/* File list */}
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {mockFileChanges.map((file) => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-center text-red-400 text-xs">
+              Failed to load file changes
+            </div>
+          )}
+          {!isLoading && fileChanges.length === 0 && !error && (
+            <div className="py-4 text-center text-biolum-dim text-sm">
+              No file changes recorded
+            </div>
+          )}
+          {fileChanges.map((file) => (
             <FileChangeRow file={file} key={file.path} />
           ))}
         </div>

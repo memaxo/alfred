@@ -8,6 +8,7 @@ import { idle, initialAutonomy, timestamp } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import { cosineSimilarity, embedMany } from "@alfred/embed";
+import { getAccuracyMetrics, getInsights, getMistakes } from "@alfred/learning";
 import { logger } from "@alfred/logger";
 import type { CognitiveEffect } from "@alfred/runtime/cognitive";
 import { z } from "zod";
@@ -122,6 +123,43 @@ async function reconstructState(
   return { state, autonomy };
 }
 
+// Autonomy scope definitions
+const AUTONOMY_SCOPES = [
+  "code",
+  "filesystem",
+  "network",
+  "system",
+  "sensitive",
+] as const;
+type AutonomyScope = (typeof AUTONOMY_SCOPES)[number];
+
+// In-memory autonomy settings (would be persisted in production)
+const autonomySettings = new Map<string, Map<AutonomyScope, number>>();
+
+function getUserAutonomy(userId: string): Map<AutonomyScope, number> {
+  if (!autonomySettings.has(userId)) {
+    const defaults = new Map<AutonomyScope, number>();
+    defaults.set("code", 0.8);
+    defaults.set("filesystem", 0.6);
+    defaults.set("network", 0.5);
+    defaults.set("system", 0.3);
+    defaults.set("sensitive", 0.2);
+    autonomySettings.set(userId, defaults);
+  }
+  return autonomySettings.get(userId) ?? new Map();
+}
+
+function getAutonomyScopeDescription(scope: AutonomyScope): string {
+  const descriptions: Record<AutonomyScope, string> = {
+    code: "Code generation and modifications",
+    filesystem: "File system read/write operations",
+    network: "Network requests and API calls",
+    system: "System commands and shell execution",
+    sensitive: "Operations involving sensitive data",
+  };
+  return descriptions[scope];
+}
+
 export const cognitiveRouter = router({
   /**
    * Get the current cognitive state for a stream
@@ -154,6 +192,114 @@ export const cognitiveRouter = router({
         ts: getStateTimestamp(),
       };
     }),
+
+  /**
+   * List feedback/mistake history from the learning ledger
+   */
+  feedbackList: authedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).optional().default(50),
+        category: z.string().optional(),
+        since: z.string().datetime().optional(),
+      })
+    )
+    .query(({ input }) => {
+      const mistakes = getMistakes({
+        limit: input.limit,
+        category: input.category,
+        since: input.since ? new Date(input.since) : undefined,
+      });
+
+      return {
+        entries: mistakes.map((m) => ({
+          id: m.id,
+          category: m.category,
+          cause: m.cause,
+          effect: m.effect,
+          timestamp: m.ts,
+          context: m.context,
+        })),
+        total: mistakes.length,
+      };
+    }),
+
+  /**
+   * Get current autonomy levels per scope
+   */
+  autonomyGet: authedProcedure.query(({ ctx }) => {
+    const userId = ctx.session?.user?.id ?? "anonymous";
+    const settings = getUserAutonomy(userId);
+
+    const scopes = AUTONOMY_SCOPES.map((scope) => ({
+      scope,
+      level: settings.get(scope) ?? 0.5,
+      description: getAutonomyScopeDescription(scope),
+    }));
+
+    return { scopes };
+  }),
+
+  /**
+   * Update autonomy level for a specific scope
+   */
+  autonomySet: authedProcedure
+    .input(
+      z.object({
+        scope: z.enum(AUTONOMY_SCOPES),
+        level: z.number().min(0).max(1),
+      })
+    )
+    .mutation(({ ctx, input }) => {
+      const userId = ctx.session?.user?.id ?? "anonymous";
+      const settings = getUserAutonomy(userId);
+      settings.set(input.scope, input.level);
+
+      logger.info("cognitive_autonomy_updated", {
+        userId,
+        scope: input.scope,
+        level: input.level,
+      });
+
+      return {
+        scope: input.scope,
+        level: input.level,
+        updated: true,
+      };
+    }),
+
+  /**
+   * Get accuracy metrics by category
+   */
+  metricsAccuracy: authedProcedure.query(() => {
+    const metrics = getAccuracyMetrics();
+    return {
+      metrics: metrics.map((m) => ({
+        category: m.category,
+        total: m.total,
+        errorRate: m.errorRate,
+        trend: m.trend,
+      })),
+    };
+  }),
+
+  /**
+   * Get learning insights
+   */
+  insightsList: authedProcedure.query(() => {
+    const insights = getInsights();
+    return {
+      insights: insights.map((i) => ({
+        id: i.id,
+        type: i.type,
+        title: i.title,
+        description: i.description,
+        confidence: i.confidence,
+        category: i.category,
+        actionable: i.actionable,
+      })),
+    };
+  }),
 
   feedback: authedProcedure
     .use(

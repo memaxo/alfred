@@ -4,79 +4,32 @@
  * Container List - Docker container list with status
  */
 
-import { Bot, Circle, Pause, Play, Square } from "lucide-react";
+import { Bot, Circle, Loader2, Pause, Play, Square } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { Container } from "./index";
 
 type ContainerListProps = {
+  containers: Container[];
   filter: "all" | "running" | "agent";
   selectedId: string | null;
   onSelect: (id: string) => void;
   className?: string;
+  isLoading?: boolean;
+  error?: string;
 };
 
-// Mock containers
-const mockContainers: Container[] = [
-  {
-    id: "abc123",
-    name: "alfred-agentfs-run-001",
-    image: "alfred/agentfs:latest",
-    status: "running",
-    ports: ["3000:3000"],
-    created: new Date(Date.now() - 3_600_000),
-    cpuPercent: 12.5,
-    memoryUsage: 256,
-    memoryLimit: 1024,
-    isAgentWorkspace: true,
-    workspaceId: "ws-001",
-  },
-  {
-    id: "def456",
-    name: "postgres",
-    image: "pgvector/pgvector:pg16",
-    status: "running",
-    ports: ["5432:5432"],
-    created: new Date(Date.now() - 86_400_000),
-    cpuPercent: 2.3,
-    memoryUsage: 128,
-    memoryLimit: 512,
-    isAgentWorkspace: false,
-  },
-  {
-    id: "ghi789",
-    name: "redis",
-    image: "redis:7-alpine",
-    status: "running",
-    ports: ["6379:6379"],
-    created: new Date(Date.now() - 86_400_000),
-    cpuPercent: 0.5,
-    memoryUsage: 32,
-    memoryLimit: 128,
-    isAgentWorkspace: false,
-  },
-  {
-    id: "jkl012",
-    name: "alfred-agentfs-run-old",
-    image: "alfred/agentfs:latest",
-    status: "exited",
-    ports: [],
-    created: new Date(Date.now() - 172_800_000),
-    cpuPercent: 0,
-    memoryUsage: 0,
-    memoryLimit: 1024,
-    isAgentWorkspace: true,
-    workspaceId: "ws-old",
-  },
-];
-
 export function ContainerList({
+  containers,
   filter,
   selectedId,
   onSelect,
   className,
+  isLoading,
+  error,
 }: ContainerListProps) {
-  const filteredContainers = mockContainers.filter((c) => {
+  // Apply filter (already filtered from backend, but filter again for safety)
+  const filteredContainers = containers.filter((c) => {
     if (filter === "running") {
       return c.status === "running";
     }
@@ -97,6 +50,19 @@ export function ContainerList({
 
       <ScrollArea className="flex-1">
         <div className="p-2">
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-center text-red-400 text-xs">{error}</div>
+          )}
+          {!(isLoading || error) && filteredContainers.length === 0 && (
+            <div className="py-4 text-center text-biolum-dim text-sm">
+              No containers found
+            </div>
+          )}
           {filteredContainers.map((container) => (
             <ContainerItem
               container={container}

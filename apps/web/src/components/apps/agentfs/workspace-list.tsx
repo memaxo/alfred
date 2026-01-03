@@ -4,56 +4,30 @@
  * Workspace List - AgentFS workspace list
  */
 
-import { Bot, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Bot, CheckCircle, Clock, Loader2, XCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 import type { Workspace } from "./index";
 
 type WorkspaceListProps = {
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (workspace: Workspace) => void;
   className?: string;
 };
-
-// Mock workspaces
-const mockWorkspaces: Workspace[] = [
-  {
-    id: "ws-001",
-    runId: "run-abc123",
-    agentType: "codex",
-    status: "active",
-    containerId: "abc123",
-    createdAt: new Date(Date.now() - 1_800_000),
-    operationCount: 45,
-    checkpointCount: 3,
-  },
-  {
-    id: "ws-002",
-    runId: "run-def456",
-    agentType: "droid",
-    status: "completed",
-    containerId: "def456",
-    createdAt: new Date(Date.now() - 7_200_000),
-    operationCount: 128,
-    checkpointCount: 8,
-  },
-  {
-    id: "ws-003",
-    runId: "run-ghi789",
-    agentType: "claude",
-    status: "failed",
-    containerId: "ghi789",
-    createdAt: new Date(Date.now() - 14_400_000),
-    operationCount: 23,
-    checkpointCount: 1,
-  },
-];
 
 export function WorkspaceList({
   selectedId,
   onSelect,
   className,
 }: WorkspaceListProps) {
+  const { data, isLoading, error } = trpc.agentfs.workspacesList.useQuery(
+    undefined,
+    { refetchInterval: 10_000 }
+  );
+
+  const workspaces: Workspace[] = data?.workspaces ?? [];
+
   return (
     <div className={cn("flex flex-col bg-void", className)}>
       <div className="flex h-9 items-center border-white/5 border-b px-3">
@@ -64,11 +38,26 @@ export function WorkspaceList({
 
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {mockWorkspaces.map((workspace) => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-center text-red-400 text-xs">
+              Failed to load workspaces
+            </div>
+          )}
+          {!isLoading && workspaces.length === 0 && !error && (
+            <div className="py-4 text-center text-biolum-dim text-sm">
+              No workspaces found
+            </div>
+          )}
+          {workspaces.map((workspace) => (
             <WorkspaceItem
               isSelected={workspace.id === selectedId}
               key={workspace.id}
-              onClick={() => onSelect(workspace.id)}
+              onClick={() => onSelect(workspace)}
               workspace={workspace}
             />
           ))}
@@ -93,7 +82,7 @@ function WorkspaceItem({
       : workspace.status === "completed"
         ? CheckCircle
         : XCircle;
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     active: "text-blue-400",
     completed: "text-green-400",
     failed: "text-red-400",
@@ -116,7 +105,10 @@ function WorkspaceItem({
               {workspace.runId}
             </span>
             <StatusIcon
-              className={cn("h-3 w-3", statusColors[workspace.status])}
+              className={cn(
+                "h-3 w-3",
+                statusColors[workspace.status] ?? "text-biolum-dim"
+              )}
             />
           </div>
           <p className="truncate text-biolum-dim text-xs capitalize">

@@ -4,73 +4,75 @@
  * Mistake Ledger - Chronological list of errors and corrections
  */
 
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import type { LearningEntry } from "./index";
+import { trpc } from "@/utils/trpc";
 
 type MistakeLedgerProps = {
   timeRange: "day" | "week" | "month";
 };
 
-const mockEntries: LearningEntry[] = [
-  {
-    id: "1",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    category: "reasoning",
-    error:
-      "Assumed user wanted code refactoring when they asked about documentation",
-    correction: "Ask clarifying questions before assuming intent",
-    severity: "medium",
-    resolved: true,
-  },
-  {
-    id: "2",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    category: "coding",
-    error: "Generated code with TypeScript errors in generic constraints",
-    correction: "Validate type constraints before suggesting code",
-    severity: "high",
-    resolved: true,
-  },
-  {
-    id: "3",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    category: "planning",
-    error: "Underestimated task complexity in ExecPlan",
-    correction: "Include buffer time for complex tasks",
-    severity: "low",
-    resolved: false,
-  },
-  {
-    id: "4",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    category: "communication",
-    error: "Response was too verbose for a simple question",
-    correction: "Match response length to question complexity",
-    severity: "low",
-    resolved: true,
-  },
-];
+// Compute time filter based on range
+function getTimeFilter(range: "day" | "week" | "month"): string | undefined {
+  const now = new Date();
+  switch (range) {
+    case "day":
+      return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    case "week":
+      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    case "month":
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    default:
+      return;
+  }
+}
 
-const severityColors = {
-  low: "text-green-400",
-  medium: "text-yellow-400",
-  high: "text-red-400",
-};
-
-const categoryColors = {
+const categoryColors: Record<string, string> = {
   reasoning: "bg-purple-500/20 text-purple-400",
   coding: "bg-blue-500/20 text-blue-400",
   planning: "bg-orange-500/20 text-orange-400",
   communication: "bg-green-500/20 text-green-400",
+  uncategorized: "bg-gray-500/20 text-gray-400",
 };
 
-export function MistakeLedger({ timeRange: _timeRange }: MistakeLedgerProps) {
+export function MistakeLedger({ timeRange }: MistakeLedgerProps) {
+  const since = getTimeFilter(timeRange);
+  const { data, isLoading, error } = trpc.cognitive.feedbackList.useQuery({
+    limit: 50,
+    since,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center text-red-400">
+        Failed to load feedback history
+      </div>
+    );
+  }
+
+  const entries = data?.entries ?? [];
+
+  if (entries.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-biolum-dim">
+        No feedback entries in this time range
+      </div>
+    );
+  }
+
   return (
     <ScrollArea className="h-full">
       <div className="space-y-3 p-4">
-        {mockEntries.map((entry) => (
+        {entries.map((entry) => (
           <div
             className="rounded-lg border border-white/10 bg-white/5 p-3"
             key={entry.id}
@@ -80,21 +82,15 @@ export function MistakeLedger({ timeRange: _timeRange }: MistakeLedgerProps) {
                 <span
                   className={cn(
                     "rounded px-2 py-0.5 text-xs",
-                    categoryColors[entry.category]
+                    categoryColors[entry.category] ??
+                      categoryColors.uncategorized
                   )}
                 >
                   {entry.category}
                 </span>
-                <span className={cn("text-xs", severityColors[entry.severity])}>
-                  {entry.severity}
-                </span>
               </div>
               <div className="flex items-center gap-2">
-                {entry.resolved ? (
-                  <Check className="h-4 w-4 text-green-400" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 text-yellow-400" />
-                )}
+                <AlertTriangle className="h-4 w-4 text-yellow-400" />
                 <span className="text-biolum-dim text-xs">
                   {formatTimeAgo(entry.timestamp)}
                 </span>
@@ -102,13 +98,13 @@ export function MistakeLedger({ timeRange: _timeRange }: MistakeLedgerProps) {
             </div>
 
             <div className="mb-2">
-              <div className="mb-1 text-biolum-dim text-xs">Error</div>
-              <p className="text-sm">{entry.error}</p>
+              <div className="mb-1 text-biolum-dim text-xs">Cause</div>
+              <p className="text-sm">{entry.cause}</p>
             </div>
 
             <div>
-              <div className="mb-1 text-biolum-dim text-xs">Correction</div>
-              <p className="text-biolum text-sm">{entry.correction}</p>
+              <div className="mb-1 text-biolum-dim text-xs">Effect</div>
+              <p className="text-biolum text-sm">{entry.effect}</p>
             </div>
           </div>
         ))}
@@ -117,7 +113,8 @@ export function MistakeLedger({ timeRange: _timeRange }: MistakeLedgerProps) {
   );
 }
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(timestamp: string): string {
+  const date = new Date(timestamp);
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) {
     return "just now";

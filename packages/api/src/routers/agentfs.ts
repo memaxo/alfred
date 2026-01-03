@@ -1,3 +1,4 @@
+import { readdirSync, statSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import type {
@@ -104,6 +105,246 @@ function toDirEntry(name: string, stat: unknown, inoFallback: number) {
 }
 
 export const agentfsRouter = router({
+  // ─────────────────────────────────────────────────────────────────────────
+  // Workspace Management Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  workspacesList: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .query(() => {
+      try {
+        const agentfsDir = path.join(process.cwd(), ".agentfs");
+
+        // Check if .agentfs directory exists
+        let dirExists = false;
+        try {
+          const stats = statSync(agentfsDir);
+          dirExists = stats.isDirectory();
+        } catch {
+          dirExists = false;
+        }
+
+        if (!dirExists) {
+          return { workspaces: [] };
+        }
+
+        // List subdirectories (each is a run)
+        const entries = readdirSync(agentfsDir, { withFileTypes: true });
+        const workspaces = entries
+          .filter((e) => e.isDirectory())
+          .map((e) => {
+            const runPath = path.join(agentfsDir, e.name);
+            const dbPath = `.agentfs/${e.name}/agentfs.db`;
+            let dbExists = false;
+            let mtime: Date | undefined;
+
+            try {
+              const dbStats = statSync(path.join(runPath, "agentfs.db"));
+              dbExists = dbStats.isFile();
+              mtime = dbStats.mtime;
+            } catch {
+              dbExists = false;
+            }
+
+            if (!dbExists) {
+              return null;
+            }
+
+            // Infer status from directory name or mtime
+            const isRecent =
+              mtime && Date.now() - mtime.getTime() < 5 * 60 * 1000;
+
+            return {
+              id: e.name,
+              runId: e.name,
+              dbPath,
+              agentType: inferAgentType(e.name),
+              status: isRecent ? "active" : "completed",
+              createdAt: mtime?.toISOString() ?? new Date().toISOString(),
+              operationCount: 0, // Would need to query DB for actual count
+              checkpointCount: 0,
+            };
+          })
+          .filter(Boolean) as Array<{
+          id: string;
+          runId: string;
+          dbPath: string;
+          agentType: string;
+          status: string;
+          createdAt: string;
+          operationCount: number;
+          checkpointCount: number;
+        }>;
+
+        return { workspaces };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to list workspaces: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  operationsList: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        limit: z.number().int().min(1).max(500).default(100),
+      })
+    )
+    .query(async ({ input }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const fsdb = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        const toolCallsRaw = await fsdb.tools.getRecent(0, input.limit);
+        const operations = toolCallsRaw.map((c: AgentFSToolCall) => ({
+          id: String(c.id),
+          type: inferOperationType(c.name),
+          name: c.name,
+          path: extractPath(c.parameters),
+          timestamp: new Date(c.started_at * 1000).toISOString(),
+          duration: c.duration_ms ?? 0,
+          bytesAffected: extractBytes(c.result),
+          error: c.error ?? null,
+        }));
+
+        return { operations };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  checkpointsList: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+      })
+    )
+    .query(async ({ input }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const fsdb = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        // Get checkpoints from KV store (if stored there)
+        const kvRaw = await fsdb.kv.list();
+        const checkpoints = kvRaw
+          .filter((e: AgentFSKVEntry) => e.key.startsWith("checkpoint:"))
+          .map((e: AgentFSKVEntry) => ({
+            id: e.key.replace("checkpoint:", ""),
+            name: e.key,
+            createdAt: new Date((e.created_at ?? 0) * 1000).toISOString(),
+            data: e.value,
+          }));
+
+        return { checkpoints };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  kvList: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+      })
+    )
+    .query(async ({ input }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const fsdb = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        const kvRaw = await fsdb.kv.list();
+        const entries = kvRaw.map((e: AgentFSKVEntry) => ({
+          key: e.key,
+          value: e.value,
+          type: typeof e.value,
+          createdAt: new Date((e.created_at ?? 0) * 1000).toISOString(),
+          updatedAt: new Date((e.updated_at ?? 0) * 1000).toISOString(),
+        }));
+
+        return { entries };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  fileAudit: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        filePath: z.string().min(1).max(500),
+      })
+    )
+    .query(async ({ input }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const fsdb = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        // Get all tool calls and filter for those affecting the specified file
+        const toolCallsRaw = await fsdb.tools.getRecent(0, 1000);
+        const changes = toolCallsRaw
+          .filter((c: AgentFSToolCall) => {
+            const callPath = extractPath(c.parameters);
+            return callPath.includes(input.filePath);
+          })
+          .map((c: AgentFSToolCall) => ({
+            id: String(c.id),
+            type: inferOperationType(c.name),
+            timestamp: new Date(c.started_at * 1000).toISOString(),
+            diff: extractDiff(c.parameters, c.result),
+          }));
+
+        return { changes };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
   snapshot: authedProcedure
     .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
     .input(agentfsSnapshotInputSchema)
@@ -365,3 +606,93 @@ export const agentfsRouter = router({
       });
     }),
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+function inferAgentType(runId: string): string {
+  if (runId.includes("codex")) return "codex";
+  if (runId.includes("droid")) return "droid";
+  if (runId.includes("claude")) return "claude";
+  if (runId.includes("roo")) return "roo";
+  return "agent";
+}
+
+function inferOperationType(
+  toolName: string
+): "read" | "write" | "delete" | "mkdir" {
+  const lower = toolName.toLowerCase();
+  if (
+    lower.includes("read") ||
+    lower.includes("get") ||
+    lower.includes("list")
+  ) {
+    return "read";
+  }
+  if (
+    lower.includes("write") ||
+    lower.includes("create") ||
+    lower.includes("save")
+  ) {
+    return "write";
+  }
+  if (lower.includes("delete") || lower.includes("remove")) {
+    return "delete";
+  }
+  if (lower.includes("mkdir") || lower.includes("directory")) {
+    return "mkdir";
+  }
+  return "read";
+}
+
+function extractPath(parameters: unknown): string {
+  if (!parameters || typeof parameters !== "object") {
+    return "";
+  }
+  const params = parameters as Record<string, unknown>;
+  if (typeof params.path === "string") {
+    return params.path;
+  }
+  if (typeof params.file === "string") {
+    return params.file;
+  }
+  if (typeof params.filePath === "string") {
+    return params.filePath;
+  }
+  return "";
+}
+
+function extractBytes(result: unknown): number | undefined {
+  if (!result || typeof result !== "object") {
+    return;
+  }
+  const res = result as Record<string, unknown>;
+  if (typeof res.bytes === "number") {
+    return res.bytes;
+  }
+  if (typeof res.size === "number") {
+    return res.size;
+  }
+  if (typeof res.content === "string") {
+    return res.content.length;
+  }
+  return;
+}
+
+function extractDiff(parameters: unknown, result: unknown): string | null {
+  if (!parameters || typeof parameters !== "object") {
+    return null;
+  }
+  const params = parameters as Record<string, unknown>;
+  if (typeof params.content === "string") {
+    return params.content.slice(0, 500);
+  }
+  if (result && typeof result === "object") {
+    const res = result as Record<string, unknown>;
+    if (typeof res.content === "string") {
+      return res.content.slice(0, 500);
+    }
+  }
+  return null;
+}

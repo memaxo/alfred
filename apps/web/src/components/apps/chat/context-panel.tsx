@@ -5,10 +5,13 @@
  */
 
 import type { AssistantUIMessage } from "@alfred/agent";
-import { Brain, Database, FileText, Link, X } from "lucide-react";
+import { computeBudgetUsage } from "@alfred/history";
+import { Brain, Database, FileText, Link, Loader2, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 // Tabs component placeholder - will use actual tabs when available
 const Tabs = ({
@@ -35,14 +38,17 @@ const TabsTrigger = ({
   children,
   className,
   value,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
   value: string;
+  onClick?: () => void;
 }) => (
   <button
     className={`rounded px-2 py-1 text-biolum-dim hover:bg-white/5 hover:text-biolum ${className}`}
     data-value={value}
+    onClick={onClick}
     type="button"
   >
     {children}
@@ -52,54 +58,25 @@ const TabsContent = ({
   children,
   className,
   value,
+  active,
 }: {
   children: React.ReactNode;
   className?: string;
   value: string;
-}) => (
-  <div className={className} data-value={value}>
-    {children}
-  </div>
-);
+  active?: boolean;
+}) =>
+  active ? (
+    <div className={className} data-value={value}>
+      {children}
+    </div>
+  ) : null;
 
 type ContextPanelProps = {
   messages: AssistantUIMessage[];
   onClose: () => void;
   className?: string;
+  searchQuery?: string;
 };
-
-type ContextItem = {
-  id: string;
-  type: "document" | "url" | "knowledge" | "fact";
-  title: string;
-  content: string;
-  relevance: number;
-};
-
-// Mock context for now
-const mockContext: ContextItem[] = [
-  {
-    id: "1",
-    type: "document",
-    title: "desktop-evolution-prd.md",
-    content: "Phase 2 defines core applications including chat, code editor...",
-    relevance: 0.95,
-  },
-  {
-    id: "2",
-    type: "knowledge",
-    title: "ALFRED Architecture",
-    content: "Uses tRPC routers with SSE streaming for real-time updates",
-    relevance: 0.88,
-  },
-  {
-    id: "3",
-    type: "url",
-    title: "AI SDK Documentation",
-    content: "https://sdk.vercel.ai/docs/ai-sdk-core",
-    relevance: 0.82,
-  },
-];
 
 const typeIcons = {
   document: FileText,
@@ -112,7 +89,40 @@ export function ContextPanel({
   messages,
   onClose,
   className,
+  searchQuery,
 }: ContextPanelProps) {
+  const [activeTab, setActiveTab] = useState("rag");
+
+  // Get the last user message or a default query
+  const queryText = useMemo(() => {
+    if (searchQuery) return searchQuery;
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    if (lastUserMsg && Array.isArray(lastUserMsg.parts)) {
+      const textPart = lastUserMsg.parts.find(
+        (p) => typeof p === "object" && "text" in p
+      );
+      if (textPart && typeof textPart === "object" && "text" in textPart) {
+        return (textPart as { text: string }).text;
+      }
+    }
+    return "alfred architecture";
+  }, [searchQuery, messages]);
+
+  // Fetch context items
+  const { data: contextData, isLoading: isLoadingContext } =
+    trpc.graph.getContext.useQuery(
+      { text: queryText, topK: 5 },
+      { enabled: activeTab === "rag" }
+    );
+
+  // Compute budget usage client-side
+  const budgetUsage = useMemo(
+    () => computeBudgetUsage(messages, 128_000),
+    [messages]
+  );
+
+  const contextItems = contextData?.items ?? [];
+
   return (
     <div className={cn("flex flex-col bg-void-surface", className)}>
       {/* Header */}
@@ -131,22 +141,57 @@ export function ContextPanel({
       {/* Tabs */}
       <Tabs className="flex-1" defaultValue="rag">
         <TabsList className="mx-2 mt-2 h-8 w-auto">
-          <TabsTrigger className="text-xs" value="rag">
+          <TabsTrigger
+            className={cn(
+              "text-xs",
+              activeTab === "rag" && "bg-white/10 text-biolum"
+            )}
+            onClick={() => setActiveTab("rag")}
+            value="rag"
+          >
             RAG
           </TabsTrigger>
-          <TabsTrigger className="text-xs" value="knowledge">
+          <TabsTrigger
+            className={cn(
+              "text-xs",
+              activeTab === "knowledge" && "bg-white/10 text-biolum"
+            )}
+            onClick={() => setActiveTab("knowledge")}
+            value="knowledge"
+          >
             Knowledge
           </TabsTrigger>
-          <TabsTrigger className="text-xs" value="history">
+          <TabsTrigger
+            className={cn(
+              "text-xs",
+              activeTab === "history" && "bg-white/10 text-biolum"
+            )}
+            onClick={() => setActiveTab("history")}
+            value="history"
+          >
             History
           </TabsTrigger>
         </TabsList>
 
         {/* RAG Context */}
-        <TabsContent className="flex-1 p-0" value="rag">
+        <TabsContent
+          active={activeTab === "rag"}
+          className="flex-1 p-0"
+          value="rag"
+        >
           <ScrollArea className="h-full">
             <div className="p-2">
-              {mockContext.map((item) => {
+              {isLoadingContext && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+                </div>
+              )}
+              {!isLoadingContext && contextItems.length === 0 && (
+                <div className="py-4 text-center text-biolum-dim text-sm">
+                  No context found
+                </div>
+              )}
+              {contextItems.map((item) => {
                 const Icon = typeIcons[item.type];
                 return (
                   <div
@@ -177,41 +222,63 @@ export function ContextPanel({
         </TabsContent>
 
         {/* Knowledge Graph */}
-        <TabsContent className="flex-1 p-2" value="knowledge">
+        <TabsContent
+          active={activeTab === "knowledge"}
+          className="flex-1 p-2"
+          value="knowledge"
+        >
           <div className="flex h-full items-center justify-center text-biolum-dim text-sm">
             Knowledge graph visualization coming soon
           </div>
         </TabsContent>
 
         {/* History Budget */}
-        <TabsContent className="flex-1 p-2" value="history">
+        <TabsContent
+          active={activeTab === "history"}
+          className="flex-1 p-2"
+          value="history"
+        >
           <div className="space-y-2">
             <div className="rounded-lg border border-white/5 bg-white/5 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm">History Budget</span>
                 <span className="font-medium text-biolum">
-                  {messages.length} / 50
+                  {messages.length} messages
                 </span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
                 <div
                   className="h-full bg-biolum transition-all"
-                  style={{ width: `${(messages.length / 50) * 100}%` }}
+                  style={{ width: `${budgetUsage.usagePercentage}%` }}
                 />
               </div>
               <p className="mt-1 text-biolum-dim text-xs">
-                Messages are pruned when budget exceeds limit
+                {budgetUsage.usagePercentage.toFixed(0)}% of context window used
               </p>
             </div>
 
             <div className="rounded-lg border border-white/5 bg-white/5 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Token Usage</span>
-                <span className="font-medium text-biolum">~12.4k</span>
+                <span className="font-medium text-biolum">
+                  ~{(budgetUsage.total / 1000).toFixed(1)}k
+                </span>
               </div>
-              <p className="mt-1 text-biolum-dim text-xs">
-                Estimated tokens in current context
-              </p>
+              <div className="mt-2 space-y-1">
+                {budgetUsage.breakdown.map((seg) => (
+                  <div
+                    className="flex items-center justify-between text-xs"
+                    key={seg.segment}
+                  >
+                    <span className="text-biolum-dim capitalize">
+                      {seg.segment}
+                    </span>
+                    <span className="text-biolum">
+                      {seg.tokens.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </TabsContent>

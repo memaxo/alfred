@@ -4,71 +4,17 @@
  * Logs Viewer - Real-time log streaming
  */
 
-import { Search } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Loader2, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type LogsViewerProps = {
   containerId: string;
   className?: string;
 };
-
-// Mock log lines
-const mockLogs = [
-  {
-    timestamp: "2026-01-03T09:30:00Z",
-    level: "info",
-    message: "Server starting...",
-  },
-  {
-    timestamp: "2026-01-03T09:30:01Z",
-    level: "info",
-    message: "Loading configuration",
-  },
-  {
-    timestamp: "2026-01-03T09:30:02Z",
-    level: "info",
-    message: "Connecting to database",
-  },
-  {
-    timestamp: "2026-01-03T09:30:03Z",
-    level: "info",
-    message: "Database connected",
-  },
-  {
-    timestamp: "2026-01-03T09:30:04Z",
-    level: "info",
-    message: "Starting HTTP server on :3000",
-  },
-  { timestamp: "2026-01-03T09:30:05Z", level: "info", message: "Server ready" },
-  {
-    timestamp: "2026-01-03T09:31:00Z",
-    level: "debug",
-    message: "Received request: GET /api/health",
-  },
-  {
-    timestamp: "2026-01-03T09:31:00Z",
-    level: "info",
-    message: "Health check passed",
-  },
-  {
-    timestamp: "2026-01-03T09:32:15Z",
-    level: "warn",
-    message: "Memory usage above 80%",
-  },
-  {
-    timestamp: "2026-01-03T09:33:00Z",
-    level: "debug",
-    message: "Running garbage collection",
-  },
-  {
-    timestamp: "2026-01-03T09:33:01Z",
-    level: "info",
-    message: "GC completed, freed 128MB",
-  },
-];
 
 const levelColors = {
   debug: "text-biolum-dim",
@@ -77,18 +23,31 @@ const levelColors = {
   error: "text-red-400",
 };
 
-export function LogsViewer({
-  containerId: _containerId,
-  className,
-}: LogsViewerProps) {
+export function LogsViewer({ containerId, className }: LogsViewerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Auto-scroll to bottom
+  // Fetch logs from backend
+  const { data, isLoading, error } = trpc.deploy.containersLogs.useQuery(
+    { containerId, tail: 200 },
+    { refetchInterval: 3000 } // Poll every 3 seconds
+  );
+
+  const logs = data?.logs ?? [];
+
+  // Filter logs by search query
+  const filteredLogs = searchQuery
+    ? logs.filter((log) =>
+        log.message.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : logs;
+
+  // Auto-scroll to bottom when logs change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, []);
+  }, [filteredLogs.length]);
 
   return (
     <div className={cn("flex flex-col bg-void", className)}>
@@ -98,7 +57,9 @@ export function LogsViewer({
           <Search className="-translate-y-1/2 absolute top-1/2 left-2 h-4 w-4 text-biolum-dim" />
           <Input
             className="h-8 border-white/10 bg-white/5 pl-8 text-sm"
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search logs..."
+            value={searchQuery}
           />
         </div>
       </div>
@@ -106,7 +67,20 @@ export function LogsViewer({
       {/* Logs */}
       <ScrollArea className="flex-1" ref={scrollRef}>
         <div className="p-2 font-mono text-xs">
-          {mockLogs.map((log, idx) => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-center text-red-400">
+              Failed to load logs
+            </div>
+          )}
+          {!isLoading && filteredLogs.length === 0 && (
+            <div className="py-2 text-center text-biolum-dim">No logs</div>
+          )}
+          {filteredLogs.map((log, idx) => (
             <div className="flex gap-2 py-0.5 hover:bg-white/5" key={idx}>
               <span className="flex-shrink-0 text-biolum-faint">
                 {new Date(log.timestamp).toLocaleTimeString()}
@@ -114,7 +88,8 @@ export function LogsViewer({
               <span
                 className={cn(
                   "w-12 flex-shrink-0",
-                  levelColors[log.level as keyof typeof levelColors]
+                  levelColors[log.level as keyof typeof levelColors] ??
+                    "text-biolum-dim"
                 )}
               >
                 [{log.level.toUpperCase().padEnd(5)}]

@@ -4,9 +4,17 @@
  * History Tab - Past agent runs and workflow executions
  */
 
-import { Bot, Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
+import {
+  Bot,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type HistoryTabProps = {
   className?: string;
@@ -17,76 +25,35 @@ type HistoryItem = {
   type: "agent" | "workflow";
   name: string;
   status: "success" | "failure" | "cancelled";
-  startTime: Date;
+  startTime: string;
   duration: number;
   tokenUsage?: number;
 };
 
-// Mock history
-const mockHistory: HistoryItem[] = [
-  {
-    id: "1",
-    type: "agent",
-    name: "Phase 2 Implementation",
-    status: "success",
-    startTime: new Date(Date.now() - 1_800_000),
-    duration: 1200,
-    tokenUsage: 45_000,
-  },
-  {
-    id: "2",
-    type: "workflow",
-    name: "CI Pipeline #412",
-    status: "success",
-    startTime: new Date(Date.now() - 3_600_000),
-    duration: 180,
-  },
-  {
-    id: "3",
-    type: "agent",
-    name: "Phase 1 Shell Components",
-    status: "success",
-    startTime: new Date(Date.now() - 7_200_000),
-    duration: 900,
-    tokenUsage: 32_000,
-  },
-  {
-    id: "4",
-    type: "agent",
-    name: "Voice Router Fix",
-    status: "failure",
-    startTime: new Date(Date.now() - 10_800_000),
-    duration: 300,
-    tokenUsage: 8000,
-  },
-  {
-    id: "5",
-    type: "workflow",
-    name: "Deploy Preview",
-    status: "cancelled",
-    startTime: new Date(Date.now() - 14_400_000),
-    duration: 60,
-  },
-];
-
 export function HistoryTab({ className }: HistoryTabProps) {
+  const { data, isLoading, error } = trpc.admin.taskHistory.useQuery({
+    limit: 50,
+  });
+
+  const history: HistoryItem[] = data?.history ?? [];
+
   return (
     <div className={cn("flex flex-col", className)}>
       {/* Summary */}
       <div className="flex items-center gap-6 border-white/5 border-b p-4">
         <div>
-          <div className="font-semibold text-2xl">{mockHistory.length}</div>
+          <div className="font-semibold text-2xl">{history.length}</div>
           <div className="text-biolum-dim text-xs">Total Runs</div>
         </div>
         <div>
           <div className="font-semibold text-2xl text-green-400">
-            {mockHistory.filter((h) => h.status === "success").length}
+            {history.filter((h) => h.status === "success").length}
           </div>
           <div className="text-biolum-dim text-xs">Succeeded</div>
         </div>
         <div>
           <div className="font-semibold text-2xl text-red-400">
-            {mockHistory.filter((h) => h.status === "failure").length}
+            {history.filter((h) => h.status === "failure").length}
           </div>
           <div className="text-biolum-dim text-xs">Failed</div>
         </div>
@@ -95,7 +62,22 @@ export function HistoryTab({ className }: HistoryTabProps) {
       {/* History list */}
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {mockHistory.map((item) => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-center text-red-400 text-xs">
+              Failed to load history
+            </div>
+          )}
+          {!isLoading && history.length === 0 && !error && (
+            <div className="py-4 text-center text-biolum-dim text-sm">
+              No history found
+            </div>
+          )}
+          {history.map((item) => (
             <HistoryRow item={item} key={item.id} />
           ))}
         </div>
@@ -133,7 +115,7 @@ function HistoryRow({ item }: { item: HistoryItem }) {
       <div className="mt-2 flex items-center gap-4 text-biolum-dim text-xs">
         <span className="flex items-center gap-1">
           <Calendar className="h-3 w-3" />
-          {item.startTime.toLocaleTimeString()}
+          {new Date(item.startTime).toLocaleTimeString()}
         </span>
         <span>{formatDuration(item.duration)}</span>
         {item.tokenUsage && (

@@ -15,11 +15,12 @@
  * @see docs/execplans/desktop-evolution-prd.md Section 3.3
  */
 
-import { Bot, PanelRight, Pause, Play, Square } from "lucide-react";
+import { Bot, Loader2, PanelRight, Pause, Play, Square } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 import { AgentCard } from "./agent-card";
 import { ExecutionLog } from "./execution-log";
 import { PlanPreview } from "./plan-preview";
@@ -35,104 +36,6 @@ type AgentsAppProps = {
   runId?: string;
 };
 
-type AgentStatus = "pending" | "spawning" | "running" | "completed" | "failed";
-
-type Agent = {
-  id: string;
-  name: string;
-  type: "codex" | "droid" | "claude" | "roo";
-  status: AgentStatus;
-  progress: number;
-  wave: number;
-  parentId?: string;
-  output?: string;
-};
-
-type Wave = {
-  id: number;
-  status: "pending" | "running" | "completed";
-  agents: string[];
-  startTime?: Date;
-  endTime?: Date;
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA
-// ─────────────────────────────────────────────────────────────────────────────
-
-const mockWaves: Wave[] = [
-  {
-    id: 1,
-    status: "completed",
-    agents: ["1"],
-    startTime: new Date(Date.now() - 60_000),
-    endTime: new Date(Date.now() - 30_000),
-  },
-  {
-    id: 2,
-    status: "running",
-    agents: ["2", "3"],
-    startTime: new Date(Date.now() - 30_000),
-  },
-  { id: 3, status: "pending", agents: ["4", "5", "6"] },
-];
-
-const mockAgents: Agent[] = [
-  {
-    id: "1",
-    name: "Planner",
-    type: "claude",
-    status: "completed",
-    progress: 100,
-    wave: 1,
-  },
-  {
-    id: "2",
-    name: "Frontend",
-    type: "codex",
-    status: "running",
-    progress: 65,
-    wave: 2,
-    parentId: "1",
-  },
-  {
-    id: "3",
-    name: "Backend",
-    type: "droid",
-    status: "running",
-    progress: 45,
-    wave: 2,
-    parentId: "1",
-  },
-  {
-    id: "4",
-    name: "Tests",
-    type: "roo",
-    status: "pending",
-    progress: 0,
-    wave: 3,
-    parentId: "2",
-  },
-  {
-    id: "5",
-    name: "Docs",
-    type: "claude",
-    status: "pending",
-    progress: 0,
-    wave: 3,
-    parentId: "2",
-  },
-  {
-    id: "6",
-    name: "Review",
-    type: "claude",
-    status: "pending",
-    progress: 0,
-    wave: 3,
-    parentId: "3",
-  },
-];
-
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -144,21 +47,83 @@ export function AgentsApp({
 }: AgentsAppProps) {
   const [showLogs, setShowLogs] = useState(true);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const utils = trpc.useUtils();
+
+  // Fetch run data if runId provided, otherwise fetch list of recent runs
+  const { data: runData, isLoading: isLoadingRun } =
+    trpc.orchestrator.runsGet.useQuery(
+      { runId: runId ?? "" },
+      { enabled: Boolean(runId) }
+    );
+
+  const { data: runsListData, isLoading: isLoadingList } =
+    trpc.orchestrator.runsList.useQuery(
+      { status: "running", limit: 1 },
+      { enabled: !runId }
+    );
+
+  // Use the first running run if no runId provided
+  const activeRun = runData ?? runsListData?.runs?.[0];
+  const currentRunId = runId ?? activeRun?.id;
+
+  // Mutations
+  const pauseMutation = trpc.orchestrator.runsPause.useMutation({
+    onSuccess: () => {
+      void utils.orchestrator.runsGet.invalidate();
+      void utils.orchestrator.runsList.invalidate();
+    },
+  });
+
+  const resumeMutation = trpc.orchestrator.runsResume.useMutation({
+    onSuccess: () => {
+      void utils.orchestrator.runsGet.invalidate();
+      void utils.orchestrator.runsList.invalidate();
+    },
+  });
+
+  const cancelMutation = trpc.orchestrator.runsCancel.useMutation({
+    onSuccess: () => {
+      void utils.orchestrator.runsGet.invalidate();
+      void utils.orchestrator.runsList.invalidate();
+    },
+  });
+
+  const isPaused = activeRun?.status === "suspended";
+  const isLoading = isLoadingRun || isLoadingList;
 
   const handlePause = useCallback(() => {
-    setIsPaused(true);
-    // TODO: Call orchestrator.pause(runId)
-  }, []);
+    if (currentRunId) {
+      pauseMutation.mutate({ runId: currentRunId });
+    }
+  }, [currentRunId, pauseMutation]);
 
   const handleResume = useCallback(() => {
-    setIsPaused(false);
-    // TODO: Call orchestrator.resume(runId)
-  }, []);
+    if (currentRunId) {
+      resumeMutation.mutate({ runId: currentRunId });
+    }
+  }, [currentRunId, resumeMutation]);
 
   const handleCancel = useCallback(() => {
-    // TODO: Call orchestrator.cancel(runId)
-  }, []);
+    if (currentRunId) {
+      cancelMutation.mutate({ runId: currentRunId });
+    }
+  }, [currentRunId, cancelMutation]);
+
+  if (isLoading) {
+    return (
+      <div
+        className={cn(
+          "flex h-full w-full items-center justify-center bg-void-surface",
+          className
+        )}
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
+      </div>
+    );
+  }
+
+  const waves = activeRun?.waves ?? [];
+  const agents = activeRun?.agents ?? [];
 
   return (
     <div
@@ -170,14 +135,33 @@ export function AgentsApp({
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-biolum" />
           <span className="font-medium text-sm">
-            {runId ? `Run: ${runId.slice(0, 8)}` : "Agent Waves"}
+            {currentRunId ? `Run: ${currentRunId.slice(0, 8)}` : "Agent Waves"}
           </span>
+          {activeRun?.status && (
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-xs",
+                activeRun.status === "running" &&
+                  "bg-blue-500/20 text-blue-400",
+                activeRun.status === "suspended" &&
+                  "bg-yellow-500/20 text-yellow-400",
+                activeRun.status === "completed" &&
+                  "bg-green-500/20 text-green-400",
+                activeRun.status === "failed" && "bg-red-500/20 text-red-400",
+                activeRun.status === "cancelled" &&
+                  "bg-gray-500/20 text-gray-400"
+              )}
+            >
+              {activeRun.status}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1">
           {isPaused ? (
             <Button
               className="h-7 gap-1 text-xs"
+              disabled={resumeMutation.isPending || !currentRunId}
               onClick={handleResume}
               size="sm"
               variant="ghost"
@@ -188,6 +172,11 @@ export function AgentsApp({
           ) : (
             <Button
               className="h-7 gap-1 text-xs"
+              disabled={
+                pauseMutation.isPending ||
+                !currentRunId ||
+                activeRun?.status !== "running"
+              }
               onClick={handlePause}
               size="sm"
               variant="ghost"
@@ -198,6 +187,12 @@ export function AgentsApp({
           )}
           <Button
             className="h-7 gap-1 text-red-400 text-xs"
+            disabled={
+              cancelMutation.isPending ||
+              !currentRunId ||
+              activeRun?.status === "completed" ||
+              activeRun?.status === "cancelled"
+            }
             onClick={handleCancel}
             size="sm"
             variant="ghost"
@@ -222,20 +217,28 @@ export function AgentsApp({
         {/* Wave Timeline + Agents */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Wave Timeline */}
-          <WaveTimeline className="flex-shrink-0" waves={mockWaves} />
+          <WaveTimeline className="flex-shrink-0" waves={waves} />
 
           {/* Agent Cards */}
           <div className="flex-1 overflow-auto p-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {mockAgents.map((agent) => (
-                <AgentCard
-                  agent={agent}
-                  isSelected={agent.id === selectedAgentId}
-                  key={agent.id}
-                  onClick={() => setSelectedAgentId(agent.id)}
-                />
-              ))}
-            </div>
+            {agents.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-biolum-dim">
+                {currentRunId
+                  ? "No agents spawned yet"
+                  : "No active runs. Start a workflow to see agents."}
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {agents.map((agent) => (
+                  <AgentCard
+                    agent={agent}
+                    isSelected={agent.id === selectedAgentId}
+                    key={agent.id}
+                    onClick={() => setSelectedAgentId(agent.id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Plan Preview */}
@@ -243,11 +246,12 @@ export function AgentsApp({
         </div>
 
         {/* Execution Logs */}
-        {showLogs && (
+        {showLogs && currentRunId && (
           <ExecutionLog
             agentId={selectedAgentId}
             className="w-80 flex-shrink-0 border-white/5 border-l"
             onClose={() => setShowLogs(false)}
+            runId={currentRunId}
           />
         )}
       </div>

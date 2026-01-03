@@ -39,6 +39,7 @@ export * as userRepo from "./repo/user";
 export * as workflowRepo from "./repo/workflow";
 
 // Schemas are exposed under namespaces to avoid duplicate export collisions.
+export * as alertSchema from "./schema/alert";
 export * as assistantSchema from "./schema/assistant";
 export * as authSchema from "./schema/auth";
 export * as clarificationSchema from "./schema/clarification";
@@ -55,5 +56,7 @@ export * as policySchema from "./schema/policy";
 export * as projectSchema from "./schema/project";
 export * as ragSchema from "./schema/rag";
 export * as todoSchema from "./schema/todo";
+export * as tokenSchema from "./schema/token";
+export * as tuneSchema from "./schema/tune";
 export * as userSchema from "./schema/user";
 export * as workflowSchema from "./schema/workflow";

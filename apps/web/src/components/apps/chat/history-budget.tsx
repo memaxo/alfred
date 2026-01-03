@@ -9,40 +9,53 @@
  * @see @alfred/history package
  */
 
+import { type BudgetSegment, computeBudgetUsage } from "@alfred/history";
+import type { UIMessage } from "@alfred/type/stream";
 import { Clock, Settings2, Trash2 } from "lucide-react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type HistoryBudgetProps = {
   className?: string;
+  messages?: readonly UIMessage[];
   onClearHistory?: () => void;
 };
 
-type BudgetSegment = {
-  label: string;
-  tokens: number;
-  color: string;
+const SEGMENT_COLORS: Record<BudgetSegment, string> = {
+  system: "bg-blue-500",
+  user: "bg-orange-500",
+  assistant: "bg-purple-500",
 };
 
-// Mock data - would come from @alfred/history
-const mockBudget = {
-  total: 128_000,
-  used: 45_000,
-  segments: [
-    { label: "System", tokens: 2000, color: "bg-blue-500" },
-    { label: "History", tokens: 28_000, color: "bg-purple-500" },
-    { label: "RAG Context", tokens: 10_000, color: "bg-green-500" },
-    { label: "User Message", tokens: 5000, color: "bg-orange-500" },
-  ] as BudgetSegment[],
-  messageCount: 24,
-  oldestMessage: new Date(Date.now() - 1000 * 60 * 60 * 2),
+const SEGMENT_LABELS: Record<BudgetSegment, string> = {
+  system: "System",
+  user: "User",
+  assistant: "Assistant",
 };
 
 export function HistoryBudget({
   className,
+  messages = [],
   onClearHistory,
 }: HistoryBudgetProps) {
-  const usagePercent = (mockBudget.used / mockBudget.total) * 100;
+  // Compute budget usage from messages
+  const budgetUsage = useMemo(
+    () => computeBudgetUsage(messages, 128_000),
+    [messages]
+  );
+
+  const usagePercent = budgetUsage.usagePercentage;
+
+  // Find oldest message timestamp
+  const oldestMessage = useMemo(() => {
+    if (messages.length === 0) return null;
+    const oldest = messages[0];
+    if (oldest && "createdAt" in oldest && oldest.createdAt) {
+      return new Date(oldest.createdAt as string | number);
+    }
+    return null;
+  }, [messages]);
 
   return (
     <div
@@ -75,8 +88,8 @@ export function HistoryBudget({
       <div className="mb-3">
         <div className="mb-1 flex justify-between text-xs">
           <span className="text-biolum-dim">
-            {mockBudget.used.toLocaleString()} /{" "}
-            {mockBudget.total.toLocaleString()} tokens
+            {budgetUsage.total.toLocaleString()} /{" "}
+            {budgetUsage.maxBudget.toLocaleString()} tokens
           </span>
           <span
             className={cn(usagePercent > 80 ? "text-red-400" : "text-biolum")}
@@ -85,14 +98,16 @@ export function HistoryBudget({
           </span>
         </div>
         <div className="flex h-2 gap-0.5 rounded-full bg-white/10">
-          {mockBudget.segments.map((segment) => (
+          {budgetUsage.breakdown.map((segment) => (
             <div
               className={cn(
                 "h-full first:rounded-l-full last:rounded-r-full",
-                segment.color
+                SEGMENT_COLORS[segment.segment]
               )}
-              key={segment.label}
-              style={{ width: `${(segment.tokens / mockBudget.total) * 100}%` }}
+              key={segment.segment}
+              style={{
+                width: `${(segment.tokens / budgetUsage.maxBudget) * 100}%`,
+              }}
             />
           ))}
         </div>
@@ -100,11 +115,17 @@ export function HistoryBudget({
 
       {/* Segment Legend */}
       <div className="mb-3 flex flex-wrap gap-3">
-        {mockBudget.segments.map((segment) => (
-          <div className="flex items-center gap-1" key={segment.label}>
-            <div className={cn("h-2 w-2 rounded-full", segment.color)} />
+        {budgetUsage.breakdown.map((segment) => (
+          <div className="flex items-center gap-1" key={segment.segment}>
+            <div
+              className={cn(
+                "h-2 w-2 rounded-full",
+                SEGMENT_COLORS[segment.segment]
+              )}
+            />
             <span className="text-biolum-dim text-xs">
-              {segment.label}: {segment.tokens.toLocaleString()}
+              {SEGMENT_LABELS[segment.segment]}:{" "}
+              {segment.tokens.toLocaleString()}
             </span>
           </div>
         ))}
@@ -114,14 +135,14 @@ export function HistoryBudget({
       <div className="flex gap-4 text-xs">
         <div>
           <span className="text-biolum-dim">Messages:</span>{" "}
-          <span className="text-biolum">{mockBudget.messageCount}</span>
+          <span className="text-biolum">{messages.length}</span>
         </div>
-        <div>
-          <span className="text-biolum-dim">Oldest:</span>{" "}
-          <span className="text-biolum">
-            {formatTimeAgo(mockBudget.oldestMessage)}
-          </span>
-        </div>
+        {oldestMessage && (
+          <div>
+            <span className="text-biolum-dim">Oldest:</span>{" "}
+            <span className="text-biolum">{formatTimeAgo(oldestMessage)}</span>
+          </div>
+        )}
       </div>
     </div>
   );

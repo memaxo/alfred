@@ -1438,7 +1438,7 @@ PolicyAppProps {
 
 **Policy Data Model:**
 
-```
+```  
 PolicyDecision {
   id: string
   timestamp: Timestamp

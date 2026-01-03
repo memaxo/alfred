@@ -38,10 +38,10 @@ type AgentFSAppProps = {
 export type Workspace = {
   id: string;
   runId: string;
-  agentType: "codex" | "droid" | "claude";
-  status: "active" | "completed" | "failed";
-  containerId: string;
-  createdAt: Date;
+  dbPath: string;
+  agentType: string;
+  status: string;
+  createdAt: string;
   operationCount: number;
   checkpointCount: number;
 };
@@ -54,12 +54,14 @@ export function AgentFSApp({
   windowId: _windowId,
   className,
 }: AgentFSAppProps) {
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
+  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(
     null
   );
   const [tab, setTab] = useState<"timeline" | "files" | "checkpoints" | "kv">(
     "timeline"
   );
+
+  const selectedWorkspaceId = selectedWorkspace?.id ?? null;
 
   return (
     <div
@@ -83,7 +85,7 @@ export function AgentFSApp({
         {/* Workspace List */}
         <WorkspaceList
           className="w-72 flex-shrink-0 border-white/5 border-r"
-          onSelect={setSelectedWorkspaceId}
+          onSelect={setSelectedWorkspace}
           selectedId={selectedWorkspaceId}
         />
 
@@ -116,29 +118,23 @@ export function AgentFSApp({
 
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden">
-              {tab === "timeline" && (
+              {tab === "timeline" && selectedWorkspace && (
                 <CallTimeline
                   className="h-full"
-                  workspaceId={selectedWorkspaceId}
+                  workspace={selectedWorkspace}
                 />
               )}
-              {tab === "files" && (
-                <FileAudit
-                  className="h-full"
-                  workspaceId={selectedWorkspaceId}
-                />
+              {tab === "files" && selectedWorkspace && (
+                <FileAudit className="h-full" workspace={selectedWorkspace} />
               )}
-              {tab === "checkpoints" && (
+              {tab === "checkpoints" && selectedWorkspace && (
                 <CheckpointBrowser
                   className="h-full"
-                  workspaceId={selectedWorkspaceId}
+                  workspace={selectedWorkspace}
                 />
               )}
-              {tab === "kv" && (
-                <KVViewer
-                  className="h-full"
-                  workspaceId={selectedWorkspaceId}
-                />
+              {tab === "kv" && selectedWorkspace && (
+                <KVViewer className="h-full" workspace={selectedWorkspace} />
               )}
             </div>
           </div>

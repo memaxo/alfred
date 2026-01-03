@@ -4,132 +4,55 @@
  * Execution Log - Real-time log stream
  */
 
-import { Terminal, X } from "lucide-react";
+import { Loader2, Terminal, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type ExecutionLogProps = {
+  runId: string;
   agentId: string | null;
   onClose: () => void;
   className?: string;
 };
 
-type LogEntry = {
-  id: string;
-  timestamp: Date;
-  level: "info" | "warn" | "error" | "debug";
-  message: string;
-  agentId?: string;
-};
-
-// Mock logs
-const mockLogs: LogEntry[] = [
-  {
-    id: "1",
-    timestamp: new Date(),
-    level: "info",
-    message: "Orchestrator initialized",
-    agentId: undefined,
-  },
-  {
-    id: "2",
-    timestamp: new Date(),
-    level: "info",
-    message: "Wave 1 started",
-    agentId: undefined,
-  },
-  {
-    id: "3",
-    timestamp: new Date(),
-    level: "info",
-    message: "Spawning Planner agent",
-    agentId: "1",
-  },
-  {
-    id: "4",
-    timestamp: new Date(),
-    level: "debug",
-    message: "Plan generation started",
-    agentId: "1",
-  },
-  {
-    id: "5",
-    timestamp: new Date(),
-    level: "info",
-    message: "Plan validated successfully",
-    agentId: "1",
-  },
-  {
-    id: "6",
-    timestamp: new Date(),
-    level: "info",
-    message: "Wave 1 completed",
-    agentId: undefined,
-  },
-  {
-    id: "7",
-    timestamp: new Date(),
-    level: "info",
-    message: "Wave 2 started",
-    agentId: undefined,
-  },
-  {
-    id: "8",
-    timestamp: new Date(),
-    level: "info",
-    message: "Spawning Frontend agent",
-    agentId: "2",
-  },
-  {
-    id: "9",
-    timestamp: new Date(),
-    level: "info",
-    message: "Spawning Backend agent",
-    agentId: "3",
-  },
-  {
-    id: "10",
-    timestamp: new Date(),
-    level: "debug",
-    message: "Reading shell.tsx",
-    agentId: "2",
-  },
-  {
-    id: "11",
-    timestamp: new Date(),
-    level: "warn",
-    message: "Large file detected, chunking",
-    agentId: "2",
-  },
-];
-
-const levelColors = {
+const levelColors: Record<string, string> = {
   info: "text-blue-400",
-  warn: "text-yellow-400",
+  warning: "text-yellow-400",
   error: "text-red-400",
+  success: "text-green-400",
   debug: "text-biolum-dim",
 };
 
 export function ExecutionLog({
+  runId,
   agentId,
   onClose,
   className,
 }: ExecutionLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Filter logs by agent if selected
-  const filteredLogs = agentId
-    ? mockLogs.filter((log) => !log.agentId || log.agentId === agentId)
-    : mockLogs;
+  const { data, isLoading, error } = trpc.orchestrator.logsStream.useQuery(
+    {
+      runId,
+      agentId: agentId ?? undefined,
+      limit: 100,
+    },
+    {
+      refetchInterval: 2000, // Poll for updates every 2 seconds
+    }
+  );
 
-  // Auto-scroll to bottom
+  const logs = data?.logs ?? [];
+
+  // Auto-scroll to bottom when logs change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [filteredLogs.length]);
+  }, [logs.length]);
 
   return (
     <div className={cn("flex flex-col bg-void", className)}>
@@ -154,13 +77,29 @@ export function ExecutionLog({
       {/* Log entries */}
       <ScrollArea className="flex-1" ref={scrollRef}>
         <div className="p-2 font-mono text-xs">
-          {filteredLogs.map((log) => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {error && (
+            <div className="py-2 text-red-400">Failed to load logs</div>
+          )}
+          {!isLoading && logs.length === 0 && (
+            <div className="py-2 text-biolum-dim">No logs yet</div>
+          )}
+          {logs.map((log) => (
             <div className="flex gap-2 py-0.5" key={log.id}>
               <span className="flex-shrink-0 text-biolum-faint">
-                {log.timestamp.toLocaleTimeString()}
+                {new Date(log.timestamp).toLocaleTimeString()}
               </span>
-              <span className={cn("flex-shrink-0", levelColors[log.level])}>
-                [{log.level.toUpperCase().padEnd(5)}]
+              <span
+                className={cn(
+                  "flex-shrink-0",
+                  levelColors[log.type] ?? "text-biolum-dim"
+                )}
+              >
+                [{log.type.toUpperCase().padEnd(7)}]
               </span>
               <span className="text-biolum-dim">{log.message}</span>
             </div>

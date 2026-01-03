@@ -7,26 +7,50 @@
 import { Calendar, HardDrive, Network, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
+import type { Container } from "./index";
 
 type ContainerDetailProps = {
   containerId: string;
+  container?: Container;
   className?: string;
 };
 
 export function ContainerDetail({
   containerId,
+  container: containerProp,
   className,
 }: ContainerDetailProps) {
-  // Mock container data
-  const container = {
+  const utils = trpc.useUtils();
+
+  // Use prop if provided, otherwise show minimal info
+  const container = containerProp ?? {
     id: containerId,
-    name: "alfred-agentfs-run-001",
-    image: "alfred/agentfs:latest",
-    status: "running" as const,
-    ports: ["3000:3000"],
-    created: new Date(Date.now() - 3_600_000),
-    volumes: ["/workspace:/workspace:rw"],
-    networks: ["alfred-net"],
+    name: containerId,
+    image: "unknown",
+    status: "exited" as const,
+    ports: [],
+    created: new Date().toISOString(),
+  };
+
+  const startMutation = trpc.deploy.containersStart.useMutation({
+    onSuccess: () => {
+      void utils.deploy.containersList.invalidate();
+    },
+  });
+
+  const stopMutation = trpc.deploy.containersStop.useMutation({
+    onSuccess: () => {
+      void utils.deploy.containersList.invalidate();
+    },
+  });
+
+  const handleStart = () => {
+    startMutation.mutate({ containerId });
+  };
+
+  const handleStop = () => {
+    stopMutation.mutate({ containerId });
   };
 
   return (
@@ -39,12 +63,24 @@ export function ContainerDetail({
 
         <div className="flex items-center gap-2">
           {container.status === "running" ? (
-            <Button className="h-8 gap-1" size="sm" variant="outline">
+            <Button
+              className="h-8 gap-1"
+              disabled={stopMutation.isPending}
+              onClick={handleStop}
+              size="sm"
+              variant="outline"
+            >
               <Square className="h-3 w-3" />
               Stop
             </Button>
           ) : (
-            <Button className="h-8 gap-1" size="sm" variant="outline">
+            <Button
+              className="h-8 gap-1"
+              disabled={startMutation.isPending}
+              onClick={handleStart}
+              size="sm"
+              variant="outline"
+            >
               <Play className="h-3 w-3" />
               Start
             </Button>
@@ -59,10 +95,7 @@ export function ContainerDetail({
         </div>
         <div className="flex items-center gap-1">
           <HardDrive className="h-3 w-3" />
-          <span>
-            {container.volumes.length} volume
-            {container.volumes.length !== 1 ? "s" : ""}
-          </span>
+          <span>ID: {container.id.slice(0, 12)}</span>
         </div>
         <div className="flex items-center gap-1">
           <Calendar className="h-3 w-3" />
@@ -73,7 +106,8 @@ export function ContainerDetail({
   );
 }
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(created: string): string {
+  const date = new Date(created);
   const diff = Date.now() - date.getTime();
   const hours = Math.floor(diff / 3_600_000);
   if (hours < 1) {

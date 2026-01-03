@@ -10,8 +10,8 @@ type Wave = {
   id: number;
   status: "pending" | "running" | "completed";
   agents: string[];
-  startTime?: Date;
-  endTime?: Date;
+  startTime?: string;
+  endTime?: string;
 };
 
 type WaveTimelineProps = {

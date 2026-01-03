@@ -15,10 +15,11 @@
  */
 
 import { Box, RefreshCw } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 import { ContainerDetail } from "./container-detail";
 import { ContainerList } from "./container-list";
 import { LogsViewer } from "./logs-viewer";
@@ -39,7 +40,7 @@ export type Container = {
   image: string;
   status: "running" | "stopped" | "paused" | "exited";
   ports: string[];
-  created: Date;
+  created: string;
   cpuPercent: number;
   memoryUsage: number;
   memoryLimit: number;
@@ -57,10 +58,22 @@ export function DockerApp({ windowId: _windowId, className }: DockerAppProps) {
   );
   const [filter, setFilter] = useState<"all" | "running" | "agent">("running");
   const [tab, setTab] = useState<"logs" | "resources">("logs");
+  const utils = trpc.useUtils();
 
-  const handleRefresh = useCallback(() => {
-    // TODO: Refresh containers from backend
-  }, []);
+  // Fetch containers from backend
+  const { data, isLoading, error } = trpc.deploy.containersList.useQuery(
+    { filter },
+    { refetchInterval: 5000 } // Refresh every 5 seconds
+  );
+
+  const containers: Container[] = (data?.containers ?? []).map((c) => ({
+    ...c,
+    status: c.status as Container["status"],
+  }));
+
+  const handleRefresh = () => {
+    void utils.deploy.containersList.invalidate();
+  };
 
   return (
     <div
@@ -107,7 +120,10 @@ export function DockerApp({ windowId: _windowId, className }: DockerAppProps) {
         {/* Container List */}
         <ContainerList
           className="w-72 flex-shrink-0 border-white/5 border-r"
+          containers={containers}
+          error={error?.message}
           filter={filter}
+          isLoading={isLoading}
           onSelect={setSelectedContainerId}
           selectedId={selectedContainerId}
         />
@@ -118,6 +134,7 @@ export function DockerApp({ windowId: _windowId, className }: DockerAppProps) {
             {/* Container Detail */}
             <ContainerDetail
               className="flex-shrink-0 border-white/5 border-b"
+              container={containers.find((c) => c.id === selectedContainerId)}
               containerId={selectedContainerId}
             />
 

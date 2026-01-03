@@ -10,6 +10,7 @@ import { deployRouter } from "./deploy";
 import { droidsRouter } from "./droids";
 import { evalRouter } from "./eval";
 import { fsRouter } from "./fs";
+import { githubRouter } from "./github";
 import { graphRouter } from "./graph";
 import { homeRouter } from "./home";
 import { jwksRouter } from "./jwks";
@@ -70,6 +71,7 @@ export const appRouter = router({
   visual: visualRouter,
   voice: voiceRouter,
   fs: fsRouter,
+  github: githubRouter,
   terminal: terminalRouter,
   tune: tuneRouter,
 });

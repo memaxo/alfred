@@ -4,57 +4,87 @@
  * Accuracy Chart - Accuracy trends over time by category
  */
 
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type AccuracyChartProps = {
   timeRange: "day" | "week" | "month";
 };
 
-const mockData = {
-  reasoning: [85, 87, 86, 89, 91, 90, 92],
-  coding: [78, 80, 82, 81, 84, 86, 88],
-  planning: [90, 89, 91, 92, 91, 93, 94],
-  communication: [92, 93, 94, 93, 95, 94, 96],
-};
-
-const categoryColors = {
+const categoryColors: Record<string, string> = {
   reasoning: "bg-purple-400",
   coding: "bg-blue-400",
   planning: "bg-orange-400",
   communication: "bg-green-400",
+  uncategorized: "bg-gray-400",
+};
+
+const trendIcons: Record<string, string> = {
+  improving: "↑",
+  declining: "↓",
+  stable: "→",
+};
+
+const trendColors: Record<string, string> = {
+  improving: "text-green-400",
+  declining: "text-red-400",
+  stable: "text-yellow-400",
 };
 
 export function AccuracyChart({ timeRange: _timeRange }: AccuracyChartProps) {
-  const maxValue = 100;
+  const { data, isLoading, error } = trpc.cognitive.metricsAccuracy.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center text-red-400">
+        Failed to load accuracy metrics
+      </div>
+    );
+  }
+
+  const metrics = data?.metrics ?? [];
+
+  if (metrics.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-biolum-dim">
+        No accuracy data available yet
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
       {/* Summary Cards */}
-      <div className="mb-6 grid grid-cols-4 gap-3">
-        {Object.entries(mockData).map(([category, values]) => {
-          const current = values.at(-1) ?? 0;
-          const previous = values.at(-2) ?? 0;
-          const change = current - previous;
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {metrics.slice(0, 4).map((metric) => {
+          // Convert error rate to accuracy percentage
+          const accuracy = Math.round((1 - metric.errorRate) * 100);
 
           return (
             <div
               className="rounded-lg border border-white/10 bg-white/5 p-3"
-              key={category}
+              key={metric.category}
             >
               <div className="mb-1 text-biolum-dim text-xs capitalize">
-                {category}
+                {metric.category}
               </div>
               <div className="flex items-end gap-2">
-                <span className="font-mono text-2xl">{current}%</span>
-                <span
-                  className={cn(
-                    "text-xs",
-                    change >= 0 ? "text-green-400" : "text-red-400"
-                  )}
-                >
-                  {change >= 0 ? "+" : ""}
-                  {change}%
+                <span className="font-mono text-2xl">{accuracy}%</span>
+                <span className={cn("text-xs", trendColors[metric.trend])}>
+                  {trendIcons[metric.trend]} {metric.trend}
                 </span>
+              </div>
+              <div className="mt-1 text-biolum-dim text-xs">
+                {metric.total} errors tracked
               </div>
             </div>
           );
@@ -64,47 +94,51 @@ export function AccuracyChart({ timeRange: _timeRange }: AccuracyChartProps) {
       {/* Chart */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-4">
         <div className="mb-4 flex items-center justify-between">
-          <span className="font-medium text-sm">Accuracy Trend</span>
-          <span className="text-biolum-dim text-xs">Last 7 days</span>
+          <span className="font-medium text-sm">
+            Error Distribution by Category
+          </span>
         </div>
 
         <div className="space-y-4">
-          {Object.entries(mockData).map(([category, values]) => (
-            <div key={category}>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-biolum-dim capitalize">{category}</span>
-                <span>{values.at(-1)}%</span>
-              </div>
-              <div className="flex h-6 items-end gap-1">
-                {values.map((value, idx) => (
+          {metrics.map((metric) => {
+            const accuracy = Math.round((1 - metric.errorRate) * 100);
+            const color =
+              categoryColors[metric.category] ?? categoryColors.uncategorized;
+
+            return (
+              <div key={metric.category}>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="text-biolum-dim capitalize">
+                    {metric.category}
+                  </span>
+                  <span>{accuracy}% accuracy</span>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className={cn(
-                      "flex-1 rounded-sm transition-all",
-                      categoryColors[category as keyof typeof categoryColors]
-                    )}
-                    key={idx}
-                    style={{
-                      height: `${(value / maxValue) * 100}%`,
-                      opacity: 0.4 + (idx / values.length) * 0.6,
-                    }}
+                    className={cn("h-full rounded-full transition-all", color)}
+                    style={{ width: `${accuracy}%` }}
                   />
-                ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-4">
-        {Object.entries(categoryColors).map(([category, color]) => (
-          <div className="flex items-center gap-1" key={category}>
-            <div className={cn("h-2 w-2 rounded-full", color)} />
-            <span className="text-biolum-dim text-xs capitalize">
-              {category}
-            </span>
-          </div>
-        ))}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
+        {metrics.map((metric) => {
+          const color =
+            categoryColors[metric.category] ?? categoryColors.uncategorized;
+          return (
+            <div className="flex items-center gap-1" key={metric.category}>
+              <div className={cn("h-2 w-2 rounded-full", color)} />
+              <span className="text-biolum-dim text-xs capitalize">
+                {metric.category}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

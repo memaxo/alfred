@@ -1,4 +1,4 @@
-import { planRepo } from "@alfred/db";
+import { patternRepo, planRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc.js";
@@ -471,6 +471,216 @@ export const planRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_export_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * List workflow patterns
+   */
+  patternsList: authedProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid().optional(),
+        limit: z.number().int().min(1).max(100).optional().default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const patterns = await patternRepo.listPatternsByUserId(userId);
+
+        // Filter by project if specified
+        const filtered = input.projectId
+          ? patterns.filter((p) => p.projectId === input.projectId)
+          : patterns;
+
+        // Sort by usage count descending
+        const sorted = filtered.sort(
+          (a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0)
+        );
+
+        return {
+          patterns: sorted.slice(0, input.limit).map((p) => ({
+            id: p.id,
+            trigger: p.trigger,
+            planTemplate: p.planTemplate,
+            successRate: p.successRate,
+            avgDurationMs: p.avgDurationMs,
+            usageCount: p.usageCount,
+            projectId: p.projectId,
+            createdAt: p.createdAt?.toISOString() ?? null,
+            updatedAt: p.updatedAt?.toISOString() ?? null,
+          })),
+          total: filtered.length,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "patterns_list_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Debug intent parsing with step breakdown
+   */
+  debugTrace: authedProcedure
+    .input(
+      z.object({
+        input: z.string().min(1).max(500),
+        source: z.enum(["voice", "chat", "api"]).default("chat"),
+      })
+    )
+    .mutation(async ({ ctx, input: requestInput }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const startTime = Date.now();
+      const trace: {
+        step: string;
+        durationMs: number;
+        output: unknown;
+      }[] = [];
+
+      try {
+        const { parseIntent } = await import("@alfred/plan");
+
+        // Step 1: Tokenize / preprocess
+        const preprocessStart = Date.now();
+        const preprocessed = requestInput.input.trim().toLowerCase();
+        trace.push({
+          step: "preprocess",
+          durationMs: Date.now() - preprocessStart,
+          output: {
+            original: requestInput.input,
+            normalized: preprocessed,
+            wordCount: preprocessed.split(/\s+/).length,
+          },
+        });
+
+        // Step 2: Parse intent
+        const parseStart = Date.now();
+        const result = await parseIntent(requestInput.input, {
+          userId,
+          source: requestInput.source,
+        });
+
+        // Handle discriminated union result
+        let intentData: unknown = null;
+        let confidence = 0;
+        let intentType = "unknown";
+        let hasMultiIntent = false;
+
+        if (result.type === "intent") {
+          intentData = result.intent;
+          intentType = "single";
+          hasMultiIntent = !!result.intent.multiIntent?.split;
+          confidence = result.intent.ambiguity?.score
+            ? 1 - result.intent.ambiguity.score
+            : 0.8;
+        } else if (result.type === "multiIntent") {
+          intentData = result.intents;
+          intentType = "multi";
+          hasMultiIntent = true;
+          confidence = 0.7;
+        } else if (result.type === "clarification") {
+          intentType = "clarification";
+          intentData = { questions: result.questions };
+          confidence = 0.3;
+        }
+
+        trace.push({
+          step: "parseIntent",
+          durationMs: Date.now() - parseStart,
+          output: {
+            resultType: result.type,
+            intentType,
+            confidence,
+            hasMultiIntent,
+          },
+        });
+
+        // Step 3: Extract entities
+        const entityStart = Date.now();
+        const entities: Record<string, unknown>[] = [];
+        if (result.type === "intent") {
+          const intent = result.intent;
+          if (intent.context.projectId) {
+            entities.push({ type: "project", value: intent.context.projectId });
+          }
+          if (intent.context.workspace) {
+            entities.push({
+              type: "workspace",
+              value: intent.context.workspace,
+            });
+          }
+          if (intent.context.codebase) {
+            entities.push({ type: "codebase", value: intent.context.codebase });
+          }
+          for (const constraint of intent.context.constraints) {
+            entities.push({
+              type: `constraint:${constraint.type}`,
+              value: constraint.value,
+            });
+          }
+        }
+        trace.push({
+          step: "extractEntities",
+          durationMs: Date.now() - entityStart,
+          output: { entities, count: entities.length },
+        });
+
+        // Step 4: Classify complexity
+        const classifyStart = Date.now();
+        let complexity = "low";
+        if (result.type === "multiIntent") {
+          complexity = "multi";
+        } else if (result.type === "intent") {
+          const constraintCount = result.intent.context.constraints.length;
+          const patternCount = result.intent.context.existingPatterns.length;
+          if (constraintCount > 2 || patternCount === 0) {
+            complexity = "high";
+          } else if (constraintCount > 0 || hasMultiIntent) {
+            complexity = "medium";
+          }
+        } else if (result.type === "clarification") {
+          complexity = "needs_clarification";
+        }
+        trace.push({
+          step: "classifyComplexity",
+          durationMs: Date.now() - classifyStart,
+          output: { complexity },
+        });
+
+        const totalDurationMs = Date.now() - startTime;
+
+        return {
+          input: requestInput.input,
+          resultType: result.type,
+          intent: intentData,
+          confidence,
+          trace,
+          totalDurationMs,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "debug_trace_failed",
           cause: error,
         });
       }

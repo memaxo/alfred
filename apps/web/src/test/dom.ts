@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error - jsdom doesn't have types in this project
 import { JSDOM } from "jsdom";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
@@ -47,13 +45,19 @@ type WindowWithRAF = Window & {
   cancelAnimationFrame?: typeof globalThis.cancelAnimationFrame;
 };
 
-if (typeof (window as WindowWithRAF).requestAnimationFrame === "undefined") {
-  (window as WindowWithRAF).requestAnimationFrame =
+if (
+  typeof (window as unknown as WindowWithRAF).requestAnimationFrame ===
+  "undefined"
+) {
+  (window as unknown as WindowWithRAF).requestAnimationFrame =
     globalThis.requestAnimationFrame;
 }
 
-if (typeof (window as WindowWithRAF).cancelAnimationFrame === "undefined") {
-  (window as WindowWithRAF).cancelAnimationFrame =
+if (
+  typeof (window as unknown as WindowWithRAF).cancelAnimationFrame ===
+  "undefined"
+) {
+  (window as unknown as WindowWithRAF).cancelAnimationFrame =
     globalThis.cancelAnimationFrame;
 }
 
@@ -67,12 +71,12 @@ type GlobalWithCanvas = typeof globalThis & {
 };
 
 const CanvasElementCtor =
-  (window as WindowWithCanvas).HTMLCanvasElement ??
+  (window as unknown as WindowWithCanvas).HTMLCanvasElement ??
   (globalThis as GlobalWithCanvas).HTMLCanvasElement ??
   (class CanvasElement extends window.HTMLElement {} as typeof HTMLCanvasElement);
 
 (globalThis as GlobalWithCanvas).HTMLCanvasElement = CanvasElementCtor;
-(window as WindowWithCanvas).HTMLCanvasElement = CanvasElementCtor;
+(window as unknown as WindowWithCanvas).HTMLCanvasElement = CanvasElementCtor;
 
 const HTMLCanvasProto = CanvasElementCtor.prototype as {
   getContext?: (contextId: string, options?: unknown) => unknown;
@@ -139,7 +143,7 @@ if (
   (globalThis as GlobalWithResizeObserver).ResizeObserver =
     ResizeObserverPolyfill;
   if (typeof window !== "undefined") {
-    (window as WindowWithResizeObserver).ResizeObserver =
+    (window as unknown as WindowWithResizeObserver).ResizeObserver =
       ResizeObserverPolyfill;
   }
 }
@@ -163,7 +167,7 @@ if (typeof (globalThis as GlobalWithScreen).screen === "undefined") {
   } as Screen;
   (globalThis as GlobalWithScreen).screen = screenStub;
   if (typeof window !== "undefined") {
-    (window as WindowWithScreen).screen = screenStub;
+    (window as unknown as WindowWithScreen).screen = screenStub;
   }
 }
 
@@ -216,9 +220,9 @@ const ensureStorage = (key: "localStorage" | "sessionStorage") => {
 
   if (
     typeof window !== "undefined" &&
-    typeof (window as WindowWithStorage)[key] === "undefined"
+    typeof (window as unknown as WindowWithStorage)[key] === "undefined"
   ) {
-    assign(window);
+    assign(window as unknown as Window);
   }
 };
 

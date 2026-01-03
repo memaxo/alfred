@@ -19,6 +19,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type SemanticSearchProps = {
   className?: string;
@@ -34,60 +35,38 @@ type SearchResult = {
   context: string;
 };
 
-const mockResults: SearchResult[] = [
-  {
-    id: "1",
-    file: "packages/api/src/routers/chat.ts",
-    line: 45,
-    content: "export const chatRouter = router({",
-    score: 0.94,
-    context: "Main chat router definition with all procedures",
-  },
-  {
-    id: "2",
-    file: "packages/agent/src/runner.ts",
-    line: 120,
-    content: "async function executeAgentLoop(ctx: AgentContext)",
-    score: 0.89,
-    context: "Agent execution loop that processes tasks",
-  },
-  {
-    id: "3",
-    file: "packages/cognitive/src/transition.ts",
-    line: 78,
-    content: "function applyTransition(state: CognitiveState)",
-    score: 0.85,
-    context: "State machine transition handler",
-  },
-  {
-    id: "4",
-    file: "apps/web/src/components/chat/message-list.tsx",
-    line: 34,
-    content: "export function MessageList({ messages }: MessageListProps)",
-    score: 0.82,
-    context: "Chat message list component",
-  },
-];
-
 export function SemanticSearch({
   className,
   onResultSelect,
 }: SemanticSearchProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
 
-  const handleSearch = async () => {
+  // Use tRPC to fetch semantic search results
+  const { data, isLoading, error } = trpc.graph.getContext.useQuery(
+    { text: searchQuery ?? "", topK: 10 },
+    { enabled: Boolean(searchQuery) }
+  );
+
+  const handleSearch = () => {
     if (!query.trim()) {
       return;
     }
-
-    setLoading(true);
-    // Mock search delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setResults(mockResults);
-    setLoading(false);
+    setSearchQuery(query);
   };
+
+  // Transform context items to search results
+  const results: SearchResult[] = (data?.items ?? []).map((item) => ({
+    id: item.id,
+    file: item.title,
+    line: 1, // Line info may not be available from semantic search
+    content: item.content.slice(0, 200),
+    score: item.relevance,
+    context: item.content,
+  }));
+
+  const hasResults = searchQuery && results.length > 0;
+  const noResults = searchQuery && !isLoading && results.length === 0 && !error;
 
   return (
     <div className={cn("flex h-full flex-col", className)}>
@@ -108,8 +87,12 @@ export function SemanticSearch({
               value={query}
             />
           </div>
-          <Button disabled={loading} onClick={handleSearch}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+          <Button disabled={isLoading} onClick={handleSearch}>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Search"
+            )}
           </Button>
         </div>
         <p className="mt-2 text-biolum-dim text-xs">
@@ -120,10 +103,20 @@ export function SemanticSearch({
 
       {/* Results */}
       <ScrollArea className="flex-1">
-        {results ? (
+        {error && (
+          <div className="p-4 text-center text-red-400 text-sm">
+            Search failed. Please try again.
+          </div>
+        )}
+        {noResults && (
+          <div className="p-4 text-center text-biolum-dim text-sm">
+            No results found for "{searchQuery}"
+          </div>
+        )}
+        {hasResults && (
           <div className="space-y-2 p-3">
             <div className="text-biolum-dim text-xs">
-              {results.length} results for "{query}"
+              {results.length} results for "{searchQuery}"
             </div>
 
             {results.map((result) => (
@@ -155,19 +148,20 @@ export function SemanticSearch({
                   </div>
                 </div>
 
-                <div className="mb-1 font-mono text-biolum-dim text-xs">
-                  Line {result.line}
-                </div>
-
                 <code className="block rounded bg-void p-2 font-mono text-xs">
                   {result.content}
                 </code>
 
-                <p className="mt-2 text-biolum-dim text-xs">{result.context}</p>
+                {result.context !== result.content && (
+                  <p className="mt-2 line-clamp-2 text-biolum-dim text-xs">
+                    {result.context}
+                  </p>
+                )}
               </button>
             ))}
           </div>
-        ) : (
+        )}
+        {!searchQuery && (
           <div className="flex h-full items-center justify-center p-8 text-center text-biolum-dim">
             <div>
               <Sparkles className="mx-auto mb-2 h-8 w-8 opacity-50" />

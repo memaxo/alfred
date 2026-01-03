@@ -4,10 +4,11 @@
  * Process List - Running processes and agents
  */
 
-import { Bot, Server, Square, Terminal } from "lucide-react";
+import { Bot, Loader2, Server, Square, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type ProcessListProps = {
   className?: string;
@@ -16,72 +17,21 @@ type ProcessListProps = {
 type Process = {
   id: string;
   name: string;
-  type: "agent" | "service" | "system";
+  type: string;
   status: "running" | "idle" | "stopped";
   cpu: number;
   memory: number;
   uptime: number;
 };
 
-// Mock processes
-const mockProcesses: Process[] = [
-  {
-    id: "1",
-    name: "orchestrator",
-    type: "service",
-    status: "running",
-    cpu: 5.2,
-    memory: 128,
-    uptime: 3600,
-  },
-  {
-    id: "2",
-    name: "codex-agent",
-    type: "agent",
-    status: "running",
-    cpu: 15.8,
-    memory: 512,
-    uptime: 1800,
-  },
-  {
-    id: "3",
-    name: "droid-agent",
-    type: "agent",
-    status: "running",
-    cpu: 12.3,
-    memory: 384,
-    uptime: 1800,
-  },
-  {
-    id: "4",
-    name: "voice-server",
-    type: "service",
-    status: "running",
-    cpu: 3.1,
-    memory: 256,
-    uptime: 7200,
-  },
-  {
-    id: "5",
-    name: "api-server",
-    type: "service",
-    status: "running",
-    cpu: 8.4,
-    memory: 320,
-    uptime: 7200,
-  },
-  {
-    id: "6",
-    name: "scheduler",
-    type: "service",
-    status: "idle",
-    cpu: 0.1,
-    memory: 64,
-    uptime: 7200,
-  },
-];
-
 export function ProcessList({ className }: ProcessListProps) {
+  const { data, isLoading, error } = trpc.admin.processesList.useQuery(
+    undefined,
+    { refetchInterval: 5000 }
+  );
+
+  const processes: Process[] = data?.processes ?? [];
+
   return (
     <div className={cn("flex flex-col", className)}>
       {/* Header */}
@@ -96,17 +46,32 @@ export function ProcessList({ className }: ProcessListProps) {
 
       {/* Processes */}
       <ScrollArea className="flex-1">
-        {mockProcesses.map((process) => (
+        {isLoading && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+          </div>
+        )}
+        {error && (
+          <div className="py-2 text-center text-red-400 text-xs">
+            Failed to load processes
+          </div>
+        )}
+        {!isLoading && processes.length === 0 && !error && (
+          <div className="py-4 text-center text-biolum-dim text-sm">
+            No processes found
+          </div>
+        )}
+        {processes.map((process) => (
           <ProcessRow key={process.id} process={process} />
         ))}
       </ScrollArea>
 
       {/* Summary */}
       <div className="flex items-center justify-between border-white/5 border-t px-4 py-2 text-biolum-dim text-xs">
-        <span>{mockProcesses.length} processes</span>
+        <span>{processes.length} processes</span>
         <span>
-          Total: CPU {mockProcesses.reduce((a, p) => a + p.cpu, 0).toFixed(1)}%
-          | Memory {mockProcesses.reduce((a, p) => a + p.memory, 0)}MB
+          Total: CPU {processes.reduce((a, p) => a + p.cpu, 0).toFixed(1)}% |
+          Memory {processes.reduce((a, p) => a + p.memory, 0)}MB
         </span>
       </div>
     </div>

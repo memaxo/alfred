@@ -4,63 +4,57 @@
  * Decision Log - Audit trail of policy decisions
  */
 
-import { AlertTriangle, Check, X } from "lucide-react";
+import { AlertTriangle, Check, Loader2, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import type { PolicyDecision } from "./index";
+import { trpc } from "@/utils/trpc";
 
-const mockDecisions: PolicyDecision[] = [
-  {
-    id: "1",
-    timestamp: new Date(Date.now() - 1000 * 60 * 5),
-    action: "file.write",
-    scope: "workspace",
-    decision: "allowed",
-    reason: "Within autonomy level for workspace operations",
-    autonomyLevel: 3,
-  },
-  {
-    id: "2",
-    timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    action: "git.push",
-    scope: "repository",
-    decision: "escalated",
-    reason: "Push operations require user confirmation",
-    autonomyLevel: 2,
-  },
-  {
-    id: "3",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    action: "npm.install",
-    scope: "dependencies",
-    decision: "allowed",
-    reason: "Package installation within allowed scope",
-    autonomyLevel: 3,
-  },
-  {
-    id: "4",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    action: "api.external",
-    scope: "network",
-    decision: "denied",
-    reason: "External API calls require explicit permission",
-    autonomyLevel: 1,
-  },
-];
+type DecisionType = "allow" | "deny";
 
-const decisionIcons = {
-  allowed: Check,
-  denied: X,
-  escalated: AlertTriangle,
+const decisionIcons: Record<
+  DecisionType,
+  React.ComponentType<{ className?: string }>
+> = {
+  allow: Check,
+  deny: X,
 };
 
-const decisionColors = {
-  allowed: "text-green-400",
-  denied: "text-red-400",
-  escalated: "text-yellow-400",
+const decisionColors: Record<DecisionType, string> = {
+  allow: "text-green-400",
+  deny: "text-red-400",
 };
 
 export function DecisionLog() {
+  const { data, isLoading, error } = trpc.admin.policyList.useQuery({
+    limit: 50,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center text-red-400">
+        Failed to load policy decisions
+      </div>
+    );
+  }
+
+  const decisions = data?.decisions ?? [];
+
+  if (decisions.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-biolum-dim">
+        No policy decisions recorded yet
+      </div>
+    );
+  }
+
   return (
     <ScrollArea className="h-full">
       <div className="p-4">
@@ -69,15 +63,15 @@ export function DecisionLog() {
             <tr className="border-white/10 border-b text-left text-biolum-dim text-xs">
               <th className="pb-2">Time</th>
               <th className="pb-2">Action</th>
-              <th className="pb-2">Scope</th>
+              <th className="pb-2">Resource</th>
               <th className="pb-2">Decision</th>
-              <th className="pb-2">Reason</th>
             </tr>
           </thead>
           <tbody>
-            {mockDecisions.map((decision) => {
-              const Icon = decisionIcons[decision.decision];
-              const color = decisionColors[decision.decision];
+            {decisions.map((decision) => {
+              const decisionType = decision.decision as DecisionType;
+              const Icon = decisionIcons[decisionType] ?? AlertTriangle;
+              const color = decisionColors[decisionType] ?? "text-yellow-400";
 
               return (
                 <tr
@@ -85,11 +79,11 @@ export function DecisionLog() {
                   key={decision.id}
                 >
                   <td className="py-2 text-biolum-dim text-xs">
-                    {formatTime(decision.timestamp)}
+                    {decision.timestamp ? formatTime(decision.timestamp) : "-"}
                   </td>
                   <td className="py-2 font-mono text-xs">{decision.action}</td>
                   <td className="py-2 text-biolum-dim text-xs">
-                    {decision.scope}
+                    {decision.resource}
                   </td>
                   <td className="py-2">
                     <div className={cn("flex items-center gap-1", color)}>
@@ -98,9 +92,6 @@ export function DecisionLog() {
                         {decision.decision}
                       </span>
                     </div>
-                  </td>
-                  <td className="max-w-xs truncate py-2 text-biolum-dim text-xs">
-                    {decision.reason}
                   </td>
                 </tr>
               );
@@ -112,7 +103,8 @@ export function DecisionLog() {
   );
 }
 
-function formatTime(date: Date): string {
+function formatTime(timestamp: string): string {
+  const date = new Date(timestamp);
   return date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",

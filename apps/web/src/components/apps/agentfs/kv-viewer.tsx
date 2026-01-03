@@ -4,71 +4,34 @@
  * KV Viewer - Key-value store browser
  */
 
-import { Database, Key, Search } from "lucide-react";
+import { Database, Key, Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
+import type { Workspace } from "./index";
 
 type KVViewerProps = {
-  workspaceId: string;
+  workspace: Workspace;
   className?: string;
 };
 
-type KVEntry = {
-  key: string;
-  value: unknown;
-  type: "string" | "number" | "object" | "array" | "boolean";
-  updatedAt: Date;
-};
-
-// Mock KV entries
-const mockEntries: KVEntry[] = [
-  {
-    key: "agent.status",
-    value: "running",
-    type: "string",
-    updatedAt: new Date(),
-  },
-  { key: "agent.progress", value: 0.65, type: "number", updatedAt: new Date() },
-  {
-    key: "config.model",
-    value: "claude-3-opus",
-    type: "string",
-    updatedAt: new Date(),
-  },
-  {
-    key: "config.temperature",
-    value: 0.7,
-    type: "number",
-    updatedAt: new Date(),
-  },
-  {
-    key: "context.files",
-    value: ["shell.tsx", "menubar.tsx"],
-    type: "array",
-    updatedAt: new Date(),
-  },
-  {
-    key: "state.lastError",
-    value: null,
-    type: "object",
-    updatedAt: new Date(),
-  },
-];
-
-export function KVViewer({
-  workspaceId: _workspaceId,
-  className,
-}: KVViewerProps) {
+export function KVViewer({ workspace, className }: KVViewerProps) {
   const [search, setSearch] = useState("");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const filteredEntries = mockEntries.filter((e) =>
+  const { data, isLoading, error } = trpc.agentfs.kvList.useQuery({
+    runId: workspace.runId,
+    dbPath: workspace.dbPath,
+  });
+
+  const entries = data?.entries ?? [];
+  const filteredEntries = entries.filter((e) =>
     e.key.toLowerCase().includes(search.toLowerCase())
   );
 
-  const selectedEntry = mockEntries.find((e) => e.key === selectedKey);
+  const selectedEntry = entries.find((e) => e.key === selectedKey);
 
   return (
     <div className={cn("flex h-full", className)}>
@@ -90,6 +53,21 @@ export function KVViewer({
         {/* Entries */}
         <ScrollArea className="flex-1">
           <div className="p-2">
+            {isLoading && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+              </div>
+            )}
+            {error && (
+              <div className="py-2 text-center text-red-400 text-xs">
+                Failed to load entries
+              </div>
+            )}
+            {!isLoading && filteredEntries.length === 0 && !error && (
+              <div className="py-4 text-center text-biolum-dim text-xs">
+                No entries
+              </div>
+            )}
             {filteredEntries.map((entry) => (
               <button
                 className={cn(
@@ -128,7 +106,8 @@ export function KVViewer({
             </div>
 
             <p className="mt-2 text-biolum-faint text-xs">
-              Last updated: {selectedEntry.updatedAt.toLocaleTimeString()}
+              Last updated:{" "}
+              {new Date(selectedEntry.updatedAt).toLocaleTimeString()}
             </p>
           </div>
         ) : (

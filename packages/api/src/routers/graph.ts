@@ -570,4 +570,145 @@ export const graphRouter = router({
         }
       }
     }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Context retrieval for chat panel
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getContext: authedProcedure
+    .input(
+      z.object({
+        text: z.string().min(1),
+        nodeId: z.string().optional(),
+        topK: z.number().int().min(1).max(20).default(5),
+        resource: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const resource = input.resource ?? "user";
+
+      try {
+        const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
+
+        // Use semantic search to find relevant context
+        const result = await runUnifiedQuery(
+          {
+            kind: "semantic",
+            text: input.text,
+            topK: input.topK,
+            preferRag: true,
+            resource,
+          },
+          { resource }
+        );
+
+        // Transform nodes to context items format
+        const contextItems = (result.nodes ?? []).map((node, index) => {
+          const props = node.properties as Record<string, unknown> | undefined;
+          return {
+            id: node.id.dbId ?? node.id.uiId ?? `ctx-${index}`,
+            type: mapNodeKindToContextType(node.kind),
+            title: node.label ?? "Unknown",
+            content:
+              (props?.content as string) ??
+              (props?.text as string) ??
+              node.label ??
+              "",
+            relevance: (props?.score as number) ?? 1 - index * 0.1,
+          };
+        });
+
+        return { items: contextItems };
+      } catch (error) {
+        logger.error("graph_get_context_failed", {
+          resource,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { items: [] };
+      }
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RAG chunks retrieval
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getRagChunks: authedProcedure
+    .input(
+      z.object({
+        text: z.string().min(1),
+        topK: z.number().int().min(1).max(20).default(5),
+        resource: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const resource = input.resource ?? "user";
+
+      try {
+        const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
+
+        const result = await runUnifiedQuery(
+          {
+            kind: "semantic",
+            text: input.text,
+            topK: input.topK,
+            preferRag: true,
+            resource,
+          },
+          { resource }
+        );
+
+        // Transform nodes to RAG chunks format
+        const chunks = (result.nodes ?? []).map((node, index) => {
+          const props = node.properties as Record<string, unknown> | undefined;
+          return {
+            id: node.id.dbId ?? node.id.uiId ?? `chunk-${index}`,
+            source:
+              (props?.source as string) ??
+              (props?.filename as string) ??
+              node.label ??
+              "unknown",
+            content:
+              (props?.content as string) ??
+              (props?.text as string) ??
+              node.label ??
+              "",
+            score: (props?.score as number) ?? 1 - index * 0.05,
+            metadata: {
+              section: (props?.section as string) ?? undefined,
+              lastUpdated: (props?.updatedAt as string) ?? undefined,
+            },
+          };
+        });
+
+        return { chunks };
+      } catch (error) {
+        logger.error("graph_get_rag_chunks_failed", {
+          resource,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { chunks: [] };
+      }
+    }),
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+function mapNodeKindToContextType(
+  kind: string
+): "document" | "url" | "knowledge" | "fact" {
+  switch (kind) {
+    case "document":
+    case "file":
+    case "note":
+      return "document";
+    case "url":
+    case "link":
+      return "url";
+    case "fact":
+      return "fact";
+    default:
+      return "knowledge";
+  }
+}
