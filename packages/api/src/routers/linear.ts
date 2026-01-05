@@ -271,11 +271,15 @@ export const linearRouter = router({
 
       // Build filter
       const filters: string[] = [];
-      if (input.teamId) filters.push(`team: { id: { eq: "${input.teamId}" } }`);
-      if (input.projectId)
+      if (input.teamId) {
+        filters.push(`team: { id: { eq: "${input.teamId}" } }`);
+      }
+      if (input.projectId) {
         filters.push(`project: { id: { eq: "${input.projectId}" } }`);
-      if (input.state)
+      }
+      if (input.state) {
         filters.push(`state: { name: { eq: "${input.state}" } }`);
+      }
 
       const filterStr =
         filters.length > 0 ? `filter: { ${filters.join(", ")} }` : "";

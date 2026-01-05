@@ -612,10 +612,18 @@ export const agentfsRouter = router({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function inferAgentType(runId: string): string {
-  if (runId.includes("codex")) return "codex";
-  if (runId.includes("droid")) return "droid";
-  if (runId.includes("claude")) return "claude";
-  if (runId.includes("roo")) return "roo";
+  if (runId.includes("codex")) {
+    return "codex";
+  }
+  if (runId.includes("droid")) {
+    return "droid";
+  }
+  if (runId.includes("claude")) {
+    return "claude";
+  }
+  if (runId.includes("roo")) {
+    return "roo";
+  }
   return "agent";
 }
 

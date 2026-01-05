@@ -389,10 +389,9 @@ export const knowledgeRouter = router({
       const rows = await query;
 
       // Filter by search if provided
-      const filteredRows = input.search
-        ? rows.filter((row) =>
-            row.label.toLowerCase().includes(input.search!.toLowerCase())
-          )
+      const q = input.search?.toLowerCase();
+      const filteredRows = q
+        ? rows.filter((row) => row.label.toLowerCase().includes(q))
         : rows;
 
       const entities = filteredRows.map((row) => {
@@ -488,8 +487,12 @@ export const knowledgeRouter = router({
 
       const relationNodeIds = new Set<string>();
       for (const e of allEdges) {
-        if (e.fromId !== input.entityId) relationNodeIds.add(e.fromId);
-        if (e.toId !== input.entityId) relationNodeIds.add(e.toId);
+        if (e.fromId !== input.entityId) {
+          relationNodeIds.add(e.fromId);
+        }
+        if (e.toId !== input.entityId) {
+          relationNodeIds.add(e.toId);
+        }
       }
 
       const relationNodes =

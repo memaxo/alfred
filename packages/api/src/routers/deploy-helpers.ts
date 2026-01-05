@@ -169,7 +169,7 @@ export async function getContainerLogs(
       .map((line) => {
         const match =
           /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(.*)$/u.exec(line);
-        if (match && match[1]) {
+        if (match?.[1]) {
           return {
             timestamp: match[1],
             level: inferLogLevel(match[2] ?? ""),
@@ -248,9 +248,13 @@ export async function removeContainer(
 // ─────────────────────────────────────────────────────────────────────────────
 
 function parseMemory(str: string): number {
-  if (!str) return 0;
+  if (!str) {
+    return 0;
+  }
   const num = Number.parseFloat(str);
-  if (Number.isNaN(num)) return 0;
+  if (Number.isNaN(num)) {
+    return 0;
+  }
 
   if (str.includes("GiB") || str.includes("GB")) {
     return Math.round(num * 1024);

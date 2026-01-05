@@ -44,8 +44,12 @@ export function FileAudit({ workspace, className }: FileAuditProps) {
       const existing = byPath.get(path) ?? { type: "read", count: 0, bytes: 0 };
       existing.count += 1;
       existing.bytes += op.bytesAffected ?? 0;
-      if (op.type === "write") existing.type = "modified";
-      if (op.type === "delete") existing.type = "deleted";
+      if (op.type === "write") {
+        existing.type = "modified";
+      }
+      if (op.type === "delete") {
+        existing.type = "deleted";
+      }
       byPath.set(path, existing);
     }
 

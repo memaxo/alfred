@@ -642,22 +642,36 @@ export const adminRouter = router({
 function parseMemoryMB(memStr: string): number {
   // Parse strings like "128MiB / 1GiB" or "128MB"
   const match = /(\d+(?:\.\d+)?)\s*(MiB|MB|GiB|GB|KiB|KB)/i.exec(memStr);
-  if (!(match && match[1] && match[2])) return 0;
+  if (!(match?.[1] && match[2])) {
+    return 0;
+  }
 
   const value = Number.parseFloat(match[1]);
   const unit = match[2].toLowerCase();
 
-  if (unit.includes("g")) return Math.round(value * 1024);
-  if (unit.includes("k")) return Math.round(value / 1024);
+  if (unit.includes("g")) {
+    return Math.round(value * 1024);
+  }
+  if (unit.includes("k")) {
+    return Math.round(value / 1024);
+  }
   return Math.round(value);
 }
 
 function mapRunStatus(
   status: string | null | undefined
 ): "success" | "failure" | "cancelled" {
-  if (!status) return "success";
-  if (status === "completed" || status === "done") return "success";
-  if (status === "failed" || status === "error") return "failure";
-  if (status === "cancelled" || status === "aborted") return "cancelled";
+  if (!status) {
+    return "success";
+  }
+  if (status === "completed" || status === "done") {
+    return "success";
+  }
+  if (status === "failed" || status === "error") {
+    return "failure";
+  }
+  if (status === "cancelled" || status === "aborted") {
+    return "cancelled";
+  }
   return "success"; // Default for completed runs
 }

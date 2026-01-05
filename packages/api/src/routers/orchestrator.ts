@@ -360,7 +360,9 @@ function computeWavesFromEvents(
 
   for (const event of events) {
     const data = event.eventData as Record<string, unknown> | null;
-    if (!data) continue;
+    if (!data) {
+      continue;
+    }
 
     const agentId = data.agentId as string | undefined;
     const agentEvent = data.event as string | undefined;
@@ -444,10 +446,14 @@ function computeAgentsFromEvents(
 
   for (const event of events) {
     const data = event.eventData as Record<string, unknown> | null;
-    if (!data) continue;
+    if (!data) {
+      continue;
+    }
 
     const agentId = data.agentId as string | undefined;
-    if (!agentId) continue;
+    if (!agentId) {
+      continue;
+    }
 
     const agentEvent = data.event as string | undefined;
 
@@ -499,7 +505,9 @@ function computeAgentsFromEvents(
 }
 
 function computeOverallProgress(waves: ComputedWave[]): number {
-  if (waves.length === 0) return 0;
+  if (waves.length === 0) {
+    return 0;
+  }
   const completedWaves = waves.filter((w) => w.status === "completed").length;
   const runningWaves = waves.filter((w) => w.status === "running").length;
   return Math.round(
@@ -531,7 +539,9 @@ function formatEventMessage(
   eventType: string,
   data: Record<string, unknown> | null
 ): string {
-  if (!data) return eventType;
+  if (!data) {
+    return eventType;
+  }
 
   const agentEvent = data.event as string | undefined;
   const agentId = data.agentId as string | undefined;

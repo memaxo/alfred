@@ -95,7 +95,9 @@ export function ContextPanel({
 
   // Get the last user message or a default query
   const queryText = useMemo(() => {
-    if (searchQuery) return searchQuery;
+    if (searchQuery) {
+      return searchQuery;
+    }
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMsg && Array.isArray(lastUserMsg.parts)) {
       const textPart = lastUserMsg.parts.find(

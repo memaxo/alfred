@@ -97,7 +97,9 @@ const mapHealthResource = (raw: unknown) => {
     firstApp = data.app;
   } else if (Array.isArray(data.apps) && data.apps.length > 0) {
     const possibleApp = data.apps[0];
-    if (possibleApp) firstApp = possibleApp;
+    if (possibleApp) {
+      firstApp = possibleApp;
+    }
   }
   return mapDeployResource(
     { app: firstApp },
@@ -112,7 +114,9 @@ const mapHealthResource = (raw: unknown) => {
 export const deployRouter = router({
   list: authedProcedure.input(listInput).query(async ({ ctx, input }) => {
     const userId = ctx.session?.user?.id;
-    if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (!userId) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
     return deployRepo.listDeployments({
       userId,
       app: input?.app,
@@ -123,7 +127,9 @@ export const deployRouter = router({
 
   get: authedProcedure.input(idInput).query(async ({ ctx, input }) => {
     const userId = ctx.session?.user?.id;
-    if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (!userId) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
     const deployment = await deployRepo.getDeploymentById(input.id);
     if (!deployment || deployment.userId !== userId) {
       throw new TRPCError({
@@ -138,7 +144,9 @@ export const deployRouter = router({
     .input(idInput)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session?.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
       const deployment = await deployRepo.getDeploymentById(input.id);
       if (!deployment || deployment.userId !== userId) {
         throw new TRPCError({
@@ -161,7 +169,9 @@ export const deployRouter = router({
     .input(createPreviewInput)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session?.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
 
       const domain = deployService.getAppDomain();
       const slug = deployService.slugifyApp(input.app);
@@ -180,8 +190,9 @@ export const deployRouter = router({
       let routeRegistered = false;
 
       const cleanup = async () => {
-        if (routeRegistered)
+        if (routeRegistered) {
           await deployService.safeRouterRemove(host, input.authz);
+        }
         await deployService.safeStopContainer(
           containerName ?? containerId,
           input.authz
@@ -236,7 +247,9 @@ export const deployRouter = router({
             typeof runResult.details?.hostPort === "number"
               ? runResult.details?.hostPort
               : (hostPort ?? null);
-          if (resolvedHostPort !== null) hostPort = resolvedHostPort;
+          if (resolvedHostPort !== null) {
+            hostPort = resolvedHostPort;
+          }
 
           ports =
             Array.isArray(runResult.details?.ports) &&
@@ -320,7 +333,9 @@ export const deployRouter = router({
       const slug = deployService.slugifyApp(input.app);
       const host = input.host ?? deployService.buildProdHost(slug, domain);
       const userId = ctx.session?.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
 
       await toolDocker.execute({
         input: {
@@ -346,8 +361,9 @@ export const deployRouter = router({
         input.app,
         "preview"
       );
-      if (preview?.domain)
+      if (preview?.domain) {
         await deployService.safeRouterRemove(preview.domain, input.authz);
+      }
       if (preview?.id) {
         await deployRepo.setDeploymentStatus(preview.id, "removed", {
           metadata: {
@@ -383,17 +399,20 @@ export const deployRouter = router({
     .input(probeInput)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session?.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
       const deployment = await deployRepo.getDeploymentByApp(
         userId,
         input.app,
         input.preview ? "preview" : "production"
       );
-      if (!deployment)
+      if (!deployment) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "deployment_not_found",
         });
+      }
       const result = await deployService.probeDeployment({
         record: deployment,
         authz: input.authz,
@@ -452,12 +471,16 @@ export const deployRouter = router({
         let timer: ReturnType<typeof setInterval> | null = null;
 
         const tick = async () => {
-          if (running || closed) return;
+          if (running || closed) {
+            return;
+          }
           running = true;
           try {
             const deployments = await fetchDeployments();
             for (const record of deployments) {
-              if (!shouldInclude(record.app)) continue;
+              if (!shouldInclude(record.app)) {
+                continue;
+              }
               const result = await deployService.probeDeployment({
                 record,
                 authz: input.authz,
@@ -474,9 +497,13 @@ export const deployRouter = router({
             }
           } catch (error) {
             if (error instanceof TRPCError) {
-              if (!closed) emit.error(error);
+              if (!closed) {
+                emit.error(error);
+              }
               closed = true;
-              if (timer) clearInterval(timer);
+              if (timer) {
+                clearInterval(timer);
+              }
               return;
             }
             emit.next({
@@ -495,7 +522,9 @@ export const deployRouter = router({
         timer = setInterval(() => void tick(), input.intervalMs);
         return () => {
           closed = true;
-          if (timer) clearInterval(timer);
+          if (timer) {
+            clearInterval(timer);
+          }
         };
       })
     ),
@@ -516,18 +545,21 @@ export const deployRouter = router({
       }
 
       const userId = ctx.session?.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
       const type = input.preview ? "preview" : "production";
       const record = await deployRepo.getDeploymentByApp(
         userId,
         input.app,
         type
       );
-      if (!record)
+      if (!record) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "deployment_not_found",
         });
+      }
 
       await deployService.safeRouterRemove(record.domain, input.authz);
       if (type === "preview") {

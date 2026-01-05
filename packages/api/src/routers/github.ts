@@ -56,7 +56,7 @@ export const githubRouter = router({
           baseRefName: string;
           additions: number;
           deletions: number;
-          comments: Array<unknown>;
+          comments: unknown[];
           reviewDecision: string | null;
           statusCheckRollup: Array<{ conclusion?: string; status?: string }>;
           createdAt: string;
@@ -297,34 +297,50 @@ export const githubRouter = router({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function mapPRState(state: string): "open" | "merged" | "closed" {
-  if (state === "MERGED") return "merged";
-  if (state === "CLOSED") return "closed";
+  if (state === "MERGED") {
+    return "merged";
+  }
+  if (state === "CLOSED") {
+    return "closed";
+  }
   return "open";
 }
 
 function mapReviewDecision(
   decision: string | null
 ): "pending" | "approved" | "changes_requested" {
-  if (decision === "APPROVED") return "approved";
-  if (decision === "CHANGES_REQUESTED") return "changes_requested";
+  if (decision === "APPROVED") {
+    return "approved";
+  }
+  if (decision === "CHANGES_REQUESTED") {
+    return "changes_requested";
+  }
   return "pending";
 }
 
 function mapCIStatus(
   checks: Array<{ conclusion?: string; status?: string }>
 ): "pending" | "success" | "failure" | "running" {
-  if (checks.length === 0) return "pending";
+  if (checks.length === 0) {
+    return "pending";
+  }
 
   const hasFailure = checks.some((c) => c.conclusion === "FAILURE");
-  if (hasFailure) return "failure";
+  if (hasFailure) {
+    return "failure";
+  }
 
   const hasRunning = checks.some(
     (c) => c.status === "IN_PROGRESS" || c.status === "QUEUED"
   );
-  if (hasRunning) return "running";
+  if (hasRunning) {
+    return "running";
+  }
 
   const allSuccess = checks.every((c) => c.conclusion === "SUCCESS");
-  if (allSuccess) return "success";
+  if (allSuccess) {
+    return "success";
+  }
 
   return "pending";
 }
@@ -367,7 +383,9 @@ function parseDiff(diffText: string): DiffFile[] {
 
   for (let i = 0; i < fileMatches.length; i++) {
     const fileMatch = fileMatches[i];
-    if (!fileMatch) continue;
+    if (!fileMatch) {
+      continue;
+    }
     const nextStart = fileMatches[i + 1]?.start ?? diffText.length;
     const fileContent = diffText.slice(fileMatch.start, nextStart);
 
@@ -383,7 +401,9 @@ function parseDiff(diffText: string): DiffFile[] {
     for (let j = 0; j < hunkStarts.length; j++) {
       const hunkStart = hunkStarts[j];
       const hunkEnd = hunkStarts[j + 1] ?? fileContent.length;
-      if (hunkStart === undefined) continue;
+      if (hunkStart === undefined) {
+        continue;
+      }
       const hunkContent = fileContent.slice(hunkStart, hunkEnd);
       const lines = hunkContent.split("\n");
       const header = lines[0] ?? "";
@@ -397,8 +417,12 @@ function parseDiff(diffText: string): DiffFile[] {
     let deletions = 0;
     for (const hunk of hunks) {
       for (const line of hunk.lines) {
-        if (line.startsWith("+") && !line.startsWith("+++")) additions++;
-        if (line.startsWith("-") && !line.startsWith("---")) deletions++;
+        if (line.startsWith("+") && !line.startsWith("+++")) {
+          additions++;
+        }
+        if (line.startsWith("-") && !line.startsWith("---")) {
+          deletions++;
+        }
       }
     }
 

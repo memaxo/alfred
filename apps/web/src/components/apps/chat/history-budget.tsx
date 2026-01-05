@@ -49,7 +49,9 @@ export function HistoryBudget({
 
   // Find oldest message timestamp
   const oldestMessage = useMemo(() => {
-    if (messages.length === 0) return null;
+    if (messages.length === 0) {
+      return null;
+    }
     const oldest = messages[0];
     if (oldest && "createdAt" in oldest && oldest.createdAt) {
       return new Date(oldest.createdAt as string | number);
