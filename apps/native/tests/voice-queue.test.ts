@@ -8,11 +8,13 @@ const savedFiles = new Map<string, string>();
 // Mock AsyncStorage
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(async (key: string) => mockStorage.get(key) ?? null),
-  setItem: jest.fn(async (key: string, value: string) => {
+  setItem: jest.fn((key: string, value: string) => {
     mockStorage.set(key, value);
+    return Promise.resolve();
   }),
-  removeItem: jest.fn(async (key: string) => {
+  removeItem: jest.fn((key: string) => {
     mockStorage.delete(key);
+    return Promise.resolve();
   }),
 }));
 
@@ -144,7 +146,7 @@ describe("native voice queue + playback", () => {
 
     await ageQueue(2000);
 
-    await queueModule.drain(async (item) => {
+    await queueModule.drain((item) => {
       order.push(item.kind);
       return Promise.resolve();
     });

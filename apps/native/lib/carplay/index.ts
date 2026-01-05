@@ -6,10 +6,19 @@ import type {
 import { Platform } from "react-native";
 
 // Lazy import CarPlay to avoid initialization errors if native module isn't available
-let CarPlay: any = null;
+type CarPlayModule = {
+  registerOnConnect: (handler: () => void) => void;
+  connected?: boolean;
+  pushTemplate: (template: unknown, animated: boolean) => void;
+  VoiceControlTemplate: unknown;
+  VoiceControlButton: unknown;
+  CarPlayButton: unknown;
+};
+
+let CarPlay: CarPlayModule | null = null;
 let CarPlayChecked = false;
 
-function getCarPlayModule(): any {
+function getCarPlayModule(): CarPlayModule | null {
   if (CarPlayChecked) {
     return CarPlay;
   }
@@ -23,7 +32,9 @@ function getCarPlayModule(): any {
     // Use dynamic require with string concatenation to prevent Metro from statically analyzing
     // This prevents the module from initializing during bundling if native bridge isn't available
     const modulePath = "@g4rb4g3/react-native-carplay";
-    const carplayModule = require(modulePath);
+    const carplayModule = require(modulePath) as unknown as {
+      default?: CarPlayModule;
+    } & CarPlayModule;
     CarPlay = carplayModule?.default || carplayModule;
 
     // Verify the module has expected methods before using
@@ -33,15 +44,9 @@ function getCarPlayModule(): any {
     }
 
     return CarPlay;
-  } catch (error: any) {
+  } catch (_error) {
     // CarPlay module not available, not properly linked, or initialization failed
     // This is expected if the native module isn't available or bridge isn't initialized
-    if (
-      error?.message?.includes("bridge") ||
-      error?.message?.includes("checkForDashboardConnection")
-    ) {
-    } else {
-    }
     CarPlay = null;
     return null;
   }
@@ -134,17 +139,21 @@ async function handleVoiceButtonPress(
     // Wait for user to speak (monitor capture state or use a timeout)
     // Poll the capture state until it indicates speech is detected or timeout
     await new Promise<void>((resolve) => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       const checkInterval = setInterval(() => {
         if (
           voice.state.capture === "recording" ||
           voice.state.capture === "complete"
         ) {
           clearInterval(checkInterval);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
           resolve();
         }
       }, POLL_INTERVAL_MS);
       // Timeout after configured duration
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         clearInterval(checkInterval);
         resolve();
       }, VOICE_TIMEOUT_MS);

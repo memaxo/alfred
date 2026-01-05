@@ -17,22 +17,16 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
-import { trpc } from "@/utils/trpc";
+import { useWorkflowGet, useWorkflowResume } from "@/hooks/use-trpc";
 
 export default function WorkflowDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // Note: Adjust query based on actual workflow router structure
-  const workflowQuery = (trpc.workflow as Record<string, any>).get?.useQuery(
-    { id: id ?? "" },
-    { enabled: !!id }
-  ) ?? { data: null, isLoading: false };
+  const workflowQuery = useWorkflowGet({ runId: id ?? "" });
 
-  const resumeMutation = (
-    trpc.workflow as Record<string, any>
-  ).resume?.useMutation({
+  const resumeMutation = useWorkflowResume({
     onSuccess: () => {
       router.back();
     },
@@ -72,7 +66,7 @@ export default function WorkflowDetailScreen() {
       });
 
       if (result.success) {
-        resumeMutation.mutate({ id });
+        resumeMutation.mutate({ runId: id });
       } else {
         Alert.alert("Authentication Failed", "Please try again.");
       }
@@ -151,11 +145,11 @@ export default function WorkflowDetailScreen() {
           </View>
         )}
 
-        {workflow?.createdAt && (
+        {workflow?.created && (
           <View className="mb-4">
             <Text className="mb-2 font-semibold text-foreground">Created</Text>
             <Text className="text-foreground">
-              {new Date(workflow.createdAt).toLocaleString()}
+              {new Date(workflow.created).toLocaleString()}
             </Text>
           </View>
         )}

@@ -94,38 +94,57 @@ export type SortOption<T> = {
  * Common sort functions
  */
 export const sortFunctions = {
-  dateNewest: <T extends { createdAt?: string | Date }>(a: T, b: T) => {
-    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return dateB - dateA;
-  },
-  dateOldest: <T extends { createdAt?: string | Date }>(a: T, b: T) => {
-    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return dateA - dateB;
-  },
-  updatedNewest: <
-    T extends { updated?: string | Date; updatedAt?: string | Date },
+  dateNewest: <
+    T extends {
+      created?: string | Date | null;
+      createdAt?: string | Date | null;
+    },
   >(
     a: T,
     b: T
   ) => {
-    const dateA =
-      a.updated || a.updatedAt
-        ? new Date(a.updated || a.updatedAt!).getTime()
-        : 0;
-    const dateB =
-      b.updated || b.updatedAt
-        ? new Date(b.updated || b.updatedAt!).getTime()
-        : 0;
+    const valA = a.created || a.createdAt;
+    const valB = b.created || b.createdAt;
+    const dateA = valA ? new Date(valA).getTime() : 0;
+    const dateB = valB ? new Date(valB).getTime() : 0;
     return dateB - dateA;
   },
-  titleAsc: <T extends { title?: string }>(a: T, b: T) => {
+  dateOldest: <
+    T extends {
+      created?: string | Date | null;
+      createdAt?: string | Date | null;
+    },
+  >(
+    a: T,
+    b: T
+  ) => {
+    const valA = a.created || a.createdAt;
+    const valB = b.created || b.createdAt;
+    const dateA = valA ? new Date(valA).getTime() : 0;
+    const dateB = valB ? new Date(valB).getTime() : 0;
+    return dateA - dateB;
+  },
+  updatedNewest: <
+    T extends {
+      updated?: string | Date | null;
+      updatedAt?: string | Date | null;
+    },
+  >(
+    a: T,
+    b: T
+  ) => {
+    const valA = a.updated || a.updatedAt;
+    const valB = b.updated || b.updatedAt;
+    const dateA = valA ? new Date(valA).getTime() : 0;
+    const dateB = valB ? new Date(valB).getTime() : 0;
+    return dateB - dateA;
+  },
+  titleAsc: <T extends { title?: string | null }>(a: T, b: T) => {
     const titleA = (a.title || "").toLowerCase();
     const titleB = (b.title || "").toLowerCase();
     return titleA.localeCompare(titleB);
   },
-  titleDesc: <T extends { title?: string }>(a: T, b: T) => {
+  titleDesc: <T extends { title?: string | null }>(a: T, b: T) => {
     const titleA = (a.title || "").toLowerCase();
     const titleB = (b.title || "").toLowerCase();
     return titleB.localeCompare(titleA);

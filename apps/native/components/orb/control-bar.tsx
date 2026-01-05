@@ -2,11 +2,11 @@
  * ControlBar Component
  *
  * The control bar for the voice call screen.
- * Features mute toggle, end call (long-press), and keyboard toggle.
+ * Features mute toggle, end call (long-press), and voice toggle.
  */
 
 import { Ionicons } from "@expo/vector-icons";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Platform, Pressable, StyleSheet, Vibration, View } from "react-native";
 import Animated, {
   Easing,
@@ -29,8 +29,6 @@ type ControlBarProps = {
   onMuteToggle: () => void;
   /** Callback when call is ended */
   onEndCall: () => void;
-  /** Callback when keyboard toggle is pressed */
-  onToggleKeyboard: () => void;
   /** Callback when voice toggle is pressed */
   onToggleVoice: () => void;
 };
@@ -48,7 +46,6 @@ export function ControlBar({
   isActive,
   onMuteToggle,
   onEndCall,
-  onToggleKeyboard,
   onToggleVoice,
 }: ControlBarProps) {
   return (
@@ -59,8 +56,8 @@ export function ControlBar({
       {/* Center - End call button (long press) */}
       <EndCallButton onEndCall={onEndCall} />
 
-      {/* Right side - Keyboard toggle */}
-      <KeyboardToggleButton onPress={onToggleKeyboard} />
+      {/* Right side - Voice toggle */}
+      <VoiceToggleButton isActive={isActive} onPress={onToggleVoice} />
     </View>
   );
 }
@@ -90,6 +87,9 @@ function MuteButton({
 
   return (
     <Pressable
+      accessibilityLabel={isMuted ? "Unmute microphone" : "Mute microphone"}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isMuted }}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -111,7 +111,6 @@ function MuteButton({
 // ─── End Call Button ─────────────────────────────────────────────────────────
 
 function EndCallButton({ onEndCall }: { onEndCall: () => void }) {
-  const [_isPressing, setIsPressing] = useState(false);
   const progress = useSharedValue(0);
   const pressTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -128,7 +127,6 @@ function EndCallButton({ onEndCall }: { onEndCall: () => void }) {
   }));
 
   const handlePressIn = () => {
-    setIsPressing(true);
     progress.value = withTiming(1, {
       duration: END_CALL_LONG_PRESS_DURATION,
       easing: Easing.linear,
@@ -146,7 +144,6 @@ function EndCallButton({ onEndCall }: { onEndCall: () => void }) {
   };
 
   const handlePressOut = () => {
-    setIsPressing(false);
     progress.value = withTiming(0, { duration: 150 });
 
     if (pressTimeout.current) {
@@ -156,7 +153,13 @@ function EndCallButton({ onEndCall }: { onEndCall: () => void }) {
   };
 
   return (
-    <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
+    <Pressable
+      accessibilityHint="Press and hold to end the call"
+      accessibilityLabel="End call"
+      accessibilityRole="button"
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
       <View style={styles.endButtonContainer}>
         {/* Progress ring */}
         <Animated.View style={[styles.endButtonRing, ringStyle]} />
@@ -170,9 +173,15 @@ function EndCallButton({ onEndCall }: { onEndCall: () => void }) {
   );
 }
 
-// ─── Keyboard Toggle Button ──────────────────────────────────────────────────
+// ─── Voice Toggle Button ─────────────────────────────────────────────────────
 
-function KeyboardToggleButton({ onPress }: { onPress: () => void }) {
+function VoiceToggleButton({
+  isActive,
+  onPress,
+}: {
+  isActive: boolean;
+  onPress: () => void;
+}) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -189,6 +198,9 @@ function KeyboardToggleButton({ onPress }: { onPress: () => void }) {
 
   return (
     <Pressable
+      accessibilityLabel={isActive ? "Stop listening" : "Start listening"}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -196,7 +208,7 @@ function KeyboardToggleButton({ onPress }: { onPress: () => void }) {
       <Animated.View style={[styles.button, animatedStyle]}>
         <Ionicons
           color={ALFRED_COLORS.text}
-          name="chatbubble-outline"
+          name={isActive ? "stop" : "mic"}
           size={24}
         />
       </Animated.View>

@@ -141,6 +141,18 @@ export async function getNotes(
     .offset(offset);
 }
 
+export async function getNote(
+  userId: string,
+  noteId: string
+): Promise<typeof notes.$inferSelect | null> {
+  const rows = await db
+    .select()
+    .from(notes)
+    .where(and(eq(notes.userId, userId), eq(notes.id, noteId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function updateNote(
   noteId: string,
   updates: Partial<NoteInsert>

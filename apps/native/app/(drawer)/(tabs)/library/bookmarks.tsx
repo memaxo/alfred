@@ -100,19 +100,17 @@ export default function BookmarksListScreen() {
     }
   }, []);
 
-  const filteredBookmarks = bookmarksQuery.data?.filter(
-    (bookmark: { title: string; url: string; description?: string | null }) => {
-      if (!searchQuery.trim()) {
-        return true;
-      }
-      const query = searchQuery.toLowerCase();
-      return (
-        bookmark.title?.toLowerCase().includes(query) ||
-        bookmark.url?.toLowerCase().includes(query) ||
-        bookmark.description?.toLowerCase().includes(query)
-      );
+  const filteredBookmarks = bookmarksQuery.data?.filter((bookmark) => {
+    if (!searchQuery.trim()) {
+      return true;
     }
-  );
+    const query = searchQuery.toLowerCase();
+    return (
+      bookmark.title?.toLowerCase().includes(query) ||
+      bookmark.url?.toLowerCase().includes(query) ||
+      bookmark.description?.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <Container>

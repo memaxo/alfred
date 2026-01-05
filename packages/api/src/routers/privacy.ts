@@ -1,6 +1,8 @@
 import { recordMemoryForget } from "@alfred/agent/metrics";
 import {
+  deleteEventsForUser,
   deleteFact,
+  deleteFactsForUser,
   getEvents,
   listFacts,
   searchFacts,
@@ -37,6 +39,32 @@ function ensureObligations(ctx: Context) {
 }
 
 export const privacyRouter = router({
+  purge: authedProcedure
+    .use(
+      requirePolicy("privacy.purge", (input, ctx) =>
+        mapPrivacyResource(input, ctx)
+      )
+    )
+    .mutation(async ({ ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      ensureObligations(ctx);
+
+      const removedFacts = await deleteFactsForUser(session.user.id);
+      const removedEvents = await deleteEventsForUser(session.user.id);
+      if (removedFacts > 0 || removedEvents > 0) {
+        recordMemoryForget("purge");
+      }
+
+      return { removedFacts, removedEvents };
+    }),
+
   facts: authedProcedure
     .input(privacyFactQuerySchema.optional())
     .query(async ({ ctx, input }) => {

@@ -95,7 +95,15 @@ export default function RootLayout() {
 
     // Only check in production, and delay slightly to not interrupt initial load
     if (!__DEV__) {
-      setTimeout(checkUpdates, 3000);
+      const timeoutId = setTimeout(() => {
+        void checkUpdates().catch(() => {
+          // ignore
+        });
+      }, 3000);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
     }
   }, []);
 
@@ -128,8 +136,7 @@ export default function RootLayout() {
   }
 
   // Extract tRPC provider to avoid JSX syntax issues with type assertion
-  // biome-ignore lint/suspicious/noExplicitAny: trpc.Provider needs any for JSX
-  const TrpcProvider = (trpc as any).Provider;
+  const TrpcProvider = trpc.Provider;
 
   return (
     <ErrorBoundary>

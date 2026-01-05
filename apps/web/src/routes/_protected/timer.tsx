@@ -256,7 +256,14 @@ function TimerPane() {
   });
 
   const isActing = completeTimer.isPending || cancelTimer.isPending;
-  const timers = (timersQuery.data ?? []) as TimerItem[];
+  const timers: TimerItem[] = (timersQuery.data ?? []).map((t) => ({
+    id: t.id,
+    label: t.label,
+    duration: t.duration,
+    startedAt: t.start ? new Date(t.start) : null,
+    completed: Boolean(t.completed),
+    cancelled: Boolean(t.cancelled),
+  }));
 
   const timerCards = useMemo<TimerCardData[]>(
     () =>

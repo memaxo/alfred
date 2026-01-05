@@ -40,4 +40,25 @@ export const userRouter = router({
         "user"
       );
     }),
+
+  registerPushToken: authedProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+        platform: z.enum(["ios", "android", "web"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const key = `push_token_${input.platform}`;
+      await setPreference(session.user.id, key, input.token, 1.0, "device");
+      return { stored: true };
+    }),
 });

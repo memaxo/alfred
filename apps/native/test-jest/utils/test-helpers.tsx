@@ -37,7 +37,7 @@ export function TestProviders({
   queryClient?: QueryClient;
 }) {
   const client = queryClient ?? createTestQueryClient();
-  const TrpcProvider = (trpc as any).Provider;
+  const TrpcProvider = trpc.Provider;
 
   return (
     <QueryClientProvider client={client}>

@@ -8,8 +8,10 @@ import { DockerSandbox } from "../../src/kinetic/sandbox";
  * If Docker is not available, these tests will fail with connection errors.
  * Ensure Docker is running before executing these tests.
  */
+const SHOULD_RUN = process.env.RUN_DOCKER_TESTS === "1";
+
 // Set a longer timeout for Docker operations
-describe("DockerSandbox (Kinetic Layer)", () => {
+describe.skipIf(!SHOULD_RUN)("DockerSandbox (Kinetic Layer)", () => {
   let sandbox: DockerSandbox;
 
   beforeAll(async () => {

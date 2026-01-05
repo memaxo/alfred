@@ -25,7 +25,7 @@ const tsvector = customType<{ data: string; driverData: string }>({
 /**
  * Tasks (work items tracked by Assistant)
  */
-export const tasks: any = pgTable("assistant_tasks", {
+export const tasks = pgTable("assistant_tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
@@ -36,7 +36,7 @@ export const tasks: any = pgTable("assistant_tasks", {
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   completed: timestamp("completed_at", { withTimezone: true }),
-  metadata: jsonb("metadata"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
 // Index coverage: assistant_tasks_user_status_idx, assistant_tasks_user_due_idx (0039)
@@ -44,16 +44,16 @@ export const tasks: any = pgTable("assistant_tasks", {
 /**
  * Notes (freeform user notes)
  */
-export const notes: any = pgTable("assistant_notes", {
+export const notes = pgTable("assistant_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title"),
   content: text("content").notNull(),
   contentTsvector: tsvector("content_tsvector"),
-  tags: jsonb("tags"), // Array of tag strings
+  tags: jsonb("tags").$type<string[]>(), // Array of tag strings
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-  metadata: jsonb("metadata"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
 // TODO: [Phase 8] Optionally embed notes for semantic search
@@ -61,7 +61,7 @@ export const notes: any = pgTable("assistant_notes", {
 /**
  * Events (calendar-like events)
  */
-export const events: any = pgTable("assistant_events", {
+export const events = pgTable("assistant_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
@@ -71,7 +71,7 @@ export const events: any = pgTable("assistant_events", {
   location: text("location"),
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-  metadata: jsonb("metadata"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
 // Index coverage: assistant_events_user_id_start_idx (0003)
@@ -79,7 +79,7 @@ export const events: any = pgTable("assistant_events", {
 /**
  * Reminders (time-based notifications)
  */
-export const reminders: any = pgTable("assistant_reminders", {
+export const reminders = pgTable("assistant_reminders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
@@ -89,7 +89,7 @@ export const reminders: any = pgTable("assistant_reminders", {
   firedAt: timestamp("fired_at", { withTimezone: true }),
   recurring: text("recurring"), // "daily" | "weekly" | "monthly" | cron expression
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  metadata: jsonb("metadata"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
 // Index coverage: assistant_reminders_user_due_fired_idx (0039)
@@ -98,15 +98,15 @@ export const reminders: any = pgTable("assistant_reminders", {
 /**
  * Bookmarks (saved URLs and resources)
  */
-export const bookmarks: any = pgTable("assistant_bookmarks", {
+export const bookmarks = pgTable("assistant_bookmarks", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   url: text("url").notNull(),
   title: text("title"),
   description: text("description"),
-  tags: jsonb("tags"), // Array of tag strings
+  tags: jsonb("tags").$type<string[]>(), // Array of tag strings
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  metadata: jsonb("metadata"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
 // Index coverage: assistant_bookmarks_user_url_idx (0039)
@@ -114,7 +114,7 @@ export const bookmarks: any = pgTable("assistant_bookmarks", {
 /**
  * Timers (active countdown timers)
  */
-export const timers: any = pgTable("assistant_timers", {
+export const timers = pgTable("assistant_timers", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   label: text("label"),

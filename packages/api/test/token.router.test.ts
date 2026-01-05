@@ -77,7 +77,10 @@ describe("token router", () => {
           mfa: "none",
         }
       );
-      expect(result).toEqual({ token: "token-123" });
+      expect(result).toEqual({
+        token: "token-123",
+        tokenId: expect.any(String),
+      });
     });
 
     it("uses default audience", async () => {
@@ -125,7 +128,10 @@ describe("token router", () => {
           mfa: "passkey",
         }
       );
-      expect(result).toEqual({ token: "elevated-token-123" });
+      expect(result).toEqual({
+        token: "elevated-token-123",
+        tokenId: expect.any(String),
+      });
     });
 
     it("throws FORBIDDEN when biometric not recent", async () => {

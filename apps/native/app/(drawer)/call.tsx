@@ -7,7 +7,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StatusBar,
   StyleSheet,
@@ -35,6 +35,9 @@ export default function VoiceCallScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const orbSize = Math.min(width * 0.85, ORB_SIZES.full);
+  const startedAtRef = useRef<number>(Date.now());
+  const [isMuted, setIsMuted] = useState(false);
+  const [elapsedSec, setElapsedSec] = useState(0);
 
   // Voice session
   const { stream } = useVoiceSessionNative(trpcClient, { surface: "native" });
@@ -55,10 +58,14 @@ export default function VoiceCallScreen() {
 
   // Handlers
   const handleEndCall = useCallback(() => {
-    if (stream.isActive) {
-      stream.stop();
-    }
-    router.back();
+    void stream
+      .stop()
+      .catch(() => {
+        // ignore
+      })
+      .finally(() => {
+        router.back();
+      });
   }, [stream, router]);
 
   const handleToggleVoice = useCallback(async () => {
@@ -70,19 +77,29 @@ export default function VoiceCallScreen() {
   }, [stream]);
 
   const handleMuteToggle = useCallback(() => {
-    // TODO: Implement mute functionality
-  }, []);
+    const next = stream.toggleMute();
+    setIsMuted(next);
+  }, [stream]);
 
   const handleKeyboardToggle = useCallback(() => {
     // Navigate to text chat or show keyboard input
     router.back();
   }, [router]);
 
-  // Call duration timer (placeholder)
-  const callDuration = useMemo(() => {
-    // In a real implementation, this would be a running timer
-    return "0:00";
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - startedAtRef.current) / 1000));
+    }, 1000);
+    return () => {
+      clearInterval(intervalId);
+    };
   }, []);
+
+  const callDuration = useMemo(() => {
+    const minutes = Math.floor(elapsedSec / 60);
+    const seconds = elapsedSec % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }, [elapsedSec]);
 
   return (
     <View style={styles.container}>
@@ -107,7 +124,13 @@ export default function VoiceCallScreen() {
         entering={FadeIn.delay(200)}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
-        <TouchableOpacity onPress={handleEndCall} style={styles.backButton}>
+        <TouchableOpacity
+          accessibilityHint="Ends the call"
+          accessibilityLabel="End call"
+          accessibilityRole="button"
+          onPress={handleEndCall}
+          style={styles.backButton}
+        >
           <Ionicons
             color={ALFRED_COLORS.textMuted}
             name="chevron-down"
@@ -119,7 +142,12 @@ export default function VoiceCallScreen() {
           <Text style={styles.callDuration}>{callDuration}</Text>
         </View>
 
-        <TouchableOpacity style={styles.menuButton}>
+        <TouchableOpacity
+          accessibilityLabel="Call options"
+          accessibilityRole="button"
+          onPress={handleKeyboardToggle}
+          style={styles.menuButton}
+        >
           <Ionicons
             color={ALFRED_COLORS.textMuted}
             name="ellipsis-vertical"
@@ -172,10 +200,9 @@ export default function VoiceCallScreen() {
       >
         <ControlBar
           isActive={orbProps.isActive}
-          isMuted={false}
+          isMuted={isMuted}
           onEndCall={handleEndCall}
           onMuteToggle={handleMuteToggle}
-          onToggleKeyboard={handleKeyboardToggle}
           onToggleVoice={handleToggleVoice}
         />
       </Animated.View>

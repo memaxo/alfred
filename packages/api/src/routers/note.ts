@@ -1,12 +1,14 @@
 import {
   createNote,
   deleteNote,
+  getNote,
   getNotes,
   updateNote,
 } from "@alfred/db/repo/assistant";
 import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import { logger } from "@alfred/logger";
-import z from "zod";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
 // Constants
@@ -103,6 +105,19 @@ export const noteRouter = router({
     .query(({ ctx, input }) =>
       getNotes(ctx.session.user.id, input.limit, input.offset)
     ),
+
+  get: authedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const note = await getNote(ctx.session.user.id, input.id);
+      if (!note) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "note_not_found",
+        });
+      }
+      return note;
+    }),
 
   update: authedProcedure.input(noteUpdateInput).mutation(async ({ input }) => {
     const updated = await updateNote(input.id, {

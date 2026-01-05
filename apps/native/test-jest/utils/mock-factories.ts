@@ -4,6 +4,8 @@
  * Generates mock data for testing.
  */
 
+import type { UIMessage } from "@alfred/type";
+
 export function createMockNote(
   overrides: Partial<Record<string, unknown>> = {}
 ) {
@@ -45,27 +47,20 @@ export function createMockBookmark(
 }
 
 export function createMockMessage(
-  overrides: Partial<{
-    id: string;
-    role: "user" | "assistant" | "system";
-    content: string;
-    timestamp: number;
-    // biome-ignore lint/suspicious/noExplicitAny: complex UI message parts
-    parts: any[];
-  }> = {}
-) {
+  overrides: Partial<UIMessage> & { content?: string } = {}
+): UIMessage {
+  const { content: contentOverride, ...messageOverrides } = overrides;
+  const content = contentOverride ?? "Hello ALFRED!";
   return {
     id: `msg-${Math.random().toString(36).substr(2, 9)}`,
-    role: "user" as const,
-    content: "Hello ALFRED!",
-    timestamp: Date.now(),
+    role: "user",
     parts: [
       {
         type: "text",
-        text: overrides.content ?? "Hello ALFRED!",
+        text: content,
       },
     ],
-    ...overrides,
+    ...messageOverrides,
   };
 }
 

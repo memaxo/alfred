@@ -33,3 +33,11 @@ export type PreferenceRouterOutputs = RouterOutputs["preference"];
 // Privacy router types
 export type PrivacyRouterInputs = RouterInputs["privacy"];
 export type PrivacyRouterOutputs = RouterOutputs["privacy"];
+
+// Workflow router types
+export type WorkflowRouterInputs = RouterInputs["workflow"];
+export type WorkflowRouterOutputs = RouterOutputs["workflow"];
+
+// User router types
+export type UserRouterInputs = RouterInputs["user"];
+export type UserRouterOutputs = RouterOutputs["user"];

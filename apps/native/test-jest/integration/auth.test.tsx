@@ -15,8 +15,7 @@ jest.mock("@/lib/auth-client", () => ({
   },
 }));
 
-// Mock SecureStore
-import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 describe("Authentication Integration", () => {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -57,7 +56,7 @@ describe("Authentication Integration", () => {
   });
 
   it("should handle onboarding status persistence", async () => {
-    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("true");
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("true");
 
     const { result } = renderHook(() => useOnboarding(), { wrapper });
 

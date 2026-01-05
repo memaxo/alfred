@@ -163,6 +163,28 @@ function generateVoiceSessionId() {
   return `voice-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
 }
 
+function decodeBase64ToBytes(value: string): Uint8Array {
+  const maybeBuffer = (globalThis as unknown as { Buffer?: unknown }).Buffer as
+    | { from: (input: string, encoding: "base64") => Uint8Array }
+    | undefined;
+  if (maybeBuffer?.from) {
+    return maybeBuffer.from(value, "base64");
+  }
+
+  const decode = (globalThis as unknown as { atob?: (input: string) => string })
+    .atob;
+  if (!decode) {
+    throw new Error("base64_decode_unavailable");
+  }
+
+  const binary = decode(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 export function useVoiceSessionNative(
   trpc: unknown,
   options?: VoiceSessionNativeOptions
@@ -571,9 +593,7 @@ export function useVoiceSessionNative(
             continue;
           }
           // Convert base64 to binary for transport
-          const binary = Uint8Array.from(atob(clip.audioBase64), (c) =>
-            c.charCodeAt(0)
-          );
+          const binary = decodeBase64ToBytes(clip.audioBase64);
           await client.sendAudioChunk({
             audio: binary,
             mimeType: clip.mimeType,

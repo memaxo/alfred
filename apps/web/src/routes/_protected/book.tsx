@@ -202,7 +202,14 @@ function BookPane() {
   );
 
   const filteredItems = useMemo<BookmarkPaneItem[]>(() => {
-    let items = (bookmarksQuery.data ?? []) as BookmarkPaneItem[];
+    let items: BookmarkPaneItem[] = (bookmarksQuery.data ?? []).map((b) => ({
+      id: b.id,
+      title: b.title,
+      description: b.description ?? null,
+      url: b.url,
+      tags: b.tags,
+      createdAt: b.created ?? null,
+    }));
 
     if (filterTag) {
       const ft = filterTag.toLowerCase();

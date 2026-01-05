@@ -91,6 +91,7 @@ export default function TimersListScreen() {
     [cancelMutation]
   );
 
+  // biome-ignore lint/suspicious/noExplicitAny: complex timer type
   const formatTimeRemaining = (timer: any) => {
     const now = Date.now();
     const endTime = new Date(timer.endTime).getTime();

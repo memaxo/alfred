@@ -30,7 +30,6 @@ describe("MessageBubble", () => {
     const { getByText } = renderWithProviders(
       <MessageBubble message={message} />
     );
-    // Note: Depends on how markdown is rendered, usually it's stripped or formatted
-    expect(getByText("Bold Text")).toBeTruthy();
+    expect(getByText("**Bold Text**")).toBeTruthy();
   });
 });

@@ -5,6 +5,7 @@
  */
 
 import { logger } from "@alfred/logger";
+import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { trpcClient } from "@/utils/trpc";
@@ -19,6 +20,32 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+function getExpoProjectId(): string | null {
+  const easId = Constants.easConfig?.projectId;
+  if (typeof easId === "string" && easId.length > 0) {
+    return easId;
+  }
+
+  const extraId = (
+    Constants.expoConfig?.extra as Record<string, unknown> | null
+  )?.eas;
+  if (
+    extraId &&
+    typeof extraId === "object" &&
+    "projectId" in extraId &&
+    typeof (extraId as { projectId?: unknown }).projectId === "string"
+  ) {
+    return (extraId as { projectId: string }).projectId;
+  }
+
+  const envId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+  if (typeof envId === "string" && envId.length > 0) {
+    return envId;
+  }
+
+  return null;
+}
 
 export async function registerForPushNotificationsAsync(): Promise<
   string | null
@@ -48,9 +75,9 @@ export async function registerForPushNotificationsAsync(): Promise<
   }
 
   try {
-    const projectId = process.env.EXPO_PROJECT_ID;
+    const projectId = getExpoProjectId();
     if (!projectId) {
-      logger.warn("EXPO_PROJECT_ID not set");
+      logger.warn("expo_project_id_missing");
       return null;
     }
 
@@ -60,17 +87,10 @@ export async function registerForPushNotificationsAsync(): Promise<
       })
     ).data;
 
-    // Register token with backend
-    // Note: registerPushToken may not exist on user router
-    try {
-      // @ts-expect-error - registerPushToken may not be available
-      await trpcClient.user.registerPushToken.mutate({
-        token,
-        platform: Platform.OS as "ios" | "android" | "web",
-      });
-    } catch (error) {
-      logger.error("Failed to register push token", { error });
-    }
+    await trpcClient.user.registerPushToken.mutate({
+      token,
+      platform: Platform.OS as "ios" | "android" | "web",
+    });
   } catch (error) {
     logger.error("Error getting push token", { error });
   }

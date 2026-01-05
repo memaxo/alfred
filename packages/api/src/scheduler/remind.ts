@@ -21,7 +21,7 @@ async function defaultOnFire(
       type: "reminder",
       id: reminder.id,
       title: reminder.title,
-      when: reminder.remindAt?.toISOString() ?? new Date().toISOString(),
+      when: reminder.due?.toISOString() ?? new Date().toISOString(),
       description: reminder.description ?? undefined,
       intentType: metadata?.intentType,
       intentData: metadata?.intentData,

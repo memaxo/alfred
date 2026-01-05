@@ -36,7 +36,7 @@ export function useTimerNotifications(timers: TimerRouterOutputs["active"]) {
     const scheduleNotifications = async () => {
       for (const timer of timers) {
         try {
-          const endTime = new Date(timer.endTime);
+          const endTime = new Date(timer.end);
           const now = new Date();
           const secondsUntilEnd = Math.max(
             0,

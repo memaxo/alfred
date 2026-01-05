@@ -32,6 +32,7 @@ import {
   sortFunctions,
 } from "@/lib/search";
 
+// biome-ignore lint/correctness/noUnusedVariables: used in reminderSortOptions
 type ReminderItem = ReturnType<
   typeof useReminderList
 >["data"] extends (infer T)[]
@@ -43,6 +44,7 @@ const reminderSortOptions: SortOption<any>[] = [
   {
     key: "due-asc",
     label: "Due Soon",
+    // biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
     sortFn: (a: any, b: any) => {
       const dateA = a.due
         ? new Date(a.due).getTime()
@@ -56,6 +58,7 @@ const reminderSortOptions: SortOption<any>[] = [
   {
     key: "due-desc",
     label: "Due Later",
+    // biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
     sortFn: (a: any, b: any) => {
       const dateA = a.due
         ? new Date(a.due).getTime()

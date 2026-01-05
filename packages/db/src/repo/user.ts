@@ -263,6 +263,14 @@ export async function deleteFact(factId: string): Promise<number> {
   return rows.length;
 }
 
+export async function deleteFactsForUser(userId: string): Promise<number> {
+  const rows = await db
+    .delete(facts)
+    .where(eq(facts.userId, userId))
+    .returning({ id: facts.id });
+  return rows.length;
+}
+
 // Event operations
 export async function addEvent(
   userId: string,
@@ -306,6 +314,14 @@ export async function getEvents(
     .offset(offset);
 
   return rows;
+}
+
+export async function deleteEventsForUser(userId: string): Promise<number> {
+  const rows = await db
+    .delete(events)
+    .where(eq(events.userId, userId))
+    .returning({ id: events.id });
+  return rows.length;
 }
 
 // Autonomy operations

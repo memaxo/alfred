@@ -13,6 +13,7 @@ import type {
   PreferenceRouterInputs,
   PrivacyRouterInputs,
   RemindRouterInputs,
+  WorkflowRouterInputs,
 } from "@/utils/trpc-types";
 
 // Re-export types that components need
@@ -23,45 +24,28 @@ export function useNoteList(input: NoteRouterInputs["list"]) {
   return trpc.note.list.useQuery(input);
 }
 
-// Note: get endpoint may not exist on note router
 export function useNoteGet(
-  input: { id: string },
+  input: NoteRouterInputs["get"],
   options?: { enabled?: boolean }
 ) {
-  return (
-    // @ts-expect-error - get endpoint may not be available
-    trpc.note.get?.useQuery?.(input, options) ?? {
-      data: null,
-      isLoading: false,
-      refetch: () => Promise.resolve(),
-    }
-  );
+  return trpc.note.get.useQuery(input, options);
 }
 
-export function useNoteCreate(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useNoteCreate(
+  options?: Parameters<typeof trpc.note.create.useMutation>[0]
+) {
   return trpc.note.create.useMutation(options);
 }
 
-export function useNoteUpdate(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useNoteUpdate(
+  options?: Parameters<typeof trpc.note.update.useMutation>[0]
+) {
   return trpc.note.update.useMutation(options);
 }
 
-export function useNoteDelete(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useNoteDelete(
+  options?: Parameters<typeof trpc.note.delete.useMutation>[0]
+) {
   return trpc.note.delete.useMutation(options);
 }
 
@@ -70,30 +54,21 @@ export function useReminderList(input: RemindRouterInputs["list"]) {
   return trpc.remind.list.useQuery(input);
 }
 
-export function useReminderCreate(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useReminderCreate(
+  options?: Parameters<typeof trpc.remind.create.useMutation>[0]
+) {
   return trpc.remind.create.useMutation(options);
 }
 
-export function useReminderFire(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useReminderFire(
+  options?: Parameters<typeof trpc.remind.fire.useMutation>[0]
+) {
   return trpc.remind.fire.useMutation(options);
 }
 
-export function useReminderDelete(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useReminderDelete(
+  options?: Parameters<typeof trpc.remind.delete.useMutation>[0]
+) {
   return trpc.remind.delete.useMutation(options);
 }
 
@@ -102,30 +77,21 @@ export function useTimerActive() {
   return trpc.timer.active.useQuery();
 }
 
-export function useTimerCreate(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useTimerCreate(
+  options?: Parameters<typeof trpc.timer.create.useMutation>[0]
+) {
   return trpc.timer.create.useMutation(options);
 }
 
-export function useTimerDone(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useTimerDone(
+  options?: Parameters<typeof trpc.timer.done.useMutation>[0]
+) {
   return trpc.timer.done.useMutation(options);
 }
 
-export function useTimerCancel(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useTimerCancel(
+  options?: Parameters<typeof trpc.timer.cancel.useMutation>[0]
+) {
   return trpc.timer.cancel.useMutation(options);
 }
 
@@ -134,21 +100,15 @@ export function useBookmarkList(input: BookRouterInputs["list"]) {
   return trpc.book.list.useQuery(input);
 }
 
-export function useBookmarkCreate(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useBookmarkCreate(
+  options?: Parameters<typeof trpc.book.create.useMutation>[0]
+) {
   return trpc.book.create.useMutation(options);
 }
 
-export function useBookmarkDelete(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function useBookmarkDelete(
+  options?: Parameters<typeof trpc.book.delete.useMutation>[0]
+) {
   return trpc.book.delete.useMutation(options);
 }
 
@@ -157,21 +117,15 @@ export function usePreferenceList(input: PreferenceRouterInputs["list"]) {
   return trpc.preference.list.useQuery(input);
 }
 
-export function usePreferenceSet(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function usePreferenceSet(
+  options?: Parameters<typeof trpc.preference.set.useMutation>[0]
+) {
   return trpc.preference.set.useMutation(options);
 }
 
-export function usePreferenceDelete(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function usePreferenceDelete(
+  options?: Parameters<typeof trpc.preference.delete.useMutation>[0]
+) {
   return trpc.preference.delete.useMutation(options);
 }
 
@@ -184,30 +138,16 @@ export function usePrivacyEvents(input?: PrivacyRouterInputs["events"]) {
   return trpc.privacy.events.useQuery(input);
 }
 
-export function usePrivacyDeleteFact(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
+export function usePrivacyDeleteFact(
+  options?: Parameters<typeof trpc.privacy.deleteFact.useMutation>[0]
+) {
   return trpc.privacy.deleteFact.useMutation(options);
 }
 
-export function usePrivacyPurge(options?: {
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onSuccess?: (data: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: callbacks need any
-  onError?: (error: any) => void;
-}) {
-  return (
-    // @ts-expect-error - purge endpoint may not be available
-    trpc.privacy.purge?.useMutation?.(options) ?? {
-      mutate: () => {},
-      mutateAsync: async () => ({}),
-      isPending: false,
-      error: null,
-    }
-  );
+export function usePrivacyPurge(
+  options?: Parameters<typeof trpc.privacy.purge.useMutation>[0]
+) {
+  return trpc.privacy.purge.useMutation(options);
 }
 
 // Voice hooks
@@ -219,51 +159,24 @@ export function useVoicePreviewVoice() {
   return trpc.voice.previewVoice.useMutation();
 }
 
-// Workflow hooks (with optional chaining since structure may vary)
-export function useWorkflowList(input?: { limit?: number; offset?: number }) {
-  // Note: Adjust based on actual workflow router structure
-  // biome-ignore lint/suspicious/noExplicitAny: tRPC proxy needs any
-  return (
-    (trpc.workflow as any).list?.useQuery?.(input) ?? {
-      data: [],
-      isLoading: false,
-      refetch: () => Promise.resolve(),
-      isRefetching: false,
-    }
-  );
+// Workflow hooks
+export function useWorkflowList(input: WorkflowRouterInputs["listRuns"]) {
+  return trpc.workflow.listRuns.useQuery(input);
 }
 
-export function useWorkflowGet(input: { runId: string }) {
-  // biome-ignore lint/suspicious/noExplicitAny: tRPC proxy needs any
-  return (
-    (trpc.workflow as any).get?.useQuery?.(input) ?? {
-      data: null,
-      isLoading: false,
-    }
-  );
+export function useWorkflowGet(input: WorkflowRouterInputs["get"]) {
+  return trpc.workflow.get.useQuery(input);
 }
 
-export function useWorkflowResume() {
-  // biome-ignore lint/suspicious/noExplicitAny: tRPC proxy needs any
-  return (
-    (trpc.workflow as any).resume?.useMutation?.() ?? {
-      mutate: () => {},
-      mutateAsync: async () => ({}),
-      isPending: false,
-      error: null,
-    }
-  );
+export function useWorkflowResume(
+  options?: Parameters<typeof trpc.workflow.resume.useMutation>[0]
+) {
+  return trpc.workflow.resume.useMutation(options);
 }
 
 // User hooks
-export function useUserRegisterPushToken() {
-  return (
-    // @ts-expect-error - registerPushToken endpoint may not be available
-    trpc.user.registerPushToken?.useMutation?.() ?? {
-      mutate: () => {},
-      mutateAsync: async () => ({}),
-      isPending: false,
-      error: null,
-    }
-  );
+export function useUserRegisterPushToken(
+  options?: Parameters<typeof trpc.user.registerPushToken.useMutation>[0]
+) {
+  return trpc.user.registerPushToken.useMutation(options);
 }

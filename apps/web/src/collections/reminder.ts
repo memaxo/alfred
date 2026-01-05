@@ -26,10 +26,10 @@ export function createReminderCollection(
             id: r.id,
             title: r.title,
             description: r.description ?? null,
-            due: r.due.toISOString(),
+            due: r.due,
             status: r.fired ? "fired" : "scheduled",
-            created: r.created.toISOString(),
-            updated: r.updated.toISOString(),
+            created: r.created ?? new Date().toISOString(),
+            updated: r.firedAt ?? r.created ?? new Date().toISOString(),
           })
         );
       },

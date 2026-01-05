@@ -54,7 +54,7 @@ export function ChatInput({
             accessibilityHint="Starts a real-time voice conversation with the AI assistant"
             accessibilityLabel="Call Alfred"
             accessibilityRole="button"
-            className="h-10 w-10 items-center justify-center rounded-full bg-primary"
+            className="h-11 w-11 items-center justify-center rounded-full bg-primary"
             disabled={disabled}
             onPress={handleCall}
           >
@@ -70,7 +70,7 @@ export function ChatInput({
               isRecording ? "Stop recording" : "Record voice message"
             }
             accessibilityRole="button"
-            className={`h-10 w-10 items-center justify-center rounded-full ${
+            className={`h-11 w-11 items-center justify-center rounded-full ${
               isRecording ? "bg-destructive" : "bg-secondary"
             }`}
             disabled={disabled}
@@ -92,7 +92,6 @@ export function ChatInput({
           <TextInput
             accessibilityHint="Type your message here"
             accessibilityLabel="Chat input field"
-            accessibilityRole="search"
             className="max-h-24 flex-1 text-base text-foreground"
             editable={!disabled}
             multiline
@@ -109,7 +108,7 @@ export function ChatInput({
           accessibilityState={{
             disabled: disabled || text.trim().length === 0,
           }}
-          className={`h-10 w-10 items-center justify-center rounded-full ${
+          className={`h-11 w-11 items-center justify-center rounded-full ${
             text.trim().length > 0 ? "bg-primary" : "bg-muted"
           }`}
           disabled={disabled || text.trim().length === 0}

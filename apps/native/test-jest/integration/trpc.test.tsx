@@ -70,10 +70,8 @@ describe("tRPC Integration Flows", () => {
       });
     });
 
-    it("should delete a note", async () => {
-      const mutate = jest.fn((_data, options) => {
-        options?.onSuccess?.();
-      });
+    it("should delete a note", () => {
+      const mutate = jest.fn();
       (trpc.note.delete.useMutation as jest.Mock).mockReturnValue({
         mutate,
         isPending: false,
@@ -85,7 +83,7 @@ describe("tRPC Integration Flows", () => {
         result.current.mutate({ id: "123" });
       });
 
-      expect(mutate).toHaveBeenCalledWith({ id: "123" }, expect.any(Object));
+      expect(mutate).toHaveBeenCalledWith({ id: "123" });
     });
   });
 });

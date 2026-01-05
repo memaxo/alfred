@@ -25,8 +25,8 @@ export function createNoteCollection(
             title: n.title,
             content: n.content,
             tags: n.tags,
-            created: n.created.toISOString(),
-            updated: n.updated.toISOString(),
+            created: n.created ?? new Date().toISOString(),
+            updated: n.updated ?? n.created ?? new Date().toISOString(),
           })
         );
       },

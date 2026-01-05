@@ -25,12 +25,13 @@ type AnalyticsUser = {
 
 class Analytics {
   private enabled = false;
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: used for provider tracking
   private userId: string | null = null;
 
   /**
    * Initialize analytics (call this after user logs in)
    */
-  async initialize(userId: string, _userProperties?: Partial<AnalyticsUser>) {
+  initialize(userId: string, _userProperties?: Partial<AnalyticsUser>) {
     this.enabled = process.env.EXPO_PUBLIC_ANALYTICS_ENABLED === "true";
     if (!this.enabled) {
       return;
@@ -40,6 +41,7 @@ class Analytics {
 
     // Analytics initialization - add providers here when needed
     if (__DEV__) {
+      // no-op
     }
   }
 
@@ -53,6 +55,7 @@ class Analytics {
 
     // Log events in dev mode for debugging
     if (__DEV__) {
+      // no-op
     }
 
     // Add analytics providers here (PostHog, Mixpanel, etc.)
@@ -69,6 +72,7 @@ class Analytics {
     this.userId = userId;
 
     if (__DEV__) {
+      // no-op
     }
   }
 
@@ -94,6 +98,7 @@ class Analytics {
     }
 
     if (__DEV__) {
+      // no-op
     }
 
     this.userId = null;

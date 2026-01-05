@@ -22,7 +22,7 @@ const baseClient = createAuthClient({
   baseURL: process.env.EXPO_PUBLIC_SERVER_URL,
   plugins: [
     expoClient({
-      scheme: "mybettertapp",
+      scheme: "alfred",
       storagePrefix: "alfred",
       storage: getStorage(),
     }),

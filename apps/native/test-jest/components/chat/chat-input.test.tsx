@@ -7,7 +7,7 @@ describe("ChatInput", () => {
     const { getByPlaceholderText } = renderWithProviders(
       <ChatInput onSend={jest.fn()} />
     );
-    expect(getByPlaceholderText("Type a message...")).toBeTruthy();
+    expect(getByPlaceholderText("Ask Alfred...")).toBeTruthy();
   });
 
   it("should call onSend when send button is pressed", () => {
@@ -16,7 +16,7 @@ describe("ChatInput", () => {
       <ChatInput onSend={onSend} />
     );
 
-    const input = getByPlaceholderText("Type a message...");
+    const input = getByPlaceholderText("Ask Alfred...");
     const sendButton = getByLabelText("Send message");
 
     fireEvent.changeText(input, "Hello world");

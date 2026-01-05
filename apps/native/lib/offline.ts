@@ -25,12 +25,12 @@ export function useNetworkStatus() {
   return { isConnected, isInternetReachable };
 }
 
-export function withRetry<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
+export function withRetry<A extends readonly unknown[], R>(
+  fn: (...args: A) => Promise<R>,
   maxRetries = 3,
-  delay = 1000
-): T {
-  return (async (...args: Parameters<T>) => {
+  delayMs = 1000
+): (...args: A) => Promise<R> {
+  return async (...args: A) => {
     let lastError: Error | null = null;
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -38,10 +38,12 @@ export function withRetry<T extends (...args: any[]) => Promise<any>>(
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         if (i < maxRetries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
+          await new Promise((resolve) =>
+            setTimeout(resolve, delayMs * (i + 1))
+          );
         }
       }
     }
     throw lastError;
-  }) as T;
+  };
 }

@@ -2,6 +2,7 @@
   "expo": {
     "name": "Alfred",
     "slug": "alfred-native",
+    "scheme": "alfred",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,7 +19,8 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Alfred needs microphone access for voice interactions.",
         "NSCameraUsageDescription": "Alfred may need camera access for certain features.",
-        "NSFaceIDUsageDescription": "Alfred uses Face ID for secure authentication."
+        "NSFaceIDUsageDescription": "Alfred uses Face ID for secure authentication.",
+        "UIBackgroundModes": ["audio", "fetch"]
       },
       "associatedDomains": ["applinks:alfred.app", "applinks:*.alfred.app"]
     },
@@ -57,6 +59,7 @@
     },
     "plugins": [
       "expo-router",
+      ["./plugins/with-car-play", { "enabled": true }],
       [
         "expo-notifications",
         {
