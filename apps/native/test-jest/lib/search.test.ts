@@ -47,7 +47,11 @@ describe("search utilities", () => {
 
   describe("sortFunctions", () => {
     it("should sort by date newest first", () => {
-      const sorted = [...items].sort(sortFunctions.dateNewest);
+      const itemsWithCreatedAt = items.map((item) => ({
+        ...item,
+        createdAt: item.updated,
+      }));
+      const sorted = [...itemsWithCreatedAt].sort(sortFunctions.dateNewest);
       expect(sorted[0].title).toBe("Cherry");
       expect(sorted[2].title).toBe("Apple");
     });

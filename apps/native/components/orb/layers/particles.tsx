@@ -57,7 +57,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-function createParticles(count: number, radius: number): Particle[] {
+function createParticles(count: number, _radius: number): Particle[] {
   const random = seededRandom(42);
   const particles: Particle[] = [];
 
@@ -131,8 +131,6 @@ export function ParticleField({
           angle += Math.sin(t * 3 + particle.phase) * 0.5;
           r += Math.sin(t * 5 + particle.phase) * 20;
           break;
-
-        case "none":
         default:
           // Minimal drift
           angle += t * particle.speed * 0.05;

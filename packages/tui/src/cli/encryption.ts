@@ -24,7 +24,7 @@ const KEY_LENGTH = 32; // 256 bits
  *
  * This ensures credentials encrypted on one machine can't be decrypted elsewhere.
  */
-function deriveMachineKey(salt: Uint8Array): Uint8Array {
+function deriveMachineKey(salt: Uint8Array): Uint8Array<ArrayBuffer> {
   const user = userInfo();
   const machineId = [
     hostname(),
@@ -47,7 +47,11 @@ function deriveMachineKey(salt: Uint8Array): Uint8Array {
     derived = round.digest();
   }
 
-  return new Uint8Array(derived.subarray(0, KEY_LENGTH));
+  // Create a new Uint8Array with explicit ArrayBuffer backing
+  const keyBuffer = new ArrayBuffer(KEY_LENGTH);
+  const keyView = new Uint8Array(keyBuffer);
+  keyView.set(derived.slice(0, KEY_LENGTH));
+  return keyView;
 }
 
 /**

@@ -30,7 +30,7 @@ export default function TabLayout() {
         options={{
           title: "Chat",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="chatbubbles" />
+            <TabBarIcon color={color} name="comments" />
           ),
         }}
       />
@@ -38,9 +38,7 @@ export default function TabLayout() {
         name="library"
         options={{
           title: "Library",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="library" />
-          ),
+          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="book" />,
         }}
       />
       <Tabs.Screen
@@ -62,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: "Workflows",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="git-branch" />
+            <TabBarIcon color={color} name="code-fork" />
           ),
         }}
       />
@@ -70,9 +68,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: "Settings",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="settings" />
-          ),
+          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="cog" />,
         }}
       />
     </Tabs>

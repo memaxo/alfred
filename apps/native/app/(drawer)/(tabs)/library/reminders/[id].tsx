@@ -18,7 +18,11 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
-import { useReminderDelete, useReminderFire } from "@/hooks/use-trpc";
+import {
+  useReminderDelete,
+  useReminderFire,
+  useReminderList,
+} from "@/hooks/use-trpc";
 
 export default function ReminderDetailScreen() {
   const router = useRouter();
@@ -27,15 +31,12 @@ export default function ReminderDetailScreen() {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [recurring, setRecurring] = useState("");
+  const [_recurring, setRecurring] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
-  // Note: get endpoint may not exist, using fallback
-  const reminderQuery = {
-    data: null,
-    isLoading: false,
-    refetch: () => Promise.resolve(),
-  };
+  // Fetch all reminders and find the one with matching id
+  const remindersQuery = useReminderList({ limit: 1000, offset: 0 });
+  const reminder = remindersQuery.data?.find((r) => r.id === id) ?? null;
 
   const deleteMutation = useReminderDelete();
   const fireMutation = useReminderFire();
@@ -48,20 +49,18 @@ export default function ReminderDetailScreen() {
 
   useEffect(() => {
     if (fireMutation.isSuccess) {
-      reminderQuery.refetch();
+      remindersQuery.refetch();
     }
-  }, [fireMutation.isSuccess, reminderQuery]);
+  }, [fireMutation.isSuccess, remindersQuery]);
 
   useEffect(() => {
-    if (reminderQuery.data) {
-      setTitle(reminderQuery.data.title ?? "");
-      setDescription(reminderQuery.data.description ?? "");
-      setDueDate(
-        reminderQuery.data.due ? new Date(reminderQuery.data.due) : new Date()
-      );
-      setRecurring(reminderQuery.data.recurring ?? "");
+    if (reminder) {
+      setTitle(reminder.title ?? "");
+      setDescription(reminder.description ?? "");
+      setDueDate(reminder.due ? new Date(reminder.due) : new Date());
+      setRecurring(reminder.recurring ?? "");
     }
-  }, [reminderQuery.data]);
+  }, [reminder]);
 
   const handleDelete = useCallback(() => {
     if (!id) {
@@ -88,7 +87,7 @@ export default function ReminderDetailScreen() {
     fireMutation.mutate({ id });
   }, [id, fireMutation]);
 
-  if (reminderQuery.isLoading) {
+  if (remindersQuery.isLoading) {
     return (
       <Container>
         <View className="flex-1 items-center justify-center">
@@ -98,7 +97,7 @@ export default function ReminderDetailScreen() {
     );
   }
 
-  if (!reminderQuery.data && id) {
+  if (!reminder && id) {
     return (
       <Container>
         <View className="flex-1 items-center justify-center p-8">
@@ -118,14 +117,12 @@ export default function ReminderDetailScreen() {
           headerRight: () => (
             <View className="flex-row items-center gap-4">
               {isEditing ? (
-                <>
-                  <TouchableOpacity onPress={() => setIsEditing(false)}>
-                    <Text className="text-muted-foreground">Cancel</Text>
-                  </TouchableOpacity>
-                </>
+                <TouchableOpacity onPress={() => setIsEditing(false)}>
+                  <Text className="text-muted-foreground">Cancel</Text>
+                </TouchableOpacity>
               ) : (
                 <>
-                  {!reminderQuery.data?.fired && (
+                  {!reminder?.fired && (
                     <TouchableOpacity onPress={handleFire}>
                       <Text className="text-primary">Mark Done</Text>
                     </TouchableOpacity>
@@ -175,7 +172,7 @@ export default function ReminderDetailScreen() {
                 <DateTimePicker
                   display={Platform.OS === "ios" ? "spinner" : "default"}
                   mode="datetime"
-                  onChange={(event, selectedDate) => {
+                  onChange={(_event, selectedDate) => {
                     setShowDatePicker(Platform.OS === "ios");
                     if (selectedDate) {
                       setDueDate(selectedDate);
@@ -189,22 +186,22 @@ export default function ReminderDetailScreen() {
         ) : (
           <>
             <Text className="mb-4 font-bold text-2xl text-foreground">
-              {reminderQuery.data?.title}
+              {reminder?.title}
             </Text>
-            {reminderQuery.data?.description ? (
+            {reminder?.description ? (
               <Text className="mb-4 text-foreground leading-6">
-                {reminderQuery.data.description}
+                {reminder.description}
               </Text>
             ) : null}
             <View className="mb-4 flex-row items-center gap-2">
               <Text className="font-semibold text-foreground">Due:</Text>
               <Text className="text-foreground">
-                {reminderQuery.data?.due
-                  ? new Date(reminderQuery.data.due).toLocaleString()
+                {reminder?.due
+                  ? new Date(reminder.due).toLocaleString()
                   : "Not set"}
               </Text>
             </View>
-            {reminderQuery.data?.fired ? (
+            {reminder?.fired ? (
               <View className="mb-4 flex-row items-center gap-2">
                 <Text className="text-primary">✓ Completed</Text>
               </View>

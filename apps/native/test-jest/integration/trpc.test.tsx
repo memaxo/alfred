@@ -30,7 +30,7 @@ describe("tRPC Integration Flows", () => {
       const mockNote = createMockNote({ id: "123", title: "Integration Test" });
 
       // Mock create mutation
-      const mutate = jest.fn((data, options) => {
+      const mutate = jest.fn((_data, options) => {
         options?.onSuccess?.(mockNote);
       });
       (trpc.note.create.useMutation as jest.Mock).mockReturnValue({
@@ -71,7 +71,7 @@ describe("tRPC Integration Flows", () => {
     });
 
     it("should delete a note", async () => {
-      const mutate = jest.fn((data, options) => {
+      const mutate = jest.fn((_data, options) => {
         options?.onSuccess?.();
       });
       (trpc.note.delete.useMutation as jest.Mock).mockReturnValue({

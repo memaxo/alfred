@@ -43,6 +43,8 @@ export type OrbProps = {
   showParticles?: boolean;
   /** Optional callback when orb is tapped */
   onPress?: () => void;
+  /** Test ID for testing */
+  testID?: string;
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ export function Orb({
   outputVolume = 0,
   size,
   showParticles = true,
+  testID,
 }: OrbProps) {
   const clock = useClock();
   const center = useMemo(() => vec(size / 2, size / 2), [size]);
@@ -113,7 +116,10 @@ export function Orb({
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
+    <View
+      style={[styles.container, { width: size, height: size }]}
+      testID={testID}
+    >
       <Canvas style={styles.canvas}>
         <Group>
           {/* Layer 1: Particle field (background) */}

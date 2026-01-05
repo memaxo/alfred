@@ -111,7 +111,7 @@ function MuteButton({
 // ─── End Call Button ─────────────────────────────────────────────────────────
 
 function EndCallButton({ onEndCall }: { onEndCall: () => void }) {
-  const [isPressing, setIsPressing] = useState(false);
+  const [_isPressing, setIsPressing] = useState(false);
   const progress = useSharedValue(0);
   const pressTimeout = useRef<NodeJS.Timeout | null>(null);
 

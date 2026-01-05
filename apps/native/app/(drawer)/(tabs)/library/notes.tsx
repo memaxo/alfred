@@ -198,7 +198,6 @@ export default function NotesListScreen() {
             className="flex-1"
             contentContainerStyle={{ padding: 16 }}
             data={sortedNotes}
-            estimatedItemSize={120}
             keyExtractor={(item) => item.id}
             ListFooterComponent={
               notesQuery.isLoading && offset > 0 ? (

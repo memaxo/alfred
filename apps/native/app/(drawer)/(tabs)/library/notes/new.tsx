@@ -25,7 +25,7 @@ export default function NewNoteScreen() {
   const [tagInput, setTagInput] = useState("");
 
   const createMutation = useNoteCreate({
-    onSuccess: (note: any) => {
+    onSuccess: (note: { id: string }) => {
       router.replace(`library/notes/${note.id}`);
     },
   });

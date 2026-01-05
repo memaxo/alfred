@@ -17,17 +17,22 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
+import {
+  usePreferenceDelete,
+  usePreferenceList,
+  usePreferenceSet,
+} from "@/hooks/use-trpc";
 
 export default function PreferencesScreen() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const preferencesQuery = (trpc.preference as any).list.useQuery({
+  const preferencesQuery = usePreferenceList({
     limit: 100,
     offset: 0,
   });
 
-  const setPreferenceMutation = (trpc.preference as any).set.useMutation({
+  const setPreferenceMutation = usePreferenceSet({
     onSuccess: () => {
       preferencesQuery.refetch();
       setEditingKey(null);
@@ -35,7 +40,7 @@ export default function PreferencesScreen() {
     },
   });
 
-  const deletePreferenceMutation = (trpc.preference as any).delete.useMutation({
+  const deletePreferenceMutation = usePreferenceDelete({
     onSuccess: () => {
       preferencesQuery.refetch();
     },

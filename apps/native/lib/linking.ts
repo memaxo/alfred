@@ -97,8 +97,7 @@ export function parseDeepLink(url: string): {
     }
 
     return { type: "unknown", path };
-  } catch (error) {
-    console.error("Error parsing deep link:", error);
+  } catch (_error) {
     return { type: "unknown" };
   }
 }

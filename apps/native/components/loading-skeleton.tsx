@@ -5,7 +5,7 @@
  */
 
 import { useEffect } from "react";
-import { View } from "react-native";
+import { type DimensionValue, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -44,7 +44,7 @@ export function SkeletonLine({
   width = "100%",
   height = 16,
 }: {
-  width?: string | number;
+  width?: DimensionValue;
   height?: number;
 }) {
   return (
@@ -62,7 +62,7 @@ export function SkeletonBox({
   width = "100%",
   height = 100,
 }: {
-  width?: string | number;
+  width?: DimensionValue;
   height?: number;
 }) {
   return (

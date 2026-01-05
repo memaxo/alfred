@@ -100,7 +100,7 @@ export default function NewReminderScreen() {
             <DateTimePicker
               display={Platform.OS === "ios" ? "spinner" : "default"}
               mode="datetime"
-              onChange={(event, selectedDate) => {
+              onChange={(_event, selectedDate) => {
                 setShowDatePicker(Platform.OS === "ios");
                 if (selectedDate) {
                   setDueDate(selectedDate);

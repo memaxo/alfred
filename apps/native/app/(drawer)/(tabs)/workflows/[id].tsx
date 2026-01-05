@@ -25,12 +25,14 @@ export default function WorkflowDetailScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Note: Adjust query based on actual workflow router structure
-  const workflowQuery = (trpc.workflow as any).get?.useQuery(
+  const workflowQuery = (trpc.workflow as Record<string, any>).get?.useQuery(
     { id: id ?? "" },
     { enabled: !!id }
   ) ?? { data: null, isLoading: false };
 
-  const resumeMutation = (trpc.workflow as any).resume?.useMutation({
+  const resumeMutation = (
+    trpc.workflow as Record<string, any>
+  ).resume?.useMutation({
     onSuccess: () => {
       router.back();
     },

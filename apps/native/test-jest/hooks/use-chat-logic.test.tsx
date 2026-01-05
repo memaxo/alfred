@@ -26,35 +26,37 @@ describe("useChatLogic", () => {
 
     expect(result.current.messages).toEqual([]);
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.currentAgent).toBe("alfred");
+    expect(result.current.currentAgent).toBe("assistant");
   });
 
   it("should update agent when setAgent is called", () => {
     const { result } = renderHook(() => useChatLogic());
 
     act(() => {
-      result.current.setAgent("jarvis");
+      result.current.setAgent("orchestrator");
     });
 
-    expect(result.current.currentAgent).toBe("jarvis");
+    expect(result.current.currentAgent).toBe("orchestrator");
   });
 
-  it("should call handleSubmit when sendMessage is called", () => {
-    const handleSubmit = jest.fn();
+  it("should call handleSend when sendMessage is called", () => {
+    const sendMessage = jest.fn();
     (useChatAi as jest.Mock).mockReturnValue({
       messages: [],
-      input: "",
-      setInput: jest.fn(),
-      handleSubmit,
-      isLoading: false,
+      sendMessage,
+      status: "idle",
+      error: null,
+      stop: jest.fn(),
+      regenerate: jest.fn(),
+      setMessages: jest.fn(),
     });
 
     const { result } = renderHook(() => useChatLogic());
 
     act(() => {
-      result.current.sendMessage();
+      result.current.handleSend("test message");
     });
 
-    expect(handleSubmit).toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalledWith({ text: "test message" });
   });
 });

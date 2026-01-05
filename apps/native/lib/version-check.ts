@@ -16,8 +16,7 @@ export async function checkForUpdates(): Promise<boolean> {
 
     const update = await Updates.checkForUpdateAsync();
     return update.isAvailable;
-  } catch (error) {
-    console.error("Error checking for updates:", error);
+  } catch (_error) {
     return false;
   }
 }
@@ -30,8 +29,7 @@ export async function fetchUpdate(): Promise<boolean> {
 
     const result = await Updates.fetchUpdateAsync();
     return result.isNew;
-  } catch (error) {
-    console.error("Error fetching update:", error);
+  } catch (_error) {
     return false;
   }
 }
@@ -39,9 +37,7 @@ export async function fetchUpdate(): Promise<boolean> {
 export async function reloadApp(): Promise<void> {
   try {
     await Updates.reloadAsync();
-  } catch (error) {
-    console.error("Error reloading app:", error);
-  }
+  } catch (_error) {}
 }
 
 export function promptUpdate(

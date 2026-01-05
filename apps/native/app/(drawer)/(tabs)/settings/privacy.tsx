@@ -6,7 +6,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,20 +17,24 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
+import {
+  usePrivacyDeleteFact,
+  usePrivacyEvents,
+  usePrivacyFacts,
+  usePrivacyPurge,
+} from "@/hooks/use-trpc";
 
 export default function PrivacyScreen() {
-  const [selectedFactId, setSelectedFactId] = useState<string | null>(null);
+  const factsQuery = usePrivacyFacts();
+  const eventsQuery = usePrivacyEvents();
 
-  const factsQuery = (trpc.privacy as any).facts.useQuery();
-  const eventsQuery = (trpc.privacy as any).events.useQuery();
-
-  const deleteFactMutation = (trpc.privacy as any).deleteFact.useMutation({
+  const deleteFactMutation = usePrivacyDeleteFact({
     onSuccess: () => {
       factsQuery.refetch();
     },
   });
 
-  const purgeMutation = (trpc.privacy as any).purge.useMutation({
+  const purgeMutation = usePrivacyPurge({
     onSuccess: () => {
       Alert.alert("Success", "All data has been purged");
       factsQuery.refetch();
@@ -45,7 +49,7 @@ export default function PrivacyScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteFactMutation.mutate({ factId }),
+          onPress: () => deleteFactMutation.mutate({ id: factId }),
         },
       ]);
     },
@@ -135,11 +139,11 @@ export default function PrivacyScreen() {
                   <View className="mb-2 flex-row items-start justify-between">
                     <View className="flex-1">
                       <Text className="mb-1 font-semibold text-foreground">
-                        {item.fact ?? "Unknown"}
+                        {item.content ?? "Unknown"}
                       </Text>
-                      {item.metadata ? (
+                      {item.category ? (
                         <Text className="text-muted-foreground text-xs">
-                          {JSON.stringify(item.metadata)}
+                          Category: {item.category}
                         </Text>
                       ) : null}
                     </View>

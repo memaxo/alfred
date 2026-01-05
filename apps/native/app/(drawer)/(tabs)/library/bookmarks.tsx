@@ -27,7 +27,7 @@ import {
 import { haptics } from "@/lib/haptics";
 
 export default function BookmarksListScreen() {
-  const router = useRouter();
+  const _router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [limit] = useState(50);
@@ -100,17 +100,19 @@ export default function BookmarksListScreen() {
     }
   }, []);
 
-  const filteredBookmarks = bookmarksQuery.data?.filter((bookmark: any) => {
-    if (!searchQuery.trim()) {
-      return true;
+  const filteredBookmarks = bookmarksQuery.data?.filter(
+    (bookmark: { title: string; url: string; description?: string | null }) => {
+      if (!searchQuery.trim()) {
+        return true;
+      }
+      const query = searchQuery.toLowerCase();
+      return (
+        bookmark.title?.toLowerCase().includes(query) ||
+        bookmark.url?.toLowerCase().includes(query) ||
+        bookmark.description?.toLowerCase().includes(query)
+      );
     }
-    const query = searchQuery.toLowerCase();
-    return (
-      bookmark.title?.toLowerCase().includes(query) ||
-      bookmark.url?.toLowerCase().includes(query) ||
-      bookmark.description?.toLowerCase().includes(query)
-    );
-  });
+  );
 
   return (
     <Container>

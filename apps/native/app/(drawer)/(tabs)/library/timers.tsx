@@ -28,7 +28,7 @@ import {
 import { haptics } from "@/lib/haptics";
 
 export default function TimersListScreen() {
-  const router = useRouter();
+  const _router = useRouter();
   const [duration, setDuration] = useState("");
   const [label, setLabel] = useState("");
 
@@ -63,7 +63,7 @@ export default function TimersListScreen() {
 
   const handleCreate = useCallback(() => {
     const seconds = Number.parseInt(duration, 10);
-    if (isNaN(seconds) || seconds <= 0) {
+    if (Number.isNaN(seconds) || seconds <= 0) {
       haptics.error();
       Alert.alert("Invalid Duration", "Please enter a valid number of seconds");
       return;
@@ -92,7 +92,7 @@ export default function TimersListScreen() {
   );
 
   const formatTimeRemaining = (timer: any) => {
-    const now = new Date().getTime();
+    const now = Date.now();
     const endTime = new Date(timer.endTime).getTime();
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
     const hours = Math.floor(remaining / 3600);
@@ -173,10 +173,7 @@ export default function TimersListScreen() {
               />
             }
             renderItem={({ item }) => (
-              <View
-                accessibilityRole="listitem"
-                className="mb-3 rounded-lg border border-border bg-card p-4"
-              >
+              <View className="mb-3 rounded-lg border border-border bg-card p-4">
                 <View className="mb-2 flex-row items-start justify-between">
                   <View className="flex-1">
                     <Text

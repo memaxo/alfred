@@ -64,12 +64,13 @@ export function fuzzySearch<T>(
 
   const scored = items
     .map((item) => {
-      const searchableTexts = Array.isArray(getSearchableText(item))
-        ? getSearchableText(item)
-        : [getSearchableText(item)];
+      const searchableTextValue = getSearchableText(item);
+      const searchableTexts: string[] = Array.isArray(searchableTextValue)
+        ? searchableTextValue
+        : [searchableTextValue];
 
       const maxScore = Math.max(
-        ...searchableTexts.map((text) => fuzzyMatch(query, text))
+        ...searchableTexts.map((text: string) => fuzzyMatch(query, text))
       );
 
       return { item, score: maxScore };
@@ -150,7 +151,7 @@ export const filterFunctions = {
       if (!item.tags || item.tags.length === 0) {
         return false;
       }
-      return tags.some((tag) => item.tags!.includes(tag));
+      return tags.some((tag) => item.tags?.includes(tag));
     },
   hasNoTags: <T extends { tags?: string[] }>(item: T) =>
     !item.tags || item.tags.length === 0,

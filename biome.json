@@ -36,6 +36,7 @@
       "beforeAll",
       "afterAll",
       "vi",
+      "jest",
       "AudioWorkletProcessor",
       "registerProcessor"
     ]

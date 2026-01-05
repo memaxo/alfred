@@ -4,7 +4,9 @@
  * Generates mock data for testing.
  */
 
-export function createMockNote(overrides: Partial<any> = {}) {
+export function createMockNote(
+  overrides: Partial<Record<string, unknown>> = {}
+) {
   return {
     id: `note-${Math.random().toString(36).substr(2, 9)}`,
     title: "Test Note",
@@ -16,7 +18,9 @@ export function createMockNote(overrides: Partial<any> = {}) {
   };
 }
 
-export function createMockReminder(overrides: Partial<any> = {}) {
+export function createMockReminder(
+  overrides: Partial<Record<string, unknown>> = {}
+) {
   return {
     id: `remind-${Math.random().toString(36).substr(2, 9)}`,
     title: "Test Reminder",
@@ -28,7 +32,9 @@ export function createMockReminder(overrides: Partial<any> = {}) {
   };
 }
 
-export function createMockBookmark(overrides: Partial<any> = {}) {
+export function createMockBookmark(
+  overrides: Partial<Record<string, unknown>> = {}
+) {
   return {
     id: `book-${Math.random().toString(36).substr(2, 9)}`,
     url: "https://example.com",
@@ -38,12 +44,27 @@ export function createMockBookmark(overrides: Partial<any> = {}) {
   };
 }
 
-export function createMockMessage(overrides: Partial<any> = {}) {
+export function createMockMessage(
+  overrides: Partial<{
+    id: string;
+    role: "user" | "assistant" | "system";
+    content: string;
+    timestamp: number;
+    // biome-ignore lint/suspicious/noExplicitAny: complex UI message parts
+    parts: any[];
+  }> = {}
+) {
   return {
     id: `msg-${Math.random().toString(36).substr(2, 9)}`,
-    role: "user",
+    role: "user" as const,
     content: "Hello ALFRED!",
     timestamp: Date.now(),
+    parts: [
+      {
+        type: "text",
+        text: overrides.content ?? "Hello ALFRED!",
+      },
+    ],
     ...overrides,
   };
 }

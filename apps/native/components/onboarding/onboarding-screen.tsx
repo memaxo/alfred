@@ -62,7 +62,7 @@ const slides: OnboardingSlide[] = [
 ];
 
 export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
-  const router = useRouter();
+  const _router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
   const translateX = useSharedValue(0);
 

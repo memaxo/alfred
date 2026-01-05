@@ -10,6 +10,8 @@
  * 3. Uncomment the PostHog implementation below
  */
 
+declare const __DEV__: boolean;
+
 type AnalyticsEvent = {
   name: string;
   properties?: Record<string, unknown>;
@@ -38,21 +40,19 @@ class Analytics {
 
     // Analytics initialization - add providers here when needed
     if (__DEV__) {
-      console.log("[Analytics] Initialized for user:", userId);
     }
   }
 
   /**
    * Track an event
    */
-  track(event: AnalyticsEvent) {
+  track(_event: AnalyticsEvent) {
     if (!this.enabled) {
       return;
     }
 
     // Log events in dev mode for debugging
     if (__DEV__) {
-      console.log("[Analytics] Event:", event.name, event.properties);
     }
 
     // Add analytics providers here (PostHog, Mixpanel, etc.)
@@ -61,7 +61,7 @@ class Analytics {
   /**
    * Set user properties
    */
-  identify(userId: string, properties?: Partial<AnalyticsUser>) {
+  identify(userId: string, _properties?: Partial<AnalyticsUser>) {
     if (!this.enabled) {
       return;
     }
@@ -69,7 +69,6 @@ class Analytics {
     this.userId = userId;
 
     if (__DEV__) {
-      console.log("[Analytics] Identify:", userId, properties);
     }
   }
 
@@ -95,7 +94,6 @@ class Analytics {
     }
 
     if (__DEV__) {
-      console.log("[Analytics] Reset");
     }
 
     this.userId = null;

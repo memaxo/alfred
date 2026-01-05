@@ -38,6 +38,7 @@ type ReminderItem = ReturnType<
   ? T
   : never;
 
+// biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
 const reminderSortOptions: SortOption<any>[] = [
   {
     key: "due-asc",
@@ -77,6 +78,7 @@ const reminderSortOptions: SortOption<any>[] = [
   },
 ];
 
+// biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
 const reminderFilterOptions: FilterOption<any>[] = [
   {
     key: "all",
@@ -301,7 +303,6 @@ export default function RemindersListScreen() {
             className="flex-1"
             contentContainerStyle={{ padding: 16 }}
             data={sortedReminders}
-            estimatedItemSize={100}
             keyExtractor={(item) => item.id}
             ListFooterComponent={
               remindersQuery.isLoading && offset > 0 ? (

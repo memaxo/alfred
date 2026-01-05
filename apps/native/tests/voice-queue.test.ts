@@ -58,7 +58,7 @@ const mockCreateAsync = jest.fn(({ uri }: { uri: string }) => {
 jest.mock("expo-av", () => ({
   Audio: {
     Sound: {
-      createAsync: (...args: any[]) => mockCreateAsync(...args),
+      createAsync: jest.fn((...args: any[]) => mockCreateAsync(args[0])),
     },
   },
 }));
@@ -79,14 +79,18 @@ jest.mock("expo-file-system", () => ({
   cacheDirectory: "/tmp/",
   documentDirectory: "/tmp/doc/",
   EncodingType: { Base64: "base64" },
-  writeAsStringAsync: (...args: any[]) => mockWriteAsStringAsync(...args),
-  deleteAsync: (...args: any[]) => mockDeleteAsync(...args),
+  writeAsStringAsync: jest.fn((...args: any[]) =>
+    mockWriteAsStringAsync(args[0], args[1], args[2])
+  ),
+  deleteAsync: jest.fn((...args: any[]) => mockDeleteAsync(args[0])),
 }));
 
 const mockConfigureAudioSession = jest.fn(async () => {});
 
 jest.mock("../lib/voice/config", () => ({
-  configureAudioSession: (...args: any[]) => mockConfigureAudioSession(...args),
+  configureAudioSession: jest.fn((..._args: any[]) =>
+    mockConfigureAudioSession()
+  ),
 }));
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -201,9 +205,9 @@ describe("native voice queue + playback", () => {
       "audio/mpeg"
     );
 
-    expect(writeAsStringAsyncMock).toHaveBeenCalledTimes(2);
-    expect(deleteAsyncMock).toHaveBeenCalledTimes(2);
-    expect(createAsyncMock).toHaveBeenCalledTimes(2);
+    expect(mockWriteAsStringAsync).toHaveBeenCalledTimes(2);
+    expect(mockDeleteAsync).toHaveBeenCalledTimes(2);
+    expect(mockCreateAsync).toHaveBeenCalledTimes(2);
     expect(playbackLog).toContainEqual(expect.stringContaining("play:"));
     expect(
       playbackLog.filter((event) => event.startsWith("play:"))
@@ -215,7 +219,7 @@ describe("native voice queue + playback", () => {
       Buffer.from("clip-three").toString("base64"),
       "audio/mpeg"
     );
-    expect(configureAudioSessionMock).toHaveBeenCalledWith(expect.any(Object), {
+    expect(mockConfigureAudioSession).toHaveBeenCalledWith(expect.any(Object), {
       background: true,
     });
   });

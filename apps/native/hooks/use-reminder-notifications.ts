@@ -4,6 +4,7 @@
  * Handles scheduling and canceling notifications for reminders.
  */
 
+import { logger } from "@alfred/logger";
 import { useEffect, useRef } from "react";
 import {
   cancelNotification,
@@ -52,9 +53,7 @@ export function useReminderNotifications(
         });
 
         notificationIdRef.current = notificationId;
-      } catch (error) {
-        console.error("Failed to schedule reminder notification:", error);
-      }
+      } catch (_error) {}
     };
 
     scheduleNotification();
@@ -62,7 +61,12 @@ export function useReminderNotifications(
     // Cleanup on unmount
     return () => {
       if (notificationIdRef.current) {
-        cancelNotification(notificationIdRef.current).catch(console.error);
+        cancelNotification(notificationIdRef.current).catch((error) =>
+          logger.error("Failed to cancel reminder notification on unmount", {
+            error,
+            notificationId: notificationIdRef.current,
+          })
+        );
       }
     };
   }, [reminder]);

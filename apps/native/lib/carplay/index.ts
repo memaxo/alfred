@@ -28,7 +28,6 @@ function getCarPlayModule(): any {
 
     // Verify the module has expected methods before using
     if (!CarPlay || typeof CarPlay.registerOnConnect !== "function") {
-      console.warn("CarPlay module loaded but missing expected methods");
       CarPlay = null;
       return null;
     }
@@ -41,9 +40,7 @@ function getCarPlayModule(): any {
       error?.message?.includes("bridge") ||
       error?.message?.includes("checkForDashboardConnection")
     ) {
-      console.warn("CarPlay native bridge not initialized:", error.message);
     } else {
-      console.warn("CarPlay module not available:", error);
     }
     CarPlay = null;
     return null;
@@ -238,8 +235,5 @@ export function setupCarPlay(
     if (carplay.connected) {
       handleConnect();
     }
-  } catch (error) {
-    // Silently fail if CarPlay setup fails (native module not available or not properly initialized)
-    console.warn("CarPlay setup failed:", error);
-  }
+  } catch (_error) {}
 }

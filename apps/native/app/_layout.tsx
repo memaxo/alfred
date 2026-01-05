@@ -46,7 +46,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const hasMounted = useRef(false);
-  const router = useRouter();
+  const _router = useRouter();
   const { colorScheme, isDarkColorScheme } = useColorScheme();
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
   const {
@@ -71,9 +71,7 @@ export default function RootLayout() {
 
   // Register for push notifications on mount
   React.useEffect(() => {
-    registerForPushNotificationsAsync().catch((error) => {
-      console.error("Failed to register for push notifications:", error);
-    });
+    registerForPushNotificationsAsync().catch((_error) => {});
   }, []);
 
   // Check for app updates on mount
@@ -130,6 +128,7 @@ export default function RootLayout() {
   }
 
   // Extract tRPC provider to avoid JSX syntax issues with type assertion
+  // biome-ignore lint/suspicious/noExplicitAny: trpc.Provider needs any for JSX
   const TrpcProvider = (trpc as any).Provider;
 
   return (
