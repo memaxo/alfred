@@ -26,6 +26,9 @@ import {
   useTimerDone,
 } from "@/hooks/use-trpc";
 import { haptics } from "@/lib/haptics";
+import type { TimerRouterOutputs } from "@/utils/trpc-types";
+
+type TimerItem = TimerRouterOutputs["active"][number];
 
 export default function TimersListScreen() {
   const _router = useRouter();
@@ -91,10 +94,9 @@ export default function TimersListScreen() {
     [cancelMutation]
   );
 
-  // biome-ignore lint/suspicious/noExplicitAny: complex timer type
-  const formatTimeRemaining = (timer: any) => {
+  const formatTimeRemaining = (timer: TimerItem) => {
     const now = Date.now();
-    const endTime = new Date(timer.endTime).getTime();
+    const endTime = new Date(timer.end).getTime();
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
     const hours = Math.floor(remaining / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);

@@ -26,26 +26,19 @@ import {
 import { haptics } from "@/lib/haptics";
 import {
   type FilterOption,
-  filterFunctions,
   fuzzySearch,
   type SortOption,
   sortFunctions,
 } from "@/lib/search";
+import type { RemindRouterOutputs } from "@/utils/trpc-types";
 
-// biome-ignore lint/correctness/noUnusedVariables: used in reminderSortOptions
-type ReminderItem = ReturnType<
-  typeof useReminderList
->["data"] extends (infer T)[]
-  ? T
-  : never;
+type ReminderItem = RemindRouterOutputs["list"][number];
 
-// biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
-const reminderSortOptions: SortOption<any>[] = [
+const reminderSortOptions: SortOption<ReminderItem>[] = [
   {
     key: "due-asc",
     label: "Due Soon",
-    // biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
-    sortFn: (a: any, b: any) => {
+    sortFn: (a, b) => {
       const dateA = a.due
         ? new Date(a.due).getTime()
         : Number.POSITIVE_INFINITY;
@@ -58,8 +51,7 @@ const reminderSortOptions: SortOption<any>[] = [
   {
     key: "due-desc",
     label: "Due Later",
-    // biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
-    sortFn: (a: any, b: any) => {
+    sortFn: (a, b) => {
       const dateA = a.due
         ? new Date(a.due).getTime()
         : Number.POSITIVE_INFINITY;
@@ -81,8 +73,7 @@ const reminderSortOptions: SortOption<any>[] = [
   },
 ];
 
-// biome-ignore lint/suspicious/noExplicitAny: complex tRPC types
-const reminderFilterOptions: FilterOption<any>[] = [
+const reminderFilterOptions: FilterOption<ReminderItem>[] = [
   {
     key: "all",
     label: "All",
@@ -91,12 +82,12 @@ const reminderFilterOptions: FilterOption<any>[] = [
   {
     key: "pending",
     label: "Pending",
-    filterFn: filterFunctions.isPending,
+    filterFn: (item) => item.fired !== true,
   },
   {
     key: "completed",
     label: "Completed",
-    filterFn: filterFunctions.isCompleted,
+    filterFn: (item) => item.fired === true,
   },
 ];
 
