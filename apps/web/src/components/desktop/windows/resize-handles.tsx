@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import type { ResizeDirection } from "./types";
 
 type ResizeHandlesProps = {
-  onResizeStart: (direction: ResizeDirection) => void;
+  onResizeStart: (direction: ResizeDirection, e: React.MouseEvent) => void;
 };
 
 const handles: Array<{
@@ -77,7 +77,7 @@ export function ResizeHandles({ onResizeStart }: ResizeHandlesProps) {
           onMouseDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onResizeStart(direction);
+            onResizeStart(direction, e);
           }}
           style={{ cursor }}
         >

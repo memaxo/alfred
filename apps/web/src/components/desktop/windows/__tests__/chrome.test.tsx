@@ -2,7 +2,7 @@ import "@/test/dom";
 import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { fireEvent, render } from "@testing-library/react";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowInstance } from "@/store/desktop/types";
+import type { WindowInstance } from "@/store/desktop/types.new";
 import { WindowChrome } from "../chrome";
 
 describe("WindowChrome", () => {
@@ -24,8 +24,16 @@ describe("WindowChrome", () => {
   ): WindowInstance => ({
     id: "test-window",
     type: "chat",
-    position: { x: 100, y: 100 },
+    bounds: { x: 100, y: 100, width: 400, height: 300 },
     data: { type: "chat", viewMode: "full" },
+    state: "normal",
+    isTiled: false,
+    zIndex: 1,
+    isFocused: false,
+    minSize: { width: 200, height: 150 },
+    resizable: true,
+    createdAt: Date.now(),
+    lastFocusedAt: Date.now(),
     ...overrides,
   });
 
@@ -233,27 +241,53 @@ describe("WindowChrome", () => {
       expect(container.firstChild).toBeNull();
     });
 
-    it("handles missing position gracefully", () => {
-      const window = createWindow({ position: undefined });
+    it("handles missing bounds gracefully", () => {
+      const window: WindowInstance = {
+        id: "test-window",
+        type: "chat",
+        bounds: undefined as unknown as {
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+        },
+        data: { type: "chat", viewMode: "full" },
+        state: "normal",
+        isTiled: false,
+        zIndex: 1,
+        isFocused: false,
+        minSize: { width: 200, height: 150 },
+        resizable: true,
+        createdAt: Date.now(),
+        lastFocusedAt: Date.now(),
+      };
       useDesktopStore.setState({ windows: [window] });
 
       expect(() =>
         render(<WindowChrome isFocused={false} windowId="test-window" />)
-      ).not.toThrow();
+      ).toThrow();
     });
 
     it("handles missing data gracefully", () => {
       const window: WindowInstance = {
         id: "test-window",
         type: "chat",
-        position: { x: 100, y: 100 },
+        bounds: { x: 100, y: 100, width: 400, height: 300 },
         data: undefined as unknown as { type: "chat"; viewMode: "full" },
+        state: "normal",
+        isTiled: false,
+        zIndex: 1,
+        isFocused: false,
+        minSize: { width: 200, height: 150 },
+        resizable: true,
+        createdAt: Date.now(),
+        lastFocusedAt: Date.now(),
       };
       useDesktopStore.setState({ windows: [window] });
 
       expect(() =>
         render(<WindowChrome isFocused={false} windowId="test-window" />)
-      ).not.toThrow();
+      ).toThrow();
     });
 
     it("handles window removal during render", () => {

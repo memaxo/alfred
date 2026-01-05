@@ -1,40 +1,19 @@
 "use client";
 
-/**
- * Window Chrome - Traditional DOM-based window decoration
- *
- * Provides JARVIS-aesthetic window frame with:
- * - Title bar with window controls
- * - Resize handles (8 directions)
- * - Drag support
- * - Focus/blur states
- *
- * This replaces the ReactFlow-based window frame during migration.
- *
- * @see docs/execplans/desktop-type-migration.md Section 6.1
- */
-
 import { Maximize2, Minus, Square, X } from "lucide-react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
+import type { WindowInstance } from "@/store/desktop/types.new";
 import { ResizeHandles } from "./resize-handles";
 import type { ResizeDirection } from "./types";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
 
 type WindowChromeProps = {
   windowId: string;
   isFocused: boolean;
   children?: ReactNode;
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function WindowChrome({
   windowId,
@@ -45,46 +24,93 @@ export function WindowChrome({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
 
-  const { window, removeWindow, updateWindow, focusWindow } = useDesktopStore(
+  const {
+    window,
+    removeWindow,
+    focusWindow,
+    moveWindow,
+    setBounds,
+    desktopArea,
+    showTilePreview,
+    hideTilePreview,
+    tileWindow,
+  } = useDesktopStore(
     useShallow((s) => ({
-      window: s.windows.find((w) => w.id === windowId),
+      window: s.windows.find((w) => w.id === windowId) as
+        | WindowInstance
+        | undefined,
       removeWindow: s.removeWindow,
-      updateWindow: s.updateWindow,
       focusWindow: s.focusWindow,
+      moveWindow: s.moveWindow,
+      setBounds: s.setBounds,
+      desktopArea: s.desktopArea,
+      showTilePreview: s.showTilePreview,
+      hideTilePreview: s.hideTilePreview,
+      tileWindow: s.tileWindow,
     }))
   );
 
-  // Handle close
   const handleClose = useCallback(() => {
     removeWindow(windowId);
   }, [removeWindow, windowId]);
 
-  // Handle minimize (placeholder - will be implemented properly)
   const handleMinimize = useCallback(() => {
-    // For now, just update viewMode
-    updateWindow(windowId, { viewMode: "compact" });
-  }, [updateWindow, windowId]);
+    useDesktopStore.getState().minimizeWindow(windowId);
+  }, [windowId]);
 
-  // Handle maximize toggle
   const handleMaximize = useCallback(() => {
-    const isMaximized = window?.data?.viewMode === "maximized";
-    updateWindow(windowId, {
-      viewMode: isMaximized ? "full" : "maximized",
-    });
-  }, [updateWindow, windowId, window?.data?.viewMode]);
+    if (!window) {
+      return;
+    }
+    if (window.state === "maximized") {
+      useDesktopStore.getState().restoreWindow(windowId);
+    } else {
+      useDesktopStore.getState().maximizeWindow(windowId);
+    }
+  }, [window, windowId]);
 
-  // Handle focus
   const handleFocus = useCallback(() => {
     if (!isFocused) {
       focusWindow(windowId);
     }
   }, [focusWindow, windowId, isFocused]);
 
-  // Handle drag start
+  const detectZoneFromPosition = useCallback(
+    (x: number, y: number): string | null => {
+      const { width, height } = desktopArea;
+      const relativeX = x - desktopArea.x;
+      const relativeY = y - desktopArea.y;
+
+      if (relativeX < width * 0.3 && relativeY < height * 0.3) {
+        return "top-left";
+      }
+      if (relativeX > width * 0.7 && relativeY < height * 0.3) {
+        return "top-right";
+      }
+      if (relativeX < width * 0.3 && relativeY > height * 0.7) {
+        return "bottom-left";
+      }
+      if (relativeX > width * 0.7 && relativeY > height * 0.7) {
+        return "bottom-right";
+      }
+      if (relativeX < width * 0.5) {
+        return "left";
+      }
+      if (relativeX > width * 0.5) {
+        return "right";
+      }
+      if (relativeY < height * 0.5) {
+        return "top";
+      }
+      return "bottom";
+    },
+    [desktopArea]
+  );
+
   const handleDragStart = useCallback(
     (e: React.MouseEvent) => {
       if (e.target !== e.currentTarget) {
-        return; // Only drag from title bar
+        return;
       }
       e.preventDefault();
       setIsDragging(true);
@@ -92,21 +118,203 @@ export function WindowChrome({
 
       const startX = e.clientX;
       const startY = e.clientY;
-      const currentPos = window?.position ?? { x: 100, y: 100 };
+      const currentBounds = window?.bounds ?? {
+        x: 100,
+        y: 100,
+        width: 400,
+        height: 300,
+      };
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
-        const newX = currentPos.x + (moveEvent.clientX - startX);
-        const newY = currentPos.y + (moveEvent.clientY - startY);
+        const newX = currentBounds.x + (moveEvent.clientX - startX);
+        const newY = currentBounds.y + (moveEvent.clientY - startY);
 
-        // Update window position (this uses old store API during migration)
-        // Will be updated to use new API with setBounds
-        // For now, position updates happen via ReactFlow in the old canvas
-        void newX;
-        void newY;
+        const { x: minX, y: minY, width: maxX, height: maxY } = desktopArea;
+
+        moveWindow(windowId, {
+          x: Math.max(minX, Math.min(newX, minX + maxX - currentBounds.width)),
+          y: Math.max(minY, Math.min(newY, minY + maxY - currentBounds.height)),
+        });
+
+        const zone = detectZoneFromPosition(
+          moveEvent.clientX,
+          moveEvent.clientY
+        );
+        if (zone) {
+          showTilePreview(zone as any);
+        } else {
+          hideTilePreview();
+        }
+      };
+
+      const handleMouseUp = (upEvent: MouseEvent) => {
+        setIsDragging(false);
+        hideTilePreview();
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+
+        const zone = detectZoneFromPosition(upEvent.clientX, upEvent.clientY);
+        if (zone) {
+          tileWindow(windowId, zone as any);
+        }
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [
+      handleFocus,
+      window,
+      windowId,
+      moveWindow,
+      detectZoneFromPosition,
+      showTilePreview,
+      hideTilePreview,
+      tileWindow,
+    ]
+  );
+
+  const handleResizeStart = useCallback(
+    (direction: ResizeDirection, e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      handleFocus();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const currentBounds = window?.bounds ?? {
+        x: 100,
+        y: 100,
+        width: 400,
+        height: 300,
+      };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const deltaX = moveEvent.clientX - startX;
+        const deltaY = moveEvent.clientY - startY;
+
+        const { x: minX, y: minY, width: maxX, height: maxY } = desktopArea;
+        const minW = window?.minSize.width ?? 200;
+        const minH = window?.minSize.height ?? 150;
+        const maxW = window?.maxSize?.width ?? Number.POSITIVE_INFINITY;
+        const maxH = window?.maxSize?.height ?? Number.POSITIVE_INFINITY;
+
+        const newBounds = { ...currentBounds };
+
+        switch (direction) {
+          case "n":
+            newBounds.y = currentBounds.y + deltaY;
+            newBounds.height = currentBounds.height - deltaY;
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.y =
+              currentBounds.y + currentBounds.height - newBounds.height;
+            newBounds.y = Math.max(
+              minY,
+              Math.min(newBounds.y, minY + maxY - newBounds.height)
+            );
+            break;
+          case "s":
+            newBounds.height = currentBounds.height + deltaY;
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.height = Math.min(
+              newBounds.height,
+              minY + maxY - currentBounds.y
+            );
+            break;
+          case "e":
+            newBounds.width = currentBounds.width + deltaX;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.width = Math.min(
+              newBounds.width,
+              minX + maxX - currentBounds.x
+            );
+            break;
+          case "w":
+            newBounds.x = currentBounds.x + deltaX;
+            newBounds.width = currentBounds.width - deltaX;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.x =
+              currentBounds.x + currentBounds.width - newBounds.width;
+            newBounds.x = Math.max(
+              minX,
+              Math.min(newBounds.x, minX + maxX - newBounds.width)
+            );
+            break;
+          case "ne":
+            newBounds.y = currentBounds.y + deltaY;
+            newBounds.height = currentBounds.height - deltaY;
+            newBounds.width = currentBounds.width + deltaX;
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.y =
+              currentBounds.y + currentBounds.height - newBounds.height;
+            newBounds.y = Math.max(
+              minY,
+              Math.min(newBounds.y, minY + maxY - newBounds.height)
+            );
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.width = Math.min(
+              newBounds.width,
+              minX + maxX - currentBounds.x
+            );
+            break;
+          case "nw":
+            newBounds.x = currentBounds.x + deltaX;
+            newBounds.y = currentBounds.y + deltaY;
+            newBounds.width = currentBounds.width - deltaX;
+            newBounds.height = currentBounds.height - deltaY;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.x =
+              currentBounds.x + currentBounds.width - newBounds.width;
+            newBounds.x = Math.max(
+              minX,
+              Math.min(newBounds.x, minX + maxX - newBounds.width)
+            );
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.y =
+              currentBounds.y + currentBounds.height - newBounds.height;
+            newBounds.y = Math.max(
+              minY,
+              Math.min(newBounds.y, minY + maxY - newBounds.height)
+            );
+            break;
+          case "se":
+            newBounds.width = currentBounds.width + deltaX;
+            newBounds.height = currentBounds.height + deltaY;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.width = Math.min(
+              newBounds.width,
+              minX + maxX - currentBounds.x
+            );
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.height = Math.min(
+              newBounds.height,
+              minY + maxY - currentBounds.y
+            );
+            break;
+          case "sw":
+            newBounds.x = currentBounds.x + deltaX;
+            newBounds.width = currentBounds.width - deltaX;
+            newBounds.height = currentBounds.height + deltaY;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.x =
+              currentBounds.x + currentBounds.width - newBounds.width;
+            newBounds.x = Math.max(
+              minX,
+              Math.min(newBounds.x, minX + maxX - newBounds.width)
+            );
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.height = Math.min(
+              newBounds.height,
+              minY + maxY - currentBounds.y
+            );
+            break;
+        }
+
+        setBounds(windowId, newBounds);
       };
 
       const handleMouseUp = () => {
-        setIsDragging(false);
+        setIsResizing(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
       };
@@ -114,27 +322,7 @@ export function WindowChrome({
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [handleFocus, window?.position]
-  );
-
-  // Handle resize
-  const handleResizeStart = useCallback(
-    (_direction: ResizeDirection) => {
-      setIsResizing(true);
-      handleFocus();
-
-      // Resize logic will be implemented here using the direction
-      // Direction tells us which edge/corner is being dragged
-      // For now, just set state
-
-      const handleMouseUp = () => {
-        setIsResizing(false);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [handleFocus]
+    [handleFocus, window, windowId, setBounds, desktopArea]
   );
 
   if (!window) {
@@ -142,11 +330,7 @@ export function WindowChrome({
   }
 
   const title = window.data?.label ?? window.data?.type ?? "Window";
-  const isMaximized = window.data?.viewMode === "maximized";
-
-  // For now, use fixed positioning based on ReactFlow node position
-  // This will be replaced with proper bounds from new WindowInstance
-  const position = window.position ?? { x: 100, y: 100 };
+  const isMaximized = window.state === "maximized";
 
   return (
     <div
@@ -162,14 +346,13 @@ export function WindowChrome({
       onMouseDown={handleFocus}
       ref={containerRef}
       style={{
-        left: isMaximized ? 0 : position.x,
-        top: isMaximized ? 0 : position.y,
-        width: isMaximized ? "100%" : 500,
-        height: isMaximized ? "100%" : 400,
+        left: isMaximized ? desktopArea.x : window.bounds.x,
+        top: isMaximized ? desktopArea.y : window.bounds.y,
+        width: isMaximized ? desktopArea.width : window.bounds.width,
+        height: isMaximized ? desktopArea.height : window.bounds.height,
         zIndex: isFocused ? 500 : 100,
       }}
     >
-      {/* Title Bar */}
       <div
         className={cn(
           "flex h-10 flex-shrink-0 cursor-grab items-center justify-between border-white/5 border-b px-3",
@@ -177,7 +360,6 @@ export function WindowChrome({
         )}
         onMouseDown={handleDragStart}
       >
-        {/* Traffic lights (macOS style) */}
         <div className="flex items-center gap-2">
           <button
             aria-label="Close"
@@ -209,16 +391,13 @@ export function WindowChrome({
           </button>
         </div>
 
-        {/* Title */}
         <span className="-translate-x-1/2 pointer-events-none absolute left-1/2 font-medium text-biolum text-sm">
           {title}
         </span>
 
-        {/* Spacer for symmetry */}
         <div className="w-16" />
       </div>
 
-      {/* Content Area */}
       <div className="flex-1 overflow-auto">
         {children ?? (
           <div className="flex h-full items-center justify-center text-biolum-dim">
@@ -227,7 +406,6 @@ export function WindowChrome({
         )}
       </div>
 
-      {/* Resize Handles */}
       {!isMaximized && <ResizeHandles onResizeStart={handleResizeStart} />}
     </div>
   );
