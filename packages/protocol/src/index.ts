@@ -9,25 +9,7 @@
  */
 
 // ACP-compatible types
-export {
-  mapAutonomyToAcpMode,
-  type PermissionOption,
-  type PermissionOptionKind,
-  type PermissionOutcome,
-  type PermissionRequest,
-  permissionOptionKindSchema,
-  permissionOptionSchema,
-  permissionOutcomeSchema,
-  permissionRequestSchema,
-  type SessionMode,
-  type StopReason,
-  sessionModeSchema,
-  stopReasonSchema,
-  type ToolCallStatus,
-  type ToolKind,
-  toolCallStatusSchema,
-  toolKindSchema,
-} from "./acp.js";
+export { mapAutonomyToAcpMode } from "./acp.js";
 
 // Thread events
 export {

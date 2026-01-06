@@ -8,6 +8,8 @@
  * @see https://github.com/agentclientprotocol/typescript-sdk
  */
 
+import type { SessionMode as AcpSessionModeInternal } from "@agentclientprotocol/sdk";
+
 // ============================================================================
 // SDK Re-exports - Connection Classes
 // ============================================================================
@@ -126,124 +128,6 @@ export type {
 } from "@agentclientprotocol/sdk";
 
 // ============================================================================
-// ALFRED Legacy Aliases (Deprecated - use SDK types directly)
-// ============================================================================
-
-import { z } from "zod";
-
-/**
- * @deprecated Use AcpToolCallStatus from SDK instead
- */
-export const toolCallStatusSchema = z.enum([
-  "pending",
-  "in_progress",
-  "completed",
-  "failed",
-]);
-
-/** @deprecated Use AcpToolCallStatus from SDK instead */
-export type ToolCallStatus = z.infer<typeof toolCallStatusSchema>;
-
-/**
- * @deprecated Use AcpToolKind from SDK instead
- */
-export const toolKindSchema = z.enum([
-  "read",
-  "edit",
-  "delete",
-  "move",
-  "search",
-  "execute",
-  "think",
-  "fetch",
-  "other",
-]);
-
-/** @deprecated Use AcpToolKind from SDK instead */
-export type ToolKind = z.infer<typeof toolKindSchema>;
-
-/**
- * @deprecated Use AcpPermissionOptionKind from SDK instead
- */
-export const permissionOptionKindSchema = z.enum([
-  "allow_once",
-  "allow_always",
-  "reject_once",
-  "reject_always",
-]);
-
-/** @deprecated Use AcpPermissionOptionKind from SDK instead */
-export type PermissionOptionKind = z.infer<typeof permissionOptionKindSchema>;
-
-/**
- * @deprecated Use AcpPermissionOption from SDK instead
- */
-export const permissionOptionSchema = z.object({
-  optionId: z.string(),
-  name: z.string(),
-  kind: permissionOptionKindSchema,
-});
-
-/** @deprecated Use AcpPermissionOption from SDK instead */
-export type PermissionOption = z.infer<typeof permissionOptionSchema>;
-
-/**
- * @deprecated Use RequestPermissionRequest from SDK instead
- */
-export const permissionRequestSchema = z.object({
-  sessionId: z.string(),
-  toolCallId: z.string(),
-  title: z.string(),
-  kind: toolKindSchema.optional(),
-  options: z.array(permissionOptionSchema),
-});
-
-/** @deprecated Use RequestPermissionRequest from SDK instead */
-export type PermissionRequest = z.infer<typeof permissionRequestSchema>;
-
-/**
- * @deprecated Use RequestPermissionOutcome from SDK instead
- */
-export const permissionOutcomeSchema = z.discriminatedUnion("outcome", [
-  z.object({
-    outcome: z.literal("selected"),
-    optionId: z.string(),
-  }),
-  z.object({
-    outcome: z.literal("cancelled"),
-  }),
-]);
-
-/** @deprecated Use RequestPermissionOutcome from SDK instead */
-export type PermissionOutcome = z.infer<typeof permissionOutcomeSchema>;
-
-/**
- * @deprecated Use AcpSessionMode from SDK instead
- */
-export const sessionModeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-});
-
-/** @deprecated Use AcpSessionMode from SDK instead */
-export type SessionMode = z.infer<typeof sessionModeSchema>;
-
-/**
- * @deprecated Use AcpStopReason from SDK instead
- */
-export const stopReasonSchema = z.enum([
-  "end_turn",
-  "max_tokens",
-  "max_turn_requests",
-  "refusal",
-  "cancelled",
-]);
-
-/** @deprecated Use AcpStopReason from SDK instead */
-export type StopReason = z.infer<typeof stopReasonSchema>;
-
-// ============================================================================
 // ALFRED Adapters - Convert between ALFRED and ACP types
 // ============================================================================
 
@@ -252,8 +136,8 @@ export type StopReason = z.infer<typeof stopReasonSchema>;
  */
 export function mapAutonomyToAcpMode(
   auto: "read" | "low" | "medium" | "high"
-): SessionMode {
-  const modes: Record<typeof auto, SessionMode> = {
+): AcpSessionModeInternal {
+  const modes: Record<typeof auto, AcpSessionModeInternal> = {
     read: {
       id: "ask",
       name: "Ask",
