@@ -584,49 +584,30 @@ export const graphRouter = router({
         resource: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
-      const resource = input.resource ?? "user";
-
-      try {
-        const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
-
-        // Use semantic search to find relevant context
-        const result = await runUnifiedQuery(
-          {
-            kind: "semantic",
-            text: input.text,
-            topK: input.topK,
-            preferRag: true,
-            resource,
-          },
-          { resource }
-        );
-
-        // Transform nodes to context items format
-        const contextItems = (result.nodes ?? []).map((node, index) => {
-          const props = node.properties as Record<string, unknown> | undefined;
-          return {
-            id: node.id.dbId ?? node.id.uiId ?? `ctx-${index}`,
-            type: mapNodeKindToContextType(node.kind),
-            title: node.label ?? "Unknown",
-            content:
-              (props?.content as string) ??
-              (props?.text as string) ??
-              node.label ??
-              "",
-            relevance: (props?.score as number) ?? 1 - index * 0.1,
-          };
-        });
-
-        return { items: contextItems };
-      } catch (error) {
-        logger.error("graph_get_context_failed", {
-          resource,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return { items: [] };
-      }
-    }),
+    .query(async ({ input }) =>
+      semanticQuery(
+        { text: input.text, topK: input.topK, resource: input.resource },
+        (result) => ({
+          items: (result.nodes ?? []).map((node, index) => {
+            const props = node.properties as
+              | Record<string, unknown>
+              | undefined;
+            return {
+              id: node.id.dbId ?? node.id.uiId ?? `ctx-${index}`,
+              type: mapNodeKindToContextType(node.kind),
+              title: node.label ?? "Unknown",
+              content:
+                (props?.content as string) ??
+                (props?.text as string) ??
+                node.label ??
+                "",
+              relevance: (props?.score as number) ?? 1 - index * 0.1,
+            };
+          }),
+        }),
+        "graph_get_context_failed"
+      ).catch(() => ({ items: [] }))
+    ),
 
   // ─────────────────────────────────────────────────────────────────────────
   // RAG chunks retrieval
@@ -640,55 +621,37 @@ export const graphRouter = router({
         resource: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
-      const resource = input.resource ?? "user";
-
-      try {
-        const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
-
-        const result = await runUnifiedQuery(
-          {
-            kind: "semantic",
-            text: input.text,
-            topK: input.topK,
-            preferRag: true,
-            resource,
-          },
-          { resource }
-        );
-
-        // Transform nodes to RAG chunks format
-        const chunks = (result.nodes ?? []).map((node, index) => {
-          const props = node.properties as Record<string, unknown> | undefined;
-          return {
-            id: node.id.dbId ?? node.id.uiId ?? `chunk-${index}`,
-            source:
-              (props?.source as string) ??
-              (props?.filename as string) ??
-              node.label ??
-              "unknown",
-            content:
-              (props?.content as string) ??
-              (props?.text as string) ??
-              node.label ??
-              "",
-            score: (props?.score as number) ?? 1 - index * 0.05,
-            metadata: {
-              section: (props?.section as string) ?? undefined,
-              lastUpdated: (props?.updatedAt as string) ?? undefined,
-            },
-          };
-        });
-
-        return { chunks };
-      } catch (error) {
-        logger.error("graph_get_rag_chunks_failed", {
-          resource,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return { chunks: [] };
-      }
-    }),
+    .query(async ({ input }) =>
+      semanticQuery(
+        { text: input.text, topK: input.topK, resource: input.resource },
+        (result) => ({
+          chunks: (result.nodes ?? []).map((node, index) => {
+            const props = node.properties as
+              | Record<string, unknown>
+              | undefined;
+            return {
+              id: node.id.dbId ?? node.id.uiId ?? `chunk-${index}`,
+              source:
+                (props?.source as string) ??
+                (props?.filename as string) ??
+                node.label ??
+                "unknown",
+              content:
+                (props?.content as string) ??
+                (props?.text as string) ??
+                node.label ??
+                "",
+              score: (props?.score as number) ?? 1 - index * 0.05,
+              metadata: {
+                section: (props?.section as string) ?? undefined,
+                lastUpdated: (props?.updatedAt as string) ?? undefined,
+              },
+            };
+          }),
+        }),
+        "graph_get_rag_chunks_failed"
+      ).catch(() => ({ chunks: [] }))
+    ),
 
   // ─────────────────────────────────────────────────────────────────────────
   // Graph visualization data
@@ -702,69 +665,90 @@ export const graphRouter = router({
         resource: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
-      const resource = input.resource ?? "user";
-
-      try {
-        const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
-
-        // Use semantic search to find relevant nodes and their connections
-        const result = await runUnifiedQuery(
-          {
-            kind: "semantic",
-            text: input.text,
-            topK: input.topK,
-            preferRag: false,
-            resource,
-          },
-          { resource }
-        );
-
-        // Transform nodes and edges for visualization
-        const nodes = (result.nodes ?? []).map(
-          (
-            node,
-            index
-          ): {
-            id: string;
-            label: string;
-            type: string;
-            relevance: number;
-          } => {
-            const props = node.properties as
-              | Record<string, unknown>
-              | undefined;
-            return {
-              id: node.id.dbId ?? node.id.uiId ?? `node-${index}`,
-              label: node.label ?? "Unknown",
-              type: node.kind ?? "other",
-              relevance: (props?.score as number) ?? 1 - index * 0.05,
-            };
-          }
-        );
-
-        const edges = (result.edges ?? []).map((edge, index) => ({
-          id: edge.id ?? `edge-${index}`,
-          source: edge.source.uiId ?? edge.source.dbId ?? "",
-          target: edge.target.uiId ?? edge.target.dbId ?? "",
-          type: edge.kind ?? "relates_to",
-          weight: edge.weight ?? 1,
-        }));
-
-        return { nodes, edges };
-      } catch (error) {
-        logger.error("graph_get_visualization_failed", {
-          resource,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return { nodes: [], edges: [] };
-      }
-    }),
+    .query(async ({ input }) =>
+      semanticQuery(
+        {
+          text: input.text,
+          topK: input.topK,
+          resource: input.resource,
+          preferRag: false,
+        },
+        (result) => ({
+          nodes: (result.nodes ?? []).map(
+            (
+              node,
+              index
+            ): {
+              id: string;
+              label: string;
+              type: string;
+              relevance: number;
+            } => {
+              const props = node.properties as
+                | Record<string, unknown>
+                | undefined;
+              return {
+                id: node.id.dbId ?? node.id.uiId ?? `node-${index}`,
+                label: node.label ?? "Unknown",
+                type: node.kind ?? "other",
+                relevance: (props?.score as number) ?? 1 - index * 0.05,
+              };
+            }
+          ),
+          edges: (result.edges ?? []).map((edge, index) => ({
+            id: edge.id ?? `edge-${index}`,
+            source: edge.source.uiId ?? edge.source.dbId ?? "",
+            target: edge.target.uiId ?? edge.target.dbId ?? "",
+            type: edge.kind ?? "relates_to",
+            weight: edge.weight ?? 1,
+          })),
+        }),
+        "graph_get_visualization_failed"
+      ).catch(() => ({ nodes: [], edges: [] }))
+    ),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper functions
 // ─────────────────────────────────────────────────────────────────────────────
+
+async function semanticQuery<T>(
+  params: {
+    text: string;
+    topK: number;
+    resource?: string;
+    preferRag?: boolean;
+  },
+  transform: (
+    result: Awaited<ReturnType<typeof import("@alfred/graph").runQuery>>
+  ) => T,
+  errorKey: string
+): Promise<T> {
+  const resource = params.resource ?? "user";
+
+  try {
+    const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
+
+    const result = await runUnifiedQuery(
+      {
+        kind: "semantic",
+        text: params.text,
+        topK: params.topK,
+        preferRag: params.preferRag ?? true,
+        resource,
+      },
+      { resource }
+    );
+
+    return transform(result);
+  } catch (error) {
+    logger.error(errorKey, {
+      resource,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
 
 function mapNodeKindToContextType(
   kind: string
