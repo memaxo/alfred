@@ -8,6 +8,7 @@ import type { AssistantUIMessage } from "@alfred/agent";
 import { computeBudgetUsage } from "@alfred/history";
 import { Brain, Database, FileText, Link, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { CompactKnowledgeGraph } from "@/components/graphs/knowledge/compact";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -115,6 +116,13 @@ export function ContextPanel({
     trpc.graph.getContext.useQuery(
       { text: queryText, topK: 5 },
       { enabled: activeTab === "rag" }
+    );
+
+  // Fetch knowledge graph data
+  const { data: graphData, isLoading: isLoadingGraph } =
+    trpc.graph.getGraphVisualization.useQuery(
+      { text: queryText, topK: 10 },
+      { enabled: activeTab === "knowledge" }
     );
 
   // Compute budget usage client-side
@@ -226,12 +234,22 @@ export function ContextPanel({
         {/* Knowledge Graph */}
         <TabsContent
           active={activeTab === "knowledge"}
-          className="flex-1 p-2"
+          className="flex-1 p-0"
           value="knowledge"
         >
-          <div className="flex h-full items-center justify-center text-biolum-dim text-sm">
-            Knowledge graph visualization coming soon
-          </div>
+          {isLoadingGraph && (
+            <div className="flex h-full items-center justify-center">
+              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
+            </div>
+          )}
+          {!isLoadingGraph && (
+            <CompactKnowledgeGraph
+              data={{
+                nodes: graphData?.nodes ?? [],
+                edges: graphData?.edges ?? [],
+              }}
+            />
+          )}
         </TabsContent>
 
         {/* History Budget */}

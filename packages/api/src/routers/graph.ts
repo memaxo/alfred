@@ -689,6 +689,77 @@ export const graphRouter = router({
         return { chunks: [] };
       }
     }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Graph visualization data
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getGraphVisualization: authedProcedure
+    .input(
+      z.object({
+        text: z.string().min(1),
+        topK: z.number().int().min(1).max(20).default(10),
+        resource: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const resource = input.resource ?? "user";
+
+      try {
+        const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
+
+        // Use semantic search to find relevant nodes and their connections
+        const result = await runUnifiedQuery(
+          {
+            kind: "semantic",
+            text: input.text,
+            topK: input.topK,
+            preferRag: false,
+            resource,
+          },
+          { resource }
+        );
+
+        // Transform nodes and edges for visualization
+        const nodes = (result.nodes ?? []).map(
+          (
+            node,
+            index
+          ): {
+            id: string;
+            label: string;
+            type: string;
+            relevance: number;
+          } => {
+            const props = node.properties as
+              | Record<string, unknown>
+              | undefined;
+            return {
+              id: node.id.dbId ?? node.id.uiId ?? `node-${index}`,
+              label: node.label ?? "Unknown",
+              type: node.kind ?? "other",
+              relevance: (props?.score as number) ?? 1 - index * 0.05,
+            };
+          }
+        );
+
+        const edges = (result.edges ?? []).map((edge, index) => ({
+          id: edge.id ?? `edge-${index}`,
+          source: edge.source.uiId ?? edge.source.dbId ?? "",
+          target: edge.target.uiId ?? edge.target.dbId ?? "",
+          type: edge.kind ?? "relates_to",
+          weight: edge.weight ?? 1,
+        }));
+
+        return { nodes, edges };
+      } catch (error) {
+        logger.error("graph_get_visualization_failed", {
+          resource,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { nodes: [], edges: [] };
+      }
+    }),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
