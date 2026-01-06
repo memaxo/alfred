@@ -39,7 +39,6 @@ if (typeof globalThis.cancelAnimationFrame === "undefined") {
   };
 }
 
-// Also set on window since some libraries access window.* directly
 type WindowWithRAF = Window & {
   requestAnimationFrame?: typeof globalThis.requestAnimationFrame;
   cancelAnimationFrame?: typeof globalThis.cancelAnimationFrame;
@@ -61,7 +60,41 @@ if (
     globalThis.cancelAnimationFrame;
 }
 
-// Provide minimal canvas and resize observer shims for jsdom-based tests.
+type WindowWithImage = Window & {
+  Image?: typeof Image;
+};
+
+type GlobalWithImage = typeof globalThis & {
+  Image?: typeof Image;
+};
+
+const ImageStub = function (this: any) {
+  this.src = "";
+  this.width = 0;
+  this.height = 0;
+  this.alt = "";
+  this.naturalWidth = 0;
+  this.naturalHeight = 0;
+  this.complete = true;
+  this.loading = "";
+  this.decoding = "auto";
+  this.align = "";
+  this.border = "";
+  this.crossOrigin = "";
+  this.currentSrc = "";
+  this.addEventListener = () => {};
+  this.removeEventListener = () => {};
+  this.onload = null;
+  this.onerror = null;
+} as any as typeof Image;
+
+if (typeof (window as unknown as WindowWithImage).Image === "undefined") {
+  (window as unknown as WindowWithImage).Image = ImageStub;
+}
+if (typeof (globalThis as GlobalWithImage).Image === "undefined") {
+  (globalThis as GlobalWithImage).Image = ImageStub;
+}
+
 type WindowWithCanvas = Window & {
   HTMLCanvasElement?: typeof HTMLCanvasElement;
 };
