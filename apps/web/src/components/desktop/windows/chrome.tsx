@@ -329,6 +329,14 @@ export function WindowChrome({
     return null;
   }
 
+  // Validate bounds before rendering to prevent crashes
+  const bounds = window.bounds ?? {
+    x: 100,
+    y: 100,
+    width: 400,
+    height: 300,
+  };
+
   const title = window.data?.label ?? window.data?.type ?? "Window";
   const isMaximized = window.state === "maximized";
 
@@ -346,10 +354,10 @@ export function WindowChrome({
       onMouseDown={handleFocus}
       ref={containerRef}
       style={{
-        left: isMaximized ? desktopArea.x : window.bounds.x,
-        top: isMaximized ? desktopArea.y : window.bounds.y,
-        width: isMaximized ? desktopArea.width : window.bounds.width,
-        height: isMaximized ? desktopArea.height : window.bounds.height,
+        left: isMaximized ? desktopArea.x : bounds.x,
+        top: isMaximized ? desktopArea.y : bounds.y,
+        width: isMaximized ? desktopArea.width : bounds.width,
+        height: isMaximized ? desktopArea.height : bounds.height,
         zIndex: isFocused ? 500 : 100,
       }}
     >
