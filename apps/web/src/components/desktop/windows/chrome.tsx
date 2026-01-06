@@ -5,7 +5,7 @@ import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowInstance } from "@/store/desktop/types.new";
+import type { TileZone, WindowInstance } from "@/store/desktop/types.new";
 import { ResizeHandles } from "./resize-handles";
 import type { ResizeDirection } from "./types";
 
@@ -76,7 +76,7 @@ export function WindowChrome({
   }, [focusWindow, windowId, isFocused]);
 
   const detectZoneFromPosition = useCallback(
-    (x: number, y: number): string | null => {
+    (x: number, y: number): TileZone | null => {
       const { width, height } = desktopArea;
       const relativeX = x - desktopArea.x;
       const relativeY = y - desktopArea.y;
@@ -141,7 +141,7 @@ export function WindowChrome({
           moveEvent.clientY
         );
         if (zone) {
-          showTilePreview(zone as any);
+          showTilePreview(zone);
         } else {
           hideTilePreview();
         }
@@ -155,7 +155,7 @@ export function WindowChrome({
 
         const zone = detectZoneFromPosition(upEvent.clientX, upEvent.clientY);
         if (zone) {
-          tileWindow(windowId, zone as any);
+          tileWindow(windowId, zone);
         }
       };
 

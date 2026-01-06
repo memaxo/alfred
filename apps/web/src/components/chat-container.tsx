@@ -28,6 +28,7 @@ import { useChatLogic } from "@/hooks/use-chat-logic";
 import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { useFocusedContext } from "@/hooks/use-focused-context";
+import { useMessageEdit } from "@/hooks/use-message-edit";
 import { getMessageText } from "@/utils/message";
 import { Actions } from "./actions";
 import { createPartRenderer } from "./chat-render";
@@ -71,8 +72,15 @@ export function ChatContainer({
     initialMessages,
     initialConversationId,
   });
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
+  const {
+    editingMessageId,
+    isEditing,
+    editText,
+    setEditText,
+    startEditing,
+    cancelEditing,
+    saveEdit,
+  } = useMessageEdit({ handleEdit });
 
   const [feedbackDraft, setFeedbackDraft] =
     useState<CognitiveFeedbackDraft | null>(null);
@@ -102,24 +110,6 @@ export function ChatContainer({
     },
     []
   );
-
-  const startEditing = useCallback((message: AssistantUIMessage) => {
-    setEditingMessageId(message.id);
-    setEditText(getMessageText(message));
-  }, []);
-
-  const cancelEditing = useCallback(() => {
-    setEditingMessageId(null);
-    setEditText("");
-  }, []);
-
-  const saveEdit = useCallback(() => {
-    if (editingMessageId && editText.trim()) {
-      handleEdit(editingMessageId, editText.trim());
-      setEditingMessageId(null);
-      setEditText("");
-    }
-  }, [editingMessageId, editText, handleEdit]);
 
   const renderMessageActions = useCallback(
     (message: UIMessage) => {
@@ -168,6 +158,7 @@ export function ChatContainer({
       handleFeedbackIntent,
       messages,
       handleRegenerate,
+      isEditing,
     ]
   );
 
