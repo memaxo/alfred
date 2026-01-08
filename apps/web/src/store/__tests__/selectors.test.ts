@@ -1,53 +1,52 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { useDesktopStore } from "../desktop";
 import {
-  selectEdgeById,
-  selectEdgeCount,
-  selectEdges,
-  selectEdgesForWindow,
   selectFocusedWindow,
   selectFocusedWindowId,
+  selectIsPinned,
+  selectIsSpaceMode,
+  selectPinnedApps,
   selectStats,
   selectWindowById,
   selectWindowCount,
   selectWindows,
   selectWindowsByType,
   selectWindowWithEdges,
-  selectZoom,
 } from "../desktop/selectors";
+import type { WindowInstance } from "../desktop/types.new";
+
+function createTestWindow(
+  id: string,
+  type: WindowInstance["type"] = "chat",
+  viewMode: "full" | "compact" = "full"
+): WindowInstance {
+  return {
+    id,
+    type,
+    data: { type, viewMode },
+    bounds: { x: 100, y: 100, width: 400, height: 300 },
+    state: "normal",
+    isTiled: false,
+    zIndex: 0,
+    isFocused: false,
+    minSize: { width: 200, height: 150 },
+    resizable: true,
+    createdAt: Date.now(),
+    lastFocusedAt: Date.now(),
+  };
+}
 
 describe("Desktop Store Selectors", () => {
   beforeEach(() => {
     useDesktopStore.setState({
       windows: [
-        {
-          id: "win-1",
-          type: "chat",
-          position: { x: 0, y: 0 },
-          data: { type: "chat", viewMode: "full" },
-        },
-        {
-          id: "win-2",
-          type: "note",
-          position: { x: 100, y: 0 },
-          data: { type: "note", viewMode: "full" },
-        },
-        {
-          id: "win-3",
-          type: "note",
-          position: { x: 200, y: 0 },
-          data: { type: "note", viewMode: "compact" },
-        },
+        createTestWindow("win-1", "chat"),
+        createTestWindow("win-2", "note"),
+        createTestWindow("win-3", "note", "compact"),
       ],
-      edges: [
-        { id: "e1", source: "win-1", target: "win-2" },
-        { id: "e2", source: "win-2", target: "win-3" },
-      ],
-      activeEdges: new Set(["e1"]),
-      highlightedEdgeIds: new Set(),
       focusedWindowId: "win-1",
-      viewport: { x: 0, y: 0, zoom: 0.75 },
       isSpaceMode: false,
+      pinnedApps: ["chat", "note"],
       dockPins: ["chat", "note"],
     });
   });
@@ -85,38 +84,7 @@ describe("Desktop Store Selectors", () => {
     });
   });
 
-  describe("Edge selectors", () => {
-    it("selectEdges returns all edges", () => {
-      const state = useDesktopStore.getState();
-      const edges = selectEdges(state);
-      expect(edges).toHaveLength(2);
-    });
-
-    it("selectEdgeById returns correct edge", () => {
-      const state = useDesktopStore.getState();
-      const edge = selectEdgeById(state, "e1");
-      expect(edge?.source).toBe("win-1");
-      expect(edge?.target).toBe("win-2");
-    });
-
-    it("selectEdgesForWindow returns connected edges", () => {
-      const state = useDesktopStore.getState();
-      const edges = selectEdgesForWindow(state, "win-2");
-      expect(edges).toHaveLength(2); // e1 (target) and e2 (source)
-    });
-
-    it("selectEdgeCount returns correct count", () => {
-      const state = useDesktopStore.getState();
-      expect(selectEdgeCount(state)).toBe(2);
-    });
-  });
-
   describe("Viewport selectors", () => {
-    it("selectZoom returns current zoom", () => {
-      const state = useDesktopStore.getState();
-      expect(selectZoom(state)).toBe(0.75);
-    });
-
     it("selectFocusedWindowId returns focused ID", () => {
       const state = useDesktopStore.getState();
       expect(selectFocusedWindowId(state)).toBe("win-1");
@@ -133,21 +101,42 @@ describe("Desktop Store Selectors", () => {
       const state = useDesktopStore.getState();
       expect(selectFocusedWindow(state)).toBeUndefined();
     });
+
+    it("selectIsSpaceMode returns current mode", () => {
+      const state = useDesktopStore.getState();
+      expect(selectIsSpaceMode(state)).toBe(false);
+
+      useDesktopStore.setState({ isSpaceMode: true });
+      expect(selectIsSpaceMode(useDesktopStore.getState())).toBe(true);
+    });
+  });
+
+  describe("Taskbar selectors", () => {
+    it("selectPinnedApps returns pinned apps", () => {
+      const state = useDesktopStore.getState();
+      const pinned = selectPinnedApps(state);
+      expect(pinned).toContain("chat");
+      expect(pinned).toContain("note");
+    });
+
+    it("selectIsPinned returns true for pinned type", () => {
+      const state = useDesktopStore.getState();
+      expect(selectIsPinned(state, "chat")).toBe(true);
+      expect(selectIsPinned(state, "knowledge")).toBe(false);
+    });
   });
 
   describe("Composite selectors", () => {
-    it("selectWindowWithEdges returns window and its edges", () => {
+    it("selectWindowWithEdges returns window", () => {
       const state = useDesktopStore.getState();
-      const { window, edges } = selectWindowWithEdges(state, "win-2");
+      const { window } = selectWindowWithEdges(state, "win-2");
       expect(window?.id).toBe("win-2");
-      expect(edges).toHaveLength(2);
     });
 
     it("selectStats returns aggregated stats", () => {
       const state = useDesktopStore.getState();
       const stats = selectStats(state);
       expect(stats.windowCount).toBe(3);
-      expect(stats.edgeCount).toBe(2);
       expect(stats.focusedWindowId).toBe("win-1");
     });
   });

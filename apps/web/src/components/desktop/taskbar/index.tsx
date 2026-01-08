@@ -81,16 +81,23 @@ type TaskbarProps = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Taskbar({ style }: TaskbarProps) {
-  const { dockPins, windows, focusedWindowId, spawnWindow, focusWindow } =
-    useDesktopStore(
-      useShallow((s) => ({
-        dockPins: s.dockPins,
-        windows: s.windows,
-        focusedWindowId: s.focusedWindowId,
-        spawnWindow: s.spawnWindow,
-        focusWindow: s.focusWindow,
-      }))
-    );
+  const {
+    dockPins,
+    windows,
+    focusedWindowId,
+    spawnWindow,
+    focusWindow,
+    restoreWindow,
+  } = useDesktopStore(
+    useShallow((s) => ({
+      dockPins: s.dockPins,
+      windows: s.windows,
+      focusedWindowId: s.focusedWindowId,
+      spawnWindow: s.spawnWindow,
+      focusWindow: s.focusWindow,
+      restoreWindow: s.restoreWindow,
+    }))
+  );
 
   // Get unique running window types
   const runningTypes = new Set(windows.map((w) => w.data?.type));
@@ -101,14 +108,17 @@ export function Taskbar({ style }: TaskbarProps) {
       const existing = windows.find((w) => w.data?.type === type);
 
       if (existing) {
-        // Focus existing window
+        // Restore if minimized, then focus
+        if (existing.state === "minimized") {
+          restoreWindow(existing.id);
+        }
         focusWindow(existing.id);
       } else {
         // Spawn new window
         spawnWindow(type);
       }
     },
-    [windows, focusWindow, spawnWindow]
+    [windows, focusWindow, spawnWindow, restoreWindow]
   );
 
   return (

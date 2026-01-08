@@ -16,12 +16,13 @@ async function withBudget<T>(
 }
 
 import { createContextSlice } from "../context";
-import { createDockSlice } from "../dock";
 import { createKnowledgeSlice } from "../knowledge";
 import { DESKTOP_STORAGE_ID, persistOptions } from "../persist";
-import type { DesktopState, WindowInstance } from "../types";
-import { createViewportSlice } from "../viewport";
-import { createWindowSlice } from "../windows";
+import { createTaskbarSlice } from "../taskbar";
+import { createTilingSlice } from "../tiling";
+import type { DesktopState, WindowInstance } from "../types.new";
+import { createViewportSliceNew } from "../viewport.new";
+import { createWindowSliceNew } from "../windows.new";
 
 // Mock localStorage
 const mockStorage = new Map<string, string>();
@@ -43,9 +44,10 @@ function createTestStore() {
   return create<DesktopState>()(
     persist(
       (...a) => ({
-        ...createWindowSlice(...a),
-        ...createViewportSlice(...a),
-        ...createDockSlice(...a),
+        ...createWindowSliceNew(...a),
+        ...createViewportSliceNew(...a),
+        ...createTilingSlice(...a),
+        ...createTaskbarSlice(...a),
         ...createCacheSlice(...a),
         ...createContextSlice(...a),
         ...createKnowledgeSlice(...a),
@@ -58,13 +60,26 @@ function createTestStore() {
 function createTestWindow(id: string, type = "note"): WindowInstance {
   return {
     id,
-    type,
-    position: { x: Math.random() * 500, y: Math.random() * 500 },
+    type: type as WindowInstance["type"],
     data: {
-      type: type as any,
+      type: type as WindowInstance["type"],
       label: `Test ${type}`,
       viewMode: "full",
     },
+    bounds: {
+      x: Math.random() * 500,
+      y: Math.random() * 500,
+      width: 400,
+      height: 300,
+    },
+    state: "normal",
+    isTiled: false,
+    zIndex: 0,
+    isFocused: false,
+    minSize: { width: 200, height: 150 },
+    resizable: true,
+    createdAt: Date.now(),
+    lastFocusedAt: Date.now(),
   };
 }
 
@@ -107,41 +122,19 @@ describe("Desktop Persistence Integration", () => {
       expect(state2.focusedWindowId).toBe("note-1");
     });
 
-    it("persists and restores edge state", async () => {
-      const store1 = createTestStore();
-
-      store1.getState().addWindow(createTestWindow("note-1", "note"));
-      store1.getState().addWindow(createTestWindow("note-2", "note"));
-      store1.getState().setEdges([
-        {
-          id: "edge-1",
-          source: "note-1",
-          target: "note-2",
-          type: "default",
-        },
-      ]);
-
-      await new Promise((r) => setTimeout(r, 50));
-
-      const store2 = createTestStore();
-      await new Promise((r) => setTimeout(r, 50));
-
-      expect(store2.getState().edges.length).toBe(1);
-      expect(store2.getState().edges[0]?.source).toBe("note-1");
-    });
-
     it("persists dock pins", async () => {
       const store1 = createTestStore();
 
-      store1.getState().pinType("knowledge");
-      store1.getState().unpinType("chat");
+      // Use pinApp (new API) which updates both pinnedApps and dockPins
+      store1.getState().pinApp("knowledge");
+      store1.getState().unpinApp("chat");
 
       await new Promise((r) => setTimeout(r, 50));
 
       const store2 = createTestStore();
       await new Promise((r) => setTimeout(r, 50));
 
-      const pins = store2.getState().dockPins;
+      const pins = store2.getState().pinnedApps;
       expect(pins).toContain("knowledge");
       expect(pins).not.toContain("chat");
     });
@@ -207,40 +200,6 @@ describe("Desktop Persistence Integration", () => {
 
       expect(store2.getState().ragDocCache).toEqual({});
     });
-
-    it("does NOT persist activeEdges", async () => {
-      const store1 = createTestStore();
-
-      store1.getState().addWindow(createTestWindow("note-1"));
-      store1.getState().addWindow(createTestWindow("note-2"));
-      store1
-        .getState()
-        .setEdges([
-          { id: "edge-1", source: "note-1", target: "note-2", type: "default" },
-        ]);
-      store1.getState().triggerEdgeActivity("edge-1", 5000);
-
-      await new Promise((r) => setTimeout(r, 50));
-
-      const store2 = createTestStore();
-      await new Promise((r) => setTimeout(r, 50));
-
-      // Active edges should be empty on new store
-      expect(store2.getState().activeEdges.size).toBe(0);
-    });
-
-    it("does NOT persist highlightedEdgeIds", async () => {
-      const store1 = createTestStore();
-
-      store1.getState().setHighlightedEdges(["edge-1", "edge-2"]);
-
-      await new Promise((r) => setTimeout(r, 50));
-
-      const store2 = createTestStore();
-      await new Promise((r) => setTimeout(r, 50));
-
-      expect(store2.getState().highlightedEdgeIds.size).toBe(0);
-    });
   });
 
   describe("migration", () => {
@@ -288,7 +247,6 @@ describe("Desktop Persistence Integration", () => {
       const partialState = {
         state: {
           windows: [], // Valid empty array
-          edges: [], // Valid empty array
           // Missing other fields
         },
         version: 2,
@@ -302,7 +260,6 @@ describe("Desktop Persistence Integration", () => {
       // Should have merged state with defaults
       const state = store.getState();
       expect(Array.isArray(state.windows)).toBe(true);
-      expect(Array.isArray(state.edges)).toBe(true);
       // Default slices should still work
       expect(typeof state.focusWindow).toBe("function");
     });
@@ -372,15 +329,10 @@ describe("Desktop Persistence Integration", () => {
     it("keeps persisted state under 50KB for typical usage", async () => {
       const store = createTestStore();
 
-      // Typical usage: 10 windows, some edges, context cache
+      // Typical usage: 10 windows, context cache
       for (let i = 0; i < 10; i++) {
         store.getState().addWindow(createTestWindow(`window-${i}`, "note"));
       }
-
-      store.getState().setEdges([
-        { id: "e1", source: "window-0", target: "window-1", type: "default" },
-        { id: "e2", source: "window-1", target: "window-2", type: "default" },
-      ]);
 
       for (let i = 0; i < 5; i++) {
         store.getState().recordContextReceipt(`window-${i}`, {

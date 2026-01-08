@@ -12,7 +12,7 @@
 import type { CSSProperties } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowType } from "@/store/desktop/types";
+import type { WindowType } from "@/store/desktop/types.new";
 import { TileZonePreview } from "../tiling/zone-preview";
 import { WindowChrome } from "../windows/chrome";
 import { windowRegistry, withWindowAdapter } from "../windows/registry";
@@ -47,28 +47,30 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
         {/* Tile Zone Preview (shown during drag) */}
         <TileZonePreview />
 
-        {/* Window instances */}
-        {windows.map((window) => {
-          const registryEntry = windowRegistry[window.type as WindowType];
-          if (!registryEntry?.component) {
-            return null;
-          }
+        {/* Window instances (skip minimized) */}
+        {windows
+          .filter((w) => w.state !== "minimized")
+          .map((window) => {
+            const registryEntry = windowRegistry[window.type as WindowType];
+            if (!registryEntry?.component) {
+              return null;
+            }
 
-          // Wrap legacy components with adapter
-          const Component = registryEntry.isLegacy
-            ? withWindowAdapter(registryEntry.component)
-            : registryEntry.component;
+            // Wrap legacy components with adapter
+            const Component = registryEntry.isLegacy
+              ? withWindowAdapter(registryEntry.component)
+              : registryEntry.component;
 
-          return (
-            <WindowChrome
-              isFocused={window.id === focusedWindowId}
-              key={window.id}
-              windowId={window.id}
-            >
-              <Component />
-            </WindowChrome>
-          );
-        })}
+            return (
+              <WindowChrome
+                isFocused={window.id === focusedWindowId}
+                key={window.id}
+                windowId={window.id}
+              >
+                <Component />
+              </WindowChrome>
+            );
+          })}
 
         {/* Empty state */}
         {windows.length === 0 && (

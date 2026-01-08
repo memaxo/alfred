@@ -1,6 +1,6 @@
 import type { WorkflowEvent } from "@alfred/type";
 import { useCallback, useRef, useState } from "react";
-import type { WindowData } from "@/store/desktop/types";
+import type { WindowData } from "@/store/desktop/types.new";
 import { trpc } from "@/utils/trpc";
 
 export type WorkflowRunStatus =

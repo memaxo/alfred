@@ -1,16 +1,19 @@
 import "@/test/dom";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
+import type { Edge } from "@xyflow/react";
 import {
   dispatchDesktopEvent,
   useDesktopActivations,
 } from "@/hooks/use-desktop-activations";
 import { useDesktopStore } from "@/store/desktop";
 import type {
-  DesktopEdge,
+  EdgeData,
   WindowInstance,
   WindowType,
-} from "@/store/desktop/types";
+} from "@/store/desktop/types.new";
+
+type DesktopEdge = Edge<EdgeData>;
 
 // Inline performance helper
 async function withBudget<T>(

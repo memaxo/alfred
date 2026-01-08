@@ -1,30 +1,43 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { useDesktopStore } from "../desktop";
-import type { WindowInstance } from "../desktop/types";
+import type { WindowInstance } from "../desktop/types.new";
+
+function createTestWindow(
+  id: string,
+  type: WindowInstance["type"] = "chat"
+): WindowInstance {
+  return {
+    id,
+    type,
+    data: { type, viewMode: "full" },
+    bounds: { x: 100, y: 100, width: 400, height: 300 },
+    state: "normal",
+    isTiled: false,
+    zIndex: 0,
+    isFocused: false,
+    minSize: { width: 200, height: 150 },
+    resizable: true,
+    createdAt: Date.now(),
+    lastFocusedAt: Date.now(),
+  };
+}
 
 describe("useDesktopStore", () => {
   beforeEach(() => {
     useDesktopStore.setState({
       windows: [],
-      edges: [],
-      activeEdges: new Set(),
-      highlightedEdgeIds: new Set(),
       focusedWindowId: null,
-      viewport: { x: 0, y: 0, zoom: 1 },
       isSpaceMode: false,
-      dockPins: ["chat", "terminal", "note", "workflow", "droid"],
+      pinnedApps: ["chat", "terminal", "agents", "workflow", "settings"],
+      dockPins: ["chat", "terminal", "agents", "workflow", "settings"],
+      zIndexCounter: 0,
     });
   });
 
   describe("WindowSlice", () => {
     it("adds a window", () => {
       const store = useDesktopStore.getState();
-      const window: WindowInstance = {
-        id: "test-1",
-        type: "chat",
-        position: { x: 100, y: 100 },
-        data: { type: "chat", viewMode: "full" },
-      };
+      const window = createTestWindow("test-1", "chat");
 
       store.addWindow(window);
 
@@ -35,12 +48,7 @@ describe("useDesktopStore", () => {
 
     it("prevents duplicate windows", () => {
       const store = useDesktopStore.getState();
-      const window: WindowInstance = {
-        id: "test-1",
-        type: "chat",
-        position: { x: 100, y: 100 },
-        data: { type: "chat", viewMode: "full" },
-      };
+      const window = createTestWindow("test-1", "chat");
 
       store.addWindow(window);
       store.addWindow(window);
@@ -51,12 +59,7 @@ describe("useDesktopStore", () => {
 
     it("removes a window", () => {
       const store = useDesktopStore.getState();
-      store.addWindow({
-        id: "test-1",
-        type: "chat",
-        position: { x: 0, y: 0 },
-        data: { type: "chat", viewMode: "full" },
-      });
+      store.addWindow(createTestWindow("test-1", "chat"));
 
       store.removeWindow("test-1");
 
@@ -64,78 +67,59 @@ describe("useDesktopStore", () => {
       expect(state.windows).toHaveLength(0);
     });
 
-    it("removes edges when window is removed", () => {
-      const store = useDesktopStore.getState();
-      store.addWindow({
-        id: "win-1",
-        type: "chat",
-        position: { x: 0, y: 0 },
-        data: { type: "chat", viewMode: "full" },
-      });
-      store.addWindow({
-        id: "win-2",
-        type: "note",
-        position: { x: 200, y: 0 },
-        data: { type: "note", viewMode: "full" },
-      });
-      store.setEdges([
-        { id: "e1", source: "win-1", target: "win-2" },
-        { id: "e2", source: "win-2", target: "win-1" },
-      ]);
-
-      store.removeWindow("win-1");
-
-      const state = useDesktopStore.getState();
-      expect(state.edges).toHaveLength(0);
-    });
-
     it("updates window data", () => {
       const store = useDesktopStore.getState();
-      store.addWindow({
-        id: "test-1",
-        type: "chat",
-        position: { x: 0, y: 0 },
-        data: { type: "chat", viewMode: "full" },
-      });
+      store.addWindow(createTestWindow("test-1", "chat"));
 
-      store.updateWindow("test-1", { viewMode: "compact" });
+      store.updateWindowData("test-1", { viewMode: "compact" });
 
       const state = useDesktopStore.getState();
       expect(state.windows[0]?.data.viewMode).toBe("compact");
+    });
+
+    it("opens window with openWindow", () => {
+      const store = useDesktopStore.getState();
+      const id = store.openWindow("note", { label: "My Note" });
+
+      const state = useDesktopStore.getState();
+      expect(state.windows).toHaveLength(1);
+      expect(state.windows[0]?.id).toBe(id);
+      expect(state.windows[0]?.data.type).toBe("note");
+      expect(state.windows[0]?.data.label).toBe("My Note");
+    });
+
+    it("closes window with closeWindow", () => {
+      const store = useDesktopStore.getState();
+      const id = store.openWindow("chat");
+
+      store.closeWindow(id);
+
+      const state = useDesktopStore.getState();
+      expect(state.windows).toHaveLength(0);
     });
   });
 
   describe("ViewportSlice", () => {
     it("focuses a window", () => {
       const store = useDesktopStore.getState();
-      store.addWindow({
-        id: "test-1",
-        type: "chat",
-        position: { x: 0, y: 0 },
-        data: { type: "chat", viewMode: "full" },
-      });
+      store.addWindow(createTestWindow("test-1", "chat"));
 
       store.focusWindow("test-1");
 
       const state = useDesktopStore.getState();
       expect(state.focusedWindowId).toBe("test-1");
+      expect(state.windows[0]?.isFocused).toBe(true);
     });
 
-    it("clears focus with null", () => {
+    it("blurs a window", () => {
       const store = useDesktopStore.getState();
+      store.addWindow(createTestWindow("test-1", "chat"));
       store.focusWindow("test-1");
-      store.focusWindow(null);
+
+      store.blurWindow("test-1");
 
       const state = useDesktopStore.getState();
-      expect(state.focusedWindowId).toBeNull();
-    });
-
-    it("sets viewport", () => {
-      const store = useDesktopStore.getState();
-      store.setViewport({ x: 100, y: 200, zoom: 0.5 });
-
-      const state = useDesktopStore.getState();
-      expect(state.viewport).toEqual({ x: 100, y: 200, zoom: 0.5 });
+      expect(state.windows[0]?.isFocused).toBe(false);
     });
 
     it("toggles space mode", () => {
@@ -150,21 +134,21 @@ describe("useDesktopStore", () => {
     });
   });
 
-  describe("DockSlice", () => {
-    it("pins a window type", () => {
+  describe("TaskbarSlice", () => {
+    it("pins an app type", () => {
       const store = useDesktopStore.getState();
-      store.pinType("reminder");
+      store.pinApp("knowledge");
 
       const state = useDesktopStore.getState();
-      expect(state.dockPins).toContain("reminder");
+      expect(state.pinnedApps).toContain("knowledge");
     });
 
-    it("unpins a window type", () => {
+    it("unpins an app type", () => {
       const store = useDesktopStore.getState();
-      store.unpinType("chat");
+      store.unpinApp("chat");
 
       const state = useDesktopStore.getState();
-      expect(state.dockPins).not.toContain("chat");
+      expect(state.pinnedApps).not.toContain("chat");
     });
 
     it("spawns a new window", () => {
@@ -182,7 +166,8 @@ describe("useDesktopStore", () => {
       store.spawnWindow("note", undefined, { x: 500, y: 300 });
 
       const state = useDesktopStore.getState();
-      expect(state.windows[0]?.position).toEqual({ x: 500, y: 300 });
+      expect(state.windows[0]?.bounds.x).toBe(500);
+      expect(state.windows[0]?.bounds.y).toBe(300);
     });
 
     it("spawns window with resource reference", () => {
@@ -197,35 +182,93 @@ describe("useDesktopStore", () => {
     });
   });
 
-  describe("Edge management", () => {
-    it("sets edges", () => {
+  describe("Window State Transitions", () => {
+    it("minimizes a window", () => {
       const store = useDesktopStore.getState();
-      store.setEdges([
-        { id: "e1", source: "a", target: "b" },
-        { id: "e2", source: "b", target: "c" },
-      ]);
+      store.addWindow(createTestWindow("test-1", "chat"));
+
+      store.minimizeWindow("test-1");
 
       const state = useDesktopStore.getState();
-      expect(state.edges).toHaveLength(2);
+      expect(state.windows[0]?.state).toBe("minimized");
     });
 
-    it("sets highlighted edges", () => {
+    it("maximizes a window", () => {
       const store = useDesktopStore.getState();
-      store.setHighlightedEdges(["e1", "e2"]);
+      store.addWindow(createTestWindow("test-1", "chat"));
+      useDesktopStore.setState({
+        desktopArea: { x: 0, y: 32, width: 1920, height: 1000 },
+      });
+
+      store.maximizeWindow("test-1");
 
       const state = useDesktopStore.getState();
-      expect(state.highlightedEdgeIds.has("e1")).toBe(true);
-      expect(state.highlightedEdgeIds.has("e2")).toBe(true);
+      expect(state.windows[0]?.state).toBe("maximized");
     });
 
-    it("triggers edge activity", async () => {
+    it("restores a window from maximized", () => {
       const store = useDesktopStore.getState();
-      store.triggerEdgeActivity("e1", 100);
+      const originalWindow = createTestWindow("test-1", "chat");
+      store.addWindow(originalWindow);
+      useDesktopStore.setState({
+        desktopArea: { x: 0, y: 32, width: 1920, height: 1000 },
+      });
 
-      expect(useDesktopStore.getState().activeEdges.has("e1")).toBe(true);
+      store.maximizeWindow("test-1");
+      store.restoreWindow("test-1");
 
-      await new Promise((r) => setTimeout(r, 150));
-      expect(useDesktopStore.getState().activeEdges.has("e1")).toBe(false);
+      const state = useDesktopStore.getState();
+      expect(state.windows[0]?.state).toBe("normal");
+    });
+  });
+
+  describe("Window Geometry", () => {
+    it("moves a window", () => {
+      const store = useDesktopStore.getState();
+      store.addWindow(createTestWindow("test-1", "chat"));
+
+      store.moveWindow("test-1", { x: 200, y: 150 });
+
+      const state = useDesktopStore.getState();
+      expect(state.windows[0]?.bounds.x).toBe(200);
+      expect(state.windows[0]?.bounds.y).toBe(150);
+    });
+
+    it("resizes a window", () => {
+      const store = useDesktopStore.getState();
+      store.addWindow(createTestWindow("test-1", "chat"));
+
+      store.resizeWindow("test-1", { width: 600, height: 500 });
+
+      const state = useDesktopStore.getState();
+      expect(state.windows[0]?.bounds.width).toBe(600);
+      expect(state.windows[0]?.bounds.height).toBe(500);
+    });
+
+    it("respects minimum size constraints", () => {
+      const store = useDesktopStore.getState();
+      store.addWindow(createTestWindow("test-1", "chat"));
+
+      store.resizeWindow("test-1", { width: 50, height: 50 });
+
+      const state = useDesktopStore.getState();
+      expect(state.windows[0]?.bounds.width).toBe(200); // minSize.width
+      expect(state.windows[0]?.bounds.height).toBe(150); // minSize.height
+    });
+
+    it("sets bounds directly", () => {
+      const store = useDesktopStore.getState();
+      store.addWindow(createTestWindow("test-1", "chat"));
+
+      store.setBounds("test-1", { x: 50, y: 60, width: 700, height: 550 });
+
+      const state = useDesktopStore.getState();
+      expect(state.windows[0]?.bounds).toEqual({
+        x: 50,
+        y: 60,
+        width: 700,
+        height: 550,
+      });
     });
   });
 });
