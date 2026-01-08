@@ -1,24 +1,13 @@
 /**
  * Hook for zoom-aware edge visibility.
  *
- * Implements edge degradation:
- * - zoom < 0.3: Hide all edges
- * - zoom 0.3-0.6: Show only important edges (blocks, depends_on, contains)
- * - zoom >= 0.6: Show all edges
+ * NOTE: Edge functionality has been deprecated in the new type system.
+ * These hooks now return stub values for backward compatibility.
  */
 
 import { useStore } from "@xyflow/react";
 import { useMemo } from "react";
-import {
-  filterEdgesByZoom,
-  getEdgeVisibility,
-} from "@/lib/desktop/performance";
-import { useDesktopStore } from "@/store/desktop";
-import {
-  selectActiveEdges,
-  selectEdges,
-  selectHighlightedEdgeIds,
-} from "@/store/desktop/selectors";
+import { getEdgeVisibility } from "@/lib/desktop/performance";
 
 type EdgeVisibility = {
   showEdges: boolean;
@@ -36,23 +25,10 @@ export function useEdgeVisibility(): EdgeVisibility {
 
 /**
  * Get filtered edges based on current zoom level.
+ * @deprecated Edge functionality removed in new type system
  */
-export function useVisibleEdges() {
-  const edges = useDesktopStore(selectEdges);
-  const activeEdges = useDesktopStore(selectActiveEdges);
-  const highlightedEdgeIds = useDesktopStore(selectHighlightedEdgeIds);
-  const zoom = useStore((state) => state.transform[2]);
-
-  return useMemo(() => {
-    const visibleEdges = filterEdgesByZoom(edges, zoom);
-
-    // Add runtime state to edges
-    return visibleEdges.map((edge) => ({
-      ...edge,
-      animated: activeEdges.has(edge.id),
-      selected: highlightedEdgeIds.has(edge.id),
-    }));
-  }, [edges, zoom, activeEdges, highlightedEdgeIds]);
+export function useVisibleEdges(): never[] {
+  return [];
 }
 
 /**

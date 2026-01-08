@@ -1,9 +1,7 @@
-import type { AssistantUIMessage } from "@alfred/agent";
 import { type StructuredPlan, structuredPlanSchema } from "@alfred/plan";
 import type { NodeProps } from "@xyflow/react";
 import {
   Check,
-  CheckCircle,
   LayoutGrid,
   List,
   Loader2,
@@ -11,11 +9,10 @@ import {
   Workflow,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -30,10 +27,15 @@ import {
   useLOD,
   WindowFrame,
 } from "@/components/windows/shared";
-import { deriveActions } from "@/hooks/use-assistant-stream";
+import { useFocusedContext } from "@/hooks/use-focused-context";
+import {
+  useWorkflowSubscription,
+  type WorkflowStep,
+} from "@/hooks/use-workflow-subscription";
 import { authClient } from "@/lib/auth-client";
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
+import { ExecutionPanel } from "./execution-panel";
 import { WorkflowCanvas } from "./workflow-canvas";
 
 type AutoLevel = "read" | "low" | "medium" | "high";
@@ -58,6 +60,9 @@ const workflowWindowDataSchema = z.object({
   runId: z.string().optional(),
   plan: structuredPlanSchema.optional(),
   activeView: z.enum(["list", "canvas"]).default("list").optional(),
+  steps: z.array(z.any()).optional(),
+  executionStartTime: z.number().optional(),
+  lastEventTime: z.number().optional(),
 });
 
 export function WorkflowWindow({ id, data, selected }: NodeProps) {
@@ -68,7 +73,6 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     ? parsed.data
     : { type: "workflow" as const, viewMode: "full" as const };
 
-  const messages = (windowData.messages ?? []) as AssistantUIMessage[];
   const status = windowData.status ?? "Idle";
   const hasRun = Boolean(windowData.runId || windowData.resourceRef?.id);
   const plan = windowData.plan as StructuredPlan | undefined;
@@ -84,12 +88,28 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     windowData.mode ?? "sequential"
   );
 
+  const { content, nodeType } = useFocusedContext();
   const { data: session } = authClient.useSession();
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
+
+  const {
+    run,
+    stop,
+    steps: currentSteps,
+    status: runStatus,
+    error: runError,
+  } = useWorkflowSubscription({
+    onWindowUpdate: (update) => {
+      updateWindowData(id, update);
+    },
+    onError: (err) => {
+      toast.error(`Workflow failed: ${err.message}`);
+    },
+  });
 
   const generatePlan = trpc.plan.generate.useMutation({
     onSuccess: (generatedPlan) => {
-      updateWindow(id, {
+      updateWindowData(id, {
         plan: generatedPlan,
         activeView: "canvas",
       });
@@ -122,6 +142,8 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
         context: {
           existingPatterns: [],
           constraints: [],
+          focusedContent: content,
+          focusedNodeType: nodeType,
         },
       },
       research: {
@@ -146,11 +168,22 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
 
   const approvePlan = trpc.plan.approve.useMutation({
     onSuccess: (result) => {
-      updateWindow(id, {
+      updateWindowData(id, {
         runId: result.runId,
         status: "running",
         activeView: "list",
       });
+
+      // Start execution subscription
+      run({
+        requirement: requirementDraft.trim(),
+        runId: result.runId,
+        auto: autoLevel,
+        mode,
+        projectId: windowData.resourceRef?.id,
+        planId: plan?.id,
+      });
+
       toast.success("Plan approved. Execution started.");
     },
     onError: (error) => {
@@ -160,7 +193,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
 
   const rejectPlan = trpc.plan.reject.useMutation({
     onSuccess: () => {
-      updateWindow(id, {
+      updateWindowData(id, {
         plan: null,
         activeView: "list",
       });
@@ -191,13 +224,13 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   };
 
   const toggleView = () => {
-    updateWindow(id, {
+    updateWindowData(id, {
       activeView: activeView === "list" ? "canvas" : "list",
     });
   };
 
   const handlePlanChange = (updatedPlan: StructuredPlan) => {
-    updateWindow(id, {
+    updateWindowData(id, {
       plan: updatedPlan,
     });
   };
@@ -205,12 +238,11 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   useEffect(() => {
     if (windowData.requirement && windowData.requirement !== requirementDraft) {
       setRequirementDraft(windowData.requirement);
+    } else if (!requirementDraft && content) {
+      // Pre-populate from focused context if empty
+      setRequirementDraft(content.slice(0, 500));
     }
-  }, [windowData.requirement, requirementDraft]);
-
-  const actions = useMemo(() => deriveActions(messages), [messages]);
-  const activeAction = actions.find((a) => a.status === "running");
-  const completedActions = actions.filter((a) => a.status === "completed");
+  }, [windowData.requirement, requirementDraft, content]);
 
   const handleStart = (event: React.FormEvent) => {
     event.preventDefault();
@@ -218,7 +250,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
       toast.error("Requirement is required");
       return;
     }
-    updateWindow(id, {
+    updateWindowData(id, {
       draft: {
         requirement: requirementDraft.trim(),
         auto: autoLevel,
@@ -230,15 +262,6 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
       },
     });
   };
-
-  const statusBadgeClass =
-    status === "completed"
-      ? "text-emerald-300"
-      : status === "failed"
-        ? "text-red-400"
-        : status === "running"
-          ? "text-biolum"
-          : "text-biolum-faint";
 
   if (lod === "tiny") {
     return (
@@ -353,55 +376,20 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
         ) : (
           <div className="flex flex-col gap-3 p-4">
             {hasRun ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className={`font-medium text-sm ${statusBadgeClass}`}>
-                    {status}
-                  </span>
-                  {windowData.requirement && (
-                    <span className="max-w-[200px] truncate text-biolum-faint text-xs">
-                      {windowData.requirement}
-                    </span>
-                  )}
-                </div>
-                <ScrollArea className="h-[250px]">
-                  <div className="space-y-2">
-                    {completedActions.map((action) => (
-                      <div
-                        className="flex items-start gap-2 rounded border border-white/10 bg-white/5 p-2"
-                        key={action.id}
-                      >
-                        <CheckCircle className="mt-0.5 h-4 w-4 text-emerald-400" />
-                        <div className="flex-1">
-                          <div className="font-medium text-sm text-white">
-                            {action.name}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {activeAction && (
-                      <div className="flex items-start gap-2 rounded border border-biolum/30 bg-biolum/10 p-2">
-                        <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-biolum" />
-                        <div className="flex-1">
-                          <div className="font-medium text-sm text-white">
-                            {activeAction.name}
-                          </div>
-                          <div className="mt-1 text-biolum-dim text-xs">
-                            Running...
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {actions.length === 0 && (
-                      <div className="py-4 text-center text-biolum-faint text-sm">
-                        {status === "pending"
-                          ? "Waiting to start..."
-                          : "No actions yet"}
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
+              <ExecutionPanel
+                className="h-[300px]"
+                error={runError}
+                isRunning={
+                  runStatus === "running" || runStatus === "connecting"
+                }
+                onClose={() => {}}
+                onStop={stop}
+                steps={
+                  currentSteps.length > 0
+                    ? currentSteps
+                    : ((windowData.steps as WorkflowStep[]) ?? [])
+                }
+              />
             ) : (
               <form className="flex flex-col gap-3" onSubmit={handleStart}>
                 <Textarea

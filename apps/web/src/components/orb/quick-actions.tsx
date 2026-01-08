@@ -13,6 +13,8 @@ import {
   Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDesktopStore } from "@/store/desktop";
+import type { WindowType } from "@/store/desktop/types.new";
 import { useOrbStore } from "@/store/orb";
 
 type QuickActionsProps = {
@@ -20,12 +22,19 @@ type QuickActionsProps = {
   className?: string;
 };
 
-const actions = [
+const actions: Array<{
+  id: string;
+  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  color: string;
+  windowType?: WindowType;
+}> = [
   {
     id: "chat",
     icon: MessageSquare,
     label: "New Chat",
     color: "text-blue-400",
+    windowType: "chat",
   },
   { id: "voice", icon: Mic, label: "Voice Mode", color: "text-green-400" },
   {
@@ -33,25 +42,45 @@ const actions = [
     icon: Terminal,
     label: "Terminal",
     color: "text-orange-400",
+    windowType: "terminal",
   },
-  { id: "files", icon: FileText, label: "Files", color: "text-yellow-400" },
-  { id: "agents", icon: Bot, label: "Agents", color: "text-purple-400" },
+  {
+    id: "files",
+    icon: FileText,
+    label: "Files",
+    color: "text-yellow-400",
+    windowType: "files",
+  },
+  {
+    id: "agents",
+    icon: Bot,
+    label: "Agents",
+    color: "text-purple-400",
+    windowType: "agents",
+  },
   {
     id: "settings",
     icon: Settings,
     label: "Settings",
     color: "text-biolum-dim",
+    windowType: "settings",
   },
 ];
 
 export function QuickActions({ onClose, className }: QuickActionsProps) {
   const expand = useOrbStore((s) => s.expand);
+  const spawnWindow = useDesktopStore((s) => s.spawnWindow);
 
   const handleAction = (actionId: string) => {
     if (actionId === "voice") {
       expand();
     }
-    // TODO: Handle other actions (open windows)
+
+    const action = actions.find((a) => a.id === actionId);
+    if (action?.windowType) {
+      spawnWindow(action.windowType);
+    }
+
     onClose();
   };
 

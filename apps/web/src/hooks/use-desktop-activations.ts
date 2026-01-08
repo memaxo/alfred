@@ -1,5 +1,4 @@
-import { useCallback, useEffect } from "react";
-import { useDesktopStore } from "@/store/desktop";
+import { useEffect } from "react";
 
 export type DesktopActivationEventType =
   | "voice-input"
@@ -11,12 +10,12 @@ export type DesktopActivationEventType =
 
 export type DesktopActivationEvent = {
   type: DesktopActivationEventType;
-  sourceId?: string; // e.g. "user", "chat"
-  targetId?: string; // e.g. "voice-session", "tool-linear", "knowledge-123"
+  sourceId?: string;
+  targetId?: string;
   data?: unknown;
 };
 
-// Global event bus for non-React contexts (good for decoupled triggers)
+// Global event bus for non-React contexts
 const desktopEventBus = new EventTarget();
 
 export function dispatchDesktopEvent(event: DesktopActivationEvent) {
@@ -26,68 +25,21 @@ export function dispatchDesktopEvent(event: DesktopActivationEvent) {
   desktopEventBus.dispatchEvent(customEvent);
 }
 
+/**
+ * Hook for desktop activation events.
+ * @deprecated Edge activity functionality removed in new type system
+ */
 export function useDesktopActivations() {
-  const triggerEdgeActivity = useDesktopStore(
-    (state) => state.triggerEdgeActivity
-  );
-  const edges = useDesktopStore((state) => state.edges);
-
-  const handleEvent = useCallback(
-    (e: Event) => {
-      const detail = (e as CustomEvent<DesktopActivationEvent>).detail;
-
-      // Strategy:
-      // 1. If sourceId and targetId are known, pulse the specific edge
-      // 2. If only sourceId is known, pulse edges from that source
-
-      if (detail.sourceId && detail.targetId) {
-        const edge = edges.find(
-          (edge) =>
-            (edge.source === detail.sourceId &&
-              edge.target === detail.targetId) ||
-            (edge.source === detail.targetId && edge.target === detail.sourceId)
-        );
-
-        if (edge) {
-          triggerEdgeActivity(edge.id, 1000);
-        } else {
-          // Fallback: Pulse all edges from source or target
-          const connectedEdges = edges.filter(
-            (e) =>
-              e.source === detail.sourceId ||
-              e.target === detail.sourceId ||
-              e.source === detail.targetId ||
-              e.target === detail.targetId
-          );
-          connectedEdges.forEach((edge) => {
-            triggerEdgeActivity(edge.id, 800);
-          });
-        }
-      } else if (detail.sourceId) {
-        const connectedEdges = edges.filter(
-          (e) => e.source === detail.sourceId || e.target === detail.sourceId
-        );
-        connectedEdges.forEach((edge) => {
-          triggerEdgeActivity(edge.id, 1000);
-        });
-      } else if (detail.targetId) {
-        const connectedEdges = edges.filter(
-          (e) => e.source === detail.targetId || e.target === detail.targetId
-        );
-        connectedEdges.forEach((edge) => {
-          triggerEdgeActivity(edge.id, 1000);
-        });
-      }
-    },
-    [edges, triggerEdgeActivity]
-  );
-
   useEffect(() => {
+    // No-op: edge activity removed in new type system
+    const handleEvent = (_e: Event) => {
+      // Events are still dispatched for logging/debugging but no visual effect
+    };
     desktopEventBus.addEventListener("desktop-activation", handleEvent);
     return () => {
       desktopEventBus.removeEventListener("desktop-activation", handleEvent);
     };
-  }, [handleEvent]);
+  }, []);
 
   return {
     dispatch: dispatchDesktopEvent,

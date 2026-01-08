@@ -68,7 +68,7 @@ export function WorkflowListWindow({ id, data, selected }: NodeProps) {
     windowData.filter ?? "all"
   );
 
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const spawnWindow = useDesktopStore((s) => s.spawnWindow);
   const windows = useDesktopStore((s) => s.windows);
   const focusWindow = useDesktopStore((s) => s.focusWindow);
@@ -91,7 +91,7 @@ export function WorkflowListWindow({ id, data, selected }: NodeProps) {
 
   const handleFilterChange = (value: WorkflowStatusFilter) => {
     setStatusFilter(value);
-    updateWindow(id, { draft: { filter: value } });
+    updateWindowData(id, { draft: { filter: value } });
   };
 
   const focusWorkflowWindow = (run: WorkflowRun) => {

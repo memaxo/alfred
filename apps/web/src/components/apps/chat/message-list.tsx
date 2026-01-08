@@ -7,10 +7,13 @@
  */
 
 import type { AssistantUIMessage } from "@alfred/agent";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
+import { Virtuoso } from "react-virtuoso";
+import { EditMessage } from "@/components/chat/edit-message";
 import { MessageActions } from "@/components/chat/message-actions";
 import { renderPart } from "@/components/chat-render";
 import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
+import { useMessageEdit } from "@/hooks/use-message-edit";
 import { cn } from "@/lib/utils";
 
 type MessageListProps = {
@@ -28,15 +31,14 @@ export function MessageList({
   status,
   className,
 }: MessageListProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const { isEditing, startEditing, cancelEditing } = useMessageEdit({
+    handleEdit: onEdit,
+  });
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages.length]);
+  const handleMessageText = useCallback((message: AssistantUIMessage) => {
+    const textPart = message.parts.find((p) => p.type === "text");
+    return textPart && "text" in textPart ? textPart.text : "";
+  }, []);
 
   const renderActions = useCallback(
     (message: AssistantUIMessage, isLast: boolean) => {
@@ -46,13 +48,21 @@ export function MessageList({
       return (
         <MessageActions
           disabled={status === "streaming"}
-          onEdit={isUser ? () => onEdit(message.id, "") : undefined}
+          onEdit={isUser ? () => startEditing(message) : undefined}
           onRegenerate={isAssistant && isLast ? onRegenerate : undefined}
           role={message.role}
         />
       );
     },
-    [status, onEdit, onRegenerate]
+    [status, onRegenerate, startEditing]
+  );
+
+  const handleSaveEdit = useCallback(
+    (messageId: string, newText: string) => {
+      onEdit(messageId, newText);
+      cancelEditing();
+    },
+    [onEdit, cancelEditing]
   );
 
   if (messages.length === 0) {
@@ -69,27 +79,43 @@ export function MessageList({
     );
   }
 
-  // For now, render all messages without virtualization
-  // TODO: Add react-window or @tanstack/virtual for large lists
+  // Use Virtuoso for virtualization with large message lists
   return (
-    <div className={cn("overflow-y-auto p-4", className)} ref={containerRef}>
-      {messages.map((message, index) => {
-        const isLast = index === messages.length - 1;
+    <div className={cn("flex h-full flex-col", className)}>
+      <Virtuoso
+        className="flex-1"
+        data={messages}
+        followOutput="smooth"
+        initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
+        itemContent={(index, message) => {
+          const isLast = index === messages.length - 1;
+          const isEditingCurrent = isEditing(message.id);
 
-        return (
-          <ChatMessage
-            actions={renderActions(message, isLast)}
-            content={message.parts as AssistantPart[]}
-            key={message.id}
-            renderPart={renderPart}
-            role={message.role}
-          />
-        );
-      })}
-
+          return (
+            <div className="p-4">
+              {isEditingCurrent && message.role === "user" ? (
+                <EditMessage
+                  disabled={status === "streaming"}
+                  initialText={handleMessageText(message)}
+                  onCancel={cancelEditing}
+                  onSave={(newText) => handleSaveEdit(message.id, newText)}
+                />
+              ) : (
+                <ChatMessage
+                  actions={renderActions(message, isLast)}
+                  content={message.parts as AssistantPart[]}
+                  key={message.id}
+                  renderPart={renderPart}
+                  role={message.role}
+                />
+              )}
+            </div>
+          );
+        }}
+      />
       {/* Streaming indicator */}
       {status === "streaming" && (
-        <div className="flex items-center gap-2 py-2 text-biolum-dim text-sm">
+        <div className="flex items-center gap-2 border-white/5 border-t bg-void-surface/40 px-4 py-2 text-biolum-dim text-sm">
           <div className="flex gap-1">
             <span
               className="h-2 w-2 animate-bounce rounded-full bg-biolum/50"
@@ -107,9 +133,6 @@ export function MessageList({
           <span>Thinking...</span>
         </div>
       )}
-
-      {/* Scroll anchor */}
-      <div ref={bottomRef} />
     </div>
   );
 }

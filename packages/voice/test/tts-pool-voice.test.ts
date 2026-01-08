@@ -3,7 +3,9 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { TTSPool } from "../src/process/tts";
 
-describe("TTSPool with Supertonic Voice Switching (skipped: causes C++ exception in Bun runner)", () => {
+const describeSupertonic = describe;
+
+describeSupertonic("TTSPool with Supertonic Voice Switching", () => {
   const modelsDir = join(process.cwd(), "models", "supertonic");
   const hasModels = existsSync(join(modelsDir, "tts.json"));
 

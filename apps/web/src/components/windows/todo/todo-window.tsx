@@ -41,7 +41,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
 
   const [text, setText] = useState("");
   const [filter, setFilter] = useState<FilterValue>(windowData.filter ?? "all");
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
 
   const utils = trpc.useUtils();
   const todosQuery = trpc.todo.getAll.useQuery();
@@ -92,7 +92,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
 
   const handleFilterChange = (value: FilterValue) => {
     setFilter(value);
-    updateWindow(id, { draft: { filter: value } });
+    updateWindowData(id, { draft: { filter: value } });
   };
 
   if (lod === "tiny") {

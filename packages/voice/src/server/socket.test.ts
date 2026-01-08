@@ -101,7 +101,7 @@ describe("VoiceSocketHandler", () => {
 
   it("should handle 'start' message", async () => {
     const payload = JSON.stringify({
-      type: "start",
+      _: "start",
       sessionId: "sess-1",
       language: "en",
     });
@@ -115,7 +115,7 @@ describe("VoiceSocketHandler", () => {
     expect(ws.data.sessionId).toBe("sess-1");
     expect(ws.send).toHaveBeenCalled(); // Ready/Status messages
     const sent = (ws.send as any).mock.calls.map((c: any) => JSON.parse(c[0]));
-    expect(sent.some((m: any) => m.type === "session_started")).toBe(true);
+    expect(sent.some((m: any) => m._ === "session_started")).toBe(true);
   });
 
   it("should handle 'audio_chunk' message", async () => {
@@ -123,7 +123,7 @@ describe("VoiceSocketHandler", () => {
     ws.data.sessionId = "sess-1";
 
     const payload = JSON.stringify({
-      type: "audio_chunk",
+      _: "audio_chunk",
       audioBase64: "dGVzdA==", // "test"
     });
     await handler.handleMessage(ws, payload);
@@ -152,7 +152,7 @@ describe("VoiceSocketHandler", () => {
     ws.data.sessionId = "sess-1";
     ws.data.sessionRegistryId = "reg-1";
 
-    const payload = JSON.stringify({ type: "stop" });
+    const payload = JSON.stringify({ _: "stop" });
     await handler.handleMessage(ws, payload);
 
     expect(mockHooks.runAssistant).toHaveBeenCalledWith(
@@ -165,14 +165,14 @@ describe("VoiceSocketHandler", () => {
     // Verify sequence of messages
     const sent = (ws.send as any).mock.calls.map((c: any) => {
       if (c[0] instanceof Buffer || c[0] instanceof Uint8Array) {
-        return { type: "tts_chunk_binary" };
+        return { _: "tts_chunk_binary" };
       }
       return JSON.parse(c[0]);
     });
-    expect(sent.some((m: any) => m.type === "final_transcript")).toBe(true);
-    expect(sent.some((m: any) => m.type === "assistant_message")).toBe(true);
-    expect(sent.some((m: any) => m.type === "tts_chunk_binary")).toBe(true);
-    expect(sent.some((m: any) => m.type === "tts_complete")).toBe(true);
+    expect(sent.some((m: any) => m._ === "final_transcript")).toBe(true);
+    expect(sent.some((m: any) => m._ === "assistant_message")).toBe(true);
+    expect(sent.some((m: any) => m._ === "tts_chunk_binary")).toBe(true);
+    expect(sent.some((m: any) => m._ === "tts_complete")).toBe(true);
 
     const metric = await voiceAssistantDurationSeconds.get();
     const count =

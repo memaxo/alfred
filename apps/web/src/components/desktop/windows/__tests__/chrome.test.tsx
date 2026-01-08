@@ -9,13 +9,20 @@ describe("WindowChrome", () => {
   beforeEach(() => {
     useDesktopStore.setState({
       windows: [],
-      edges: [],
-      activeEdges: new Set(),
-      highlightedEdgeIds: new Set(),
       focusedWindowId: null,
-      viewport: { x: 0, y: 0, zoom: 1 },
       isSpaceMode: false,
-      dockPins: [],
+      mode: "desktop",
+      desktopArea: { x: 0, y: 32, width: 1920, height: 1000 },
+      pinnedApps: ["chat", "terminal", "agents", "workflow", "settings"],
+      zIndexCounter: 0,
+      config: {
+        layout: "float",
+        gap: 8,
+        mainRatio: 0.6,
+        respectMinSize: true,
+      },
+      zones: [],
+      activeTilePreview: null,
     });
   });
 
@@ -87,7 +94,7 @@ describe("WindowChrome", () => {
     const window = createWindow();
     useDesktopStore.setState({ windows: [window] });
     const store = useDesktopStore.getState();
-    const removeSpy = vi.spyOn(store, "removeWindow");
+    const closeSpy = vi.spyOn(store, "closeWindow");
 
     const { getByRole } = render(
       <WindowChrome isFocused={false} windowId="test-window" />
@@ -96,14 +103,14 @@ describe("WindowChrome", () => {
     const closeButton = getByRole("button", { name: /close/i });
     fireEvent.click(closeButton);
 
-    expect(removeSpy).toHaveBeenCalledWith("test-window");
+    expect(closeSpy).toHaveBeenCalledWith("test-window");
   });
 
   it("minimizes window when minimize button is clicked", () => {
     const window = createWindow();
     useDesktopStore.setState({ windows: [window] });
     const store = useDesktopStore.getState();
-    const updateSpy = vi.spyOn(store, "updateWindow");
+    const minimizeSpy = vi.spyOn(store, "minimizeWindow");
 
     const { getByRole } = render(
       <WindowChrome isFocused={false} windowId="test-window" />
@@ -112,16 +119,14 @@ describe("WindowChrome", () => {
     const minimizeButton = getByRole("button", { name: /minimize/i });
     fireEvent.click(minimizeButton);
 
-    expect(updateSpy).toHaveBeenCalledWith("test-window", {
-      viewMode: "compact",
-    });
+    expect(minimizeSpy).toHaveBeenCalledWith("test-window");
   });
 
   it("maximizes window when maximize button is clicked", () => {
     const window = createWindow();
     useDesktopStore.setState({ windows: [window] });
     const store = useDesktopStore.getState();
-    const updateSpy = vi.spyOn(store, "updateWindow");
+    const maximizeSpy = vi.spyOn(store, "maximizeWindow");
 
     const { getByRole } = render(
       <WindowChrome isFocused={false} windowId="test-window" />
@@ -130,18 +135,16 @@ describe("WindowChrome", () => {
     const maximizeButton = getByRole("button", { name: /maximize/i });
     fireEvent.click(maximizeButton);
 
-    expect(updateSpy).toHaveBeenCalledWith("test-window", {
-      viewMode: "maximized",
-    });
+    expect(maximizeSpy).toHaveBeenCalledWith("test-window");
   });
 
   it("restores window when maximize button is clicked on maximized window", () => {
     const window = createWindow({
-      data: { type: "chat", viewMode: "maximized" },
+      state: "maximized",
     });
     useDesktopStore.setState({ windows: [window] });
     const store = useDesktopStore.getState();
-    const updateSpy = vi.spyOn(store, "updateWindow");
+    const restoreSpy = vi.spyOn(store, "restoreWindow");
 
     const { getByRole } = render(
       <WindowChrome isFocused={false} windowId="test-window" />
@@ -150,9 +153,7 @@ describe("WindowChrome", () => {
     const restoreButton = getByRole("button", { name: /restore/i });
     fireEvent.click(restoreButton);
 
-    expect(updateSpy).toHaveBeenCalledWith("test-window", {
-      viewMode: "full",
-    });
+    expect(restoreSpy).toHaveBeenCalledWith("test-window");
   });
 
   it("focuses window when clicked", () => {
@@ -217,7 +218,7 @@ describe("WindowChrome", () => {
 
   it("hides resize handles when maximized", () => {
     const window = createWindow({
-      data: { type: "chat", viewMode: "maximized" },
+      state: "maximized",
     });
     useDesktopStore.setState({ windows: [window] });
 
@@ -263,9 +264,13 @@ describe("WindowChrome", () => {
       };
       useDesktopStore.setState({ windows: [window] });
 
-      expect(() =>
-        render(<WindowChrome isFocused={false} windowId="test-window" />)
-      ).toThrow();
+      const { container } = render(
+        <WindowChrome isFocused={false} windowId="test-window" />
+      );
+
+      // Should render with default bounds instead of crashing
+      const chrome = container.querySelector('[data-window-id="test-window"]');
+      expect(chrome).toBeTruthy();
     });
 
     it("handles missing data gracefully", () => {
@@ -285,9 +290,12 @@ describe("WindowChrome", () => {
       };
       useDesktopStore.setState({ windows: [window] });
 
-      expect(() =>
-        render(<WindowChrome isFocused={false} windowId="test-window" />)
-      ).toThrow();
+      const { getByText } = render(
+        <WindowChrome isFocused={false} windowId="test-window" />
+      );
+
+      // Should render with fallback title instead of crashing
+      expect(getByText("Window")).toBeTruthy();
     });
 
     it("handles window removal during render", () => {

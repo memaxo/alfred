@@ -14,12 +14,13 @@
  * @see docs/execplans/desktop-evolution-prd.md Section 3.6
  */
 
-import { GitBranch, Play, Save } from "lucide-react";
+import { GitBranch, Play, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Button } from "@/components/ui/button";
+import { useWorkflowSubscription } from "@/hooks/use-workflow-subscription";
 import { cn } from "@/lib/utils";
-import { ExecutionPanel } from "./execution-panel";
+import { ExecutionPanel } from "../../windows/workflow/execution-panel";
 import { NodeCanvas } from "./node-canvas";
 import { NodePalette } from "./node-palette";
 import { VariableInspector } from "./variable-inspector";
@@ -61,13 +62,38 @@ export function WorkflowApp({
   const [showPalette, setShowPalette] = useState(true);
   const [showExecution, setShowExecution] = useState(false);
   const [showVariables, setShowVariables] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
+
+  const {
+    status,
+    steps,
+    error,
+    run,
+    stop,
+    clear: _clear,
+  } = useWorkflowSubscription({
+    onError: (_err) => {},
+  });
+
+  const isRunning = status === "connecting" || status === "running";
 
   const handleRun = () => {
-    setIsRunning(true);
     setShowExecution(true);
-    // TODO: Execute workflow
-    setTimeout(() => setIsRunning(false), 3000);
+
+    const input = {
+      requirement: "Test workflow execution",
+      auto: "low" as const,
+      mode: "sequential" as const,
+    };
+
+    void run(input);
+  };
+
+  const handleStop = () => {
+    stop();
+  };
+
+  const handleClear = () => {
+    _clear();
   };
 
   return (
@@ -111,6 +137,15 @@ export function WorkflowApp({
             Save
           </Button>
           <Button
+            className="h-7 gap-1 text-xs"
+            onClick={handleClear}
+            size="sm"
+            variant="ghost"
+          >
+            <Trash2 className="h-3 w-3" />
+            Clear
+          </Button>
+          <Button
             className={cn(
               "h-7 gap-1 text-xs",
               isRunning && "bg-green-500/20 text-green-400"
@@ -121,7 +156,7 @@ export function WorkflowApp({
             variant="ghost"
           >
             <Play className="h-3 w-3" />
-            {isRunning ? "Running..." : "Run"}
+            {isRunning ? "Running" : "Run"}
           </Button>
         </div>
       </div>
@@ -152,8 +187,11 @@ export function WorkflowApp({
       {showExecution && (
         <ExecutionPanel
           className="h-48 flex-shrink-0 border-white/5 border-t"
+          error={error}
           isRunning={isRunning}
           onClose={() => setShowExecution(false)}
+          onStop={handleStop}
+          steps={steps}
         />
       )}
     </div>

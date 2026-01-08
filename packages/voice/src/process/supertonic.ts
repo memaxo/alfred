@@ -97,12 +97,23 @@ class TextToSpeech {
   }
 
   async release() {
-    await Promise.all([
+    const releases = [
       this.dpOrt.release(),
       this.textEncOrt.release(),
       this.vectorEstOrt.release(),
       this.vocoderOrt.release(),
-    ]);
+    ];
+
+    // Use allSettled to ensure all releases are attempted even if one fails
+    const results = await Promise.allSettled(releases);
+
+    // Check for failures but don't throw (cleanup should be best-effort)
+    const failures = results.filter((r) => r.status === "rejected");
+    if (failures.length > 0) {
+      console.warn(
+        `Failed to release ${failures.length} session(s) during cleanup`
+      );
+    }
   }
 
   private async _infer(
@@ -604,12 +615,18 @@ export class SupertonicTTS {
   }
 
   async shutdown(): Promise<void> {
+    // Clear current style reference first
+    this.currentStyle = null;
+
+    // Clear voice cache to remove Tensor references before releasing sessions
+    // This ensures no Tensor references exist when sessions are released
+    this.voiceCache.clear();
+
     if (this.textToSpeech) {
       await this.textToSpeech.release();
       this.textToSpeech = null;
     }
-    this.voiceCache.clear();
-    this.currentStyle = null;
+
     this.initialized = false;
   }
 

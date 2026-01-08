@@ -8,7 +8,7 @@ export function useKnowledgeVisualize() {
 
   const spawnKnowledgeGraph = useDesktopStore((s) => s.spawnKnowledgeGraph);
   const windows = useDesktopStore((s) => s.windows);
-  const viewport = useDesktopStore((s) => s.viewport);
+  const desktopArea = useDesktopStore((s) => s.desktopArea);
 
   const visualizeMutation = trpc.knowledge.visualize.useMutation();
 
@@ -37,8 +37,8 @@ export function useKnowledgeVisualize() {
         }
 
         const center = options?.center ?? {
-          x: -viewport.x + 600,
-          y: -viewport.y + 400,
+          x: desktopArea.x + desktopArea.width / 2,
+          y: desktopArea.y + desktopArea.height / 2,
         };
 
         const windowIds = spawnKnowledgeGraph(
@@ -56,7 +56,7 @@ export function useKnowledgeVisualize() {
         setIsLoading(false);
       }
     },
-    [visualizeMutation, spawnKnowledgeGraph, viewport]
+    [visualizeMutation, spawnKnowledgeGraph, desktopArea]
   );
 
   const visualizeFromWindow = useCallback(
@@ -91,8 +91,8 @@ export function useKnowledgeVisualize() {
 
       // Position the graph near the source window
       const center = {
-        x: window.position.x + 400,
-        y: window.position.y,
+        x: window.bounds.x + 400,
+        y: window.bounds.y,
       };
 
       return visualize(text, { center });

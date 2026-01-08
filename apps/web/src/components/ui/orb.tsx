@@ -94,6 +94,7 @@ function Scene({
   const circleRef =
     useRef<THREE.Mesh<THREE.CircleGeometry, THREE.ShaderMaterial>>(null);
   const initialColorsRef = useRef<[string, string]>(colors);
+  // Kept for backward compat with props, though shader is now Eclipse-style (Biolum White)
   const targetColor1Ref = useRef(new THREE.Color(colors[0]));
   const targetColor2Ref = useRef(new THREE.Color(colors[1]));
   const animSpeedRef = useRef(0.1);
@@ -150,6 +151,7 @@ function Scene({
     () => splitmix32(seed ?? Math.floor(Math.random() * 2 ** 32)),
     [seed]
   );
+  // Offsets still used for potential variation
   const offsets = useMemo(
     () =>
       new Float32Array(Array.from({ length: 7 }, () => random() * Math.PI * 2)),
@@ -346,194 +348,91 @@ varying vec2 vUv;
 
 const float PI = 3.14159265358979323846;
 
-// Draw a single oval with soft edges and calculate its gradient color
-bool drawOval(vec2 polarUv, vec2 polarCenter, float a, float b, bool reverseGradient, float softness, out vec4 color) {
-    vec2 p = polarUv - polarCenter;
-    float oval = (p.x * p.x) / (a * a) + (p.y * p.y) / (b * b);
-
-    float edge = smoothstep(1.0, 1.0 - softness, oval);
-
-    if (edge > 0.0) {
-        float gradient = reverseGradient ? (1.0 - (p.x / a + 1.0) / 2.0) : ((p.x / a + 1.0) / 2.0);
-        // Flatten gradient toward middle value for more uniform appearance
-        gradient = mix(0.5, gradient, 0.1);
-        color = vec4(vec3(gradient), 0.85 * edge);
-        return true;
-    }
-    return false;
-}
-
-// Map grayscale value to a 4-color ramp (color1, color2, color3, color4)
-vec3 colorRamp(float grayscale, vec3 color1, vec3 color2, vec3 color3, vec3 color4) {
-    if (grayscale < 0.33) {
-        return mix(color1, color2, grayscale * 3.0);
-    } else if (grayscale < 0.66) {
-        return mix(color2, color3, (grayscale - 0.33) * 3.0);
-    } else {
-        return mix(color3, color4, (grayscale - 0.66) * 3.0);
-    }
-}
-
-vec2 hash2(vec2 p) {
-    return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453);
-}
-
-// 2D noise for the ring
-float noise2D(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    float n = mix(
-        mix(dot(hash2(i + vec2(0.0, 0.0)), f - vec2(0.0, 0.0)),
-            dot(hash2(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),
-        mix(dot(hash2(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),
-            dot(hash2(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x),
-        u.y
-    );
-
-    return 0.5 + 0.5 * n;
-}
-
-float sharpRing(vec3 decomposed, float time) {
-    float ringStart = 1.0;
-    float ringWidth = 0.3;
-    float noiseScale = 5.0;
-
-    float noise = mix(
-        noise2D(vec2(decomposed.x, time) * noiseScale),
-        noise2D(vec2(decomposed.y, time) * noiseScale),
-        decomposed.z
-    );
-
-    noise = (noise - 0.5) * 2.5;
-
-    return ringStart + noise * ringWidth * 1.5;
-}
-
-float smoothRing(vec3 decomposed, float time) {
-    float ringStart = 0.9;
-    float ringWidth = 0.2;
-    float noiseScale = 6.0;
-
-    float noise = mix(
-        noise2D(vec2(decomposed.x, time) * noiseScale),
-        noise2D(vec2(decomposed.y, time) * noiseScale),
-        decomposed.z
-    );
-
-    noise = (noise - 0.5) * 5.0;
-
-    return ringStart + noise * ringWidth;
-}
-
-float flow(vec3 decomposed, float time) {
-    return mix(
-        texture(uPerlinTexture, vec2(time, decomposed.x / 2.0)).r,
-        texture(uPerlinTexture, vec2(time, decomposed.y / 2.0)).r,
-        decomposed.z
-    );
-}
-
 void main() {
-    // Normalize vUv to be centered around (0.0, 0.0)
+    // 1. Coordinate System
     vec2 uv = vUv * 2.0 - 1.0;
-
-    // Convert uv to polar coordinates
-    float radius = length(uv);
+    float r = length(uv);
     float theta = atan(uv.y, uv.x);
-    if (theta < 0.0) theta += 2.0 * PI; // Normalize theta to [0, 2*PI]
+    if (theta < 0.0) theta += 2.0 * PI;
 
-    // Decomposed angle is used for sampling noise textures without seams:
-    // float noise = mix(sample(decomposed.x), sample(decomposed.y), decomposed.z);
-    vec3 decomposed = vec3(
-        // angle in the range [0, 1]
-        theta / (2.0 * PI),
-        // angle offset by 180 degrees in the range [1, 2]
-        mod(theta / (2.0 * PI) + 0.5, 1.0) + 1.0,
-        // mixing factor between two noises
-        abs(theta / PI - 1.0)
-    );
-
-    // Add noise to the angle for a flow-like distortion (reduced for flatter look)
-    float noise = flow(decomposed, radius * 0.03 - uAnimation * 0.2) - 0.5;
-    theta += noise * mix(0.08, 0.25, uOutputVolume);
-
-    // Initialize the base color to white
-    vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
-
-    // Original parameters for the ovals in polar coordinates
-    float originalCenters[7] = float[7](0.0, 0.5 * PI, 1.0 * PI, 1.5 * PI, 2.0 * PI, 2.5 * PI, 3.0 * PI);
-
-    // Parameters for the animated centers in polar coordinates
-    float centers[7];
-    for (int i = 0; i < 7; i++) {
-        centers[i] = originalCenters[i] + 0.5 * sin(uTime / 20.0 + uOffsets[i]);
-    }
-
-    float a, b;
-    vec4 ovalColor;
-
-    // Check if the pixel is inside any of the ovals
-    for (int i = 0; i < 7; i++) {
-        float noise = texture(uPerlinTexture, vec2(mod(centers[i] + uTime * 0.05, 1.0), 0.5)).r;
-        a = 0.5 + noise * 0.3; // Increased for more coverage
-        b = noise * mix(3.5, 2.5, uInputVolume); // Increased height for fuller appearance
-        bool reverseGradient = (i % 2 == 1); // Reverse gradient for every second oval
-
-        // Calculate the distance in polar coordinates
-        float distTheta = min(
-            abs(theta - centers[i]),
-            min(
-                abs(theta + 2.0 * PI - centers[i]),
-                abs(theta - 2.0 * PI - centers[i])
-            )
-        );
-        float distRadius = radius;
-
-        float softness = 0.6; // Increased softness for flatter, less pronounced edges
-
-        // Check if the pixel is inside the oval in polar coordinates
-        if (drawOval(vec2(distTheta, distRadius), vec2(0.0, 0.0), a, b, reverseGradient, softness, ovalColor)) {
-            // Blend the oval color with the existing color
-            color.rgb = mix(color.rgb, ovalColor.rgb, ovalColor.a);
-            color.a = max(color.a, ovalColor.a); // Max alpha
-        }
-    }
+    // 2. Dynamic Parameters
+    // Volume pumps the radius and the intensity of the wisps
+    float vol = smoothstep(0.0, 1.0, uInputVolume); 
     
-    // Calculate both noisy rings
-    float ringRadius1 = sharpRing(decomposed, uTime * 0.1);
-    float ringRadius2 = smoothRing(decomposed, uTime * 0.1);
+    // Base radius of the "Moon" (Black Void Center)
+    // Breathing: 0.38 base + sine wave + volume punch
+    float breath = sin(uTime * 0.5) * 0.01;
+    float moonRadius = 0.38 + breath + vol * 0.05;
+
+    // 3. Noise / Wisps Generation
+    // We want radial streaks that flow outwards.
+    // Coordinate for noise: (theta, radius - flow)
+    float speed = 0.1 + vol * 0.2;
+    // Stretch noise along theta for "ray" look
+    vec2 noiseUv = vec2(theta / (2.0 * PI) * 6.0, r - uTime * speed);
     
-    // Adjust rings based on input volume (reduced for flatter appearance)
-    float inputRadius1 = radius + uInputVolume * 0.2;
-    float inputRadius2 = radius + uInputVolume * 0.15;
-    float opacity1 = mix(0.2, 0.6, uInputVolume);
-    float opacity2 = mix(0.15, 0.45, uInputVolume);
-
-    // Blend both rings
-    float ringAlpha1 = (inputRadius2 >= ringRadius1) ? opacity1 : 0.0;
-    float ringAlpha2 = smoothstep(ringRadius2 - 0.05, ringRadius2 + 0.05, inputRadius1) * opacity2;
+    // Add some swirl based on radius
+    noiseUv.x += r * 0.2 * sin(uTime * 0.2);
     
-    float totalRingAlpha = max(ringAlpha1, ringAlpha2);
+    // Sample texture with offsets for layering
+    float n1 = texture2D(uPerlinTexture, noiseUv).r;
+    float n2 = texture2D(uPerlinTexture, noiseUv * 2.0 + vec2(0.0, uTime * 0.05)).r;
     
-    // Apply screen blend mode for combined rings
-    vec3 ringColor = vec3(1.0); // White ring color
-    color.rgb = 1.0 - (1.0 - color.rgb) * (1.0 - ringColor * totalRingAlpha);
-
-    // Define colours to ramp against greyscale (could increase the amount of colours in the ramp)
-    vec3 color1 = vec3(0.0, 0.0, 0.0); // Black
-    vec3 color2 = uColor1; // Darker Color
-    vec3 color3 = uColor2; // Lighter Color
-    vec3 color4 = vec3(1.0, 1.0, 1.0); // White
-
-    // Convert grayscale color to the color ramp
-    float luminance = mix(color.r, 1.0 - color.r, uInverted);
-    color.rgb = colorRamp(luminance, color1, color2, color3, color4); // Apply the color ramp
-
-    // Apply fade-in opacity
-    color.a *= uOpacity;
-
-    gl_FragColor = color;
+    // Composite noise (FBM-like)
+    float noise = n1 * 0.6 + n2 * 0.4;
+    
+    // 4. Corona Intensity
+    // It exists strictly outside the moonRadius.
+    float dist = max(0.0, r - moonRadius);
+    
+    // Decay: Exp decay
+    float decay = exp(-dist * (5.0 - vol * 2.0)); 
+    
+    // Rim light (bright edge right at the moon)
+    float rim = smoothstep(0.0, 0.015, dist) * smoothstep(0.04, 0.0, dist);
+    
+    // Wisp strands
+    // Contrast the noise
+    float strands = smoothstep(0.4, 0.7, noise); 
+    
+    float corona = decay * strands;
+    
+    // Add rim brightness
+    corona += rim * 0.8;
+    
+    // Boost corona with volume
+    corona *= (1.0 + vol * 4.0);
+    
+    // 5. Composition
+    vec3 col = vec3(1.0); // Biolum White
+    
+    // Mix Mask
+    float t = smoothstep(moonRadius - 0.005, moonRadius + 0.005, r);
+    
+    // Output
+    vec3 finalRGB = vec3(1.0); // Always white
+    
+    // Alpha Logic
+    // Inside Moon: Opaque Black (or just opaque alpha with black color)
+    // Outside: White with corona alpha
+    
+    // If we use standard blending (SRC_ALPHA, ONE_MINUS_SRC_ALPHA), 
+    // black with alpha 1 blocks background.
+    
+    vec3 cMoon = vec3(0.0);
+    float aMoon = 1.0;
+    
+    vec3 cCorona = vec3(1.0);
+    float aCorona = corona;
+    
+    vec3 rgb = mix(cMoon, cCorona, t);
+    float a = mix(aMoon, aCorona, t);
+    
+    // Global opacity
+    a *= uOpacity;
+    
+    // Pre-multiply alpha for proper blending if enabled in Canvas
+    // Canvas has premultipliedAlpha: true
+    gl_FragColor = vec4(rgb * a, a);
 }
 `;

@@ -12,8 +12,10 @@
 import type { CSSProperties } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useDesktopStore } from "@/store/desktop";
+import type { WindowType } from "@/store/desktop/types";
 import { TileZonePreview } from "../tiling/zone-preview";
 import { WindowChrome } from "../windows/chrome";
+import { windowRegistry, withWindowAdapter } from "../windows/registry";
 
 type WindowLayerProps = {
   style?: CSSProperties;
@@ -21,14 +23,12 @@ type WindowLayerProps = {
 };
 
 export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
-  const { windows } = useDesktopStore(
+  const { windows, desktopArea } = useDesktopStore(
     useShallow((s) => ({
       windows: s.windows,
+      desktopArea: s.desktopArea,
     }))
   );
-
-  // During migration, we render both old ReactFlow windows and new DOM windows
-  // For now, just show a placeholder
 
   return (
     <div
@@ -40,21 +40,35 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
       <div
         className="absolute right-0 left-0"
         style={{
-          top: 32, // Menu bar height
-          bottom: 48, // Taskbar height
+          top: desktopArea.y,
+          bottom: window.innerHeight - desktopArea.y - desktopArea.height,
         }}
       >
         {/* Tile Zone Preview (shown during drag) */}
         <TileZonePreview />
 
         {/* Window instances */}
-        {windows.map((window) => (
-          <WindowChrome
-            isFocused={window.id === focusedWindowId}
-            key={window.id}
-            windowId={window.id}
-          />
-        ))}
+        {windows.map((window) => {
+          const registryEntry = windowRegistry[window.type as WindowType];
+          if (!registryEntry?.component) {
+            return null;
+          }
+
+          // Wrap legacy components with adapter
+          const Component = registryEntry.isLegacy
+            ? withWindowAdapter(registryEntry.component)
+            : registryEntry.component;
+
+          return (
+            <WindowChrome
+              isFocused={window.id === focusedWindowId}
+              key={window.id}
+              windowId={window.id}
+            >
+              <Component />
+            </WindowChrome>
+          );
+        })}
 
         {/* Empty state */}
         {windows.length === 0 && (

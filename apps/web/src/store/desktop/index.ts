@@ -1,6 +1,10 @@
-export { createDockSlice } from "./dock";
+export { createCacheSlice } from "./cache";
+export { createContextSlice } from "./context";
+export { createKnowledgeSlice } from "./knowledge";
 export { DESKTOP_STORAGE_ID, persistOptions } from "./persist";
 export * from "./selectors";
-export * from "./types";
-export { createViewportSlice } from "./viewport";
-export { createWindowSlice } from "./windows";
+export { createTaskbarSlice } from "./taskbar";
+export { createTilingSlice } from "./tiling";
+export * from "./types.new";
+export { createViewportSliceNew } from "./viewport.new";
+export { createWindowSliceNew } from "./windows.new";

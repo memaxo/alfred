@@ -91,7 +91,7 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const removeWindow = useDesktopStore((s) => s.removeWindow);
 
   useEffect(() => {
@@ -136,7 +136,7 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
             description: draftDescription.trim() || undefined,
             due: dueDate.toISOString(),
           });
-          updateWindow(id, {
+          updateWindowData(id, {
             resourceRef: { type: "reminder", id: newId },
             label: draftTitle.trim(),
           });
@@ -148,7 +148,7 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
             description: draftDescription.trim() || undefined,
             due: dueDate.toISOString(),
           });
-          updateWindow(id, {
+          updateWindowData(id, {
             label: draftTitle.trim(),
           });
           toast.success("Reminder updated");
@@ -169,7 +169,7 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
       deleteReminder,
       isNew,
       resourceId,
-      updateWindow,
+      updateWindowData,
     ]
   );
 

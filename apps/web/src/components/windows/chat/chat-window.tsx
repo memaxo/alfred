@@ -1,7 +1,7 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
 import { MessageSquare, Mic } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { z } from "zod";
 import {
   Conversation,
@@ -25,8 +25,8 @@ import {
   WindowFrame,
 } from "@/components/windows/shared";
 import { useChatLogic } from "@/hooks/use-chat-logic";
+import { useMessageEdit } from "@/hooks/use-message-edit";
 import { useDesktopStore } from "@/store/desktop";
-import { getMessageText } from "@/utils/message";
 
 const chatWindowDataSchema = z.object({
   type: z.literal("chat"),
@@ -50,7 +50,7 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
     ? parsed.data
     : { type: "chat" as const, viewMode: "full" as const };
 
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const spawnWindow = useDesktopStore((s) => s.spawnWindow);
 
   const {
@@ -58,33 +58,20 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
     handleSend: sendToChat,
     handleRegenerate,
     handleEdit,
-    hydrate,
     isRecording,
     toggleVoice,
     status,
     error,
   } = useChatLogic({ initialAgent: "assistant" });
 
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-
-  const startEditing = useCallback((message: AssistantUIMessage) => {
-    setEditingMessageId(message.id);
-    setEditText(getMessageText(message));
-  }, []);
-
-  const cancelEditing = useCallback(() => {
-    setEditingMessageId(null);
-    setEditText("");
-  }, []);
-
-  const saveEdit = useCallback(() => {
-    if (editingMessageId && editText.trim()) {
-      handleEdit(editingMessageId, editText.trim());
-      setEditingMessageId(null);
-      setEditText("");
-    }
-  }, [editingMessageId, editText, handleEdit]);
+  const {
+    editText,
+    isEditing,
+    setEditText,
+    startEditing,
+    cancelEditing,
+    saveEdit,
+  } = useMessageEdit({ handleEdit });
 
   const renderMessageActions = useCallback(
     (message: AssistantUIMessage) => {
@@ -104,38 +91,14 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
         />
       );
     },
-    [status, startEditing, messages, handleRegenerate]
+    [status, startEditing, messages, handleRegenerate, isEditing]
   );
 
   useEffect(() => {
     if (error && windowData.error !== error.message) {
-      updateWindow(id, { draft: { error: error.message } });
+      updateWindowData(id, { draft: { error: error.message } });
     }
-  }, [error, id, updateWindow, windowData.error]);
-
-  useEffect(() => {
-    const storedMessages = windowData.messages;
-    if (
-      storedMessages &&
-      Array.isArray(storedMessages) &&
-      storedMessages.length > 0 &&
-      messages.length === 0
-    ) {
-      hydrate(storedMessages as AssistantUIMessage[]);
-    }
-  }, [windowData.messages, messages.length, hydrate]);
-
-  const lastMessagesRef = useRef<string>("");
-  useEffect(() => {
-    if (messages.length > 0) {
-      const key = JSON.stringify(messages.map((m) => m.id));
-      if (key === lastMessagesRef.current) {
-        return;
-      }
-      lastMessagesRef.current = key;
-      updateWindow(id, { draft: { messages } });
-    }
-  }, [messages, id, updateWindow]);
+  }, [error, id, updateWindowData, windowData.error]);
 
   const handleSubmit = useCallback(
     (input: { text: string }) => {
@@ -196,9 +159,9 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
               </p>
             ) : (
               messages.map((message) => {
-                const isEditing = editingMessageId === message.id;
+                const isEditingCurrent = isEditing(message.id);
 
-                if (isEditing) {
+                if (isEditingCurrent) {
                   return (
                     <div
                       className="mb-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3"

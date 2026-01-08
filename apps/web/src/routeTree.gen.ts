@@ -9,12 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ConsentRouteImport } from './routes/consent'
-import { Route as DeviceRouteImport } from './routes/device'
-import { Route as ElevateRouteImport } from './routes/elevate'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
+import { Route as ElevateRouteImport } from './routes/elevate'
+import { Route as DeviceRouteImport } from './routes/device'
+import { Route as ConsentRouteImport } from './routes/consent'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
@@ -29,11 +29,12 @@ import { Route as ProtectedBookRouteImport } from './routes/_protected/book'
 import { Route as ProtectedAdminRouteImport } from './routes/_protected/admin'
 import { Route as ProtectedAdminIndexRouteImport } from './routes/_protected/admin/index'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
-import { Route as ApiWorkflowStreamRouteImport } from './routes/api/workflow/stream'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as ApiOrchestratorSplatRouteImport } from './routes/api/orchestrator/$'
 import { Route as ApiLinearWebhookRouteImport } from './routes/api/linear/webhook'
 import { Route as ApiDesktopMetricsRouteImport } from './routes/api/desktop.metrics'
+import { Route as ApiAuthRevokeRouteImport } from './routes/api/auth/revoke'
+import { Route as ApiAuthIntrospectRouteImport } from './routes/api/auth/introspect'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
 import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assistant-agent/$'
@@ -60,9 +61,9 @@ const HealthzRoute = HealthzRouteImport.update({
   path: '/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConsentRoute = ConsentRouteImport.update({
-  id: '/consent',
-  path: '/consent',
+const ElevateRoute = ElevateRouteImport.update({
+  id: '/elevate',
+  path: '/elevate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeviceRoute = DeviceRouteImport.update({
@@ -70,9 +71,9 @@ const DeviceRoute = DeviceRouteImport.update({
   path: '/device',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ElevateRoute = ElevateRouteImport.update({
-  id: '/elevate',
-  path: '/elevate',
+const ConsentRoute = ConsentRouteImport.update({
+  id: '/consent',
+  path: '/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProtectedRoute = ProtectedRouteImport.update({
@@ -144,11 +145,6 @@ const AuthCallbackLinearRoute = AuthCallbackLinearRouteImport.update({
   path: '/auth/callback/linear',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWorkflowStreamRoute = ApiWorkflowStreamRouteImport.update({
-  id: '/api/workflow/stream',
-  path: '/api/workflow/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   id: '/api/trpc/$',
   path: '/api/trpc/$',
@@ -167,6 +163,16 @@ const ApiLinearWebhookRoute = ApiLinearWebhookRouteImport.update({
 const ApiDesktopMetricsRoute = ApiDesktopMetricsRouteImport.update({
   id: '/api/desktop/metrics',
   path: '/api/desktop/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRevokeRoute = ApiAuthRevokeRouteImport.update({
+  id: '/api/auth/revoke',
+  path: '/api/auth/revoke',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthIntrospectRoute = ApiAuthIntrospectRouteImport.update({
+  id: '/api/auth/introspect',
+  path: '/api/auth/introspect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -224,10 +230,10 @@ const ProtectedAdminMetricsRoute = ProtectedAdminMetricsRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/healthz': typeof HealthzRouteWithChildren
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
   '/elevate': typeof ElevateRoute
+  '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof ProtectedAdminRouteWithChildren
@@ -251,19 +257,20 @@ export interface FileRoutesByFullPath {
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/introspect': typeof ApiAuthIntrospectRoute
+  '/api/auth/revoke': typeof ApiAuthRevokeRoute
   '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
   '/admin/': typeof ProtectedAdminIndexRoute
 }
 export interface FileRoutesByTo {
-  '/healthz': typeof HealthzRouteWithChildren
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
   '/elevate': typeof ElevateRoute
+  '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/book': typeof ProtectedBookRoute
@@ -286,21 +293,22 @@ export interface FileRoutesByTo {
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/introspect': typeof ApiAuthIntrospectRoute
+  '/api/auth/revoke': typeof ApiAuthRevokeRoute
   '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
   '/admin': typeof ProtectedAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_protected': typeof ProtectedRouteWithChildren
-  '/healthz': typeof HealthzRouteWithChildren
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
   '/elevate': typeof ElevateRoute
+  '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_protected/admin': typeof ProtectedAdminRouteWithChildren
@@ -324,21 +332,22 @@ export interface FileRoutesById {
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/introspect': typeof ApiAuthIntrospectRoute
+  '/api/auth/revoke': typeof ApiAuthRevokeRoute
   '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
   '/_protected/admin/': typeof ProtectedAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/healthz'
     | '/consent'
     | '/device'
     | '/elevate'
+    | '/healthz'
     | '/login'
     | '/onboarding'
     | '/admin'
@@ -362,19 +371,20 @@ export interface FileRouteTypes {
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
+    | '/api/auth/introspect'
+    | '/api/auth/revoke'
     | '/api/desktop/metrics'
     | '/api/linear/webhook'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
-    | '/api/workflow/stream'
     | '/auth/callback/linear'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/healthz'
     | '/consent'
     | '/device'
     | '/elevate'
+    | '/healthz'
     | '/login'
     | '/onboarding'
     | '/book'
@@ -397,20 +407,21 @@ export interface FileRouteTypes {
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
+    | '/api/auth/introspect'
+    | '/api/auth/revoke'
     | '/api/desktop/metrics'
     | '/api/linear/webhook'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
-    | '/api/workflow/stream'
     | '/auth/callback/linear'
     | '/admin'
   id:
     | '__root__'
     | '/_protected'
-    | '/healthz'
     | '/consent'
     | '/device'
     | '/elevate'
+    | '/healthz'
     | '/login'
     | '/onboarding'
     | '/_protected/admin'
@@ -434,21 +445,22 @@ export interface FileRouteTypes {
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
+    | '/api/auth/introspect'
+    | '/api/auth/revoke'
     | '/api/desktop/metrics'
     | '/api/linear/webhook'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
-    | '/api/workflow/stream'
     | '/auth/callback/linear'
     | '/_protected/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   ProtectedRoute: typeof ProtectedRouteWithChildren
-  HealthzRoute: typeof HealthzRouteWithChildren
   ConsentRoute: typeof ConsentRoute
   DeviceRoute: typeof DeviceRoute
   ElevateRoute: typeof ElevateRoute
+  HealthzRoute: typeof HealthzRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
@@ -457,37 +469,17 @@ export interface RootRouteChildren {
   ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiAuthIntrospectRoute: typeof ApiAuthIntrospectRoute
+  ApiAuthRevokeRoute: typeof ApiAuthRevokeRoute
   ApiDesktopMetricsRoute: typeof ApiDesktopMetricsRoute
   ApiLinearWebhookRoute: typeof ApiLinearWebhookRoute
   ApiOrchestratorSplatRoute: typeof ApiOrchestratorSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
-  ApiWorkflowStreamRoute: typeof ApiWorkflowStreamRoute
   AuthCallbackLinearRoute: typeof AuthCallbackLinearRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/consent': {
-      id: '/consent'
-      path: '/consent'
-      fullPath: '/consent'
-      preLoaderRoute: typeof ConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/device': {
-      id: '/device'
-      path: '/device'
-      fullPath: '/device'
-      preLoaderRoute: typeof DeviceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/elevate': {
-      id: '/elevate'
-      path: '/elevate'
-      fullPath: '/elevate'
-      preLoaderRoute: typeof ElevateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -507,6 +499,27 @@ declare module '@tanstack/react-router' {
       path: '/healthz'
       fullPath: '/healthz'
       preLoaderRoute: typeof HealthzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/elevate': {
+      id: '/elevate'
+      path: '/elevate'
+      fullPath: '/elevate'
+      preLoaderRoute: typeof ElevateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device': {
+      id: '/device'
+      path: '/device'
+      fullPath: '/device'
+      preLoaderRoute: typeof DeviceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consent': {
+      id: '/consent'
+      path: '/consent'
+      fullPath: '/consent'
+      preLoaderRoute: typeof ConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_protected': {
@@ -607,13 +620,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackLinearRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/workflow/stream': {
-      id: '/api/workflow/stream'
-      path: '/api/workflow/stream'
-      fullPath: '/api/workflow/stream'
-      preLoaderRoute: typeof ApiWorkflowStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/trpc/$': {
       id: '/api/trpc/$'
       path: '/api/trpc/$'
@@ -640,6 +646,20 @@ declare module '@tanstack/react-router' {
       path: '/api/desktop/metrics'
       fullPath: '/api/desktop/metrics'
       preLoaderRoute: typeof ApiDesktopMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/revoke': {
+      id: '/api/auth/revoke'
+      path: '/api/auth/revoke'
+      fullPath: '/api/auth/revoke'
+      preLoaderRoute: typeof ApiAuthRevokeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/introspect': {
+      id: '/api/auth/introspect'
+      path: '/api/auth/introspect'
+      fullPath: '/api/auth/introspect'
+      preLoaderRoute: typeof ApiAuthIntrospectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -787,10 +807,10 @@ const HealthzRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   ProtectedRoute: ProtectedRouteWithChildren,
-  HealthzRoute: HealthzRouteWithChildren,
   ConsentRoute: ConsentRoute,
   DeviceRoute: DeviceRoute,
   ElevateRoute: ElevateRoute,
+  HealthzRoute: HealthzRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   ApiMetricsRoute: ApiMetricsRoute,
@@ -799,11 +819,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiAuthIntrospectRoute: ApiAuthIntrospectRoute,
+  ApiAuthRevokeRoute: ApiAuthRevokeRoute,
   ApiDesktopMetricsRoute: ApiDesktopMetricsRoute,
   ApiLinearWebhookRoute: ApiLinearWebhookRoute,
   ApiOrchestratorSplatRoute: ApiOrchestratorSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
-  ApiWorkflowStreamRoute: ApiWorkflowStreamRoute,
   AuthCallbackLinearRoute: AuthCallbackLinearRoute,
 }
 export const routeTree = rootRouteImport

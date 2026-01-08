@@ -19,6 +19,7 @@ import { useCallback, useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 import { DiffPanel } from "./diff-panel";
 import { MergeControls } from "./merge-controls";
 import { PRDetail } from "./pr-detail";
@@ -64,10 +65,11 @@ export function PRReviewApp({
   const [selectedPRId, setSelectedPRId] = useState<string | null>(null);
   const [showDiff, _setShowDiff] = useState(true);
   const [filter, setFilter] = useState<"all" | "open" | "agent">("open");
+  const utils = trpc.useUtils();
 
   const handleRefresh = useCallback(() => {
-    // TODO: Refresh PRs from backend
-  }, []);
+    utils.github.pullRequestsList.invalidate();
+  }, [utils]);
 
   return (
     <div

@@ -37,7 +37,7 @@ export function windowToNodeProps(window: WindowInstance): LegacyNodeProps {
     xPos: window.bounds.x,
     yPos: window.bounds.y,
     zIndex: window.zIndex,
-    isConnectable: false, // Windows don't use ReactFlow connections
+    connectable: false, // Windows don't use ReactFlow connections
     positionAbsoluteX: window.bounds.x,
     positionAbsoluteY: window.bounds.y,
   };
@@ -125,7 +125,7 @@ export function withNodePropsAdapter(
   function AdaptedComponent(props: LegacyNodeProps) {
     // Get store actions
     const removeWindow = useDesktopStore((s) => s.removeWindow);
-    const updateWindow = useDesktopStore((s) => s.updateWindow);
+    const updateWindowData = useDesktopStore((s) => s.updateWindowData);
     const focusWindow = useDesktopStore((s) => s.focusWindow);
 
     // Convert NodeProps to WindowInstance
@@ -142,12 +142,12 @@ export function withNodePropsAdapter(
     }, []);
 
     const handleMaximize = useCallback(() => {
-      updateWindow(window.id, { viewMode: "maximized" });
-    }, [window.id]);
+      updateWindowData(window.id, { viewMode: "maximized" });
+    }, [window.id, updateWindowData]);
 
     const handleRestore = useCallback(() => {
-      updateWindow(window.id, { viewMode: "full" });
-    }, [window.id]);
+      updateWindowData(window.id, { viewMode: "full" });
+    }, [window.id, updateWindowData]);
 
     const handleFocus = useCallback(() => {
       focusWindow(window.id);
@@ -179,9 +179,9 @@ export function withNodePropsAdapter(
     const handleDataChange = useCallback(
       (data: Partial<WindowData>) => {
         // Cast to handle type differences during migration
-        updateWindow(window.id, data as Record<string, unknown>);
+        updateWindowData(window.id, data as Record<string, unknown>);
       },
-      [window.id]
+      [window.id, updateWindowData]
     );
 
     const windowProps: WindowComponentProps = {
@@ -220,7 +220,7 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
     s.windows.find((w) => w.id === windowId)
   );
   const removeWindow = useDesktopStore((s) => s.removeWindow);
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const focusWindow = useDesktopStore((s) => s.focusWindow);
 
   const handleClose = useCallback(() => {
@@ -232,12 +232,12 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
   }, []);
 
   const handleMaximize = useCallback(() => {
-    updateWindow(windowId, { viewMode: "maximized" });
-  }, [windowId, updateWindow]);
+    updateWindowData(windowId, { viewMode: "maximized" });
+  }, [windowId, updateWindowData]);
 
   const handleRestore = useCallback(() => {
-    updateWindow(windowId, { viewMode: "full" });
-  }, [windowId, updateWindow]);
+    updateWindowData(windowId, { viewMode: "full" });
+  }, [windowId, updateWindowData]);
 
   const handleFocus = useCallback(() => {
     focusWindow(windowId);
@@ -269,9 +269,9 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
   const handleDataChange = useCallback(
     (data: Partial<WindowData>) => {
       // Cast to handle type differences during migration
-      updateWindow(windowId, data as Record<string, unknown>);
+      updateWindowData(windowId, data as Record<string, unknown>);
     },
-    [windowId, updateWindow]
+    [windowId, updateWindowData]
   );
 
   if (!window) {

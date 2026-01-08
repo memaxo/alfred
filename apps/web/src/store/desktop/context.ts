@@ -1,6 +1,6 @@
 import type { SearchReceipt } from "@alfred/type";
 import type { StateCreator } from "zustand";
-import type { DesktopState } from "./types";
+import type { DesktopState } from "./types.new";
 
 export type ContextCacheEntry = {
   receipt?: SearchReceipt;

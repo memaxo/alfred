@@ -24,8 +24,6 @@ export function useVoiceSessionWeb() {
   const s2sMutation = trpc.voice.speechToSpeech.useMutation();
 
   // --- State ---
-  const [isRecording] = useState(false);
-  const [isProcessing] = useState(false);
   const [lastResponse, setLastResponse] =
     useState<SpeechToSpeechResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +44,12 @@ export function useVoiceSessionWeb() {
 
   const protocol = useVoiceProtocol(sessionIdRef, {
     onAudioChunk: async (chunk) => {
+      // Track RTT based on time elapsed since last telemetry send
+      if (telemetryRef.current.lastTelemetrySendTime > 0) {
+        const rtt = Date.now() - telemetryRef.current.lastTelemetrySendTime;
+        telemetryRef.current.rttBuffer.push(rtt);
+      }
+
       // Decode if needed? Protocol delivers Base64.
       // use-voice-protocol passes the raw event.
       // We need to convert base64 -> Float32 for worklet.
@@ -69,16 +73,16 @@ export function useVoiceSessionWeb() {
 
   // --- Telemetry State ---
   const telemetryRef = useRef<{
-    lastTime: number;
+    lastTelemetrySendTime: number;
     jitterBuffer: number[];
     packetLoss: number;
-    seq: number;
+    rttBuffer: number[];
     interval: ReturnType<typeof setInterval> | null;
   }>({
-    lastTime: 0,
+    lastTelemetrySendTime: 0,
     jitterBuffer: [],
     packetLoss: 0,
-    seq: 0,
+    rttBuffer: [],
     interval: null,
   });
 
@@ -154,7 +158,7 @@ export function useVoiceSessionWeb() {
         clearInterval(telemetryRef.current.interval);
       }
       telemetryRef.current.interval = setInterval(() => {
-        const { jitterBuffer, packetLoss } = telemetryRef.current;
+        const { jitterBuffer, packetLoss, rttBuffer } = telemetryRef.current;
         if (jitterBuffer.length === 0 && packetLoss === 0) {
           return;
         }
@@ -164,10 +168,21 @@ export function useVoiceSessionWeb() {
             ? jitterBuffer.reduce((a, b) => a + b, 0) / jitterBuffer.length
             : 0;
 
-        client.sendTelemetry?.({ packetLoss, jitter: avgJitter, rtt: 0 }); // RTT TODO
+        const avgRtt =
+          rttBuffer.length > 0
+            ? rttBuffer.reduce((a, b) => a + b, 0) / rttBuffer.length
+            : 0;
+
+        telemetryRef.current.lastTelemetrySendTime = Date.now();
+        client.sendTelemetry?.({
+          packetLoss,
+          jitter: avgJitter,
+          rtt: avgRtt,
+        });
 
         telemetryRef.current.jitterBuffer = [];
         telemetryRef.current.packetLoss = 0;
+        telemetryRef.current.rttBuffer = [];
       }, TELEMETRY_INTERVAL_MS);
     },
     [protocol, audio, sessionInfo, prefs]
@@ -225,9 +240,9 @@ export function useVoiceSessionWeb() {
   );
 
   return {
-    state: session.state, // Legacy state (mostly idle for streaming)
-    isRecording, // TODO: wire to protocol state
-    isProcessing: protocol.state.status === "processing" || isProcessing,
+    state: session.state,
+    isRecording: protocol.state.status === "recording",
+    isProcessing: protocol.state.status === "processing",
     lastResponse,
     error: protocol.state.error || error,
     start: async () => {}, // Legacy

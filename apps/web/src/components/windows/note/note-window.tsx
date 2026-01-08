@@ -61,7 +61,7 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const removeWindow = useDesktopStore((s) => s.removeWindow);
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
             content: draftContent,
             tags: [],
           });
-          updateWindow(id, {
+          updateWindowData(id, {
             resourceRef: { type: "note", id: newId },
             label: draftTitle.trim() || "Untitled Note",
           });
@@ -106,7 +106,7 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
             title: draftTitle.trim() || null,
             content: draftContent,
           });
-          updateWindow(id, {
+          updateWindowData(id, {
             label: draftTitle.trim() || "Untitled Note",
           });
           toast.success("Note updated");
@@ -126,7 +126,7 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
       isNew,
       resourceId,
       updateNote,
-      updateWindow,
+      updateWindowData,
     ]
   );
 

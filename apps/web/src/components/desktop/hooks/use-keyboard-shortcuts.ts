@@ -1,18 +1,4 @@
-/**
- * Global Keyboard Shortcuts Hook
- *
- * Handles global keyboard shortcuts for the desktop shell.
- *
- * Shortcuts:
- * - Cmd+K: Open command palette
- * - Cmd+W: Close focused window
- * - Cmd+M: Minimize focused window
- * - Cmd+Tab: Cycle focus between windows
- * - Cmd+`: Toggle Mindscape mode
- * - Cmd+1-9: Focus window by position
- * - Arrow keys (when holding Cmd): Directional focus
- * - Escape: Close overlays, unfocus
- */
+"use client";
 
 import { useCallback, useEffect } from "react";
 import { useDesktopStore } from "@/store/desktop";
@@ -27,6 +13,10 @@ export function useKeyboardShortcuts() {
     focusWindow,
     setSpaceMode,
     isSpaceMode,
+    tileWindow,
+    maximizeWindow,
+    minimizeWindow,
+    untileWindow,
   } = useDesktopStore((s) => ({
     focusedWindowId: s.focusedWindowId,
     windows: s.windows,
@@ -34,20 +24,20 @@ export function useKeyboardShortcuts() {
     focusWindow: s.focusWindow,
     setSpaceMode: s.setSpaceMode,
     isSpaceMode: s.isSpaceMode,
+    tileWindow: s.tileWindow,
+    maximizeWindow: s.maximizeWindow,
+    minimizeWindow: s.minimizeWindow,
+    untileWindow: s.untileWindow,
   }));
 
   const handleKeyDown: ShortcutHandler = useCallback(
     (e) => {
       const isMeta = e.metaKey || e.ctrlKey;
 
-      // Cmd+K: Open command palette (handled by command palette itself)
-      // Just prevent default to ensure it works
       if (isMeta && e.key === "k") {
-        // Command palette handles this
         return;
       }
 
-      // Cmd+W: Close focused window
       if (isMeta && e.key === "w") {
         e.preventDefault();
         if (focusedWindowId) {
@@ -56,14 +46,12 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Cmd+`: Toggle Mindscape mode
       if (isMeta && e.key === "`") {
         e.preventDefault();
         setSpaceMode(!isSpaceMode);
         return;
       }
 
-      // Cmd+Tab: Cycle focus between windows
       if (isMeta && e.key === "Tab") {
         e.preventDefault();
         if (windows.length === 0) {
@@ -82,7 +70,6 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Cmd+1-9: Focus window by position
       if (isMeta && e.key >= "1" && e.key <= "9") {
         e.preventDefault();
         const index = Number.parseInt(e.key, 10) - 1;
@@ -93,21 +80,40 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Escape: Clear focus / close overlays
-      if (e.key === "Escape") {
-        // Let command palette handle its own escape
-        // If nothing else handles it, clear focus
-        return;
-      }
-
-      // Arrow keys with Cmd: Directional focus navigation
       if (
         isMeta &&
         ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
       ) {
         e.preventDefault();
-        // Directional focus will be implemented with tiling
-        // For now, just cycle through windows
+        if (!focusedWindowId) {
+          return;
+        }
+
+        switch (e.key) {
+          case "ArrowLeft":
+            tileWindow(focusedWindowId, "left");
+            break;
+          case "ArrowRight":
+            tileWindow(focusedWindowId, "right");
+            break;
+          case "ArrowUp":
+            maximizeWindow(focusedWindowId);
+            break;
+          case "ArrowDown":
+            minimizeWindow(focusedWindowId);
+            break;
+        }
+        return;
+      }
+
+      if (isMeta && e.key === "Escape") {
+        e.preventDefault();
+        if (focusedWindowId) {
+          const window = windows.find((w) => w.id === focusedWindowId);
+          if (window?.isTiled) {
+            untileWindow(focusedWindowId);
+          }
+        }
         return;
       }
     },
@@ -118,6 +124,10 @@ export function useKeyboardShortcuts() {
       focusWindow,
       setSpaceMode,
       isSpaceMode,
+      tileWindow,
+      maximizeWindow,
+      minimizeWindow,
+      untileWindow,
     ]
   );
 

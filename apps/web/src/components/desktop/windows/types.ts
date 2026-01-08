@@ -58,20 +58,21 @@ export type WindowComponentProps = {
  * Legacy props from ReactFlow's NodeProps that existing windows use.
  * Used for the adapter layer during migration.
  */
-export type LegacyNodeProps = {
+import type { Node } from "@xyflow/react";
+
+export type LegacyNodeProps = Omit<
+  Node,
+  "id" | "position" | "data" | "type"
+> & {
   id: string;
   data: WindowData;
   selected?: boolean;
-  dragging?: boolean;
   type?: string;
   xPos?: number;
   yPos?: number;
-  zIndex?: number;
-  isConnectable?: boolean;
+  connectable?: boolean;
   positionAbsoluteX?: number;
   positionAbsoluteY?: number;
-  sourcePosition?: string;
-  targetPosition?: string;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ export type WindowMetadata = {
   /** Human-readable label */
   label: string;
   /** Icon component or string */
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | any;
   /** Default window size */
   defaultSize: { width: number; height: number };
   /** Minimum window size */
@@ -108,7 +109,7 @@ export type WindowMetadata = {
  */
 export type WindowRegistryEntry = {
   type: WindowType;
-  component: WindowComponentType | LegacyWindowComponentType;
+  component: WindowComponentType | LegacyWindowComponentType | any;
   metadata: WindowMetadata;
   /** Whether using legacy adapter */
   isLegacy: boolean;

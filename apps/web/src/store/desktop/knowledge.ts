@@ -1,10 +1,5 @@
 import type { StateCreator } from "zustand";
-import type {
-  DesktopEdge,
-  DesktopState,
-  EdgeData,
-  WindowInstance,
-} from "./types";
+import type { DesktopState, WindowInstance } from "./types.new";
 
 export type KnowledgeNode = {
   id: string;
@@ -38,15 +33,15 @@ export const createKnowledgeSlice: StateCreator<
   [],
   KnowledgeSlice
 > = (set, get) => ({
-  spawnKnowledgeGraph: (nodes, edges, centerPosition) => {
+  spawnKnowledgeGraph: (nodes, _edges, centerPosition) => {
     if (nodes.length === 0) {
       return [];
     }
 
-    const { viewport, windows: existingWindows } = get();
+    const { desktopArea, windows: existingWindows } = get();
     const center = centerPosition ?? {
-      x: -viewport.x + 600,
-      y: -viewport.y + 400,
+      x: desktopArea.x + desktopArea.width / 2,
+      y: desktopArea.y + desktopArea.height / 2,
     };
 
     // Map old IDs to new window IDs
@@ -82,6 +77,20 @@ export const createKnowledgeSlice: StateCreator<
             x: center.x + Math.cos(angle) * radius,
             y: center.y + Math.sin(angle) * radius,
           },
+          bounds: {
+            x: center.x + Math.cos(angle) * radius,
+            y: center.y + Math.sin(angle) * radius,
+            width: 400,
+            height: 300,
+          },
+          state: "normal" as const,
+          isTiled: false,
+          zIndex: 0,
+          isFocused: false,
+          minSize: { width: 200, height: 150 },
+          resizable: true,
+          createdAt: Date.now(),
+          lastFocusedAt: Date.now(),
           data: {
             type: "knowledge" as const,
             label: node.label,
@@ -96,44 +105,13 @@ export const createKnowledgeSlice: StateCreator<
             summary: node.description,
             hgHash: node.hgHash,
           },
-        } as WindowInstance;
+        } as unknown as WindowInstance;
       })
       .filter(Boolean);
 
-    // Create edges using mapped IDs
-    const newEdges: DesktopEdge[] = edges
-      .map((edge) => {
-        const sourceId = idMap.get(edge.fromId);
-        const targetId = idMap.get(edge.toId);
-        if (!(sourceId && targetId)) {
-          return null;
-        }
-        return {
-          id: `edge-${edge.id}`,
-          source: sourceId,
-          target: targetId,
-          type: "default",
-          data: {
-            kind: edge.kind as EdgeData["kind"],
-            metadata: {
-              source: "inference" as const,
-              confidence: edge.weight,
-              createdAt: new Date().toISOString(),
-            },
-          },
-        } as DesktopEdge;
-      })
-      .filter((e): e is DesktopEdge => e !== null);
-
     set((state) => ({
       windows: [...state.windows, ...newWindows],
-      edges: [...state.edges, ...newEdges],
     }));
-
-    // Auto-layout after spawning
-    setTimeout(() => {
-      get().autoLayout();
-    }, 50);
 
     return newWindows.map((w) => w.id);
   },

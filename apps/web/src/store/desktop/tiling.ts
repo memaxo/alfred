@@ -6,7 +6,7 @@
 
 import type { StateCreator } from "zustand";
 import type {
-  Bounds,
+  DesktopArea,
   DesktopState,
   TileZone,
   TilingConfig,
@@ -27,7 +27,7 @@ const DEFAULT_CONFIG: TilingConfig = {
  */
 function calculateZoneBounds(
   layout: TilingLayout,
-  desktopArea: Bounds,
+  desktopArea: DesktopArea,
   gap: number,
   mainRatio: number
 ): TilingZoneState[] {
@@ -354,7 +354,6 @@ export const createTilingSlice: StateCreator<
       return;
     }
 
-    // Tile windows into available zones
     const assignments: Array<{ windowId: string; zone: TileZone }> = [];
     for (
       let i = 0;
@@ -368,7 +367,6 @@ export const createTilingSlice: StateCreator<
         continue;
       }
 
-      // Check min size constraint
       if (
         config.respectMinSize &&
         (zone.bounds.width < window.minSize.width ||
@@ -380,9 +378,25 @@ export const createTilingSlice: StateCreator<
       assignments.push({ windowId: window.id, zone: zone.id });
     }
 
-    // Apply all assignments
     for (const { windowId, zone } of assignments) {
       get().tileWindow(windowId, zone);
     }
+  },
+
+  updateTiledWindows: () => {
+    const { zones } = get();
+
+    set((state) => ({
+      windows: state.windows.map((w) => {
+        if (!(w.isTiled && w.tileZone)) {
+          return w;
+        }
+        const zone = zones.find((z) => z.id === w.tileZone);
+        if (!zone) {
+          return { ...w, isTiled: false, tileZone: undefined };
+        }
+        return { ...w, bounds: zone.bounds };
+      }),
+    }));
   },
 });

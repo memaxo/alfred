@@ -6,6 +6,7 @@ import {
   expect,
   it,
 } from "bun:test";
+import { join } from "node:path";
 import {
   __internals,
   ModelProcess,
@@ -22,8 +23,10 @@ describe("Environment Variable Overrides", () => {
   let processInstance: ModelProcess;
 
   beforeAll(() => {
+    const voiceDir = join(process.cwd(), "packages", "voice");
     const config: ProcessConfig = {
-      scriptPath: "/test/script.py",
+      // Needs to be under packages/voice so uv is eligible.
+      scriptPath: join(voiceDir, "scripts", "test.py"),
       modelPath: "test-model",
     };
     processInstance = new ModelProcess(config);

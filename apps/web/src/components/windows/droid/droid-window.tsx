@@ -114,7 +114,7 @@ export function DroidWindow({ id, data, selected }: NodeProps) {
   const timeoutSec = timeoutMinutes * 60;
   const requiresElevation = timeoutSec > ELEVATED_TIMEOUT_THRESHOLD_SEC;
 
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
 
   const subscriptionRef = useRef<ReturnType<
     typeof subscribeToDroidStream
@@ -164,7 +164,7 @@ export function DroidWindow({ id, data, selected }: NodeProps) {
   );
 
   useEffect(() => {
-    updateWindow(id, {
+    updateWindowData(id, {
       // Store droid state in window data for persistence
       draft: {
         prompt,
@@ -187,7 +187,7 @@ export function DroidWindow({ id, data, selected }: NodeProps) {
     lastError,
     activeRunId,
     timeoutSec,
-    updateWindow,
+    updateWindowData,
   ]);
 
   const handleStreamEvent = useCallback(

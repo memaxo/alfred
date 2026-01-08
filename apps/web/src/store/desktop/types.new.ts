@@ -345,17 +345,20 @@ export type {
   FeedbackEntry,
   FeedbackIntent,
 } from "./context";
+export type { KnowledgeSlice } from "./knowledge";
 
 // Import for DesktopState composition
 import type { CacheSlice } from "./cache";
 import type { ContextSlice } from "./context";
+import type { KnowledgeSlice } from "./knowledge";
 
 export type DesktopState = WindowSlice &
   TilingSlice &
   ViewportSlice &
   TaskbarSlice &
   CacheSlice &
-  ContextSlice;
+  ContextSlice &
+  KnowledgeSlice;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT VALUES — Window constraints and defaults

@@ -5,7 +5,7 @@ import { Toolbar } from "@/components/ai-elements/toolbar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { ViewMode, WindowType } from "@/store/desktop/types";
+import type { ViewMode, WindowType } from "@/store/desktop/types.new";
 import { useWindowFocus } from "./focus";
 
 export type WindowTier = "primary" | "secondary" | "tertiary";
@@ -77,7 +77,7 @@ export function WindowFrame({
   modes = ["compact", "full"],
 }: WindowFrameProps) {
   const removeWindow = useDesktopStore((s) => s.removeWindow);
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const viewMode = useDesktopStore(
     (s) => s.windows.find((w) => w.id === id)?.data.viewMode ?? "full"
   );
@@ -89,7 +89,7 @@ export function WindowFrame({
   const handleViewModeToggle = () => {
     const currentIndex = modes.indexOf(viewMode);
     const nextIndex = (currentIndex + 1) % modes.length;
-    updateWindow(id, { viewMode: modes[nextIndex] });
+    updateWindowData(id, { viewMode: modes[nextIndex] });
   };
 
   return (

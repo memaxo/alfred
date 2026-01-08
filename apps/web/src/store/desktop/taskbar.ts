@@ -84,4 +84,31 @@ export const createTaskbarSlice: StateCreator<
   unpinType: (type: WindowType) => {
     get().unpinApp(type);
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // KNOWLEDGE GRAPH SPAWNING
+  // ─────────────────────────────────────────────────────────────────────────
+
+  spawnKnowledgeGraph: (
+    nodes: Array<{
+      id: string;
+      label: string;
+      entityType?: string;
+      confidence?: number;
+      archived?: string;
+      description?: string;
+      hgHash?: string;
+    }>,
+    edges: Array<{
+      id: string;
+      fromId: string;
+      toId: string;
+      kind: string;
+      weight?: number;
+    }>,
+    centerPosition?: { x: number; y: number }
+  ) => {
+    const { spawnKnowledgeGraph: spawnGraph } = get();
+    return spawnGraph(nodes, edges, centerPosition);
+  },
 });

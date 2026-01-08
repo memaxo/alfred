@@ -3,7 +3,9 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { TTSPool } from "../src/process/tts";
 
-describe("TTSPool with Supertonic Streaming", () => {
+const describeSupertonic = describe;
+
+describeSupertonic("TTSPool with Supertonic Streaming", () => {
   const modelsDir = join(process.cwd(), "models", "supertonic");
   const hasModels = existsSync(join(modelsDir, "tts.json"));
 
@@ -13,7 +15,7 @@ describe("TTSPool with Supertonic Streaming", () => {
     voice: "dummy",
   };
 
-  it("should stream chunks (skipped: causes C++ exception in Bun runner)", async () => {
+  it("should stream chunks", async () => {
     if (!hasModels) {
       console.warn(
         "Skipping Supertonic streaming test because models are missing"

@@ -24,6 +24,7 @@ import { useDesktopStore } from "@/store/desktop";
 import { DesktopCommandPalette } from "./command-palette";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { MindscapeLayer } from "./layers/mindscape-layer";
+import { OrbLayer } from "./layers/orb-layer";
 import { WindowLayer } from "./layers/window-layer";
 import { MenuBar } from "./menubar";
 import { Taskbar } from "./taskbar";
@@ -64,35 +65,31 @@ export function AlfredDesktopShell({
   onVisualize,
   onAsk,
 }: AlfredDesktopShellProps) {
-  // Desktop mode determines which layer is active
-  const { mode, focusedWindowId } = useDesktopStore(
+  const { mode, focusedWindowId, setDesktopArea } = useDesktopStore(
     useShallow((s) => ({
       mode: s.isSpaceMode ? "mindscape" : "desktop",
       focusedWindowId: s.focusedWindowId,
+      setDesktopArea: s.setDesktopArea,
     }))
   );
 
-  // Initialize keyboard shortcuts
   useKeyboardShortcuts();
 
-  // Calculate desktop area on mount and resize
   useEffect(() => {
     const updateDesktopArea = () => {
-      // Menu bar height: 32px, Taskbar height: 48px
-      // This would update the store - we'll implement this properly
-      // when we wire up the new store
-      // const area = {
-      //   x: 0,
-      //   y: 32, // Menu bar height
-      //   width: window.innerWidth,
-      //   height: window.innerHeight - 32 - 48, // Minus menu bar and taskbar
-      // };
+      const area = {
+        x: 0,
+        y: 32,
+        width: window.innerWidth,
+        height: window.innerHeight - 32 - 48,
+      };
+      setDesktopArea(area);
     };
 
     updateDesktopArea();
     window.addEventListener("resize", updateDesktopArea);
     return () => window.removeEventListener("resize", updateDesktopArea);
-  }, []);
+  }, [setDesktopArea]);
 
   return (
     <div
@@ -131,8 +128,8 @@ export function AlfredDesktopShell({
       {/* Taskbar Layer */}
       <Taskbar style={{ zIndex: Z_INDEX.TASKBAR }} />
 
-      {/* Orb Layer - will be added in Phase 5 */}
-      {/* <OrbLayer style={{ zIndex: Z_INDEX.ORB }} /> */}
+      {/* Orb Layer */}
+      <OrbLayer style={{ zIndex: Z_INDEX.ORB }} />
 
       {/* Overlay Layer (Command Palette, Modals) */}
       <div

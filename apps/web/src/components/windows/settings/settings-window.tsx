@@ -44,7 +44,7 @@ export function SettingsWindow({ id, data, selected }: NodeProps) {
 
   const [customKey, setCustomKey] = useState("");
   const [customValue, setCustomValue] = useState("");
-  const updateWindow = useDesktopStore((s) => s.updateWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
 
   const utils = trpc.useUtils();
   const preferenceQuery = trpc.preference.list.useQuery(listInput);
@@ -88,7 +88,7 @@ export function SettingsWindow({ id, data, selected }: NodeProps) {
     };
     setPreference.mutate(input, {
       onSuccess: () => {
-        updateWindow(id, { draft: { autonomy: level } });
+        updateWindowData(id, { draft: { autonomy: level } });
       },
     });
   };

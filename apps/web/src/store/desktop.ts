@@ -2,19 +2,21 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createCacheSlice } from "./desktop/cache";
 import { createContextSlice } from "./desktop/context";
-import { createDockSlice } from "./desktop/dock";
 import { createKnowledgeSlice } from "./desktop/knowledge";
 import { persistOptions } from "./desktop/persist";
-import type { DesktopState } from "./desktop/types";
-import { createViewportSlice } from "./desktop/viewport";
-import { createWindowSlice } from "./desktop/windows";
+import { createTaskbarSlice } from "./desktop/taskbar";
+import { createTilingSlice } from "./desktop/tiling";
+import type { DesktopState } from "./desktop/types.new";
+import { createViewportSliceNew } from "./desktop/viewport.new";
+import { createWindowSliceNew } from "./desktop/windows.new";
 
 export const useDesktopStore = create<DesktopState>()(
   persist(
     (...a) => ({
-      ...createWindowSlice(...a),
-      ...createViewportSlice(...a),
-      ...createDockSlice(...a),
+      ...createWindowSliceNew(...a),
+      ...createViewportSliceNew(...a),
+      ...createTilingSlice(...a),
+      ...createTaskbarSlice(...a),
       ...createCacheSlice(...a),
       ...createContextSlice(...a),
       ...createKnowledgeSlice(...a),
@@ -36,4 +38,4 @@ if (hasWindow() && !window.__DESKTOP_STORE__) {
   window.__DESKTOP_STORE__ = useDesktopStore;
 }
 
-export * from "./desktop/types";
+export * from "./desktop/types.new";

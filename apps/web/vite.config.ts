@@ -79,13 +79,18 @@ function getBuildConstants(): Record<string, string> {
 
 const serverOnlyRegex = [
   /^@alfred\/agent(?:\/.*)?$/,
+  /^@alfred\/cognitive(?:\/.*)?$/,
+  /^@alfred\/metrics(?:\/.*)?$/,
   /^@alfred\/policy(?:\/.*)?$/,
   /^@alfred\/db(?:\/.*)?$/,
+  /^@alfred\/runtime(?:\/.*)?$/,
   /^@alfred\/voice(?:\/.*)?$/,
 ];
 const serverOnlyPackages = [
   "@alfred/agent",
   "@alfred/auth",
+  "@alfred/cognitive",
+  "@alfred/metrics",
   "@alfred/policy",
   "@alfred/db",
   "@alfred/runtime",

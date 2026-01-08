@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowType } from "@/store/desktop/types";
+import type { WindowType } from "@/store/desktop/types.new";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICON MAP

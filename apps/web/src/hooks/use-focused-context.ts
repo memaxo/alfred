@@ -51,7 +51,6 @@ type FocusedContext = ContextState & {
 export function useFocusedContext(): FocusedContext {
   const focusedWindowId = useDesktopStore((state) => state.focusedWindowId);
   const windows = useDesktopStore((state) => state.windows);
-  const edges = useDesktopStore((state) => state.edges);
   const contextCache = useDesktopStore((state) => state.contextCache);
 
   const [localContext, setLocalContext] = useState<ContextState>({
@@ -74,23 +73,10 @@ export function useFocusedContext(): FocusedContext {
       return null;
     }
 
-    if (window.data?.type === "chat") {
-      // Look for connected edges
-      const connectedEdge = edges.find(
-        (e) => e.source === focusedWindowId || e.target === focusedWindowId
-      );
-
-      if (connectedEdge) {
-        // Prioritize the *other* window
-        const otherId =
-          connectedEdge.source === focusedWindowId
-            ? connectedEdge.target
-            : connectedEdge.source;
-        return otherId;
-      }
-    }
+    // NOTE: Edge-based context connection removed in new type system
+    // Previously, chat windows could connect to topic windows via edges
     return focusedWindowId;
-  }, [focusedWindowId, windows, edges]);
+  }, [focusedWindowId, windows]);
 
   const focusedWindow = windows.find((w) => w.id === effectiveWindowId);
   const focusedGraphNodeId = useMemo(() => {
@@ -239,10 +225,8 @@ export function useFocusedContext(): FocusedContext {
     }
   );
 
-  // Highlight graph edges involved in the context
-  const setHighlightedEdges = useDesktopStore(
-    (state) => state.setHighlightedEdges
-  );
+  // NOTE: setHighlightedEdges removed in new type system
+  const setHighlightedEdges = (_ids: string[]) => {};
   useEffect(() => {
     const edgesValue = (ragQuery.data as { edges?: unknown } | undefined)
       ?.edges;
