@@ -2,8 +2,6 @@
  * Autonomy gradient update with instrumentation
  */
 
-import { performance } from "node:perf_hooks";
-
 import { cognitiveAutonomyUpdateDuration } from "../metrics.js";
 import type { Physiology } from "../physiology/types.js";
 import {
@@ -20,6 +18,10 @@ import {
   DEFAULT_BETA_PRIOR,
   type Evidence,
 } from "./types.js";
+
+// Use cross-platform performance API
+const perf =
+  typeof performance !== "undefined" ? performance : { now: () => Date.now() };
 
 export const initialAutonomy = (now: number): AutonomyGradient => {
   const prior = { ...DEFAULT_BETA_PRIOR };
@@ -45,7 +47,7 @@ export function updateAutonomy(
   evidence: Evidence,
   physiology?: Physiology
 ): AutonomyGradient {
-  const start = performance.now();
+  const start = perf.now();
 
   try {
     const reliability = clamp01(evidence.reliability ?? 1);
@@ -109,7 +111,7 @@ export function updateAutonomy(
       lastUpdate: timestamp(now),
     };
   } finally {
-    const durationMs = performance.now() - start;
+    const durationMs = perf.now() - start;
     cognitiveAutonomyUpdateDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.05) {
