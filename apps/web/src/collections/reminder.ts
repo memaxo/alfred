@@ -12,6 +12,10 @@ type ReminderInput = {
   recurring?: string;
 };
 
+function toISOString(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
 export function createReminderCollection(
   queryClient: QueryClient,
   trpcClient: inferRouterClient<TRPCAppRouter>
@@ -26,10 +30,12 @@ export function createReminderCollection(
             id: r.id,
             title: r.title,
             description: r.description ?? null,
-            due: r.due,
+            due: toISOString(r.due as Date | string),
             status: r.fired ? "fired" : "scheduled",
-            created: r.created ?? new Date().toISOString(),
-            updated: r.firedAt ?? r.created ?? new Date().toISOString(),
+            created: toISOString(r.created as Date | string),
+            updated: r.firedAt
+              ? toISOString(r.firedAt as Date | string)
+              : toISOString(r.created as Date | string),
           })
         );
       },

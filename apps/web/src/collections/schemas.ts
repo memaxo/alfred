@@ -18,7 +18,7 @@ export const reminderSchema = z.object({
   due: z.string(),
   status: z.enum(["scheduled", "due", "fired"]),
   created: z.string(),
-  updated: z.string(),
+  updated: z.string().nullable(),
 });
 
 export type ReminderResource = z.infer<typeof reminderSchema>;
