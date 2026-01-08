@@ -13,6 +13,7 @@
  */
 
 import { mock, vi } from "bun:test";
+import { registerMockReset } from "../bun/preload";
 
 // Configure environment to disable Redis connections
 process.env.REDIS_URL = "false";
@@ -93,3 +94,6 @@ export function resetRedisMocks() {
 
 // Auto-install mocks when this module is imported
 installRedisMocks();
+
+// Auto-register reset function with preload
+registerMockReset(resetRedisMocks);

@@ -5,6 +5,7 @@ import { mock, vi } from "bun:test";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
+import { registerMockReset } from "../bun/preload";
 import { createVCR, type VCRRecorder } from "../vcr";
 
 /**
@@ -81,7 +82,38 @@ export type WorkflowRuntimeFixtureHandle = {
   vcr: InstanceType<typeof VCRRecorder> | null;
 };
 
-const aiStreamState: { mode: StreamMode } = { mode: "normal" };
+/**
+ * Module-level state for workflow runtime fixture.
+ * Encapsulated for easier reset between tests.
+ */
+const fixtureState = {
+  aiStreamMode: "normal" as StreamMode,
+  reviewGateShouldFail: false,
+  activeVcr: null as InstanceType<typeof VCRRecorder> | null,
+};
+
+/**
+ * Reset all module-level state in the workflow runtime fixture.
+ * Called automatically by preload afterEach.
+ */
+export function resetWorkflowFixtureState(): void {
+  fixtureState.aiStreamMode = "normal";
+  fixtureState.reviewGateShouldFail = false;
+  // Note: activeVcr cleanup is handled by stop() in individual fixtures
+  // Setting to null here prevents stale references
+  fixtureState.activeVcr = null;
+}
+
+// Legacy reference for backwards compatibility in existing code
+const aiStreamState = {
+  get mode() {
+    return fixtureState.aiStreamMode;
+  },
+  set mode(v: StreamMode) {
+    fixtureState.aiStreamMode = v;
+  },
+};
+
 const realAiModule = await import("ai");
 const realOpenAiModule = await import("@ai-sdk/openai");
 
@@ -284,15 +316,13 @@ mock.module("@alfred/agent/assistant/graphstore", () => ({
   linkRagProvenanceToReasoning: vi.fn().mockResolvedValue(undefined),
 }));
 
-let reviewGateShouldFail = false;
-
 mock.module("@alfred/agent/workflow/review-gate", () => {
   class ReviewGateStub {
     requireAtLeast() {}
     applyPlan() {}
     recordCheck() {}
     isSatisfied() {
-      return !reviewGateShouldFail;
+      return !fixtureState.reviewGateShouldFail;
     }
     summary() {
       return [];
@@ -302,7 +332,7 @@ mock.module("@alfred/agent/workflow/review-gate", () => {
 });
 
 export function setReviewGateFailureMode(shouldFail: boolean) {
-  reviewGateShouldFail = shouldFail;
+  fixtureState.reviewGateShouldFail = shouldFail;
 }
 
 mock.module("@alfred/runtime/orchestrator/review", () => ({
@@ -331,18 +361,16 @@ export type WorkflowRuntimeFixtureOptions = {
   vcr?: VCRConfig;
 };
 
-let activeVcr: InstanceType<typeof VCRRecorder> | null = null;
-
 export async function installWorkflowRuntimeFixture(
   options?: WorkflowRuntimeFixtureOptions
 ): Promise<WorkflowRuntimeFixtureHandle> {
   // Initialize VCR if configured
   if (options?.vcr) {
-    activeVcr = createVCR({
+    fixtureState.activeVcr = createVCR({
       cassettePath: options.vcr.cassettePath,
       strictReplay: options.vcr.strictReplay ?? false,
     });
-    await activeVcr.start();
+    await fixtureState.activeVcr.start();
     // When VCR is active, it intercepts fetch requests
     // AI providers using fetch will be automatically recorded/replayed
   }
@@ -551,13 +579,13 @@ export async function installWorkflowRuntimeFixture(
     },
     async stop() {
       server.stop();
-      if (activeVcr) {
-        await activeVcr.stop();
-        activeVcr = null;
+      if (fixtureState.activeVcr) {
+        await fixtureState.activeVcr.stop();
+        fixtureState.activeVcr = null;
       }
     },
     /** VCR instance when VCR mode is enabled */
-    vcr: activeVcr,
+    vcr: fixtureState.activeVcr,
   };
 }
 
@@ -571,3 +599,6 @@ export async function withWorkflowRuntime(
     await handle.stop();
   }
 }
+
+// Auto-register reset function with preload
+registerMockReset(resetWorkflowFixtureState);

@@ -16,6 +16,7 @@
  */
 
 import { mock, vi } from "bun:test";
+import { registerMockReset } from "../bun/preload";
 
 /**
  * Default claims returned by requireToolScopesAndPolicy mock.
@@ -93,3 +94,8 @@ export function requireScopes(scopes: string[]) {
     claims: { ...DEFAULT_TOKEN_CLAIMS, scopes },
   });
 }
+
+// Auto-register reset function with preload
+// This is safe even if installAuthTokenMock hasn't been called yet,
+// because resetAuthTokenMocks just clears vi.fn() state
+registerMockReset(resetAuthTokenMocks);

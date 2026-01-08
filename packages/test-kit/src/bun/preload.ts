@@ -2,7 +2,49 @@ import { afterAll, afterEach, mock } from "bun:test";
 
 const g = globalThis as unknown as {
   __alfredWatchdogInstalled?: boolean;
+  __alfredMockResetRegistry?: Array<() => void>;
 };
+
+/**
+ * Centralized mock reset registry.
+ * Test-kit modules register their reset functions here to be called in afterEach.
+ * This ensures all mock state is cleaned up between tests automatically.
+ */
+export function getMockResetRegistry(): Array<() => void> {
+  if (!g.__alfredMockResetRegistry) {
+    g.__alfredMockResetRegistry = [];
+  }
+  return g.__alfredMockResetRegistry;
+}
+
+/**
+ * Register a mock reset function to be called after each test.
+ * Call this in test-kit modules to auto-register cleanup.
+ *
+ * @example
+ * ```ts
+ * // In packages/test-kit/src/redis/index.ts
+ * registerMockReset(resetRedisMocks);
+ * ```
+ */
+export function registerMockReset(resetFn: () => void): void {
+  const registry = getMockResetRegistry();
+  if (!registry.includes(resetFn)) {
+    registry.push(resetFn);
+  }
+}
+
+/**
+ * Unregister a mock reset function.
+ * Useful for cleanup in edge cases.
+ */
+export function unregisterMockReset(resetFn: () => void): void {
+  const registry = getMockResetRegistry();
+  const idx = registry.indexOf(resetFn);
+  if (idx !== -1) {
+    registry.splice(idx, 1);
+  }
+}
 
 function writeErr(s: string): void {
   try {
@@ -82,6 +124,16 @@ afterEach(async () => {
     mock.clearAllMocks();
   } catch {
     // ignore
+  }
+
+  // Call all registered mock reset functions from test-kit modules
+  const registry = getMockResetRegistry();
+  for (const resetFn of registry) {
+    try {
+      resetFn();
+    } catch {
+      // ignore individual reset failures
+    }
   }
 
   resetEnv();

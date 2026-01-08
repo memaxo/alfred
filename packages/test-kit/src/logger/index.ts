@@ -12,6 +12,7 @@
  */
 
 import { mock, vi } from "bun:test";
+import { registerMockReset } from "../bun/preload";
 
 /**
  * Mock implementations for logger methods.
@@ -52,3 +53,6 @@ export function resetLoggerMocks() {
 
 // Auto-install when this module is imported
 installLoggerMock();
+
+// Auto-register reset function with preload
+registerMockReset(resetLoggerMocks);
