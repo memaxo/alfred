@@ -20,7 +20,7 @@
         "NSMicrophoneUsageDescription": "Alfred needs microphone access for voice interactions.",
         "NSCameraUsageDescription": "Alfred may need camera access for certain features.",
         "NSFaceIDUsageDescription": "Alfred uses Face ID for secure authentication.",
-        "UIBackgroundModes": ["audio", "fetch"]
+        "UIBackgroundModes": ["audio", "fetch", "remote-notification"]
       },
       "associatedDomains": ["applinks:alfred.app", "applinks:*.alfred.app"]
     },
@@ -59,7 +59,6 @@
     },
     "plugins": [
       "expo-router",
-      ["./plugins/with-car-play", { "enabled": true }],
       [
         "expo-notifications",
         {

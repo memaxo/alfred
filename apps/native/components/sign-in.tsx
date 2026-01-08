@@ -17,12 +17,21 @@ export function SignIn() {
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+    if (!password.trim()) {
+      setError("Password is required");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     await authClient.signIn.email(
       {
-        email,
+        email: email.trim(),
         password,
       },
       {
@@ -80,7 +89,7 @@ export function SignIn() {
   return (
     <View className="mt-6 rounded-lg border border-border bg-card p-4">
       <Text className="mb-4 font-semibold text-foreground text-lg">
-        Sign In
+        Sign In to Your Server
       </Text>
 
       {error && (
@@ -91,7 +100,9 @@ export function SignIn() {
 
       <TextInput
         autoCapitalize="none"
+        autoComplete="email"
         className="mb-3 rounded-md border border-input bg-input p-4 text-foreground"
+        editable={!isAnyLoading}
         keyboardType="email-address"
         onChangeText={setEmail}
         placeholder="Email"
@@ -100,7 +111,9 @@ export function SignIn() {
       />
 
       <TextInput
+        autoComplete="password"
         className="mb-4 rounded-md border border-input bg-input p-4 text-foreground"
+        editable={!isAnyLoading}
         onChangeText={setPassword}
         placeholder="Password"
         placeholderTextColor="#9CA3AF"
@@ -110,7 +123,7 @@ export function SignIn() {
 
       <TouchableOpacity
         className="mb-3 flex-row items-center justify-center rounded-md bg-primary p-4"
-        disabled={isAnyLoading}
+        disabled={isAnyLoading || !email.trim() || !password.trim()}
         onPress={handleLogin}
       >
         {isLoading ? (
@@ -128,7 +141,7 @@ export function SignIn() {
 
       <TouchableOpacity
         className="flex-row items-center justify-center rounded-md border border-border bg-card p-4"
-        disabled={isAnyLoading}
+        disabled={isAnyLoading || !email.trim()}
         onPress={handlePasskeyLogin}
       >
         {isPasskeyLoading ? (

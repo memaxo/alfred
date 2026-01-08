@@ -2,6 +2,7 @@ import { useChat } from "@ai-sdk/react";
 import { Ionicons } from "@expo/vector-icons";
 import { DefaultChatTransport } from "ai";
 import { fetch as expoFetch } from "expo/fetch";
+import { Redirect } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -14,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
+import { authClient } from "@/lib/auth-client";
 
 const generateAPIUrl = (relativePath: string) => {
   const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
@@ -28,6 +30,7 @@ const generateAPIUrl = (relativePath: string) => {
 };
 
 export default function AIScreen() {
+  const { data: session } = authClient.useSession();
   const [input, setInput] = useState("");
   const {
     messages,
@@ -51,6 +54,10 @@ export default function AIScreen() {
     }
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages.length]);
+
+  if (!session?.user) {
+    return <Redirect href="/(drawer)/" />;
+  }
 
   const onSubmit = () => {
     const value = input.trim();

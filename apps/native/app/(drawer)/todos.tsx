@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+import { Redirect } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -11,10 +12,12 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
+import { authClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 export default function TodosScreen() {
+  const { data: session } = authClient.useSession();
   const [newTodoText, setNewTodoText] = useState("");
 
   const utils = trpc.useUtils();
@@ -50,6 +53,10 @@ export default function TodosScreen() {
       createMutation.mutate(input);
     }
   };
+
+  if (!session?.user) {
+    return <Redirect href="/(drawer)/" />;
+  }
 
   const handleToggleTodo = (id: number, completed: boolean) => {
     const input: ToggleTodoInput = { id, completed: !completed };

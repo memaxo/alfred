@@ -23,7 +23,11 @@ Notifications.setNotificationHandler({
 
 function getExpoProjectId(): string | null {
   const easId = Constants.easConfig?.projectId;
-  if (typeof easId === "string" && easId.length > 0) {
+  if (
+    typeof easId === "string" &&
+    easId.length > 0 &&
+    easId !== "your-project-id-here"
+  ) {
     return easId;
   }
 
@@ -36,11 +40,18 @@ function getExpoProjectId(): string | null {
     "projectId" in extraId &&
     typeof (extraId as { projectId?: unknown }).projectId === "string"
   ) {
-    return (extraId as { projectId: string }).projectId;
+    const projectId = (extraId as { projectId: string }).projectId;
+    if (projectId !== "your-project-id-here") {
+      return projectId;
+    }
   }
 
   const envId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
-  if (typeof envId === "string" && envId.length > 0) {
+  if (
+    typeof envId === "string" &&
+    envId.length > 0 &&
+    envId !== "your-project-id-here"
+  ) {
     return envId;
   }
 
@@ -53,46 +64,86 @@ export async function registerForPushNotificationsAsync(): Promise<
   let token: string | null = null;
 
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#00D9FF",
-    });
+    try {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#00D9FF",
+      });
+    } catch (error) {
+      logger.warn("Failed to set notification channel", { error });
+    }
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+  try {
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
 
-  if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== "granted") {
+      logger.warn("Push notification permissions not granted");
+      return null;
+    }
+  } catch (error) {
+    logger.warn("Failed to get notification permissions", { error });
+    return null;
   }
 
-  if (finalStatus !== "granted") {
-    logger.warn("Failed to get push token for push notification!");
+  const projectId = getExpoProjectId();
+  if (!projectId) {
+    // Silently skip push notification registration in development if project ID is missing
+    if (__DEV__) {
+      logger.debug(
+        "Skipping push notification registration: EAS project ID not configured"
+      );
+    } else {
+      logger.warn(
+        "Skipping push notification registration: EAS project ID not configured"
+      );
+    }
     return null;
   }
 
   try {
-    const projectId = getExpoProjectId();
-    if (!projectId) {
-      logger.warn("expo_project_id_missing");
-      return null;
-    }
-
     token = (
       await Notifications.getExpoPushTokenAsync({
         projectId,
       })
     ).data;
 
-    await trpcClient.user.registerPushToken.mutate({
-      token,
-      platform: Platform.OS as "ios" | "android" | "web",
-    });
+    if (token) {
+      try {
+        await trpcClient.user.registerPushToken.mutate({
+          token,
+          platform: Platform.OS as "ios" | "android" | "web",
+        });
+      } catch (error) {
+        // Log but don't fail - token was obtained successfully
+        logger.warn("Failed to register push token with backend", { error });
+      }
+    }
   } catch (error) {
-    logger.error("Error getting push token", { error });
+    // Handle keychain and other errors gracefully
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (
+      errorMessage.includes("Keychain") ||
+      errorMessage.includes("entitlement")
+    ) {
+      logger.warn(
+        "Push notification registration skipped: keychain access not available (development mode)",
+        {
+          error: errorMessage,
+        }
+      );
+    } else {
+      logger.error("Error getting push token", { error });
+    }
   }
 
   return token;

@@ -6,7 +6,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import { Redirect, Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StatusBar,
@@ -25,12 +25,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ALFRED_COLORS, ORB_SIZES, Orb, useOrbState } from "@/components/orb";
 import { ControlBar } from "@/components/orb/control-bar";
+import { authClient } from "@/lib/auth-client";
 import { useVoiceSessionNative } from "@/lib/voice/session";
 import { trpcClient } from "@/utils/trpc";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function VoiceCallScreen() {
+  const { data: session } = authClient.useSession();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -100,6 +102,10 @@ export default function VoiceCallScreen() {
     const seconds = elapsedSec % 60;
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
   }, [elapsedSec]);
+
+  if (!session?.user) {
+    return <Redirect href="/(drawer)/" />;
+  }
 
   return (
     <View style={styles.container}>

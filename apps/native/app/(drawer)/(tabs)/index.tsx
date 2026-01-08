@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,9 +11,11 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { ChatList } from "@/components/chat/chat-list";
 import { Container } from "@/components/container";
 import { useChatLogic } from "@/hooks/use-chat-logic";
+import { authClient } from "@/lib/auth-client";
 import { useColorScheme } from "@/lib/use-color-scheme";
 
 export default function ChatScreen() {
+  const { data: session } = authClient.useSession();
   const { isDarkColorScheme } = useColorScheme();
   const {
     messages,
@@ -26,6 +28,11 @@ export default function ChatScreen() {
     isRecording,
     clearMessages,
   } = useChatLogic();
+
+  // Redirect to home if not authenticated
+  if (!session?.user) {
+    return <Redirect href="/(drawer)/" />;
+  }
 
   return (
     <Container>

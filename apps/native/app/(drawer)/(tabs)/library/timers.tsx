@@ -96,7 +96,12 @@ export default function TimersListScreen() {
 
   const formatTimeRemaining = (timer: TimerItem) => {
     const now = Date.now();
-    const endTime = new Date(timer.end).getTime();
+    // Use end field from database if available, otherwise calculate from start + duration
+    const endTime = timer.end
+      ? new Date(timer.end).getTime()
+      : timer.start
+        ? new Date(timer.start).getTime() + timer.duration * 1000
+        : now;
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
     const hours = Math.floor(remaining / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);

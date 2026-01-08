@@ -1,9 +1,16 @@
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { TabBarIcon } from "@/components/tabbar-icon";
+import { authClient } from "@/lib/auth-client";
 import { useColorScheme } from "@/lib/use-color-scheme";
 
 export default function TabLayout() {
   const { isDarkColorScheme } = useColorScheme();
+  const { data: session } = authClient.useSession();
+
+  // Protect all tabs - redirect to home if not authenticated
+  if (!session?.user) {
+    return <Redirect href="/(drawer)/" />;
+  }
 
   return (
     <Tabs
