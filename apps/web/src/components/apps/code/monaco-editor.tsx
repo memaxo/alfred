@@ -3,18 +3,22 @@
 /**
  * Monaco Editor - Code editor integration
  *
- * Full Monaco integration with ALFRED void theme.
+ * Full Monaco integration with ALFRED void theme and customizable settings.
  */
 
-import { Editor } from "@monaco-editor/react";
-import { useEffect } from "react";
+import { Editor, type OnMount } from "@monaco-editor/react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import type { EditorSettings } from "./types";
+import { DEFAULT_EDITOR_SETTINGS } from "./types";
 
 type MonacoEditorProps = {
   content: string;
   language: string;
   path: string;
   onChange: (content: string) => void;
+  settings?: EditorSettings;
+  onCursorChange?: (line: number, column: number) => void;
   className?: string;
 };
 
@@ -23,8 +27,12 @@ export function MonacoEditor({
   language,
   path,
   onChange,
+  settings = DEFAULT_EDITOR_SETTINGS,
+  onCursorChange,
   className,
 }: MonacoEditorProps) {
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+
   // Configure ALFRED void theme
   useEffect(() => {
     const configureTheme = async () => {
@@ -41,6 +49,8 @@ export function MonacoEditor({
           { token: "type", foreground: "3b82f6" },
           { token: "class", foreground: "06b6d4" },
           { token: "function", foreground: "c084fc" },
+          { token: "variable", foreground: "f472b6" },
+          { token: "operator", foreground: "94a3b8" },
         ],
         colors: {
           "editor.background": "#09090b",
@@ -55,6 +65,8 @@ export function MonacoEditor({
           "editorLineNumber.foreground": "#71717a",
           "editorLineNumber.activeForeground": "#fafafa",
           "editorGutter.background": "#09090b",
+          "editorBracketMatch.background": "#27272a",
+          "editorBracketMatch.border": "#a855f7",
         },
       });
       monaco.editor.setTheme("alfred-void");
@@ -62,6 +74,20 @@ export function MonacoEditor({
 
     configureTheme();
   }, []);
+
+  const handleEditorMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+
+    // Track cursor position
+    editor.onDidChangeCursorPosition((e) => {
+      onCursorChange?.(e.position.lineNumber, e.position.column);
+    });
+
+    // Add custom keybindings
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD, () => {
+      editor.getAction("editor.action.copyLinesDownAction")?.run();
+    });
+  };
 
   // Detect language from file extension if not provided
   const detectedLanguage =
@@ -76,20 +102,30 @@ export function MonacoEditor({
         height="100%"
         language={detectedLanguage}
         onChange={(value) => onChange(value ?? "")}
+        onMount={handleEditorMount}
         options={{
           automaticLayout: true,
-          fontSize: 14,
+          fontSize: settings.fontSize,
           fontFamily: "Menlo, Monaco, 'Courier New', monospace",
-          minimap: { enabled: true },
+          minimap: { enabled: settings.minimap },
           scrollBeyondLastLine: false,
-          wordWrap: "on",
-          lineNumbers: "on",
+          wordWrap: settings.wordWrap,
+          lineNumbers: settings.lineNumbers,
           renderLineHighlight: "all",
           cursorBlinking: "smooth",
           cursorSmoothCaretAnimation: "on",
           smoothScrolling: true,
-          tabSize: 2,
+          tabSize: settings.tabSize,
           insertSpaces: true,
+          bracketPairColorization: { enabled: true },
+          guides: {
+            bracketPairs: true,
+            indentation: true,
+          },
+          suggest: {
+            showKeywords: true,
+            showSnippets: true,
+          },
         }}
         path={path}
         theme="alfred-void"
@@ -97,4 +133,31 @@ export function MonacoEditor({
       />
     </div>
   );
+}
+
+export function insertTextAtCursor(
+  editorRef: React.RefObject<Parameters<OnMount>[0] | null>,
+  text: string
+) {
+  const editor = editorRef.current;
+  if (!editor) {
+    return;
+  }
+
+  const position = editor.getPosition();
+  if (!position) {
+    return;
+  }
+
+  editor.executeEdits("ai-suggestion", [
+    {
+      range: {
+        startLineNumber: position.lineNumber,
+        startColumn: position.column,
+        endLineNumber: position.lineNumber,
+        endColumn: position.column,
+      },
+      text,
+    },
+  ]);
 }
