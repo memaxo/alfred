@@ -83,12 +83,16 @@ export type ComponentName = keyof typeof componentRegistry;
 
 /**
  * Status tracking for component installation
+ *
+ * - pending: Not yet implemented
+ * - installed: Component exists but needs integration work
+ * - integrated: Component fully implemented and ready for use
  */
 export const componentStatus: Record<
   ComponentName,
   "pending" | "installed" | "integrated"
 > = {
-  // Phase 1
+  // Phase 1: AI Chat UI
   connect: "pending",
   ctx: "pending",
   actions: "pending",
@@ -104,17 +108,21 @@ export const componentStatus: Record<
   thought: "pending",
   code: "pending",
   controls: "integrated",
-  audio: "pending",
-  viz: "pending",
-  chat: "integrated",
-  chatbar: "pending",
-  voice: "pending",
-  orb: "pending",
-  wave: "pending",
-  response: "pending",
-  mic: "pending",
-  msg: "pending",
-  voiceBtn: "pending",
+
+  // Voice & Audio (ElevenLabs)
+  audio: "integrated", // components/audio.tsx + components/ui/audio-player.tsx
+  viz: "integrated", // components/viz.tsx + components/ui/bar-visualizer.tsx
+  chat: "integrated", // components/ui/conversation.tsx
+  chatbar: "integrated", // components/ui/conversation-bar.tsx
+  voice: "integrated", // components/voice.tsx + components/ui/voice-picker.tsx
+  orb: "integrated", // components/orb.tsx + components/ui/orb.tsx (3D WebGL)
+  wave: "integrated", // components/ui/live-waveform.tsx + components/ui/waveform/*
+  response: "integrated", // components/ui/response.tsx (Streamdown)
+  mic: "integrated", // components/mic.tsx + components/ui/mic-selector.tsx
+  msg: "integrated", // components/ui/message.tsx
+  voiceBtn: "integrated", // components/voice-btn.tsx + components/ui/voice-button.tsx
+
+  // Canvas & Preview
   preview: "pending",
   node: "pending",
   artifact: "pending",
@@ -125,22 +133,22 @@ export const componentStatus: Record<
   loading: "pending",
   list: "pending",
 
-  // Phase 2
+  // Phase 2: Data Visualization
   number: "pending",
   chart: "pending",
-  matrix: "pending",
+  matrix: "integrated", // components/ui/matrix.tsx (VU, digits, patterns)
   grid: "pending",
   dock: "pending",
   term: "pending",
 
-  // Phase 3
-  text: "pending",
-  select: "pending",
+  // Phase 3: Forms & Input
+  text: "installed", // components/ui/input.tsx exists
+  select: "installed", // components/ui/select.tsx exists
   date: "pending",
   daterange: "pending",
-  checkbox: "pending",
+  checkbox: "installed", // components/ui/checkbox.tsx exists
   choice: "pending",
   autocomplete: "pending",
-  dropdown: "pending",
+  dropdown: "installed", // components/ui/dropdown-menu.tsx exists
   profile: "pending",
 };
