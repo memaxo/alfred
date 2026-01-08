@@ -16,12 +16,6 @@ beforeAll(async () => {
   workflowRuns = dbModule.workflowSchema.workflowRuns;
 });
 
-const minimalInput = {
-  requirement: "Test workflow",
-  auto: "low" as const,
-  mode: "sequential" as const,
-};
-
 describe("WorkflowTestHarness", () => {
   let harness: WorkflowTestHarness | null = null;
 
@@ -35,8 +29,8 @@ describe("WorkflowTestHarness", () => {
 
   it("injects sessions through headers without mocking auth", async () => {
     harness = new WorkflowTestHarness();
-    const request = harness.request(minimalInput);
-    const session = await auth.api.getSession({ headers: request.headers });
+    const headers = harness.headers();
+    const session = await auth.api.getSession({ headers });
     expect(session?.user?.id).toBe(harness.user.id);
   });
 

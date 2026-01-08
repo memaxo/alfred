@@ -1,4 +1,3 @@
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { auth } from "@alfred/auth";
 import { db, workflowSchema } from "@alfred/db";
 import {
@@ -95,22 +94,6 @@ export class WorkflowTestHarness {
     headers.set("content-type", "application/json");
     headers.set(TEST_SESSION_HEADER, this.sessionHeader);
     return headers;
-  }
-
-  request(input: WorkflowInputPayload, headers?: HeadersInit): Request {
-    return new Request("http://localhost/api/workflow/stream", {
-      method: "POST",
-      headers: this.headers(headers),
-      body: JSON.stringify(input),
-    });
-  }
-
-  async invoke(
-    handler: (request: Request) => Promise<Response>,
-    input: WorkflowInputPayload,
-    headers?: HeadersInit
-  ): Promise<Response> {
-    return handler(this.request(input, headers));
   }
 
   async createCaller() {
