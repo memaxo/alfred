@@ -5,22 +5,22 @@
  */
 
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type ResourceChartProps = {
   containerId: string;
   className?: string;
 };
 
-export function ResourceChart({
-  containerId: _containerId,
-  className,
-}: ResourceChartProps) {
-  // Mock resource data
-  const cpuPercent = 12.5;
-  const memoryUsage = 256;
-  const memoryLimit = 1024;
-  const networkIn = 1.2;
-  const networkOut = 0.8;
+export function ResourceChart({ containerId, className }: ResourceChartProps) {
+  const { data } = trpc.deploy.containersStats.useQuery(
+    { containerId },
+    { refetchInterval: 3000 }
+  );
+
+  const cpuPercent = data?.cpuPercent ?? 0;
+  const memoryUsage = data?.memoryUsage ?? 0;
+  const memoryLimit = data?.memoryLimit ?? 0;
 
   return (
     <div className={cn("grid gap-4 p-4", className)}>
@@ -37,29 +37,10 @@ export function ResourceChart({
       <ResourceCard
         color="bg-purple-500"
         label="Memory"
-        max={memoryLimit}
+        max={memoryLimit || 1}
         unit="MB"
         value={memoryUsage}
       />
-
-      {/* Network */}
-      <div className="rounded-xl border border-white/5 bg-white/5 p-4">
-        <h3 className="mb-3 font-medium text-sm">Network I/O</h3>
-        <div className="flex items-center gap-8">
-          <div>
-            <span className="font-semibold text-2xl text-green-400">
-              {networkIn}
-            </span>
-            <span className="ml-1 text-biolum-dim text-sm">MB/s in</span>
-          </div>
-          <div>
-            <span className="font-semibold text-2xl text-orange-400">
-              {networkOut}
-            </span>
-            <span className="ml-1 text-biolum-dim text-sm">MB/s out</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

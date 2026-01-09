@@ -10,10 +10,20 @@ import { requirePolicy } from "../gate";
 import { deployService, type ProbeResult } from "../services/deploy";
 import { authedProcedure, router } from "../trpc";
 import {
+  connectNetwork,
+  createContainer,
+  createNetwork,
+  createVolume,
+  disconnectNetwork,
+  getContainerInspect,
   getContainerLogs,
   getContainerStats,
   listContainers,
+  listNetworks,
+  listVolumes,
   removeContainer,
+  removeNetwork,
+  removeVolume,
   startContainer,
   stopContainer,
 } from "./deploy-helpers";
@@ -117,7 +127,7 @@ export const deployRouter = router({
     if (!userId) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
-    return deployRepo.listDeployments({
+    return await deployRepo.listDeployments({
       userId,
       app: input?.app,
       type: input?.type,
@@ -624,5 +634,87 @@ export const deployRouter = router({
     .input(z.object({ containerId: z.string(), authz: z.string().optional() }))
     .mutation(async ({ input }) => ({
       success: await removeContainer(input.containerId, input.authz),
+    })),
+
+  containersInspect: authedProcedure
+    .input(z.object({ containerId: z.string() }))
+    .query(async ({ input }) => getContainerInspect(input.containerId)),
+
+  containersCreate: authedProcedure
+    .input(
+      z.object({
+        image: z.string().min(1),
+        name: z.string().min(1).optional(),
+        ports: z
+          .array(
+            z.object({
+              host: z.number().int().min(1).max(65_535),
+              container: z.number().int().min(1).max(65_535),
+            })
+          )
+          .optional(),
+        env: z.record(z.string(), z.string()).optional(),
+        network: z.string().min(1).optional(),
+        volumes: z.array(z.string().min(1)).optional(),
+        cmd: z.string().min(1).optional(),
+      })
+    )
+    .mutation(async ({ input }) => createContainer(input)),
+
+  networksList: authedProcedure.query(async () => ({
+    networks: await listNetworks(),
+  })),
+
+  networksCreate: authedProcedure
+    .input(z.object({ name: z.string().min(1), driver: z.string().optional() }))
+    .mutation(async ({ input }) => createNetwork(input)),
+
+  networksRemove: authedProcedure
+    .input(z.object({ nameOrId: z.string().min(1) }))
+    .mutation(async ({ input }) => ({
+      success: await removeNetwork(input.nameOrId),
+    })),
+
+  networksConnect: authedProcedure
+    .input(
+      z.object({ network: z.string().min(1), containerId: z.string().min(1) })
+    )
+    .mutation(async ({ input }) => ({
+      success: await connectNetwork({
+        network: input.network,
+        container: input.containerId,
+      }),
+    })),
+
+  networksDisconnect: authedProcedure
+    .input(
+      z.object({
+        network: z.string().min(1),
+        containerId: z.string().min(1),
+        force: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ input }) => ({
+      success: await disconnectNetwork({
+        network: input.network,
+        container: input.containerId,
+        force: input.force,
+      }),
+    })),
+
+  volumesList: authedProcedure.query(async () => ({
+    volumes: await listVolumes(),
+  })),
+
+  volumesCreate: authedProcedure
+    .input(z.object({ name: z.string().min(1), driver: z.string().optional() }))
+    .mutation(async ({ input }) => ({
+      success: await createVolume(input),
+    })),
+
+  volumesRemove: authedProcedure
+    .input(z.object({ name: z.string().min(1) }))
+    .mutation(async ({ input }) => ({
+      success: await removeVolume(input.name),
     })),
 });
