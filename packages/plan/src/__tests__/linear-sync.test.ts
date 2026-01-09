@@ -24,8 +24,8 @@ const mockProject = mock((id: string) => {
       id: "linear-123",
       name: "Linear Project",
       description: "Desc",
-      startDate: "2024-01-01",
-      targetDate: "2024-12-31",
+      startDate: "2026-01-01",
+      targetDate: "2026-12-31",
       teams: mockTeams,
       state: Promise.resolve({ name: "Started" }),
     };
@@ -55,7 +55,8 @@ describe("Linear Sync", () => {
 
     mockGetProjectById.mockResolvedValue({
       id: alfredProjectId,
-      workspace: "/path/to/space",
+      workspace: "/path/to/project",
+      linearSpaceId: "space-123",
       config: {},
     });
 
@@ -72,6 +73,7 @@ describe("Linear Sync", () => {
 
     expect(result.linearProjectId).toBe(linearProjectId);
     expect(result.linearTeamId).toBe("team-123");
+    expect(result.linearSpaceId).toBe("space-123");
     expect(mockUpdateProject).toHaveBeenCalled();
 
     // Check that metadata was synced (call to updateProject includes config.linear)
@@ -95,6 +97,7 @@ describe("Linear Sync", () => {
     mockGetProjectById.mockResolvedValue({
       id: "id",
       workspace: "/path",
+      linearSpaceId: "space-123",
     });
     mockGetLinearByWorkspace.mockResolvedValue(null);
 
@@ -108,12 +111,26 @@ describe("Linear Sync", () => {
     mockGetProjectById.mockResolvedValue({
       id: "id",
       workspace: "/path",
+      linearSpaceId: "space-123",
     });
     mockGetLinearByWorkspace.mockResolvedValue({ token: "tk" });
     mockProject.mockResolvedValue(null);
 
     await expect(linkLinearProject("id", "not-found")).rejects.toThrow(
       "Linear Project not found"
+    );
+  });
+
+  it("should throw if Linear workspace id is missing", async () => {
+    const { linkLinearProject } = await import("../project/linear.js");
+    mockGetProjectById.mockResolvedValue({
+      id: "id",
+      workspace: "/path",
+      linearSpaceId: null,
+    });
+
+    await expect(linkLinearProject("id", "lin-123")).rejects.toThrow(
+      "linear_space_required"
     );
   });
 });

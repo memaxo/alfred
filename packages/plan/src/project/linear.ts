@@ -4,12 +4,14 @@ import { LinearClient } from "@linear/sdk";
 import type { Project } from "./types.js";
 
 /**
- * Get a Linear client for a given project or space
+ * Get a Linear client for a given Linear workspace ("space") id.
  */
-async function getLinearClient(space: string): Promise<LinearClient> {
-  const installation = await linearRepo.getLinearByWorkspace(space);
+async function getLinearClient(linearSpaceId: string): Promise<LinearClient> {
+  const installation = await linearRepo.getLinearByWorkspace(linearSpaceId);
   if (!installation) {
-    throw new Error(`Linear installation not found for space: ${space}`);
+    throw new Error(
+      `Linear installation not found for workspace: ${linearSpaceId}`
+    );
   }
 
   return new LinearClient({
@@ -25,6 +27,8 @@ export async function linkLinearProject(
   linearProjectId: string,
   options?: {
     syncMetadata?: boolean; // Default: true
+    /** Linear workspace (organization) id, used to resolve the Linear installation */
+    linearSpaceId?: string;
   }
 ): Promise<Project> {
   const project = await projectRepo.getProjectById(projectId);
@@ -32,7 +36,13 @@ export async function linkLinearProject(
     throw new Error(`Project not found: ${projectId}`);
   }
 
-  const client = await getLinearClient(project.workspace);
+  const linearSpaceId =
+    options?.linearSpaceId?.trim() || project.linearSpaceId?.trim();
+  if (!linearSpaceId) {
+    throw new Error("linear_space_required");
+  }
+
+  const client = await getLinearClient(linearSpaceId);
 
   // 1. Resolve Linear Project to get team IDs
   const linearProject = await client.project(linearProjectId);
@@ -49,6 +59,7 @@ export async function linkLinearProject(
 
   // 2. Update project with Linear IDs
   const updatedProject = await projectRepo.updateProject(projectId, {
+    linearSpaceId,
     linearProjectId,
     linearTeamId: teamIds[0], // Use first team
   });
@@ -73,7 +84,12 @@ export async function syncProjectMetadata(
     return;
   }
 
-  const client = await getLinearClient(project.workspace);
+  const linearSpaceId = project.linearSpaceId?.trim();
+  if (!linearSpaceId) {
+    return;
+  }
+
+  const client = await getLinearClient(linearSpaceId);
   const linearProject = await client.project(linearProjectId);
   if (!linearProject) {
     return;
@@ -111,7 +127,7 @@ export async function syncOnWorkflowStart(
   _workflowId: string
 ): Promise<void> {
   const project = await projectRepo.getProjectById(projectId);
-  if (!project?.linearProjectId) {
+  if (!(project?.linearProjectId && project.linearSpaceId)) {
     return; // No Linear link, skip sync
   }
 

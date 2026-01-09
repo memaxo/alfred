@@ -1,8 +1,10 @@
 // packages/api/src/routers/project.ts
 import { projectRepo } from "@alfred/db";
+import { getLinearByOAuth } from "@alfred/db/repo/linear";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
+import { ensureValidToken, getClientId } from "./linear-helpers";
 
 export const projectRouter = router({
   /**
@@ -57,9 +59,21 @@ export const projectRouter = router({
         });
       }
 
+      const installation = await getLinearByOAuth(getClientId());
+      await ensureValidToken(installation);
+      const linearSpaceId = installation?.space?.trim();
+      if (!linearSpaceId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "linear_not_connected",
+        });
+      }
+
       try {
         const { linkLinearProject } = await import("@alfred/plan");
-        return await linkLinearProject(input.projectId, input.linearProjectId);
+        return await linkLinearProject(input.projectId, input.linearProjectId, {
+          linearSpaceId,
+        });
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",

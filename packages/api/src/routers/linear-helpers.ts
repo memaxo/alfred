@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import { URLSearchParams } from "node:url";
+import type { LinearInstallation } from "@alfred/db/repo/linear";
+import { updateLinearToken } from "@alfred/db/repo/linear";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 
@@ -85,6 +87,50 @@ export type WorkflowState = {
   type: string;
   position: number;
 };
+
+export async function ensureValidToken(
+  installation: LinearInstallation | null
+): Promise<string> {
+  if (!installation?.token) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "linear_not_connected",
+    });
+  }
+
+  const isExpired = installation.expires
+    ? new Date(installation.expires) < new Date()
+    : false;
+
+  if (!isExpired) {
+    return installation.token;
+  }
+
+  if (!installation.refresh) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "linear_token_expired_no_refresh",
+    });
+  }
+
+  try {
+    const refreshed = await refreshAccessToken(installation.refresh);
+    const clientId = getClientId();
+    await updateLinearToken(
+      clientId,
+      refreshed.accessToken,
+      refreshed.refreshToken,
+      refreshed.expiresIn ?? undefined
+    );
+    return refreshed.accessToken;
+  } catch (error) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "linear_token_refresh_failed",
+      cause: error,
+    });
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Environment Helpers
@@ -245,6 +291,57 @@ export async function exchangeAuthorizationCode(
   return {
     accessToken: json.access_token,
     refreshToken: json.refresh_token ?? null,
+    scope: json.scope ?? getScope(),
+    expiresIn:
+      typeof json.expires_in === "number" && Number.isFinite(json.expires_in)
+        ? json.expires_in
+        : null,
+  };
+}
+
+export async function refreshAccessToken(
+  refreshToken: string
+): Promise<TokenExchangeResult> {
+  const params = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: getClientId(),
+    client_secret: getClientSecret(),
+  });
+
+  const response = await fetch(LINEAR_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "linear_token_refresh_failed",
+    });
+  }
+
+  const json = (await response.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    scope?: string;
+    expires_in?: number;
+    error?: string;
+  };
+
+  if (!json.access_token) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: json.error ?? "linear_refresh_token_missing",
+    });
+  }
+
+  return {
+    accessToken: json.access_token,
+    refreshToken: json.refresh_token ?? refreshToken,
     scope: json.scope ?? getScope(),
     expiresIn:
       typeof json.expires_in === "number" && Number.isFinite(json.expires_in)

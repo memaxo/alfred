@@ -10,6 +10,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   workspace: text("workspace").notNull(),
+  linearSpaceId: text("linear_space_id"),
   linearProjectId: text("linear_project_id"),
   linearTeamId: text("linear_team_id"),
   config: jsonb("config").default({}),

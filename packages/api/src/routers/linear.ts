@@ -7,6 +7,7 @@ import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 import {
   type BoardIssue,
+  ensureValidToken,
   exchangeAuthorizationCode,
   fetchLinearViewer,
   getClientId,
@@ -176,6 +177,7 @@ export const linearRouter = router({
         user: installation.appUser,
         expiresAt: installation.expires?.toISOString() ?? null,
         isExpired,
+        canRefresh: installation.refresh !== null,
       };
     }),
 
@@ -201,17 +203,12 @@ export const linearRouter = router({
       const clientId = getClientId();
       const installation = await getLinearByOAuth(clientId);
 
-      if (!installation?.token) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "linear_not_connected",
-        });
-      }
+      const token = await ensureValidToken(installation);
 
       const result = await linearGraphQL<{
         issueUpdate?: { success: boolean; issue: unknown };
       }>(
-        installation.token,
+        token,
         `mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
           issueUpdate(id: $id, input: $input) {
             success
@@ -262,12 +259,7 @@ export const linearRouter = router({
       const clientId = getClientId();
       const installation = await getLinearByOAuth(clientId);
 
-      if (!installation?.token) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "linear_not_connected",
-        });
-      }
+      const token = await ensureValidToken(installation);
 
       // Build filter
       const filters: string[] = [];
@@ -285,7 +277,7 @@ export const linearRouter = router({
         filters.length > 0 ? `filter: { ${filters.join(", ")} }` : "";
 
       const result = await linearGraphQL<{ issues?: { nodes: IssueNode[] } }>(
-        installation.token,
+        token,
         `query Issues($first: Int!) {
           issues(first: $first ${filterStr}) {
             nodes {
@@ -335,15 +327,10 @@ export const linearRouter = router({
       const clientId = getClientId();
       const installation = await getLinearByOAuth(clientId);
 
-      if (!installation?.token) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "linear_not_connected",
-        });
-      }
+      const token = await ensureValidToken(installation);
 
       const result = await linearGraphQL<{ issue?: IssueDetail }>(
-        installation.token,
+        token,
         `query Issue($id: String!) {
           issue(id: $id) {
             id identifier title description priority
@@ -389,6 +376,140 @@ export const linearRouter = router({
       };
     }),
 
+  createIssue: authedProcedure
+    .use(requirePolicy("linear.updateIssue"))
+    .input(
+      z.object({
+        title: z.string().min(1),
+        description: z.string().optional(),
+        teamId: z.string().min(1),
+        priority: z.number().int().min(0).max(4).optional(),
+        stateId: z.string().optional(),
+        assigneeId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const clientId = getClientId();
+      const installation = await getLinearByOAuth(clientId);
+
+      const token = await ensureValidToken(installation);
+
+      const result = await linearGraphQL<{
+        issueCreate?: {
+          success: boolean;
+          issue: { id: string; identifier: string; title: string };
+        };
+      }>(
+        token,
+        `mutation CreateIssue($input: IssueCreateInput!) {
+          issueCreate(input: $input) {
+            success
+            issue {
+              id
+              identifier
+              title
+            }
+          }
+        }`,
+        {
+          input: {
+            title: input.title,
+            description: input.description,
+            teamId: input.teamId,
+            priority: input.priority,
+            stateId: input.stateId,
+            assigneeId: input.assigneeId,
+          },
+        }
+      );
+
+      return result.issueCreate;
+    }),
+
+  teams: authedProcedure
+    .use(requirePolicy("linear.getStatus"))
+    .query(async ({ ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const clientId = getClientId();
+      const installation = await getLinearByOAuth(clientId);
+
+      if (!installation) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "linear_not_found",
+        });
+      }
+
+      await ensureValidToken(installation);
+
+      const result = await linearGraphQL<{
+        teams?: { nodes: Array<{ id: string; name: string; key: string }> };
+      }>(
+        installation.token,
+        `query Teams {
+          teams {
+            nodes { id name key }
+          }
+        }`
+      );
+
+      return { teams: result.teams?.nodes ?? [] };
+    }),
+
+  workflowStates: authedProcedure
+    .use(requirePolicy("linear.getStatus"))
+    .input(z.object({ teamId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const clientId = getClientId();
+      const installation = await getLinearByOAuth(clientId);
+
+      const token = await ensureValidToken(installation);
+
+      const teamFilter = input.teamId
+        ? `filter: { team: { id: { eq: "${input.teamId}" } } }`
+        : "";
+
+      const result = await linearGraphQL<{
+        workflowStates?: { nodes: WorkflowState[] };
+      }>(
+        token,
+        `query WorkflowStates {
+          workflowStates(first: 50 ${teamFilter ? `, ${teamFilter}` : ""}) {
+            nodes { id name color type position }
+          }
+        }`
+      );
+
+      return {
+        states: (result.workflowStates?.nodes ?? []).sort(
+          (a, b) => a.position - b.position
+        ),
+      };
+    }),
+
   boardView: authedProcedure
     .use(requirePolicy("linear.getStatus"))
     .input(z.object({ teamId: z.string().optional() }))
@@ -404,12 +525,7 @@ export const linearRouter = router({
       const clientId = getClientId();
       const installation = await getLinearByOAuth(clientId);
 
-      if (!installation?.token) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "linear_not_connected",
-        });
-      }
+      const token = await ensureValidToken(installation);
 
       const teamFilter = input.teamId
         ? `team: { id: { eq: "${input.teamId}" } }`
@@ -419,7 +535,7 @@ export const linearRouter = router({
         workflowStates?: { nodes: WorkflowState[] };
         issues?: { nodes: BoardIssue[] };
       }>(
-        installation.token,
+        token,
         `query BoardView {
           workflowStates(first: 20) {
             nodes { id name color type position }

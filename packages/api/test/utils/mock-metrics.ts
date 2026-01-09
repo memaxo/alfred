@@ -113,6 +113,7 @@ metricsStub.recordVoiceTts = vi.fn();
 metricsStub.recordStreamEvent = vi.fn();
 metricsStub.startStreamTimer = vi.fn(() => vi.fn());
 metricsStub.getMetricsSnapshot = vi.fn(() => "metrics");
+metricsStub.getMetricsJSON = vi.fn(() => []);
 metricsStub.initMetricsHooks = vi.fn();
 
 // Workflow runner metrics commonly needed by workflow tests
