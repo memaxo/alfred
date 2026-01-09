@@ -4,6 +4,7 @@
  * Displays active timers and allows creating new ones.
  */
 
+import { logger } from "@alfred/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -96,12 +97,17 @@ export default function TimersListScreen() {
 
   const formatTimeRemaining = (timer: TimerItem) => {
     const now = Date.now();
-    // Use end field from database if available, otherwise calculate from start + duration
-    const endTime = timer.end
-      ? new Date(timer.end).getTime()
-      : timer.start
-        ? new Date(timer.start).getTime() + timer.duration * 1000
-        : now;
+    // Use end field from database exclusively - it accounts for paused/resumed timers and clock skew
+    if (!timer.end) {
+      logger.error("Timer missing end field", {
+        timerId: timer.id,
+        hasStart: !!timer.start,
+        duration: timer.duration,
+      });
+      // Return 0:00 as fallback to prevent UI crash
+      return "0:00";
+    }
+    const endTime = new Date(timer.end).getTime();
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
     const hours = Math.floor(remaining / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);

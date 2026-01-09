@@ -5,6 +5,7 @@
  * Features the neural orb visualization that responds to voice states.
  */
 
+import { logger } from "@alfred/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,7 +23,6 @@ import Animated, {
   SlideInDown,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { ALFRED_COLORS, ORB_SIZES, Orb, useOrbState } from "@/components/orb";
 import { ControlBar } from "@/components/orb/control-bar";
 import { authClient } from "@/lib/auth-client";
@@ -62,8 +62,8 @@ export default function VoiceCallScreen() {
   const handleEndCall = useCallback(() => {
     void stream
       .stop()
-      .catch(() => {
-        // ignore
+      .catch((error) => {
+        logger.error("Failed to stop voice stream", { error });
       })
       .finally(() => {
         router.back();
