@@ -288,6 +288,7 @@ export const workflowRouter = router({
 
         await recordAudit({
           userId: session.user.id,
+          projectId: workflow.projectId ?? undefined,
           action: "workflow.start",
           resource: { kind: "workflow", id: executor.runId },
           decision: "allow",
@@ -475,7 +476,15 @@ export const workflowRouter = router({
         authz: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
       // Handle clarification resume
       if (input.clarificationId && input.response) {
         try {
@@ -523,9 +532,11 @@ export const workflowRouter = router({
           throw toTRPCError(error, "workflow_resume_failed");
         }
         {
+          const run = await workflowRepo.getRun(input.runId);
           const { recordAudit } = await import("@alfred/agent/utils/audit");
           await recordAudit({
-            userId: null,
+            userId: session.user.id,
+            projectId: run?.projectId ?? undefined,
             action: "workflow.resume",
             resource: { kind: "workflow", id: input.runId },
             decision: "allow",
