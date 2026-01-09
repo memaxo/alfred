@@ -23,6 +23,7 @@ export type UnifiedNode = {
   id: UnifiedNodeRef;
   kind: UnifiedNodeKind;
   label: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Unified node properties can have any shape
   properties?: Record<string, any>;
 };
 
@@ -32,6 +33,7 @@ export type UnifiedEdge = {
   target: UnifiedNodeRef;
   kind: string;
   weight?: number;
+  // biome-ignore lint/suspicious/noExplicitAny: Unified edge properties can have any shape
   properties?: Record<string, any>;
 };
 

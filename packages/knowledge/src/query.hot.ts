@@ -91,7 +91,7 @@ function resolveResourceCandidates(
   return Array.from(candidates);
 }
 
-async function fetchReflectionRows(
+function fetchReflectionRows(
   resources: string[],
   limit: number
 ): Promise<MemoryNodeRow[]> {

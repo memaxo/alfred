@@ -42,7 +42,9 @@ export async function fast_getGraphSnapshot(
       y: Math.random() * 1000 - 500,
       data: {
         label: n.label, // Use 'label' column directly
+        // biome-ignore lint/suspicious/noExplicitAny: Internal node property mapping
         title: (n.properties as any)?.title ?? n.label,
+        // biome-ignore lint/suspicious/noExplicitAny: Internal node property mapping
         ...((n.properties as any) ?? {}),
       },
     })),

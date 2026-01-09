@@ -27,9 +27,7 @@ export type TemporalOptions = {
  *
  * @param asOf - Point in time to query (default: now)
  */
-export async function getValidEdges(
-  asOf: Date = new Date()
-): Promise<EdgeRow[]> {
+export function getValidEdges(asOf: Date = new Date()): Promise<EdgeRow[]> {
   return db
     .select()
     .from(memoryEdges)
@@ -52,7 +50,7 @@ export async function getValidEdges(
 /**
  * Get edges from a specific node that are valid at a point in time.
  */
-export async function getValidOutboundEdges(
+export function getValidOutboundEdges(
   nodeId: string,
   kind?: string,
   options: TemporalOptions = {}
@@ -91,7 +89,7 @@ export async function getValidOutboundEdges(
 /**
  * Get edges to a specific node that are valid at a point in time.
  */
-export async function getValidInboundEdges(
+export function getValidInboundEdges(
   nodeId: string,
   kind?: string,
   options: TemporalOptions = {}
@@ -210,7 +208,7 @@ export async function supersededEdge(
  * @param kind - Edge type
  * @returns All versions of the edge, ordered by creation time
  */
-export async function getEdgeHistory(
+export function getEdgeHistory(
   fromId: string,
   toId: string,
   kind: string
@@ -292,7 +290,7 @@ export function isEdgeValid(edge: EdgeRow, asOf: Date = new Date()): boolean {
 /**
  * Get superseded (soft-deleted) edges for a node pair.
  */
-export async function getSupersededEdges(
+export function getSupersededEdges(
   fromId: string,
   toId: string,
   kind?: string

@@ -429,10 +429,10 @@ export async function deleteEdge(edgeId: string): Promise<number> {
   return rows.length;
 }
 
-export async function upsertEdges(seeds: EdgeSeed[]): Promise<EdgeRow[]> {
+export function upsertEdges(seeds: EdgeSeed[]): Promise<EdgeRow[]> {
   const deduped = uniqSeeds(seeds);
   if (deduped.length === 0) {
-    return [];
+    return Promise.resolve([]);
   }
 
   return db

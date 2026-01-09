@@ -500,11 +500,15 @@ export async function findPath(
     return [];
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
   const nodePath = Array.isArray((row as any).node_path)
-    ? ((row as any).node_path as string[])
+    ? // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
+      ((row as any).node_path as string[])
     : [];
+  // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
   const edgePath = Array.isArray((row as any).edge_path)
-    ? ((row as any).edge_path as string[])
+    ? // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
+      ((row as any).edge_path as string[])
     : [];
 
   if (nodePath.length === 0) {

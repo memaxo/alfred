@@ -60,7 +60,7 @@ export type UnifiedQueryResult = {
   edges?: UnifiedEdge[];
 };
 
-export async function runQuery(
+export function runQuery(
   query: UnifiedQuery,
   context: { graph?: Hypergraph; resource?: string }
 ): Promise<UnifiedQueryResult> {
@@ -70,11 +70,11 @@ export async function runQuery(
     case "path":
       return runPath(query, context.resource);
     case "datalog":
-      return runDatalog(query, context.graph);
+      return Promise.resolve(runDatalog(query, context.graph));
     case "semantic":
       return runSemantic(query, context);
     default:
-      return { nodes: [], edges: [] };
+      return Promise.resolve({ nodes: [], edges: [] });
   }
 }
 
@@ -127,10 +127,10 @@ async function runPath(
   };
 }
 
-async function runDatalog(
+function runDatalog(
   query: DatalogQuery,
   graph?: Hypergraph
-): Promise<UnifiedQueryResult> {
+): UnifiedQueryResult {
   if (!graph) {
     throw new Error("Hypergraph instance required for datalog queries");
   }
@@ -216,6 +216,7 @@ function mapNodes(rows: DbNode[]): Map<string, UnifiedNode> {
 
 function mapNodeRow(row: DbNode): UnifiedNode {
   const kind = (row.kind as UnifiedNodeKind) ?? "other";
+  // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
   const props: any = row.properties ?? undefined;
   return {
     id: { dbId: row.id },
