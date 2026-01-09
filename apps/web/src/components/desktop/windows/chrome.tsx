@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import type { TileZone, WindowInstance } from "@/store/desktop/types.new";
+import { useWindowAnimation } from "../animations";
 import { ResizeHandles } from "./resize-handles";
 import type { ResizeDirection } from "./types";
 
@@ -23,6 +24,7 @@ export function WindowChrome({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   const {
     window,
@@ -50,9 +52,25 @@ export function WindowChrome({
     }))
   );
 
+  // Animation hook with close callback
+  const {
+    styles: animationStyles,
+    animateClose,
+    startTileAnimation,
+    startResizeAnimation,
+    endResizeAnimation,
+    isAnimating,
+  } = useWindowAnimation({
+    onCloseComplete: () => removeWindow(windowId),
+  });
+
   const handleClose = useCallback(() => {
-    removeWindow(windowId);
-  }, [removeWindow, windowId]);
+    if (isClosing) {
+      return;
+    }
+    setIsClosing(true);
+    animateClose();
+  }, [animateClose, isClosing]);
 
   const handleMinimize = useCallback(() => {
     useDesktopStore.getState().minimizeWindow(windowId);
@@ -155,6 +173,7 @@ export function WindowChrome({
 
         const zone = detectZoneFromPosition(upEvent.clientX, upEvent.clientY);
         if (zone) {
+          startTileAnimation();
           tileWindow(windowId, zone);
         }
       };
@@ -171,6 +190,7 @@ export function WindowChrome({
       showTilePreview,
       hideTilePreview,
       tileWindow,
+      startTileAnimation,
     ]
   );
 
@@ -178,6 +198,7 @@ export function WindowChrome({
     (direction: ResizeDirection, e: React.MouseEvent) => {
       e.preventDefault();
       setIsResizing(true);
+      startResizeAnimation();
       handleFocus();
 
       const startX = e.clientX;
@@ -315,6 +336,7 @@ export function WindowChrome({
 
       const handleMouseUp = () => {
         setIsResizing(false);
+        endResizeAnimation();
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
       };
@@ -322,7 +344,15 @@ export function WindowChrome({
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [handleFocus, window, windowId, setBounds, desktopArea]
+    [
+      handleFocus,
+      window,
+      windowId,
+      setBounds,
+      desktopArea,
+      startResizeAnimation,
+      endResizeAnimation,
+    ]
   );
 
   if (!window) {
@@ -342,24 +372,30 @@ export function WindowChrome({
 
   return (
     <div
+      aria-label={title}
       className={cn(
-        "pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl border bg-void-surface/95 shadow-xl backdrop-blur-xl transition-all duration-200",
+        "pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl border-2 bg-void-surface/95 shadow-xl backdrop-blur-xl",
         isFocused
-          ? "border-biolum/30 shadow-[0_0_30px_rgba(0,255,136,0.15)]"
+          ? "border-biolum/50 shadow-[0_0_30px_rgba(0,255,136,0.2)] ring-2 ring-biolum/20 ring-offset-2 ring-offset-void"
           : "border-white/10 shadow-lg",
         isDragging && "cursor-grabbing",
-        isResizing && "select-none"
+        isResizing && "select-none",
+        isAnimating && "pointer-events-none"
       )}
+      data-focused={isFocused}
       data-window-id={windowId}
       onMouseDown={handleFocus}
       ref={containerRef}
+      role="dialog"
       style={{
         left: isMaximized ? desktopArea.x : bounds.x,
         top: isMaximized ? desktopArea.y : bounds.y,
         width: isMaximized ? desktopArea.width : bounds.width,
         height: isMaximized ? desktopArea.height : bounds.height,
-        zIndex: isFocused ? 500 : 100,
+        zIndex: window.zIndex,
+        ...animationStyles,
       }}
+      tabIndex={isFocused ? 0 : -1}
     >
       <div
         className={cn(
