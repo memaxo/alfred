@@ -87,12 +87,13 @@ describe("connectWithRetry", () => {
     const delays: number[] = [];
     let attempts = 0;
     const transientClient = {
-      async connect() {
+      connect() {
         if (attempts < 2) {
           attempts += 1;
-          throw new Error("connection refused");
+          return Promise.reject(new Error("connection refused"));
         }
         attempts += 1;
+        return Promise.resolve();
       },
     };
 
@@ -100,8 +101,9 @@ describe("connectWithRetry", () => {
       maxRetries: 5,
       initialDelay: 100,
       maxDelay: 5000,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         delays.push(ms);
+        return Promise.resolve();
       },
     });
 
@@ -112,15 +114,17 @@ describe("connectWithRetry", () => {
 
   it("does not retry authentication failures", async () => {
     const authClient = {
-      async connect() {
-        throw new Error("password authentication failed for user");
+      connect() {
+        return Promise.reject(
+          new Error("password authentication failed for user")
+        );
       },
     };
 
     await expect(
       connectWithRetry(authClient as any, {
         maxRetries: 5,
-        sleep: async () => {},
+        sleep: () => Promise.resolve(),
       })
     ).rejects.toThrow(/authentication/);
     expect(warnMock).not.toHaveBeenCalled();
@@ -129,9 +133,9 @@ describe("connectWithRetry", () => {
   it("stops after the configured max retries", async () => {
     let attempts = 0;
     const failingClient = {
-      async connect() {
+      connect() {
         attempts += 1;
-        throw new Error("connection refused");
+        return Promise.reject(new Error("connection refused"));
       },
     };
 
@@ -139,7 +143,7 @@ describe("connectWithRetry", () => {
       connectWithRetry(failingClient as any, {
         maxRetries: 3,
         initialDelay: 50,
-        sleep: async () => {},
+        sleep: () => Promise.resolve(),
       })
     ).rejects.toThrow(/connection refused/);
     expect(attempts).toBe(3);
@@ -157,18 +161,20 @@ describe("createPgClient", () => {
     process.env.NODE_ENV = "production";
     const delays: number[] = [];
     let callCount = 0;
-    connectMock = mock(async () => {
+    connectMock = mock(() => {
       if (callCount < 2) {
         callCount += 1;
-        throw new Error("connection failed");
+        return Promise.reject(new Error("connection failed"));
       }
       callCount += 1;
+      return Promise.resolve();
     });
 
     createPgClient(undefined, {
       retry: {
-        sleep: async (ms) => {
+        sleep: (ms) => {
           delays.push(ms);
+          return Promise.resolve();
         },
       },
     });
@@ -193,12 +199,13 @@ describe("createPgClient", () => {
 
   it("allows enabling retries via config override", async () => {
     let callCount = 0;
-    connectMock = mock(async () => {
+    connectMock = mock(() => {
       if (callCount < 1) {
         callCount += 1;
-        throw new Error("connection failed");
+        return Promise.reject(new Error("connection failed"));
       }
       callCount += 1;
+      return Promise.resolve();
     });
 
     createPgClient(undefined, {
@@ -216,15 +223,13 @@ describe("createPgClient", () => {
   });
 
   it("logs an error after max retry attempts", async () => {
-    connectMock = mock(async () => {
-      throw new Error("startup failure");
-    });
+    connectMock = mock(() => Promise.reject(new Error("startup failure")));
 
     createPgClient(undefined, {
       retry: {
         enabled: true,
         maxRetries: 3,
-        sleep: async () => {},
+        sleep: () => Promise.resolve(),
       },
     });
 
@@ -241,18 +246,20 @@ describe("createPgClient", () => {
     process.env.DB_RETRY_ENABLED = "true";
     let callCount = 0;
     const delays: number[] = [];
-    connectMock = mock(async () => {
+    connectMock = mock(() => {
       if (callCount < 1) {
         callCount += 1;
-        throw new Error("connection failed");
+        return Promise.reject(new Error("connection failed"));
       }
       callCount += 1;
+      return Promise.resolve();
     });
 
     createPgClient(undefined, {
       retry: {
-        sleep: async (ms) => {
+        sleep: (ms) => {
           delays.push(ms);
+          return Promise.resolve();
         },
       },
     });

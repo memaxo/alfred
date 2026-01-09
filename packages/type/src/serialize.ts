@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
  */
 export function stableStringify(value: unknown): string {
   const seen = new WeakSet();
+  // biome-ignore lint/suspicious/noExplicitAny: Internal recursive encoding
   const encode = (v: unknown): any => {
     if (v === null || typeof v !== "object") {
       return v;

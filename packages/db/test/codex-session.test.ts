@@ -41,7 +41,7 @@ describe("codex-session (unit - no DB)", () => {
   });
 
   describe("listSessions options type", () => {
-    it("accepts userId as required parameter", async () => {
+    it("accepts userId as required parameter", () => {
       // Type check - listSessions requires userId
       const validOptions = {
         userId: "user-123",
@@ -49,7 +49,7 @@ describe("codex-session (unit - no DB)", () => {
       expect(validOptions.userId).toBeDefined();
     });
 
-    it("accepts optional status filter", async () => {
+    it("accepts optional status filter", () => {
       const optionsWithStatus = {
         userId: "user-123",
         status: "active" as const,
@@ -57,7 +57,7 @@ describe("codex-session (unit - no DB)", () => {
       expect(optionsWithStatus.status).toBe("active");
     });
 
-    it("accepts optional pagination parameters", async () => {
+    it("accepts optional pagination parameters", () => {
       const optionsWithPagination = {
         userId: "user-123",
         limit: 50,

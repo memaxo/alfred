@@ -40,6 +40,7 @@ async function runSmokeTest() {
   const _requestId = 0;
 
   // Helper to send JSON
+  // biome-ignore lint/suspicious/noExplicitAny: Smoke test helper
   const send = (msg: any) => {
     const str = `${JSON.stringify(msg)}\n`;
     proc.stdin.write(str);

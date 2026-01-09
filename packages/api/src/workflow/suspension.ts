@@ -219,6 +219,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
 
     await recordAudit({
       userId: options.sessionUserId,
+      projectId,
       action: "workflow.stream.suspend",
       resource: { kind: "workflow", id: runId },
       decision: "allow",
@@ -311,9 +312,13 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
               state.primary?.type ?? "unknown"
             );
           }
+          const input = (options.input ?? {}) as Record<string, unknown>;
+          const projectId = input.projectId as string | undefined;
+
           await updateResumed(runId);
           await recordAudit({
             userId: options.sessionUserId,
+            projectId,
             action: "workflow.stream.resume",
             resource: { kind: "workflow", id: runId },
             decision: "allow",

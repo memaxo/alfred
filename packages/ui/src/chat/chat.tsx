@@ -326,6 +326,7 @@ export function Chat({
 
   const logContent = useMemo(() => {
     if (virtualized && ListComponent) {
+      // biome-ignore lint/suspicious/noExplicitAny: Virtual list component typing
       const VirtualList = ListComponent as React.ComponentType<any>;
       return (
         <VirtualList

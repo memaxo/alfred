@@ -63,6 +63,7 @@ export async function buildHistoryContext(
 ): Promise<BuildHistoryContextResult> {
   const sourceLabel = options.source ?? "history";
   return withBudget(`build_history_context_${sourceLabel}`, 10, async () => {
+    await Promise.resolve();
     const messages = (
       Array.isArray(options.messages) ? options.messages : []
     ).filter((m): m is UIMessage => !!m);

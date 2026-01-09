@@ -1,6 +1,7 @@
 import type { Buffer } from "node:buffer";
 
 // Lazy load @discordjs/opus to allow mocking in tests
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic require
 let OpusEncoderClass: any = null;
 
 function getOpusClass() {
@@ -19,7 +20,9 @@ function getOpusClass() {
 const RATE = 48_000;
 const CHANNELS = 1;
 
+// biome-ignore lint/suspicious/noExplicitAny: Native binding
 let encoder: any = null;
+// biome-ignore lint/suspicious/noExplicitAny: Native binding
 let decoder: any = null;
 
 function getEncoder() {
