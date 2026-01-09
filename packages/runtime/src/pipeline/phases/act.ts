@@ -37,6 +37,7 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         | null
         | undefined;
       const userId = context.get("userId") as string | undefined;
+      const projectId = context.get("projectId") as string | undefined;
 
       const generator = executeActPhase(
         input,
@@ -51,7 +52,8 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         userId,
         this.createAiAdapter
           ? { createAiAdapter: this.createAiAdapter }
-          : undefined
+          : undefined,
+        projectId
       );
       let result: { escalated: boolean; reason?: string } | undefined;
 

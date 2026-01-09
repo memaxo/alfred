@@ -31,6 +31,8 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
         | ExecutionContext
         | null
         | undefined;
+      const userId = context.get("userId") as string | undefined;
+      const projectId = context.get("projectId") as string | undefined;
 
       const generator = executePlanPhase(
         input,
@@ -38,9 +40,11 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
         signal,
         this.model,
         cachedContext ?? undefined,
-        this.createAiAdapter
-          ? { createAiAdapter: this.createAiAdapter }
-          : undefined
+        {
+          userId,
+          projectId,
+          createAiAdapter: this.createAiAdapter,
+        }
       );
 
       let planSummary: string | null | undefined;

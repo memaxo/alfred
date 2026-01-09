@@ -150,6 +150,14 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     this.runtimeContext.set("aiModel", this.model);
     this.runtimeContext.set("runStartedAt", this.workflowStartTime);
 
+    const inputParam = this._input as Record<string, unknown>;
+    if (inputParam.userId && !this.runtimeContext.has("userId")) {
+      this.runtimeContext.set("userId", inputParam.userId);
+    }
+    if (inputParam.projectId && !this.runtimeContext.has("projectId")) {
+      this.runtimeContext.set("projectId", inputParam.projectId);
+    }
+
     // Setup cancellation listener
     if (this.signal) {
       this.externalAbortHandler = () => {

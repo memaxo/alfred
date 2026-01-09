@@ -155,6 +155,7 @@ export function orchestrateWorkflowStream(
         });
         await recordAudit({
           userId: session.user.id,
+          projectId: input.projectId,
           action: "workflow.stream.cancel",
           resource: { kind: "workflow", id: runId },
           decision: "allow",
@@ -186,6 +187,7 @@ export function orchestrateWorkflowStream(
         });
         await recordAudit({
           userId: session.user.id,
+          projectId: input.projectId,
           action: "workflow.stream.suspend",
           resource: { kind: "workflow", id: runId },
           decision: "allow",
@@ -215,6 +217,7 @@ export function orchestrateWorkflowStream(
         });
         await recordAudit({
           userId: session.user.id,
+          projectId: input.projectId,
           action: "workflow.stream.complete",
           resource: { kind: "workflow", id: runId },
           decision: "allow",
@@ -453,6 +456,7 @@ export function orchestrateWorkflowStream(
 
       await recordAudit({
         userId: session.user.id,
+        projectId: input.projectId,
         action: "workflow.stream",
         resource: { kind: "workflow", id: activeRunId },
         decision: "allow",

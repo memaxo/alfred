@@ -99,7 +99,8 @@ export async function* executeActPhase(
   cachedContext?: ExecutionContext | null,
   planSummary?: string | null,
   userId?: string,
-  deps?: ActPhaseDeps
+  deps?: ActPhaseDeps,
+  projectId?: string
 ): AsyncGenerator<WorkflowEvent, ActResult, void> {
   yield { _: "notice", message: "execution_started" } as WorkflowEvent;
 
@@ -108,7 +109,8 @@ export async function* executeActPhase(
   }
 
   const createAiAdapter =
-    deps?.createAiAdapter ?? ((id: string) => new AISDKAdapter({ runId: id }));
+    deps?.createAiAdapter ??
+    ((id: string) => new AISDKAdapter({ runId: id, userId, projectId }));
   const buildToolset = deps?.buildToolset ?? buildTools;
   const orchestratorRunner = deps?.runOrchestratorFn ?? runOrchestrator;
 

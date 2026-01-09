@@ -113,6 +113,8 @@ export async function* executePlanPhase(
   model: LanguageModel,
   prebuiltContext?: ExecutionContext | null,
   deps?: {
+    userId?: string;
+    projectId?: string;
     createAiAdapter?: (runId: string) => AiAdapter;
     buildContext?: (args: {
       requirement: string;
@@ -136,6 +138,9 @@ export async function* executePlanPhase(
   if (signal.aborted) {
     throw new DOMException("Phase aborted", "AbortError");
   }
+
+  const userId = deps?.userId;
+  const projectId = deps?.projectId;
 
   const workspace = input.workspace ?? process.cwd();
 
@@ -306,7 +311,8 @@ export async function* executePlanPhase(
   }
 
   const createAiAdapter =
-    deps?.createAiAdapter ?? ((id: string) => new AISDKAdapter({ runId: id }));
+    deps?.createAiAdapter ??
+    ((id: string) => new AISDKAdapter({ runId: id, userId, projectId }));
   const aiAdapter = createAiAdapter(runId);
   const planningMessages = buildPlanMessages(runId, input, context, subTasks);
   let planSummary = "";

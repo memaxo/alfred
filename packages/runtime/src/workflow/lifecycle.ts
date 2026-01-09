@@ -23,6 +23,7 @@ export type Lifecycle = {
 
 export function createLifecycle(args: {
   userId: string;
+  projectId?: string;
   stopStreamTimer: (labels: { status: "ok" | "error" | "cancel" }) => void;
   recordEvent: (
     event: "run" | "chunk" | "progress" | "error" | "complete" | "cancel"
@@ -71,6 +72,7 @@ export function createLifecycle(args: {
       });
       await recordAudit({
         userId: args.userId,
+        projectId: args.projectId,
         action: "workflow.stream.cancel",
         resource: { kind: "workflow", id: runId },
         decision: "allow",
@@ -104,6 +106,7 @@ export function createLifecycle(args: {
       });
       await recordAudit({
         userId: args.userId,
+        projectId: args.projectId,
         action: "workflow.stream.suspend",
         resource: { kind: "workflow", id: runId },
         decision: "allow",
@@ -139,6 +142,7 @@ export function createLifecycle(args: {
       });
       await recordAudit({
         userId: args.userId,
+        projectId: args.projectId,
         action: "workflow.stream.complete",
         resource: { kind: "workflow", id: runId },
         decision: "allow",
@@ -242,6 +246,7 @@ export function createLifecycle(args: {
       try {
         await recordAudit({
           userId: args.userId,
+          projectId: args.projectId,
           action: "workflow.stream.fail",
           resource: { kind: "workflow", id: runId },
           decision: "allow",

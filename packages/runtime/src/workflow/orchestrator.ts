@@ -109,6 +109,7 @@ export async function orchestrateWorkflowStream(
 
   const lifecycle = createLifecycle({
     userId: session.user.id,
+    projectId: (input.projectId as string) ?? undefined,
     stopStreamTimer,
     recordEvent,
     triggerPreferenceRefresh: callbacks.triggerPreferenceRefresh,
