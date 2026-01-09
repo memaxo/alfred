@@ -37,8 +37,9 @@ const migrateCommand = {
       .default(false)
       .describe("Plan mode: show pending migrations without applying"),
   }),
-  handler: async (args: unknown) => {
+  handler: (args: unknown) => {
     const _parsed = z.object({ plan: z.boolean() }).parse(args);
+    return Promise.resolve();
   },
 };
 

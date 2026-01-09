@@ -74,7 +74,7 @@ describe("Python Process Integration", () => {
     // Mock the waitForReady to avoid hanging
     const _originalWaitForReady =
       processInstance.waitForReady.bind(processInstance);
-    processInstance.waitForReady = async () => {
+    processInstance.waitForReady = () => {
       // Simulate ready signal
       const mockResponse = {
         id: "init",
@@ -82,6 +82,7 @@ describe("Python Process Integration", () => {
         payload: { message: "STT server ready" },
       };
       processInstance.ipc.handleResponse(mockResponse as any);
+      return Promise.resolve();
     };
 
     await processInstance.start();
@@ -113,13 +114,14 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance.waitForReady = async () => {
+    processInstance.waitForReady = () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
       processInstance.ipc.handleResponse(mockResponse as any);
+      return Promise.resolve();
     };
 
     await processInstance.start();
@@ -152,13 +154,14 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance.waitForReady = async () => {
+    processInstance.waitForReady = () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
       processInstance.ipc.handleResponse(mockResponse as any);
+      return Promise.resolve();
     };
 
     await processInstance.start();
@@ -192,13 +195,14 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance.waitForReady = async () => {
+    processInstance.waitForReady = () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
       processInstance.ipc.handleResponse(mockResponse as any);
+      return Promise.resolve();
     };
 
     await processInstance.start();
@@ -229,13 +233,14 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance.waitForReady = async () => {
+    processInstance.waitForReady = () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
       processInstance.ipc.handleResponse(mockResponse as any);
+      return Promise.resolve();
     };
 
     await processInstance.start();

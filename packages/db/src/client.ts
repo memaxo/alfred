@@ -27,9 +27,11 @@ type RetryOptions = {
 
 const SQLITE_MEMORY_URL = "sqlite::memory:";
 const require = createRequire(import.meta.url);
-const drizzleSqlite: (...args: any[]) => any = (
-  require("drizzle-orm/bun-sqlite") as { drizzle: (...args: any[]) => any }
-).drizzle;
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic load
+const drizzleSqlite: (...args: any[]) => any =
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic load
+  (require("drizzle-orm/bun-sqlite") as { drizzle: (...args: any[]) => any })
+    .drizzle;
 
 export function getDbDriver(): DbDriver {
   return dbDriver;
@@ -138,6 +140,7 @@ function createSqliteDrizzle(connectionString: string) {
             .replace(/gen_random_uuid\(\)/g, "lower(hex(randomblob(16)))")
             .replace(/\bnow\(\)/gi, "CURRENT_TIMESTAMP")
         : source;
+    // biome-ignore lint/suspicious/noExplicitAny: Internal Bun-SQLite binding
     return originalPrepare(normalized as string, ...(params as any[]));
   }) as typeof sqlite.prepare;
   ensureSqliteTestSchema(sqlite);

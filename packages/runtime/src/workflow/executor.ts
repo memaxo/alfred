@@ -23,6 +23,14 @@ export function createWorkflowExecutor(
     process.env.OPENAI_MODEL_PLAN ?? "gpt-4o"
   ) as unknown as LanguageModel;
 
+  if (
+    runtimeContext &&
+    inputParam.projectId &&
+    !runtimeContext.has("projectId")
+  ) {
+    runtimeContext.set("projectId", inputParam.projectId);
+  }
+
   const runtimeInput: RuntimeInput = {
     requirement: inputParam.requirement,
     auto: inputParam.auto,

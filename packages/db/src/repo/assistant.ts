@@ -56,13 +56,16 @@ export async function createTask(
 
   const row = Array.isArray(res)
     ? res[0]
-    : (res as any).rows
-      ? (res as any).rows[0]
-      : (res as any)[0];
+    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      (res as any).rows
+      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any).rows[0]
+      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any)[0];
   return row;
 }
 
-export async function getTasks(
+export function getTasks(
   userId: string,
   status?: string,
   limit = 100,
@@ -131,13 +134,16 @@ export async function createNote(
 
   const row = Array.isArray(res)
     ? res[0]
-    : (res as any).rows
-      ? (res as any).rows[0]
-      : (res as any)[0];
+    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      (res as any).rows
+      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any).rows[0]
+      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any)[0];
   return row;
 }
 
-export async function getNotes(
+export function getNotes(
   userId: string,
   limit = 100,
   offset = 0,
@@ -218,13 +224,16 @@ export async function createReminder(
 
   const row = Array.isArray(res)
     ? res[0]
-    : (res as any).rows
-      ? (res as any).rows[0]
-      : (res as any)[0];
+    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      (res as any).rows
+      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any).rows[0]
+      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any)[0];
   return row;
 }
 
-export async function getDueReminders(
+export function getDueReminders(
   userId: string,
   before: Date,
   projectId?: string
@@ -245,7 +254,7 @@ export async function getDueReminders(
     .orderBy(asc(reminders.due));
 }
 
-export async function getReminders(
+export function getReminders(
   userId: string,
   limit = 100,
   offset = 0,
@@ -265,7 +274,7 @@ export async function getReminders(
     .offset(offset);
 }
 
-export async function getDueRemindersAll(
+export function getDueRemindersAll(
   before: Date,
   limit = 100
 ): Promise<(typeof reminders.$inferSelect)[]> {
@@ -317,13 +326,16 @@ export async function createBookmark(
 
   const row = Array.isArray(res)
     ? res[0]
-    : (res as any).rows
-      ? (res as any).rows[0]
-      : (res as any)[0];
+    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      (res as any).rows
+      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any).rows[0]
+      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any)[0];
   return row;
 }
 
-export async function getBookmarks(
+export function getBookmarks(
   userId: string,
   limit = 100,
   offset = 0,
@@ -374,13 +386,16 @@ export async function createTimer(
 
   const row = Array.isArray(res)
     ? res[0]
-    : (res as any).rows
-      ? (res as any).rows[0]
-      : (res as any)[0];
+    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      (res as any).rows
+      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any).rows[0]
+      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any)[0];
   return row;
 }
 
-export async function getActiveTimers(
+export function getActiveTimers(
   userId: string,
   projectId?: string
 ): Promise<(typeof timers.$inferSelect)[]> {
@@ -443,13 +458,16 @@ export async function createEvent(
 
   const row = Array.isArray(res)
     ? res[0]
-    : (res as any).rows
-      ? (res as any).rows[0]
-      : (res as any)[0];
+    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      (res as any).rows
+      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any).rows[0]
+      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+        (res as any)[0];
   return row;
 }
 
-export async function getEvents(
+export function getEvents(
   userId: string,
   startAfter?: Date,
   endBefore?: Date,

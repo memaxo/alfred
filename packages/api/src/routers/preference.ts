@@ -143,6 +143,7 @@ export const preferenceRouter = router({
     )
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         messageId: z.string().min(1),
         conversationId: z.string().min(1).optional(),
         rating: z.number().int().min(1).max(5).optional(),
@@ -200,7 +201,8 @@ export const preferenceRouter = router({
           key,
           value,
           0.9,
-          "learned"
+          "learned",
+          input.projectId
         );
         updated += 1;
       }
@@ -220,7 +222,8 @@ export const preferenceRouter = router({
           input.messageId,
           input.rating,
           undefined,
-          input.tags
+          input.tags,
+          input.projectId
         );
       }
 
@@ -235,6 +238,7 @@ export const preferenceRouter = router({
     )
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         originalMessageId: z.string().min(1),
         correctedMessageId: z.string().min(1),
         correctionType: z.enum(["verbosity", "tone", "format", "content"]),
@@ -280,7 +284,8 @@ export const preferenceRouter = router({
         inferred.key,
         inferred.value,
         0.7,
-        "inferred"
+        "inferred",
+        input.projectId
       );
       {
         const { invalidatePreferenceCache } = await import(

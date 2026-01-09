@@ -55,9 +55,9 @@ export const manifest: CliManifest = {
       shortcut: "c",
       category: "monitoring",
       defaultVisible: true,
-      factory: async () => {
+      factory: () => {
         // TODO: Return actual CognitivePanel once it's exported from @alfred/tui
-        return class PlaceholderPanel {};
+        return Promise.resolve(class PlaceholderPanel {});
       },
     },
   ],

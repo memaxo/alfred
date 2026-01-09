@@ -158,6 +158,7 @@ export const aiStub = {
   generateObject: vi.fn().mockResolvedValue({ object: {} }),
   streamText: vi.fn(() => ({
     fullStream: (async function* () {
+      await Promise.resolve();
       yield { type: "finish", finishReason: "stop" };
     })(),
   })),

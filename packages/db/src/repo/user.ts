@@ -4,7 +4,7 @@
  */
 
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { db, dbDriver } from "../client";
+import { db } from "../client";
 import {
   autonomy,
   events,
@@ -32,48 +32,6 @@ function sanitizeInsert<T extends Record<string, unknown>>(input: Partial<T>) {
   }
   return copy as Partial<T>;
 }
-
-const usePreparedStatements = dbDriver === "postgres";
-
-type PreparedQuery<TParams, TResult> = {
-  execute(params: TParams): Promise<TResult>;
-};
-
-const _getPreferencesStmt: PreparedQuery<{ userId: string }, PreferenceRow[]> =
-  usePreparedStatements
-    ? (db
-        .select({
-          id: preferences.id,
-          userId: preferences.userId,
-          key: preferences.key,
-          value: preferences.value,
-          confidence: preferences.confidence,
-          source: preferences.source,
-          created: preferences.created,
-          updated: preferences.updated,
-        })
-        .from(preferences)
-        .where(eq(preferences.userId, sql.placeholder("userId")))
-        .prepare("get_user_preferences") as PreparedQuery<
-        { userId: string },
-        PreferenceRow[]
-      >)
-    : {
-        execute: async ({ userId }) =>
-          db
-            .select({
-              id: preferences.id,
-              userId: preferences.userId,
-              key: preferences.key,
-              value: preferences.value,
-              confidence: preferences.confidence,
-              source: preferences.source,
-              created: preferences.created,
-              updated: preferences.updated,
-            })
-            .from(preferences)
-            .where(eq(preferences.userId, userId)),
-      };
 
 // Profile operations
 export async function getProfile(userId: string): Promise<ProfileRow | null> {
@@ -183,11 +141,19 @@ export async function setPreference(
 
 export async function deletePreference(
   userId: string,
-  key: string
+  key: string,
+  projectId?: string
 ): Promise<number> {
+  const conditions = [eq(preferences.userId, userId), eq(preferences.key, key)];
+  if (projectId) {
+    conditions.push(eq(preferences.projectId, projectId));
+  } else {
+    conditions.push(sql`${preferences.projectId} IS NULL`);
+  }
+
   const rows = await db
     .delete(preferences)
-    .where(and(eq(preferences.userId, userId), eq(preferences.key, key)))
+    .where(and(...conditions))
     .returning({ id: preferences.id });
 
   return rows.length;

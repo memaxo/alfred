@@ -24,10 +24,12 @@ const mockPools = {
   synthesize: async () => {},
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: Mock pool cast
 const registry = new VoiceRegistry(mockPools as any, mockPools as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8898;
+// biome-ignore lint/suspicious/noExplicitAny: Bun.serve requires data type
 const server = Bun.serve<any>({
   port: PORT,
   websocket: {
@@ -35,6 +37,7 @@ const server = Bun.serve<any>({
       ws.data = { userId: "load-user" };
     },
     async message(ws, msg) {
+      // biome-ignore lint/suspicious/noExplicitAny: WebSocket data cast
       await handler.handleMessage(ws as any, msg);
     },
   },

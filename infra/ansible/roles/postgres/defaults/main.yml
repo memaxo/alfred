@@ -1,0 +1,3 @@
+---
+postgres_backup_dir: /opt/alfred/backups/postgres
+postgres_backup_retention_days: 7

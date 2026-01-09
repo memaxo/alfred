@@ -282,6 +282,7 @@ type StreamingExecutorOptions = {
 
 function createStartExecutor(runId: string) {
   const stream = (async function* () {
+    await Promise.resolve();
     yield { _: "run", id: runId } as WorkflowEvent;
     yield { _: "progress", pct: 10, message: "starting" } as WorkflowEvent;
   })();
@@ -335,7 +336,7 @@ function createStreamingExecutor(options: StreamingExecutorOptions) {
     runId,
     summary: "capture-stream",
     stream,
-    resume: async (resumeData: { event: string; authz: string }) => {
+    resume: (resumeData: { event: string; authz: string }) => {
       resumeGate.resolve(resumeData);
     },
     cancel: () => {

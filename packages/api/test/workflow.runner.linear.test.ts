@@ -14,16 +14,16 @@ const emitMock = mock((type: string, params: unknown) => ({
   type,
   params,
 }));
-async function emitLinearActivityStub(
+function emitLinearActivityStub(
   type: string,
   params: unknown
 ): Promise<{ ok: boolean; id?: string }> {
   emitMock(type, params);
-  return { ok: true, id: `${type}-activity` };
+  return Promise.resolve({ ok: true, id: `${type}-activity` });
 }
-const delegateMock = mock(async () => {});
-const startedMock = mock(async () => ({ stateId: "state-id" }));
-const externalUrlMock = mock(async () => {});
+const delegateMock = mock(() => Promise.resolve());
+const startedMock = mock(() => Promise.resolve({ stateId: "state-id" }));
+const externalUrlMock = mock(() => Promise.resolve());
 
 mock.module("@alfred/agent/orchestrator/linear", () => ({
   __esModule: true,

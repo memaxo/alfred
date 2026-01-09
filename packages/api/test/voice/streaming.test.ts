@@ -5,17 +5,17 @@ import { VoiceSessionManager } from "../../src/voice/session";
 
 // Mock pools
 class MockSTTPool {
-  async transcribe() {
-    return {
+  transcribe() {
+    return Promise.resolve({
       text: "test transcript",
       language: "en",
       isPartial: false,
-    };
+    });
   }
 }
 
 class MockTTSPool {
-  async synthesize(
+  synthesize(
     _request: { text: string; voice?: string; streaming?: boolean },
     onChunk: (chunk: {
       audioBase64: string;
@@ -29,6 +29,7 @@ class MockTTSPool {
       mimeType: "audio/pcm",
       sampleRate: 16_000,
     });
+    return Promise.resolve();
   }
 }
 
@@ -73,7 +74,7 @@ describe("Voice Streaming Flow", () => {
     expect(session2.getTranscript()).toBeTruthy();
   });
 
-  it("should cleanup idle sessions", async () => {
+  it("should cleanup idle sessions", () => {
     const session = sessionManager.createSession("user1", "session1");
     session.activate();
 

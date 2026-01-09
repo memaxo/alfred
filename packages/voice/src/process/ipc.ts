@@ -40,7 +40,7 @@ export class Bridge {
     };
   }
 
-  async sendRequest(
+  sendRequest(
     process: Subprocess,
     request: IPCRequest,
     timeoutMs?: number,

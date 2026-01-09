@@ -48,21 +48,25 @@ export type AiAdapter = {
 type AdapterInit = {
   runId?: string;
   userId?: string;
+  projectId?: string;
 };
 
 export class AISDKAdapter {
   private readonly runId?: string;
   private readonly userId?: string;
+  private readonly projectId?: string;
   constructor(init?: AdapterInit | string);
   constructor(arg?: string | AdapterInit) {
     if (typeof arg === "string") {
       this.runId = arg;
       this.userId = undefined;
+      this.projectId = undefined;
       return;
     }
 
     this.runId = arg?.runId;
     this.userId = arg?.userId;
+    this.projectId = arg?.projectId;
   }
 
   /**
@@ -286,6 +290,7 @@ export class AISDKAdapter {
 
     try {
       const prompt = await buildPreferenceSystemPrompt(this.userId, {
+        projectId: this.projectId,
         toolNames: options.tools ? Object.keys(options.tools) : undefined,
         conversationType: "workflow",
       });

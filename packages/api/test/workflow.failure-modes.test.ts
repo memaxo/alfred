@@ -167,6 +167,7 @@ describe("workflow failure modes (runtime)", () => {
       runId: mockRunId,
       summary: "failure scenario",
       stream: (async function* () {
+        await Promise.resolve();
         for (const ev of events) {
           yield ev;
         }
@@ -232,6 +233,7 @@ describe("workflow failure modes (runtime)", () => {
       runId: mockRunId,
       summary: "conflict scenario",
       stream: (async function* () {
+        await Promise.resolve();
         for (const ev of events) {
           yield ev;
         }

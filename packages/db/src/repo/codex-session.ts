@@ -87,7 +87,7 @@ export type ListSessionsOptions = {
   offset?: number;
 };
 
-export async function listSessions(
+export function listSessions(
   options: ListSessionsOptions
 ): Promise<CodexSession[]> {
   const { userId, status, limit = 50, offset = 0 } = options;

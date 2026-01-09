@@ -50,12 +50,12 @@ export async function getCorrection(id: string): Promise<CorrectionRow | null> {
   return row ?? null;
 }
 
-export async function getCorrectionsForTarget(
+export function getCorrectionsForTarget(
   targetType: "node" | "edge",
   targetId: string,
   limit = 50
 ): Promise<CorrectionRow[]> {
-  return await db
+  return db
     .select()
     .from(knowledgeCorrections)
     .where(

@@ -252,6 +252,7 @@ function createRuntimeExecutor(options: RuntimeExecutorOptions) {
   const { runId, ragDocumentId, traces } = options;
 
   const stream = (async function* () {
+    await Promise.resolve();
     yield { _: "run", id: runId } as WorkflowEvent;
 
     // Emit runtime context with ragDocumentIds so the router can attach provenance

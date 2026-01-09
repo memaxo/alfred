@@ -5,22 +5,22 @@ import { VoiceSession, VoiceSessionManager } from "../../src/voice/session";
 
 // Mock pools for testing
 class MockSTTPool {
-  async transcribe() {
-    return {
+  transcribe() {
+    return Promise.resolve({
       text: "test transcript",
       language: "en",
       isPartial: false,
-    };
+    });
   }
 }
 
 class MockTTSPool {
-  async synthesize() {
-    return {
+  synthesize() {
+    return Promise.resolve({
       audioBase64: "test",
       mimeType: "audio/pcm",
       sampleRate: 16_000,
-    };
+    });
   }
 }
 

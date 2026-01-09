@@ -161,6 +161,7 @@ function createMockExecutor(
   events: WorkflowEvent[]
 ) {
   const mockStream = async function* () {
+    await Promise.resolve();
     for (const event of events) {
       yield event;
     }
@@ -181,6 +182,7 @@ describe("workflow router", () => {
       const mockRunId = "test-run-id";
       const mockSummary = "Plan initialized for test requirement";
       const mockStream = async function* () {
+        await Promise.resolve();
         yield { _: "run", id: mockRunId } as WorkflowEvent;
         yield {
           _: "progress",
@@ -319,6 +321,7 @@ describe("workflow router", () => {
       ];
 
       const mockStream = async function* () {
+        await Promise.resolve();
         for (const event of events) {
           yield event;
         }
@@ -446,6 +449,7 @@ describe("workflow router", () => {
         runId: resumedRunId,
         summary: "resumed",
         stream: (async function* () {
+          await Promise.resolve();
           for (const event of runEvents) {
             yield event;
           }
@@ -574,6 +578,7 @@ describe("workflow router", () => {
       ];
 
       const mockStream = async function* () {
+        await Promise.resolve();
         for (const event of events) {
           yield event;
         }
@@ -638,6 +643,7 @@ describe("workflow router", () => {
     it("handles persistence failures gracefully", async () => {
       const mockRunId = "test-run-id";
       const mockStream = async function* () {
+        await Promise.resolve();
         yield { _: "run", id: mockRunId } as WorkflowEvent;
       };
 
@@ -686,8 +692,9 @@ describe("workflow router", () => {
           }
         })(),
         resume: vi.fn().mockResolvedValue(undefined),
-        cancel: vi.fn().mockImplementation(async () => {
+        cancel: vi.fn().mockImplementation(() => {
           active = false;
+          return Promise.resolve();
         }),
       } as ReturnType<typeof createMockExecutor>;
 

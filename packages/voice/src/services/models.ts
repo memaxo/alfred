@@ -3,7 +3,7 @@ import { basename, join } from "node:path";
 import { logger } from "@alfred/logger";
 
 // Simple in-memory cache for available voices (remote)
-let availableVoiceCache: { data: any[]; timestamp: number } | null = null;
+let availableVoiceCache: { data: unknown[]; timestamp: number } | null = null;
 const AVAILABLE_VOICE_CACHE_TTL_MS = 3600 * 1000; // 1 hour
 
 // Simple in-memory cache for voice list (local)

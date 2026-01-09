@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+BACKUP_DIR="{{ postgres_backup_dir }}"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+DATABASE="{{ alfred_db_name }}"
+USER="{{ alfred_db_user }}"
+
+# Ensure backup directory exists
+mkdir -p "$BACKUP_DIR"
+
+# Run backup
+echo "Starting backup of $DATABASE..."
+docker exec -t pg pg_dump -U "$USER" "$DATABASE" | gzip > "$BACKUP_DIR/backup_${DATABASE}_${TIMESTAMP}.sql.gz"
+
+# Clean up old backups
+echo "Cleaning up backups older than {{ postgres_backup_retention_days }} days..."
+find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +{{ postgres_backup_retention_days }} -delete
+
+echo "Backup complete: $BACKUP_DIR/backup_${DATABASE}_${TIMESTAMP}.sql.gz"

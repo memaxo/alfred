@@ -5,6 +5,7 @@ import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
 const startInput = z.object({
+  projectId: z.string().uuid().optional(),
   config: z.unknown(),
   pythonBin: z.string().optional(),
   runsRoot: z.string().optional(),
@@ -22,6 +23,7 @@ type TuneJobArtifacts = {
 type TuneJob = {
   id: string;
   userId: string;
+  projectId?: string;
   name: string;
   status: "pending" | "running" | "completed" | "failed" | "cancelled";
   config: unknown;
@@ -124,6 +126,7 @@ export const tuneRouter = router({
     const job: TuneJob = {
       id: jobId,
       userId,
+      projectId: input.projectId,
       name: `Fine-tune ${new Date().toISOString().slice(0, 10)}`,
       status: "running",
       config: input.config,
@@ -177,6 +180,7 @@ export const tuneRouter = router({
   jobsList: authedProcedure
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         status: z
           .enum(["pending", "running", "completed", "failed", "cancelled"])
           .optional(),
@@ -186,6 +190,10 @@ export const tuneRouter = router({
     .query(({ ctx, input }) => {
       const userId = ctx.session?.user?.id ?? "anonymous";
       let jobs = [...jobsStore.values()].filter((j) => j.userId === userId);
+
+      if (input.projectId) {
+        jobs = jobs.filter((j) => j.projectId === input.projectId);
+      }
 
       if (input.status) {
         jobs = jobs.filter((j) => j.status === input.status);

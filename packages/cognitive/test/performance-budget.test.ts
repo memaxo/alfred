@@ -27,7 +27,7 @@ describe("cognitive performance budgets", () => {
       "state-transition",
       0.1, // 100µs budget
       2000, // 2000 iterations
-      async () => {
+      () => {
         applyTransition(state, autonomy, event);
       }
     );
@@ -42,7 +42,7 @@ describe("cognitive performance budgets", () => {
       "physiology-update",
       0.01, // 10µs budget
       5000, // 5000 iterations
-      async () => {
+      () => {
         physiology = updatePhysiology(physiology, "step");
       }
     );
@@ -65,7 +65,7 @@ describe("cognitive performance budgets", () => {
       "autonomy-update",
       0.05, // 50µs budget
       2000, // 2000 iterations
-      async () => {
+      () => {
         gradient = updateAutonomy(tick, gradient, evidence);
         tick += 1;
       }
@@ -84,7 +84,7 @@ describe("cognitive performance budgets", () => {
       "error-calculation",
       0.1, // 100µs budget
       2000, // 2000 iterations
-      async () => {
+      () => {
         calculateError(expected, actual);
       }
     );

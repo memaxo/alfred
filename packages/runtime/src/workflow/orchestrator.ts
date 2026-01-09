@@ -254,6 +254,14 @@ export async function orchestrateWorkflowStream(
           executionId: runId,
           reasoningSince: Date.now(),
         };
+
+        const runtimeContext = getRuntimeContextFromCallbacks(
+          callbacks.context
+        );
+        if (runtimeContext && projectId && !runtimeContext.has("projectId")) {
+          runtimeContext.set("projectId", projectId);
+        }
+
         await workflowRepo.createRun({
           id: runId,
           userId: session.user.id,
@@ -341,6 +349,10 @@ export async function orchestrateWorkflowStream(
 
       await recordAudit({
         userId: session.user.id,
+        projectId:
+          (getRuntimeContextFromCallbacks(callbacks.context)?.get(
+            "projectId"
+          ) as string) ?? undefined,
         action: "workflow.stream",
         resource: { kind: "workflow", id: runId ?? executor.runId },
         decision: "allow",

@@ -1,0 +1,53 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install base packages
+  package:
+    name:
+      - curl
+      - git
+      - vim
+      - htop
+      - ufw
+      - tar
+      - unzip
+    state: present
+
+- name: Create alfred group
+  group:
+    name: "{{ alfred_group }}"
+    state: present
+
+- name: Create alfred user
+  user:
+    name: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    shell: /bin/bash
+    append: yes
+    groups: docker
+  when: "'docker' in ansible_facts.packages"
+
+- name: Ensure alfred user exists without docker group if docker not installed yet
+  user:
+    name: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    shell: /bin/bash
+  when: "'docker' not in ansible_facts.packages"
+
+- name: Set up UFW
+  ufw:
+    rule: allow
+    name: "{{ item }}"
+  loop:
+    - OpenSSH
+    - '80/tcp'
+    - '443/tcp'
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    policy: deny

@@ -39,7 +39,6 @@ if (isNonEmptyArray(args)) {
     );
   }
 } else {
-  // biome-ignore lint/suspicious/noConsole: CLI tool output.
   console.error("usage: bun scripts/compose.ts <compose-args...>");
   process.exitCode = 2;
 }

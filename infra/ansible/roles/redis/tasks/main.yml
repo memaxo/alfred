@@ -1,0 +1,6 @@
+---
+# Redis is handled via the 'redis' profile in ALFRED's docker-compose.yml.
+# This role can be used for host-level redis configuration if needed in the future.
+- name: Ensure redis is enabled in compose
+  set_fact:
+    alfred_use_redis: true

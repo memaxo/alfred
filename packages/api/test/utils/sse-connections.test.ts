@@ -36,7 +36,7 @@ describe("SSE Connection Tracking", () => {
 
     it("enforces per-user connection limit", () => {
       // Default limit is 5 per user
-      const results = [];
+      const results: ReturnType<typeof createConnection>[] = [];
       for (let i = 0; i < 5; i++) {
         results.push(createConnection("user1", "assistant"));
       }
@@ -70,7 +70,11 @@ describe("SSE Connection Tracking", () => {
 
     it("enforces rate limiting per user", () => {
       // Default rate limit is 10 per minute
-      const results = [];
+      const results: {
+        connectionId: string;
+        allowed: boolean;
+        reason?: string;
+      }[] = [];
       for (let i = 0; i < 10; i++) {
         results.push(createConnection("user1", "assistant"));
         // Remove immediately to test rate limit, not connection limit
@@ -221,9 +225,9 @@ describe("SSE Connection Tracking", () => {
   });
 
   describe("rate limit bucket reset", () => {
-    it("allows new connections after rate limit window", async () => {
+    it("allows new connections after rate limit window", () => {
       // Create 10 connections (rate limit)
-      const connections = [];
+      const connections: string[] = [];
       for (let i = 0; i < 10; i++) {
         const result = createConnection("user1", "assistant");
         connections.push(result.connectionId);

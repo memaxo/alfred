@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 describe("embed_server device selection", () => {
   it("honors EMBED_DEVICE without importing torch", async () => {
+    const scriptPath = join(process.cwd(), "scripts", "embed_server.py");
     const code = `
 import sys
 import json
@@ -14,7 +15,7 @@ import importlib.util
 
 spec = importlib.util.spec_from_file_location(
   "embed_server",
-  "packages/embed/scripts/embed_server.py",
+  "${scriptPath}",
 )
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

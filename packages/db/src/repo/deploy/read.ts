@@ -55,8 +55,8 @@ export async function listDeployments({
   type?: string;
   status?: string;
 } = {}): Promise<DeploymentRecord[]> {
-  let where: any;
-  const predicates: any[] = [];
+  let where: SQL | undefined;
+  const predicates: SQL[] = [];
   if (userId) {
     predicates.push(eq(deployments.userId, userId));
   }

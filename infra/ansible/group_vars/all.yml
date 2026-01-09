@@ -1,0 +1,9 @@
+---
+alfred_user: alfred
+alfred_group: alfred
+alfred_app_dir: /opt/alfred
+alfred_domain: alfred.local
+alfred_port: 3000
+
+postgres_backup_dir: /opt/alfred/backups/postgres
+monitoring_dir: /opt/alfred/monitoring

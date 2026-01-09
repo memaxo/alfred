@@ -197,8 +197,10 @@ export class VoiceSocketHandler {
 
       const event = parseMessage(message);
       const kind =
+        // biome-ignore lint/suspicious/noExplicitAny: Generic event handling
         typeof (event as any)._ === "string"
-          ? ((event as any)._ as string)
+          ? // biome-ignore lint/suspicious/noExplicitAny: Generic event handling
+            ((event as any)._ as string)
           : null;
       if (!kind) {
         throw new Error("event_type_missing");
@@ -390,8 +392,11 @@ export class VoiceSocketHandler {
       this.sendWithErrorHandling(ws, {
         _: "vad_state",
         sessionId,
+        // biome-ignore lint/suspicious/noExplicitAny: Internal result property
         vadConfidence: (result as any).vadConfidence ?? null,
+        // biome-ignore lint/suspicious/noExplicitAny: Internal result property
         isEmpty: (result as any).isEmpty ?? null,
+        // biome-ignore lint/suspicious/noExplicitAny: Internal result property
         endOfUtterance: (result as any).endOfUtterance ?? null,
       });
 

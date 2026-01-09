@@ -34,12 +34,12 @@ function installSessionPatch() {
       ) => ReturnType<(typeof auth)["api"]["getSession"]>;
     };
     const originalGetSession = authApi.getSession.bind(auth.api);
-    const patchedGetSession = async (
+    const patchedGetSession = (
       params: Parameters<(typeof auth)["api"]["getSession"]>[0]
     ) => {
       const header = getHeaderValue(params?.headers, TEST_SESSION_HEADER);
       if (header) {
-        return JSON.parse(header) as AuthSession;
+        return Promise.resolve(JSON.parse(header) as AuthSession);
       }
       return originalGetSession(params);
     };
@@ -96,19 +96,22 @@ export class WorkflowTestHarness {
     return headers;
   }
 
-  async createCaller() {
-    return createWorkflowCaller({
-      user: this.user,
-      obligations: this.obligations,
-    });
+  createCaller() {
+    return Promise.resolve(
+      createWorkflowCaller({
+        user: this.user,
+        obligations: this.obligations,
+      })
+    );
   }
 
   async reset() {
     await resetWorkflowRecords();
   }
 
-  async close() {
+  close() {
     releaseSessionPatch();
+    return Promise.resolve();
   }
 }
 
@@ -120,7 +123,7 @@ export async function withWorkflowHarness<T>(
   try {
     return await fn(harness);
   } finally {
-    await harness.close();
+    harness.close();
   }
 }
 

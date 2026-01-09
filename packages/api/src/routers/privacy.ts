@@ -82,7 +82,8 @@ export const privacyRouter = router({
           session.user.id,
           params.embedding,
           params.limit,
-          params.threshold
+          params.threshold,
+          params.projectId
         );
         return Array.isArray(matches) ? matches : [];
       }
@@ -90,7 +91,8 @@ export const privacyRouter = router({
       const listed = await listFacts(
         session.user.id,
         params.limit,
-        params.offset
+        params.offset,
+        params.projectId
       );
       return Array.isArray(listed) ? listed : [];
     }),
@@ -137,7 +139,8 @@ export const privacyRouter = router({
         session.user.id,
         params.type,
         params.limit,
-        params.offset
+        params.offset,
+        params.projectId
       );
       return Array.isArray(events) ? events : [];
     }),

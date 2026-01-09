@@ -1,0 +1,11 @@
+---
+- name: Deploy ALFRED
+  hosts: alfred_servers
+  become: yes
+  roles:
+    - base
+    - docker
+    - caddy
+    - alfred
+    - postgres
+    - monitoring

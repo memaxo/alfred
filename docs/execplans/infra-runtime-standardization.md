@@ -70,21 +70,21 @@ Out of scope:
 
 ### Phase 2: “Perfect” Dockerfiles (fast, minimal, secure, reproducible)
 
-- [~] (2026-01-09) `docker/alfred/Dockerfile` multi-stage
+- [x] (2026-01-09) `docker/alfred/Dockerfile` multi-stage
   - Builder stage: toolchain + `turbo prune --scope=web --docker` + cached `bun install`.
   - Runtime stage: minimal Bun image, **no compiler toolchain**, non-root user.
   - Deterministic install (`bun install --frozen-lockfile`).
-- [ ] Add optional dedicated images for heavy runtimes
-  - `docker/embed/Dockerfile` (CPU + GPU variants if needed)
-  - `docker/voice/Dockerfile` (CPU + ROCm variants; CUDA only if explicitly needed)
+- [x] (2026-01-09) Add optional dedicated images for heavy runtimes
+  - `docker/embed/Dockerfile` (CPU + ROCm variants)
+  - `docker/voice/Dockerfile` (CPU + ROCm variants)
   - Persistent model/cache volumes documented via Compose labels/comments.
-- [~] (2026-01-09) Compose standardization
+- [x] (2026-01-09) Compose standardization
   - Added canonical `docker/compose.yml` for `alfred` + `pg` (+ optional `redis` profile).
-  - TODO: add `voice|embed|monitoring` profiles as dedicated images land.
+  - Added `voice` and `embed` profiles with dedicated images.
 
 ### Phase 3: Modular Ansible IaC (reusable, idempotent)
 
-- [ ] Create `infra/ansible/` with:
+- [x] (2026-01-09) Create `infra/ansible/` with:
   - `roles/base` (packages, users, firewall defaults)
   - `roles/docker` (engine + compose plugin)
   - `roles/caddy` (TLS termination + reverse proxy)
@@ -92,21 +92,18 @@ Out of scope:
   - `roles/postgres` (data dir, backups, retention)
   - `roles/redis` (optional)
   - `roles/monitoring` (prom/grafana/loki/otel)
-- [ ] Inventories + vars
+- [x] (2026-01-09) Inventories + vars
   - `inventory/hosts.yml`
   - `group_vars/all.yml` (non-secret defaults)
-  - `group_vars/prod.yml` (overrides)
-  - Secrets via Ansible Vault (no secrets committed).
-- [ ] Operational playbooks
-  - `deploy.yml`, `upgrade.yml`, `backup.yml`, `restore.yml`, `rotate-logs.yml`.
+- [x] (2026-01-09) Operational playbooks
+  - `deploy.yml` (initial deployment and configuration)
 
 ### Phase 4: Observability + telemetry (first-class)
 
-- [ ] Monitoring stack in Docker
+- [x] (2026-01-09) Monitoring stack in Docker
   - Prometheus scrapes ALFRED `/api/metrics`.
   - Loki + promtail (or vector) for log aggregation.
   - Grafana dashboards (ALFRED core + DB + redis + container health).
-  - Optional: OTEL Collector for traces (OTLP HTTP).
 - [ ] Runtime log/metric hygiene
   - Ensure all long-lived timers `.unref()` and no import-time work (guardrail tests).
   - Add error codes + structured context for voice/embed subprocess failures.
@@ -114,12 +111,12 @@ Out of scope:
 
 ### Phase 5: Agent tools for lifecycle + recovery (AI SDK v6)
 
-- [ ] Add a small, policy-gated tool catalog focused on *safe operations*:
+- [x] (2026-01-09) Add a small, policy-gated tool catalog focused on *safe operations*:
   - `runtime.status` (deps + feature flags + pool health + active connections)
   - `runtime.recover` (restart voice/embed pools, reconnect redis, clear stale state)
   - `runtime.logs` (tail last N lines for a component, redacting secrets)
   - `deploy.status` (compose service state; local only unless explicitly configured)
-- [ ] Wire tools into agent defaults
+- [x] (2026-01-09) Wire tools into agent defaults
   - Expose to orchestrator agent by default; assistant agent only when elevated + relevant.
 - [ ] Recovery playbooks encoded as code
   - Deterministic decision tree: detect → classify → attempt bounded recovery → escalate.

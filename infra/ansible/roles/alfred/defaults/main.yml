@@ -1,0 +1,8 @@
+---
+alfred_app_dir: /opt/alfred
+alfred_node_env: production
+alfred_port: 3000
+alfred_db_user: alfred
+alfred_db_password: alfred
+alfred_db_name: alfred
+alfred_redis_url: redis://redis:6379

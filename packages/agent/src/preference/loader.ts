@@ -100,18 +100,21 @@ function getRedisClient(): RedisClient | null {
   return null;
 }
 
-function redisKey(userId: string): string {
-  return `${CACHE_PREFIX}${userId}`;
+function redisKey(userId: string, projectId?: string): string {
+  const suffix = projectId ? `:${projectId}` : ":global";
+  return `${CACHE_PREFIX}${userId}${suffix}`;
 }
 
 export async function loadPreferences(
-  userId: string
+  userId: string,
+  projectId?: string
 ): Promise<Map<PreferenceKey, PreferenceDetail>> {
   await initializeRedis().catch(() => {
     // Initialization failures are logged inside initializeRedis(); fallback to L1/DB
   });
 
-  const cached = l1Cache.get(userId);
+  const cacheKey = `${userId}:${projectId ?? "global"}`;
+  const cached = l1Cache.get(cacheKey);
   if (cached) {
     return cached;
   }
@@ -119,26 +122,37 @@ export async function loadPreferences(
   const redis = getRedisClient();
   if (redis) {
     try {
-      const serialized = await redis.get(redisKey(userId));
+      const serialized = await redis.get(redisKey(userId, projectId));
       if (serialized) {
         const prefs = deserializePreferences(serialized);
         if (prefs) {
-          l1Cache.set(userId, prefs);
+          l1Cache.set(cacheKey, prefs);
           return prefs;
         }
       }
     } catch (error) {
       logger.warn("preference_redis_get_failed", {
         userId,
+        projectId,
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  const rows = await getUserPreferences(userId);
+  const rows = await getUserPreferences(userId, projectId);
   const prefs = new Map<PreferenceKey, PreferenceDetail>();
 
+  // Use a temporary map to handle layered overrides if needed,
+  // but getUserPreferences already returns them ordered (projectId DESC, updated DESC).
+  // So the first one we see for a key is the best one.
+  const seen = new Set<string>();
+
   for (const row of rows) {
+    if (seen.has(row.key)) {
+      continue;
+    }
+    seen.add(row.key);
+
     const keyResult = preferenceKeySchema.safeParse(row.key);
     if (!keyResult.success) {
       logger.warn("preference_key_invalid", {
@@ -169,12 +183,12 @@ export async function loadPreferences(
     });
   }
 
-  l1Cache.set(userId, prefs);
+  l1Cache.set(cacheKey, prefs);
 
   if (redis && prefs.size > 0) {
     try {
       await redis.set(
-        redisKey(userId),
+        redisKey(userId, projectId),
         serializePreferences(prefs),
         "EX",
         L2_TTL_SECONDS
@@ -182,6 +196,7 @@ export async function loadPreferences(
     } catch (error) {
       logger.warn("preference_redis_set_failed", {
         userId,
+        projectId,
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -192,9 +207,10 @@ export async function loadPreferences(
 
 export async function loadPreferencesWithDefaults(
   userId: string,
+  projectId?: string,
   domain?: DomainName | null
 ): Promise<Map<PreferenceKey, PreferenceDetail>> {
-  const base = await loadPreferences(userId);
+  const base = await loadPreferences(userId, projectId);
   if (!domain) {
     return base;
   }
@@ -214,8 +230,12 @@ export async function loadPreferencesWithDefaults(
   return merged;
 }
 
-export async function invalidatePreferenceCache(userId: string): Promise<void> {
-  l1Cache.delete(userId);
+export async function invalidatePreferenceCache(
+  userId: string,
+  projectId?: string
+): Promise<void> {
+  const cacheKey = `${userId}:${projectId ?? "global"}`;
+  l1Cache.delete(cacheKey);
 
   await initializeRedis().catch(() => {
     // Ignore initialization failure; cache invalidation already happened locally
@@ -227,11 +247,12 @@ export async function invalidatePreferenceCache(userId: string): Promise<void> {
   }
 
   try {
-    await redis.del(redisKey(userId));
-    await redis.publish(CACHE_CHANNEL, userId);
+    await redis.del(redisKey(userId, projectId));
+    await redis.publish(CACHE_CHANNEL, cacheKey);
   } catch (error) {
     logger.warn("preference_redis_invalidate_failed", {
       userId,
+      projectId,
       error: error instanceof Error ? error.message : String(error),
     });
   }

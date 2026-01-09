@@ -10,7 +10,7 @@
 import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { auditLogs } from "@alfred/db/schema/policy";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
 
 export const isUsingSqlite =
   process.env.DATABASE_URL?.includes("sqlite") ?? false;
@@ -29,7 +29,7 @@ export async function verifyAuditLogs(params: {
   count: number;
   logs: (typeof auditLogs.$inferSelect)[];
 }> {
-  const conditions = [];
+  const conditions: SQL[] = [];
 
   if (params.userId) {
     conditions.push(eq(auditLogs.userId, params.userId));
@@ -189,7 +189,7 @@ export function createSchedulerTestHarness() {
     /**
      * Start a scheduler
      */
-    start: async () => {
+    start: () => {
       // Placeholder for starting scheduler
       return Promise.resolve();
     },
@@ -197,7 +197,7 @@ export function createSchedulerTestHarness() {
     /**
      * Stop a scheduler
      */
-    stop: async () => {
+    stop: () => {
       // Placeholder for stopping scheduler
       return Promise.resolve();
     },
@@ -205,7 +205,7 @@ export function createSchedulerTestHarness() {
     /**
      * Trigger a scheduled task
      */
-    trigger: async (_taskName: string) => {
+    trigger: (_taskName: string) => {
       // Placeholder for triggering tasks
       return Promise.resolve();
     },
@@ -213,9 +213,9 @@ export function createSchedulerTestHarness() {
     /**
      * Get scheduled task state
      */
-    getState: async (_taskName: string) => {
+    getState: (_taskName: string) => {
       // Placeholder for getting task state
-      return null;
+      return Promise.resolve(null);
     },
   };
 }

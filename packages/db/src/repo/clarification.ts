@@ -45,7 +45,7 @@ export async function updateResponse(
   return row;
 }
 
-export async function listRequestsByRunId(
+export function listRequestsByRunId(
   runId: string
 ): Promise<ClarificationRequest[]> {
   return db

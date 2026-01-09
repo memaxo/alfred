@@ -1,0 +1,55 @@
+---
+- name: Ensure monitoring directory exists
+  file:
+    path: "{{ monitoring_dir }}"
+    state: directory
+    owner: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    mode: '0755'
+
+- name: Create prometheus config directory
+  file:
+    path: "{{ monitoring_dir }}/prometheus"
+    state: directory
+    owner: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    mode: '0755'
+
+- name: Template prometheus config
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_dir }}/prometheus/prometheus.yml"
+    owner: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    mode: '0644'
+
+- name: Create dashboards directory
+  file:
+    path: "{{ monitoring_dir }}/dashboards"
+    state: directory
+    owner: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    mode: '0755'
+
+- name: Template Grafana dashboards
+  template:
+    src: dashboards/alfred-core.json.j2
+    dest: "{{ monitoring_dir }}/dashboards/alfred-core.json"
+    owner: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    mode: '0644'
+
+- name: Template monitoring docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ monitoring_dir }}/docker-compose.yml"
+    owner: "{{ alfred_user }}"
+    group: "{{ alfred_group }}"
+    mode: '0644'
+
+- name: Run monitoring stack
+  shell:
+    cmd: "docker compose up -d"
+    chdir: "{{ monitoring_dir }}"
+  become: yes
+  become_user: "{{ alfred_user }}"

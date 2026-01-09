@@ -45,6 +45,7 @@ const mockSttPool = {
 };
 
 const mockTtsPool = {
+  // biome-ignore lint/suspicious/noExplicitAny: Mock pool requires flexible typing
   synthesize: async (req: any, onChunk: any) => {
     // Simulate synthesis delay
     await new Promise((r) => setTimeout(r, 10));
@@ -54,10 +55,12 @@ const mockTtsPool = {
   },
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: Mock pool cast
 const registry = new VoiceRegistry(mockSttPool as any, mockTtsPool as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8899;
+// biome-ignore lint/suspicious/noExplicitAny: Bun.serve requires data type
 const server = Bun.serve<any>({
   port: PORT,
   websocket: {
@@ -66,6 +69,7 @@ const server = Bun.serve<any>({
     },
     async message(ws, message) {
       await handler.handleMessage(
+        // biome-ignore lint/suspicious/noExplicitAny: WebSocket data cast
         ws as unknown as ServerWebSocket<any>,
         message
       );

@@ -13,7 +13,7 @@ mock.module("../src/voice/assistant", () => ({
 describe("End-to-End Voice Session (S2S)", () => {
   let registry: VoiceRegistry;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     const setup = createVoiceTestRegistry({
       transcript: "Hello computer",
       chunkText: "chunk",
@@ -21,7 +21,7 @@ describe("End-to-End Voice Session (S2S)", () => {
     registry = setup.registry;
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     registry.shutdown();
   });
 

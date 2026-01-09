@@ -48,8 +48,24 @@ const nodeTypes = {
   dependency: DependencyNode,
 };
 
+type PhaseData = {
+  title: string;
+  status: string;
+  description: string;
+};
+
+type StepData = {
+  title: string;
+  agent: string;
+  description: string;
+};
+
+type DependencyData = {
+  label: string;
+};
+
 // Phase node component
-function PhaseNode({ data }: { data: Record<string, unknown> }) {
+function PhaseNode({ data }: { data: PhaseData }) {
   return (
     <Card className="min-w-[200px] border-2 border-purple-500/20 bg-purple-50/50 dark:bg-purple-950/50">
       <CardHeader className="pb-2">
@@ -71,7 +87,7 @@ function PhaseNode({ data }: { data: Record<string, unknown> }) {
 }
 
 // Step node component
-function StepNode({ data }: { data: Record<string, unknown> }) {
+function StepNode({ data }: { data: StepData }) {
   return (
     <Card className="min-w-[180px] border border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/50">
       <CardHeader className="pb-2">
@@ -93,7 +109,7 @@ function StepNode({ data }: { data: Record<string, unknown> }) {
 }
 
 // Dependency node component
-function DependencyNode({ data }: { data: Record<string, unknown> }) {
+function DependencyNode({ data }: { data: DependencyData }) {
   return (
     <div className="rounded border bg-gray-100 px-2 py-1 text-xs dark:bg-gray-800">
       {data.label}
@@ -106,19 +122,44 @@ function ToolPanel({
   onGeneratePlan,
   onLoadPlan,
   onSavePlan,
+  isGenerating,
 }: {
-  onGeneratePlan: () => void;
+  onGeneratePlan: (intent: string) => void;
   onLoadPlan: () => void;
   onSavePlan: () => void;
+  isGenerating: boolean;
 }) {
+  const [intent, setIntent] = useState("");
+
   return (
     <div className="space-y-4">
       <div>
         <h3 className="mb-2 font-medium text-sm">Quick Actions</h3>
         <div className="space-y-2">
-          <Button className="w-full" onClick={onGeneratePlan} size="sm">
-            <Play className="mr-2 h-4 w-4" />
-            Generate Plan
+          <Input
+            className="h-8 text-xs"
+            disabled={isGenerating}
+            onChange={(e) => setIntent(e.target.value)}
+            placeholder="Enter intent..."
+            value={intent}
+          />
+          <Button
+            className="w-full"
+            disabled={!intent || isGenerating}
+            onClick={() => onGeneratePlan(intent)}
+            size="sm"
+          >
+            {isGenerating ? (
+              <>
+                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 h-4 w-4" />
+                Generate Plan
+              </>
+            )}
           </Button>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={onLoadPlan} size="sm" variant="outline">
@@ -186,31 +227,50 @@ function PropertiesPanel({ selectedNode }: { selectedNode: Node | null }) {
     );
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Internal node data
+  const data = selectedNode.data as any;
+
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="mb-2 font-medium text-sm">{selectedNode.data.title}</h3>
+        <h3 className="mb-2 font-medium text-sm">{data.title || data.label}</h3>
         <div className="space-y-3">
-          <div>
-            <label className="font-medium text-muted-foreground text-xs">
-              Title
-            </label>
-            <Input
-              className="mt-1 h-8 text-sm"
-              placeholder="Node title"
-              value={selectedNode.data.title || ""}
-            />
-          </div>
-          <div>
-            <label className="font-medium text-muted-foreground text-xs">
-              Description
-            </label>
-            <Input
-              className="mt-1 h-8 text-sm"
-              placeholder="Node description"
-              value={selectedNode.data.description || ""}
-            />
-          </div>
+          {data.title !== undefined && (
+            <div>
+              <label className="font-medium text-muted-foreground text-xs">
+                Title
+              </label>
+              <Input
+                className="mt-1 h-8 text-sm"
+                placeholder="Node title"
+                value={data.title || ""}
+              />
+            </div>
+          )}
+          {data.label !== undefined && (
+            <div>
+              <label className="font-medium text-muted-foreground text-xs">
+                Label
+              </label>
+              <Input
+                className="mt-1 h-8 text-sm"
+                placeholder="Node label"
+                value={data.label || ""}
+              />
+            </div>
+          )}
+          {data.description !== undefined && (
+            <div>
+              <label className="font-medium text-muted-foreground text-xs">
+                Description
+              </label>
+              <Input
+                className="mt-1 h-8 text-sm"
+                placeholder="Node description"
+                value={data.description || ""}
+              />
+            </div>
+          )}
           {selectedNode.type === "step" && (
             <div>
               <label className="font-medium text-muted-foreground text-xs">
@@ -219,7 +279,7 @@ function PropertiesPanel({ selectedNode }: { selectedNode: Node | null }) {
               <Input
                 className="mt-1 h-8 text-sm"
                 placeholder="Agent type"
-                value={selectedNode.data.agent || ""}
+                value={data.agent || ""}
               />
             </div>
           )}
@@ -254,52 +314,16 @@ export function VisualBuilderWindow(_props: WindowComponentProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [_planId, setPlanId] = useState<string | null>(null);
-  const [_planStatus, setPlanStatus] = useState<
-    "draft" | "approved" | "rejected"
-  >("draft");
-  const [_isGenerating, setIsGenerating] = useState(false);
-
+  const [isGenerating, setIsGenerating] = useState(false);
   // tRPC mutations
   const generatePlanMutation = trpc.plan.generate.useMutation({
-    onSuccess: (data) => {
+    onSuccess: () => {
       setIsGenerating(false);
-      setPlanId(data.id);
-      setPlanStatus("draft");
       toast.success("Plan generated successfully");
     },
     onError: (error) => {
       setIsGenerating(false);
       toast.error(`Failed to generate plan: ${error.message}`);
-    },
-  });
-
-  const _approvePlanMutation = trpc.plan.approve.useMutation({
-    onSuccess: () => {
-      setPlanStatus("approved");
-      toast.success("Plan approved and executed");
-    },
-    onError: (error) => {
-      toast.error(`Failed to approve plan: ${error.message}`);
-    },
-  });
-
-  const _rejectPlanMutation = trpc.plan.reject.useMutation({
-    onSuccess: () => {
-      setPlanStatus("rejected");
-      toast.success("Plan rejected");
-    },
-    onError: (error) => {
-      toast.error(`Failed to reject plan: ${error.message}`);
-    },
-  });
-
-  const _saveTemplateMutation = trpc.plan.create.useMutation({
-    onSuccess: () => {
-      toast.success("Template saved successfully");
-    },
-    onError: (error) => {
-      toast.error(`Failed to save template: ${error.message}`);
     },
   });
 
@@ -499,6 +523,7 @@ export function VisualBuilderWindow(_props: WindowComponentProps) {
       {/* Left Tool Panel */}
       <div className="w-64 border-r bg-background/50 p-4">
         <ToolPanel
+          isGenerating={isGenerating}
           onGeneratePlan={generatePlan}
           onLoadPlan={onLoadPlan}
           onSavePlan={onSavePlan}

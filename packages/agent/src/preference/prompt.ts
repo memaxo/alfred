@@ -10,6 +10,7 @@ import { loadPreferencesWithDefaults } from "./loader";
 import { sanitizePreferences } from "./sanitize";
 
 export type DomainContext = {
+  projectId?: string;
   domain?: DomainName | null;
   toolNames?: string[];
   conversationType?: "workflow" | "chat" | "assistant";
@@ -37,7 +38,11 @@ export async function buildPreferenceSystemPrompt(
   }
 
   try {
-    const rawPrefs = await loadPreferencesWithDefaults(userId, domain);
+    const rawPrefs = await loadPreferencesWithDefaults(
+      userId,
+      context?.projectId,
+      domain
+    );
     if (rawPrefs.size === 0) {
       return "";
     }
