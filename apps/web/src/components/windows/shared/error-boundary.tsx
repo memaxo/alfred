@@ -5,24 +5,38 @@ import { Button } from "@/components/ui/button";
 type Props = {
   windowId: string;
   children: ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 };
 
 type State = {
   hasError: boolean;
   error: Error | null;
+  errorCount: number;
 };
 
 export class WindowErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorCount: 0 };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(_error: Error, _errorInfo: React.ErrorInfo) {}
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
+
+    // biome-ignore lint/suspicious/noConsole: Error logging is intentional for debugging
+    console.error(
+      `[WindowErrorBoundary] Window "${this.props.windowId}" crashed:`,
+      error,
+      errorInfo.componentStack
+    );
+
+    // Allow custom error handler
+    this.props.onError?.(error, errorInfo);
+  }
 
   handleRetry = () => {
     this.setState({ hasError: false, error: null });
@@ -30,6 +44,9 @@ export class WindowErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const maxRetries = 3;
+      const canRetry = this.state.errorCount < maxRetries;
+
       return (
         <div className="flex h-full min-h-[100px] flex-col items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
           <AlertTriangle className="h-6 w-6 text-red-500" />
@@ -37,14 +54,20 @@ export class WindowErrorBoundary extends Component<Props, State> {
           <p className="max-w-[200px] truncate text-center text-biolum-faint text-xs">
             {this.state.error?.message ?? "Unknown error"}
           </p>
-          <Button
-            className="text-xs"
-            onClick={this.handleRetry}
-            size="sm"
-            variant="ghost"
-          >
-            Retry
-          </Button>
+          {canRetry ? (
+            <Button
+              className="text-xs"
+              onClick={this.handleRetry}
+              size="sm"
+              variant="ghost"
+            >
+              Retry ({maxRetries - this.state.errorCount} left)
+            </Button>
+          ) : (
+            <p className="text-biolum-faint text-xs">
+              Too many errors. Please refresh the page.
+            </p>
+          )}
         </div>
       );
     }

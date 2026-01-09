@@ -11,6 +11,7 @@
 
 import type { CSSProperties } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { WindowErrorBoundary } from "@/components/windows/shared/error-boundary";
 import { useDesktopStore } from "@/store/desktop";
 import type { WindowType } from "@/store/desktop/types.new";
 import { TileZonePreview } from "../tiling/zone-preview";
@@ -67,7 +68,9 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
                 key={window.id}
                 windowId={window.id}
               >
-                <Component />
+                <WindowErrorBoundary windowId={window.id}>
+                  <Component />
+                </WindowErrorBoundary>
               </WindowChrome>
             );
           })}

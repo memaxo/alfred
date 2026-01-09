@@ -262,6 +262,36 @@ const ensureStorage = (key: "localStorage" | "sessionStorage") => {
 ensureStorage("localStorage");
 ensureStorage("sessionStorage");
 
+// Mock matchMedia for components that check prefers-reduced-motion
+type WindowWithMatchMedia = Window & {
+  matchMedia?: typeof window.matchMedia;
+};
+
+type GlobalWithMatchMedia = typeof globalThis & {
+  matchMedia?: typeof window.matchMedia;
+};
+
+const matchMediaMock = (query: string): MediaQueryList => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: () => {},
+  removeListener: () => {},
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  dispatchEvent: () => true,
+});
+
+if (typeof (globalThis as GlobalWithMatchMedia).matchMedia === "undefined") {
+  (globalThis as GlobalWithMatchMedia).matchMedia = matchMediaMock;
+}
+if (
+  typeof window !== "undefined" &&
+  typeof (window as unknown as WindowWithMatchMedia).matchMedia === "undefined"
+) {
+  (window as unknown as WindowWithMatchMedia).matchMedia = matchMediaMock;
+}
+
 if (typeof globalThis.PointerEvent === "undefined") {
   class PointerEvent extends MouseEvent {
     public pointerId: number;

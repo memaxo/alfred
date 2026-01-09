@@ -12,6 +12,7 @@
  */
 
 import { type CSSProperties, lazy, Suspense } from "react";
+import { LayerErrorBoundary } from "../error-boundary";
 
 // Lazy load the actual ReactFlow canvas to keep main bundle small
 const MindscapeCanvas = lazy(() =>
@@ -66,9 +67,14 @@ export function MindscapeLayer({
         bottom: 48, // Above taskbar
       }}
     >
-      <Suspense fallback={<MindscapeLoading />}>
-        <MindscapeCanvas />
-      </Suspense>
+      <LayerErrorBoundary
+        fallback={<MindscapeCanvasPlaceholder />}
+        layerName="Mindscape"
+      >
+        <Suspense fallback={<MindscapeLoading />}>
+          <MindscapeCanvas />
+        </Suspense>
+      </LayerErrorBoundary>
     </div>
   );
 }

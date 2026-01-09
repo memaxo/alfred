@@ -23,6 +23,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useDesktopStore } from "@/store/desktop";
 import { FocusIndicator, SkipLinks } from "./accessibility";
 import { DesktopCommandPalette } from "./command-palette";
+import { LayerErrorBoundary, ShellErrorBoundary } from "./error-boundary";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { MindscapeLayer } from "./layers/mindscape-layer";
 import { OrbLayer } from "./layers/orb-layer";
@@ -93,67 +94,75 @@ export function AlfredDesktopShell({
   }, [setDesktopArea]);
 
   return (
-    <div
-      aria-label="Alfred Desktop"
-      className="relative h-screen w-full overflow-hidden bg-void"
-      data-testid="alfred-desktop-shell"
-      role="application"
-    >
-      {/* Accessibility: Skip Links */}
-      <SkipLinks />
-
-      {/* Accessibility: Focus Indicator */}
-      <FocusIndicator />
-
-      {/* Background Layer */}
+    <ShellErrorBoundary>
       <div
-        className="absolute inset-0"
-        data-layer="background"
-        style={{ zIndex: Z_INDEX.BACKGROUND }}
+        aria-label="Alfred Desktop"
+        className="relative h-screen w-full overflow-hidden bg-void"
+        data-testid="alfred-desktop-shell"
+        role="application"
       >
-        {/* Desktop background - gradient or image */}
-        <div className="h-full w-full bg-gradient-to-br from-void via-void-surface to-void" />
-      </div>
+        {/* Accessibility: Skip Links */}
+        <SkipLinks />
 
-      {/* Mindscape Layer (ReactFlow - toggle) */}
-      {mode === "mindscape" && (
-        <MindscapeLayer
-          onWorkflowNavigate={onWorkflowNavigate}
-          style={{ zIndex: Z_INDEX.MINDSCAPE }}
-        />
-      )}
+        {/* Accessibility: Focus Indicator */}
+        <FocusIndicator />
 
-      {/* Window Layer (Traditional DOM windows) */}
-      {mode === "desktop" && (
-        <main aria-label="Desktop windows" id="main-content">
-          <WindowLayer
-            focusedWindowId={focusedWindowId}
-            style={{ zIndex: Z_INDEX.WINDOWS_MIN }}
+        {/* Background Layer */}
+        <div
+          className="absolute inset-0"
+          data-layer="background"
+          style={{ zIndex: Z_INDEX.BACKGROUND }}
+        >
+          {/* Desktop background - gradient or image */}
+          <div className="h-full w-full bg-gradient-to-br from-void via-void-surface to-void" />
+        </div>
+
+        {/* Mindscape Layer (ReactFlow - toggle) */}
+        {mode === "mindscape" && (
+          <MindscapeLayer
+            onWorkflowNavigate={onWorkflowNavigate}
+            style={{ zIndex: Z_INDEX.MINDSCAPE }}
           />
-        </main>
-      )}
+        )}
 
-      {/* Menu Bar Layer */}
-      <MenuBar style={{ zIndex: Z_INDEX.MENU_BAR }} />
+        {/* Window Layer (Traditional DOM windows) */}
+        {mode === "desktop" && (
+          <main aria-label="Desktop windows" id="main-content">
+            <LayerErrorBoundary layerName="Windows">
+              <WindowLayer
+                focusedWindowId={focusedWindowId}
+                style={{ zIndex: Z_INDEX.WINDOWS_MIN }}
+              />
+            </LayerErrorBoundary>
+          </main>
+        )}
 
-      {/* Taskbar Layer */}
-      <Taskbar style={{ zIndex: Z_INDEX.TASKBAR }} />
+        {/* Menu Bar Layer */}
+        <LayerErrorBoundary fallback={null} layerName="Menu Bar">
+          <MenuBar style={{ zIndex: Z_INDEX.MENU_BAR }} />
+        </LayerErrorBoundary>
 
-      {/* Orb Layer */}
-      <OrbLayer style={{ zIndex: Z_INDEX.ORB }} />
+        {/* Taskbar Layer */}
+        <LayerErrorBoundary fallback={null} layerName="Taskbar">
+          <Taskbar style={{ zIndex: Z_INDEX.TASKBAR }} />
+        </LayerErrorBoundary>
 
-      {/* Overlay Layer (Command Palette, Modals) */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        data-layer="overlay"
-        style={{ zIndex: Z_INDEX.OVERLAY }}
-      >
-        <DesktopCommandPalette onAsk={onAsk} onVisualize={onVisualize} />
+        {/* Orb Layer */}
+        <OrbLayer style={{ zIndex: Z_INDEX.ORB }} />
+
+        {/* Overlay Layer (Command Palette, Modals) */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          data-layer="overlay"
+          style={{ zIndex: Z_INDEX.OVERLAY }}
+        >
+          <DesktopCommandPalette onAsk={onAsk} onVisualize={onVisualize} />
+        </div>
+
+        {/* Additional children (portals, etc.) */}
+        {children}
       </div>
-
-      {/* Additional children (portals, etc.) */}
-      {children}
-    </div>
+    </ShellErrorBoundary>
   );
 }
 
