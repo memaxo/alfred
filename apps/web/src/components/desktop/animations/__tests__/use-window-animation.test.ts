@@ -289,10 +289,12 @@ describe("useWindowAnimation", () => {
       });
     });
 
-    it("sets willChange to transform, opacity when animating", () => {
+    it("sets willChange to transform, opacity, filter when animating", () => {
       const { result } = renderHook(() => useWindowAnimation());
 
-      expect(result.current.styles.willChange).toBe("transform, opacity");
+      expect(result.current.styles.willChange).toBe(
+        "transform, opacity, filter"
+      );
     });
   });
 });

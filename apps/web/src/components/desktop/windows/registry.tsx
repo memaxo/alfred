@@ -30,6 +30,7 @@ import {
   Shield,
   Square,
   Terminal,
+  Workflow,
 } from "lucide-react";
 // Phase 2/3 apps
 import {
@@ -43,6 +44,7 @@ import {
   KnowledgeAppWindow,
   LinearAppWindow,
   MetricsAppWindow,
+  NotesAppWindow,
   PolicyAppWindow,
   PRReviewAppWindow,
   TaskManagerAppWindow,
@@ -58,12 +60,13 @@ import { ReminderWindow } from "@/components/windows/reminder/reminder-window";
 import { SettingsWindow } from "@/components/windows/settings/settings-window";
 import { TerminalWindow } from "@/components/windows/terminal/terminal-window";
 import { TodoWindow } from "@/components/windows/todo/todo-window";
+import { VisualBuilderWindow } from "@/components/windows/visual-builder/visual-builder-window";
 import { WorkflowListWindow } from "@/components/windows/workflow/workflow-list-window";
 
 import type { WindowType } from "@/store/desktop/types";
 
 // Adapter for legacy components
-export { withWindowAdapter } from "./adapter";
+export { useWindowProps, withWindowAdapter } from "./adapter";
 
 import type { WindowMetadata, WindowRegistryEntry } from "./types";
 
@@ -98,7 +101,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       singleton: true,
       tier: "primary",
     },
-    isLegacy: true,
+    isLegacy: false,
   },
   droid: {
     type: "droid",
@@ -497,7 +500,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   notes: {
     type: "notes",
-    component: NoteWindow,
+    component: NotesAppWindow,
     metadata: {
       label: "Notes",
       icon: FileText,
@@ -507,7 +510,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       singleton: false,
       tier: "tertiary",
     },
-    isLegacy: true,
+    isLegacy: false,
   },
   reminders: {
     type: "reminders",
@@ -536,6 +539,20 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       tier: "tertiary",
     },
     isLegacy: true,
+  },
+  "visual-builder": {
+    type: "visual-builder",
+    component: VisualBuilderWindow,
+    metadata: {
+      label: "Visual Builder",
+      icon: Workflow,
+      defaultSize: { width: 1200, height: 800 },
+      minSize: { width: 800, height: 600 },
+      resizable: true,
+      singleton: false,
+      tier: "secondary",
+    },
+    isLegacy: false,
   },
 };
 

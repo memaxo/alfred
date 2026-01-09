@@ -98,13 +98,13 @@ describe("WindowGroupChrome", () => {
       groups: [group],
     });
 
-    const { getByText } = render(
+    const { container } = render(
       <WindowGroupChrome groupId="group1">
         {(activeId) => <div>Active: {activeId}</div>}
       </WindowGroupChrome>
     );
 
-    expect(getByText("Active: w1")).toBeTruthy();
+    expect(container.textContent).toContain("Active: w1");
   });
 
   it("switches active tab when tab is clicked", () => {

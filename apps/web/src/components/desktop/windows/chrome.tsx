@@ -63,12 +63,15 @@ export function WindowChrome({
   const {
     styles: animationStyles,
     animateClose,
+    animateMinimize,
     startTileAnimation,
     startResizeAnimation,
     endResizeAnimation,
     isAnimating,
   } = useWindowAnimation({
     onCloseComplete: () => removeWindow(windowId),
+    onMinimizeComplete: () =>
+      useDesktopStore.getState().minimizeWindow(windowId),
   });
 
   const handleClose = useCallback(() => {
@@ -80,8 +83,11 @@ export function WindowChrome({
   }, [animateClose, isClosing]);
 
   const handleMinimize = useCallback(() => {
-    useDesktopStore.getState().minimizeWindow(windowId);
-  }, [windowId]);
+    // Target position for minimize animation (bottom center)
+    const targetX = 0;
+    const targetY = desktopArea.height;
+    animateMinimize(targetX, targetY);
+  }, [animateMinimize, desktopArea.height]);
 
   const handleMaximize = useCallback(() => {
     if (!window) {
@@ -391,13 +397,16 @@ export function WindowChrome({
     <div
       aria-label={title}
       className={cn(
-        "pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl border-2 bg-void-surface/95 shadow-xl backdrop-blur-xl",
+        "pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl border-2 bg-void-surface/95 shadow-2xl backdrop-blur-xl",
         isFocused
-          ? "border-biolum/50 shadow-[0_0_30px_rgba(0,255,136,0.2)] ring-2 ring-biolum/20 ring-offset-2 ring-offset-void"
+          ? "border-biolum/50 shadow-[0_0_50px_rgba(0,255,136,0.3)] ring-2 ring-biolum/20 ring-offset-2 ring-offset-void"
           : "border-white/10 shadow-lg",
         isDragging && "cursor-grabbing",
         isResizing && "select-none",
-        isAnimating && "pointer-events-none"
+        isAnimating && "pointer-events-none",
+        // Apply smooth transitions when not manually interacting
+        !(isDragging || isResizing) &&
+          "transition-[left,top,width,height,border-color,box-shadow,ring] duration-300 ease-out"
       )}
       data-focused={isFocused}
       data-window-id={windowId}

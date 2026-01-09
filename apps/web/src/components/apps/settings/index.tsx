@@ -8,7 +8,15 @@
  * @see docs/execplans/desktop-evolution-prd.md Section 8.8
  */
 
-import { Bell, Key, Palette, Settings, Shield, User } from "lucide-react";
+import {
+  Bell,
+  Key,
+  Keyboard,
+  Palette,
+  Settings,
+  Shield,
+  User,
+} from "lucide-react";
 import { useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +35,7 @@ type SettingsSection =
   | "tokens"
   | "policy"
   | "appearance"
+  | "keyboard"
   | "notifications";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,6 +51,7 @@ export function SettingsApp({ window: _window }: WindowComponentProps) {
     { id: "tokens", icon: Key, label: "API Tokens" },
     { id: "policy", icon: Shield, label: "Policy" },
     { id: "appearance", icon: Palette, label: "Appearance" },
+    { id: "keyboard", icon: Keyboard, label: "Keyboard" },
     { id: "notifications", icon: Bell, label: "Notifications" },
   ] as const;
 
@@ -83,6 +93,7 @@ export function SettingsApp({ window: _window }: WindowComponentProps) {
         {section === "tokens" && <TokensSection />}
         {section === "policy" && <PolicySection />}
         {section === "appearance" && <AppearanceSection />}
+        {section === "keyboard" && <KeyboardSection />}
         {section === "notifications" && <NotificationsSection />}
       </div>
     </div>
@@ -133,6 +144,38 @@ function AppearanceSection() {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function KeyboardSection() {
+  const shortcuts = [
+    { key: "⌘K", description: "Open Command Palette" },
+    { key: "⌘M", description: "Toggle Mindscape Canvas" },
+    { key: "⌘W", description: "Close Focused Window" },
+    { key: "⌘H", description: "Hide (Minimize) Window" },
+    { key: "⌘Q", description: "Quit Focused Application" },
+    { key: "⌘Tab", description: "Cycle Through Windows" },
+    { key: "⌃Arrows", description: "Focus Tiled Window" },
+    { key: "⌘Arrows", description: "Tile Window" },
+  ];
+
+  return (
+    <div className="p-6">
+      <h2 className="mb-4 font-semibold text-lg">Keyboard Shortcuts</h2>
+      <div className="grid gap-2">
+        {shortcuts.map((s) => (
+          <div
+            className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 px-4"
+            key={s.key}
+          >
+            <span className="text-biolum-dim text-sm">{s.description}</span>
+            <kbd className="rounded bg-void px-2 py-1 font-mono text-biolum text-xs shadow-inner">
+              {s.key}
+            </kbd>
+          </div>
+        ))}
       </div>
     </div>
   );
