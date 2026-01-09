@@ -64,10 +64,9 @@ Out of scope:
 - [x] (2026-01-09) Fix ROCm voice container determinism
   - Dockerfile now installs `ffmpeg` + `libsndfile1` and uses `pyproject.rocm.toml` (as `pyproject.toml`) with an in-image `uv lock` + `uv sync --frozen`.
   - Added an in-image smoke check that imports key deps without loading models.
-- [ ] Decide and implement `subscriptions` surface
-  - Either: implement `/api/subscriptions` WebSocket server (Bun upgrade + multiplex)
-  - Or: delete/disable client manager + hook.
-  - Add integration test for the chosen contract.
+- [x] (2026-01-09) Decide and implement `subscriptions` surface
+  - Decision: rely on tRPC subscriptions (HTTP) and disable exports of the bespoke `/api/subscriptions` client manager.
+  - TODO: if we need graph realtime, implement it as a tRPC subscription.
 
 ### Phase 2: “Perfect” Dockerfiles (fast, minimal, secure, reproducible)
 
