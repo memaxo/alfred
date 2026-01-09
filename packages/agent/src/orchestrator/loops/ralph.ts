@@ -18,6 +18,7 @@ import { logger } from "@alfred/logger";
 import { z } from "zod";
 import { type CodexToolInput, toolCodex } from "../tool/codex/index.js";
 import { type DroidToolInput, toolDroid } from "../tool/droid.js";
+import { type OpenCodeToolInput, toolOpenCode } from "../tool/opencode/index.js";
 import type { ToolWriter } from "../tool/shared/context.js";
 import {
   recordRalphCompletion,
@@ -94,7 +95,7 @@ export type RalphState = {
  */
 export type RalphInput = {
   /** Which executor to use */
-  executor: "codex" | "droid";
+  executor: "codex" | "droid" | "opencode";
   /** The prompt to feed repeatedly */
   prompt: string;
   /** Ralph configuration */
@@ -102,7 +103,8 @@ export type RalphInput = {
   /** Tool-specific input (minus prompt, which is managed by Ralph) */
   toolInput:
     | Omit<CodexToolInput, "prompt" | "action">
-    | Omit<DroidToolInput, "prompt">;
+    | Omit<DroidToolInput, "prompt">
+    | Omit<OpenCodeToolInput, "prompt" | "action">;
   /** Optional stream writer for real-time output */
   writer?: ToolWriter;
   /** Optional abort signal for cancellation */
@@ -267,7 +269,7 @@ function buildIterationPrompt(state: RalphState): string {
  * Execute a single iteration using the specified executor
  */
 async function executeIteration(
-  executor: "codex" | "droid",
+  executor: "codex" | "droid" | "opencode",
   prompt: string,
   toolInput: RalphInput["toolInput"],
   writer: ToolWriter,
@@ -293,14 +295,31 @@ async function executeIteration(
     };
   }
 
-  // Droid executor
-  const droidInput = toolInput as Omit<DroidToolInput, "prompt">;
-  const output = await toolDroid.execute({
+  if (executor === "droid") {
+    const droidInput = toolInput as Omit<DroidToolInput, "prompt">;
+    const output = await toolDroid.execute({
+      input: {
+        prompt,
+        ...droidInput,
+      },
+      writer,
+      signal,
+    });
+    return {
+      result: output.result,
+      artifacts: output.artifacts ?? [],
+    };
+  }
+
+  const ocInput = toolInput as Omit<OpenCodeToolInput, "prompt" | "action">;
+  const output = await toolOpenCode.execute({
     input: {
+      action: "exec",
       prompt,
-      ...droidInput,
+      ...ocInput,
     },
     writer,
+    signal,
   });
   return {
     result: output.result,
@@ -503,7 +522,9 @@ export async function runRalphLoop(params: RalphInput): Promise<RalphResult> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const ralphInputSchema = z.object({
-  executor: z.enum(["codex", "droid"]).describe("Which coding agent to use"),
+  executor: z
+    .enum(["codex", "droid", "opencode"])
+    .describe("Which coding agent to use"),
   prompt: z.string().min(1).describe("The prompt to feed repeatedly"),
   config: ralphConfigSchema.describe("Ralph loop configuration"),
   auto: z.enum(["read", "low", "medium", "high"]).default("low"),
@@ -513,6 +534,22 @@ export const ralphInputSchema = z.object({
   timeoutSec: z.number().int().min(30).max(1800).optional(),
   sessionId: z.string().optional().describe("Session ID for Codex"),
   userId: z.string().optional().describe("User ID for session binding"),
+  cmd: z
+    .string()
+    .optional()
+    .describe("ACP agent command override (OpenCode executor only)"),
+  args: z
+    .array(z.string())
+    .optional()
+    .describe("ACP agent args override (OpenCode executor only)"),
+  containerName: z
+    .string()
+    .optional()
+    .describe("AgentFS container name/id (OpenCode executor only)"),
+  containerCw: z
+    .string()
+    .optional()
+    .describe("Workdir inside the container (OpenCode executor only)"),
 });
 
 export type RalphToolInput = z.infer<typeof ralphInputSchema>;
@@ -548,14 +585,27 @@ export const toolRalph = {
             sessionId: toolInputRest.sessionId,
             userId: toolInputRest.userId,
           }
-        : {
-            out: "text" as const,
-            auto: toolInputRest.auto,
-            cw: toolInputRest.cw,
-            model: toolInputRest.model,
-            authz: toolInputRest.authz,
-            timeoutSec: toolInputRest.timeoutSec,
-          };
+        : executor === "droid"
+          ? {
+              out: "text" as const,
+              auto: toolInputRest.auto,
+              cw: toolInputRest.cw,
+              model: toolInputRest.model,
+              authz: toolInputRest.authz,
+              timeoutSec: toolInputRest.timeoutSec,
+            }
+          : {
+              auto: toolInputRest.auto,
+              cw: toolInputRest.cw,
+              model: toolInputRest.model,
+              authz: toolInputRest.authz,
+              timeoutSec: toolInputRest.timeoutSec,
+              sessionId: toolInputRest.sessionId,
+              cmd: toolInputRest.cmd,
+              args: toolInputRest.args,
+              containerName: toolInputRest.containerName,
+              containerCw: toolInputRest.containerCw,
+            };
 
     return await runRalphLoop({
       executor,

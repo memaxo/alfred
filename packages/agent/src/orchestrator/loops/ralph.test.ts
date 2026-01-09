@@ -34,6 +34,14 @@ const mockDroidExecute = mock(() =>
   })
 );
 
+// Mock toolOpenCode
+const mockOpenCodeExecute = mock(() =>
+  Promise.resolve({
+    result: "OpenCode iteration...",
+    artifacts: [],
+  })
+);
+
 mock.module("../tool/codex/index.js", () => ({
   toolCodex: {
     execute: mockCodexExecute,
@@ -45,6 +53,13 @@ mock.module("../tool/droid.js", () => ({
     execute: mockDroidExecute,
   },
   droidInputSchema: {},
+}));
+
+mock.module("../tool/opencode/index.js", () => ({
+  toolOpenCode: {
+    execute: mockOpenCodeExecute,
+  },
+  opencodeInputSchema: {},
 }));
 
 // Mock metrics (no-op)
@@ -84,6 +99,7 @@ mock.module("@alfred/cognitive", () => ({
 beforeEach(() => {
   mockCodexExecute.mockReset();
   mockDroidExecute.mockReset();
+  mockOpenCodeExecute.mockReset();
 
   // Default mock implementations
   mockCodexExecute.mockImplementation(() =>
@@ -96,6 +112,13 @@ beforeEach(() => {
   mockDroidExecute.mockImplementation(() =>
     Promise.resolve({
       result: "Working on it...",
+      artifacts: [],
+    })
+  );
+
+  mockOpenCodeExecute.mockImplementation(() =>
+    Promise.resolve({
+      result: "OpenCode iteration...",
       artifacts: [],
     })
   );
