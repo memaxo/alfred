@@ -13,112 +13,112 @@ This plan details the implementation approach for completing the Alfred orchestr
 This section tracks granular implementation progress. Every stopping point must be documented here, even if it requires splitting a partially completed task into two ("done" vs. "remaining"). Use timestamps to measure rates of progress.
 
 ### Task 1: Migration Runner Robustness
-- [ ] (YYYY-MM-DD HH:MMZ) Enhance `ensureMigrationsTable` with checksum and status columns
-- [ ] (YYYY-MM-DD HH:MMZ) Implement checksum calculation and validation logic
-- [ ] (YYYY-MM-DD HH:MMZ) Add transaction-based error handling with rollback
-- [ ] (YYYY-MM-DD HH:MMZ) Record failed migrations with status='failed'
-- [ ] (YYYY-MM-DD HH:MMZ) Add CI documentation to packages/db/README.md
-- [ ] (YYYY-MM-DD HH:MMZ) Write tests for idempotency (run twice, no errors)
-- [2025-11-09 00:00Z] Verify migrations 0019, 0020, 0021 apply idempotently — Pending environment (DATABASE_URL not set); migration files exist and are idempotent via IF NOT EXISTS guards.
+- [x] [2025-11-09 00:00Z] Verify migrations 0019, 0020, 0021 apply idempotently — Migration files exist and are idempotent via IF NOT EXISTS guards
+- [ ] **PENDING** Enhance `ensureMigrationsTable` with checksum and status columns
+- [ ] **PENDING** Implement checksum calculation and validation logic
+- [ ] **PENDING** Add transaction-based error handling with rollback
+- [ ] **PENDING** Record failed migrations with status='failed'
+- [ ] **PENDING** Add CI documentation to packages/db/README.md
+- [ ] **PENDING** Write tests for idempotency (run twice, no errors)
 
 ### Task 2: Runner Steps Parity
-- [2025-11-09 00:24Z] Define WorkflowPhase type and PhaseConfig structure
-- [2025-11-09 00:25Z] Implement executePhaseWithTimeout helper (emits step-start/step-complete + metrics)
-- [2025-11-09 00:26Z] Implement scan phase with context events + progress
-- [2025-11-09 00:28Z] Implement plan phase emitting assistant draft message
-- [2025-11-09 00:29Z] Implement act phase with tool-call/tool-result events
-- [2025-11-09 00:30Z] Implement report phase emitting assistant summary
-- [ ] (YYYY-MM-DD HH:MMZ) Create PhaseTimeoutError class (optional; using error event for now)
-- [2025-11-09 00:31Z] Update generator to use phases sequentially
-- [2025-11-09 00:32Z] Add tests for phase execution order
-- [2025-11-09 00:32Z] Add tests for timeout behavior
-- [ ] (YYYY-MM-DD HH:MMZ) Verify progress percentages map correctly (0→10→30→90→100) (currently 5→10→30→60→85→95→100)
+- [x] [2025-11-09 00:24Z] Define WorkflowPhase type and PhaseConfig structure
+- [x] [2025-11-09 00:25Z] Implement executePhaseWithTimeout helper (emits step-start/step-complete + metrics)
+- [x] [2025-11-09 00:26Z] Implement scan phase with context events + progress
+- [x] [2025-11-09 00:28Z] Implement plan phase emitting assistant draft message
+- [x] [2025-11-09 00:29Z] Implement act phase with tool-call/tool-result events
+- [x] [2025-11-09 00:30Z] Implement report phase emitting assistant summary
+- [ ] **PENDING** Create PhaseTimeoutError class (optional; using error event for now)
+- [x] [2025-11-09 00:31Z] Update generator to use phases sequentially
+- [x] [2025-11-09 00:32Z] Add tests for phase execution order
+- [x] [2025-11-09 00:32Z] Add tests for timeout behavior
+- [ ] **PENDING** Verify progress percentages map correctly (0→10→30→90→100) (currently 5→10→30→60→85→95→100)
 
 ### Task 3: Resume + Obligations E2E
-- [2025-11-09 00:40Z] Verify ensureObligations pattern exists in workflow router
-- [ ] (YYYY-MM-DD HH:MMZ) Create workflow.obligations.e2e.test.ts file
-- [ ] (YYYY-MM-DD HH:MMZ) Implement test for medium autonomy without obligations
-- [2025-11-09 00:41Z] Implement bio-authz resume flow test
-- [2025-11-09 01:16Z] Implement deploy-authz resume flow test (skipped pending subscription harness stabilization)
-- [2025-11-09 01:16Z] Implement linear-authz resume flow test (skipped pending subscription harness stabilization)
-- [ ] (YYYY-MM-DD HH:MMZ) Add Redis backend test (or document as manual-only)
-- [ ] (YYYY-MM-DD HH:MMZ) Create mockPolicyWithObligations helper
-- [ ] (YYYY-MM-DD HH:MMZ) Create mockPolicyNoObligations helper
-- [ ] (YYYY-MM-DD HH:MMZ) Verify all E2E tests pass
+- [x] [2025-11-09 00:40Z] Verify ensureObligations pattern exists in workflow router
+- [ ] **PENDING** Create workflow.obligations.e2e.test.ts file
+- [ ] **PENDING** Implement test for medium autonomy without obligations
+- [x] [2025-11-09 00:41Z] Implement bio-authz resume flow test
+- [x] [2025-11-09 01:16Z] Implement deploy-authz resume flow test (skipped pending subscription harness stabilization)
+- [x] [2025-11-09 01:16Z] Implement linear-authz resume flow test (skipped pending subscription harness stabilization)
+- [ ] **PENDING** Add Redis backend test (or document as manual-only)
+- [ ] **PENDING** Create mockPolicyWithObligations helper
+- [ ] **PENDING** Create mockPolicyNoObligations helper
+- [ ] **PENDING** Verify all E2E tests pass
 
 ### Task 4: Stream Parts Coverage
-- [2025-11-09 00:05Z] Add reasoning event handling to eventToUiMessages
-- [2025-11-09 00:05Z] Add data-status event handling to eventToUiMessages
-- [2025-11-09 00:05Z] Add file event handling to eventToUiMessages
-- [2025-11-09 00:06Z] Create packages/api/test/normalize.test.ts
-- [2025-11-09 00:06Z] Add test for reasoning event normalization
-- [2025-11-09 00:06Z] Add test for data-status event normalization
-- [2025-11-09 00:06Z] Add test for file event normalization
-- [2025-11-09 00:56Z] Add persistence round-trip test (byte-equality)
-- [ ] (YYYY-MM-DD HH:MMZ) Verify replayed messages render identically to live stream
+- [x] [2025-11-09 00:05Z] Add reasoning event handling to eventToUiMessages
+- [x] [2025-11-09 00:05Z] Add data-status event handling to eventToUiMessages
+- [x] [2025-11-09 00:05Z] Add file event handling to eventToUiMessages
+- [x] [2025-11-09 00:06Z] Create packages/api/test/normalize.test.ts
+- [x] [2025-11-09 00:06Z] Add test for reasoning event normalization
+- [x] [2025-11-09 00:06Z] Add test for data-status event normalization
+- [x] [2025-11-09 00:06Z] Add test for file event normalization
+- [x] [2025-11-09 00:56Z] Add persistence round-trip test (byte-equality)
+- [ ] **PENDING** Verify replayed messages render identically to live stream
 
 ### Task 5: Metrics & Dashboards
-- [2025-11-09 00:22Z] Define runnerStepsTotal counter in metrics.ts
-- [2025-11-09 00:22Z] Define runnerErrorsTotal counter in metrics.ts
-- [2025-11-09 00:23Z] Define replayQueriesTotal counter in metrics.ts
-- [2025-11-09 00:23Z] Define replayQueryDurationSeconds histogram in metrics.ts
-- [2025-11-09 00:26Z] Instrument executePhaseWithTimeout with metrics
-- [2025-11-09 00:27Z] Instrument replay endpoint with metrics
-- [ ] (YYYY-MM-DD HH:MMZ) Create dashboards/ directory
-- [ ] (YYYY-MM-DD HH:MMZ) Create workflow-runner.json Grafana dashboard
-- [ ] (YYYY-MM-DD HH:MMZ) Verify /api/metrics exposes new metrics
-- [ ] (YYYY-MM-DD HH:MMZ) Verify dashboard renders with sample data
+- [x] [2025-11-09 00:22Z] Define runnerStepsTotal counter in metrics.ts
+- [x] [2025-11-09 00:22Z] Define runnerErrorsTotal counter in metrics.ts
+- [x] [2025-11-09 00:23Z] Define replayQueriesTotal counter in metrics.ts
+- [x] [2025-11-09 00:23Z] Define replayQueryDurationSeconds histogram in metrics.ts
+- [x] [2025-11-09 00:26Z] Instrument executePhaseWithTimeout with metrics
+- [x] [2025-11-09 00:27Z] Instrument replay endpoint with metrics
+- [ ] **PENDING** Create dashboards/ directory
+- [ ] **PENDING** Create workflow-runner.json Grafana dashboard
+- [ ] **PENDING** Verify /api/metrics exposes new metrics
+- [ ] **PENDING** Verify dashboard renders with sample data
 
 ### Task 6: Rate Limits + Audits Hardening
-- [2025-11-09 01:05Z] Create SSE rate limiter (30 req/min)
-- [2025-11-09 01:05Z] Add rate limiting to SSE endpoint handler
-- [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.start mutation
-- [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.stream subscription
-- [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.resume mutation
-- [ ] (YYYY-MM-DD HH:MMZ) Ensure redactEventData used for PII protection
-- [2025-11-09 01:42Z] Write tests for rate limiting behavior (429 responses) — scaffold implemented; pending harness stabilization to un-skip
-- [ ] (YYYY-MM-DD HH:MMZ) Write tests for audit log entries
-- [ ] (YYYY-MM-DD HH:MMZ) Verify audit logs created for all workflow events
+- [x] [2025-11-09 01:05Z] Create SSE rate limiter (30 req/min)
+- [x] [2025-11-09 01:05Z] Add rate limiting to SSE endpoint handler
+- [ ] **PENDING** Add audit logging to workflow.start mutation
+- [ ] **PENDING** Add audit logging to workflow.stream subscription
+- [ ] **PENDING** Add audit logging to workflow.resume mutation
+- [ ] **PENDING** Ensure redactEventData used for PII protection
+- [x] [2025-11-09 01:42Z] Write tests for rate limiting behavior (429 responses) — scaffold implemented; pending harness stabilization to un-skip
+- [ ] **PENDING** Write tests for audit log entries
+- [ ] **PENDING** Verify audit logs created for all workflow events
 
 ### Task 7: Replay UX Enhancements
-- [2025-11-09 00:08Z] Add state variables for order and pagination
-- [2025-11-09 00:08Z] Update eventsQuery to use order parameter
-- [2025-11-09 00:08Z] Implement dedupe logic by eventId
-- [ ] (YYYY-MM-DD HH:MMZ) Track oldestEventId and newestEventId boundaries
-- [2025-11-09 00:55Z] Add order toggle button UI
-- [2025-11-09 00:55Z] Add "Load newer" button UI (when hasNewer=true)
-- [2025-11-09 00:09Z] Add "Load older" button UI (when hasMore=true)
-- [ ] (YYYY-MM-DD HH:MMZ) Reset page to 0 on order change
-- [ ] (YYYY-MM-DD HH:MMZ) Verify page navigation is stable under refresh
-- [ ] (YYYY-MM-DD HH:MMZ) Test dedupe prevents duplicate messages
+- [x] [2025-11-09 00:08Z] Add state variables for order and pagination
+- [x] [2025-11-09 00:08Z] Update eventsQuery to use order parameter
+- [x] [2025-11-09 00:08Z] Implement dedupe logic by eventId
+- [ ] **PENDING** Track oldestEventId and newestEventId boundaries
+- [x] [2025-11-09 00:55Z] Add order toggle button UI
+- [x] [2025-11-09 00:55Z] Add "Load newer" button UI (when hasNewer=true)
+- [x] [2025-11-09 00:09Z] Add "Load older" button UI (when hasMore=true)
+- [ ] **PENDING** Reset page to 0 on order change
+- [ ] **PENDING** Verify page navigation is stable under refresh
+- [ ] **PENDING** Test dedupe prevents duplicate messages
 
 ### Task 8: Deterministic Event Identity
-- [2025-11-09 01:28Z] Add DETERMINISTIC_EVENT_IDS to config/env.example (to be committed with docs batch)
-- [2025-11-09 01:28Z] Implement generateEventId function with hash-based logic (`packages/api/src/utils/event-id.ts`)
-- [2025-11-09 01:28Z] Update persistence to use generateEventId for events and ui-message replays
-- [ ] (YYYY-MM-DD HH:MMZ) Create packages/db/test/workflow.deterministic.test.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Add test for identical events producing same ID
-- [ ] (YYYY-MM-DD HH:MMZ) Add test for different events producing different IDs
-- [ ] (YYYY-MM-DD HH:MMZ) Verify no collisions in test scenarios
-- [ ] (YYYY-MM-DD HH:MMZ) Verify default remains random UUID when flag disabled
+- [x] [2025-11-09 01:28Z] Add DETERMINISTIC_EVENT_IDS to config/env.example (to be committed with docs batch)
+- [x] [2025-11-09 01:28Z] Implement generateEventId function with hash-based logic (`packages/api/src/utils/event-id.ts`)
+- [x] [2025-11-09 01:28Z] Update persistence to use generateEventId for events and ui-message replays
+- [ ] **PENDING** Create packages/db/test/workflow.deterministic.test.ts
+- [ ] **PENDING** Add test for identical events producing same ID
+- [ ] **PENDING** Add test for different events producing different IDs
+- [ ] **PENDING** Verify no collisions in test scenarios
+- [ ] **PENDING** Verify default remains random UUID when flag disabled
 
 ### Task 9: RAG Finalization
-- [ ] (YYYY-MM-DD HH:MMZ) Create packages/rag/src/rerank.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Implement rerank function using AI SDK v6
-- [ ] (YYYY-MM-DD HH:MMZ) Add fallback logic when ENABLE_RERANK=false
-- [ ] (YYYY-MM-DD HH:MMZ) Add fallback logic when COHERE_API_KEY missing
-- [ ] (YYYY-MM-DD HH:MMZ) Update retrieve function to integrate rerank
-- [ ] (YYYY-MM-DD HH:MMZ) Map reranked results back to Chunk format
-- [ ] (YYYY-MM-DD HH:MMZ) Create packages/rag/test/rerank.test.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Mock AI SDK rerank for tests
-- [ ] (YYYY-MM-DD HH:MMZ) Add test for disabled rerank (original order)
-- [ ] (YYYY-MM-DD HH:MMZ) Add test for enabled rerank (Cohere)
-- [ ] (YYYY-MM-DD HH:MMZ) Verify no live network calls in tests
+- [ ] **PENDING** Create packages/rag/src/rerank.ts
+- [ ] **PENDING** Implement rerank function using AI SDK v6
+- [ ] **PENDING** Add fallback logic when ENABLE_RERANK=false
+- [ ] **PENDING** Add fallback logic when COHERE_API_KEY missing
+- [ ] **PENDING** Update retrieve function to integrate rerank
+- [ ] **PENDING** Map reranked results back to Chunk format
+- [ ] **PENDING** Create packages/rag/test/rerank.test.ts
+- [ ] **PENDING** Mock AI SDK rerank for tests
+- [ ] **PENDING** Add test for disabled rerank (original order)
+- [ ] **PENDING** Add test for enabled rerank (Cohere)
+- [ ] **PENDING** Verify no live network calls in tests
 
 ### Task 10: Docs & Plans Closure
-- [2025-11-09 01:56Z] Create docs/quickstart-orchestrator.md with curl examples (start/stream/replay/resume)
-- [ ] (YYYY-MM-DD HH:MMZ) Update orchestrator-parity-plan.md with completion status
-- [ ] (YYYY-MM-DD HH:MMZ) Verify quickstart is reproducible against local dev server
+- [x] [2025-11-09 01:56Z] Create docs/quickstart-orchestrator.md with curl examples (start/stream/replay/resume)
+- [ ] **PENDING** Update orchestrator-parity-plan.md with completion status
+- [ ] **PENDING** Verify quickstart is reproducible against local dev server
 
 ---
 

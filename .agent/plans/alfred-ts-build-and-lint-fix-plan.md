@@ -114,7 +114,7 @@ Track progress per milestone with timestamps (UTC). Example entries shown; repla
 - [x] (2025-11-19 19:55Z) Remove redundant `async` wrappers in `packages/agent/src/lib/proxmox.ts`
 - [x] (2025-11-19 19:57Z) Await legacy tool execution in `packages/agent/src/v6.ts`
 - [x] (2025-11-19 20:00Z) Remove redundant `async` wrappers in `packages/api/src/metrics.ts`
-- [ ] (YYYY-MM-DD HH:MMZ) Audit runtime/agent async utilities for `useAwait`
+- [ ] **PENDING** Audit runtime/agent async utilities for `useAwait`
 
 ### Milestone 2 – Type Discipline
 - [x] (2025-11-19 20:12Z) Type native TRPC client (`apps/native/utils/trpc.ts`)
@@ -124,8 +124,8 @@ Track progress per milestone with timestamps (UTC). Example entries shown; repla
 - [x] (2025-11-19 20:33Z) Provide typed CarPlay module declaration to replace `any`
 - [x] (2025-11-19 20:45Z) Remove `any` usage from `packages/runtime/src/adapters/ai.ts`
 - [x] (2025-11-19 20:22Z) Remove casts/`any` from `packages/api/src/ai/normalize.ts` and align tool parts with AI SDK types
-- [ ] (YYYY-MM-DD HH:MMZ) Remove `any` from drive tab components
-- [ ] (YYYY-MM-DD HH:MMZ) Update or add relevant tests
+- [ ] **PENDING** Remove `any` from drive tab components
+- [ ] **PENDING** Update or add relevant tests
 
 ### Milestone 3 – Structural Readability
 - [x] (2025-11-19 20:29Z) Refactor `apps/native/components/header-button.tsx`
@@ -135,18 +135,18 @@ Track progress per milestone with timestamps (UTC). Example entries shown; repla
 - [x] (2025-11-19 20:31Z) Clean `apps/web/src/components/chat-container.tsx` imports/hooks/props ordering
 - [x] (2025-11-19 20:34Z) Format + organize `apps/web/src/components/autonomy-slider.tsx`
 - [x] (2025-11-19 20:36Z) Refactor `apps/web/src/components/chat-render.tsx` (complexity, imports)
-- [ ] (YYYY-MM-DD HH:MMZ) Verify component tests (or document absence)
+- [ ] **PENDING** Verify component tests (or document absence)
 - [x] (2025-11-19 21:05Z) Reduce complexity and lint noise in `apps/web/src/routes/orchestrator/run.tsx`
 
 ### Milestone 4 – Autofix & Final Checks
-- [ ] (YYYY-MM-DD HH:MMZ) Run `bunx biome check --write` and review diffs
-- [ ] (YYYY-MM-DD HH:MMZ) Final `bunx biome check .` passes
-- [ ] (YYYY-MM-DD HH:MMZ) Final `bun run typecheck && bun test` passes
-- [ ] (YYYY-MM-DD HH:MMZ) Update docs/changelog if required
+- [ ] **PENDING** Run `bunx biome check --write` and review diffs
+- [ ] **PENDING** Final `bunx biome check .` passes
+- [ ] **PENDING** Final `bun run typecheck && bun test` passes
+- [ ] **PENDING** Update docs/changelog if required
 
 ## Surprises & Discoveries
 
-- (YYYY-MM-DD HH:MMZ) _None yet._
+- (2025-11-19) None yet.
 
 Add entries as issues arise; describe cause, impact, and mitigation.
 
@@ -154,7 +154,6 @@ Add entries as issues arise; describe cause, impact, and mitigation.
 
 - (2025-11-19) Use shared registry from `@alfred/metrics/registry` to avoid cross-package imports (pre-existing, documented for completeness). Future lint fixes must respect the same boundary.
 - (2025-11-19) Prioritize lint remediation order as async safety → type discipline → readability so regressions that affect runtime correctness are addressed before stylistic cleanups.
-- (YYYY-MM-DD) Pending decisions go here with reasoning.
 
 ## Outcomes & Retrospective
 
