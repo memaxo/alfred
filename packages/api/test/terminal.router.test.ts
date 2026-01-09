@@ -421,4 +421,120 @@ describe("terminal router", () => {
       // Should not throw
     });
   });
+
+  describe("listContainers", () => {
+    it("returns empty array when docker is not available", async () => {
+      const dockerFailSpawn = vi.fn().mockImplementation(() => {
+        throw new Error("docker not found");
+      });
+      vi.spyOn(bun, "spawn").mockImplementation(
+        dockerFailSpawn as unknown as typeof bun.spawn
+      );
+
+      const result = await caller.terminal.listContainers();
+
+      expect(result).toEqual([]);
+    });
+
+    it("returns empty array when docker returns no containers", async () => {
+      const mockProc = {
+        stdout: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(""));
+            controller.close();
+          },
+        }),
+        stderr: new ReadableStream(),
+        exited: Promise.resolve(0),
+      };
+
+      vi.spyOn(bun, "spawn").mockImplementation(
+        () => mockProc as unknown as Bun.Subprocess
+      );
+
+      const result = await caller.terminal.listContainers();
+
+      expect(result).toEqual([]);
+    });
+
+    it("parses docker ps output correctly", async () => {
+      const dockerOutput = [
+        "abc123|my-app|nginx:latest|Up 2 hours|running",
+        "def456|my-db|postgres:15|Exited (0) 1 hour ago|exited",
+        "ghi789|my-redis|redis:7|Up 5 minutes|running",
+      ].join("\n");
+
+      const mockProc = {
+        stdout: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(dockerOutput));
+            controller.close();
+          },
+        }),
+        stderr: new ReadableStream(),
+        exited: Promise.resolve(0),
+      };
+
+      vi.spyOn(bun, "spawn").mockImplementation(
+        () => mockProc as unknown as Bun.Subprocess
+      );
+
+      const result = await caller.terminal.listContainers();
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toEqual({
+        id: "abc123",
+        name: "my-app",
+        image: "nginx:latest",
+        status: "Up 2 hours",
+        state: "running",
+      });
+      expect(result[1]).toEqual({
+        id: "def456",
+        name: "my-db",
+        image: "postgres:15",
+        status: "Exited (0) 1 hour ago",
+        state: "exited",
+      });
+      expect(result[2]).toEqual({
+        id: "ghi789",
+        name: "my-redis",
+        image: "redis:7",
+        status: "Up 5 minutes",
+        state: "running",
+      });
+    });
+
+    it("calls docker with correct format arguments", async () => {
+      const spawnSpy = vi.fn().mockImplementation(() => ({
+        stdout: new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }),
+        stderr: new ReadableStream(),
+        exited: Promise.resolve(0),
+      }));
+
+      vi.spyOn(bun, "spawn").mockImplementation(
+        spawnSpy as unknown as typeof bun.spawn
+      );
+
+      await caller.terminal.listContainers();
+
+      expect(spawnSpy).toHaveBeenCalledWith(
+        [
+          "docker",
+          "ps",
+          "-a",
+          "--format",
+          "{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.State}}",
+        ],
+        expect.objectContaining({
+          stdout: "pipe",
+          stderr: "pipe",
+        })
+      );
+    });
+  });
 });

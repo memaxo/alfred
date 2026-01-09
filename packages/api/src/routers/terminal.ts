@@ -275,4 +275,44 @@ export const terminalRouter = router({
       }
       session.pty.kill();
     }),
+
+  listContainers: authedProcedure.query(async () => {
+    try {
+      const proc = Bun.spawn(
+        [
+          "docker",
+          "ps",
+          "-a",
+          "--format",
+          "{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.State}}",
+        ],
+        { stdout: "pipe", stderr: "pipe" }
+      );
+      const output = await new Response(proc.stdout).text();
+      await proc.exited;
+
+      if (!output.trim()) {
+        return [];
+      }
+
+      return output
+        .trim()
+        .split("\n")
+        .map((line) => {
+          const [id, name, image, status, state] = line.split("|");
+          return {
+            id,
+            name,
+            image,
+            status,
+            state: state as "running" | "paused" | "exited" | "created",
+          };
+        });
+    } catch (error) {
+      logger.warn("terminal_docker_list_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }),
 });

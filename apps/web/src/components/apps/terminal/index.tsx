@@ -19,6 +19,8 @@ import { useCallback, useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { TerminalProfile } from "@/store/terminal";
+import { useTerminalProfiles } from "@/store/terminal";
 import { ProfileSelector } from "./profile-selector";
 import { TerminalInstance } from "./terminal-instance";
 import { TerminalTabs } from "./terminal-tabs";
@@ -39,36 +41,6 @@ type TerminalTab = {
   isActive: boolean;
 };
 
-type TerminalProfile = {
-  id: string;
-  name: string;
-  type: "local" | "ssh" | "docker";
-  shell?: string;
-  host?: string;
-  container?: string;
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DEFAULT PROFILES
-// ─────────────────────────────────────────────────────────────────────────────
-
-const DEFAULT_PROFILE: TerminalProfile = {
-  id: "local",
-  name: "Local",
-  type: "local",
-  shell: "zsh",
-};
-
-const defaultProfiles: TerminalProfile[] = [
-  DEFAULT_PROFILE,
-  {
-    id: "docker-alfred",
-    name: "Docker: alfred",
-    type: "docker",
-    container: "alfred-agentfs",
-  },
-];
-
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,11 +49,14 @@ export function TerminalApp({
   windowId: _windowId,
   className,
 }: TerminalAppProps) {
+  const { getDefault } = useTerminalProfiles();
+  const defaultProfile = getDefault();
+
   const [tabs, setTabs] = useState<TerminalTab[]>([
     {
       id: "1",
-      title: "zsh",
-      profile: DEFAULT_PROFILE,
+      title: defaultProfile.name,
+      profile: defaultProfile,
       isActive: true,
     },
   ]);
@@ -90,19 +65,22 @@ export function TerminalApp({
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
-  const handleNewTab = useCallback((profile?: TerminalProfile) => {
-    const p = profile ?? DEFAULT_PROFILE;
-    const newTab: TerminalTab = {
-      id: crypto.randomUUID(),
-      title: p.name,
-      profile: p,
-      isActive: true,
-    };
+  const handleNewTab = useCallback(
+    (profile?: TerminalProfile) => {
+      const p = profile ?? defaultProfile;
+      const newTab: TerminalTab = {
+        id: crypto.randomUUID(),
+        title: p.name,
+        profile: p,
+        isActive: true,
+      };
 
-    setTabs((prev) => [...prev, newTab]);
-    setActiveTabId(newTab.id);
-    setShowProfileSelector(false);
-  }, []);
+      setTabs((prev) => [...prev, newTab]);
+      setActiveTabId(newTab.id);
+      setShowProfileSelector(false);
+    },
+    [defaultProfile]
+  );
 
   const handleCloseTab = useCallback(
     (tabId: string) => {
@@ -184,7 +162,6 @@ export function TerminalApp({
         <ProfileSelector
           onClose={() => setShowProfileSelector(false)}
           onSelect={handleNewTab}
-          profiles={defaultProfiles}
         />
       )}
     </div>
