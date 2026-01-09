@@ -145,6 +145,7 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS user_preferences (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    project_id TEXT,
     key TEXT NOT NULL,
     value TEXT NOT NULL,
     confidence REAL DEFAULT 1.0,
@@ -153,6 +154,7 @@ const statements = [
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_id, key)
   );`,
+  "ALTER TABLE user_preferences ADD COLUMN project_id TEXT;",
   `CREATE TABLE IF NOT EXISTS cognitive_events (
     id TEXT PRIMARY KEY,
     stream_id TEXT NOT NULL,
@@ -261,6 +263,7 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS audit_logs (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    project_id TEXT,
     trace_id TEXT,
     action TEXT NOT NULL,
     resource TEXT NOT NULL,
@@ -269,9 +272,11 @@ const statements = [
     context TEXT,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  "ALTER TABLE audit_logs ADD COLUMN project_id TEXT;",
   `CREATE TABLE IF NOT EXISTS user_feedback (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    project_id TEXT,
     conversation_id TEXT,
     message_id TEXT,
     rating INTEGER,
@@ -279,6 +284,7 @@ const statements = [
     tags TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  "ALTER TABLE user_feedback ADD COLUMN project_id TEXT;",
   `CREATE TABLE IF NOT EXISTS codex_sessions (
     id TEXT PRIMARY KEY,
     session_id TEXT UNIQUE NOT NULL,
@@ -295,8 +301,71 @@ const statements = [
   "ALTER TABLE codex_sessions ADD COLUMN project_id TEXT;",
   `CREATE INDEX IF NOT EXISTS codex_sessions_user_idx
     ON codex_sessions(user_id);`,
-  `CREATE INDEX IF NOT EXISTS codex_sessions_expires_idx
-    ON codex_sessions(expires_at);`,
+  `CREATE TABLE IF NOT EXISTS approvals (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    trace_id TEXT,
+    action TEXT NOT NULL,
+    resource TEXT NOT NULL,
+    context TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    approved_by TEXT,
+    approved_at TEXT,
+    expires_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    metadata TEXT
+  );`,
+  "ALTER TABLE approvals ADD COLUMN project_id TEXT;",
+  `CREATE TABLE IF NOT EXISTS user_facts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    content TEXT NOT NULL,
+    embedding BLOB,
+    category TEXT,
+    confidence REAL DEFAULT 1.0,
+    source TEXT DEFAULT 'user',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
+  `CREATE TABLE IF NOT EXISTS user_events (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    type TEXT NOT NULL,
+    data TEXT NOT NULL,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    metadata TEXT
+  );`,
+  `CREATE TABLE IF NOT EXISTS tune_jobs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    config TEXT NOT NULL,
+    progress TEXT,
+    artifacts TEXT,
+    error_message TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    started_at TEXT,
+    completed_at TEXT
+  );`,
+  `CREATE TABLE IF NOT EXISTS metric_alerts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    name TEXT NOT NULL,
+    query TEXT NOT NULL,
+    condition TEXT NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'warning',
+    enabled INTEGER DEFAULT 1,
+    last_triggered_at TEXT,
+    trigger_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
 ];
 
 export function ensureSqliteTestSchema(db: Database): void {

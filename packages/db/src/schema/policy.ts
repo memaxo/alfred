@@ -34,6 +34,9 @@ export const auditLogs = pgTable("audit_logs", {
 export const approvals = pgTable("approvals", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   traceId: text("trace_id"), // Link to audit log
   action: text("action").notNull(),
   resource: text("resource").notNull(),

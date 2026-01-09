@@ -23,6 +23,10 @@ CREATE INDEX IF NOT EXISTS user_events_project_id_idx ON user_events (project_id
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS audit_logs_project_id_idx ON audit_logs (project_id);
 
+-- Approvals
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS approvals_project_id_idx ON approvals (project_id);
+
 -- Tune Jobs
 ALTER TABLE tune_jobs ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS tune_jobs_project_id_idx ON tune_jobs (project_id);
