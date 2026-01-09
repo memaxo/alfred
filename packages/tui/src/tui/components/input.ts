@@ -1,241 +1,176 @@
-/**
- * ALFRED TUI Input Line Component
- *
- * Single-line text input with cursor, history navigation, and editing.
- */
-
 import type { KeyEvent } from "../input/keys";
-import { colors } from "../theme";
-import { dim, fg, padRight, visibleLength } from "../typography";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type InputLineState = {
   value: string;
   cursorPosition: number;
-  history: string[];
-  historyIndex: number;
   placeholder: string;
+  history: string[];
+  historyIndex: number | null;
 };
 
-export type InputLineActions = {
-  setValue: (value: string) => void;
-  insert: (char: string) => void;
+export function createInputLineState(placeholder = ""): InputLineState {
+  return {
+    value: "",
+    cursorPosition: 0,
+    placeholder,
+    history: [],
+    historyIndex: null,
+  };
+}
+
+export function createInputLineActions(
+  get: () => InputLineState,
+  set: (next: InputLineState) => void
+): {
+  insert: (text: string) => void;
   backspace: () => void;
-  delete: () => void;
   moveCursorLeft: () => void;
   moveCursorRight: () => void;
   moveCursorStart: () => void;
   moveCursorEnd: () => void;
+  submit: () => string;
   historyPrev: () => void;
   historyNext: () => void;
-  submit: () => string;
-  clear: () => void;
-};
-
-// ─── State Factory ───────────────────────────────────────────────────────────
-
-export function createInputLineState(
-  placeholder = "Type here..."
-): InputLineState {
-  return {
-    value: "",
-    cursorPosition: 0,
-    history: [],
-    historyIndex: -1,
-    placeholder,
+} {
+  const update = (fn: (prev: InputLineState) => InputLineState) => {
+    set(fn(get()));
   };
-}
 
-// ─── Actions Factory ─────────────────────────────────────────────────────────
-
-export function createInputLineActions(
-  getState: () => InputLineState,
-  setState: (state: InputLineState) => void
-): InputLineActions {
   return {
-    setValue: (value: string) => {
-      setState({
-        ...getState(),
-        value,
-        cursorPosition: value.length,
-        historyIndex: -1,
-      });
-    },
-
-    insert: (char: string) => {
-      const state = getState();
-      const before = state.value.slice(0, state.cursorPosition);
-      const after = state.value.slice(state.cursorPosition);
-      setState({
-        ...state,
-        value: before + char + after,
-        cursorPosition: state.cursorPosition + char.length,
-        historyIndex: -1,
+    insert: (text) => {
+      if (!text) {
+        return;
+      }
+      update((prev) => {
+        const before = prev.value.slice(0, prev.cursorPosition);
+        const after = prev.value.slice(prev.cursorPosition);
+        const nextValue = before + text + after;
+        return {
+          ...prev,
+          value: nextValue,
+          cursorPosition: prev.cursorPosition + text.length,
+          historyIndex: null,
+        };
       });
     },
 
     backspace: () => {
-      const state = getState();
-      if (state.cursorPosition === 0) {
-        return;
-      }
-      const before = state.value.slice(0, state.cursorPosition - 1);
-      const after = state.value.slice(state.cursorPosition);
-      setState({
-        ...state,
-        value: before + after,
-        cursorPosition: state.cursorPosition - 1,
-      });
-    },
-
-    delete: () => {
-      const state = getState();
-      if (state.cursorPosition >= state.value.length) {
-        return;
-      }
-      const before = state.value.slice(0, state.cursorPosition);
-      const after = state.value.slice(state.cursorPosition + 1);
-      setState({
-        ...state,
-        value: before + after,
+      update((prev) => {
+        if (prev.cursorPosition <= 0) {
+          return prev;
+        }
+        const before = prev.value.slice(0, prev.cursorPosition - 1);
+        const after = prev.value.slice(prev.cursorPosition);
+        return {
+          ...prev,
+          value: before + after,
+          cursorPosition: prev.cursorPosition - 1,
+        };
       });
     },
 
     moveCursorLeft: () => {
-      const state = getState();
-      if (state.cursorPosition > 0) {
-        setState({
-          ...state,
-          cursorPosition: state.cursorPosition - 1,
-        });
-      }
+      update((prev) => ({
+        ...prev,
+        cursorPosition: Math.max(0, prev.cursorPosition - 1),
+      }));
     },
 
     moveCursorRight: () => {
-      const state = getState();
-      if (state.cursorPosition < state.value.length) {
-        setState({
-          ...state,
-          cursorPosition: state.cursorPosition + 1,
-        });
-      }
+      update((prev) => ({
+        ...prev,
+        cursorPosition: Math.min(prev.value.length, prev.cursorPosition + 1),
+      }));
     },
 
     moveCursorStart: () => {
-      setState({
-        ...getState(),
-        cursorPosition: 0,
-      });
+      update((prev) => ({ ...prev, cursorPosition: 0 }));
     },
 
     moveCursorEnd: () => {
-      const state = getState();
-      setState({
-        ...state,
-        cursorPosition: state.value.length,
-      });
+      update((prev) => ({ ...prev, cursorPosition: prev.value.length }));
+    },
+
+    submit: () => {
+      const prev = get();
+      const text = prev.value;
+      if (text) {
+        set({
+          ...prev,
+          value: "",
+          cursorPosition: 0,
+          history: [...prev.history, text],
+          historyIndex: null,
+        });
+      } else {
+        set({ ...prev, value: "", cursorPosition: 0, historyIndex: null });
+      }
+      return text;
     },
 
     historyPrev: () => {
-      const state = getState();
-      if (state.history.length === 0) {
-        return;
-      }
-      const newIndex =
-        state.historyIndex < state.history.length - 1
-          ? state.historyIndex + 1
-          : state.historyIndex;
-      const value = state.history[newIndex] ?? "";
-      setState({
-        ...state,
-        historyIndex: newIndex,
-        value,
-        cursorPosition: value.length,
+      update((prev) => {
+        if (prev.history.length === 0) {
+          return prev;
+        }
+        const idx =
+          prev.historyIndex === null
+            ? prev.history.length - 1
+            : Math.max(0, prev.historyIndex - 1);
+        return {
+          ...prev,
+          value: prev.history[idx] ?? "",
+          cursorPosition: (prev.history[idx] ?? "").length,
+          historyIndex: idx,
+        };
       });
     },
 
     historyNext: () => {
-      const state = getState();
-      if (state.historyIndex <= 0) {
-        setState({
-          ...state,
-          historyIndex: -1,
-          value: "",
-          cursorPosition: 0,
-        });
-        return;
-      }
-      const newIndex = state.historyIndex - 1;
-      const value = state.history[newIndex] ?? "";
-      setState({
-        ...state,
-        historyIndex: newIndex,
-        value,
-        cursorPosition: value.length,
-      });
-    },
+      update((prev) => {
+        if (prev.history.length === 0) {
+          return prev;
+        }
 
-    submit: () => {
-      const state = getState();
-      const value = state.value.trim();
-      if (value) {
-        // Add to history (avoid duplicates at top)
-        const history =
-          state.history[0] === value
-            ? state.history
-            : [value, ...state.history.slice(0, 99)];
-        setState({
-          ...state,
-          value: "",
-          cursorPosition: 0,
-          history,
-          historyIndex: -1,
-        });
-      }
-      return value;
-    },
+        if (prev.historyIndex === null) {
+          return prev;
+        }
 
-    clear: () => {
-      setState({
-        ...getState(),
-        value: "",
-        cursorPosition: 0,
-        historyIndex: -1,
+        const idx = prev.historyIndex + 1;
+        if (idx >= prev.history.length) {
+          return { ...prev, value: "", cursorPosition: 0, historyIndex: null };
+        }
+
+        const v = prev.history[idx] ?? "";
+        return {
+          ...prev,
+          value: v,
+          cursorPosition: v.length,
+          historyIndex: idx,
+        };
       });
     },
   };
 }
 
-// ─── Key Handler ─────────────────────────────────────────────────────────────
-
 export function handleInputLineKey(
   event: KeyEvent,
-  actions: InputLineActions,
+  actions: ReturnType<typeof createInputLineActions>,
   onSubmit?: (value: string) => void
 ): boolean {
-  // Submit on Enter
-  if (event.key === "enter" && !event.shift) {
-    const value = actions.submit();
-    if (value && onSubmit) {
-      onSubmit(value);
+  if (event.key === "enter") {
+    const v = actions.submit();
+    if (v && onSubmit) {
+      onSubmit(v);
     }
     return true;
   }
 
-  // Backspace
   if (event.key === "backspace") {
     actions.backspace();
     return true;
   }
 
-  // Delete
-  if (event.key === "delete") {
-    actions.delete();
-    return true;
-  }
-
-  // Cursor movement
   if (event.key === "left") {
     actions.moveCursorLeft();
     return true;
@@ -246,17 +181,16 @@ export function handleInputLineKey(
     return true;
   }
 
-  if (event.key === "home" || (event.ctrl && event.key === "a")) {
+  if (event.key === "home") {
     actions.moveCursorStart();
     return true;
   }
 
-  if (event.key === "end" || (event.ctrl && event.key === "e")) {
+  if (event.key === "end") {
     actions.moveCursorEnd();
     return true;
   }
 
-  // History navigation
   if (event.key === "up") {
     actions.historyPrev();
     return true;
@@ -267,64 +201,10 @@ export function handleInputLineKey(
     return true;
   }
 
-  // Clear line
-  if (event.ctrl && event.key === "u") {
-    actions.clear();
-    return true;
-  }
-
-  // Character input
-  if (event.key.length === 1 && !event.ctrl && !event.alt) {
+  if (!(event.ctrl || event.meta || event.alt) && event.key.length === 1) {
     actions.insert(event.key);
     return true;
   }
 
   return false;
-}
-
-// ─── Rendering ───────────────────────────────────────────────────────────────
-
-export function renderInputLine(
-  state: InputLineState,
-  width: number,
-  options: {
-    prompt?: string;
-    showCursor?: boolean;
-  } = {}
-): string {
-  const { prompt = "> ", showCursor = true } = options;
-  const promptText = fg(colors.primary)(prompt);
-  const promptWidth = visibleLength(promptText);
-  const availableWidth = width - promptWidth - 1;
-
-  // Show placeholder if empty
-  if (!(state.value || showCursor)) {
-    return promptText + dim(state.placeholder);
-  }
-
-  // Calculate visible window
-  let displayValue = state.value;
-  let cursorPos = state.cursorPosition;
-
-  // Handle overflow - scroll to keep cursor visible
-  if (displayValue.length > availableWidth) {
-    const scrollOffset = Math.max(0, cursorPos - availableWidth + 5);
-    displayValue = displayValue.slice(scrollOffset);
-    cursorPos -= scrollOffset;
-  }
-
-  // Truncate if still too long
-  if (displayValue.length > availableWidth) {
-    displayValue = displayValue.slice(0, availableWidth);
-  }
-
-  // Insert cursor
-  if (showCursor) {
-    const before = displayValue.slice(0, cursorPos);
-    const after = displayValue.slice(cursorPos);
-    const cursor = fg(colors.primary)("▌");
-    displayValue = before + cursor + after;
-  }
-
-  return promptText + padRight(displayValue, availableWidth);
 }

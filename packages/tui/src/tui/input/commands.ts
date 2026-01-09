@@ -4,7 +4,7 @@
  * Fuzzy-searchable command palette for quick actions.
  */
 
-import type { KeyEvent } from "./keys";
+import type { KeyEvent } from "@opentui/core";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -229,9 +229,10 @@ export function createCommandPaletteKeyHandler(
 ): (event: KeyEvent) => boolean {
   return (event: KeyEvent) => {
     const state = getState();
+    const alt = (event as { alt?: boolean }).alt ?? false;
 
     // Open with : (colon)
-    if (!state.isOpen && event.key === ":") {
+    if (!state.isOpen && event.name === ":") {
       actions.open();
       return true;
     }
@@ -241,37 +242,37 @@ export function createCommandPaletteKeyHandler(
     }
 
     // Close with Escape
-    if (event.key === "escape") {
+    if (event.name === "escape") {
       actions.close();
       return true;
     }
 
     // Navigate with arrows
-    if (event.key === "up") {
+    if (event.name === "up") {
       actions.selectPrev();
       return true;
     }
-    if (event.key === "down") {
+    if (event.name === "down") {
       actions.selectNext();
       return true;
     }
 
     // Execute with Enter
-    if (event.key === "enter") {
+    if (event.name === "enter") {
       actions.executeSelected();
       return true;
     }
 
     // Backspace
-    if (event.key === "backspace") {
+    if (event.name === "backspace") {
       const newQuery = state.query.slice(0, -1);
       actions.setQuery(newQuery);
       return true;
     }
 
     // Type characters
-    if (event.key.length === 1 && !event.ctrl && !event.alt) {
-      actions.setQuery(state.query + event.key);
+    if (event.name.length === 1 && !event.ctrl && !alt) {
+      actions.setQuery(state.query + event.name);
       return true;
     }
 

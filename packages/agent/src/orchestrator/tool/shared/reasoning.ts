@@ -136,6 +136,8 @@ export async function persistReasoning(
     executionId?: string;
     threadId?: string;
     auto?: string;
+    ragDocumentIds?: string[];
+    projectId?: string;
   }
 ): Promise<void> {
   if (traces.length === 0) {

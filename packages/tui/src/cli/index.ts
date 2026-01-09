@@ -109,18 +109,30 @@ async function handleTuiCommand(args: string[]): Promise<void> {
 
   switch (subCommand) {
     case "chat": {
-      const { runChatMode } = await import("../tui/modes/chat");
-      return await runChatMode();
+      const { runTui } = await import("../tui");
+      return await runTui({
+        skipIntro: true,
+        initialMode: "chat",
+        headless: isHeadless,
+      });
     }
 
     case "plan": {
-      const { runPlanMode } = await import("../tui/modes/plan");
-      return await runPlanMode();
+      const { runTui } = await import("../tui");
+      return await runTui({
+        skipIntro: true,
+        initialMode: "plan",
+        headless: isHeadless,
+      });
     }
 
     case "debug": {
-      const { runDebugMode } = await import("../tui/modes/debug");
-      return await runDebugMode();
+      const { runTui } = await import("../tui");
+      return await runTui({
+        skipIntro: true,
+        initialMode: "debug",
+        headless: isHeadless,
+      });
     }
 
     default: {
@@ -134,7 +146,7 @@ async function handleTuiCommand(args: string[]): Promise<void> {
         tuiArgs.includes("--skip-checks") ||
         process.env.ALFRED_TUI_SKIP_CHECKS === "true";
 
-      return await runTui({ skipIntro, skipChecks });
+      return await runTui({ skipIntro, skipChecks, headless: isHeadless });
     }
   }
 }

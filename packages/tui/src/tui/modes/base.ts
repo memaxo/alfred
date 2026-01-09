@@ -1,207 +1,91 @@
-/**
- * ALFRED TUI Base Mode
- *
- * Abstract base class for all interactive TUI modes.
- * Provides lifecycle management, input handling, and rendering patterns.
- */
-
 import { getKeyInput, type KeyEvent } from "../input/keys";
 import type { TerminalSize } from "../renderer";
-import {
-  cleanupTerminal,
-  clearScreen,
-  getCurrentSize,
-  setupTerminal,
-  writeAt,
-} from "../renderer";
+import { cleanupTerminal, getCurrentSize, setupTerminal } from "../renderer";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export type ModeCallbacks = {
+export type BaseModeOptions = {
   onExit?: () => void;
-  onError?: (error: Error) => void;
-  /**
-   * When true, a parent controller (e.g. `TuiApp`) owns terminal setup/cleanup.
-   * This prevents integrated mode switches from tearing down the terminal.
-   */
-  managedTerminal?: boolean;
 };
 
-// ─── Base Mode ───────────────────────────────────────────────────────────────
-
 export abstract class BaseMode {
-  protected running = false;
-  protected renderInterval: ReturnType<typeof setInterval> | null = null;
-  /** Public callbacks for lifecycle hooks */
-  readonly callbacks: ModeCallbacks;
-  protected size: TerminalSize = { width: 80, height: 24 };
-  private keyCleanup: (() => void) | null = null;
+  private started = false;
+  private stopped = false;
+  private readonly exitListeners: Array<() => void> = [];
+  private unsubscribeKey: (() => void) | null = null;
+  private readonly keyInput = getKeyInput();
 
-  constructor(callbacks: ModeCallbacks = {}) {
-    this.callbacks = callbacks;
+  constructor(options: BaseModeOptions = {}) {
+    if (options.onExit) {
+      this.exitListeners.push(options.onExit);
+    }
   }
 
-  // ─── Lifecycle ───────────────────────────────────────────────────────────────
-
-  /**
-   * Start the mode
-   */
   start(): void {
-    if (this.running) {
+    if (this.started) {
       return;
     }
-    this.running = true;
+    this.started = true;
 
-    // Setup terminal
     setupTerminal();
-
-    // Initialize state
     this.init();
 
-    // Get initial size
-    this.size = getCurrentSize();
+    this.unsubscribeKey = this.keyInput.onKey((event) => {
+      if (this.handleKey(event)) {
+        return;
+      }
+    });
+    this.keyInput.start();
 
-    // Setup input handling
-    const keyInput = getKeyInput();
-    this.keyCleanup = keyInput.onKey(this.handleKeyInternal);
-    keyInput.start();
-
-    // Start render loop at 30 FPS
-    this.renderInterval = setInterval(() => {
-      this.renderFrame();
-    }, 33);
-    this.renderInterval.unref?.();
-
-    // Handle resize
-    if (process.stdout.isTTY) {
-      process.stdout.on("resize", this.handleResize);
+    try {
+      this.onResize(getCurrentSize());
+    } catch {
+      // ignore
     }
-
-    // Initial render
-    this.renderFrame();
   }
 
-  /**
-   * Stop the mode
-   */
   stop(): void {
-    if (!this.running) {
+    if (!this.started || this.stopped) {
       return;
     }
-    this.running = false;
+    this.stopped = true;
 
-    // Stop input handling
-    const keyInput = getKeyInput();
-    this.keyCleanup?.();
-    this.keyCleanup = null;
-    keyInput.stop();
-
-    // Stop render loop
-    if (this.renderInterval) {
-      clearInterval(this.renderInterval);
-      this.renderInterval = null;
+    try {
+      this.unsubscribeKey?.();
+    } finally {
+      this.unsubscribeKey = null;
+      this.keyInput.stop();
     }
 
-    // Remove resize handler
-    if (process.stdout.isTTY) {
-      process.stdout.off("resize", this.handleResize);
-    }
-
-    // Cleanup
-    this.cleanup();
-    if (!this.callbacks.managedTerminal) {
+    try {
+      this.cleanup();
+    } finally {
       cleanupTerminal();
     }
   }
 
-  /**
-   * Exit the mode and call callback
-   */
   exit(): void {
-    this.stop();
-    this.callbacks.onExit?.();
-  }
-
-  // ─── Resize Handling ─────────────────────────────────────────────────────────
-
-  private readonly handleResize = (): void => {
-    this.size = getCurrentSize();
-    this.onResize(this.size);
-  };
-
-  // ─── Input Handling ──────────────────────────────────────────────────────────
-
-  private readonly handleKeyInternal = (event: KeyEvent): boolean => {
-    // Global exit on Ctrl+C
-    if (event.ctrl && event.key === "c") {
-      this.exit();
-      return true;
-    }
-
-    // Delegate to subclass
-    return this.handleKey(event);
-  };
-
-  // ─── Rendering ───────────────────────────────────────────────────────────────
-
-  private renderFrame(): void {
-    if (!this.running) {
-      return;
-    }
-
-    try {
-      const lines = this.render(this.size);
-      clearScreen();
-      for (let y = 0; y < lines.length; y++) {
-        writeAt(0, y, lines[y] ?? "");
+    for (const cb of this.exitListeners) {
+      try {
+        cb();
+      } catch {
+        // ignore
       }
-    } catch (error) {
-      this.callbacks.onError?.(error as Error);
     }
   }
 
-  // ─── Abstract Methods ────────────────────────────────────────────────────────
-
-  /**
-   * Initialize mode state - called once on start
-   */
-  protected abstract init(): void;
-
-  /**
-   * Cleanup mode state - called once on stop
-   */
-  protected abstract cleanup(): void;
-
-  /**
-   * Handle key event - return true if handled
-   */
-  protected abstract handleKey(event: KeyEvent): boolean;
-
-  /**
-   * Render the mode - return array of lines to display
-   */
-  protected abstract render(size: TerminalSize): string[];
-
-  /**
-   * Called when terminal is resized
-   */
-  protected onResize(_size: TerminalSize): void {
-    // Override in subclass if needed
+  onExit(cb: () => void): void {
+    this.exitListeners.push(cb);
   }
+
+  protected abstract init(): void;
+  protected abstract cleanup(): void;
+  protected abstract handleKey(event: KeyEvent): boolean;
+  protected abstract render(size: TerminalSize): string[];
+  protected onResize(_size: TerminalSize): void {}
 }
 
-// ─── Mode Runner ─────────────────────────────────────────────────────────────
-
-/**
- * Run a mode and wait for it to exit
- */
 export function runMode(mode: BaseMode): Promise<void> {
   return new Promise((resolve) => {
-    const originalOnExit = mode.callbacks.onExit;
-    mode.callbacks.onExit = () => {
-      originalOnExit?.();
-      resolve();
-    };
+    mode.onExit(() => resolve());
     mode.start();
   });
 }

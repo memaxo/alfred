@@ -4,8 +4,6 @@
  * Server-Sent Events client for streaming assistant responses.
  */
 
-import type { StreamChunk } from "../components/stream";
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type UIMessagePart =
@@ -26,6 +24,18 @@ export type UIMessage = {
   content?: string;
   parts?: UIMessagePart[];
 };
+
+export type StreamChunk =
+  | { type: "text"; content: string }
+  | { type: "tool-call-start"; toolCallId: string; toolName: string }
+  | {
+      type: "tool-call-result";
+      toolCallId: string;
+      content?: string;
+      isError?: boolean;
+    }
+  | { type: "error"; content: string }
+  | { type: "done" };
 
 export type SSEOptions = {
   baseUrl?: string;

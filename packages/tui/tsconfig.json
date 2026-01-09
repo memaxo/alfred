@@ -5,9 +5,11 @@
     "outDir": "./dist",
     "declaration": true,
     "declarationMap": false,
-    "composite": true
+    "composite": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "types/**/*.d.ts"],
   "exclude": [
     "node_modules",
     "dist",

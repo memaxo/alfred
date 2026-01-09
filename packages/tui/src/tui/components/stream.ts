@@ -1,49 +1,29 @@
-/**
- * ALFRED TUI Stream Renderer Component
- *
- * Renders streaming text with tool call indicators.
- */
+export type StreamChunk =
+  | { type: "text"; content: string }
+  | { type: "tool-call-start"; toolCallId: string; toolName: string }
+  | {
+      type: "tool-call-result";
+      toolCallId: string;
+      content?: string;
+      isError?: boolean;
+    }
+  | { type: "error"; content: string }
+  | { type: "done" };
 
-import { colors, icons } from "../theme";
-import { bold, dim, fg } from "../typography";
+export type ToolCallStatus = "pending" | "complete" | "error";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export type StreamChunkType =
-  | "text"
-  | "tool-call-start"
-  | "tool-call-result"
-  | "reasoning"
-  | "error"
-  | "done";
-
-export type StreamChunk = {
-  type: StreamChunkType;
-  content?: string;
-  toolName?: string;
-  toolCallId?: string;
-  isError?: boolean;
+export type ActiveToolCall = {
+  name: string;
+  status: ToolCallStatus;
 };
 
 export type StreamState = {
   chunks: StreamChunk[];
   currentText: string;
-  activeToolCalls: Map<
-    string,
-    { name: string; status: "pending" | "complete" | "error" }
-  >;
+  activeToolCalls: Map<string, ActiveToolCall>;
   isStreaming: boolean;
   error?: string;
 };
-
-export type StreamActions = {
-  addChunk: (chunk: StreamChunk) => void;
-  setStreaming: (streaming: boolean) => void;
-  setError: (error: string) => void;
-  reset: () => void;
-};
-
-// ─── State Factory ───────────────────────────────────────────────────────────
 
 export function createStreamState(): StreamState {
   return {
@@ -51,206 +31,98 @@ export function createStreamState(): StreamState {
     currentText: "",
     activeToolCalls: new Map(),
     isStreaming: false,
-    error: undefined,
   };
 }
 
-// ─── Actions Factory ─────────────────────────────────────────────────────────
-
 export function createStreamActions(
-  getState: () => StreamState,
-  setState: (state: StreamState) => void
-): StreamActions {
+  get: () => StreamState,
+  set: (next: StreamState) => void
+): {
+  addChunk: (chunk: StreamChunk) => void;
+  setStreaming: (isStreaming: boolean) => void;
+  reset: () => void;
+} {
+  const update = (fn: (prev: StreamState) => StreamState) => {
+    set(fn(get()));
+  };
+
   return {
     addChunk: (chunk) => {
-      const state = getState();
-      const newState = { ...state, chunks: [...state.chunks, chunk] };
+      update((prev) => {
+        const next: StreamState = {
+          ...prev,
+          chunks: [...prev.chunks, chunk],
+        };
 
-      switch (chunk.type) {
-        case "text":
-          newState.currentText += chunk.content ?? "";
-          break;
+        if (chunk.type === "text") {
+          next.currentText = prev.currentText + chunk.content;
+          return next;
+        }
 
-        case "tool-call-start":
-          if (chunk.toolCallId && chunk.toolName) {
-            newState.activeToolCalls = new Map(state.activeToolCalls);
-            newState.activeToolCalls.set(chunk.toolCallId, {
-              name: chunk.toolName,
-              status: "pending",
+        if (chunk.type === "tool-call-start") {
+          const m = new Map(prev.activeToolCalls);
+          m.set(chunk.toolCallId, { name: chunk.toolName, status: "pending" });
+          next.activeToolCalls = m;
+          return next;
+        }
+
+        if (chunk.type === "tool-call-result") {
+          const m = new Map(prev.activeToolCalls);
+          const existing = m.get(chunk.toolCallId);
+          if (existing) {
+            m.set(chunk.toolCallId, {
+              ...existing,
+              status: chunk.isError ? "error" : "complete",
             });
           }
-          break;
-
-        case "tool-call-result":
-          if (chunk.toolCallId) {
-            newState.activeToolCalls = new Map(state.activeToolCalls);
-            const call = newState.activeToolCalls.get(chunk.toolCallId);
-            if (call) {
-              newState.activeToolCalls.set(chunk.toolCallId, {
-                ...call,
-                status: chunk.isError ? "error" : "complete",
-              });
-            }
+          next.activeToolCalls = m;
+          if (chunk.content) {
+            next.currentText = prev.currentText + chunk.content;
           }
-          break;
+          return next;
+        }
 
-        case "error":
-          newState.error = chunk.content;
-          newState.isStreaming = false;
-          break;
+        if (chunk.type === "error") {
+          next.error = chunk.content;
+          next.isStreaming = false;
+          return next;
+        }
 
-        case "done":
-          newState.isStreaming = false;
-          break;
-      }
+        if (chunk.type === "done") {
+          next.isStreaming = false;
+          return next;
+        }
 
-      setState(newState);
-    },
-
-    setStreaming: (streaming) => {
-      setState({
-        ...getState(),
-        isStreaming: streaming,
+        return next;
       });
     },
 
-    setError: (error) => {
-      setState({
-        ...getState(),
-        error,
-        isStreaming: false,
-      });
+    setStreaming: (isStreaming) => {
+      update((prev) => ({
+        ...prev,
+        isStreaming,
+        error: isStreaming ? undefined : prev.error,
+      }));
     },
 
     reset: () => {
-      setState(createStreamState());
+      set(createStreamState());
     },
   };
 }
 
-// ─── Rendering ───────────────────────────────────────────────────────────────
-
-/**
- * Render active tool calls
- */
 export function renderToolCalls(
-  activeToolCalls: Map<
-    string,
-    { name: string; status: "pending" | "complete" | "error" }
-  >
+  toolCalls: Map<string, ActiveToolCall>
 ): string[] {
   const lines: string[] = [];
-
-  for (const [, call] of activeToolCalls) {
-    let icon: string;
-    let color: string;
-
-    switch (call.status) {
-      case "pending":
-        icon = icons.pending;
-        color = colors.primary;
-        break;
-      case "complete":
-        icon = icons.success;
-        color = colors.success;
-        break;
-      case "error":
-        icon = icons.error;
-        color = colors.error;
-        break;
-    }
-
-    const statusText =
+  for (const [, call] of toolCalls) {
+    const label =
       call.status === "pending"
         ? "Calling"
         : call.status === "complete"
           ? "Done"
           : "Failed";
-    lines.push(
-      `  ${fg(color)(icon)} ${bold(call.name)} ${dim(`(${statusText})`)}`
-    );
+    lines.push(`  ${label}: ${call.name}`);
   }
-
-  return lines;
-}
-
-/**
- * Render streaming indicator
- */
-export function renderStreamingIndicator(frame: number): string {
-  const spinnerChars = icons.spinner;
-  const spinnerChar = spinnerChars[frame % spinnerChars.length];
-  return fg(colors.primary)(spinnerChar ?? "⠋");
-}
-
-/**
- * Render stream content with tool calls
- */
-export function renderStreamContent(
-  state: StreamState,
-  width: number,
-  frame: number
-): string[] {
-  const lines: string[] = [];
-
-  // Show error if present
-  if (state.error) {
-    lines.push(fg(colors.error)(`Error: ${state.error}`));
-    return lines;
-  }
-
-  // Show tool calls
-  if (state.activeToolCalls.size > 0) {
-    const toolLines = renderToolCalls(state.activeToolCalls);
-    lines.push(...toolLines);
-    if (state.currentText) {
-      lines.push("");
-    }
-  }
-
-  // Show current text
-  if (state.currentText) {
-    const textLines = wrapTextSimple(state.currentText, width);
-    lines.push(...textLines);
-  }
-
-  // Show streaming indicator
-  if (state.isStreaming && !state.error) {
-    const lastLine = lines.at(-1) ?? "";
-    const indicator = renderStreamingIndicator(frame);
-    if (lastLine) {
-      lines[lines.length - 1] = `${lastLine} ${indicator}`;
-    } else {
-      lines.push(indicator);
-    }
-  }
-
-  return lines;
-}
-
-function wrapTextSimple(text: string, width: number): string[] {
-  const lines: string[] = [];
-  const paragraphs = text.split("\n");
-
-  for (const paragraph of paragraphs) {
-    if (paragraph.length <= width) {
-      lines.push(paragraph);
-    } else {
-      let remaining = paragraph;
-      while (remaining.length > width) {
-        // Find last space within width
-        let breakPoint = remaining.lastIndexOf(" ", width);
-        if (breakPoint === -1 || breakPoint === 0) {
-          breakPoint = width;
-        }
-        lines.push(remaining.slice(0, breakPoint));
-        remaining = remaining.slice(breakPoint).trimStart();
-      }
-      if (remaining) {
-        lines.push(remaining);
-      }
-    }
-  }
-
   return lines;
 }
