@@ -33,6 +33,12 @@ export async function findForbiddenArtifacts(): Promise<string[]> {
     const glob = new Bun.Glob(pattern);
     for await (const match of glob.scan({ cwd: ROOT })) {
       const normalized = normalizePath(match);
+
+      // dist/ is an allowed build output location; its internal layout may include a src/
+      // segment depending on the package build tool.
+      if (normalized.includes("/dist/")) {
+        continue;
+      }
       if (ALLOWLIST.has(normalized)) {
         continue;
       }

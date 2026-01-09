@@ -1,0 +1,33 @@
+name: Perf & Budgets
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * 1" # Mondays at 5am
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perf:
+    name: Perf
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.3.5"
+
+      - uses: rharkor/caching-for-turbo@v1.7
+      - run: bun install --frozen-lockfile
+
+      - name: Check budgets
+        run: bun run check:budgets
+
+      - name: Run perf tests
+        run: bun run test:perf:bun

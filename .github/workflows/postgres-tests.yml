@@ -1,0 +1,50 @@
+name: Postgres Integration Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *" # Daily at 3am
+
+concurrency:
+  group: postgres-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres:
+    name: Postgres
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: alfred
+          POSTGRES_PASSWORD: alfred
+          POSTGRES_DB: alfred
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U alfred -d alfred"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://alfred:alfred@localhost:5432/alfred
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.3.5"
+      - uses: rharkor/caching-for-turbo@v1.7
+      - run: bun install --frozen-lockfile
+
+      - name: Apply migrations
+        run: bun run db:migrate
+
+      - name: Run Postgres-backed tests
+        run: bun run test:postgres
