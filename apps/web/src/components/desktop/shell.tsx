@@ -21,6 +21,7 @@
 import { type ReactNode, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useDesktopStore } from "@/store/desktop";
+import { FocusIndicator, SkipLinks } from "./accessibility";
 import { DesktopCommandPalette } from "./command-palette";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { MindscapeLayer } from "./layers/mindscape-layer";
@@ -93,9 +94,17 @@ export function AlfredDesktopShell({
 
   return (
     <div
+      aria-label="Alfred Desktop"
       className="relative h-screen w-full overflow-hidden bg-void"
       data-testid="alfred-desktop-shell"
+      role="application"
     >
+      {/* Accessibility: Skip Links */}
+      <SkipLinks />
+
+      {/* Accessibility: Focus Indicator */}
+      <FocusIndicator />
+
       {/* Background Layer */}
       <div
         className="absolute inset-0"
@@ -116,10 +125,12 @@ export function AlfredDesktopShell({
 
       {/* Window Layer (Traditional DOM windows) */}
       {mode === "desktop" && (
-        <WindowLayer
-          focusedWindowId={focusedWindowId}
-          style={{ zIndex: Z_INDEX.WINDOWS_MIN }}
-        />
+        <main aria-label="Desktop windows" id="main-content">
+          <WindowLayer
+            focusedWindowId={focusedWindowId}
+            style={{ zIndex: Z_INDEX.WINDOWS_MIN }}
+          />
+        </main>
       )}
 
       {/* Menu Bar Layer */}
