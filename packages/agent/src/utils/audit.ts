@@ -2,6 +2,7 @@ import type { PolicyResource } from "@alfred/policy";
 
 type AuditArgs = {
   userId: string | null;
+  projectId?: string | null;
   action: string;
   resource: PolicyResource | { kind: string; id?: string };
   decision?: "allow" | "deny";
@@ -18,6 +19,7 @@ export async function recordAudit(args: AuditArgs): Promise<void> {
     const policyRepo = await import("@alfred/db/repo/policy");
     await policyRepo.createAuditLog({
       userId: args.userId ?? "",
+      projectId: args.projectId ?? undefined,
       action: args.action,
       resource: args.resource,
       decision: args.decision ?? "allow",

@@ -230,10 +230,7 @@ describe("workflow router resume flow (integration)", () => {
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-1",
       summary: "ok",
-      resume: async (payload: {
-        event: string;
-        authz: string;
-      }): Promise<void> => {
+      resume: (payload: { event: string; authz: string }): void => {
         resumeGate.resolve(payload);
       },
       cancel: () => {
@@ -323,10 +320,7 @@ describe("workflow router resume flow (integration)", () => {
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-2",
       summary: "ok",
-      resume: async (payload: {
-        event: string;
-        authz: string;
-      }): Promise<void> => {
+      resume: (payload: { event: string; authz: string }): void => {
         resumeGate.resolve(payload);
       },
       cancel: () => {

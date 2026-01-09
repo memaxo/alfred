@@ -39,7 +39,7 @@ type PreparedQuery<TParams, TResult> = {
   execute(params: TParams): Promise<TResult>;
 };
 
-const getPreferencesStmt: PreparedQuery<{ userId: string }, PreferenceRow[]> =
+const _getPreferencesStmt: PreparedQuery<{ userId: string }, PreferenceRow[]> =
   usePreparedStatements
     ? (db
         .select({
@@ -138,7 +138,7 @@ export async function getPreferences(
     conditions.push(sql`${preferences.projectId} IS NULL`);
   }
 
-  return db
+  return await db
     .select()
     .from(preferences)
     .where(and(...conditions))
@@ -235,10 +235,7 @@ export async function searchFacts(
   // Format embedding array as PostgreSQL array constructor for vector cast
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
 
-  const conditions = [
-    eq(facts.userId, userId),
-    isNotNull(facts.embedding),
-  ];
+  const conditions = [eq(facts.userId, userId), isNotNull(facts.embedding)];
   if (projectId) {
     // Favor project-local facts but allow global fallback
     // We could apply a score boost here, but for now we just filter or sort.
@@ -246,7 +243,7 @@ export async function searchFacts(
     // We can do this by adding to the score if projectId matches.
   }
 
-  const projectScoreExpr = projectId 
+  const projectScoreExpr = projectId
     ? sql<number>`CASE WHEN ${facts.projectId} = ${projectId} THEN 0.1 ELSE 0 END`
     : sql<number>`0`;
 
@@ -457,7 +454,7 @@ export async function getFeedback(
   limit = 50,
   offset = 0
 ): Promise<FeedbackRow[]> {
-  return db
+  return await db
     .select()
     .from(feedback)
     .where(eq(feedback.userId, userId))

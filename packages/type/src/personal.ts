@@ -9,11 +9,13 @@ export const profileUpdateSchema = z.object({
 });
 
 export const preferenceListSchema = z.object({
+  projectId: z.string().uuid().optional(),
   limit: z.number().int().min(1).max(200).default(100),
   offset: z.number().int().min(0).default(0),
 });
 
 export const preferenceSetSchema = z.object({
+  projectId: z.string().uuid().optional(),
   key: z.string().min(1).max(128),
   value: z.any(),
   confidence: z.number().min(0).max(1).optional(),
@@ -21,10 +23,12 @@ export const preferenceSetSchema = z.object({
 });
 
 export const preferenceDeleteSchema = z.object({
+  projectId: z.string().uuid().optional(),
   key: z.string().min(1).max(128),
 });
 
 export const privacyFactQuerySchema = z.object({
+  projectId: z.string().uuid().optional(),
   embedding: z.array(z.number()).length(1024).optional(),
   limit: z.number().int().min(1).max(100).default(20),
   offset: z.number().int().min(0).default(0),
@@ -37,6 +41,7 @@ export const privacyFactDeleteSchema = z.object({
 });
 
 export const privacyEventsQuerySchema = z.object({
+  projectId: z.string().uuid().optional(),
   type: z.string().min(1).optional(),
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),

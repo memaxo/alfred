@@ -62,7 +62,7 @@ export async function findColdNodes(
 ): Promise<NodeRow[]> {
   const threshold = new Date(Date.now() - daysUnaccessed * 24 * 60 * 60 * 1000);
 
-  return db
+  return await db
     .select()
     .from(memoryNodes)
     .where(
@@ -87,7 +87,7 @@ export async function findHotNodes(
   accessThreshold = 10,
   limit = 100
 ): Promise<NodeRow[]> {
-  return db
+  return await db
     .select()
     .from(memoryNodes)
     .where(
@@ -138,7 +138,7 @@ export async function findNodesByKind(
   limit = 100,
   offset = 0
 ): Promise<NodeRow[]> {
-  return db
+  return await db
     .select()
     .from(memoryNodes)
     .where(eq(memoryNodes.kind, kind))
@@ -151,7 +151,7 @@ export async function getOutboundEdges(
   nodeId: string,
   kind?: string
 ): Promise<EdgeRow[]> {
-  return db
+  return await db
     .select()
     .from(memoryEdges)
     .where(buildEdgeWhere(memoryEdges.fromId, nodeId, kind))
@@ -162,7 +162,7 @@ export async function getInboundEdges(
   nodeId: string,
   kind?: string
 ): Promise<EdgeRow[]> {
-  return db
+  return await db
     .select()
     .from(memoryEdges)
     .where(buildEdgeWhere(memoryEdges.toId, nodeId, kind))
@@ -257,7 +257,7 @@ export async function findStaleNodes(
 ): Promise<NodeRow[]> {
   const threshold = new Date(Date.now() - olderThanMs);
 
-  return db
+  return await db
     .select()
     .from(memoryNodes)
     .where(
@@ -282,7 +282,7 @@ export async function findNodesForDecay(
 
   const threshold = new Date(Date.now() - olderThanMs);
 
-  return db
+  return await db
     .select()
     .from(memoryNodes)
     .where(
@@ -303,7 +303,7 @@ export async function findNodesByConfidence(
   kind?: string,
   limit = 1000
 ): Promise<NodeRow[]> {
-  const query = db
+  const query = await db
     .select()
     .from(memoryNodes)
     .where(

@@ -28,7 +28,8 @@ import {
   Upload,
   Zap,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { trpc } from "@/utils/trpc";
 
 import "@xyflow/react/dist/style.css";
 
@@ -252,140 +254,227 @@ export function VisualBuilderWindow(_props: WindowComponentProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [_planId, setPlanId] = useState<string | null>(null);
+  const [_planStatus, setPlanStatus] = useState<
+    "draft" | "approved" | "rejected"
+  >("draft");
+  const [_isGenerating, setIsGenerating] = useState(false);
+
+  // tRPC mutations
+  const generatePlanMutation = trpc.plan.generate.useMutation({
+    onSuccess: (data) => {
+      setIsGenerating(false);
+      setPlanId(data.id);
+      setPlanStatus("draft");
+      toast.success("Plan generated successfully");
+    },
+    onError: (error) => {
+      setIsGenerating(false);
+      toast.error(`Failed to generate plan: ${error.message}`);
+    },
+  });
+
+  const _approvePlanMutation = trpc.plan.approve.useMutation({
+    onSuccess: () => {
+      setPlanStatus("approved");
+      toast.success("Plan approved and executed");
+    },
+    onError: (error) => {
+      toast.error(`Failed to approve plan: ${error.message}`);
+    },
+  });
+
+  const _rejectPlanMutation = trpc.plan.reject.useMutation({
+    onSuccess: () => {
+      setPlanStatus("rejected");
+      toast.success("Plan rejected");
+    },
+    onError: (error) => {
+      toast.error(`Failed to reject plan: ${error.message}`);
+    },
+  });
+
+  const _saveTemplateMutation = trpc.plan.create.useMutation({
+    onSuccess: () => {
+      toast.success("Template saved successfully");
+    },
+    onError: (error) => {
+      toast.error(`Failed to save template: ${error.message}`);
+    },
+  });
 
   // Generate initial plan from intent
-  const generatePlan = useCallback(async () => {
-    await Promise.resolve();
-    try {
-      // TODO: Call plan generation API when backend is connected
-      // For now, create a demo plan
-      const demoPlan = {
-        phases: [
-          {
-            id: "phase-1",
-            title: "Research & Analysis",
-            description: "Gather requirements and analyze existing code",
-            steps: [
-              {
-                id: "step-1",
-                title: "Code Exploration",
-                description: "Explore codebase structure",
-                agent: "codex",
-              },
-              {
-                id: "step-2",
-                title: "Requirements Analysis",
-                description: "Define technical requirements",
-                agent: "research",
-              },
-            ],
-          },
-          {
-            id: "phase-2",
-            title: "Implementation",
-            description: "Build the solution",
-            steps: [
-              {
-                id: "step-3",
-                title: "Core Development",
-                description: "Implement main functionality",
-                agent: "codex",
-              },
-              {
-                id: "step-4",
-                title: "Testing",
-                description: "Write and run tests",
-                agent: "codex",
-              },
-            ],
-          },
-        ],
-      };
-
-      // Convert plan to React Flow nodes
-      const planNodes: Node[] = [];
-      const planEdges: Edge[] = [];
-
-      demoPlan.phases.forEach((phase, phaseIndex) => {
-        const phaseX = 100 + phaseIndex * 400;
-        const phaseY = 100;
-
-        // Add phase node
-        planNodes.push({
-          id: phase.id,
-          type: "phase",
-          position: { x: phaseX, y: phaseY },
-          data: {
-            title: phase.title,
-            description: phase.description,
-            status: "pending",
-          },
-        });
-
-        // Add step nodes
-        phase.steps.forEach((step, stepIndex) => {
-          const stepX = phaseX + 250;
-          const stepY = phaseY + stepIndex * 100;
-
-          planNodes.push({
-            id: step.id,
-            type: "step",
-            position: { x: stepX, y: stepY },
-            data: {
-              title: step.title,
-              description: step.description,
-              agent: step.agent,
+  const generatePlan = useCallback(
+    (intentDescription: string) => {
+      setIsGenerating(true);
+      try {
+        generatePlanMutation.mutate({
+          intent: {
+            id: crypto.randomUUID(),
+            description: intentDescription,
+            source: "visual-builder",
+            userId: "user-id-placeholder",
+            timestamp: new Date(),
+            context: {
+              existingPatterns: [],
+              constraints: [],
+              focusedContent: null,
+              focusedNodeType: null,
             },
-          });
+          },
+          research: {
+            external: [],
+            internal: {
+              existingCode: [],
+              patterns: [],
+              conventions: [],
+            },
+            metadata: {
+              totalSources: 0,
+              tokenCount: 0,
+              researchDurationMs: 0,
+            },
+          },
+          options: {
+            maxPhases: 5,
+            preferParallel: false,
+          },
+        });
+      } catch {
+        setIsGenerating(false);
+      }
+    },
+    [generatePlanMutation]
+  );
 
-          // Connect phase to step
-          planEdges.push({
-            id: `${phase.id}->${step.id}`,
-            source: phase.id,
-            target: step.id,
-            type: "smoothstep",
-            className: "stroke-purple-500",
-          });
+  // Initialize with a sample plan for visualization demo
+  useEffect(() => {
+    const demoPlan = {
+      phases: [
+        {
+          id: "phase-1",
+          title: "Research & Analysis",
+          description: "Gather requirements and analyze existing code",
+          steps: [
+            {
+              id: "step-1",
+              title: "Code Exploration",
+              description: "Explore codebase structure",
+              agent: "codex",
+            },
+            {
+              id: "step-2",
+              title: "Requirements Analysis",
+              description: "Define technical requirements",
+              agent: "research",
+            },
+          ],
+        },
+        {
+          id: "phase-2",
+          title: "Implementation",
+          description: "Build the solution",
+          steps: [
+            {
+              id: "step-3",
+              title: "Core Development",
+              description: "Implement main functionality",
+              agent: "codex",
+            },
+            {
+              id: "step-4",
+              title: "Testing",
+              description: "Write and run tests",
+              agent: "codex",
+            },
+          ],
+        },
+      ],
+    };
 
-          // Connect steps sequentially
-          if (stepIndex > 0) {
-            const prevStep = phase.steps[stepIndex - 1];
-            if (prevStep) {
-              planEdges.push({
-                id: `${prevStep.id}->${step.id}`,
-                source: prevStep.id,
-                target: step.id,
-                type: "smoothstep",
-                className: "stroke-blue-500",
-              });
-            }
-          }
+    // Convert plan to React Flow nodes
+    const planNodes: Node[] = [];
+    const planEdges: Edge[] = [];
+
+    demoPlan.phases.forEach((phase, phaseIndex) => {
+      const phaseX = 100 + phaseIndex * 400;
+      const phaseY = 100;
+
+      // Add phase node
+      planNodes.push({
+        id: phase.id,
+        type: "phase",
+        position: { x: phaseX, y: phaseY },
+        data: {
+          title: phase.title,
+          description: phase.description,
+          status: "pending",
+        },
+      });
+
+      // Add step nodes
+      phase.steps.forEach((step, stepIndex) => {
+        const stepX = phaseX + 250;
+        const stepY = phaseY + stepIndex * 100;
+
+        planNodes.push({
+          id: step.id,
+          type: "step",
+          position: { x: stepX, y: stepY },
+          data: {
+            title: step.title,
+            description: step.description,
+            agent: step.agent,
+          },
         });
 
-        // Connect phases sequentially
-        if (phaseIndex > 0) {
-          const prevPhase = demoPlan.phases[phaseIndex - 1];
-          if (prevPhase) {
-            const lastStepOfPrevPhase = prevPhase.steps.at(-1);
-            const firstStepOfCurrentPhase = phase.steps[0];
+        // Connect phase to step
+        planEdges.push({
+          id: `${phase.id}->${step.id}`,
+          source: phase.id,
+          target: step.id,
+          type: "smoothstep",
+          className: "stroke-purple-500",
+        });
 
-            if (lastStepOfPrevPhase && firstStepOfCurrentPhase) {
-              planEdges.push({
-                id: `${lastStepOfPrevPhase.id}->${firstStepOfCurrentPhase.id}`,
-                source: lastStepOfPrevPhase.id,
-                target: firstStepOfCurrentPhase.id,
-                type: "smoothstep",
-                className: "stroke-green-500",
-                animated: true,
-              });
-            }
+        // Connect steps sequentially
+        if (stepIndex > 0) {
+          const prevStep = phase.steps[stepIndex - 1];
+          if (prevStep) {
+            planEdges.push({
+              id: `${prevStep.id}->${step.id}`,
+              source: prevStep.id,
+              target: step.id,
+              type: "smoothstep",
+              className: "stroke-blue-500",
+            });
           }
         }
       });
 
-      setNodes(planNodes);
-      setEdges(planEdges);
-    } catch (_error) {}
+      // Connect phases sequentially
+      if (phaseIndex > 0) {
+        const prevPhase = demoPlan.phases[phaseIndex - 1];
+        if (prevPhase) {
+          const lastStepOfPrevPhase = prevPhase.steps.at(-1);
+          const firstStepOfCurrentPhase = phase.steps[0];
+
+          if (lastStepOfPrevPhase && firstStepOfCurrentPhase) {
+            planEdges.push({
+              id: `${lastStepOfPrevPhase.id}->${firstStepOfCurrentPhase.id}`,
+              source: lastStepOfPrevPhase.id,
+              target: firstStepOfCurrentPhase.id,
+              type: "smoothstep",
+              className: "stroke-green-500",
+              animated: true,
+            });
+          }
+        }
+      }
+    });
+
+    setNodes(planNodes);
+    setEdges(planEdges);
   }, [setNodes, setEdges]);
 
   // Handle new connections

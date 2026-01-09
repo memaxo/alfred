@@ -565,8 +565,10 @@ export const planRouter = router({
     )
     .query(async ({ input }) => {
       try {
-        const { planToWaves } = await import("@alfred/plan");
-        const waves = planToWaves(input.plan as any, {
+        const { planToWaves, structuredPlanSchema } = await import(
+          "@alfred/plan"
+        );
+        const waves = planToWaves(structuredPlanSchema.parse(input.plan), {
           maxConcurrency: input.maxConcurrency,
         });
         return waves;
@@ -693,7 +695,7 @@ export const planRouter = router({
         const categorized = categorizePatterns(matches);
 
         return {
-          matches: matches.map((m: any) => ({
+          matches: matches.map((m) => ({
             id: m.id,
             trigger: m.trigger,
             planTemplate: m.planTemplate,
@@ -707,21 +709,19 @@ export const planRouter = router({
             updatedAt: m.updatedAt?.toISOString() ?? null,
           })),
           categories: {
-            autoSuggest: categorized.autoSuggest.map((m: any) => ({
+            autoSuggest: categorized.autoSuggest.map((m) => ({
               id: m.id,
               trigger: m.trigger,
               similarity: m.similarity,
               confidence: m.similarity * Number.parseFloat(m.successRate),
             })),
-            requireConfirmation: categorized.requireConfirmation.map(
-              (m: any) => ({
-                id: m.id,
-                trigger: m.trigger,
-                similarity: m.similarity,
-                confidence: m.similarity * Number.parseFloat(m.successRate),
-              })
-            ),
-            lowConfidence: categorized.lowConfidence.map((m: any) => ({
+            requireConfirmation: categorized.requireConfirmation.map((m) => ({
+              id: m.id,
+              trigger: m.trigger,
+              similarity: m.similarity,
+              confidence: m.similarity * Number.parseFloat(m.successRate),
+            })),
+            lowConfidence: categorized.lowConfidence.map((m) => ({
               id: m.id,
               trigger: m.trigger,
               similarity: m.similarity,

@@ -222,20 +222,16 @@ export const workflowRouter = router({
 
         // Trigger Linear metadata sync if project is associated
         if (workflow.projectId) {
+          const projectId = workflow.projectId;
           void (async () => {
             const url = process.env.DATABASE_URL;
             if (url && !url.startsWith("sqlite")) {
               await import("@alfred/db/repo/project")
-                .then((repo) =>
-                  repo.updateProjectLastActive(workflow.projectId!)
-                )
+                .then((repo) => repo.updateProjectLastActive(projectId))
                 .catch(() => {});
             }
             const { syncOnWorkflowStart } = await import("@alfred/plan");
-            await syncOnWorkflowStart(
-              workflow.projectId as string,
-              executor.runId
-            );
+            await syncOnWorkflowStart(projectId as string, executor.runId);
           })();
         }
 

@@ -39,7 +39,7 @@ export async function getDeploymentByApp(
   app: string,
   type = "preview"
 ): Promise<DeploymentRecord | null> {
-  return findLatestDeployment(userId, app, type);
+  return await findLatestDeployment(userId, app, type);
 }
 
 export async function listDeployments({
@@ -55,8 +55,8 @@ export async function listDeployments({
   type?: string;
   status?: string;
 } = {}): Promise<DeploymentRecord[]> {
-  let where;
-  const predicates = [];
+  let where: any;
+  const predicates: any[] = [];
   if (userId) {
     predicates.push(eq(deployments.userId, userId));
   }
@@ -77,19 +77,19 @@ export async function listDeployments({
   }
 
   if (where) {
-    return db
+    return await db
       .select()
       .from(deployments)
       .where(where)
       .orderBy(desc(deployments.created));
   }
-  return db.select().from(deployments).orderBy(desc(deployments.created));
+  return await db.select().from(deployments).orderBy(desc(deployments.created));
 }
 
 export async function getStaleDeployments(
   threshold: Date
 ): Promise<DeploymentRecord[]> {
-  return db
+  return await db
     .select()
     .from(deployments)
     .where(
@@ -105,7 +105,7 @@ export async function getStaleDeployments(
 }
 
 export async function listActiveDeployments(): Promise<DeploymentRecord[]> {
-  return db
+  return await db
     .select()
     .from(deployments)
     .where(and(eq(deployments.status, "running"), isNotNull(deployments.url)))

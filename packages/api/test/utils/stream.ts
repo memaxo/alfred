@@ -5,11 +5,18 @@ export type Subscriber<T> = {
 };
 
 // Wraps different subscription return shapes into a common interface
-export function toObservable<T>(candidate: any) {
-  if (candidate && typeof candidate.subscribe === "function") {
-    return candidate;
+export function toObservable<T>(candidate: unknown) {
+  if (
+    candidate &&
+    typeof (candidate as Record<string, unknown>).subscribe === "function"
+  ) {
+    return candidate as { subscribe: (sub: Subscriber<T>) => void };
   }
-  if (candidate && typeof candidate[Symbol.asyncIterator] === "function") {
+  if (
+    candidate &&
+    typeof (candidate as Record<string, unknown>)[Symbol.asyncIterator] ===
+      "function"
+  ) {
     return {
       subscribe(sub: Subscriber<T>) {
         (async () => {

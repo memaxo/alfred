@@ -55,7 +55,7 @@ export async function getCorrectionsForTarget(
   targetId: string,
   limit = 50
 ): Promise<CorrectionRow[]> {
-  return db
+  return await db
     .select()
     .from(knowledgeCorrections)
     .where(

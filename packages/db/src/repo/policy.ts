@@ -12,6 +12,7 @@ type ApprovalInsert = typeof approvals.$inferInsert;
 
 type AuditLogParams = {
   userId: string;
+  projectId?: string;
   action: string;
   resource: { kind: string; id?: string };
   decision: "allow" | "deny";
@@ -23,6 +24,7 @@ type AuditLogParams = {
 // Audit log operations
 export async function createAuditLog({
   userId,
+  projectId,
   action,
   resource,
   decision,
@@ -32,6 +34,7 @@ export async function createAuditLog({
 }: AuditLogParams): Promise<typeof auditLogs.$inferSelect | undefined> {
   const record: AuditLogInsert = {
     userId,
+    projectId,
     action,
     resource: resource.id ? `${resource.kind}:${resource.id}` : resource.kind,
     decision,
@@ -48,15 +51,21 @@ export async function getAuditLogs(
   userId: string,
   action?: string,
   limit = 100,
-  offset = 0
+  offset = 0,
+  projectId?: string
 ): Promise<(typeof auditLogs.$inferSelect)[]> {
-  const where = action
-    ? and(eq(auditLogs.userId, userId), eq(auditLogs.action, action))
-    : eq(auditLogs.userId, userId);
-  return db
+  const conditions = [eq(auditLogs.userId, userId)];
+  if (action) {
+    conditions.push(eq(auditLogs.action, action));
+  }
+  if (projectId) {
+    conditions.push(eq(auditLogs.projectId, projectId));
+  }
+
+  return await db
     .select()
     .from(auditLogs)
-    .where(where)
+    .where(and(...conditions))
     .orderBy(desc(auditLogs.timestamp))
     .limit(limit)
     .offset(offset);
@@ -65,7 +74,7 @@ export async function getAuditLogs(
 export async function getAuditLogsByTrace(
   traceId: string
 ): Promise<(typeof auditLogs.$inferSelect)[]> {
-  return db
+  return await db
     .select()
     .from(auditLogs)
     .where(eq(auditLogs.traceId, traceId))
@@ -110,7 +119,7 @@ export async function getApproval(
 export async function getPendingApprovals(
   userId: string
 ): Promise<(typeof approvals.$inferSelect)[]> {
-  return db
+  return await db
     .select()
     .from(approvals)
     .where(and(eq(approvals.userId, userId), eq(approvals.status, "pending")))
@@ -144,7 +153,7 @@ export async function denyApproval(
 export async function expireApprovals(): Promise<
   (typeof approvals.$inferSelect)[]
 > {
-  return db
+  return await db
     .update(approvals)
     .set({ status: "denied", approvedBy: "system", approvedAt: new Date() })
     .where(

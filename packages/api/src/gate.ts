@@ -72,8 +72,12 @@ export function requirePolicy(
     const obligations = decision.obligations ?? [];
     const obligationHandling = options?.handleObligations ?? "error";
 
+    const inputRecord = (input ?? {}) as Record<string, unknown>;
+    const projectId = inputRecord.projectId as string | undefined;
+
     await policyRepo.createAuditLog({
       userId: subjectId,
+      projectId,
       action,
       resource,
       decision: decision.allow ? "allow" : "deny",
