@@ -14,15 +14,24 @@ import {
   FileText,
   FolderKanban,
   Layers,
+  LayoutDashboard,
   List,
   MessageSquare,
   Network,
   Search,
   Settings,
+  Shield,
   Square,
   Terminal,
   Workflow,
 } from "lucide-react";
+// Phase 2/3 apps
+import {
+  AdminAppWindow,
+  MetricsAppWindow,
+  PolicyAppWindow,
+  TaskManagerAppWindow,
+} from "@/components/apps";
 // Legacy window components (from old ReactFlow system)
 import { AgentsWindow } from "@/components/windows/agents/agents-window";
 import { ChatWindow } from "@/components/windows/chat/chat-window";
@@ -39,6 +48,7 @@ import { TerminalWindow } from "@/components/windows/terminal/terminal-window";
 import { TodoWindow } from "@/components/windows/todo/todo-window";
 import { WorkflowListWindow } from "@/components/windows/workflow/workflow-list-window";
 import { WorkflowWindow } from "@/components/windows/workflow/workflow-window";
+
 import type { WindowType } from "@/store/desktop/types";
 
 // Adapter for legacy components
@@ -282,11 +292,26 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
     },
     isLegacy: true,
   },
+  admin: {
+    type: "admin",
+    component: AdminAppWindow,
+    metadata: {
+      label: "Admin",
+      icon: Shield,
+      defaultSize: { width: 700, height: 520 },
+      minSize: { width: 500, height: 400 },
+      resizable: true,
+      singleton: true,
+      tier: "tertiary",
+    },
+    isLegacy: false,
+  },
   taskmanager: {
     type: "taskmanager",
-    component: null,
+    component: TaskManagerAppWindow,
     metadata: {
       label: "Task Manager",
+      icon: List,
       defaultSize: { width: 600, height: 400 },
       minSize: { width: 400, height: 300 },
       resizable: true,
@@ -375,9 +400,10 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   policy: {
     type: "policy",
-    component: null,
+    component: PolicyAppWindow,
     metadata: {
       label: "Policy",
+      icon: Shield,
       defaultSize: { width: 600, height: 400 },
       minSize: { width: 400, height: 300 },
       resizable: true,
@@ -414,9 +440,10 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   metrics: {
     type: "metrics",
-    component: null,
+    component: MetricsAppWindow,
     metadata: {
       label: "Metrics",
+      icon: LayoutDashboard,
       defaultSize: { width: 600, height: 400 },
       minSize: { width: 400, height: 300 },
       resizable: true,

@@ -24,6 +24,7 @@ export type WindowType =
   | "pr-review"
   | "agentfs"
   | "files"
+  | "admin"
   // Tier 2: Intelligence & Learning (NEW)
   | "cortex"
   | "learning"
@@ -454,6 +455,10 @@ export const WINDOW_DEFAULTS: Record<
   agentfs: {
     minSize: { width: 400, height: 300 },
     defaultBounds: { x: 200, y: 150, width: 600, height: 450 },
+  },
+  admin: {
+    minSize: { width: 500, height: 400 },
+    defaultBounds: { x: 120, y: 120, width: 700, height: 520 },
   },
   files: {
     minSize: { width: 400, height: 300 },

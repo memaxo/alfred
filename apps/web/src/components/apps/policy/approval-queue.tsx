@@ -5,18 +5,33 @@
  */
 
 import { Check, Clock, Loader2, X } from "lucide-react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/utils/trpc";
 
 export function ApprovalQueue() {
   const utils = trpc.useUtils();
-  const { data, isLoading, error } = trpc.admin.approvalsList.useQuery();
+  const { data, isLoading, error, refetch } = trpc.admin.approvalsList.useQuery(
+    undefined,
+    {
+      retry: false,
+    }
+  );
+
   const resolveMutation = trpc.admin.approvalsResolve.useMutation({
     onSuccess: () => {
       void utils.admin.approvalsList.invalidate();
     },
   });
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -9,6 +9,7 @@
  */
 
 // Phase 3: System Applications
+export { AdminApp, AdminAppWindow } from "./admin";
 export { AgentFSApp, AgentFSAppWindow } from "./agentfs";
 // Phase 2: Core Applications
 export { AgentsApp, AgentsAppWindow } from "./agents";
@@ -19,6 +20,8 @@ export { DockerApp, DockerAppWindow } from "./docker";
 export { FilesApp, FilesAppWindow } from "./files";
 export { KnowledgeApp, KnowledgeAppWindow } from "./knowledge";
 export { LinearApp, LinearAppWindow } from "./linear";
+export { MetricsApp, MetricsAppWindow } from "./metrics";
+export { PolicyApp, PolicyAppWindow } from "./policy";
 export { PRReviewApp, PRReviewAppWindow } from "./pr-review";
 export { TaskManagerApp, TaskManagerAppWindow } from "./taskmanager";
 export { TerminalApp, TerminalAppWindow } from "./terminal";

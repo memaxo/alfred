@@ -6,6 +6,7 @@
 
 import { Bot, Loader2, Server, Square, Terminal } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -25,10 +26,21 @@ type Process = {
 };
 
 export function ProcessList({ className }: ProcessListProps) {
-  const { data, isLoading, error } = trpc.admin.processesList.useQuery(
+  const { data, isLoading, error, refetch } = trpc.admin.processesList.useQuery(
     undefined,
-    { refetchInterval: 5000 }
+    {
+      refetchInterval: 5000,
+      retry: false,
+    }
   );
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   const processes: Process[] = data?.processes ?? [];
 

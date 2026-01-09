@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+"use client";
+
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   Activity,
   AlertTriangle,
   Clock,
-  Monitor,
   RefreshCw,
   Server,
   ShieldAlert,
@@ -13,13 +13,13 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -35,40 +35,6 @@ type VoiceStats = RouterOutputs["admin"]["getVoiceStats"];
 type VoiceTelemetry = NonNullable<VoiceStats["telemetry"]>;
 type PoolStats = NonNullable<VoiceStats["sttPool"]>;
 type PoolProcess = PoolStats["health"][number];
-
-export const Route = createFileRoute("/_protected/admin/voice")({
-  component: VoiceAdminRoute,
-});
-
-function VoiceAdminRoute() {
-  return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-biolum/20 bg-biolum/5 p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-biolum/10 p-2">
-              <Monitor className="h-5 w-5 text-biolum" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-biolum text-sm">
-                Desktop First Experience
-              </h3>
-              <p className="text-biolum-dim text-xs">
-                Voice operations are best managed within ALFRED Desktop.
-              </p>
-            </div>
-          </div>
-          <Link search={{ spawn: "admin" }} to="/">
-            <Button size="sm" variant="outline">
-              Open in Desktop
-            </Button>
-          </Link>
-        </div>
-      </div>
-      <VoiceAdminView />
-    </div>
-  );
-}
 
 export function VoiceAdminView() {
   const utils = trpc.useUtils();
@@ -465,28 +431,6 @@ function LatencyPanel({ telemetry }: { telemetry?: VoiceTelemetry | null }) {
   );
 }
 
-function BiometricGate({ onRetry }: { onRetry: () => void }) {
-  return (
-    <Card className="border border-yellow-400/30 bg-yellow-500/5">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3 text-lg">
-          <ShieldAlert className="h-5 w-5" />
-          Biometric verification required
-        </CardTitle>
-        <CardDescription>
-          Re-authenticate with your passkey (Settings → Security) and retry to
-          view voice operations data.
-        </CardDescription>
-      </CardHeader>
-      <CardFooter>
-        <Button onClick={onRetry} variant="secondary">
-          I have re-authenticated
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
 function MessageBanner({ message }: { message: string }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-biolum text-sm">
@@ -569,25 +513,6 @@ function formatLastPing(lastPing: number | null | undefined) {
   }
   const hours = Math.floor(minutes / 60);
   return `${hours}h ago`;
-}
-
-function isBiometricError(error: unknown): boolean {
-  if (!error) {
-    return false;
-  }
-  const maybe = error as {
-    data?: { code?: string };
-    message?: string;
-    code?: string;
-  };
-  const code = maybe.data?.code ?? maybe.code;
-  if (code === "FORBIDDEN" || code === "UNAUTHORIZED") {
-    return true;
-  }
-  if (typeof maybe.message === "string") {
-    return maybe.message.includes("biometric");
-  }
-  return false;
 }
 
 function buildTelemetryCards(telemetry: VoiceTelemetry) {

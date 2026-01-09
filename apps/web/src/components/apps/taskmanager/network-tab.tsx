@@ -5,6 +5,7 @@
  */
 
 import { ArrowDown, ArrowUp, Globe, Loader2, Server } from "lucide-react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -23,10 +24,19 @@ type Connection = {
 };
 
 export function NetworkTab({ className }: NetworkTabProps) {
-  const { data, isLoading, error } = trpc.admin.networkConnections.useQuery(
-    undefined,
-    { refetchInterval: 10_000 }
-  );
+  const { data, isLoading, error, refetch } =
+    trpc.admin.networkConnections.useQuery(undefined, {
+      refetchInterval: 10_000,
+      retry: false,
+    });
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   const connections: Connection[] = data?.connections ?? [];
 

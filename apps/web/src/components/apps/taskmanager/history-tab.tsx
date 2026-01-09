@@ -12,6 +12,7 @@ import {
   Loader2,
   XCircle,
 } from "lucide-react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -31,9 +32,20 @@ type HistoryItem = {
 };
 
 export function HistoryTab({ className }: HistoryTabProps) {
-  const { data, isLoading, error } = trpc.admin.taskHistory.useQuery({
-    limit: 50,
-  });
+  const { data, isLoading, error, refetch } = trpc.admin.taskHistory.useQuery(
+    { limit: 50 },
+    {
+      retry: false,
+    }
+  );
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   const history: HistoryItem[] = data?.history ?? [];
 

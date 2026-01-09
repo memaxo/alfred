@@ -33,6 +33,7 @@ const VALID_WINDOW_TYPES: WindowType[] = [
   "pr-review",
   "agentfs",
   "files",
+  "admin",
   "cortex",
   "learning",
   "policy",

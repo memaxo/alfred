@@ -5,6 +5,7 @@
  */
 
 import { Loader2, Lock, Shield, Unlock } from "lucide-react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -24,7 +25,18 @@ const levelLabels: Record<ConstraintLevel, string> = {
 };
 
 export function ConstraintList() {
-  const { data, isLoading, error } = trpc.admin.policyConstraints.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.admin.policyConstraints.useQuery(undefined, {
+      retry: false,
+    });
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

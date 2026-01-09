@@ -13,6 +13,7 @@ import {
   Search,
 } from "lucide-react";
 import { useState } from "react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -36,9 +37,23 @@ export function MetricExplorer() {
   const [search, setSearch] = useState("");
   const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
 
-  const { data: metrics, isLoading } = trpc.metrics.getSnapshot.useQuery();
+  const { data, error, isLoading, refetch } = trpc.admin.metricsList.useQuery(
+    undefined,
+    {
+      retry: false,
+    }
+  );
 
-  const filtered = ((metrics as unknown as Metric[]) || []).filter((m) =>
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
+
+  const metricsData = (data?.metrics as unknown as Metric[]) || [];
+  const filtered = metricsData.filter((m) =>
     m.name.toLowerCase().includes(search.toLowerCase())
   );
 

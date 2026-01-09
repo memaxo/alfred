@@ -5,6 +5,7 @@
  */
 
 import { AlertTriangle, Check, Loader2, X } from "lucide-react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -25,9 +26,20 @@ const decisionColors: Record<DecisionType, string> = {
 };
 
 export function DecisionLog() {
-  const { data, isLoading, error } = trpc.admin.policyList.useQuery({
-    limit: 50,
-  });
+  const { data, isLoading, error, refetch } = trpc.admin.policyList.useQuery(
+    { limit: 50 },
+    {
+      retry: false,
+    }
+  );
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

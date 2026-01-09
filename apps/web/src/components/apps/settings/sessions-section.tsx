@@ -9,6 +9,7 @@
  */
 
 import { Globe, Loader2, Shield, Trash2 } from "lucide-react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -16,12 +17,26 @@ import { trpc } from "@/utils/trpc";
 
 export function SessionsSection() {
   const utils = trpc.useUtils();
-  const { data, isLoading, error } = trpc.admin.sessionsList.useQuery();
+  const { data, isLoading, error, refetch } = trpc.admin.sessionsList.useQuery(
+    undefined,
+    {
+      retry: false,
+    }
+  );
+
   const revokeMutation = trpc.admin.sessionsRevoke.useMutation({
     onSuccess: () => {
       void utils.admin.sessionsList.invalidate();
     },
   });
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -15,12 +15,26 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 import type { Metric } from "./index";
 
 export function DashboardBuilder() {
-  const { data: metrics, isLoading } = trpc.metrics.getSnapshot.useQuery();
+  const { data, error, isLoading, refetch } = trpc.admin.metricsList.useQuery(
+    undefined,
+    {
+      retry: false,
+    }
+  );
+
+  if (isBiometricError(error)) {
+    return (
+      <div className="p-4">
+        <BiometricGate onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -31,7 +45,7 @@ export function DashboardBuilder() {
     );
   }
 
-  const metricList = (metrics as unknown as Metric[]) || [];
+  const metricList = (data?.metrics as unknown as Metric[]) || [];
 
   // Find key metrics
   const assistantRequests = metricList.find(

@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+"use client";
+
 import {
   AreaChart,
   Badge,
@@ -21,19 +22,16 @@ import {
   Database,
   Heart,
   MessageSquare,
-  Monitor,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { VoidCard } from "@/components/tremor/void-card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
 
 const REFRESH_INTERVAL_MS = 5000;
 const MAX_HISTORY_POINTS = 20;
-
-type TremorColor = "emerald" | "blue" | "amber" | "red";
 
 type HistoryPoint = {
   time: string;
@@ -51,40 +49,6 @@ type LatencySummary = {
   count?: number | null;
 };
 
-export const Route = createFileRoute("/_protected/admin/metrics")({
-  component: MetricsDashboardRoute,
-});
-
-function MetricsDashboardRoute() {
-  return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-biolum/20 bg-biolum/5 p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-biolum/10 p-2">
-              <Monitor className="h-5 w-5 text-biolum" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-biolum text-sm">
-                Desktop First Experience
-              </h3>
-              <p className="text-biolum-dim text-xs">
-                This view is optimized for ALFRED Desktop.
-              </p>
-            </div>
-          </div>
-          <Link search={{ spawn: "metrics" }} to="/">
-            <Button size="sm" variant="outline">
-              Open in Desktop
-            </Button>
-          </Link>
-        </div>
-      </div>
-      <MetricsDashboardView />
-    </div>
-  );
-}
-
 export function MetricsDashboardView() {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const {
@@ -92,8 +56,10 @@ export function MetricsDashboardView() {
     isLoading,
     refetch,
     isRefetching,
+    error,
   } = trpc.admin.getPerformanceStats.useQuery(undefined, {
     refetchInterval: REFRESH_INTERVAL_MS,
+    retry: false,
   });
 
   useEffect(() => {
@@ -115,6 +81,10 @@ export function MetricsDashboardView() {
       });
     }
   }, [stats]);
+
+  if (isBiometricError(error)) {
+    return <BiometricGate onRetry={() => refetch()} />;
+  }
 
   if (isLoading && !stats) {
     return <MetricsSkeleton />;
@@ -139,9 +109,13 @@ export function MetricsDashboardView() {
         </div>
         <div className="flex items-center gap-4">
           {isRefetching && <Badge color="emerald">Live Sync</Badge>}
-          <Button onClick={() => refetch()} size="sm" variant="outline">
+          <button
+            className="rounded-lg border border-white/10 px-3 py-1 text-sm transition-colors hover:bg-white/5"
+            onClick={() => refetch()}
+            type="button"
+          >
             Refresh
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -394,7 +368,7 @@ function LatencyCard({
       <Flex>
         <Title>{title} Latency</Title>
         {budget !== undefined && (
-          <Badge color={isOverBudget ? "red" : "emerald"} size="xs">
+          <Badge color={isOverBudget ? "red" : "emerald"}>
             Budget:{" "}
             {budget < 0.001
               ? `${(budget * 1_000_000).toFixed(0)}µs`

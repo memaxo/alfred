@@ -1,5 +1,5 @@
-import type { QueryClient } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -7,15 +7,19 @@ import {
   Scripts,
   useRouterState,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
-import { useCallback, useMemo } from "react";
+import { Suspense, useCallback, useMemo } from "react";
+import { AlfredDesktopDevtoolsPanel } from "@/components/desktop/devtools-panel";
 import { type JarvisHUDConfig, JarvisHUDProvider } from "@/components/hud";
 import Loader from "@/components/loader";
 import { Toaster } from "@/components/ui/sonner";
 import { useJarvisTts } from "@/hooks/use-jarvis-tts";
 import Header from "../components/header";
 import appCss from "../index.css?url";
+
+const DEVTOOLS_ENABLED =
+  import.meta.env.DEV && import.meta.env.VITE_DEVTOOLS === "1";
 
 export type RouterAppContext = {
   queryClient: QueryClient;
@@ -79,6 +83,24 @@ function RootDocument() {
     [isProtected, jarvisSpeakEnabled, onSpeak]
   );
 
+  const devtoolsPlugins = useMemo(
+    () => [
+      {
+        name: "Router",
+        component: TanStackRouterDevtoolsPanel,
+      },
+      {
+        name: "Query",
+        component: ReactQueryDevtoolsPanel,
+      },
+      {
+        name: "Desktop",
+        component: AlfredDesktopDevtoolsPanel,
+      },
+    ],
+    []
+  );
+
   return (
     <html className="dark antialiased" lang="en" suppressHydrationWarning>
       <head>
@@ -93,8 +115,11 @@ function RootDocument() {
             </div>
           </JarvisHUDProvider>
           <Toaster richColors />
-          <TanStackRouterDevtools position="bottom-left" />
-          <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+          {DEVTOOLS_ENABLED && (
+            <Suspense>
+              <TanStackDevtools plugins={devtoolsPlugins} />
+            </Suspense>
+          )}
         </RootProvider>
         <Scripts />
       </body>
