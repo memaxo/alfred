@@ -1,5 +1,6 @@
 export { createCacheSlice } from "./cache";
 export { createContextSlice } from "./context";
+export { createGroupSlice } from "./groups";
 export { createKnowledgeSlice } from "./knowledge";
 export { DESKTOP_STORAGE_ID, persistOptions } from "./persist";
 export * from "./selectors";

@@ -36,6 +36,7 @@ export type WindowType =
   | "workflow"
   | "linear"
   | "concept"
+  | "project"
   // Tier 4: Productivity & Settings
   | "settings"
   | "notes"
@@ -141,9 +142,27 @@ export type WindowInstance = {
   maxSize?: { width: number; height: number };
   resizable: boolean;
 
+  // Grouping
+  groupId?: string;
+
   // Metadata
   createdAt: number;
   lastFocusedAt: number;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WINDOW GROUPS — Tabbed container for related windows
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WindowGroup = {
+  id: string;
+  windowIds: string[];
+  activeWindowId: string;
+  bounds: Bounds;
+  state: WindowState;
+  zIndex: number;
+  isFocused: boolean;
+  createdAt: number;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -222,6 +241,28 @@ export type WindowSlice = {
   setWindows: (
     windows: WindowInstance[] | ((prev: WindowInstance[]) => WindowInstance[])
   ) => void;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP SLICE — Window groups/tabs management
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type GroupSlice = {
+  groups: WindowGroup[];
+
+  // Group CRUD
+  createGroup: (windowIds: string[]) => string;
+  dissolveGroup: (groupId: string) => void;
+  addToGroup: (groupId: string, windowId: string) => void;
+  removeFromGroup: (groupId: string, windowId: string) => void;
+
+  // Tab navigation
+  setActiveTab: (groupId: string, windowId: string) => void;
+  nextTab: (groupId: string) => void;
+  prevTab: (groupId: string) => void;
+
+  // Group focus
+  focusGroup: (groupId: string) => void;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -353,6 +394,7 @@ import type { ContextSlice } from "./context";
 import type { KnowledgeSlice } from "./knowledge";
 
 export type DesktopState = WindowSlice &
+  GroupSlice &
   TilingSlice &
   ViewportSlice &
   TaskbarSlice &
@@ -455,6 +497,10 @@ export const WINDOW_DEFAULTS: Record<
   concept: {
     minSize: { width: 300, height: 200 },
     defaultBounds: { x: 200, y: 200, width: 400, height: 300 },
+  },
+  project: {
+    minSize: { width: 400, height: 350 },
+    defaultBounds: { x: 150, y: 100, width: 500, height: 450 },
   },
   settings: {
     minSize: { width: 400, height: 400 },

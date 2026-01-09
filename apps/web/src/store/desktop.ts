@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createCacheSlice } from "./desktop/cache";
 import { createContextSlice } from "./desktop/context";
+import { createGroupSlice } from "./desktop/groups";
 import { createKnowledgeSlice } from "./desktop/knowledge";
 import { persistOptions } from "./desktop/persist";
 import { createTaskbarSlice } from "./desktop/taskbar";
@@ -14,6 +15,7 @@ export const useDesktopStore = create<DesktopState>()(
   persist(
     (...a) => ({
       ...createWindowSliceNew(...a),
+      ...createGroupSlice(...a),
       ...createViewportSliceNew(...a),
       ...createTilingSlice(...a),
       ...createTaskbarSlice(...a),

@@ -7,5 +7,6 @@
 
 export * from "./adapter";
 export { WindowChrome } from "./chrome";
+export { WindowGroupChrome } from "./group";
 export { ResizeHandles } from "./resize-handles";
 export * from "./types";
