@@ -20,6 +20,7 @@ import { toolRemind } from "../assistant/src/tool/remind";
 import { toolTimer } from "../assistant/src/tool/timer";
 import { toolVoiceControl, toolVoiceStatus } from "../assistant/src/tool/voice";
 import { toolWebAssistant } from "../assistant/src/tool/web";
+import { toolRalph } from "./orchestrator/loops/ralph";
 import { toolCodex } from "./orchestrator/tool/codex";
 import { toolCodexlog } from "./orchestrator/tool/codexlog";
 import { toolCognitiveState } from "./orchestrator/tool/cognitive";
@@ -170,6 +171,7 @@ const orchestratorToolSources: LegacyTool[] = [
   toolRagQuery,
   toolRagList,
   toolRagDelete,
+  toolRalph,
   toolLearnRecord,
   toolLearnPattern,
   toolLearnMistake,

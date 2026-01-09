@@ -30,7 +30,7 @@ import {
 // Regex for splitting lines - declared at module level for performance
 const LINE_SPLIT_REGEX = /\r?\n/;
 
-const droidInputSchema = z.object({
+export const droidInputSchema = z.object({
   prompt: z.string().min(1),
   out: z.enum(["text", "json", "debug"]).default("text"),
   auto: z.enum(["read", "low", "medium", "high"]).default("read"),
@@ -44,6 +44,17 @@ const droidInputSchema = z.object({
     .max(MAX_TIMEOUT_SEC)
     .optional(),
   env: z.record(z.string(), z.string()).optional(),
+  /** Ralph Wiggum loop configuration for iterative execution */
+  ralph: z
+    .object({
+      /** Maximum iterations before forced termination */
+      maxIterations: z.number().int().min(1).max(50).default(10),
+      /** Text to detect in <promise>TEXT</promise> tag for completion */
+      completionPromise: z.string().min(1).optional(),
+      /** Current iteration number (managed internally) */
+      iteration: z.number().int().min(0).optional(),
+    })
+    .optional(),
 });
 
 export type DroidToolInput = z.infer<typeof droidInputSchema>;
@@ -57,6 +68,17 @@ const toolOutputSchema = z.object({
         kind: z.string(),
       })
     )
+    .optional(),
+  /** Ralph loop iteration state (present when ralph config was used) */
+  iterationState: z
+    .object({
+      /** Current iteration number */
+      iteration: z.number().int().min(0),
+      /** Whether task completed via promise detection */
+      completed: z.boolean(),
+      /** The promise text detected if completion occurred */
+      promiseDetected: z.string().optional(),
+    })
     .optional(),
 });
 

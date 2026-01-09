@@ -254,6 +254,17 @@ export const codexInputSchema = z.object({
       confidence: z.number().min(0).max(1).optional(),
     })
     .optional(),
+  /** Ralph Wiggum loop configuration for iterative execution */
+  ralph: z
+    .object({
+      /** Maximum iterations before forced termination */
+      maxIterations: z.number().int().min(1).max(50).default(10),
+      /** Text to detect in <promise>TEXT</promise> tag for completion */
+      completionPromise: z.string().min(1).optional(),
+      /** Current iteration number (managed internally) */
+      iteration: z.number().int().min(0).optional(),
+    })
+    .optional(),
 });
 
 export type CodexToolInput = z.infer<typeof codexInputSchema>;
@@ -278,6 +289,17 @@ export const toolOutputSchema = z.object({
     .optional(),
   metadata: agentMetadataSchema.optional(),
   sessionState: responseSessionStateSchema.optional(),
+  /** Ralph loop iteration state (present when ralph config was used) */
+  iterationState: z
+    .object({
+      /** Current iteration number */
+      iteration: z.number().int().min(0),
+      /** Whether task completed via promise detection */
+      completed: z.boolean(),
+      /** The promise text detected if completion occurred */
+      promiseDetected: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type { AgentMetadata, ResponseSessionState };
