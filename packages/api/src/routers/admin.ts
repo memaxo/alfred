@@ -139,6 +139,7 @@ export const adminRouter = router({
   policyList: protectedProcedure
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         action: z.string().optional(),
         limit: z.number().int().min(1).max(500).optional().default(100),
         offset: z.number().int().min(0).optional().default(0),
@@ -155,7 +156,8 @@ export const adminRouter = router({
         userId,
         input.action,
         input.limit,
-        input.offset
+        input.offset,
+        input.projectId
       );
 
       return {
@@ -179,27 +181,29 @@ export const adminRouter = router({
   }),
 
   // Approvals procedures
-  approvalsList: protectedProcedure.query(async ({ ctx }) => {
-    await ensureRecentBiometric(ctx.session);
-    const userId = ctx.session?.user?.id;
-    if (!userId) {
-      throw new TRPCError({ code: "UNAUTHORIZED" });
-    }
+  approvalsList: protectedProcedure
+    .input(z.object({ projectId: z.string().uuid().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      await ensureRecentBiometric(ctx.session);
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
 
-    const pending = await getPendingApprovals(userId);
-    return {
-      requests: pending.map((approval) => ({
-        id: approval.id,
-        action: approval.action,
-        resource: approval.resource,
-        context: approval.context,
-        status: approval.status,
-        created: approval.created?.toISOString(),
-        expiresAt: approval.expiresAt?.toISOString(),
-        metadata: approval.metadata,
-      })),
-    };
-  }),
+      const pending = await getPendingApprovals(userId, input?.projectId);
+      return {
+        requests: pending.map((approval) => ({
+          id: approval.id,
+          action: approval.action,
+          resource: approval.resource,
+          context: approval.context,
+          status: approval.status,
+          created: approval.created?.toISOString(),
+          expiresAt: approval.expiresAt?.toISOString(),
+          metadata: approval.metadata,
+        })),
+      };
+    }),
 
   approvalsResolve: protectedProcedure
     .input(
@@ -529,6 +533,7 @@ export const adminRouter = router({
   taskHistory: protectedProcedure
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         limit: z.number().int().min(1).max(100).default(50),
       })
     )
@@ -543,6 +548,7 @@ export const adminRouter = router({
         // Get recent workflow runs for this user
         const runs = await workflowRepo.listRuns({
           userId,
+          projectId: input.projectId,
           limit: input.limit,
         });
 

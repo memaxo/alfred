@@ -43,10 +43,7 @@ export async function getDocument(
   return rows[0] ?? null;
 }
 
-export async function listDocuments(
-  limit = 100,
-  offset = 0
-): Promise<DocumentRow[]> {
+export function listDocuments(limit = 100, offset = 0): Promise<DocumentRow[]> {
   return db
     .select()
     .from(ragDocuments)
@@ -92,7 +89,7 @@ export async function detachDocumentFromProject(
   return rows.length;
 }
 
-export async function listDocumentsForProject(
+export function listDocumentsForProject(
   projectId: string,
   limit = 100,
   offset = 0
@@ -119,7 +116,7 @@ export async function listDocumentsForProject(
 }
 
 // Chunk operations
-export async function addChunks(
+export function addChunks(
   documentId: string,
   chunks: Array<{
     content: string;
@@ -129,7 +126,7 @@ export async function addChunks(
   }>
 ): Promise<ChunkRow[]> {
   if (chunks.length === 0) {
-    return [] as ChunkRow[];
+    return Promise.resolve([] as ChunkRow[]);
   }
 
   const values = chunks.map<ChunkInsert>((chunk, index) => ({
@@ -143,7 +140,7 @@ export async function addChunks(
   return db.insert(ragChunks).values(values).returning() as Promise<ChunkRow[]>;
 }
 
-export async function getChunks(documentId: string): Promise<ChunkRow[]> {
+export function getChunks(documentId: string): Promise<ChunkRow[]> {
   return db
     .select()
     .from(ragChunks)

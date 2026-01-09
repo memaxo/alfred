@@ -38,7 +38,10 @@ function coerceResumeEvent(
   value: unknown,
   fallback: ObligationResumeEvent
 ): ObligationResumeEvent {
-  if (typeof value === "string" && allowedResumeEvents.has(value as any)) {
+  if (
+    typeof value === "string" &&
+    allowedResumeEvents.has(value as ObligationResumeEvent)
+  ) {
     return value as ObligationResumeEvent;
   }
   return fallback;

@@ -33,6 +33,7 @@ export const tokenRouter = router({
     .use(requirePolicy("token.issue"))
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         scopes: scopesSchema,
         aud: z.string().trim().min(1).optional(),
         ttlSec: ttlSchema,
@@ -49,6 +50,7 @@ export const tokenRouter = router({
       }
       const audience = input.aud ?? process.env.TOOL_AUDIENCE ?? "alfred:tools";
       const token = await issueAccessToken(userId, input.scopes, audience, {
+        projectId: input.projectId,
         ttlSec: input.ttlSec,
         elevated: false,
         mfa: "none",
@@ -84,6 +86,7 @@ export const tokenRouter = router({
     .use(requirePolicy("token.elevate"))
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         scopes: scopesSchema,
         aud: z.string().trim().min(1).optional(),
         ttlSec: ttlSchema,
@@ -119,6 +122,7 @@ export const tokenRouter = router({
       }
       const audience = input.aud ?? process.env.TOOL_AUDIENCE ?? "alfred:tools";
       const token = await issueAccessToken(userId, input.scopes, audience, {
+        projectId: input.projectId,
         ttlSec: input.ttlSec,
         elevated: true,
         mfa: "passkey",

@@ -44,6 +44,7 @@ function getPublicKey() {
 
 export type TokenClaims = {
   sub: string;
+  pid?: string; // ALFRED Project ID
   scopes: string[];
   roles?: string[];
   elevated?: boolean;
@@ -56,6 +57,7 @@ export type TokenClaims = {
 };
 
 type IssueOptions = {
+  projectId?: string;
   ttlSec?: number;
   elevated?: boolean;
   mfa?: "passkey" | "none";
@@ -79,11 +81,13 @@ export async function issueAccessToken(
   const jti = nanoid();
 
   const payload: JWTPayload & {
+    pid?: string;
     scopes: string[];
     elevated?: boolean;
     mfa?: "passkey" | "totp" | "none";
     roles?: string[];
   } = {
+    pid: options.projectId,
     scopes,
     elevated: options.elevated,
     mfa: options.mfa ?? "none",
@@ -141,6 +145,7 @@ export async function verifyAccessToken(
 
   return {
     sub: payload.sub,
+    pid: typeof payload.pid === "string" ? payload.pid : undefined,
     scopes,
     roles: Array.isArray(payload.roles) ? payload.roles : undefined,
     elevated: payload.elevated === true,

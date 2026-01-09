@@ -84,6 +84,7 @@ export async function getAuditLogsByTrace(
 // Approval operations
 export async function createApproval(params: {
   userId: string;
+  projectId?: string;
   action: string;
   resource: string;
   traceId?: string;
@@ -93,6 +94,7 @@ export async function createApproval(params: {
 }): Promise<typeof approvals.$inferSelect | undefined> {
   const record: ApprovalInsert = {
     userId: params.userId,
+    projectId: params.projectId ?? null,
     action: params.action,
     resource: params.resource,
     traceId: params.traceId ?? null,
@@ -117,12 +119,21 @@ export async function getApproval(
 }
 
 export async function getPendingApprovals(
-  userId: string
+  userId: string,
+  projectId?: string
 ): Promise<(typeof approvals.$inferSelect)[]> {
+  const conditions = [
+    eq(approvals.userId, userId),
+    eq(approvals.status, "pending"),
+  ];
+  if (projectId) {
+    conditions.push(eq(approvals.projectId, projectId));
+  }
+
   return await db
     .select()
     .from(approvals)
-    .where(and(eq(approvals.userId, userId), eq(approvals.status, "pending")))
+    .where(and(...conditions))
     .orderBy(asc(approvals.created));
 }
 
