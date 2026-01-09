@@ -56,6 +56,19 @@ export type AgentOutcome = {
   };
 };
 
+type AgentExecutor = "codex" | "droid" | "opencode";
+
+function normalizeAgentType(raw: unknown): AgentExecutor {
+  if (typeof raw !== "string") {
+    return "codex";
+  }
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "droid" || normalized === "opencode") {
+    return normalized;
+  }
+  return "codex";
+}
+
 /**
  * Run a single agent within a wave.
  * Handles workspace creation, TDD loop, codex execution, and error recovery.
@@ -323,6 +336,7 @@ export async function runAgent({
   }
 
   const startedAt = Date.now();
+  const executor = normalizeAgentType(spec.agentType);
 
   // Checkpoint before execution
   if (workspaceEnv) {
@@ -342,35 +356,75 @@ export async function runAgent({
   let durationSeconds = 0;
 
   try {
-    await toolCodex.execute({
-      input: {
-        action: "exec",
-        prompt,
-        out: "text",
-        auto: spec.auto,
-        cw: spec.workingDirectory,
-        sessionId: spec.sessionId,
-        agentfsDbPath,
-        containerName,
-        containerCw,
-        model: spec.model,
-        profile: spec.profile,
-        authz,
-        context: {
-          linearSessionId: spec.context.linearSessionId,
-          linearSpace: spec.context.linearSpace,
-          linearAuthz: spec.context.linearAuthz,
-          linearIssueId: spec.context.linearIssueId,
-          relevantFiles: spec.context.relevantFiles,
+    if (executor === "codex") {
+      await toolCodex.execute({
+        input: {
+          action: "exec",
+          prompt,
+          out: "text",
+          auto: spec.auto,
+          cw: spec.workingDirectory,
+          sessionId: spec.sessionId,
+          agentfsDbPath,
+          containerName,
+          containerCw,
+          model: spec.model,
+          profile: spec.profile,
+          authz,
+          context: {
+            linearSessionId: spec.context.linearSessionId,
+            linearSpace: spec.context.linearSpace,
+            linearAuthz: spec.context.linearAuthz,
+            linearIssueId: spec.context.linearIssueId,
+            relevantFiles: spec.context.relevantFiles,
+          },
+          userId,
         },
-        userId,
-      },
-      writer,
-      signal,
-    });
+        writer,
+        signal,
+      });
+    } else if (executor === "droid") {
+      const { toolDroid } = await import(
+        "@alfred/agent/orchestrator/tool/droid"
+      );
+      await toolDroid.execute({
+        input: {
+          prompt,
+          out: "text",
+          auto: spec.auto,
+          cw: spec.workingDirectory,
+          model: spec.model,
+          authz,
+        },
+        writer,
+        signal,
+      });
+    } else {
+      const { toolOpenCode } = await import(
+        "@alfred/agent/orchestrator/tool/opencode/index"
+      );
+      await toolOpenCode.execute({
+        input: {
+          action: "exec",
+          prompt,
+          auto: spec.auto,
+          cw: spec.workingDirectory,
+          sessionId: spec.sessionId,
+          model: spec.model,
+          authz,
+          containerName,
+          containerCw,
+        },
+        writer,
+        signal,
+      });
+    }
   } catch (error: unknown) {
     // Handle Supervisor Interrupts
-    if (String(error).includes("codex_exec_interrupted")) {
+    if (
+      executor === "codex" &&
+      String(error).includes("codex_exec_interrupted")
+    ) {
       logger.warn("agent_interrupted_by_supervisor", {
         agentId: spec.agentId,
         error: String(error),
@@ -402,24 +456,40 @@ export async function runAgent({
         stuck: false,
         status: "interrupted",
         durationSeconds: interruptDurationSeconds,
-        role: spec.agentType ?? "codex",
+        role: executor,
       };
     }
 
     // Restore on crash (non-interrupt errors)
-    const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
-      formatCodexRuntimeError(error);
-    queue.enqueue({
-      type: "notice",
-      message: userMessage,
-    } as unknown as WorkflowEvent);
-    logger.error("codex_agent_failed", {
-      agentId: spec.agentId,
-      error: rawMessage,
-      code,
-      needsElevation,
-      limitExceeded,
-    });
+    if (executor === "codex") {
+      const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+        formatCodexRuntimeError(error);
+      queue.enqueue({
+        type: "notice",
+        message: userMessage,
+      } as unknown as WorkflowEvent);
+      logger.error("codex_agent_failed", {
+        agentId: spec.agentId,
+        error: rawMessage,
+        code,
+        needsElevation,
+        limitExceeded,
+      });
+    } else {
+      const message =
+        error instanceof Error
+          ? error.message
+          : `agent_failed:${String(error)}`;
+      queue.enqueue({
+        type: "notice",
+        message: `${executor}_agent_failed:${message}`,
+      } as unknown as WorkflowEvent);
+      logger.error("agent_failed", {
+        agentId: spec.agentId,
+        executor,
+        error: message,
+      });
+    }
 
     if (workspaceEnv) {
       logger.warn("agent_crashed_restoring_checkpoint", {
@@ -524,10 +594,10 @@ export async function runAgent({
     stuck,
     status,
     durationSeconds,
-    role: spec.agentType ?? "codex",
+    role: executor,
     escalation: escalationReason,
     result: {
-      summary: "codex agent execution",
+      summary: `${executor} agent execution`,
       artifacts: [],
       changes: hints ? Array.from(hints) : [],
       notes: [],

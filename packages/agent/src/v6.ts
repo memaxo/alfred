@@ -27,6 +27,7 @@ import { toolCognitiveState } from "./orchestrator/tool/cognitive";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
 import { toolGit } from "./orchestrator/tool/git";
+import { toolOpenCode } from "./orchestrator/tool/opencode";
 import {
   toolKnowledgeConnect,
   toolKnowledgeCorrect,
@@ -162,6 +163,7 @@ const orchestratorToolSources: LegacyTool[] = [
   toolCognitiveState,
   toolDocker,
   toolDroid,
+  toolOpenCode,
   toolGit,
   toolKnowledgeQuery,
   toolKnowledgeExtract,
