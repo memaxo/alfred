@@ -10,7 +10,9 @@
 import {
   Bell,
   Bot,
+  Code,
   FileText,
+  FolderKanban,
   Layers,
   List,
   MessageSquare,
@@ -22,24 +24,27 @@ import {
   Workflow,
 } from "lucide-react";
 // Legacy window components (from old ReactFlow system)
+import { AgentsWindow } from "@/components/windows/agents/agents-window";
 import { ChatWindow } from "@/components/windows/chat/chat-window";
+import { CodexWindow } from "@/components/windows/codex/codex-window";
 import { ConceptWindow } from "@/components/windows/concept/concept-window";
 import { DroidWindow } from "@/components/windows/droid/droid-window";
 import { IntegrationsWindow } from "@/components/windows/integrations/integrations-window";
 import { KnowledgeWindow } from "@/components/windows/knowledge/knowledge-window";
 import { NoteWindow } from "@/components/windows/note/note-window";
+import { ProjectWindow } from "@/components/windows/project/project-window";
 import { ReminderWindow } from "@/components/windows/reminder/reminder-window";
 import { SettingsWindow } from "@/components/windows/settings/settings-window";
 import { TerminalWindow } from "@/components/windows/terminal/terminal-window";
 import { TodoWindow } from "@/components/windows/todo/todo-window";
 import { WorkflowListWindow } from "@/components/windows/workflow/workflow-list-window";
 import { WorkflowWindow } from "@/components/windows/workflow/workflow-window";
-import type { WindowType } from "@/store/desktop/types.new";
+import type { WindowType } from "@/store/desktop/types";
 
 // Adapter for legacy components
 export { withWindowAdapter } from "./adapter";
 
-import type { WindowRegistryEntry } from "./types";
+import type { WindowMetadata, WindowRegistryEntry } from "./types";
 
 /**
  * Window registry mapping type to component and metadata
@@ -132,6 +137,20 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
     },
     isLegacy: true,
   },
+  project: {
+    type: "project",
+    component: ProjectWindow,
+    metadata: {
+      label: "Projects",
+      icon: FolderKanban,
+      defaultSize: { width: 500, height: 450 },
+      minSize: { width: 400, height: 350 },
+      resizable: true,
+      singleton: true,
+      tier: "secondary",
+    },
+    isLegacy: true,
+  },
 
   // Tier 2: Productivity & Settings (Legacy)
   settings: {
@@ -219,6 +238,22 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
     isLegacy: true,
   },
 
+  // Tier 0: Codex Direct UI
+  codex: {
+    type: "codex",
+    component: CodexWindow,
+    metadata: {
+      label: "Codex",
+      icon: Code,
+      defaultSize: { width: 650, height: 550 },
+      minSize: { width: 500, height: 400 },
+      resizable: true,
+      singleton: true,
+      tier: "primary",
+    },
+    isLegacy: true,
+  },
+
   // Placeholder for future windows (will be implemented as needed)
   code: {
     type: "code",
@@ -235,16 +270,17 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   agents: {
     type: "agents",
-    component: null,
+    component: AgentsWindow,
     metadata: {
-      label: "Agents",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      label: "Agent Waves",
+      icon: Bot,
+      defaultSize: { width: 600, height: 500 },
+      minSize: { width: 450, height: 400 },
       resizable: true,
       singleton: true,
-      tier: "secondary",
+      tier: "primary",
     },
-    isLegacy: false,
+    isLegacy: true,
   },
   taskmanager: {
     type: "taskmanager",
@@ -475,6 +511,6 @@ export function getWindowLabel(type: WindowType): string {
 /**
  * Get window icon from type
  */
-export function getWindowIcon(type: WindowType): React.ReactNode | undefined {
+export function getWindowIcon(type: WindowType): WindowMetadata["icon"] {
   return windowRegistry[type]?.metadata?.icon;
 }
