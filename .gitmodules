@@ -1,3 +1,7 @@
 [submodule "vendor/codex"]
 	path = vendor/codex
 	url = https://github.com/openai/codex.git
+[submodule "vendor/opentui"]
+	path = vendor/opentui
+	url = https://github.com/anomalyco/opentui.git
+	branch = main
