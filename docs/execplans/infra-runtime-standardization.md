@@ -70,7 +70,7 @@ Out of scope:
 
 ### Phase 2: “Perfect” Dockerfiles (fast, minimal, secure, reproducible)
 
-- [ ] `docker/alfred/Dockerfile` multi-stage
+- [~] (2026-01-09) `docker/alfred/Dockerfile` multi-stage
   - Builder stage: toolchain + `turbo prune --scope=web --docker` + cached `bun install`.
   - Runtime stage: minimal Bun image, **no compiler toolchain**, non-root user.
   - Deterministic install (`bun install --frozen-lockfile`).
