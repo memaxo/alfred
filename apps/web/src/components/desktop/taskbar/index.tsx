@@ -4,7 +4,7 @@
  * Taskbar - Windows 11-inspired bottom taskbar
  *
  * Provides:
- * - App launcher button (Alfred logo)
+ * - App launcher button (Alfred logo) with popover grid
  * - Pinned apps section
  * - Running apps with previews
  * - System tray
@@ -15,12 +15,18 @@
  */
 
 import { MessageSquare } from "lucide-react";
-import { type CSSProperties, useCallback } from "react";
+import { type CSSProperties, useCallback, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
+  getSpawnableWindowTypes,
   getWindowIcon,
   getWindowLabel,
 } from "@/components/desktop/windows/registry";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -135,21 +141,71 @@ export function Taskbar({ style }: TaskbarProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function AppLauncherButton() {
+  const [open, setOpen] = useState(false);
+  const { spawnWindow } = useDesktopStore(
+    useShallow((s) => ({
+      spawnWindow: s.spawnWindow,
+    }))
+  );
+
+  const spawnableTypes = getSpawnableWindowTypes();
+
+  const handleLaunch = useCallback(
+    (type: WindowType) => {
+      spawnWindow(type);
+      setOpen(false);
+    },
+    [spawnWindow]
+  );
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          aria-label="App Launcher"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-biolum/20 to-biolum/5 text-biolum transition-all hover:scale-105 hover:from-biolum/30 hover:to-biolum/10"
-          type="button"
-        >
-          <span className="text-xl">⬡</span>
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top">
-        <p>App Launcher</p>
-      </TooltipContent>
-    </Tooltip>
+    <Popover onOpenChange={setOpen} open={open}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              aria-label="App Launcher"
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-biolum/20 to-biolum/5 text-biolum transition-all hover:scale-105 hover:from-biolum/30 hover:to-biolum/10",
+                open && "scale-105 from-biolum/30 to-biolum/10"
+              )}
+              type="button"
+            >
+              <span className="text-xl">⬡</span>
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>App Launcher</p>
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent
+        align="start"
+        className="w-80 border-white/10 bg-void-surface/95 p-3 backdrop-blur-xl"
+        side="top"
+        sideOffset={12}
+      >
+        <div className="mb-2 font-medium text-biolum text-sm">Applications</div>
+        <div className="grid grid-cols-4 gap-2">
+          {spawnableTypes.map((type) => {
+            const Icon = getWindowIcon(type) ?? MessageSquare;
+            const label = getWindowLabel(type);
+            return (
+              <button
+                className="flex flex-col items-center gap-1 rounded-lg p-2 text-biolum-dim transition-colors hover:bg-white/5 hover:text-biolum"
+                key={type}
+                onClick={() => handleLaunch(type)}
+                title={label}
+                type="button"
+              >
+                <Icon className="h-6 w-6" />
+                <span className="max-w-full truncate text-xs">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
