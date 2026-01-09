@@ -83,7 +83,7 @@ export const manifest: CliManifest = {
   version: "0.1.0",
   description: `Embedding generation with KaLM-Embedding-Gemma3-12B (${EMBEDDING_DIM}d)`,
   commands: [downloadCommand, benchmarkCommand],
-  healthCheck: async () => {
+  healthCheck: () => {
     try {
       const start = performance.now();
       const health = getHealth();
@@ -91,9 +91,13 @@ export const manifest: CliManifest = {
 
       const allHealthy =
         health.length > 0 &&
-        health.every((w) => Boolean(w && "healthy" in w && w.healthy));
+        health.every((w) =>
+          Boolean(
+            w && typeof w === "object" && "healthy" in w && (w as any).healthy
+          )
+        );
 
-      return {
+      return Promise.resolve({
         status: allHealthy
           ? "healthy"
           : health.length === 0
@@ -105,12 +109,12 @@ export const manifest: CliManifest = {
             ? "Embedding pool not initialized"
             : "Some embedding workers unhealthy",
         latencyMs: latency,
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         status: "unhealthy",
         message: `Embedding health check failed: ${(error as Error).message}`,
-      };
+      });
     }
   },
   dependencies: [],

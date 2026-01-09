@@ -143,7 +143,7 @@ export class EmbedPool {
 
     this.currentIndex = (this.currentIndex + 1) % this.poolSize;
 
-    return proc.sendRequest(texts);
+    return await proc.sendRequest(texts);
   }
 
   getHealth(): {

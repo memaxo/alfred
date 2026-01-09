@@ -45,6 +45,7 @@ export async function embed(text: string): Promise<number[]> {
     pool = new EmbedPool({
       modelName:
         process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
+      // biome-ignore lint/suspicious/noExplicitAny: Environment variable type casting
       device: (process.env.EMBED_DEVICE as any) ?? "auto",
       poolSize: Number(process.env.EMBED_POOL_SIZE ?? 2),
     });
@@ -69,6 +70,7 @@ export async function embedMany(texts: string[]): Promise<number[][]> {
     pool = new EmbedPool({
       modelName:
         process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
+      // biome-ignore lint/suspicious/noExplicitAny: Environment variable type casting
       device: (process.env.EMBED_DEVICE as any) ?? "auto",
       poolSize: Number(process.env.EMBED_POOL_SIZE ?? 2),
     });
@@ -91,7 +93,7 @@ export async function shutdown(): Promise<void> {
 /**
  * Get health status of embedding workers
  */
-export function getHealth(): any[] {
+export function getHealth(): unknown[] {
   if (!pool) {
     return [];
   }

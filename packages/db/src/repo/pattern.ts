@@ -44,7 +44,7 @@ export async function updatePattern(
   return row;
 }
 
-export async function listPatternsByUserId(
+export function listPatternsByUserId(
   userId: string
 ): Promise<WorkflowPattern[]> {
   return db
@@ -53,7 +53,7 @@ export async function listPatternsByUserId(
     .where(eq(workflowPatterns.userId, userId));
 }
 
-export async function listAllPatterns(): Promise<WorkflowPattern[]> {
+export function listAllPatterns(): Promise<WorkflowPattern[]> {
   return db.select().from(workflowPatterns);
 }
 

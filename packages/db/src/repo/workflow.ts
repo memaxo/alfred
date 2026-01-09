@@ -264,11 +264,16 @@ export async function findRunByLinearSession(
 
 export async function listRuns(args: {
   userId: string;
+  projectId?: string;
   status?: WorkflowStatus;
   limit?: number;
   offset?: number;
 }): Promise<WorkflowRun[]> {
   const conditions = [eq(workflowRuns.userId, args.userId)];
+
+  if (args.projectId) {
+    conditions.push(eq(workflowRuns.projectId, args.projectId));
+  }
 
   if (args.status) {
     conditions.push(eq(workflowRuns.status, args.status));

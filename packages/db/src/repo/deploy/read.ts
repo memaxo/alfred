@@ -1,4 +1,13 @@
-import { and, desc, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  type SQL,
+} from "drizzle-orm";
 import { db } from "../../client";
 import { deployments } from "../../schema/deploy";
 import type { DeploymentRecord } from "./types";

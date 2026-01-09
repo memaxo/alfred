@@ -249,7 +249,7 @@ export async function recordCorrection(
  *
  * @param corrections - Array of correction records
  */
-export async function calibrateThresholds(
+export function calibrateThresholds(
   corrections: Array<{
     domain: string;
     wasCorrect: boolean;
@@ -297,7 +297,7 @@ export async function calibrateThresholds(
     }
   }
 
-  return results;
+  return Promise.resolve(results);
 }
 
 /**

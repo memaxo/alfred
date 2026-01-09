@@ -185,7 +185,7 @@ export class EmbedProcess {
     }
   }
 
-  async sendRequest(texts: string[]): Promise<number[][]> {
+  sendRequest(texts: string[]): Promise<number[][]> {
     if (!this.process) {
       throw new Error("Process not started");
     }
@@ -261,7 +261,7 @@ export class EmbedProcess {
     }, 30_000); // Check every 30 seconds
   }
 
-  private async ping(): Promise<void> {
+  private ping(): Promise<void> {
     const reqId = randomUUID();
     const request: EmbedRequest = {
       id: reqId,
@@ -311,9 +311,9 @@ export class EmbedProcess {
     };
   }
 
-  async shutdown(): Promise<void> {
+  shutdown(): Promise<void> {
     if (this.isShuttingDown) {
-      return;
+      return Promise.resolve();
     }
     this.isShuttingDown = true;
 
@@ -325,5 +325,6 @@ export class EmbedProcess {
       this.process.kill();
       this.process = null;
     }
+    return Promise.resolve();
   }
 }

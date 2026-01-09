@@ -100,7 +100,10 @@ export async function getPreferences(
     .select()
     .from(preferences)
     .where(and(...conditions))
-    .orderBy(desc(preferences.projectId), desc(preferences.updated));
+    .orderBy(
+      sql`${preferences.projectId} DESC NULLS LAST`,
+      desc(preferences.updated)
+    );
 }
 
 export async function setPreference(

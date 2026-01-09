@@ -74,22 +74,22 @@ export const manifest: CliManifest = {
   description:
     "Content-addressed hypergraph for cognitive state and knowledge management",
   commands: [queryCommand, ingestCommand],
-  healthCheck: async () => {
+  healthCheck: () => {
     try {
       const start = performance.now();
       // Check graph stats
       const latency = performance.now() - start;
 
-      return {
+      return Promise.resolve({
         status: "healthy",
         message: "Knowledge graph operational",
         latencyMs: latency,
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         status: "unhealthy",
         message: `Knowledge graph health check failed: ${(error as Error).message}`,
-      };
+      });
     }
   },
   dependencies: ["@alfred/db"],

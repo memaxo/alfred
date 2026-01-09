@@ -69,7 +69,7 @@ export async function upsertEvalDef(input: {
   return row;
 }
 
-export async function listEvalDefs(
+export function listEvalDefs(
   limit = 50,
   offset = 0
 ): Promise<(typeof evalDefs.$inferSelect)[]> {
@@ -124,7 +124,7 @@ export async function createDataset(input: {
   return row;
 }
 
-export async function listDatasets(
+export function listDatasets(
   defId: string,
   limit = 50,
   offset = 0
@@ -174,7 +174,7 @@ export async function addPoints(
   return inserted;
 }
 
-export async function getPointsForDataset(
+export function getPointsForDataset(
   datasetId: string
 ): Promise<(typeof evalPoints.$inferSelect)[]> {
   return db
@@ -294,7 +294,7 @@ export async function getRun(
   return rows[0] ?? null;
 }
 
-export async function listRuns(
+export function listRuns(
   input: { defSlug?: string; limit?: number; offset?: number } = {}
 ): Promise<EvalRunWithRelations[]> {
   const limit = input.limit ?? 50;
@@ -320,7 +320,7 @@ export async function listRuns(
     .offset(offset);
 }
 
-export async function listRunScores(
+export function listRunScores(
   runId: string,
   limit = 100,
   offset = 0
@@ -343,7 +343,7 @@ export async function listRunScores(
     .offset(offset);
 }
 
-export async function getRunScoreStats(runId: string): Promise<
+export function getRunScoreStats(runId: string): Promise<
   {
     scorer: string | null;
     count: number;

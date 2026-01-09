@@ -35,6 +35,7 @@ async function main() {
 
   if (chunks.length > 0) {
     const topChunk = chunks[0];
+    // biome-ignore lint/suspicious/noExplicitAny: Validation script inspection
     const _metadata = topChunk.metadata as any;
   }
   const texts = [
