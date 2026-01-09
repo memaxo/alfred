@@ -13,6 +13,16 @@ const codexExecuteMock = mock(async (_args: unknown) => ({
   artifacts: [],
 }));
 
+const droidExecuteMock = mock(async (_args: unknown) => ({
+  result: "ok",
+  artifacts: [],
+}));
+
+const opencodeExecuteMock = mock(async (_args: unknown) => ({
+  result: "ok",
+  artifacts: [],
+}));
+
 const processForLearningMock = mock(async (_dbPath: string) => ({
   patterns: [],
   mistakes: [],
@@ -21,6 +31,14 @@ const processForLearningMock = mock(async (_dbPath: string) => ({
 
 mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   toolCodex: { execute: codexExecuteMock },
+}));
+
+mock.module("@alfred/agent/orchestrator/tool/droid", () => ({
+  toolDroid: { execute: droidExecuteMock },
+}));
+
+mock.module("@alfred/agent/orchestrator/tool/opencode/index", () => ({
+  toolOpenCode: { execute: opencodeExecuteMock },
 }));
 
 mock.module("@alfred/agent/agentfs/learning-bridge", () => ({
@@ -52,6 +70,8 @@ describe("runAgent (agentfs)", () => {
 
   beforeEach(async () => {
     codexExecuteMock.mockClear();
+    droidExecuteMock.mockClear();
+    opencodeExecuteMock.mockClear();
     processForLearningMock.mockClear();
 
     await mkdir(baseDir, { recursive: true });
@@ -168,6 +188,181 @@ describe("runAgent (agentfs)", () => {
     expect(call?.input?.agentfsDbPath).toBe(mockWorkspace.dbPath);
 
     expect(processForLearningMock).toHaveBeenCalledWith(mockWorkspace.dbPath);
+  });
+
+  it("dispatches to toolDroid when agentType is droid", async () => {
+    const runId = "test-run-agentfs-droid";
+    const taskId = "T00000003";
+
+    const task: SubTask = {
+      id: taskId,
+      title: "Test agent dispatch (droid)",
+      requirement: "Verify runAgent routes to toolDroid when agentType=droid.",
+      deps: [],
+      priority: 1,
+      acceptance: ["toolDroid.execute is called"],
+      filesHint: [],
+    };
+
+    const spec: AgentSpec = {
+      agentId: `${runId}:${taskId}`,
+      subTaskId: taskId,
+      sessionId: `${runId}:${taskId}`,
+      workingDirectory: workspaceDir,
+      environment: "agentfs",
+      auto: "low",
+      agentType: "droid",
+      execPlanPath: path.join(".agent", "plans", runId, `${taskId}.md`),
+      context: {},
+    };
+
+    const mockWorkspace: AgentFSWorkspaceLike = {
+      id: "mock-agentfs-droid",
+      kind: "agentfs",
+      root: workspaceDir,
+      branch: null,
+      dbPath: path.join(workspaceDir, ".agentfs", "audit.db"),
+      initialize: async () => {},
+      cleanup: async () => {},
+      checkpoint: async () => {},
+      restore: async () => {},
+      exec: async () => ({
+        stdout: "",
+        stderr: "",
+        exitCode: 0,
+        durationMs: 0,
+      }),
+      startSession: async () => "session",
+      stopSession: async () => {},
+      listSessions: async () => [],
+      recordToolCall: async () => 1,
+    };
+
+    WorkspaceFactory.create = (async () =>
+      mockWorkspace) as typeof WorkspaceFactory.create;
+
+    const { runAgent } = await import("../src/orchestrator/agent");
+
+    const tracker = createTrackerContext([task]);
+    const trackerContextRef = { current: tracker };
+    const queue = new AsyncQueue<WorkflowEvent>();
+
+    const outcome = await runAgent({
+      spec,
+      phaseId: "phase-test",
+      runId,
+      workspace: workspaceDir,
+      workspaceRoot: workspaceDir,
+      subTaskById: new Map([[taskId, task]]),
+      projectConfig: null,
+      activeWorkspaces: [],
+      agentFileHints: new Map(),
+      rootExecPlanPath: path.join(
+        workspaceDir,
+        ".agent",
+        "plans",
+        runId,
+        "root.md"
+      ),
+      signal: new AbortController().signal,
+      authz: "authz-token",
+      userId: "user-1",
+      trackerContextRef,
+      queue,
+    });
+
+    expect(outcome.role).toBe("droid");
+    expect(droidExecuteMock).toHaveBeenCalledTimes(1);
+    expect(codexExecuteMock).toHaveBeenCalledTimes(0);
+    expect(opencodeExecuteMock).toHaveBeenCalledTimes(0);
+  });
+
+  it("dispatches to toolOpenCode when agentType is opencode", async () => {
+    const runId = "test-run-agentfs-opencode";
+    const taskId = "T00000004";
+
+    const task: SubTask = {
+      id: taskId,
+      title: "Test agent dispatch (opencode)",
+      requirement:
+        "Verify runAgent routes to toolOpenCode when agentType=opencode.",
+      deps: [],
+      priority: 1,
+      acceptance: ["toolOpenCode.execute is called"],
+      filesHint: [],
+    };
+
+    const spec: AgentSpec = {
+      agentId: `${runId}:${taskId}`,
+      subTaskId: taskId,
+      sessionId: `${runId}:${taskId}`,
+      workingDirectory: workspaceDir,
+      environment: "agentfs",
+      auto: "low",
+      agentType: "opencode",
+      execPlanPath: path.join(".agent", "plans", runId, `${taskId}.md`),
+      context: {},
+    };
+
+    const mockWorkspace: AgentFSWorkspaceLike = {
+      id: "mock-agentfs-opencode",
+      kind: "agentfs",
+      root: workspaceDir,
+      branch: null,
+      dbPath: path.join(workspaceDir, ".agentfs", "audit.db"),
+      initialize: async () => {},
+      cleanup: async () => {},
+      checkpoint: async () => {},
+      restore: async () => {},
+      exec: async () => ({
+        stdout: "",
+        stderr: "",
+        exitCode: 0,
+        durationMs: 0,
+      }),
+      startSession: async () => "session",
+      stopSession: async () => {},
+      listSessions: async () => [],
+      recordToolCall: async () => 1,
+    };
+
+    WorkspaceFactory.create = (async () =>
+      mockWorkspace) as typeof WorkspaceFactory.create;
+
+    const { runAgent } = await import("../src/orchestrator/agent");
+
+    const tracker = createTrackerContext([task]);
+    const trackerContextRef = { current: tracker };
+    const queue = new AsyncQueue<WorkflowEvent>();
+
+    const outcome = await runAgent({
+      spec,
+      phaseId: "phase-test",
+      runId,
+      workspace: workspaceDir,
+      workspaceRoot: workspaceDir,
+      subTaskById: new Map([[taskId, task]]),
+      projectConfig: null,
+      activeWorkspaces: [],
+      agentFileHints: new Map(),
+      rootExecPlanPath: path.join(
+        workspaceDir,
+        ".agent",
+        "plans",
+        runId,
+        "root.md"
+      ),
+      signal: new AbortController().signal,
+      authz: "authz-token",
+      userId: "user-1",
+      trackerContextRef,
+      queue,
+    });
+
+    expect(outcome.role).toBe("opencode");
+    expect(opencodeExecuteMock).toHaveBeenCalledTimes(1);
+    expect(codexExecuteMock).toHaveBeenCalledTimes(0);
+    expect(droidExecuteMock).toHaveBeenCalledTimes(0);
   });
 
   it("does not fail the run when AgentFS learning extraction throws (best-effort)", async () => {
