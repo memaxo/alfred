@@ -8,6 +8,7 @@ WORKDIR /app
 # soundfile needs libsndfile1
 RUN apt-get update && apt-get install -y \
     libsndfile1 \
+    ffmpeg \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -21,12 +22,17 @@ ENV PATH="/root/.cargo/bin:$PATH"
 RUN uv venv .venv
 
 # Copy dependency files
-COPY packages/voice/pyproject.toml packages/voice/uv.lock ./packages/voice/
+COPY packages/voice/pyproject.rocm.toml ./packages/voice/pyproject.toml
+COPY packages/voice/uv.lock ./packages/voice/uv.lock
 
 # Sync dependencies
-# We set sys_platform=linux to ensure we get the Linux/ROCm variants
+# Generate a lockfile in-image from the ROCm pyproject, then sync.
+# This ensures PyTorch comes from the ROCm index declared in pyproject.
 WORKDIR /app/packages/voice
-RUN uv sync --frozen --no-install-project
+RUN uv lock && uv sync --frozen --no-install-project
+
+# Smoke check: verify Python deps import without loading models
+RUN .venv/bin/python -c "import torch, transformers, snac, soundfile, nemo.collections.asr; print('deps_ok')"
 
 # Copy source code
 COPY packages/voice/python ./python

@@ -14,65 +14,65 @@ import os
 import sys
 import json
 import traceback
-from sentence_transformers import SentenceTransformer
-import torch
 
 MODEL_NAME = "tencent/KaLM-Embedding-Gemma3-12B-2511"
 FULL_DIM = 3840  # Model's native dimension
 TARGET_DIM = 1024  # MRL truncation target (pgvector HNSW compatible)
 
 
-def detect_device() -> str:
-    """Detect best available device: mps > cuda > cpu"""
-    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        return "mps"
-    elif torch.cuda.is_available():
-        return "cuda"
-    else:
+def detect_device(torch_mod) -> str:
+    """Detect best available device: mps > cuda > cpu."""
+    try:
+        if hasattr(torch_mod, "backends") and hasattr(torch_mod.backends, "mps"):
+            if torch_mod.backends.mps.is_available():
+                return "mps"
+    except Exception:
+        pass
+
+    try:
+        if hasattr(torch_mod, "cuda") and torch_mod.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+
+    return "cpu"
+
+
+def resolve_device(explicit: str | None, torch_mod) -> str:
+    """Resolve device from EMBED_DEVICE.
+
+    Accepted: auto|cpu|mps|cuda|rocm
+    Note: PyTorch uses device="cuda" for ROCm (HIP) as well.
+    """
+    if not explicit:
+        return detect_device(torch_mod)
+
+    raw = explicit.strip().lower()
+    if raw == "auto":
+        return detect_device(torch_mod)
+    if raw == "cpu":
         return "cpu"
+    if raw == "mps":
+        try:
+            if hasattr(torch_mod.backends, "mps") and torch_mod.backends.mps.is_available():
+                return "mps"
+        except Exception:
+            pass
+        return detect_device(torch_mod)
+    if raw in ("cuda", "rocm"):
+        # ROCm is reported through torch.cuda APIs.
+        try:
+            if torch_mod.cuda.is_available():
+                return "cuda"
+        except Exception:
+            pass
+        return detect_device(torch_mod)
+
+    # Unknown value: fall back safely.
+    return detect_device(torch_mod)
 
 
-# Load model on startup
-print(json.dumps({"id": "init", "type": "status", "payload": {"message": "loading_model"}}), flush=True)
-
-device = detect_device()
-print(json.dumps({"id": "init", "type": "status", "payload": {"message": f"using_device_{device}"}}), flush=True)
-
-# Parse quantization config
-quantization = os.getenv("EMBED_QUANTIZATION")
-model_kwargs = {"dtype": torch.bfloat16}
-
-if quantization == "4bit":
-    try:
-        from transformers import BitsAndBytesConfig
-        model_kwargs["quantization_config"] = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4"
-        )
-        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "quantization_4bit_enabled"}}), flush=True)
-    except ImportError:
-        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "bitsandbytes_not_found_skipping_quantization"}}), flush=True)
-elif quantization == "8bit":
-    try:
-        from transformers import BitsAndBytesConfig
-        model_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
-        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "quantization_8bit_enabled"}}), flush=True)
-    except ImportError:
-        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "bitsandbytes_not_found_skipping_quantization"}}), flush=True)
-
-model = SentenceTransformer(
-    MODEL_NAME,
-    trust_remote_code=True,
-    device=device,
-    model_kwargs=model_kwargs,
-)
-
-print(json.dumps({"id": "init", "type": "status", "payload": {"message": "model_loaded"}}), flush=True)
-
-
-def embed_texts(texts: list[str]) -> list[list[float]]:
+def embed_texts(model, texts: list[str]) -> list[list[float]]:
     """
     Embed texts with MRL truncation to 1024 dimensions.
     
@@ -104,6 +104,113 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
 def main():
     """IPC loop - read JSON from stdin, write JSON to stdout."""
+    from sentence_transformers import SentenceTransformer
+    import torch
+
+    # Load model on startup
+    print(
+        json.dumps(
+            {"id": "init", "type": "status", "payload": {"message": "loading_model"}}
+        ),
+        flush=True,
+    )
+
+    explicit = os.getenv("EMBED_DEVICE")
+    device = resolve_device(explicit, torch)
+    print(
+        json.dumps(
+            {
+                "id": "init",
+                "type": "status",
+                "payload": {
+                    "message": f"using_device_{device}",
+                    "requested": (explicit or "auto"),
+                },
+            }
+        ),
+        flush=True,
+    )
+
+    # Parse quantization config
+    quantization = os.getenv("EMBED_QUANTIZATION")
+    model_kwargs = {"dtype": torch.bfloat16}
+
+    if quantization == "4bit":
+        try:
+            from transformers import BitsAndBytesConfig
+
+            model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+            print(
+                json.dumps(
+                    {
+                        "id": "init",
+                        "type": "status",
+                        "payload": {"message": "quantization_4bit_enabled"},
+                    }
+                ),
+                flush=True,
+            )
+        except ImportError:
+            print(
+                json.dumps(
+                    {
+                        "id": "init",
+                        "type": "status",
+                        "payload": {
+                            "message": "bitsandbytes_not_found_skipping_quantization"
+                        },
+                    }
+                ),
+                flush=True,
+            )
+    elif quantization == "8bit":
+        try:
+            from transformers import BitsAndBytesConfig
+
+            model_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+            print(
+                json.dumps(
+                    {
+                        "id": "init",
+                        "type": "status",
+                        "payload": {"message": "quantization_8bit_enabled"},
+                    }
+                ),
+                flush=True,
+            )
+        except ImportError:
+            print(
+                json.dumps(
+                    {
+                        "id": "init",
+                        "type": "status",
+                        "payload": {
+                            "message": "bitsandbytes_not_found_skipping_quantization"
+                        },
+                    }
+                ),
+                flush=True,
+            )
+
+    model = SentenceTransformer(
+        MODEL_NAME,
+        trust_remote_code=True,
+        device=device,
+        model_kwargs=model_kwargs,
+    )
+
+    print(
+        json.dumps(
+            {"id": "init", "type": "status", "payload": {"message": "model_loaded"}}
+        ),
+        flush=True,
+    )
+
     print(json.dumps({"id": "ready", "type": "ready", "payload": {}}), flush=True)
 
     for line in sys.stdin:
@@ -122,7 +229,7 @@ def main():
                         "payload": {"error": "No texts provided"},
                     }
                 else:
-                    embeddings = embed_texts(texts)
+                    embeddings = embed_texts(model, texts)
                     response = {
                         "id": req_id,
                         "type": "embed_response",
