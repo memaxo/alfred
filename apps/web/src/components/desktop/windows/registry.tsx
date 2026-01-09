@@ -10,12 +10,19 @@
 import {
   Bell,
   Bot,
+  Box,
   Code,
+  Code2,
+  Database,
   FileText,
   FolderKanban,
+  FolderOpen,
+  GitBranch,
+  GitPullRequest,
   Layers,
   LayoutDashboard,
   List,
+  ListTodo,
   MessageSquare,
   Network,
   Search,
@@ -23,23 +30,28 @@ import {
   Shield,
   Square,
   Terminal,
-  Workflow,
 } from "lucide-react";
 // Phase 2/3 apps
 import {
   AdminAppWindow,
+  AgentFSAppWindow,
+  AgentsAppWindow,
+  ChatAppWindow,
+  CodeAppWindow,
+  DockerAppWindow,
+  FilesAppWindow,
+  KnowledgeAppWindow,
+  LinearAppWindow,
   MetricsAppWindow,
   PolicyAppWindow,
+  PRReviewAppWindow,
   TaskManagerAppWindow,
+  WorkflowAppWindow,
 } from "@/components/apps";
-// Legacy window components (from old ReactFlow system)
-import { AgentsWindow } from "@/components/windows/agents/agents-window";
-import { ChatWindow } from "@/components/windows/chat/chat-window";
 import { CodexWindow } from "@/components/windows/codex/codex-window";
 import { ConceptWindow } from "@/components/windows/concept/concept-window";
 import { DroidWindow } from "@/components/windows/droid/droid-window";
 import { IntegrationsWindow } from "@/components/windows/integrations/integrations-window";
-import { KnowledgeWindow } from "@/components/windows/knowledge/knowledge-window";
 import { NoteWindow } from "@/components/windows/note/note-window";
 import { ProjectWindow } from "@/components/windows/project/project-window";
 import { ReminderWindow } from "@/components/windows/reminder/reminder-window";
@@ -47,7 +59,6 @@ import { SettingsWindow } from "@/components/windows/settings/settings-window";
 import { TerminalWindow } from "@/components/windows/terminal/terminal-window";
 import { TodoWindow } from "@/components/windows/todo/todo-window";
 import { WorkflowListWindow } from "@/components/windows/workflow/workflow-list-window";
-import { WorkflowWindow } from "@/components/windows/workflow/workflow-window";
 
 import type { WindowType } from "@/store/desktop/types";
 
@@ -63,7 +74,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   // Tier 0: Core Experience (Legacy)
   chat: {
     type: "chat",
-    component: ChatWindow,
+    component: ChatAppWindow,
     metadata: {
       label: "Chat",
       icon: MessageSquare,
@@ -73,7 +84,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       singleton: true,
       tier: "primary",
     },
-    isLegacy: true,
+    isLegacy: false,
   },
   terminal: {
     type: "terminal",
@@ -107,7 +118,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   // Tier 1: Knowledge & Exploration (Legacy)
   knowledge: {
     type: "knowledge",
-    component: KnowledgeWindow,
+    component: KnowledgeAppWindow,
     metadata: {
       label: "Knowledge",
       icon: Network,
@@ -117,21 +128,21 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       singleton: false,
       tier: "secondary",
     },
-    isLegacy: true,
+    isLegacy: false,
   },
   workflow: {
     type: "workflow",
-    component: WorkflowWindow,
+    component: WorkflowAppWindow,
     metadata: {
       label: "Workflow",
-      icon: Workflow,
+      icon: GitBranch,
       defaultSize: { width: 700, height: 500 },
       minSize: { width: 500, height: 400 },
       resizable: true,
       singleton: false,
       tier: "secondary",
     },
-    isLegacy: true,
+    isLegacy: false,
   },
   concept: {
     type: "concept",
@@ -267,11 +278,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   // Placeholder for future windows (will be implemented as needed)
   code: {
     type: "code",
-    component: null,
+    component: CodeAppWindow,
     metadata: {
       label: "Code",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: Code2,
+      defaultSize: { width: 800, height: 600 },
+      minSize: { width: 600, height: 400 },
       resizable: true,
       singleton: true,
       tier: "secondary",
@@ -280,17 +292,17 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   agents: {
     type: "agents",
-    component: AgentsWindow,
+    component: AgentsAppWindow,
     metadata: {
       label: "Agent Waves",
       icon: Bot,
-      defaultSize: { width: 600, height: 500 },
-      minSize: { width: 450, height: 400 },
+      defaultSize: { width: 700, height: 500 },
+      minSize: { width: 500, height: 400 },
       resizable: true,
       singleton: true,
       tier: "primary",
     },
-    isLegacy: true,
+    isLegacy: false,
   },
   admin: {
     type: "admin",
@@ -322,11 +334,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   docker: {
     type: "docker",
-    component: null,
+    component: DockerAppWindow,
     metadata: {
       label: "Docker",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: Box,
+      defaultSize: { width: 700, height: 500 },
+      minSize: { width: 500, height: 400 },
       resizable: true,
       singleton: false,
       tier: "tertiary",
@@ -335,11 +348,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   "pr-review": {
     type: "pr-review",
-    component: null,
+    component: PRReviewAppWindow,
     metadata: {
       label: "PR Review",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: GitPullRequest,
+      defaultSize: { width: 800, height: 600 },
+      minSize: { width: 600, height: 400 },
       resizable: true,
       singleton: false,
       tier: "tertiary",
@@ -348,10 +362,11 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   agentfs: {
     type: "agentfs",
-    component: null,
+    component: AgentFSAppWindow,
     metadata: {
       label: "AgentFS",
-      defaultSize: { width: 600, height: 400 },
+      icon: Database,
+      defaultSize: { width: 600, height: 450 },
       minSize: { width: 400, height: 300 },
       resizable: true,
       singleton: true,
@@ -361,10 +376,11 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   files: {
     type: "files",
-    component: null,
+    component: FilesAppWindow,
     metadata: {
       label: "Files",
-      defaultSize: { width: 600, height: 400 },
+      icon: FolderOpen,
+      defaultSize: { width: 600, height: 450 },
       minSize: { width: 400, height: 300 },
       resizable: true,
       singleton: false,
@@ -467,11 +483,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   linear: {
     type: "linear",
-    component: null,
+    component: LinearAppWindow,
     metadata: {
       label: "Linear",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: ListTodo,
+      defaultSize: { width: 800, height: 600 },
+      minSize: { width: 600, height: 400 },
       resizable: true,
       singleton: true,
       tier: "tertiary",
@@ -480,42 +497,45 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   notes: {
     type: "notes",
-    component: null,
+    component: NoteWindow,
     metadata: {
       label: "Notes",
+      icon: FileText,
       defaultSize: { width: 600, height: 400 },
       minSize: { width: 400, height: 300 },
       resizable: true,
       singleton: false,
       tier: "tertiary",
     },
-    isLegacy: false,
+    isLegacy: true,
   },
   reminders: {
     type: "reminders",
-    component: null,
+    component: ReminderWindow,
     metadata: {
       label: "Reminders",
+      icon: Bell,
       defaultSize: { width: 600, height: 400 },
       minSize: { width: 400, height: 300 },
       resizable: true,
       singleton: false,
       tier: "tertiary",
     },
-    isLegacy: false,
+    isLegacy: true,
   },
   todos: {
     type: "todos",
-    component: null,
+    component: TodoWindow,
     metadata: {
       label: "Todos",
+      icon: Square,
       defaultSize: { width: 600, height: 400 },
       minSize: { width: 400, height: 300 },
       resizable: true,
       singleton: false,
       tier: "tertiary",
     },
-    isLegacy: false,
+    isLegacy: true,
   },
 };
 

@@ -29,4 +29,32 @@ describe("Desktop Actions", () => {
     expect(tmAction).toBeDefined();
     expect(tmAction?.label).toBe("New Task Manager");
   });
+
+  it("includes spawn-code action", () => {
+    const actions = getSpawnActions();
+    const action = actions.find((a) => a.id === "spawn-code");
+    expect(action).toBeDefined();
+    expect(action?.label).toBe("New Code");
+  });
+
+  it("includes spawn-files action", () => {
+    const actions = getSpawnActions();
+    const action = actions.find((a) => a.id === "spawn-files");
+    expect(action).toBeDefined();
+    expect(action?.label).toBe("New Files");
+  });
+
+  it("includes spawn-docker action", () => {
+    const actions = getSpawnActions();
+    const action = actions.find((a) => a.id === "spawn-docker");
+    expect(action).toBeDefined();
+    expect(action?.label).toBe("New Docker");
+  });
+
+  it("includes spawn-pr-review action", () => {
+    const actions = getSpawnActions();
+    const action = actions.find((a) => a.id === "spawn-pr-review");
+    expect(action).toBeDefined();
+    expect(action?.label).toBe("New PR Review");
+  });
 });
