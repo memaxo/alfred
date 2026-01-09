@@ -60,12 +60,53 @@ The user-visible proof is:
 
 ## Outcomes & Retrospective
 
-- Milestones 1-4 implemented: durable entities now carry `projectId` (or are project-attached via join tables), and AgentFS containers are reused per project.
-- Milestone 5 implemented: project archival + decay hooks are in place, internal research is project-aware (patterns + conventions), and pattern retention is automated.
-- Milestone 6 implemented: assistant entities (notes, reminders, timers, bookmarks, tasks, events) and workflow replays/suspensions are now project-scoped.
-- Added gated schedulers:
-  - `SCHED_PROJECT_LIFECYCLE=1` to auto-archive inactive projects.
-  - `SCHED_PATTERN_LIFECYCLE=1` to retire/quarantine stale workflow patterns.
+**Status: Complete** (2026-01-09)
+
+All six milestones have been successfully implemented and verified:
+
+- **Milestone 1**: Linear workspace linkage fixed via `linear_space_id` column. Projects can now reliably link to Linear projects using the correct organization ID rather than filesystem paths.
+
+- **Milestone 2**: Codex sessions and runs are project-scoped. Schema includes `project_id` columns with proper indexes (`codex_sessions_project_idx`, `codex_runs_project_started_idx`). Runtime propagates `projectId` through orchestrator to Codex execution metadata.
+
+- **Milestone 3**: All durable knowledge entities are project-scoped:
+  - Conversations and messages have `project_id`
+  - RAG documents use `project_rag_documents` join table (preserves global deduplication)
+  - Memory nodes and edges have `project_id` columns
+  - Deployments are project-scoped
+
+- **Milestone 4**: Project-container attachments implemented via `project_containers` table. AgentFS workspace reuse per project is operational (container name derived from project ID).
+
+- **Milestone 5**: Project lifecycle management complete:
+  - `archived_at` and `archived_reason` columns added to projects
+  - `SCHED_PROJECT_LIFECYCLE=1` scheduler auto-archives inactive projects (30-day default)
+  - Internal research (`lookupPatterns`, `extractConventions`) is project-aware with cross-project fallback
+  - `SCHED_PATTERN_LIFECYCLE=1` scheduler retires/quarantines stale patterns
+
+- **Milestone 6**: Assistant artifacts and workflow replays are project-scoped:
+  - All assistant tables (tasks, notes, events, reminders, bookmarks, timers) have `project_id`
+  - Workflow suspension/replay propagates `projectId`
+  - SQLite schema parity maintained
+
+**Key Migrations:**
+- `0071_linearspace.sql` - Linear workspace ID
+- `0072_codexproject.sql` - Codex project scoping
+- `0073_chatproject.sql` - Conversation project scoping
+- `0074_ragproject.sql` - RAG project attachments
+- `0075_graphproject.sql` - Memory graph project scoping
+- `0076_deployproject.sql` - Deployment project scoping
+- `0077_projectcontainers.sql` - Container attachment table
+
+**Verification:**
+- All migrations applied successfully
+- Tests exist for schedulers (`project-lifecycle.scheduler.test.ts`, `pattern-lifecycle.scheduler.test.ts`)
+- Project router tests verify Linear linkage
+- Schema indexes ensure efficient project-scoped queries
+
+**Lessons Learned:**
+- SQLite schema parity is critical for test isolation
+- Join tables (`project_rag_documents`) preserve deduplication while enabling project scoping
+- Scheduler gating via env flags prevents accidental execution in multi-instance deployments
+- Project detection from workspace path remains the primary creation mechanism
 
 ## Context and Orientation
 

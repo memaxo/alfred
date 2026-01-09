@@ -28,7 +28,8 @@ A privacy-first, fully offline personal AI assistant built for deep hyperpersona
 - [Cerebras Fast LLM Integration](#cerebras-fast-llm-integration)
 - [Cognitive State Machine](#cognitive-state-machine)
 - [Personality Hyperparameters (Planned)](#personality-hyperparameters-planned)
-- [Agent Wave Orchestration](#agent-wave-orchestration)
+- [Agent Client Protocol (ACP)](#agent-client-protocol-acp)
+- [Execution Engines (Codex & Droid)](#execution-engines-codex--droid)
 - [Local Voice Pipeline](#local-voice-pipeline)
 - [Neural Orb & Face Evolution](#neural-orb--face-evolution)
 - [Terminal UI (TUI)](#terminal-ui-tui)
@@ -130,23 +131,26 @@ Open [http://localhost:3000](http://localhost:3000) to access the web interface.
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| **Chat Interface** | ✅ Stable | Conversational AI with tool execution |
-| **Voice S2S** | ✅ Stable | Local speech-to-speech with Maya1/NeMo (Python) |
+| **Chat Interface** | 🚧 Beta | Conversational AI with tool execution |
+| **Voice S2S** | 🚧 Beta | Local speech-to-speech with Maya1/NeMo (Python) |
+| **Agent Client Protocol** | 🚧 Beta | Standardized agent-client communication (ACP) |
+| **Codex Engine** | 🚧 Beta | Primary Rust-based execution and reasoning engine |
+| **Droid Integration** | 🚧 Beta | Secure, sandboxed deterministic task execution |
 | **Knowledge Graph** | ✅ Stable | Hypergraph-based memory with semantic search |
-| **Mindscape Visualization** | ✅ Stable | WebGPU-powered spatial knowledge canvas |
-| **Workflow Engine** | ✅ Stable | Multi-step autonomous task execution |
-| **Agent Wave Orchestration** | ✅ Stable | Parallel multi-agent task decomposition |
+| **Mindscape Visualization** | 🚧 Beta | Spatial knowledge canvas |
+| **Workflow Engine** | 🚧 Beta | Multi-step autonomous task execution |
+| **Agent Wave Orchestration** | 🚧 Beta | Parallel multi-agent task decomposition |
 | **Tool System** | ✅ Stable | Extensible MCP-compatible tool framework |
 | **Bayesian Autonomy** | ✅ Stable | Trust levels that adapt based on outcomes |
-| **Cognitive State Machine** | ✅ Stable | Event-sourced states with physiology regulation |
-| **Docker Integration** | ✅ Stable | Container management and deployment |
-| **Linear Integration** | ✅ Stable | Issue tracking with agent activities |
-| **Biometric Security** | ✅ Stable | Passkey elevation for high-risk operations |
-| **Terminal UI (TUI)** | ✅ Stable | Headless dashboard with OpenTUI React |
-| **Neural Orb** | ✅ Stable | WebGL presence indicator with state mapping |
+| **Cognitive State Machine** | 🚧 Beta | Event-sourced states with physiology regulation |
+| **Docker Integration** | 🚧 Beta | Container management and deployment |
+| **Linear Integration** | 🚧 Beta | Issue tracking with agent activities |
+| **Biometric Security** | 🚧 Beta | Passkey elevation for high-risk operations |
+| **Terminal UI (TUI)** | 🚧 Beta | Headless dashboard with OpenTUI React |
+| **Neural Orb** | 🚧 Beta | WebGL presence indicator with state mapping |
 | **Cerebras Integration** | 🚧 Beta | 2,100 tok/s fast LLM inference |
 | **Model Finetuning** | 🚧 Beta | MLX/LoRA adapters on interaction history |
-| **Desktop Shell UI** | ✅ Stable | JARVIS-inspired window manager, orb, components |
+| **Desktop Shell UI** | 🚧 Beta | JARVIS-inspired window manager, orb, components |
 | **Desktop Native Wrapper** | 📋 Planned | Buntralino packaging (Bun + Neutralino.js) |
 | **iOS Companion** | 🚧 Beta | React Native mobile interface |
 | **Generative UI** | 📋 Planned | LLM-generated dynamic components |
@@ -352,8 +356,10 @@ This isn't configuration—it's emergent behavior from continuous self-supervisi
 - HAMT/interval/B-tree indices for fast traversal
 - Causal reasoning and decision tracking
 
-**Agent Runtime** (`packages/runtime`)
+**Agent Runtime & Execution** (`packages/runtime`, `packages/agent`, `packages/protocol`, `packages/codex`)
 - Orchestrates multi-agent "waves" for complex tasks
+- Agent Client Protocol (ACP) for standardized client-agent communication
+- Codex (Rust) and Droid engines for secure, high-performance execution
 - AI SDK v6 streaming with tool chaining and suspend/resume
 - Conflict resolution via Arbiter when agents disagree
 - Context building from preferences, memory, cognitive state, and learnings
@@ -562,6 +568,38 @@ For complex tasks, ALFRED decomposes work into subtasks and executes them using 
 | **arbiter** | Conflict resolution | none (reasoning only) |
 
 Each wave tracks progress in ExecPlan documents under `.agent/plans/<runId>/`.
+
+---
+
+## Agent Client Protocol (ACP)
+
+ALFRED implements the **Agent Client Protocol (ACP)**, an open standard designed to unify communication between code editors (clients) and AI agents. This allows ALFRED to interact with a wide variety of agents interchangeably while maintaining a consistent security and policy layer.
+
+### Key Benefits
+- **Standardization**: Bidirectional JSON-RPC communication between clients (IDEs, CLIs) and agents.
+- **Interoperability**: Native support for multiple agents including Claude Code, Codex CLI, Roo, and more.
+- **Session Management**: Full lifecycle control with support for session resumption and multi-agent coordination.
+- **Secure Handling**: Policy-based tool execution and biometric elevation for high-autonomy operations.
+
+ALFRED Desktop serves as a first-class ACP client, managing sessions and capabilities through a centralized `ACPClientManager`.
+
+---
+
+## Execution Engines (Codex & Droid)
+
+ALFRED leverages specialized execution engines to perform complex tasks with high reliability, performance, and security.
+
+### Codex Agent
+The **Codex** agent is ALFRED's primary "thinking" engine. It wraps a high-performance Rust-based CLI (`codex-rs`) to execute code and reason about complex problems.
+- **Event-Driven**: Streams structured events (thoughts, commands, artifacts) via NDJSON for real-time observability.
+- **Autonomy-Aware**: Maps cognitive autonomy levels directly to sandbox policies (`read-only` vs `workspace-write`).
+- **Worktree Isolation**: Executes tasks in isolated Git worktrees to enable parallel agent waves without file contention.
+
+### Droid Agent
+The **Droid** agent is a specialized, non-interactive engine designed for deterministic task execution in highly secure or constrained environments.
+- **Strict Sandboxing**: Enforces rigid filesystem boundaries and environment allowlists.
+- **Secure Spawning**: Uses file descriptor handles and secure CWD logic to protect against TOCTOU (Time-of-check to time-of-use) attacks.
+- **Deterministic**: Optimized for reliable tool execution where multi-step interactive reasoning is not required.
 
 ---
 
