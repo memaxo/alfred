@@ -16,6 +16,7 @@ import { homeRouter } from "./home";
 import { jwksRouter } from "./jwks";
 import { knowledgeRouter } from "./knowledge";
 import { linearRouter } from "./linear";
+import { metricsRouter } from "./metrics";
 import { noteRouter } from "./note";
 import { orchestratorRouter } from "./orchestrator";
 import { planRouter } from "./plan";
@@ -61,6 +62,7 @@ export const appRouter = router({
   eval: evalRouter,
   deploy: deployRouter,
   linear: linearRouter,
+  metrics: metricsRouter,
   assistant: assistantRouter,
   orchestrator: orchestratorRouter,
   plan: planRouter,

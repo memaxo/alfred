@@ -4,70 +4,19 @@
  * Metric Explorer - Browse available metrics
  */
 
-import { Activity, BarChart, Clock, Gauge, Search } from "lucide-react";
+import {
+  Activity,
+  BarChart,
+  Clock,
+  Gauge,
+  Loader2,
+  Search,
+} from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 import type { Metric } from "./index";
-
-const mockMetrics: Metric[] = [
-  {
-    name: "http_requests_total",
-    type: "counter",
-    help: "Total HTTP requests",
-    labels: ["method", "status"],
-    value: 12_453,
-  },
-  {
-    name: "http_request_duration_seconds",
-    type: "histogram",
-    help: "Request duration",
-    labels: ["method"],
-    value: 0.124,
-  },
-  {
-    name: "active_connections",
-    type: "gauge",
-    help: "Current active connections",
-    labels: [],
-    value: 42,
-  },
-  {
-    name: "memory_usage_bytes",
-    type: "gauge",
-    help: "Memory usage in bytes",
-    labels: ["type"],
-    value: 524_288_000,
-  },
-  {
-    name: "agent_tasks_processed",
-    type: "counter",
-    help: "Tasks processed by agents",
-    labels: ["agent"],
-    value: 891,
-  },
-  {
-    name: "cognitive_transitions_total",
-    type: "counter",
-    help: "Cognitive state transitions",
-    labels: ["from", "to"],
-    value: 156,
-  },
-  {
-    name: "llm_tokens_total",
-    type: "counter",
-    help: "Total LLM tokens used",
-    labels: ["model"],
-    value: 2_456_789,
-  },
-  {
-    name: "db_query_duration_seconds",
-    type: "histogram",
-    help: "Database query duration",
-    labels: ["query"],
-    value: 0.045,
-  },
-];
 
 const typeIcons = {
   counter: Activity,
@@ -87,9 +36,20 @@ export function MetricExplorer() {
   const [search, setSearch] = useState("");
   const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
 
-  const filtered = mockMetrics.filter((m) =>
+  const { data: metrics, isLoading } = trpc.metrics.getSnapshot.useQuery();
+
+  const filtered = ((metrics as unknown as Metric[]) || []).filter((m) =>
     m.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center text-biolum-dim">
+        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+        Loading metrics...
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full">
@@ -110,8 +70,8 @@ export function MetricExplorer() {
         <ScrollArea className="h-[calc(100%-52px)]">
           <div className="space-y-1 p-2">
             {filtered.map((metric) => {
-              const Icon = typeIcons[metric.type];
-              const color = typeColors[metric.type];
+              const Icon = typeIcons[metric.type] || Activity;
+              const color = typeColors[metric.type] || "text-biolum";
 
               return (
                 <button
@@ -139,7 +99,7 @@ export function MetricExplorer() {
       </div>
 
       {/* Metric Detail */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 overflow-auto p-4">
         {selectedMetric ? (
           <div className="space-y-4">
             <div>
@@ -157,24 +117,43 @@ export function MetricExplorer() {
                 </div>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-biolum-dim text-xs">Current Value</div>
+                <div className="text-biolum-dim text-xs">Total Values</div>
                 <div className="mt-1 font-mono text-lg">
-                  {selectedMetric.value?.toLocaleString()}
+                  {selectedMetric.values.length}
                 </div>
               </div>
             </div>
 
-            {selectedMetric.labels.length > 0 && (
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="mb-2 text-biolum-dim text-xs">Labels</div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedMetric.labels.map((label) => (
-                    <span
-                      className="rounded bg-white/10 px-2 py-0.5 font-mono text-sm"
-                      key={label}
+            {selectedMetric.values.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-biolum-dim text-xs uppercase tracking-wider">
+                  Values
+                </div>
+                <div className="space-y-1">
+                  {selectedMetric.values.map((v, i) => (
+                    <div
+                      className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-2 text-sm"
+                      key={`${selectedMetric.name}-val-${i}`}
                     >
-                      {label}
-                    </span>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(v.labels).map(([key, val]) => (
+                          <span
+                            className="rounded bg-biolum/10 px-1.5 py-0.5 font-mono text-[10px] text-biolum"
+                            key={key}
+                          >
+                            {key}={val}
+                          </span>
+                        ))}
+                        {Object.keys(v.labels).length === 0 && (
+                          <span className="text-biolum-dim italic">
+                            no labels
+                          </span>
+                        )}
+                      </div>
+                      <div className="font-medium font-mono text-biolum">
+                        {v.value.toLocaleString()}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

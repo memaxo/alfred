@@ -23,10 +23,13 @@ import { QueryEditor } from "./query-editor";
 
 export type Metric = {
   name: string;
-  type: "counter" | "gauge" | "histogram" | "summary";
   help: string;
-  labels: string[];
-  value?: number;
+  type: "counter" | "gauge" | "histogram" | "summary";
+  values: {
+    value: number;
+    labels: Record<string, string>;
+  }[];
+  aggregator: string;
 };
 
 export type MetricQuery = {
@@ -42,7 +45,7 @@ export type MetricQuery = {
 
 export function MetricsApp({ window: _window }: WindowComponentProps) {
   const [tab, setTab] = useState<"explorer" | "query" | "alerts" | "dashboard">(
-    "explorer"
+    "dashboard"
   );
 
   return (
@@ -51,17 +54,19 @@ export function MetricsApp({ window: _window }: WindowComponentProps) {
       <div className="flex h-10 items-center justify-between border-white/5 border-b px-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-biolum" />
-          <span className="font-medium text-sm">Metrics Dashboard</span>
+          <span className="font-medium text-biolum text-sm">
+            Metrics Dashboard
+          </span>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-white/5 border-b">
+      <div className="flex border-white/5 border-b bg-void-surface/30">
         {[
+          { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
           { id: "explorer", icon: Search, label: "Explorer" },
           { id: "query", icon: Code, label: "Query" },
           { id: "alerts", icon: Bell, label: "Alerts" },
-          { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
         ].map((t) => (
           <button
             className={cn(

@@ -4,61 +4,65 @@
  * Dashboard Builder - Create custom metric dashboards
  */
 
-import { Maximize2, Plus, Settings } from "lucide-react";
+import { Loader2, Maximize2, Plus, Settings } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-type Panel = {
-  id: string;
-  title: string;
-  type: "line" | "gauge" | "stat" | "table";
-  query: string;
-  width: 1 | 2 | 3;
-};
-
-const mockPanels: Panel[] = [
-  {
-    id: "1",
-    title: "Request Rate",
-    type: "line",
-    query: "rate(http_requests_total[5m])",
-    width: 2,
-  },
-  {
-    id: "2",
-    title: "Error Rate",
-    type: "gauge",
-    query: 'rate(http_requests_total{status=~"5.."}[5m])',
-    width: 1,
-  },
-  {
-    id: "3",
-    title: "Active Users",
-    type: "stat",
-    query: "active_connections",
-    width: 1,
-  },
-  {
-    id: "4",
-    title: "Response Time",
-    type: "line",
-    query: "histogram_quantile(0.95, http_request_duration_seconds)",
-    width: 2,
-  },
-  {
-    id: "5",
-    title: "Top Endpoints",
-    type: "table",
-    query: "topk(5, rate(http_requests_total[1h]))",
-    width: 1,
-  },
-];
+import { trpc } from "@/utils/trpc";
+import type { Metric } from "./index";
 
 export function DashboardBuilder() {
+  const { data: metrics, isLoading } = trpc.metrics.getSnapshot.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center text-biolum-dim">
+        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+        Loading metrics...
+      </div>
+    );
+  }
+
+  const metricList = (metrics as unknown as Metric[]) || [];
+
+  // Find key metrics
+  const assistantRequests = metricList.find(
+    (m) => m.name === "assistant_generate_requests_total"
+  );
+  const toolCalls = metricList.find(
+    (m) => m.name === "assistant_tool_calls_total"
+  );
+  const droidRuns = metricList.find((m) => m.name === "droid_exec_runs_total");
+  const codexRuns = metricList.find((m) => m.name === "codex_exec_runs_total");
+
+  const getSum = (metric?: Metric) => {
+    if (!metric) {
+      return 0;
+    }
+    return metric.values.reduce((acc, v) => acc + v.value, 0);
+  };
+
+  const toolCallsData =
+    toolCalls?.values
+      .map((v) => ({
+        name: v.labels.tool || "unknown",
+        value: v.value,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5) || [];
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-white/5 border-b p-4">
-        <span className="font-medium">Dashboard</span>
+        <span className="font-medium">System Overview</span>
         <div className="flex gap-2">
           <Button className="gap-1" size="sm" variant="outline">
             <Settings className="h-3 w-3" />
@@ -73,109 +77,126 @@ export function DashboardBuilder() {
 
       <div className="flex-1 overflow-auto p-4">
         <div className="grid grid-cols-3 gap-4">
-          {mockPanels.map((panel) => (
-            <div
-              className={cn(
-                "rounded-lg border border-white/10 bg-white/5",
-                panel.width === 2 && "col-span-2",
-                panel.width === 3 && "col-span-3"
-              )}
-              key={panel.id}
-            >
-              <div className="flex items-center justify-between border-white/5 border-b p-2">
-                <span className="text-sm">{panel.title}</span>
-                <Button className="h-6 w-6" size="icon" variant="ghost">
-                  <Maximize2 className="h-3 w-3" />
-                </Button>
-              </div>
+          {/* Stats Panels */}
+          <StatPanel
+            subtitle="Total generations"
+            title="Assistant Requests"
+            value={getSum(assistantRequests)}
+          />
+          <StatPanel
+            subtitle="Autonomous executions"
+            title="Droid Runs"
+            value={getSum(droidRuns)}
+          />
+          <StatPanel
+            subtitle="Context validations"
+            title="Codex Runs"
+            value={getSum(codexRuns)}
+          />
 
-              <div className="h-32 p-2">
-                {panel.type === "line" && <MockLineChart />}
-                {panel.type === "gauge" && <MockGauge />}
-                {panel.type === "stat" && <MockStat />}
-                {panel.type === "table" && <MockTable />}
-              </div>
+          {/* Chart Panel */}
+          <div className="col-span-2 rounded-lg border border-white/10 bg-white/5">
+            <div className="flex items-center justify-between border-white/5 border-b p-2">
+              <span className="text-sm">Top Tool Invocations</span>
+              <Button className="h-6 w-6" size="icon" variant="ghost">
+                <Maximize2 className="h-3 w-3" />
+              </Button>
             </div>
-          ))}
+            <div className="h-64 p-4">
+              {toolCallsData.length > 0 ? (
+                <ResponsiveContainer height="100%" width="100%">
+                  <BarChart data={toolCallsData} layout="vertical">
+                    <CartesianGrid
+                      horizontal={false}
+                      stroke="#333"
+                      strokeDasharray="3 3"
+                    />
+                    <XAxis fontSize={12} stroke="#666" type="number" />
+                    <YAxis
+                      dataKey="name"
+                      fontSize={12}
+                      stroke="#666"
+                      type="category"
+                      width={100}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#111",
+                        border: "1px solid #333",
+                        borderRadius: "8px",
+                      }}
+                      itemStyle={{ color: "#00f3ff" }}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                      {toolCallsData.map((_entry, index) => (
+                        <Cell
+                          fill={`rgba(0, 243, 255, ${1 - index * 0.15})`}
+                          key={`cell-${index}`}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-biolum-dim italic">
+                  No tool call data available
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Table Panel */}
+          <div className="rounded-lg border border-white/10 bg-white/5">
+            <div className="flex items-center justify-between border-white/5 border-b p-2">
+              <span className="text-sm">Active Metrics</span>
+              <Button className="h-6 w-6" size="icon" variant="ghost">
+                <Maximize2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="h-64 overflow-auto p-2">
+              <table className="w-full text-biolum-dim text-xs">
+                <tbody className="divide-y divide-white/5">
+                  {metricList.slice(0, 10).map((m) => (
+                    <tr key={m.name}>
+                      <td
+                        className="max-w-[120px] truncate py-2 font-mono"
+                        title={m.name}
+                      >
+                        {m.name}
+                      </td>
+                      <td className="py-2 text-right font-mono text-biolum">
+                        {getSum(m).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function MockLineChart() {
+function StatPanel({
+  title,
+  value,
+  subtitle,
+}: {
+  title: string;
+  value: number;
+  subtitle: string;
+}) {
   return (
-    <div className="flex h-full items-end gap-1">
-      {Array.from({ length: 20 }).map((_, i) => (
-        <div
-          className="flex-1 rounded-t bg-biolum/60"
-          key={i}
-          style={{ height: `${30 + Math.random() * 70}%` }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function MockGauge() {
-  const value = 0.15;
-  return (
-    <div className="flex h-full flex-col items-center justify-center">
-      <div className="relative h-16 w-16">
-        <svg className="-rotate-90 h-full w-full" viewBox="0 0 36 36">
-          <path
-            className="stroke-white/10"
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            strokeWidth="3"
-          />
-          <path
-            className="stroke-green-500"
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            strokeDasharray={`${value * 100}, 100`}
-            strokeLinecap="round"
-            strokeWidth="3"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center font-mono text-sm">
-          {(value * 100).toFixed(0)}%
-        </div>
+    <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+      <div className="text-biolum-dim text-xs uppercase tracking-wider">
+        {title}
       </div>
-    </div>
-  );
-}
-
-function MockStat() {
-  return (
-    <div className="flex h-full flex-col items-center justify-center">
-      <div className="font-mono text-3xl text-biolum">42</div>
-      <div className="text-biolum-dim text-xs">current</div>
-    </div>
-  );
-}
-
-function MockTable() {
-  return (
-    <div className="h-full overflow-auto text-xs">
-      <table className="w-full">
-        <tbody>
-          {[
-            "/api/chat",
-            "/api/agents",
-            "/api/workflow",
-            "/healthz",
-            "/api/auth",
-          ].map((ep) => (
-            <tr className="border-white/5 border-b" key={ep}>
-              <td className="py-1 font-mono">{ep}</td>
-              <td className="py-1 text-right">
-                {Math.floor(Math.random() * 1000)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="mt-2 font-mono text-3xl text-biolum">
+        {value.toLocaleString()}
+      </div>
+      <div className="mt-1 text-[10px] text-biolum-dim">{subtitle}</div>
     </div>
   );
 }

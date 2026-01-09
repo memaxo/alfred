@@ -259,3 +259,7 @@ export const metricsContentType = metricsRegistry.contentType;
 export function getMetricsSnapshot() {
   return metricsRegistry.metrics();
 }
+
+export function getMetricsJSON() {
+  return metricsRegistry.getMetricsAsJSON();
+}
