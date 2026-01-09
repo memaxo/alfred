@@ -43,101 +43,90 @@ async function runTest(
   }
 }
 
-// ─── Component Tests ──────────────────────────────────────────────────────────
+// ─── React TUI Tests ─────────────────────────────────────────────────────────
 
-async function testInputLineComponent() {
-  const { createInputLineState, createInputLineActions } = await import(
-    "../packages/tui/src/tui/components/input"
-  );
-
-  let state = createInputLineState("placeholder");
-  const actions = createInputLineActions(
-    () => state,
-    (s) => {
-      state = s;
-    }
-  );
-
-  // Test insert
-  actions.insert("hello");
-  if (state.value !== "hello") {
-    throw new Error(`Expected "hello", got "${state.value}"`);
+async function testReactTuiEntrypoint() {
+  const react = await import("../packages/tui/src/tui/react");
+  if (typeof react.createReactTui !== "function") {
+    throw new Error("Expected createReactTui to be a function");
   }
-
-  // Test submit
-  const submitted = actions.submit();
-  if (submitted !== "hello") {
-    throw new Error(`Expected submitted "hello", got "${submitted}"`);
-  }
-  if (state.value !== "") {
-    throw new Error("Expected empty value after submit");
+  if (typeof react.Dashboard !== "function") {
+    throw new Error("Expected Dashboard to be exported");
   }
 }
 
-async function testMessageHistoryComponent() {
-  const { createMessageHistoryState, createMessageHistoryActions } =
-    await import("../packages/tui/src/tui/components/history");
+async function testTuiEntrypoint() {
+  const tui = await import("../packages/tui/src/tui");
+  if (typeof tui.runTui !== "function") {
+    throw new Error("Expected runTui to be a function");
+  }
+}
 
-  let state = createMessageHistoryState();
-  const actions = createMessageHistoryActions(
-    () => state,
-    (s) => {
-      state = s;
+async function testCommands() {
+  const { fuzzyMatch, searchCommands, createStandardCommands } = await import(
+    "../packages/tui/src/tui/input/commands"
+  );
+
+  if (fuzzyMatch("qt", "Quit") <= 0) {
+    throw new Error("Expected fuzzyMatch to match basic patterns");
+  }
+  if (fuzzyMatch("zzz", "Quit") !== 0) {
+    throw new Error("Expected fuzzyMatch to return 0 when no match");
+  }
+
+  const commands = createStandardCommands({
+    quit: () => {},
+    help: () => {},
+    refresh: () => {},
+    focusPanel: () => {},
+    toggleFocusMode: () => {},
+    openMode: () => {},
+  });
+
+  const matches = searchCommands(commands, "quit");
+  if (matches.length === 0 || matches[0]?.id !== "quit") {
+    throw new Error("Expected searchCommands to find quit");
+  }
+}
+
+async function testHeadlessDashboardRun() {
+  const proc = Bun.spawn(
+    [
+      "bun",
+      "../packages/tui/src/bin/alfred.ts",
+      "tui",
+      "--headless",
+      "--skip-intro",
+    ],
+    {
+      cwd: import.meta.dir,
+      env: {
+        ...process.env,
+        TERM: process.env.TERM ?? "xterm-256color",
+        COLUMNS: process.env.COLUMNS ?? "120",
+        LINES: process.env.LINES ?? "40",
+        ALFRED_AUTH_BYPASS: process.env.ALFRED_AUTH_BYPASS ?? "true",
+        ALFRED_API_AUTO_INIT: process.env.ALFRED_API_AUTO_INIT ?? "false",
+      },
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
     }
   );
 
-  // Test add message
-  const id = actions.addMessage({ role: "user", content: "Test" });
-  if (!id) {
-    throw new Error("Expected message ID");
-  }
-  if (state.messages.length !== 1) {
-    throw new Error(`Expected 1 message, got ${state.messages.length}`);
-  }
+  const timeoutMs = 12_000;
+  const timeout = setTimeout(() => proc.kill(), timeoutMs);
+  timeout.unref?.();
 
-  // Test append
-  actions.appendToMessage(id, " appended");
-  if (state.messages[0]?.content !== "Test appended") {
+  const exitCode = await proc.exited;
+  clearTimeout(timeout);
+
+  if (exitCode !== 0) {
+    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
     throw new Error(
-      `Expected "Test appended", got "${state.messages[0]?.content}"`
+      `Expected headless tui to exit 0, got ${exitCode}.\nstdout:\n${stdout}\nstderr:\n${stderr}`
     );
-  }
-
-  // Test scroll
-  actions.scrollUp(5);
-  if (state.scrollOffset !== 5) {
-    throw new Error(`Expected scrollOffset 5, got ${state.scrollOffset}`);
-  }
-  if (state.autoScroll !== false) {
-    throw new Error("Expected autoScroll false after scrollUp");
-  }
-}
-
-async function testStreamComponent() {
-  const { createStreamState, createStreamActions } = await import(
-    "../packages/tui/src/tui/components/stream"
-  );
-
-  let state = createStreamState();
-  const actions = createStreamActions(
-    () => state,
-    (s) => {
-      state = s;
-    }
-  );
-
-  if (state.isStreaming !== false) {
-    throw new Error("Expected initial isStreaming false");
-  }
-
-  actions.setStreaming(true);
-  if (state.isStreaming !== true) {
-    throw new Error("Expected isStreaming true after setStreaming(true)");
-  }
-
-  actions.setStreaming(false);
-  if (state.isStreaming !== false) {
-    throw new Error("Expected isStreaming false after setStreaming(false)");
   }
 }
 
@@ -231,42 +220,6 @@ async function testIntroGreeting() {
   }
 }
 
-// ─── Panel Tests ──────────────────────────────────────────────────────────────
-
-async function testBasePanelImport() {
-  const { BasePanel } = await import("../packages/tui/src/tui/panels/base");
-
-  if (!BasePanel) {
-    throw new Error("Expected BasePanel class to be exported");
-  }
-  if (typeof BasePanel !== "function") {
-    throw new Error("Expected BasePanel to be a class");
-  }
-}
-
-async function testCognitivePanelImport() {
-  const { CognitivePanel } = await import(
-    "../packages/tui/src/tui/panels/cognitive"
-  );
-
-  if (!CognitivePanel) {
-    throw new Error("Expected CognitivePanel class to be exported");
-  }
-}
-
-// ─── Mode Tests ───────────────────────────────────────────────────────────────
-
-async function testBaseModeImport() {
-  const { BaseMode } = await import("../packages/tui/src/tui/modes/base");
-
-  if (!BaseMode) {
-    throw new Error("Expected BaseMode class to be exported");
-  }
-  if (typeof BaseMode !== "function") {
-    throw new Error("Expected BaseMode to be a class");
-  }
-}
-
 // ─── Registry Tests ───────────────────────────────────────────────────────────
 
 async function testRegistryImport() {
@@ -282,10 +235,11 @@ async function testRegistryImport() {
 async function main() {
   log("\n🖥️  TUI Verification\n");
 
-  log("Components:");
-  await runTest("InputLine component", testInputLineComponent);
-  await runTest("MessageHistory component", testMessageHistoryComponent);
-  await runTest("Stream component", testStreamComponent);
+  log("React TUI:");
+  await runTest("React entrypoint import", testReactTuiEntrypoint);
+  await runTest("TUI entrypoint import", testTuiEntrypoint);
+  await runTest("Commands module", testCommands);
+  await runTest("Headless dashboard run", testHeadlessDashboardRun);
 
   log("\nTypography:");
   await runTest("Typography utilities", testTypography);
@@ -296,13 +250,6 @@ async function main() {
   log("\nIntro:");
   await runTest("Logo import", testIntroLogo);
   await runTest("Greeting generator", testIntroGreeting);
-
-  log("\nPanels:");
-  await runTest("BasePanel import", testBasePanelImport);
-  await runTest("CognitivePanel import", testCognitivePanelImport);
-
-  log("\nModes:");
-  await runTest("BaseMode import", testBaseModeImport);
 
   log("\nRegistry:");
   await runTest("Registry import", testRegistryImport);

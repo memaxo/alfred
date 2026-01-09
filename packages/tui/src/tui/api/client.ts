@@ -188,6 +188,44 @@ export class ApiClient {
     const url = `${this.baseUrl}/api/trpc/admin.getStats`;
     return await fetchJson(url);
   }
+
+  // ─── Deploy/Docker ───────────────────────────────────────────────────────
+
+  async listContainers(
+    filter: "all" | "running" | "agent" = "running"
+  ): Promise<
+    ApiResult<{
+      containers: Array<{
+        id: string;
+        name: string;
+        image: string;
+        status: "running" | "paused" | "exited";
+      }>;
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/deploy.containersList?input=${encodeURIComponent(
+      JSON.stringify({ filter })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async getContainerLogs(
+    containerId: string,
+    tail = 200
+  ): Promise<
+    ApiResult<{
+      logs: Array<{
+        timestamp: string;
+        level: "debug" | "info" | "warn" | "error";
+        message: string;
+      }>;
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/deploy.containersLogs?input=${encodeURIComponent(
+      JSON.stringify({ containerId, tail })
+    )}`;
+    return await fetchJson(url);
+  }
 }
 
 // ─── Singleton Instance ──────────────────────────────────────────────────────
