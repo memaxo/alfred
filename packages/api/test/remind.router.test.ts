@@ -130,6 +130,7 @@ describe("remindRouter", () => {
         "Test Reminder",
         dueDate,
         "Test description",
+        undefined,
         undefined
       );
       expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
@@ -137,7 +138,47 @@ describe("remindRouter", () => {
         "user",
         expect.arrayContaining([
           expect.objectContaining({ kind: "reminder", id: mockReminder.id }),
-        ])
+        ]),
+        { projectId: undefined }
+      );
+    });
+
+    it("creates reminder with projectId", async () => {
+      const dueDate = new Date("2025-12-31T12:00:00Z");
+      const projectId = crypto.randomUUID();
+      const mockReminder = {
+        id: crypto.randomUUID(),
+        userId: "test-user",
+        projectId,
+        title: "Project Reminder",
+        due: dueDate,
+        fired: false,
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      createReminderMock.mockResolvedValue(mockReminder);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.remind.create({
+        projectId,
+        title: "Project Reminder",
+        due: dueDate.toISOString(),
+      });
+
+      expect(result).toEqual(mockReminder);
+      expect(createReminderMock).toHaveBeenCalledWith(
+        "test-user",
+        "Project Reminder",
+        dueDate,
+        undefined,
+        undefined,
+        projectId
+      );
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.any(Array),
+        { projectId }
       );
     });
 
@@ -169,6 +210,7 @@ describe("remindRouter", () => {
         "Test Reminder",
         dueDate,
         undefined,
+        undefined,
         undefined
       );
       expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
@@ -176,7 +218,8 @@ describe("remindRouter", () => {
         "user",
         expect.arrayContaining([
           expect.objectContaining({ kind: "reminder", id: mockReminder.id }),
-        ])
+        ]),
+        { projectId: undefined }
       );
     });
 
@@ -253,7 +296,27 @@ describe("remindRouter", () => {
       const result = await caller.remind.list({ limit: 100, offset: 0 });
 
       expect(result).toEqual(mockReminders);
-      expect(getRemindersMock).toHaveBeenCalledWith("test-user", 100, 0);
+      expect(getRemindersMock).toHaveBeenCalledWith(
+        "test-user",
+        100,
+        0,
+        undefined
+      );
+    });
+
+    it("lists reminders scoped to project", async () => {
+      const projectId = crypto.randomUUID();
+      getRemindersMock.mockResolvedValue([]);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      await caller.remind.list({ projectId });
+
+      expect(getRemindersMock).toHaveBeenCalledWith(
+        "test-user",
+        100,
+        0,
+        projectId
+      );
     });
 
     it("uses default limit and offset", async () => {
@@ -262,7 +325,12 @@ describe("remindRouter", () => {
       const caller = await createTestCaller({ userId: "test-user" });
       await caller.remind.list({});
 
-      expect(getRemindersMock).toHaveBeenCalledWith("test-user", 100, 0);
+      expect(getRemindersMock).toHaveBeenCalledWith(
+        "test-user",
+        100,
+        0,
+        undefined
+      );
     });
 
     it("validates limit bounds", async () => {
@@ -303,7 +371,11 @@ describe("remindRouter", () => {
       });
 
       expect(result).toEqual(mockReminders);
-      expect(getDueRemindersMock).toHaveBeenCalledWith("test-user", beforeDate);
+      expect(getDueRemindersMock).toHaveBeenCalledWith(
+        "test-user",
+        beforeDate,
+        undefined
+      );
     });
 
     it("uses current date when before is not provided", async () => {

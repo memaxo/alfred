@@ -39,6 +39,12 @@ export type MindscapeNodeData = {
   icon?: string;
   sourceWindowId?: string;
   metadata?: Record<string, unknown>;
+  // Entity specific
+  entityId?: string;
+  entityType?: string;
+  confidence?: number;
+  archived?: boolean;
+  hgHash?: string;
 };
 
 export type MindscapeEdgeData = {
@@ -236,9 +242,15 @@ export const useMindscapeStore = create<MindscapeStore>()(
           get().addNode(node);
         },
 
-        openInDesktop: (nodeId) => {
+        openInDesktop: (nodeId: string): string | null => {
           const node = get().nodes.find((n) => n.id === nodeId);
-          return node?.data.sourceWindowId ?? null;
+          if (!node) {
+            return null;
+          }
+          if ("sourceWindowId" in node.data && node.data.sourceWindowId) {
+            return node.data.sourceWindowId;
+          }
+          return null;
         },
       }),
       {

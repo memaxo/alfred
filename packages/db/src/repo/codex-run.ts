@@ -15,6 +15,7 @@ type EventInsert = typeof codexEvents.$inferInsert;
 export async function createRun(args: {
   id?: string;
   userId: string;
+  projectId?: string | null;
   sessionId?: string | null;
   threadId?: string | null;
   parentRunId?: string | null;
@@ -45,6 +46,7 @@ export async function createRun(args: {
     .values({
       id: args.id,
       userId: args.userId,
+      projectId: args.projectId ?? null,
       sessionId: args.sessionId ?? null,
       threadId: args.threadId ?? null,
       parentRunId: args.parentRunId ?? null,
@@ -103,6 +105,7 @@ export async function getLatestRunBySession(args: {
 
 export function listRuns(args: {
   userId: string;
+  projectId?: string;
   status?: CodexRunStatus;
   sessionId?: string;
   threadId?: string;
@@ -116,6 +119,9 @@ export function listRuns(args: {
   const offset = Math.max(0, args.offset ?? 0);
 
   const conditions = [eq(codexRuns.userId, args.userId)];
+  if (args.projectId) {
+    conditions.push(eq(codexRuns.projectId, args.projectId));
+  }
   if (args.status) {
     conditions.push(eq(codexRuns.status, args.status));
   }

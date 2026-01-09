@@ -8,6 +8,7 @@ export type CorrectionRow = typeof knowledgeCorrections.$inferSelect;
 export async function createCorrection(params: {
   userId: string;
   resource: string;
+  projectId?: string;
   targetType: "node" | "edge";
   targetId: string;
   operation: "update" | "delete";
@@ -18,6 +19,7 @@ export async function createCorrection(params: {
   const record: CorrectionInsert = {
     userId: params.userId,
     resource: params.resource,
+    projectId: params.projectId ?? null,
     targetType: params.targetType,
     targetId: params.targetId,
     operation: params.operation,

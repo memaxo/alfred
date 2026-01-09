@@ -52,7 +52,10 @@ describe("Internal Research Integration", () => {
       },
     };
 
-    const result = await gatherInternalResearch(mockIntent);
+    const result = await gatherInternalResearch(mockIntent, undefined, {
+      includePatterns: false,
+      includeConventions: false,
+    });
 
     expect(result.existingCode.length).toBeGreaterThan(0);
     const filePaths = result.existingCode;

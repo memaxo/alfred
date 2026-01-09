@@ -11,6 +11,7 @@ type NodeSeed = {
   hash: string;
   kind: string;
   label: string;
+  projectId?: string;
   properties?: Record<string, unknown>;
 };
 type EdgeSeed = {
@@ -19,9 +20,17 @@ type EdgeSeed = {
   fromId: string;
   toId: string;
   kind: string;
+  projectId?: string;
   weight: number;
   metadata?: Record<string, unknown>;
 };
+
+function scopeResource(resource: string, projectId?: string): string {
+  if (!projectId) {
+    return resource;
+  }
+  return `project:${projectId}:${resource}`;
+}
 
 function nodeKey(resource: string, hash: string): string {
   return `${resource}:${hash}`;
@@ -69,7 +78,11 @@ function reasoningNodeHash(
   return hash.digest("hex");
 }
 
-function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
+function makeNode(
+  resource: string,
+  entry: KnowledgeEntry,
+  projectId?: string
+): NodeSeed | null {
   const { data, hash } = entry;
   switch (data._) {
     case "fact":
@@ -78,6 +91,7 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
         hash,
         kind: data._,
         label: data.content,
+        projectId,
         properties: {
           confidence: data.confidence,
           source: data.source,
@@ -90,6 +104,7 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
         hash,
         kind: data._,
         label: data.conclusion,
+        projectId,
         properties: {
           derived: data.derived,
           confidence: data.confidence,
@@ -101,6 +116,7 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
         hash,
         kind: data._,
         label: data.rule,
+        projectId,
         properties: {
           examples: data.examples,
           accuracy: data.accuracy,
@@ -114,6 +130,7 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
 export async function linkRagProvenanceToReasoning(opts: {
   runtimeResource: string;
   executionId: string;
+  projectId?: string;
 }): Promise<void> {
   if (!process.env.DATABASE_URL) {
     return;
@@ -124,7 +141,7 @@ export async function linkRagProvenanceToReasoning(opts: {
       await import("@alfred/db/repo/graph");
 
     const { nodes } = await getReasoningChain({
-      resource: opts.runtimeResource,
+      resource: scopeResource(opts.runtimeResource, opts.projectId),
       executionId: opts.executionId,
       limit: 500,
     });
@@ -154,15 +171,16 @@ export async function linkRagProvenanceToReasoning(opts: {
     }
 
     const edgeSeeds: EdgeSeed[] = [];
+    const projectResource = scopeResource("user", opts.projectId);
     for (const [documentId, reasoningIds] of docToReasoning.entries()) {
-      const docNode = await findRagDocumentNode(documentId);
+      const docNode = await findRagDocumentNode(documentId, opts.projectId);
       if (!docNode) {
         continue;
       }
 
       for (const reasoningId of reasoningIds) {
         const edgeHash = createHash("sha256")
-          .update("user")
+          .update(projectResource)
           .update("|rag_explains|")
           .update(docNode.id)
           .update("|")
@@ -170,11 +188,12 @@ export async function linkRagProvenanceToReasoning(opts: {
           .digest("hex");
 
         edgeSeeds.push({
-          resource: "user",
+          resource: projectResource,
           hash: edgeHash,
           fromId: docNode.id,
           toId: reasoningId,
           kind: "explains",
+          projectId: opts.projectId,
           weight: 1,
           metadata: {
             documentId,
@@ -197,7 +216,8 @@ export async function linkRagProvenanceToReasoning(opts: {
 function makeEdge(
   resource: string,
   entry: KnowledgeEntry,
-  nodes: Map<string, { id: string }>
+  nodes: Map<string, { id: string }>,
+  projectId?: string
 ): EdgeSeed | null {
   if (entry.data._ !== "relation") {
     return null;
@@ -217,6 +237,7 @@ function makeEdge(
     fromId: from.id,
     toId: to.id,
     kind: entry.data.kind,
+    projectId,
     weight: entry.data.weight,
     metadata: {
       from: fromHash,
@@ -227,7 +248,8 @@ function makeEdge(
 
 export async function persistKnowledge(
   resource: string,
-  entries: KnowledgeEntry[]
+  entries: KnowledgeEntry[],
+  projectId?: string
 ): Promise<void> {
   if (entries.length === 0) {
     return;
@@ -237,11 +259,13 @@ export async function persistKnowledge(
     return;
   }
 
+  const scoped = scopeResource(resource, projectId);
+
   const nodeSeeds: NodeSeed[] = [];
   const edgeSeeds: KnowledgeEntry[] = [];
 
   for (const entry of entries) {
-    const nodeSeed = makeNode(resource, entry);
+    const nodeSeed = makeNode(scoped, entry, projectId);
     if (nodeSeed) {
       nodeSeeds.push(nodeSeed);
     }
@@ -264,7 +288,7 @@ export async function persistKnowledge(
 
     const edges: EdgeSeed[] = [];
     for (const relation of edgeSeeds) {
-      const seed = makeEdge(resource, relation, idMap);
+      const seed = makeEdge(scoped, relation, idMap, projectId);
       if (seed) {
         edges.push(seed);
       }
@@ -382,6 +406,7 @@ export async function persistReasoning(
     executionId?: string;
     auto?: string;
     ragDocumentIds?: string[];
+    projectId?: string;
   }
 ): Promise<void> {
   if (traces.length === 0) {
@@ -394,6 +419,8 @@ export async function persistReasoning(
 
   const allEntries: KnowledgeEntry[] = [];
   const executionKey = context?.executionId ?? context?.threadId ?? resource;
+  const projectId = context?.projectId;
+  const scoped = scopeResource(resource, projectId);
 
   for (const trace of traces) {
     const extraction = await extractReasoning(trace.text, {
@@ -416,7 +443,7 @@ export async function persistReasoning(
   }
 
   try {
-    await persistKnowledge(resource, allEntries);
+    await persistKnowledge(resource, allEntries, projectId);
 
     if (traces.length === 0) {
       return;
@@ -424,7 +451,7 @@ export async function persistReasoning(
 
     const nodeSeeds: NodeSeed[] = traces.map((trace, index) => {
       const hash = reasoningNodeHash(
-        resource,
+        scoped,
         context?.executionId,
         index,
         trace.timestamp,
@@ -432,10 +459,11 @@ export async function persistReasoning(
       );
 
       return {
-        resource,
+        resource: scoped,
         hash,
         kind: "reasoning",
         label: trace.text.substring(0, 100),
+        projectId,
         properties: {
           timestamp: trace.timestamp,
           index,
@@ -489,7 +517,7 @@ export async function persistReasoning(
           (traces[i + 1]?.timestamp ?? traces[i]?.timestamp ?? 0) -
           (traces[i]?.timestamp ?? 0);
         const edgeHash = createHash("sha256")
-          .update(resource)
+          .update(scoped)
           .update("|")
           .update(currentSeed.hash)
           .update("|")
@@ -497,11 +525,12 @@ export async function persistReasoning(
           .digest("hex");
 
         edgeSeeds.push({
-          resource,
+          resource: scoped,
           hash: edgeHash,
           fromId: currentRow.id,
           toId: nextRow.id,
           kind: "precedes",
+          projectId,
           weight: 1,
           metadata: {
             timeDelta: delta,
@@ -560,6 +589,7 @@ export async function persistCodexExecution(
     sessionId?: string;
     threadId?: string;
     auto?: string;
+    projectId?: string;
     result: string;
     artifacts?: CodexArtifact[];
   }
@@ -568,6 +598,8 @@ export async function persistCodexExecution(
     return;
   }
 
+  const scopedResource = scopeResource(resource, options.projectId);
+
   const trimmed = options.result.trim();
   if (!trimmed) {
     return;
@@ -575,7 +607,7 @@ export async function persistCodexExecution(
 
   const createdAt = Date.now();
   const execHash = codexExecutionHash(
-    resource,
+    scopedResource,
     options.sessionId,
     options.threadId,
     createdAt
@@ -584,10 +616,11 @@ export async function persistCodexExecution(
   const nodeSeeds: NodeSeed[] = [];
 
   nodeSeeds.push({
-    resource,
+    resource: scopedResource,
     hash: execHash,
     kind: "codex_execution",
     label: trimmed.slice(0, 120),
+    projectId: options.projectId,
     properties: {
       sessionId: options.sessionId,
       threadId: options.threadId,
@@ -602,12 +635,17 @@ export async function persistCodexExecution(
     if (!artifact.path) {
       continue;
     }
-    const artifactHash = codexArtifactHash(resource, artifact.path, createdAt);
+    const artifactHash = codexArtifactHash(
+      scopedResource,
+      artifact.path,
+      createdAt
+    );
     artifactSeeds.push({
-      resource,
+      resource: scopedResource,
       hash: artifactHash,
       kind: "codex_artifact",
       label: artifact.path,
+      projectId: options.projectId,
       properties: {
         path: artifact.path,
         kind: artifact.kind,
@@ -646,19 +684,20 @@ export async function persistCodexExecution(
         continue;
       }
       const edgeHash = createHash("sha256")
-        .update(resource)
+        .update(scopedResource)
         .update("|codex_has_artifact|")
         .update(execRow.hash)
         .update("|")
         .update(artifactRow.hash)
         .digest("hex");
       edgeSeeds.push({
-        resource,
+        resource: scopedResource,
         hash: edgeHash,
         fromId: execRow.id,
         toId: artifactRow.id,
         kind: "has_artifact",
         weight: 1,
+        projectId: options.projectId,
         metadata: {
           type: "codex_execution_artifact",
         },

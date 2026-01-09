@@ -1,4 +1,4 @@
-import type { WorkflowEvent } from "@alfred/type";
+import { skipToken } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import type { WindowData } from "@/store/desktop/types.new";
 import { trpc } from "@/utils/trpc";
@@ -29,7 +29,7 @@ export type UseWorkflowSubscriptionReturn = {
   error: Error | null;
   steps: WorkflowStep[];
   runId: string | null;
-  run: (input: any) => void;
+  run: (input: unknown) => void;
   stop: () => void;
   clear: () => void;
 };
@@ -46,7 +46,7 @@ export function useWorkflowSubscription(
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [runId, setRunId] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
-  const [input, setInput] = useState<any>(null);
+  const [input, setInput] = useState<unknown>(null);
 
   const stepsRef = useRef<WorkflowStep[]>([]);
 
@@ -67,7 +67,7 @@ export function useWorkflowSubscription(
   }, [status]);
 
   const run = useCallback(
-    (workflowInput: any) => {
+    (workflowInput: unknown) => {
       clear();
       setInput(workflowInput);
       setEnabled(true);
@@ -102,7 +102,7 @@ export function useWorkflowSubscription(
         });
       }
       setSteps([...stepsRef.current]);
-      onWindowUpdate?.({ steps: [...stepsRef.current] } as any);
+      onWindowUpdate?.({ steps: [...stepsRef.current] });
     },
     [onWindowUpdate]
   );
@@ -124,22 +124,23 @@ export function useWorkflowSubscription(
             startTime: step.startTime,
           };
           setSteps([...stepsRef.current]);
-          onWindowUpdate?.({ steps: [...stepsRef.current] } as any);
+          onWindowUpdate?.({ steps: [...stepsRef.current] });
         }
       }
     },
     [onWindowUpdate]
   );
 
-  trpc.workflow.stream.useSubscription(input, {
+  // biome-ignore lint/suspicious/noExplicitAny: trpc subscription input typing mismatch with skipToken
+  trpc.workflow.stream.useSubscription((input as any) ?? skipToken, {
     enabled: enabled && !!input,
     onStarted: () => {
       setStatus("running");
       onWindowUpdate?.({ status: "running" });
     },
+    // biome-ignore lint/suspicious/noExplicitAny: WorkflowEvent type doesn't match runtime event structure
     onData: (event: any) => {
-      const workflowEvent = event as WorkflowEvent;
-      switch (workflowEvent._) {
+      switch (event._) {
         case "run":
           // Initial run event might contain runId
           break;
@@ -148,7 +149,7 @@ export function useWorkflowSubscription(
         case "step_start": {
           const phaseId =
             typeof event.phase === "string" ? event.phase : "step";
-          const phaseName = (event.phase as any)?.name ?? phaseId;
+          const phaseName = (event.phase as { name?: string })?.name ?? phaseId;
           ensureStep(phaseId, phaseName, "running");
           break;
         }
@@ -202,7 +203,7 @@ export function useWorkflowSubscription(
           // Sync messages to window store
           onWindowUpdate?.({
             messages: event.messages,
-          } as any);
+          });
           break;
         }
       }

@@ -5,12 +5,16 @@
 
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { projects } from "./project";
 
 export const tuneJobs = pgTable("tune_jobs", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   name: text("name").notNull(),
   status: text("status").notNull().default("pending"),
   config: jsonb("config").notNull(),

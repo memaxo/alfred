@@ -20,7 +20,7 @@ RUN bunx turbo prune --scope=web --docker
 FROM base AS build
 
 COPY --from=prune /app/out/json/ ./
-COPY --from=prune /app/bun.lock ./bun.lock
+COPY --from=prune /app/out/bun.lock ./bun.lock
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
 COPY --from=prune /app/out/full/ ./

@@ -43,6 +43,24 @@ export const getSchedPreferenceInference = createServerOnlyFn(
 );
 
 /**
+ * Get SCHED_PROJECT_LIFECYCLE environment variable (server-only).
+ * Used to enable/disable project lifecycle scheduler.
+ * Throws if called from client code.
+ */
+export const getSchedProjectLifecycle = createServerOnlyFn(
+  () => process.env.SCHED_PROJECT_LIFECYCLE
+);
+
+/**
+ * Get SCHED_PATTERN_LIFECYCLE environment variable (server-only).
+ * Used to enable/disable pattern lifecycle scheduler.
+ * Throws if called from client code.
+ */
+export const getSchedPatternLifecycle = createServerOnlyFn(
+  () => process.env.SCHED_PATTERN_LIFECYCLE
+);
+
+/**
  * Get VITE_TEST_MODE environment variable (server-only).
  * Used for test mode detection in server functions.
  * Throws if called from client code.

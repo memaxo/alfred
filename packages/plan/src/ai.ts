@@ -13,14 +13,12 @@ let cachedGateway: ReturnType<typeof createGatewayProvider> | null = null;
 
 export function getOpenAI() {
   if (cachedGateway) {
-    return cachedGateway;
+    return (id: string) => cachedGateway?.languageModel(id);
   }
 
   // Test override: allow empty client in tests if key is missing
   if (process.env.NODE_ENV === "test" && !process.env.OPENAI_API_KEY) {
-    return {
-      languageModel: () => ({}),
-    } as unknown as ReturnType<typeof createGatewayProvider>;
+    return (_id: string) => ({}) as any;
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -31,5 +29,5 @@ export function getOpenAI() {
     apiKey,
   });
 
-  return cachedGateway;
+  return (id: string) => cachedGateway?.languageModel(id);
 }

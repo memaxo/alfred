@@ -256,7 +256,8 @@ describe("workflow router", () => {
       expect(createConversationMock).toHaveBeenCalledWith(
         "test-user",
         expect.stringContaining("test requirement"),
-        mockRunId
+        mockRunId,
+        undefined
       );
       expect(createMessageMock).toHaveBeenCalledWith(
         "test-user",
@@ -389,7 +390,8 @@ describe("workflow router", () => {
       expect(createConversationMock).toHaveBeenCalledWith(
         "test-user",
         expect.any(String),
-        mockRunId
+        mockRunId,
+        undefined
       );
       expect(createMessageMock).toHaveBeenCalledWith(
         "test-user",

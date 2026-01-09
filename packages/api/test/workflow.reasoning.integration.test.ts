@@ -4,6 +4,8 @@ process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 process.env.OPENAI_API_KEY ??= "test-key";
 
+import "./utils/mock-metrics";
+
 import {
   afterAll,
   afterEach,

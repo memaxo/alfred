@@ -31,6 +31,7 @@ export type WindowType =
   | "policy"
   | "tune"
   | "plan"
+  | "visual-builder"
   | "metrics"
   | "rag"
   // Tier 3: Knowledge & Exploration
@@ -361,6 +362,7 @@ export type ViewportSlice = {
 
 export type TaskbarSlice = {
   pinnedApps: WindowType[];
+  recentApps: WindowType[];
 
   pinApp: (type: WindowType) => void;
   unpinApp: (type: WindowType) => void;
@@ -369,6 +371,7 @@ export type TaskbarSlice = {
     resourceRef?: ResourceRef,
     position?: { x: number; y: number }
   ) => string;
+  addRecentApp: (type: WindowType) => void;
 
   // Legacy compatibility
   dockPins: WindowType[];
@@ -483,6 +486,10 @@ export const WINDOW_DEFAULTS: Record<
   plan: {
     minSize: { width: 500, height: 400 },
     defaultBounds: { x: 150, y: 100, width: 700, height: 500 },
+  },
+  "visual-builder": {
+    minSize: { width: 800, height: 600 },
+    defaultBounds: { x: 100, y: 50, width: 1200, height: 800 },
   },
   metrics: {
     minSize: { width: 400, height: 300 },

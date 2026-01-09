@@ -44,11 +44,13 @@ export async function getDeploymentByApp(
 
 export async function listDeployments({
   userId,
+  projectId,
   app,
   type,
   status,
 }: {
   userId?: string;
+  projectId?: string;
   app?: string;
   type?: string;
   status?: string;
@@ -57,6 +59,9 @@ export async function listDeployments({
   const predicates = [];
   if (userId) {
     predicates.push(eq(deployments.userId, userId));
+  }
+  if (projectId) {
+    predicates.push(eq(deployments.projectId, projectId));
   }
   if (app) {
     predicates.push(eq(deployments.app, app));

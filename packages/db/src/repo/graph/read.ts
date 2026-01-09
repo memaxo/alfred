@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
 import type { EdgeRow, NodeRow } from "./types";
@@ -232,7 +232,8 @@ export async function getNeighbors(
 }
 
 export async function findRagDocumentNode(
-  documentId: string
+  documentId: string,
+  projectId?: string
 ): Promise<NodeRow | null> {
   const rows = await db
     .select()
@@ -240,7 +241,8 @@ export async function findRagDocumentNode(
     .where(
       and(
         eq(memoryNodes.kind, "rag_document"),
-        sql`COALESCE(properties->>'documentId', '') = ${documentId}`
+        sql`COALESCE(properties->>'documentId', '') = ${documentId}`,
+        projectId ? eq(memoryNodes.projectId, projectId) : sql`true`
       )
     )
     .limit(1);
@@ -271,8 +273,13 @@ export async function findStaleNodes(
 
 export async function findNodesForDecay(
   olderThanMs: number,
-  limit = 1000
+  limit = 1000,
+  projectIds?: string[]
 ): Promise<NodeRow[]> {
+  if (projectIds && projectIds.length === 0) {
+    return [];
+  }
+
   const threshold = new Date(Date.now() - olderThanMs);
 
   return db
@@ -282,7 +289,8 @@ export async function findNodesForDecay(
       and(
         sql`${memoryNodes.updated} < ${threshold.toISOString()}::timestamp`,
         sql`properties->>'archived' IS NULL`,
-        sql`${memoryNodes.resource} != 'ontology'`
+        sql`${memoryNodes.resource} != 'ontology'`,
+        projectIds ? inArray(memoryNodes.projectId, projectIds) : sql`true`
       )
     )
     .orderBy(memoryNodes.updated)

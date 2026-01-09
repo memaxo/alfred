@@ -203,13 +203,14 @@ Identify specific framework versions and compatibility constraints.`,
  */
 export async function gatherFullResearch(
   intent: WorkflowIntent,
-  options?: ResearchOptions
+  options?: ResearchOptions,
+  projectId?: string
 ): Promise<ResearchResult> {
   // 1. Gather external research
   const external = await gatherExternalResearch(intent, options);
 
   // 2. Gather internal research (codebase, patterns, conventions)
-  const internal = await gatherInternalResearch(intent);
+  const internal = await gatherInternalResearch(intent, projectId);
 
   // 3. Aggregate into unified result
   return aggregateResearch(external, internal, {

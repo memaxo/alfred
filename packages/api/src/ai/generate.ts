@@ -7,6 +7,7 @@ import { generateText } from "ai";
 
 type PersistArgs = {
   userId: string;
+  projectId?: string;
   kind: "assistant" | "orchestrator";
   input: unknown;
   result: unknown;
@@ -76,9 +77,13 @@ function coerceGenerateResult(result: unknown): {
 export async function persistResult(args: PersistArgs): Promise<string | null> {
   const runId = crypto.randomUUID();
   try {
+    const input = (args.input ?? {}) as Record<string, unknown>;
+    const projectId = args.projectId ?? (input.projectId as string | undefined);
+
     await workflowRepo.createRun({
       id: runId,
       userId: args.userId,
+      projectId,
       workflowId: `${args.kind}-generate`,
       status: "completed",
       inputData: args.input,

@@ -16,6 +16,7 @@ export function useKeyboardShortcuts() {
     tileWindow,
     maximizeWindow,
     minimizeWindow,
+    restoreWindow,
     untileWindow,
   } = useDesktopStore((s) => ({
     focusedWindowId: s.focusedWindowId,
@@ -27,6 +28,7 @@ export function useKeyboardShortcuts() {
     tileWindow: s.tileWindow,
     maximizeWindow: s.maximizeWindow,
     minimizeWindow: s.minimizeWindow,
+    restoreWindow: s.restoreWindow,
     untileWindow: s.untileWindow,
   }));
 
@@ -34,10 +36,12 @@ export function useKeyboardShortcuts() {
     (e) => {
       const isMeta = e.metaKey || e.ctrlKey;
 
+      // Cmd+K - Command palette (let it bubble)
       if (isMeta && e.key === "k") {
         return;
       }
 
+      // Cmd+W - Close focused window
       if (isMeta && e.key === "w") {
         e.preventDefault();
         if (focusedWindowId) {
@@ -46,8 +50,26 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Mindscape toggle: Cmd+M (per PRD)
-      if (isMeta && e.key === "m") {
+      // Cmd+Q - Quit/close focused app (same as Cmd+W for desktop)
+      if (isMeta && e.key === "q") {
+        e.preventDefault();
+        if (focusedWindowId) {
+          removeWindow(focusedWindowId);
+        }
+        return;
+      }
+
+      // Cmd+H - Hide/minimize focused window
+      if (isMeta && e.key === "h") {
+        e.preventDefault();
+        if (focusedWindowId) {
+          minimizeWindow(focusedWindowId);
+        }
+        return;
+      }
+
+      // Mindscape toggle: Cmd+M or Cmd+` (per PRD)
+      if (isMeta && (e.key === "m" || e.key === "`")) {
         e.preventDefault();
         setSpaceMode(!isSpaceMode);
         return;
@@ -107,12 +129,71 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Cmd+Escape - Untile focused window
       if (isMeta && e.key === "Escape") {
         e.preventDefault();
         if (focusedWindowId) {
           const window = windows.find((w) => w.id === focusedWindowId);
           if (window?.isTiled) {
             untileWindow(focusedWindowId);
+          }
+        }
+        return;
+      }
+
+      // Ctrl+Arrow - Navigate between tiled windows (focus direction)
+      if (
+        e.ctrlKey &&
+        !e.metaKey &&
+        ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
+      ) {
+        e.preventDefault();
+        const tiledWindows = windows.filter((w) => w.isTiled);
+        if (tiledWindows.length === 0) {
+          return;
+        }
+
+        const focusedWindow = windows.find((w) => w.id === focusedWindowId);
+        if (!focusedWindow?.isTiled) {
+          // Focus first tiled window if none focused
+          const first = tiledWindows[0];
+          if (first) {
+            focusWindow(first.id);
+          }
+          return;
+        }
+
+        // Find adjacent window based on tile zone
+        const direction = e.key.replace("Arrow", "").toLowerCase();
+        const currentZone = focusedWindow.tileZone;
+
+        let targetZone: string | null = null;
+        if (direction === "left" && currentZone === "right") {
+          targetZone = "left";
+        } else if (direction === "right" && currentZone === "left") {
+          targetZone = "right";
+        } else if (direction === "up") {
+          // Look for top zones
+          if (currentZone === "bottom-left") {
+            targetZone = "top-left";
+          } else if (currentZone === "bottom-right") {
+            targetZone = "top-right";
+          }
+        } else if (direction === "down") {
+          // Look for bottom zones
+          if (currentZone === "top-left") {
+            targetZone = "bottom-left";
+          } else if (currentZone === "top-right") {
+            targetZone = "bottom-right";
+          }
+        }
+
+        if (targetZone) {
+          const targetWindow = tiledWindows.find(
+            (w) => w.tileZone === targetZone
+          );
+          if (targetWindow) {
+            focusWindow(targetWindow.id);
           }
         }
         return;
@@ -128,6 +209,7 @@ export function useKeyboardShortcuts() {
       tileWindow,
       maximizeWindow,
       minimizeWindow,
+      restoreWindow,
       untileWindow,
     ]
   );

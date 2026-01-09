@@ -38,6 +38,12 @@
       "import": "./dist/repo/deploy/index.js",
       "types": "./dist/repo/deploy/index.d.ts"
     },
+    "./repo/container": {
+      "bun": "./src/repo/container.ts",
+      "default": "./dist/repo/container.js",
+      "import": "./dist/repo/container.js",
+      "types": "./dist/repo/container.d.ts"
+    },
     "./repo/graph": {
       "bun": "./src/repo/graph/index.ts",
       "default": "./dist/repo/graph/index.js",

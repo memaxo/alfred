@@ -50,6 +50,14 @@ export interface AgentFSWorkspaceConfigExtended extends AgentFSWorkspaceConfig {
   image?: string;
   /** Authorization token for Docker operations */
   authz?: string;
+  /** Override Docker container name (default: per-run) */
+  containerName?: string;
+  /** Keep the container around on cleanup (for project-scoped reuse) */
+  retainContainer?: boolean;
+  /** Optional project attachment for container tracking */
+  projectId?: string;
+  /** Container kind for project attachment tracking (e.g. agentfs_dev, deploy) */
+  containerKind?: string;
 }
 
 /**
@@ -72,6 +80,7 @@ export class AgentFSWorkspace implements Workspace {
   private readonly _image: string;
   private readonly _authz?: string;
 
+  private readonly _retainContainer: boolean;
   constructor(
     readonly id: string,
     readonly runId: string,
@@ -91,10 +100,46 @@ export class AgentFSWorkspace implements Workspace {
       );
 
     // Docker container configuration
-    this._containerName = `alfred-agentfs-${runId.replace(/[^a-zA-Z0-9]/g, "-")}`;
+    this._containerName =
+      config.containerName ??
+      `alfred-agentfs-${runId.replace(/[^a-zA-Z0-9]/g, "-")}`;
     this._image =
       config.image ?? process.env.ORCH_DOCKER_IMAGE ?? "alfred-agentfs:codex";
     this._authz = config.authz;
+    this._retainContainer = config.retainContainer === true;
+  }
+
+  private async recordProjectContainer(): Promise<void> {
+    const projectId = this.config.projectId;
+    const kind = this.config.containerKind;
+    if (!(projectId && kind)) {
+      return;
+    }
+    const url = process.env.DATABASE_URL;
+    if (!url || url.startsWith("sqlite")) {
+      return;
+    }
+    if (!this._containerId) {
+      return;
+    }
+
+    try {
+      const { upsertProjectContainer } = await import(
+        "@alfred/db/repo/container"
+      );
+      await upsertProjectContainer({
+        projectId,
+        kind,
+        name: this._containerName,
+        containerId: this._containerId,
+        status: "active",
+        metadata: {
+          image: this._image,
+        },
+      });
+    } catch {
+      // ignore container tracking failures
+    }
   }
 
   /** Workspace root on the host filesystem */
@@ -204,6 +249,8 @@ export class AgentFSWorkspace implements Workspace {
           containerId: this._containerId,
           containerName: this._containerName,
         });
+
+        await this.recordProjectContainer();
         return;
       }
     } catch {
@@ -234,6 +281,8 @@ export class AgentFSWorkspace implements Workspace {
           containerName: this._containerName,
           image: this._image,
         });
+
+        await this.recordProjectContainer();
         return;
       }
     } catch (error) {
@@ -266,6 +315,8 @@ export class AgentFSWorkspace implements Workspace {
           },
         });
       }
+
+      await this.recordProjectContainer();
       return;
     }
 
@@ -311,7 +362,7 @@ export class AgentFSWorkspace implements Workspace {
     }
 
     // Remove Docker container
-    if (this._containerName) {
+    if (this._containerName && !this._retainContainer) {
       try {
         await toolDocker.execute({
           input: {

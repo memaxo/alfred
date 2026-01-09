@@ -70,15 +70,20 @@ mock.module("@alfred/api/ai/generate", () => ({
   generateText: generateTextMock,
   persistResult: async (args: {
     userId: string;
+    projectId?: string;
     kind: "assistant" | "orchestrator";
     input: unknown;
     result: unknown;
   }) => {
     const workflowRepo = await import("@alfred/db/repo/workflow");
     const runId = crypto.randomUUID();
+    const input = (args.input ?? {}) as Record<string, unknown>;
+    const projectId = args.projectId ?? (input.projectId as string | undefined);
+
     await workflowRepo.createRun({
       id: runId,
       userId: args.userId,
+      projectId,
       workflowId: `${args.kind}-generate`,
       status: "completed",
       inputData: args.input,
@@ -151,5 +156,24 @@ describe("assistant.generate persistence & replay", () => {
         (p: any) => p.type === "tool-result" && p.output?.items?.length === 2
       )
     ).toBe(true);
+  });
+
+  it("persists projectId when provided in generate input", async () => {
+    const projectId = crypto.randomUUID();
+    generateTextMock.mockResolvedValue({
+      text: "Project reply",
+      usage: { inputTokens: 1, outputTokens: 1 },
+      finishReason: "stop",
+    });
+
+    await caller.assistant.generate({
+      projectId,
+      messages: [
+        { id: "u1", role: "user", parts: [{ type: "text", text: "hi" }] },
+      ],
+    } as any);
+
+    expect(createdRuns.length).toBe(1);
+    expect(createdRuns[0].projectId).toBe(projectId);
   });
 });

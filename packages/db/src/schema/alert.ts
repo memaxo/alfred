@@ -12,12 +12,16 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { projects } from "./project";
 
 export const metricAlerts = pgTable("metric_alerts", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   name: text("name").notNull(),
   query: text("query").notNull(),
   condition: text("condition").notNull(),

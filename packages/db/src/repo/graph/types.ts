@@ -9,6 +9,7 @@ export type NodeSeed = {
   hash: string;
   kind: string;
   label: string;
+  projectId?: string;
   properties?: unknown;
   embedding?: number[];
 };
@@ -19,6 +20,7 @@ export type EdgeSeed = {
   fromId: string;
   toId: string;
   kind: string;
+  projectId?: string;
   weight?: number;
   metadata?: unknown;
 };

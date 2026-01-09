@@ -7,6 +7,7 @@ import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "../client";
 import {
   bookmarks,
+  events,
   notes,
   reminders,
   tasks,
@@ -38,12 +39,14 @@ export async function createTask(
   title: string,
   description?: string,
   priority = 0,
-  due?: Date
+  due?: Date,
+  projectId?: string
 ): Promise<typeof tasks.$inferSelect> {
   const res = await db
     .insert(tasks)
     .values({
       userId,
+      projectId,
       title,
       description: description ?? null,
       priority,
@@ -62,16 +65,21 @@ export async function createTask(
 export async function getTasks(
   userId: string,
   status?: string,
-  limit = 100
+  limit = 100,
+  projectId?: string
 ): Promise<(typeof tasks.$inferSelect)[]> {
-  const where = status
-    ? and(eq(tasks.userId, userId), eq(tasks.status, status))
-    : eq(tasks.userId, userId);
+  const conditions = [eq(tasks.userId, userId)];
+  if (status) {
+    conditions.push(eq(tasks.status, status));
+  }
+  if (projectId) {
+    conditions.push(eq(tasks.projectId, projectId));
+  }
 
   return db
     .select()
     .from(tasks)
-    .where(where)
+    .where(and(...conditions))
     .orderBy(desc(tasks.priority), asc(tasks.due))
     .limit(limit);
 }
@@ -107,12 +115,14 @@ export async function createNote(
   userId: string,
   content: string,
   title?: string,
-  tagsInput?: string[]
+  tagsInput?: string[],
+  projectId?: string
 ): Promise<typeof notes.$inferSelect> {
   const res = await db
     .insert(notes)
     .values({
       userId,
+      projectId,
       content,
       title: title ?? null,
       tags: tagsInput ?? null,
@@ -130,12 +140,18 @@ export async function createNote(
 export async function getNotes(
   userId: string,
   limit = 100,
-  offset = 0
+  offset = 0,
+  projectId?: string
 ): Promise<(typeof notes.$inferSelect)[]> {
+  const conditions = [eq(notes.userId, userId)];
+  if (projectId) {
+    conditions.push(eq(notes.projectId, projectId));
+  }
+
   return db
     .select()
     .from(notes)
-    .where(eq(notes.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(notes.updated))
     .limit(limit)
     .offset(offset);
@@ -185,12 +201,14 @@ export async function createReminder(
   title: string,
   due: Date,
   description?: string,
-  recurring?: string
+  recurring?: string,
+  projectId?: string
 ): Promise<typeof reminders.$inferSelect> {
   const res = await db
     .insert(reminders)
     .values({
       userId,
+      projectId,
       title,
       description: description ?? null,
       due,
@@ -208,30 +226,40 @@ export async function createReminder(
 
 export async function getDueReminders(
   userId: string,
-  before: Date
+  before: Date,
+  projectId?: string
 ): Promise<(typeof reminders.$inferSelect)[]> {
+  const conditions = [
+    eq(reminders.userId, userId),
+    eq(reminders.fired, false),
+    lte(reminders.due, before),
+  ];
+  if (projectId) {
+    conditions.push(eq(reminders.projectId, projectId));
+  }
+
   return db
     .select()
     .from(reminders)
-    .where(
-      and(
-        eq(reminders.userId, userId),
-        eq(reminders.fired, false),
-        lte(reminders.due, before)
-      )
-    )
+    .where(and(...conditions))
     .orderBy(asc(reminders.due));
 }
 
 export async function getReminders(
   userId: string,
   limit = 100,
-  offset = 0
+  offset = 0,
+  projectId?: string
 ): Promise<(typeof reminders.$inferSelect)[]> {
+  const conditions = [eq(reminders.userId, userId)];
+  if (projectId) {
+    conditions.push(eq(reminders.projectId, projectId));
+  }
+
   return db
     .select()
     .from(reminders)
-    .where(eq(reminders.userId, userId))
+    .where(and(...conditions))
     .orderBy(asc(reminders.due))
     .limit(limit)
     .offset(offset);
@@ -272,12 +300,14 @@ export async function createBookmark(
   url: string,
   title?: string,
   description?: string,
-  tagsInput?: string[]
+  tagsInput?: string[],
+  projectId?: string
 ): Promise<typeof bookmarks.$inferSelect> {
   const res = await db
     .insert(bookmarks)
     .values({
       userId,
+      projectId,
       url,
       title: title ?? null,
       description: description ?? null,
@@ -296,12 +326,18 @@ export async function createBookmark(
 export async function getBookmarks(
   userId: string,
   limit = 100,
-  offset = 0
+  offset = 0,
+  projectId?: string
 ): Promise<(typeof bookmarks.$inferSelect)[]> {
+  const conditions = [eq(bookmarks.userId, userId)];
+  if (projectId) {
+    conditions.push(eq(bookmarks.projectId, projectId));
+  }
+
   return db
     .select()
     .from(bookmarks)
-    .where(eq(bookmarks.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(bookmarks.created))
     .limit(limit)
     .offset(offset);
@@ -319,12 +355,14 @@ export async function deleteBookmark(bookmarkId: string): Promise<number> {
 export async function createTimer(
   userId: string,
   durationSec: number,
-  label?: string
+  label?: string,
+  projectId?: string
 ): Promise<typeof timers.$inferSelect> {
   const res = await db
     .insert(timers)
     .values({
       userId,
+      projectId,
       label: label ?? null,
       duration: durationSec,
       start: sql<Date>`NOW()`,
@@ -343,18 +381,22 @@ export async function createTimer(
 }
 
 export async function getActiveTimers(
-  userId: string
+  userId: string,
+  projectId?: string
 ): Promise<(typeof timers.$inferSelect)[]> {
+  const conditions = [
+    eq(timers.userId, userId),
+    eq(timers.cancelled, false),
+    eq(timers.completed, false),
+  ];
+  if (projectId) {
+    conditions.push(eq(timers.projectId, projectId));
+  }
+
   return db
     .select()
     .from(timers)
-    .where(
-      and(
-        eq(timers.userId, userId),
-        eq(timers.cancelled, false),
-        eq(timers.completed, false)
-      )
-    )
+    .where(and(...conditions))
     .orderBy(asc(timers.end));
 }
 
@@ -373,5 +415,68 @@ export async function cancelTimer(timerId: string): Promise<number> {
     .set({ cancelled: true, cancelledAt: sql`NOW()` })
     .where(eq(timers.id, timerId))
     .returning({ id: timers.id });
+  return rows.length;
+}
+
+// Event operations
+export async function createEvent(
+  userId: string,
+  title: string,
+  start: Date,
+  end?: Date,
+  description?: string,
+  location?: string,
+  projectId?: string
+): Promise<typeof events.$inferSelect> {
+  const res = await db
+    .insert(events)
+    .values({
+      userId,
+      projectId,
+      title,
+      start,
+      end: end ?? null,
+      description: description ?? null,
+      location: location ?? null,
+    })
+    .returning();
+
+  const row = Array.isArray(res)
+    ? res[0]
+    : (res as any).rows
+      ? (res as any).rows[0]
+      : (res as any)[0];
+  return row;
+}
+
+export async function getEvents(
+  userId: string,
+  startAfter?: Date,
+  endBefore?: Date,
+  projectId?: string
+): Promise<(typeof events.$inferSelect)[]> {
+  const conditions = [eq(events.userId, userId)];
+  if (startAfter) {
+    conditions.push(sql`${events.start} >= ${startAfter}`);
+  }
+  if (endBefore) {
+    conditions.push(sql`${events.start} <= ${endBefore}`);
+  }
+  if (projectId) {
+    conditions.push(eq(events.projectId, projectId));
+  }
+
+  return db
+    .select()
+    .from(events)
+    .where(and(...conditions))
+    .orderBy(asc(events.start));
+}
+
+export async function deleteEvent(eventId: string): Promise<number> {
+  const rows = await db
+    .delete(events)
+    .where(eq(events.id, eventId))
+    .returning({ id: events.id });
   return rows.length;
 }

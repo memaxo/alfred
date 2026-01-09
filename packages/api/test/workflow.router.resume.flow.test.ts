@@ -308,7 +308,10 @@ describe("workflow router resume flow (integration)", () => {
         expect.objectContaining({
           kind: "workflow_run",
         }),
-      ])
+      ]),
+      expect.objectContaining({
+        projectId: undefined,
+      })
     );
   });
 

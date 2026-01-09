@@ -1,8 +1,8 @@
 # TUI Architecture
 
 **Owner**: infra  
-**Status**: Implemented (Phase 2-3)  
-**Last Updated**: 2025-12-28
+**Status**: Migrating to OpenTUI React (Phase 2 complete)  
+**Last Updated**: 2026-01-09
 
 ## Purpose
 
@@ -10,7 +10,9 @@ Document the terminal user interface architecture, panel system, and integration
 
 ## Overview
 
-The TUI provides real-time observability and control over ALFRED's cognitive systems, workflows, and metrics through a terminal interface. Built on OpenTUI for rendering and tRPC for data subscriptions.
+The TUI provides real-time observability and control over ALFRED's cognitive systems, workflows, and metrics through a terminal interface. Built on OpenTUI React for rendering and tRPC for data subscriptions.
+
+**Migration Status**: The TUI is migrating from custom `string[]` renderers to OpenTUI React components. Use `ALFRED_TUI_REACT=1` to enable the React renderer. See [OpenTUI React Patterns](#opentui-react-patterns) section below.
 
 ## Architecture Layers
 
@@ -277,9 +279,114 @@ No automated E2E tests for TUI (terminal automation unreliable).
 - [OpenTUI Documentation](https://opentui.org) - Rendering library docs
 - [tRPC Subscriptions](https://trpc.io/docs/subscriptions) - Real-time data
 
+## OpenTUI React Patterns
+
+### Migration Strategy
+
+The TUI is migrating from custom `BasePanel` classes (render `string[]`) to React components using OpenTUI primitives. This reduces maintenance burden and provides access to OpenTUI's widget library.
+
+**Feature Flag**: Set `ALFRED_TUI_REACT=1` to use React renderer. Old renderer remains default until migration complete.
+
+### Component Structure
+
+React components live in `packages/tui/src/tui/react/`:
+
+```
+react/
+├── index.tsx              # React TUI entry point
+├── dashboard.tsx          # Dashboard layout component
+├── hooks/
+│   └── stores.ts          # React hooks for accessing stores
+└── panels/
+    ├── cognitive.tsx      # Cognitive panel component
+    ├── workflow.tsx       # Workflow panel component
+    ├── metrics.tsx        # Metrics panel component
+    ├── voice.tsx          # Voice panel component
+    ├── knowledge.tsx      # Knowledge panel component
+    └── toolcalls.tsx      # ToolCalls panel component
+```
+
+### Component Patterns
+
+**Text Elements**: Use `content` prop, not children:
+```tsx
+<text content={dim("Loading...")} />
+```
+
+**Layout Props**: Components accept `x`, `y`, `width`, `height` directly:
+```tsx
+<box width={50} height={10} x={0} y={0} border title="Panel" />
+```
+
+**Scrollable Content**: Wrap in `<scrollbox>`:
+```tsx
+<scrollbox focused={focused}>
+  <text content="Line 1" />
+  <text content="Line 2" />
+</scrollbox>
+```
+
+**Keyboard Handling**: Use `useKeyboard()` hook:
+```tsx
+useKeyboard((event) => {
+  if (event.name === "q") quit();
+});
+```
+
+**Store Integration**: Access via React hooks:
+```tsx
+const store = useCognitiveStore();
+useEffect(() => {
+  if (!store) return;
+  const unsub = store.subscribe((state) => {
+    setState(state);
+  });
+  return unsub;
+}, [store]);
+```
+
+**Type Safety**: Use `@ts-nocheck` temporarily at top of component files. OpenTUI's JSX types require jsx-runtime setup that conflicts with `jsx: "react-jsx"`. Runtime works correctly - this is type-checking only.
+
+### Panel Migration Checklist
+
+When migrating a panel from `BasePanel` to React component:
+
+1. ✅ Create React component in `react/panels/<name>.tsx`
+2. ✅ Convert `renderContent(): string[]` to JSX with `<text>` elements
+3. ✅ Use `<scrollbox>` for scrollable content
+4. ✅ Integrate with existing store via React hooks
+5. ✅ Preserve keyboard handling logic with `useKeyboard()`
+6. ✅ Accept `x`, `y`, `width`, `height`, `focused` props
+7. ✅ Use `content` prop for all `<text>` elements
+8. ✅ Add `@ts-nocheck` at top of file (temporary)
+
+### Renderer Lifecycle
+
+```typescript
+// Create renderer (async factory)
+const renderer = await createCliRenderer({
+  exitOnCtrlC: false,
+  useAlternateScreen: true,
+});
+
+// Create React root and render
+const root = createRoot(renderer);
+root.render(<Dashboard stores={stores} callbacks={callbacks} />);
+
+// Start renderer
+renderer.start();
+
+// Cleanup
+root.unmount();
+renderer.destroy();
+```
+
+See `.ruler/44-opentui-react-patterns.md` for complete pattern reference.
+
 ## Maintenance Notes
 
 - Keep panels lean (< 300 lines per file)
 - Extract shared visualizations to helpers
 - Use sparklines for trends (ASCII charts)
 - Test on 80-column terminals (common SSH default)
+- **New panels**: Use OpenTUI React components, not `BasePanel`

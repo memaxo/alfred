@@ -137,14 +137,53 @@ describe("noteRouter", () => {
         "test-user",
         "Test note content",
         "Test Note",
-        ["test"]
+        ["test"],
+        undefined
       );
       expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
       expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
         "user",
         expect.arrayContaining([
           expect.objectContaining({ kind: "note", id: mockNote.id }),
-        ])
+        ]),
+        { projectId: undefined }
+      );
+    });
+
+    it("creates note with projectId", async () => {
+      const projectId = crypto.randomUUID();
+      const mockNote = {
+        id: crypto.randomUUID(),
+        userId: "test-user",
+        projectId,
+        title: "Project Note",
+        content: "Content",
+        tags: null,
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      createNoteMock.mockResolvedValue(mockNote);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.note.create({
+        projectId,
+        content: "Content",
+        title: "Project Note",
+      });
+
+      expect(result).toEqual(mockNote);
+      expect(createNoteMock).toHaveBeenCalledWith(
+        "test-user",
+        "Content",
+        "Project Note",
+        undefined,
+        projectId
+      );
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.any(Array),
+        { projectId }
       );
     });
 
@@ -171,6 +210,7 @@ describe("noteRouter", () => {
         "test-user",
         "Test note content",
         undefined,
+        undefined,
         undefined
       );
       expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
@@ -178,7 +218,8 @@ describe("noteRouter", () => {
         "user",
         expect.arrayContaining([
           expect.objectContaining({ kind: "note", id: mockNote.id }),
-        ])
+        ]),
+        { projectId: undefined }
       );
     });
 
@@ -252,7 +293,17 @@ describe("noteRouter", () => {
       const result = await caller.note.list({ limit: 100, offset: 0 });
 
       expect(result).toEqual(mockNotes);
-      expect(getNotesMock).toHaveBeenCalledWith("test-user", 100, 0);
+      expect(getNotesMock).toHaveBeenCalledWith("test-user", 100, 0, undefined);
+    });
+
+    it("lists notes scoped to project", async () => {
+      const projectId = crypto.randomUUID();
+      getNotesMock.mockResolvedValue([]);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      await caller.note.list({ projectId });
+
+      expect(getNotesMock).toHaveBeenCalledWith("test-user", 100, 0, projectId);
     });
 
     it("uses default limit and offset", async () => {
@@ -261,7 +312,7 @@ describe("noteRouter", () => {
       const caller = await createTestCaller({ userId: "test-user" });
       await caller.note.list({});
 
-      expect(getNotesMock).toHaveBeenCalledWith("test-user", 100, 0);
+      expect(getNotesMock).toHaveBeenCalledWith("test-user", 100, 0, undefined);
     });
 
     it("validates limit bounds", async () => {

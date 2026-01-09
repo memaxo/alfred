@@ -5,6 +5,7 @@ import { truncateToBytes } from "./truncate.js";
 type CodexRunRepo = {
   createRun: (args: {
     userId: string;
+    projectId?: string | null;
     sessionId?: string | null;
     threadId?: string | null;
     parentRunId?: string | null;
@@ -63,6 +64,7 @@ type RecorderEvent = {
 
 export type CodexRunRecorderOptions = {
   userId: string | undefined;
+  projectId?: string | undefined;
   sessionId: string | undefined;
   threadId: string | undefined;
   auto: string | undefined;
@@ -152,6 +154,7 @@ export class CodexRunRecorder {
     const created = await repo
       .createRun({
         userId: options.userId,
+        projectId: options.projectId ?? null,
         sessionId: sessionId ?? null,
         threadId: options.threadId ?? null,
         parentRunId,

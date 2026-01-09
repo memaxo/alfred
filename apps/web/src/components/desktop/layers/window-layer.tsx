@@ -16,12 +16,47 @@ import { useDesktopStore } from "@/store/desktop";
 import type { WindowType } from "@/store/desktop/types.new";
 import { TileZonePreview } from "../tiling/zone-preview";
 import { WindowChrome } from "../windows/chrome";
-import { windowRegistry, withWindowAdapter } from "../windows/registry";
+import {
+  useWindowProps,
+  windowRegistry,
+  withWindowAdapter,
+} from "../windows/registry";
 
 type WindowLayerProps = {
   style?: CSSProperties;
   focusedWindowId: string | null;
 };
+
+function WindowRenderer({
+  windowId,
+  isFocused,
+}: {
+  windowId: string;
+  isFocused: boolean;
+}) {
+  const props = useWindowProps(windowId);
+  if (!props) {
+    return null;
+  }
+
+  const registryEntry = windowRegistry[props.window.type as WindowType];
+  if (!registryEntry?.component) {
+    return null;
+  }
+
+  // Wrap legacy components with adapter
+  const Component = registryEntry.isLegacy
+    ? withWindowAdapter(registryEntry.component)
+    : registryEntry.component;
+
+  return (
+    <WindowChrome isFocused={isFocused} windowId={windowId}>
+      <WindowErrorBoundary windowId={windowId}>
+        <Component {...props} />
+      </WindowErrorBoundary>
+    </WindowChrome>
+  );
+}
 
 export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
   const { windows, desktopArea } = useDesktopStore(
@@ -51,29 +86,13 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
         {/* Window instances (skip minimized) */}
         {windows
           .filter((w) => w.state !== "minimized")
-          .map((window) => {
-            const registryEntry = windowRegistry[window.type as WindowType];
-            if (!registryEntry?.component) {
-              return null;
-            }
-
-            // Wrap legacy components with adapter
-            const Component = registryEntry.isLegacy
-              ? withWindowAdapter(registryEntry.component)
-              : registryEntry.component;
-
-            return (
-              <WindowChrome
-                isFocused={window.id === focusedWindowId}
-                key={window.id}
-                windowId={window.id}
-              >
-                <WindowErrorBoundary windowId={window.id}>
-                  <Component />
-                </WindowErrorBoundary>
-              </WindowChrome>
-            );
-          })}
+          .map((window) => (
+            <WindowRenderer
+              isFocused={window.id === focusedWindowId}
+              key={window.id}
+              windowId={window.id}
+            />
+          ))}
 
         {/* Empty state */}
         {windows.length === 0 && (

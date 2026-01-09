@@ -12,6 +12,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { projects } from "./project";
+
 // Index coverage: migrations 0042 add deployment query indexes.
 
 /**
@@ -20,6 +22,9 @@ import {
 export const deployments = pgTable("deployments", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   app: text("app").notNull(), // App name/identifier
   type: text("type").notNull().default("preview"), // "preview" | "production"
   status: text("status").notNull().default("pending"), // "pending" | "building" | "running" | "failed" | "stopped"

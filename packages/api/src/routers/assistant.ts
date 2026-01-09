@@ -41,6 +41,7 @@ const memorySchema = z
   .partial();
 
 const generateInput = z.object({
+  projectId: z.string().uuid().optional(),
   thread: z.string().optional(),
   resource: z.string().optional(),
   messages: z.array(z.unknown()).min(1),
@@ -138,6 +139,7 @@ export const assistantRouter = router({
         }
         const replayId = await persistResult({
           userId: ctx.session.user.id,
+          projectId: input.projectId,
           kind: "assistant",
           input,
           result: output,

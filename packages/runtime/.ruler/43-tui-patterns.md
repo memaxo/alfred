@@ -1,8 +1,10 @@
 # TUI (Terminal User Interface) Patterns
 
+**Note**: This file documents legacy `BasePanel` patterns. New panels should use OpenTUI React components (see `.ruler/44-opentui-react-patterns.md`). This file remains for reference during migration.
+
 ## Core Principle
 
-Terminal interfaces must be fast, keyboard-driven, and follow consistent panel/layout patterns. All TUI panels extend BasePanel and implement lifecycle hooks.
+Terminal interfaces must be fast, keyboard-driven, and follow consistent panel/layout patterns. Legacy panels extend `BasePanel` and implement lifecycle hooks. New panels use OpenTUI React components.
 
 ## Rules
 

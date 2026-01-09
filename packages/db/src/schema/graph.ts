@@ -17,6 +17,8 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 
+import { projects } from "./project";
+
 const tsvector = customType<{ data: string; driverData: string }>({
   dataType() {
     return "tsvector";
@@ -34,6 +36,9 @@ export const memoryNodes = pgTable("memory_nodes", {
   label: text("label").notNull(), // Human-readable label
   resource: text("resource").notNull(), // Scope identifier (thread/resource)
   hash: text("hash").notNull(), // Content-addressed identifier
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   properties: jsonb("properties"), // Arbitrary node properties
   sanitized: boolean("sanitized").notNull().default(false),
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -78,6 +83,9 @@ export const memoryEdges = pgTable("memory_edges", {
   metadata: jsonb("metadata"), // Arbitrary edge properties
   resource: text("resource").notNull(), // Scope identifier
   hash: text("hash").notNull(), // Unique edge identifier
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   // Transaction time: when we learned about this edge
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   // Bi-temporal validity period: when the edge is/was valid in the real world
@@ -99,6 +107,9 @@ export const knowledgeCorrections = pgTable("knowledge_corrections", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   resource: text("resource").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   targetType: text("target_type").notNull(), // "node" | "edge"
   targetId: uuid("target_id").notNull(),
   operation: text("operation").notNull(), // "update" | "delete"

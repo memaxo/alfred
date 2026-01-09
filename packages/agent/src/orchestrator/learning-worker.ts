@@ -266,6 +266,51 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
       logger.info("learning_worker_decayed", { count: decayedCount });
     }
 
+    // 1b. Archived projects decay faster (best-effort; Postgres only).
+    const archivedProjectIds = await (async () => {
+      const url = process.env.DATABASE_URL;
+      if (!url || url.startsWith("sqlite")) {
+        return [] as string[];
+      }
+      try {
+        const projectRepo = await import("@alfred/db/repo/project");
+        return await projectRepo.listArchivedProjectIds(200);
+      } catch {
+        return [] as string[];
+      }
+    })();
+
+    if (archivedProjectIds.length > 0) {
+      const archivedNodes = await findNodesForDecay(
+        config.decayThresholdMs,
+        config.decayLimit,
+        archivedProjectIds
+      );
+
+      if (archivedNodes.length > 0) {
+        const archivedUpdates = archivedNodes.map((node) => {
+          const props = (node.properties as Record<string, unknown>) || {};
+          const currentConfidence =
+            typeof props.confidence === "number" ? props.confidence : 1.0;
+          const newConfidence = Math.max(
+            config.confidenceFloor,
+            currentConfidence * config.decayFactor * 0.9
+          );
+
+          return {
+            id: node.id,
+            confidence: newConfidence,
+          };
+        });
+
+        const decayedCount = await updateNodeConfidenceBatch(archivedUpdates);
+        metrics.memoryNodesDecayedTotal.inc(decayedCount);
+        logger.info("learning_worker_archived_project_decay", {
+          count: decayedCount,
+        });
+      }
+    }
+
     // 2. Prune Low Confidence
     const lowConfidenceNodes = await findNodesByConfidence(
       0,

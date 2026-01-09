@@ -1,9 +1,14 @@
 import type { UIMessage } from "@alfred/type/stream";
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import { projects } from "./project";
+
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   title: text("title"),
   workflowId: uuid("workflow_id"),
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),

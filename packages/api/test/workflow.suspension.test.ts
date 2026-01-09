@@ -105,4 +105,25 @@ describe("createWorkflowSuspension", () => {
     expect(onCancelled).toHaveBeenCalled();
     expect(runRegistryMocks.unregister).toHaveBeenCalled();
   });
+
+  it("persists projectId from input in suspended run", async () => {
+    const projectId = crypto.randomUUID();
+    const suspension = createWorkflowSuspension({
+      sessionUserId: "user-1",
+      input: { ...baseInput, projectId } as any,
+      transport: "trpc",
+      emitObligation: vi.fn(),
+      policyCheck: vi.fn().mockResolvedValue([]),
+      startWorkflow: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    await suspension.suspend([biometric]);
+
+    expect(workflowRepoMocks.createRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId,
+      })
+    );
+  });
 });

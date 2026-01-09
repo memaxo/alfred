@@ -126,6 +126,45 @@ export async function runAgent({
     return path.relative(repoBase, absFile);
   })();
 
+  const agentfsProjectId = await (async () => {
+    if (spec.environment !== "agentfs") {
+      return;
+    }
+    const url = process.env.DATABASE_URL;
+    if (!url || url.startsWith("sqlite")) {
+      return;
+    }
+
+    try {
+      const workflowRepo = await import("@alfred/db/repo/workflow");
+      const run = await workflowRepo.getRun(runId);
+      if (run?.projectId) {
+        void import("@alfred/db/repo/project")
+          .then((repo) => repo.updateProjectLastActive(run.projectId!))
+          .catch(() => {});
+        return run.projectId;
+      }
+    } catch {
+      // ignore
+    }
+
+    if (userId) {
+      try {
+        const { detectProject } = await import("@alfred/plan");
+        const project = await detectProject(workspace, userId);
+        return project.id;
+      } catch {
+        // ignore
+      }
+    }
+
+    return;
+  })();
+
+  const agentfsContainerNameOverride = agentfsProjectId
+    ? `alfred-agentfs-project-${agentfsProjectId.replace(/[^a-zA-Z0-9]/g, "-")}`
+    : undefined;
+
   try {
     workspaceEnv = await WorkspaceFactory.create(
       spec.environment,
@@ -136,6 +175,10 @@ export async function runAgent({
         agentfsOverlay: spec.agentfsOverlay,
         agentfsDbPath: agentfsDbPathOverride,
         authz,
+        containerName: agentfsContainerNameOverride,
+        retainContainer: Boolean(agentfsProjectId),
+        projectId: agentfsProjectId,
+        containerKind: agentfsProjectId ? "agentfs_dev" : undefined,
       }
     );
 

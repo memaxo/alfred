@@ -13,6 +13,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { projects } from "./project";
 
 // Index coverage is handled in migrations 0003, 0007, and 0039 for the assistant tables.
 
@@ -28,6 +29,9 @@ const tsvector = customType<{ data: string; driverData: string }>({
 export const tasks = pgTable("assistant_tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   description: text("description"),
   status: text("status").notNull().default("pending"), // "pending" | "in_progress" | "completed" | "cancelled"
@@ -47,6 +51,9 @@ export const tasks = pgTable("assistant_tasks", {
 export const notes = pgTable("assistant_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   title: text("title"),
   content: text("content").notNull(),
   contentTsvector: tsvector("content_tsvector"),
@@ -64,6 +71,9 @@ export const notes = pgTable("assistant_notes", {
 export const events = pgTable("assistant_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   description: text("description"),
   start: timestamp("start_at", { withTimezone: true }).notNull(),
@@ -82,6 +92,9 @@ export const events = pgTable("assistant_events", {
 export const reminders = pgTable("assistant_reminders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   description: text("description"),
   due: timestamp("due_at", { withTimezone: true }).notNull(),
@@ -101,6 +114,9 @@ export const reminders = pgTable("assistant_reminders", {
 export const bookmarks = pgTable("assistant_bookmarks", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   url: text("url").notNull(),
   title: text("title"),
   description: text("description"),
@@ -117,6 +133,9 @@ export const bookmarks = pgTable("assistant_bookmarks", {
 export const timers = pgTable("assistant_timers", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   label: text("label"),
   duration: integer("duration_seconds").notNull(), // Duration in seconds
   start: timestamp("start_at", { withTimezone: true }).notNull(),

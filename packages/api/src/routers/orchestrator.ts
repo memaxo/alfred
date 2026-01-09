@@ -16,6 +16,7 @@ import { sanitizeResult } from "../utils/generate";
 const ORCHESTRATOR_MAX_STEPS = 12;
 
 const generateInput = z.object({
+  projectId: z.string().uuid().optional(),
   thread: z.string().optional(),
   resource: z.string().optional(),
   messages: z.array(z.unknown()).min(1),
@@ -83,6 +84,7 @@ export const orchestratorRouter = router({
         const output = sanitizeResult(result);
         const replayId = await persistResult({
           userId: ctx.session.user.id,
+          projectId: input.projectId,
           kind: "orchestrator",
           input,
           result: output,

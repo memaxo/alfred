@@ -5,6 +5,7 @@ export type DeploymentRecord = typeof deployments.$inferSelect;
 
 export type UpsertDeploymentInput = {
   userId: string;
+  projectId?: string | null;
   app: string;
   type?: "preview" | "production" | string;
   status?: string;

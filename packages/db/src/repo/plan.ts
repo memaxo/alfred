@@ -94,3 +94,17 @@ export async function updatePlan(
   }
   return row;
 }
+
+/**
+ * Delete plan by ID
+ */
+export async function deletePlan(id: string): Promise<void> {
+  const [row] = await db
+    .delete(workflowPlans)
+    .where(eq(workflowPlans.id, id))
+    .returning();
+
+  if (!row) {
+    throw new Error("plan_not_found");
+  }
+}

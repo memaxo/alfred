@@ -383,7 +383,7 @@ export type WorkflowEvent =
   | (WorkflowEventBase & { _: "progress"; pct?: number; message?: string })
   | (WorkflowEventBase & { _: "stdout"; text: string })
   | (WorkflowEventBase & { _: "stderr"; text: string })
-  | (WorkflowEventBase & { _: "droid"; chunk: unknown })
+  | (WorkflowEventBase & { _: "droid"; chunk?: unknown })
   | (WorkflowEventBase & { _: "notice"; message: string })
   | (WorkflowEventBase & { _: "error"; message: string; chunk?: unknown })
   | (WorkflowEventBase & {
@@ -431,9 +431,9 @@ export type WorkflowEvent =
       scopes: string[];
       event: string;
     })
-  | (WorkflowEventBase & { _: "step-start"; phase: unknown })
-  | (WorkflowEventBase & { _: "step-complete"; phase: unknown })
-  | (WorkflowEventBase & { _: "step-skip"; phase: unknown })
+  | (WorkflowEventBase & { _: "step-start"; phase?: unknown })
+  | (WorkflowEventBase & { _: "step-complete"; phase?: unknown })
+  | (WorkflowEventBase & { _: "step-skip"; phase?: unknown })
   | (WorkflowEventBase & { _: "step_start"; phase?: unknown })
   | (WorkflowEventBase & { _: "step_complete"; phase?: unknown })
   | (WorkflowEventBase & { _: "suspend" })

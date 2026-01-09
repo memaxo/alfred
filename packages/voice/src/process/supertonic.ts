@@ -110,9 +110,6 @@ class TextToSpeech {
     // Check for failures but don't throw (cleanup should be best-effort)
     const failures = results.filter((r) => r.status === "rejected");
     if (failures.length > 0) {
-      console.warn(
-        `Failed to release ${failures.length} session(s) during cleanup`
-      );
     }
   }
 

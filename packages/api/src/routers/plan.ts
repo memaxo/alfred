@@ -84,7 +84,18 @@ export const planRouter = router({
     .input(
       z.object({
         intent: z.unknown(),
-        options: z.unknown().optional(),
+        options: z
+          .object({
+            maxResults: z.number().int().min(1).max(20).optional(),
+            minReliability: z.number().min(0).max(1).optional(),
+            dateFilter: z.enum(["recent", "all"]).optional(),
+            frameworkMatch: z.boolean().optional(),
+            searchType: z
+              .enum(["auto", "neural", "keyword", "fast", "deep"])
+              .optional(),
+            includeContext: z.boolean().optional(),
+          })
+          .optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -96,21 +107,16 @@ export const planRouter = router({
         });
       }
 
-      const {
-        gatherExternalResearch,
-        researchOptionsSchema,
-        workflowIntentSchema,
-      } = await import("@alfred/plan");
+      const { gatherExternalResearch, workflowIntentSchema } = await import(
+        "@alfred/plan"
+      );
       const intent = workflowIntentSchema.parse(input.intent);
-      const options = input.options
-        ? researchOptionsSchema.parse(input.options)
-        : undefined;
 
       // Validate that intent.userId matches authenticated user
       validateIntentUserId(intent, userId);
 
       try {
-        const results = await gatherExternalResearch(intent, options);
+        const results = await gatherExternalResearch(intent, input.options);
         return results;
       } catch (error) {
         throw new TRPCError({
@@ -456,6 +462,124 @@ export const planRouter = router({
     }),
 
   /**
+   * Get plan by ID
+   */
+  get: authedProcedure
+    .input(z.object({ planId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const { getPlanRecord } = await import("@alfred/plan");
+        const plan = await getPlanRecord(input.planId);
+        if (!plan) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "plan_not_found",
+          });
+        }
+        if (plan.userId !== userId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "plan_access_denied",
+          });
+        }
+        return plan;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_retrieval_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * List plans with filters
+   */
+  list: authedProcedure
+    .input(
+      z.object({
+        status: z
+          .enum(["pending", "approved", "rejected", "executed"])
+          .optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const { listPlans } = await import("@alfred/plan");
+        const plans = await listPlans({
+          userId,
+          status: input.status,
+          limit: input.limit,
+          offset: input.offset,
+        });
+        return plans;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_listing_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Convert StructuredPlan to WavePlan (debug endpoint)
+   */
+  convertToWaves: authedProcedure
+    .input(
+      z.object({
+        plan: z.object({
+          phases: z.array(z.unknown()),
+          resources: z
+            .object({
+              strategy: z.enum([
+                "sequential",
+                "parallel",
+                "topological",
+                "mixed",
+              ]),
+              agentCount: z.number().int().optional(),
+            })
+            .optional(),
+        }),
+        maxConcurrency: z.number().int().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const { planToWaves } = await import("@alfred/plan");
+        const waves = planToWaves(input.plan as any, {
+          maxConcurrency: input.maxConcurrency,
+        });
+        return waves;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "wave_conversion_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
    * Export plan to YAML
    */
   exportYAML: authedProcedure
@@ -526,6 +650,90 @@ export const planRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "patterns_list_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Match patterns for a new intent
+   */
+  patternsMatch: authedProcedure
+    .input(
+      z.object({
+        intent: z.string().min(1).max(1000),
+        projectId: z.string().uuid().optional(),
+        minSimilarity: z.number().min(0).max(1).optional().default(0.7),
+        maxResults: z.number().int().min(1).max(10).optional().default(5),
+        requireStructuralMatch: z.boolean().optional().default(true),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const { matchPatterns, categorizePatterns } = await import(
+          "@alfred/plan/pattern"
+        );
+
+        // Match patterns
+        const matches = await matchPatterns(input.intent, input.projectId, {
+          minSimilarity: input.minSimilarity,
+          maxResults: input.maxResults,
+          requireStructuralMatch: input.requireStructuralMatch,
+        });
+
+        // Categorize by confidence
+        const categorized = categorizePatterns(matches);
+
+        return {
+          matches: matches.map((m: any) => ({
+            id: m.id,
+            trigger: m.trigger,
+            planTemplate: m.planTemplate,
+            successRate: m.successRate,
+            avgDurationMs: m.avgDurationMs,
+            usageCount: m.usageCount,
+            similarity: m.similarity,
+            confidence: m.similarity * Number.parseFloat(m.successRate),
+            projectId: m.projectId,
+            createdAt: m.createdAt?.toISOString() ?? null,
+            updatedAt: m.updatedAt?.toISOString() ?? null,
+          })),
+          categories: {
+            autoSuggest: categorized.autoSuggest.map((m: any) => ({
+              id: m.id,
+              trigger: m.trigger,
+              similarity: m.similarity,
+              confidence: m.similarity * Number.parseFloat(m.successRate),
+            })),
+            requireConfirmation: categorized.requireConfirmation.map(
+              (m: any) => ({
+                id: m.id,
+                trigger: m.trigger,
+                similarity: m.similarity,
+                confidence: m.similarity * Number.parseFloat(m.successRate),
+              })
+            ),
+            lowConfidence: categorized.lowConfidence.map((m: any) => ({
+              id: m.id,
+              trigger: m.trigger,
+              similarity: m.similarity,
+              confidence: m.similarity * Number.parseFloat(m.successRate),
+            })),
+          },
+          total: matches.length,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "pattern_match_failed",
           cause: error,
         });
       }

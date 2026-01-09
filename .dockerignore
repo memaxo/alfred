@@ -24,5 +24,20 @@
 **/tmp
 **/tmp/**
 
+# Local model caches are huge; never send them as Docker build context.
+packages/embed/models
+packages/embed/models/**
+packages/voice/models
+packages/voice/models/**
+**/*.safetensors
+**/*.bin
+**/*.onnx
+**/*.heapsnapshot
+**/*.heapprofile
+
+# Python envs are not part of the build.
+**/.venv
+**/.venv/**
+
 docker/postgres/data
 docker/postgres/data/**

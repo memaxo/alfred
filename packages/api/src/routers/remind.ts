@@ -4,6 +4,7 @@ import z from "zod";
 import { authedProcedure, router } from "../trpc";
 
 const reminderBase = z.object({
+  projectId: z.string().uuid().optional(),
   title: z.string().min(1).max(256),
   description: z.string().max(2048).optional(),
   recurring: z.string().max(128).optional(),
@@ -14,6 +15,7 @@ const reminderCreateInput = reminderBase.extend({
 });
 
 const reminderListInput = z.object({
+  projectId: z.string().uuid().optional(),
   limit: z.number().int().min(1).max(200).default(100),
   offset: z.number().int().min(0).default(0),
 });
@@ -27,23 +29,30 @@ export const remindRouter = router({
         input.title,
         new Date(input.due),
         input.description,
-        input.recurring
+        input.recurring,
+        input.projectId
       );
 
-      await ensureMirrorNodes("user", [
-        {
-          kind: "reminder",
-          id: reminder.id,
-          label: reminder.title,
-          properties: {
-            entity: { kind: "reminder", id: reminder.id },
-            title: reminder.title,
-            due:
-              reminder.due instanceof Date ? reminder.due.toISOString() : null,
-            status: reminder.fired ? "fired" : "scheduled",
+      await ensureMirrorNodes(
+        "user",
+        [
+          {
+            kind: "reminder",
+            id: reminder.id,
+            label: reminder.title,
+            properties: {
+              entity: { kind: "reminder", id: reminder.id },
+              title: reminder.title,
+              due:
+                reminder.due instanceof Date
+                  ? reminder.due.toISOString()
+                  : null,
+              status: reminder.fired ? "fired" : "scheduled",
+            },
           },
-        },
-      ]);
+        ],
+        { projectId: input.projectId }
+      );
 
       return reminder;
     }),
@@ -54,16 +63,23 @@ export const remindRouter = router({
       assistantRepo.getReminders(
         ctx.session.user.id,
         input.limit ?? 100,
-        input.offset ?? 0
+        input.offset ?? 0,
+        input.projectId
       )
     ),
 
   due: authedProcedure
-    .input(z.object({ before: z.string().datetime().optional() }))
+    .input(
+      z.object({
+        before: z.string().datetime().optional(),
+        projectId: z.string().uuid().optional(),
+      })
+    )
     .query(({ ctx, input }) =>
       assistantRepo.getDueReminders(
         ctx.session.user.id,
-        input.before ? new Date(input.before) : new Date()
+        input.before ? new Date(input.before) : new Date(),
+        input.projectId
       )
     ),
 

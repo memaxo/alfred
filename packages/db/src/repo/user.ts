@@ -125,8 +125,24 @@ export async function upsertProfile(
 }
 
 // Preference operations
-export async function getPreferences(userId: string): Promise<PreferenceRow[]> {
-  return getPreferencesStmt.execute({ userId });
+export async function getPreferences(
+  userId: string,
+  projectId?: string
+): Promise<PreferenceRow[]> {
+  const conditions = [eq(preferences.userId, userId)];
+  if (projectId) {
+    conditions.push(
+      sql`(${preferences.projectId} IS NULL OR ${preferences.projectId} = ${projectId})`
+    );
+  } else {
+    conditions.push(sql`${preferences.projectId} IS NULL`);
+  }
+
+  return db
+    .select()
+    .from(preferences)
+    .where(and(...conditions))
+    .orderBy(desc(preferences.projectId), desc(preferences.updated));
 }
 
 export async function setPreference(
@@ -134,19 +150,21 @@ export async function setPreference(
   key: string,
   value: unknown,
   confidence = 1.0,
-  source = "user"
+  source = "user",
+  projectId?: string
 ): Promise<PreferenceRow> {
   const [row] = await db
     .insert(preferences)
     .values({
       userId,
+      projectId,
       key,
       value,
       confidence,
       source,
     })
     .onConflictDoUpdate({
-      target: [preferences.userId, preferences.key],
+      target: [preferences.userId, preferences.key, preferences.projectId],
       set: {
         value,
         confidence,
@@ -182,12 +200,14 @@ export async function addFact(
   embedding?: number[],
   category?: string,
   confidence = 1.0,
-  source = "user"
+  source = "user",
+  projectId?: string
 ): Promise<FactRow> {
   const [row] = await db
     .insert(facts)
     .values({
       userId,
+      projectId,
       content,
       embedding: embedding ?? null,
       category: category ?? null,
@@ -209,16 +229,33 @@ export async function searchFacts(
   userId: string,
   embedding: number[],
   limit = 10,
-  threshold = 0.7
+  threshold = 0.7,
+  projectId?: string
 ): Promise<FactSearchResult[]> {
   // Format embedding array as PostgreSQL array constructor for vector cast
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
+
+  const conditions = [
+    eq(facts.userId, userId),
+    isNotNull(facts.embedding),
+  ];
+  if (projectId) {
+    // Favor project-local facts but allow global fallback
+    // We could apply a score boost here, but for now we just filter or sort.
+    // ExecPlan suggests "weights project-local facts higher than global ones".
+    // We can do this by adding to the score if projectId matches.
+  }
+
+  const projectScoreExpr = projectId 
+    ? sql<number>`CASE WHEN ${facts.projectId} = ${projectId} THEN 0.1 ELSE 0 END`
+    : sql<number>`0`;
 
   // Use Drizzle with raw SQL only for vector operations
   const rows = await db
     .select({
       id: facts.id,
       userId: facts.userId,
+      projectId: facts.projectId,
       content: facts.content,
       category: facts.category,
       confidence: facts.confidence,
@@ -226,11 +263,11 @@ export async function searchFacts(
       created: facts.created,
       updated: facts.updated,
       embedding: facts.embedding,
-      score: sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,
+      score: sql<number>`(1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)) + ${projectScoreExpr}`,
     })
     .from(facts)
-    .where(and(eq(facts.userId, userId), isNotNull(facts.embedding)))
-    .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
+    .where(and(...conditions))
+    .orderBy(sql`score DESC`)
     .limit(limit * 3);
 
   // Filter by threshold and limit
@@ -242,12 +279,18 @@ export async function searchFacts(
 export async function listFacts(
   userId: string,
   limit = 100,
-  offset = 0
+  offset = 0,
+  projectId?: string
 ): Promise<FactRow[]> {
+  const conditions = [eq(facts.userId, userId)];
+  if (projectId) {
+    conditions.push(eq(facts.projectId, projectId));
+  }
+
   const rows = await db
     .select()
     .from(facts)
-    .where(eq(facts.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(facts.created))
     .limit(limit)
     .offset(offset);
@@ -276,12 +319,14 @@ export async function addEvent(
   userId: string,
   type: string,
   data: unknown,
-  metadata?: unknown
+  metadata?: unknown,
+  projectId?: string
 ): Promise<EventRow> {
   const [row] = await db
     .insert(events)
     .values({
       userId,
+      projectId,
       type,
       data,
       metadata: metadata ?? null,
@@ -299,16 +344,21 @@ export async function getEvents(
   userId: string,
   type?: string,
   limit = 100,
-  offset = 0
+  offset = 0,
+  projectId?: string
 ): Promise<EventRow[]> {
-  const where = type
-    ? and(eq(events.userId, userId), eq(events.type, type))
-    : eq(events.userId, userId);
+  const conditions = [eq(events.userId, userId)];
+  if (type) {
+    conditions.push(eq(events.type, type));
+  }
+  if (projectId) {
+    conditions.push(eq(events.projectId, projectId));
+  }
 
   const rows = await db
     .select()
     .from(events)
-    .where(where)
+    .where(and(...conditions))
     .orderBy(desc(events.timestamp))
     .limit(limit)
     .offset(offset);
@@ -379,12 +429,14 @@ export async function addFeedback(
   messageId: string,
   rating?: number,
   comment?: string,
-  tags?: string[]
+  tags?: string[],
+  projectId?: string
 ): Promise<FeedbackRow> {
   const [row] = await db
     .insert(feedback)
     .values({
       userId,
+      projectId,
       conversationId: conversationId ?? null,
       messageId: messageId ?? null,
       rating: rating ?? null,

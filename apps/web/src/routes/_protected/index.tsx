@@ -48,17 +48,21 @@ function DesktopRoute() {
 
   // Auto-activate voice in intro mode
   useEffect(() => {
-    if (introMode === "intro" && stream.status === "idle") {
-      stream.start().catch((err) => {
+    if (introMode !== "intro") {
+      return;
+    }
+    if (stream.status === "idle") {
+      stream.start().catch(() => {
         // Silent catch - browser autoplay policy might block
-        console.debug("Voice auto-start deferred:", err);
       });
     }
   }, [introMode, stream]);
 
   // Interaction dismissal
   useEffect(() => {
-    if (introMode !== "intro") return;
+    if (introMode !== "intro") {
+      return;
+    }
 
     const dismiss = () => {
       setIntroMode("active");

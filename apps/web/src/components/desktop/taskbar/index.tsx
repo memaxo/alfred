@@ -4,50 +4,25 @@
  * Taskbar - Windows 11-inspired bottom taskbar
  *
  * Provides:
- * - App launcher button (Alfred logo) with popover grid
- * - Pinned apps section
- * - Running apps with previews
- * - System tray
- *
- * Icons and labels are pulled from windowRegistry (single source of truth).
+ * - App launcher button (Alfred logo) with enhanced popover
+ * - Grouped pinned and running apps
+ * - Window thumbnail previews on hover
+ * - Taskbar context menus
  *
  * @see docs/execplans/desktop-evolution-prd.md Section 2.3
  */
 
-import { MessageSquare } from "lucide-react";
-import { type CSSProperties, useCallback, useState } from "react";
+import { type CSSProperties, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import {
-  getSpawnableWindowTypes,
-  getWindowIcon,
-  getWindowLabel,
-} from "@/components/desktop/windows/registry";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowType } from "@/store/desktop/types.new";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
+import type { WindowInstance, WindowType } from "@/store/desktop/types.new";
+import { AppLauncherButton } from "./app-launcher";
+import { TaskbarButton } from "./taskbar-button";
 
 type TaskbarProps = {
   style?: CSSProperties;
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function Taskbar({ style }: TaskbarProps) {
   const {
@@ -68,26 +43,62 @@ export function Taskbar({ style }: TaskbarProps) {
     }))
   );
 
-  // Get unique running window types
-  const runningTypes = new Set(windows.map((w) => w.data?.type));
+  // Group windows by type
+  const windowsByType = useMemo(() => {
+    const groups: Record<string, WindowInstance[]> = {};
+    for (const win of windows) {
+      const type = win.data?.type;
+      if (!type) {
+        continue;
+      }
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(win);
+    }
+    return groups;
+  }, [windows]);
+
+  // All types that should be visible in taskbar (pinned + running)
+  const visibleTypes = useMemo(() => {
+    const runningTypes = Object.keys(windowsByType) as WindowType[];
+    const all = new Set([...dockPins, ...runningTypes]);
+    return Array.from(all);
+  }, [dockPins, windowsByType]);
 
   const handleAppClick = useCallback(
     (type: WindowType) => {
-      // Find existing window of this type
-      const existing = windows.find((w) => w.data?.type === type);
+      const group = windowsByType[type];
 
-      if (existing) {
-        // Restore if minimized, then focus
-        if (existing.state === "minimized") {
-          restoreWindow(existing.id);
+      if (group && group.length > 0) {
+        // If only one window, focus/restore it
+        if (group.length === 1) {
+          const win = group[0];
+          if (win) {
+            if (win.state === "minimized") {
+              restoreWindow(win.id);
+            }
+            focusWindow(win.id);
+          }
+        } else {
+          // If multiple windows, focus the most recently used one
+          const sorted = [...group].sort(
+            (a, b) => b.lastFocusedAt - a.lastFocusedAt
+          );
+          const win = sorted[0];
+          if (win) {
+            if (win.state === "minimized") {
+              restoreWindow(win.id);
+            }
+            focusWindow(win.id);
+          }
         }
-        focusWindow(existing.id);
       } else {
         // Spawn new window
         spawnWindow(type);
       }
     },
-    [windows, focusWindow, spawnWindow, restoreWindow]
+    [windowsByType, focusWindow, spawnWindow, restoreWindow]
   );
 
   return (
@@ -104,163 +115,26 @@ export function Taskbar({ style }: TaskbarProps) {
           {/* Divider */}
           <div className="mx-1 h-6 w-px bg-white/10" />
 
-          {/* Pinned Apps */}
-          {dockPins.map((type) => (
-            <TaskbarButton
-              isFocused={
-                windows.find((w) => w.id === focusedWindowId)?.data?.type ===
-                type
-              }
-              isRunning={runningTypes.has(type)}
-              key={type}
-              onClick={() => handleAppClick(type)}
-              type={type}
-            />
-          ))}
+          {/* Apps */}
+          {visibleTypes.map((type) => {
+            const group = windowsByType[type] || [];
+            const isFocused =
+              windows.find((w) => w.id === focusedWindowId)?.data?.type ===
+              type;
 
-          {/* Running but unpinned apps */}
-          {windows
-            .filter((w) => !dockPins.includes(w.data?.type as WindowType))
-            .map((w) => (
+            return (
               <TaskbarButton
-                isFocused={w.id === focusedWindowId}
-                isRunning={true}
-                key={w.id}
-                onClick={() => focusWindow(w.id)}
-                type={w.data?.type as WindowType}
+                isFocused={isFocused}
+                isRunning={group.length > 0}
+                key={type}
+                onClick={() => handleAppClick(type)}
+                type={type}
+                windows={group}
               />
-            ))}
+            );
+          })}
         </div>
       </div>
     </TooltipProvider>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// APP LAUNCHER BUTTON
-// ─────────────────────────────────────────────────────────────────────────────
-
-function AppLauncherButton() {
-  const [open, setOpen] = useState(false);
-  const { spawnWindow } = useDesktopStore(
-    useShallow((s) => ({
-      spawnWindow: s.spawnWindow,
-    }))
-  );
-
-  const spawnableTypes = getSpawnableWindowTypes();
-
-  const handleLaunch = useCallback(
-    (type: WindowType) => {
-      spawnWindow(type);
-      setOpen(false);
-    },
-    [spawnWindow]
-  );
-
-  return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <button
-              aria-label="App Launcher"
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-biolum/20 to-biolum/5 text-biolum transition-all hover:scale-105 hover:from-biolum/30 hover:to-biolum/10",
-                open && "scale-105 from-biolum/30 to-biolum/10"
-              )}
-              type="button"
-            >
-              <span className="text-xl">⬡</span>
-            </button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>App Launcher</p>
-        </TooltipContent>
-      </Tooltip>
-      <PopoverContent
-        align="start"
-        className="w-80 border-white/10 bg-void-surface/95 p-3 backdrop-blur-xl"
-        side="top"
-        sideOffset={12}
-      >
-        <div className="mb-2 font-medium text-biolum text-sm">Applications</div>
-        <div className="grid grid-cols-4 gap-2">
-          {spawnableTypes.map((type) => {
-            const Icon = getWindowIcon(type) ?? MessageSquare;
-            const label = getWindowLabel(type);
-            return (
-              <button
-                className="flex flex-col items-center gap-1 rounded-lg p-2 text-biolum-dim transition-colors hover:bg-white/5 hover:text-biolum"
-                key={type}
-                onClick={() => handleLaunch(type)}
-                title={label}
-                type="button"
-              >
-                <Icon className="h-6 w-6" />
-                <span className="max-w-full truncate text-xs">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TASKBAR BUTTON
-// ─────────────────────────────────────────────────────────────────────────────
-
-type TaskbarButtonProps = {
-  type: WindowType;
-  isRunning: boolean;
-  isFocused: boolean;
-  onClick: () => void;
-};
-
-function TaskbarButton({
-  type,
-  isRunning,
-  isFocused,
-  onClick,
-}: TaskbarButtonProps) {
-  const Icon = getWindowIcon(type) ?? MessageSquare;
-  const label = getWindowLabel(type);
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          aria-label={label}
-          className={cn(
-            "relative flex h-10 w-10 items-center justify-center rounded-lg transition-all",
-            isFocused
-              ? "bg-biolum/20 text-biolum"
-              : "text-biolum-dim hover:bg-white/5 hover:text-biolum"
-          )}
-          onClick={onClick}
-          type="button"
-        >
-          <Icon className="h-5 w-5" />
-
-          {/* Running indicator */}
-          {isRunning && (
-            <div
-              className={cn(
-                "-translate-x-1/2 absolute bottom-1 left-1/2 h-1 rounded-full transition-all",
-                isFocused ? "w-4 bg-biolum" : "w-1 bg-biolum/50"
-              )}
-            />
-          )}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top">
-        <p>{label}</p>
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-export { AppLauncherButton, TaskbarButton };

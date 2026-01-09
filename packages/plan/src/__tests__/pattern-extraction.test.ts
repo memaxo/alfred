@@ -12,6 +12,10 @@ mock.module("@alfred/agent/v6", () => ({
   getModelId: () => "gpt-4o-mini",
 }));
 
+mock.module("@alfred/rag", () => ({
+  embed: async () => new Array(1024).fill(0.1),
+}));
+
 mock.module("@alfred/db", () => ({
   patternRepo: {
     createPattern: async (data: any) => ({ ...data, id: "pattern-123" }),

@@ -24,6 +24,7 @@ mock.module("@alfred/db", () => ({
         planTemplate: { phases: [{}, {}, {}, {}] },
       },
     ],
+    updatePattern: async () => ({}),
   },
 }));
 
@@ -39,7 +40,7 @@ describe("Pattern Matching", () => {
   it("should categorize matches by confidence", () => {
     const patterns = [
       { id: "p1", successRate: "0.9500", similarity: 0.9 } as any,
-      { id: "p2", successRate: "0.8000", similarity: 0.75 } as any,
+      { id: "p2", successRate: "0.8000", similarity: 0.9 } as any,
       { id: "p3", successRate: "0.5000", similarity: 0.6 } as any,
     ];
 

@@ -265,6 +265,34 @@ function resolveCodexBin(): string {
   throw CodexError.spawn("codex_binary_not_found");
 }
 
+async function resolveProjectId(args: {
+  workingDirectory: string;
+  userId: string | undefined;
+  session: CodexSessionState | undefined;
+}): Promise<string | undefined> {
+  if (args.session?.projectId) {
+    const projectId = args.session.projectId;
+    if (process.env.DATABASE_URL) {
+      import("@alfred/db/repo/project")
+        .then((repo) => repo.updateProjectLastActive(projectId))
+        .catch(() => {});
+    }
+    return projectId;
+  }
+
+  if (!(process.env.DATABASE_URL && args.userId)) {
+    return;
+  }
+
+  try {
+    const { detectProject } = await import("@alfred/plan");
+    const project = await detectProject(args.workingDirectory, args.userId);
+    return project.id;
+  } catch {
+    return;
+  }
+}
+
 type ThreadValidator = (threadId: string) => Promise<boolean>;
 
 function resolveThreadValidator(): ThreadValidator | undefined {
@@ -349,8 +377,28 @@ async function runCodexWithCodex({
     throw CodexError.session("codex_session_user_required");
   }
 
+  let existingSession: CodexSessionState | undefined;
+  if (sessionId) {
+    if (!sessionOwnerId) {
+      throw CodexError.session("codex_session_user_required");
+    }
+    existingSession = await sessionManager.getSession(
+      sessionId,
+      sessionOwnerId
+    );
+  } else {
+    existingSession = undefined;
+  }
+
+  const projectId = await resolveProjectId({
+    workingDirectory: resolvedCw,
+    userId: sessionOwnerId,
+    session: existingSession,
+  });
+
   const recorder = await CodexRunRecorder.start({
     userId: sessionOwnerId,
+    projectId,
     sessionId,
     threadId: undefined,
     auto: input.auto,
@@ -428,18 +476,6 @@ async function runCodexWithCodex({
   // codex binary in that mode.
   const codexBin = input.containerName ? "codex" : resolveCodexBin();
   const threadValidator = resolveThreadValidator();
-  let existingSession: CodexSessionState | undefined;
-  if (sessionId) {
-    if (!sessionOwnerId) {
-      throw CodexError.session("codex_session_user_required");
-    }
-    existingSession = await sessionManager.getSession(
-      sessionId,
-      sessionOwnerId
-    );
-  } else {
-    existingSession = undefined;
-  }
 
   const stopSessionValidationTimer = startCodexSessionValidationTimer();
 
@@ -520,8 +556,12 @@ async function runCodexWithCodex({
       const { buildCodexLearningContext } = await import(
         "@alfred/db/repo/codex-learning"
       );
+
+      const learningResource = projectId
+        ? `project:${projectId}:${resolvedCw}`
+        : resolvedCw;
       const learningContext = await buildCodexLearningContext(
-        resolvedCw,
+        learningResource,
         input.prompt,
         2000
       );
@@ -741,6 +781,7 @@ async function runCodexWithCodex({
       threadId,
       executionId,
       auto: input.auto,
+      projectId,
     }).catch((err) => logger.debug("codex_persist_reasoning_error", { err }));
   }
 
@@ -750,6 +791,7 @@ async function runCodexWithCodex({
     sessionId,
     threadId,
     auto: input.auto,
+    projectId,
     result: resultText,
     artifacts,
   }).catch((err) => logger.debug("codex_persist_execution_error", { err }));
@@ -759,12 +801,22 @@ async function runCodexWithCodex({
       throw CodexError.session("codex_session_user_required");
     }
     try {
-      await sessionManager.createSession(
-        sessionId,
-        threadId,
-        resolvedCw,
-        sessionOwnerId
-      );
+      if (projectId) {
+        await sessionManager.createSession(
+          sessionId,
+          threadId,
+          resolvedCw,
+          sessionOwnerId,
+          { projectId }
+        );
+      } else {
+        await sessionManager.createSession(
+          sessionId,
+          threadId,
+          resolvedCw,
+          sessionOwnerId
+        );
+      }
     } catch (error) {
       await recorder.finalizeError({
         exitCode: 1,

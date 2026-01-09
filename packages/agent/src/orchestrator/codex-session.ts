@@ -17,6 +17,7 @@ export type CodexSessionState = {
   userId: string;
   threadId: string;
   workingDirectory: string;
+  projectId?: string;
   createdAt: number;
   lastAccessedAt: number;
   expiresAt: number;
@@ -66,6 +67,7 @@ function toState(record: CodexSession): CodexSessionState {
     userId: record.userId,
     threadId: record.threadId,
     workingDirectory: record.workingDirectory,
+    projectId: record.projectId ?? undefined,
     status: (record.status as CodexSessionState["status"]) ?? "active",
     linearIssueId: record.linearIssueId ?? undefined,
     createdAt: toMillis(record.createdAt),
@@ -148,6 +150,7 @@ export class CodexSessionManager {
     options: {
       status?: CodexSessionState["status"];
       linearIssueId?: string;
+      projectId?: string;
     } = {}
   ): Promise<CodexSessionState> {
     if (!userId) {
@@ -161,6 +164,7 @@ export class CodexSessionManager {
       sessionId,
       threadId,
       userId,
+      projectId: options.projectId ?? null,
       workingDirectory,
       status: options.status ?? "active",
       linearIssueId: options.linearIssueId ?? null,

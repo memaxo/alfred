@@ -68,6 +68,7 @@ type GlobalWithImage = typeof globalThis & {
   Image?: typeof Image;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: Test stub requires this to mimic browser Image constructor
 const ImageStub = function (this: any) {
   this.src = "";
   this.width = 0;
@@ -86,7 +87,7 @@ const ImageStub = function (this: any) {
   this.removeEventListener = () => {};
   this.onload = null;
   this.onerror = null;
-} as any as typeof Image;
+} as unknown as typeof Image;
 
 if (typeof (window as unknown as WindowWithImage).Image === "undefined") {
   (window as unknown as WindowWithImage).Image = ImageStub;

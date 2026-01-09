@@ -43,6 +43,13 @@ export function uniqSeeds<T extends { resource: string; hash: string }>(
   return list;
 }
 
+export function scopeResource(resource: string, projectId?: string): string {
+  if (!projectId) {
+    return resource;
+  }
+  return `project:${projectId}:${resource}`;
+}
+
 export function parseJsonRecord(
   value: unknown
 ): Record<string, unknown> | null {

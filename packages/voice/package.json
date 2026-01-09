@@ -86,6 +86,10 @@
       "types": "./dist/process/ipc.d.ts",
       "default": "./src/process/ipc.ts"
     },
+    "./process/pool-manager": {
+      "types": "./dist/process/pool-manager.d.ts",
+      "default": "./src/process/pool-manager.ts"
+    },
     "./process/stt": {
       "types": "./dist/process/stt.d.ts",
       "default": "./src/process/stt.ts"

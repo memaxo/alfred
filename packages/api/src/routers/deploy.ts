@@ -290,8 +290,27 @@ export const deployRouter = router({
         });
         routeRegistered = true;
 
+        const projectId = await (async () => {
+          const url = process.env.DATABASE_URL;
+          if (!url || url.startsWith("sqlite")) {
+            return;
+          }
+          const cw = typeof input.cw === "string" ? input.cw.trim() : "";
+          if (!cw) {
+            return;
+          }
+          try {
+            const { detectProject } = await import("@alfred/plan");
+            const project = await detectProject(cw, userId);
+            return project.id;
+          } catch {
+            return;
+          }
+        })();
+
         const record = await deployRepo.upsertDeployment({
           userId,
+          projectId,
           app: input.app,
           type: "preview",
           status: "running",
@@ -371,6 +390,16 @@ export const deployRouter = router({
         input.app,
         "preview"
       );
+
+      if (preview?.projectId) {
+        const url = process.env.DATABASE_URL;
+        if (url && !url.startsWith("sqlite")) {
+          const projectId = preview.projectId;
+          await import("@alfred/db/repo/project")
+            .then((repo) => repo.updateProjectLastActive(projectId))
+            .catch(() => {});
+        }
+      }
       if (preview?.domain) {
         await deployService.safeRouterRemove(preview.domain, input.authz);
       }
@@ -386,6 +415,7 @@ export const deployRouter = router({
 
       const record = await deployRepo.upsertDeployment({
         userId,
+        projectId: preview?.projectId ?? null,
         app: input.app,
         type: "production",
         status: "active",

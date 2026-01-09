@@ -12,6 +12,14 @@ export type WorkspaceFactoryOptions = {
   image?: string;
   /** Authorization token for Docker operations */
   authz?: string;
+  /** Override Docker container name (default: per-run) */
+  containerName?: string;
+  /** Keep container around on cleanup (for project-scoped reuse) */
+  retainContainer?: boolean;
+  /** Optional project attachment for container tracking */
+  projectId?: string;
+  /** Container kind for project attachment tracking */
+  containerKind?: string;
 };
 
 /**
@@ -34,6 +42,10 @@ export const WorkspaceFactory = {
       dbPath: options?.agentfsDbPath,
       image: options?.image,
       authz: options?.authz,
+      containerName: options?.containerName,
+      retainContainer: options?.retainContainer,
+      projectId: options?.projectId,
+      containerKind: options?.containerKind,
     });
   },
 };

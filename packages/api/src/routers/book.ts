@@ -3,6 +3,7 @@ import z from "zod";
 import { authedProcedure, router } from "../trpc";
 
 const bookmarkInput = z.object({
+  projectId: z.string().uuid().optional(),
   url: z.string().url(),
   title: z.string().min(1).max(256).optional(),
   description: z.string().max(1024).optional(),
@@ -10,6 +11,7 @@ const bookmarkInput = z.object({
 });
 
 const bookmarkListInput = z.object({
+  projectId: z.string().uuid().optional(),
   limit: z.number().int().min(1).max(200).default(100),
   offset: z.number().int().min(0).default(0),
 });
@@ -23,14 +25,20 @@ export const bookRouter = router({
         input.url,
         input.title,
         input.description,
-        input.tags
+        input.tags,
+        input.projectId
       )
     ),
 
   list: authedProcedure
     .input(bookmarkListInput)
     .query(({ ctx, input }) =>
-      assistantRepo.getBookmarks(ctx.session.user.id, input.limit, input.offset)
+      assistantRepo.getBookmarks(
+        ctx.session.user.id,
+        input.limit,
+        input.offset,
+        input.projectId
+      )
     ),
 
   delete: authedProcedure

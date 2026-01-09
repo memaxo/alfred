@@ -98,6 +98,7 @@ export async function upsertNodes(
     hash: seed.hash,
     kind: seed.kind,
     label: sanitizeContextText(seed.label),
+    projectId: seed.projectId ?? null,
     properties:
       seed.properties === undefined || seed.properties === null
         ? null
@@ -116,6 +117,7 @@ export async function upsertNodes(
         label: sql`excluded.label`,
         properties: sql`excluded.properties`,
         embedding: sql`excluded.embedding`,
+        projectId: sql`excluded.project_id`,
         sanitized: sql`excluded.sanitized`,
         updated: sql`NOW()`,
       },
@@ -194,7 +196,8 @@ function getMirrorLabel(seed: MirrorEntitySeed): string {
  */
 export async function ensureMirrorNodes(
   resource: string,
-  seeds: MirrorEntitySeed[]
+  seeds: MirrorEntitySeed[],
+  options?: { projectId?: string }
 ): Promise<Map<string, NodeRow>> {
   if (seeds.length === 0) {
     return new Map();
@@ -232,6 +235,7 @@ export async function ensureMirrorNodes(
       hash: getMirrorHash(seed),
       kind: seed.kind,
       label: getMirrorLabel(seed),
+      projectId: options?.projectId,
       properties:
         seed.properties === undefined
           ? {
@@ -283,6 +287,7 @@ export async function ensureMirrorNodes(
         hash: getMirrorHash(seed),
         kind: seed.kind,
         label: row.label,
+        projectId: options?.projectId,
         properties: seed.properties,
       }));
       const updated = await upsertNodes(updateSeeds);
@@ -297,6 +302,7 @@ export async function ensureMirrorNodes(
         hash: getMirrorHash(seed),
         kind: seed.kind,
         label: sanitizeContextText(getMirrorLabel(seed)),
+        projectId: options?.projectId ?? null,
         properties:
           seed.properties === undefined || seed.properties === null
             ? null
@@ -438,6 +444,7 @@ export async function upsertEdges(seeds: EdgeSeed[]): Promise<EdgeRow[]> {
         fromId: seed.fromId,
         toId: seed.toId,
         kind: seed.kind,
+        projectId: seed.projectId ?? null,
         weight: seed.weight ?? 1,
         metadata: seed.metadata ?? null,
       }))
@@ -448,6 +455,7 @@ export async function upsertEdges(seeds: EdgeSeed[]): Promise<EdgeRow[]> {
         fromId: sql`excluded.from_id`,
         toId: sql`excluded.to_id`,
         kind: sql`excluded.kind`,
+        projectId: sql`excluded.project_id`,
         weight: sql`excluded.weight`,
         metadata: sql`excluded.metadata`,
       },

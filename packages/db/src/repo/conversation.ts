@@ -18,6 +18,7 @@ type PreparedQuery<TParams, TResult> = {
 const conversationSelection = {
   id: conversations.id,
   userId: conversations.userId,
+  projectId: conversations.projectId,
   title: conversations.title,
   workflowId: conversations.workflowId,
   created: conversations.created,
@@ -108,12 +109,14 @@ const getMessageStmt: PreparedQuery<
 export async function createConversation(
   userId: string,
   title?: string,
-  workflowId?: string
+  workflowId?: string,
+  projectId?: string
 ): Promise<ConversationRow> {
   const [row] = await db
     .insert(conversations)
     .values({
       userId,
+      projectId: projectId ?? null,
       title: title ?? null,
       workflowId: workflowId ?? null,
     })

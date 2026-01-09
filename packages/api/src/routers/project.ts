@@ -83,6 +83,71 @@ export const projectRouter = router({
       }
     }),
 
+  archive: authedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        reason: z.string().min(1).max(200).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const project = await projectRepo.getProjectById(input.id);
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "project_not_found",
+        });
+      }
+
+      if (project.userId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "project_access_denied",
+        });
+      }
+
+      await projectRepo.archiveProject(input.id, input.reason ?? null);
+      return (await projectRepo.getProjectById(input.id)) ?? project;
+    }),
+
+  unarchive: authedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const project = await projectRepo.getProjectById(input.id);
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "project_not_found",
+        });
+      }
+
+      if (project.userId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "project_access_denied",
+        });
+      }
+
+      await projectRepo.unarchiveProject(input.id);
+      return (await projectRepo.getProjectById(input.id)) ?? project;
+    }),
+
   /**
    * Get a project by ID
    */

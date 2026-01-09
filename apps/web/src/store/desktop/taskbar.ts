@@ -29,6 +29,7 @@ export const createTaskbarSlice: StateCreator<
   TaskbarSlice
 > = (set, get) => ({
   pinnedApps: DEFAULT_PINNED_APPS,
+  recentApps: [],
 
   // Legacy compatibility
   dockPins: DEFAULT_PINNED_APPS,
@@ -65,12 +66,27 @@ export const createTaskbarSlice: StateCreator<
     resourceRef?: ResourceRef,
     position?: { x: number; y: number }
   ) => {
-    const { openWindow } = get();
+    const { openWindow, addRecentApp } = get();
+    addRecentApp(type);
     return openWindow(
       type,
       resourceRef ? { resourceRef } : undefined,
       position ? { x: position.x, y: position.y } : undefined
     );
+  },
+
+  addRecentApp: (type: WindowType) => {
+    set((state) => {
+      // Don't add if already the most recent
+      if (state.recentApps[0] === type) {
+        return state;
+      }
+
+      const filtered = state.recentApps.filter((t) => t !== type);
+      return {
+        recentApps: [type, ...filtered].slice(0, 10), // Keep last 10
+      };
+    });
   },
 
   // ─────────────────────────────────────────────────────────────────────────

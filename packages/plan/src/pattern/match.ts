@@ -10,9 +10,9 @@ export type MatchOptions = {
 };
 
 export type CategorizedPatterns = {
-  autoSuggest: WorkflowPattern[];
-  requireConfirmation: WorkflowPattern[];
-  lowConfidence: WorkflowPattern[];
+  autoSuggest: Array<WorkflowPattern & { similarity: number }>;
+  requireConfirmation: Array<WorkflowPattern & { similarity: number }>;
+  lowConfidence: Array<WorkflowPattern & { similarity: number }>;
 };
 
 /**

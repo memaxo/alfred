@@ -13,8 +13,11 @@ export async function detectProject(
   // 1. Check if project exists for user+workspace
   const existing = await projectRepo.getProjectByWorkspace(userId, workspace);
   if (existing) {
+    if (existing.archivedAt) {
+      await projectRepo.unarchiveProject(existing.id);
+    }
     await projectRepo.updateProjectLastActive(existing.id);
-    return existing;
+    return (await projectRepo.getProjectById(existing.id)) ?? existing;
   }
 
   // 2. Auto-create project from workspace

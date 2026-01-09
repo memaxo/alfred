@@ -53,7 +53,37 @@ describe("book router", () => {
         "https://example.com",
         "Example",
         "Example site",
-        ["web"]
+        ["web"],
+        undefined
+      );
+      expect(result).toEqual(mockBookmark);
+    });
+
+    it("creates a bookmark with projectId", async () => {
+      const projectId = crypto.randomUUID();
+      const mockBookmark = {
+        id: "bookmark-id",
+        userId: "test-user",
+        projectId,
+        url: "https://example.com",
+        title: "Example",
+      };
+
+      createBookmarkMock.mockResolvedValue(mockBookmark);
+
+      const result = await caller.book.create({
+        projectId,
+        url: "https://example.com",
+        title: "Example",
+      });
+
+      expect(createBookmarkMock).toHaveBeenCalledWith(
+        "test-user",
+        "https://example.com",
+        "Example",
+        undefined,
+        undefined,
+        projectId
       );
       expect(result).toEqual(mockBookmark);
     });
@@ -81,8 +111,31 @@ describe("book router", () => {
         offset: 0,
       });
 
-      expect(getBookmarksMock).toHaveBeenCalledWith("test-user", 10, 0);
+      expect(getBookmarksMock).toHaveBeenCalledWith(
+        "test-user",
+        10,
+        0,
+        undefined
+      );
       expect(result).toEqual(mockBookmarks);
+    });
+
+    it("lists bookmarks scoped to project", async () => {
+      const projectId = crypto.randomUUID();
+      getBookmarksMock.mockResolvedValue([]);
+
+      await caller.book.list({
+        limit: 10,
+        offset: 0,
+        projectId,
+      });
+
+      expect(getBookmarksMock).toHaveBeenCalledWith(
+        "test-user",
+        10,
+        0,
+        projectId
+      );
     });
   });
 

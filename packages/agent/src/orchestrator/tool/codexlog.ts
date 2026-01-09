@@ -7,6 +7,11 @@ import type { ToolExecuteArgs } from "./shared/context.js";
 const listInputSchema = z.object({
   action: z.literal("list").describe("List Codex runs for the current user."),
   authz: z.string().optional().describe("Tool token for policy enforcement."),
+  projectId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Filter by ALFRED project id."),
   status: z
     .enum(["running", "completed", "failed", "cancelled"])
     .optional()
@@ -227,6 +232,7 @@ export const toolCodexlog = {
           : undefined;
         const runs = await codexRunRepo.listRuns({
           userId,
+          projectId: input.projectId,
           status: input.status,
           sessionId: input.sessionId,
           threadId: input.threadId,

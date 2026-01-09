@@ -1,0 +1,23 @@
+[project]
+name = "alfred-embed"
+version = "0.1.0"
+description = "Local embedding models for ALFRED (KaLM-Embedding-Gemma3-12B-2511) - ROCm Variant"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "sentence-transformers>=3.0.0",
+    "huggingface-hub>=0.20.0",
+    "numpy>=1.24.0",
+    "torch>=2.5.0",
+    "bitsandbytes>=0.42.0",
+    "accelerate>=0.26.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-rocm"
+url = "https://download.pytorch.org/whl/rocm6.0"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-rocm" }
+torchvision = { index = "pytorch-rocm" }
+torchaudio = { index = "pytorch-rocm" }

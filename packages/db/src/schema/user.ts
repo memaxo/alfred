@@ -14,6 +14,7 @@ import {
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
+import { projects } from "./project";
 
 // Index coverage: migrations 0040+ handle preferences and facts performance indexes.
 
@@ -43,6 +44,9 @@ export const profiles = pgTable("user_profiles", {
 export const preferences = pgTable("user_preferences", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(), // References better_auth.users
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   key: text("key").notNull(),
   value: jsonb("value").notNull(),
   confidence: real("confidence").default(1.0), // Extracted preference confidence
@@ -59,6 +63,9 @@ export const preferences = pgTable("user_preferences", {
 export const facts = pgTable("user_facts", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   content: text("content").notNull(),
   embedding: vector("embedding", { dimensions: VECTOR_DIM }),
   category: text("category"), // "personal" | "work" | "technical" | etc.
@@ -76,6 +83,9 @@ export const facts = pgTable("user_facts", {
 export const events = pgTable("user_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   type: text("type").notNull(), // "conversation" | "tool_use" | "workflow" | "feedback"
   data: jsonb("data").notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow(),
@@ -106,6 +116,9 @@ export const autonomy = pgTable("user_autonomy", {
 export const feedback = pgTable("user_feedback", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   conversationId: text("conversation_id"),
   messageId: text("message_id"),
   rating: integer("rating"), // 1-5 stars or thumbs up/down

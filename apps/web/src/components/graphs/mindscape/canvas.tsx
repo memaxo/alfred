@@ -15,10 +15,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useDesktopStore } from "@/store/desktop";
 import { type MindscapeNode, useMindscapeStore } from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
-import {
-  KnowledgeEntityNode,
-  type KnowledgeEntityType,
-} from "../knowledge/entity-node";
+import { KnowledgeEntityNode } from "../knowledge/entity-node";
 import { FactEdge } from "../knowledge/fact-edge";
 
 const nodeTypes = {
@@ -47,11 +44,21 @@ function MindscapeCanvasInner() {
       }))
     );
 
-  const { spawnWindow, setMode, setFocusedWindow } = useDesktopStore(
+  const { spawnWindow, setMode, setFocusedWindow, restoreWindow, focusWindow } =
+    useDesktopStore(
+      useShallow((s) => ({
+        spawnWindow: s.spawnWindow,
+        setMode: s.setMode,
+        setFocusedWindow: s.setFocusedWindow,
+        restoreWindow: s.restoreWindow,
+        focusWindow: s.focusWindow,
+      }))
+    );
+
+  const { deactivate, removeNode } = useMindscapeStore(
     useShallow((s) => ({
-      spawnWindow: s.spawnWindow,
-      setMode: s.setMode,
-      setFocusedWindow: s.setFocusedWindow,
+      deactivate: s.deactivate,
+      removeNode: s.removeNode,
     }))
   );
 
@@ -105,8 +112,10 @@ function MindscapeCanvasInner() {
           y: Math.sin(angle) * radius,
         },
         data: {
+          type: "entity" as const,
+          entityId: entity.id,
+          entityType: entity.type,
           label: entity.name,
-          type: mapEntityType(entity.type),
           description: entity.description ?? undefined,
           confidence: entity.confidence ?? undefined,
         },
@@ -116,7 +125,7 @@ function MindscapeCanvasInner() {
 
   useEffect(() => {
     if (graphNodes.length > 0 && nodes.length === 0) {
-      graphNodes.forEach((node) => addNode(node as any));
+      graphNodes.forEach((node) => addNode(node));
       setTimeout(() => fitView({ padding: 0.3, duration: 500 }), 100);
     }
   }, [graphNodes, nodes.length, fitView, addNode]);
@@ -125,14 +134,40 @@ function MindscapeCanvasInner() {
     (event: React.MouseEvent, node: MindscapeNode) => {
       event.stopPropagation();
       selectNode(node.id);
+    },
+    [selectNode]
+  );
 
+  const handleNodeDoubleClick = useCallback(
+    (event: React.MouseEvent, node: MindscapeNode) => {
+      event.stopPropagation();
+
+      // Check if this is a window-type node with a source window
+      if (node.data.type === "window" && node.data.sourceWindowId) {
+        const windowId = node.data.sourceWindowId;
+        restoreWindow(windowId);
+        focusWindow(windowId);
+        removeNode(node.id);
+        deactivate();
+        setMode("desktop");
+        return;
+      }
+
+      // For knowledge entities, spawn a knowledge window
       const entityId = node.id;
       spawnWindow("knowledge", { type: "knowledge", id: entityId });
-
       setFocusedWindow(null);
       setMode("desktop");
     },
-    [selectNode, spawnWindow, setFocusedWindow, setMode]
+    [
+      restoreWindow,
+      focusWindow,
+      removeNode,
+      deactivate,
+      setMode,
+      spawnWindow,
+      setFocusedWindow,
+    ]
   );
 
   const uniqueEntityTypes = useMemo(() => {
@@ -153,6 +188,7 @@ function MindscapeCanvasInner() {
         nodeTypes={nodeTypes}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
         onNodesChange={onNodesChange}
         panOnScroll
         proOptions={{ hideAttribution: true }}
@@ -235,21 +271,6 @@ function MindscapeCanvasInner() {
       </div>
     </div>
   );
-}
-
-function mapEntityType(type: string): KnowledgeEntityType {
-  const typeMap: Record<string, KnowledgeEntityType> = {
-    person: "person",
-    place: "place",
-    concept: "concept",
-    event: "event",
-    fact: "fact",
-    relation: "relation",
-    entity: "concept",
-    pattern: "fact",
-    insight: "fact",
-  };
-  return typeMap[type.toLowerCase()] ?? "concept";
 }
 
 export function MindscapeCanvas() {

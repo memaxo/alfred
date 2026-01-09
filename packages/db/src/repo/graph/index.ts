@@ -10,4 +10,5 @@ export * from "./scoring";
 export * from "./temporal";
 export * from "./traverse";
 export * from "./types";
+export * from "./utils";
 export * from "./write";

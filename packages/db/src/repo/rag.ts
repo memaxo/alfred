@@ -5,7 +5,7 @@
 
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "../client";
-import { ragChunks, ragDocuments } from "../schema/rag";
+import { projectRagDocuments, ragChunks, ragDocuments } from "../schema/rag";
 
 // type DocumentInsert = typeof ragDocuments.$inferInsert;
 type DocumentRow = typeof ragDocuments.$inferSelect;
@@ -61,6 +61,61 @@ export async function deleteDocument(documentId: string): Promise<number> {
     .where(eq(ragDocuments.id, documentId))
     .returning({ id: ragDocuments.id });
   return rows.length;
+}
+
+export async function attachDocumentToProject(
+  projectId: string,
+  documentId: string
+): Promise<void> {
+  await db
+    .insert(projectRagDocuments)
+    .values({ projectId, documentId })
+    .onConflictDoNothing({
+      target: [projectRagDocuments.projectId, projectRagDocuments.documentId],
+    });
+}
+
+export async function detachDocumentFromProject(
+  projectId: string,
+  documentId: string
+): Promise<number> {
+  const rows = await db
+    .delete(projectRagDocuments)
+    .where(
+      and(
+        eq(projectRagDocuments.projectId, projectId),
+        eq(projectRagDocuments.documentId, documentId)
+      )
+    )
+    .returning({ projectId: projectRagDocuments.projectId });
+
+  return rows.length;
+}
+
+export async function listDocumentsForProject(
+  projectId: string,
+  limit = 100,
+  offset = 0
+): Promise<DocumentRow[]> {
+  return db
+    .select({
+      id: ragDocuments.id,
+      source: ragDocuments.source,
+      title: ragDocuments.title,
+      author: ragDocuments.author,
+      created: ragDocuments.created,
+      updated: ragDocuments.updated,
+      metadata: ragDocuments.metadata,
+    })
+    .from(ragDocuments)
+    .innerJoin(
+      projectRagDocuments,
+      eq(projectRagDocuments.documentId, ragDocuments.id)
+    )
+    .where(eq(projectRagDocuments.projectId, projectId))
+    .orderBy(desc(ragDocuments.updated))
+    .limit(limit)
+    .offset(offset) as Promise<DocumentRow[]>;
 }
 
 // Chunk operations

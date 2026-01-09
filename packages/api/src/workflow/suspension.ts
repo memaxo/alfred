@@ -197,9 +197,11 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
     await dispose();
 
     const runId = randomUUID();
+    const input = (options.input ?? {}) as Record<string, unknown>;
+    const projectId = input.projectId as string | undefined;
 
     const storedInput = {
-      ...(options.input as Record<string, unknown>),
+      ...input,
       executionId: runId,
       reasoningSince: Date.now(),
     };
@@ -207,6 +209,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
     await workflowRepo.createRun({
       id: runId,
       userId: options.sessionUserId,
+      projectId,
       workflowId,
       status: "suspended",
       inputData: storedInput,

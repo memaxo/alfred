@@ -14,10 +14,23 @@
  * @see docs/execplans/desktop-evolution-prd.md Section 3.6
  */
 
-import { FolderOpen, LayoutGrid, List, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import {
+  FolderOpen,
+  LayoutGrid,
+  List,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Breadcrumbs } from "./breadcrumbs";
 import { FileGrid } from "./file-grid";
@@ -70,6 +83,19 @@ export function FilesApp({
     }
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === " " && selectedFile) {
+        e.preventDefault();
+        setQuickLookFile(selectedFile);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedFile]);
+
   return (
     <div
       className={cn("flex h-full w-full flex-col bg-void-surface", className)}
@@ -83,6 +109,37 @@ export function FilesApp({
         </div>
 
         <div className="flex items-center gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-7 w-7 text-biolum-dim hover:text-biolum"
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>New Folder</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-7 w-7 text-biolum-dim hover:text-biolum"
+                  disabled={!selectedFile}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="mx-2 h-4 w-px bg-white/10" />
+
           <Button
             className={cn(
               "h-7 w-7",
@@ -106,7 +163,11 @@ export function FilesApp({
             <List className="h-4 w-4" />
           </Button>
           <div className="mx-2 h-4 w-px bg-white/10" />
-          <Button className="h-7 w-7" size="icon" variant="ghost">
+          <Button
+            className="h-7 w-7 text-biolum-dim hover:text-biolum"
+            size="icon"
+            variant="ghost"
+          >
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>

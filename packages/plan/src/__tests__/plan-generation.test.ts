@@ -12,15 +12,9 @@ mock.module("@alfred/agent/v6", () => ({
   getModelId: () => "gpt-4o",
 }));
 
-// Mock @alfred/agent/orchestrator/multi/decompose
-const mockDecomposeTask = mock();
-mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
-  decomposeTask: mockDecomposeTask,
-}));
-
-import { buildDependencyGraph } from "../generate/dependencies.js";
-import { groupIntoPhases } from "../generate/group.js";
-import { generatePlan } from "../generate/phased.js";
+const { buildDependencyGraph } = await import("../generate/dependencies.js");
+const { groupIntoPhases } = await import("../generate/group.js");
+const { generatePlan } = await import("../generate/phased.js");
 
 describe("Plan Generation", () => {
   const mockIntent = {
@@ -51,7 +45,6 @@ describe("Plan Generation", () => {
 
   beforeEach(() => {
     mockGenerateObject.mockReset();
-    mockDecomposeTask.mockReset();
   });
 
   it("should group subtasks into logical phases", () => {
@@ -163,42 +156,66 @@ describe("Plan Generation", () => {
   });
 
   it("should generate a full StructuredPlan", async () => {
-    mockDecomposeTask.mockResolvedValue([
-      {
-        id: "T1",
-        title: "Setup",
-        requirement: "setup",
-        deps: [],
-        priority: 1,
-        acceptance: [],
-        filesHint: [],
-      },
-      {
-        id: "T2",
-        title: "Test",
-        requirement: "test",
-        deps: ["T1"],
-        priority: 1,
-        acceptance: [],
-        filesHint: [],
-      },
-    ]);
-
     mockGenerateObject.mockResolvedValue({
       object: {
         phases: [
-          { name: "Environment Setup", description: "Set up the environment" },
-          { name: "Validation", description: "Validate changes" },
+          {
+            id: "phase-1",
+            name: "Logic & API",
+            description: "Update server-side logic",
+            dependsOn: [],
+            estimatedDurationMs: 60_000,
+            agentType: "codex",
+            tasks: [],
+          },
+          {
+            id: "phase-2",
+            name: "User Interface",
+            description: "Update UI components",
+            dependsOn: ["phase-1"],
+            estimatedDurationMs: 60_000,
+            agentType: "codex",
+            tasks: [],
+          },
+          {
+            id: "phase-3",
+            name: "Testing & Validation",
+            description: "Add/adjust tests",
+            dependsOn: ["phase-1", "phase-2"],
+            estimatedDurationMs: 60_000,
+            agentType: "codex",
+            tasks: [],
+          },
         ],
+        resources: {
+          agentCount: 2,
+          strategy: "sequential",
+          isolation: "agentfs",
+        },
+        evaluationCriteria: [],
       },
     });
 
-    const plan = await generatePlan(mockIntent, mockResearch);
+    const research = {
+      ...mockResearch,
+      internal: {
+        ...mockResearch.internal,
+        existingCode: [
+          "packages/api/src/routers/plan.ts",
+          "apps/web/src/components/Theme.tsx",
+          "packages/plan/src/__tests__/plan-generation.test.ts",
+        ],
+      },
+    };
+
+    const plan = await generatePlan(mockIntent, research as any);
 
     expect(plan.id).toBeDefined();
-    expect(plan.phases.length).toBe(2);
-    expect(plan.phases[0].name).toBe("Environment Setup");
+    expect(plan.phases.length).toBe(3);
+    expect(plan.phases[0].name).toBe("Logic & API");
     expect(plan.phases[1].dependsOn).toContain("phase-1");
+    expect(plan.phases[2].dependsOn).toContain("phase-1");
+    expect(plan.phases[2].dependsOn).toContain("phase-2");
     expect(plan.resources.strategy).toBe("sequential");
   });
 });

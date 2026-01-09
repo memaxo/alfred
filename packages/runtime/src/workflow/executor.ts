@@ -157,6 +157,7 @@ export async function ensureWorkflowConversation(options: {
   userId: string;
   workflowId: string;
   title?: string;
+  projectId?: string;
 }) {
   const existing = await conversationRepo.getConversationByWorkflow(
     options.userId,
@@ -170,7 +171,8 @@ export async function ensureWorkflowConversation(options: {
     const conversation = await conversationRepo.createConversation(
       options.userId,
       options.title,
-      options.workflowId
+      options.workflowId,
+      options.projectId
     );
     return { conversation, created: true };
   } catch (error) {

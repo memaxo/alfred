@@ -1,5 +1,9 @@
 import { initApiServices, shutdownApiServices } from "@alfred/api/init";
 import {
+  startPatternLifecycleScheduler,
+  stopPatternLifecycleScheduler,
+} from "@alfred/api/scheduler/pattern-lifecycle";
+import {
   startPreferenceDecayScheduler,
   stopPreferenceDecayScheduler,
 } from "@alfred/api/scheduler/preference-decay";
@@ -8,12 +12,18 @@ import {
   stopPreferenceInferenceScheduler,
 } from "@alfred/api/scheduler/preference-inference";
 import {
+  startProjectLifecycleScheduler,
+  stopProjectLifecycleScheduler,
+} from "@alfred/api/scheduler/project-lifecycle";
+import {
   startReminderScheduler,
   stopReminderScheduler,
 } from "@alfred/api/scheduler/remind";
 import { logger } from "@alfred/logger";
 import {
+  getSchedPatternLifecycle,
   getSchedPreferenceInference,
+  getSchedProjectLifecycle,
   getSchedRemind,
 } from "@/lib/env/server-only";
 
@@ -72,6 +82,40 @@ export function initServer() {
     });
   }
 
+  try {
+    if (getSchedProjectLifecycle() === "1") {
+      startProjectLifecycleScheduler({ logger });
+      logger.info("project_lifecycle_scheduler_init", {
+        message: "Scheduler init requested (SCHED_PROJECT_LIFECYCLE=1)",
+      });
+    } else {
+      logger.info("project_lifecycle_scheduler_disabled", {
+        message: "Scheduler disabled (unset SCHED_PROJECT_LIFECYCLE)",
+      });
+    }
+  } catch (error) {
+    logger.error("project_lifecycle_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    if (getSchedPatternLifecycle() === "1") {
+      startPatternLifecycleScheduler({ logger });
+      logger.info("pattern_lifecycle_scheduler_init", {
+        message: "Scheduler init requested (SCHED_PATTERN_LIFECYCLE=1)",
+      });
+    } else {
+      logger.info("pattern_lifecycle_scheduler_disabled", {
+        message: "Scheduler disabled (unset SCHED_PATTERN_LIFECYCLE)",
+      });
+    }
+  } catch (error) {
+    logger.error("pattern_lifecycle_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   // Initialize API services (compression worker, voice pools)
   initApiServices();
 
@@ -86,6 +130,8 @@ export function initServer() {
         stopReminderScheduler();
         stopPreferenceInferenceScheduler();
         stopPreferenceDecayScheduler();
+        stopProjectLifecycleScheduler();
+        stopPatternLifecycleScheduler();
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
           context: "before_reload",
@@ -99,6 +145,8 @@ export function initServer() {
         stopReminderScheduler();
         stopPreferenceInferenceScheduler();
         stopPreferenceDecayScheduler();
+        stopProjectLifecycleScheduler();
+        stopPatternLifecycleScheduler();
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
           context: "on_dispose",
@@ -136,6 +184,24 @@ export function shutdown() {
     logger.info("preference_schedulers_stopped");
   } catch (error) {
     logger.error("preference_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    stopProjectLifecycleScheduler();
+    logger.info("project_lifecycle_scheduler_stopped");
+  } catch (error) {
+    logger.error("project_lifecycle_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    stopPatternLifecycleScheduler();
+    logger.info("pattern_lifecycle_scheduler_stopped");
+  } catch (error) {
+    logger.error("pattern_lifecycle_scheduler_stop_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

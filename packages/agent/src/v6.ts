@@ -45,6 +45,7 @@ import {
   toolRagQuery,
 } from "./orchestrator/tool/rag";
 import { toolRouter } from "./orchestrator/tool/router";
+import { toolRuntime } from "./orchestrator/tool/runtime";
 import { toolSession } from "./orchestrator/tool/session";
 import { toolTicket } from "./orchestrator/tool/ticket";
 import { toolWeb } from "./orchestrator/tool/web";
@@ -175,6 +176,7 @@ const orchestratorToolSources: LegacyTool[] = [
   toolSession,
   toolProxmox,
   toolRouter,
+  toolRuntime,
   toolTicket,
   toolWeb,
 ];

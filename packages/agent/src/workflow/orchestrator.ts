@@ -300,6 +300,27 @@ export function orchestrateWorkflowStream(
       } else {
         runId = executor.runId;
         outerRunId = runId;
+
+        const projectId = await (async () => {
+          const url = process.env.DATABASE_URL;
+          if (!url || url.startsWith("sqlite")) {
+            return;
+          }
+          try {
+            const { detectProject } = await import("@alfred/plan");
+            const workspace =
+              (typeof input.workspace === "string" && input.workspace.length > 0
+                ? input.workspace
+                : typeof input.cw === "string" && input.cw.length > 0
+                  ? input.cw
+                  : undefined) ?? process.cwd();
+            const project = await detectProject(workspace, session.user.id);
+            return project.id;
+          } catch {
+            return;
+          }
+        })();
+
         const storedInput: Record<string, unknown> = {
           ...input,
           executionId: runId,
@@ -308,6 +329,7 @@ export function orchestrateWorkflowStream(
         await workflowRepo.createRun({
           id: runId,
           userId: session.user.id,
+          projectId,
           workflowId: "plan",
           status: "running",
           inputData: storedInput,
@@ -319,24 +341,28 @@ export function orchestrateWorkflowStream(
             linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? undefined,
         });
 
-        void ensureMirrorNodes("user", [
-          {
-            kind: "workflow_run",
-            id: runId,
-            label: deriveWorkflowTitle(input.requirement),
-            properties: {
-              entity: { kind: "workflow_run", id: runId },
-              workflowId: "plan",
-              status: "running",
-              linearIssueId:
-                input.linear?.issueId ?? input.linear?.sessionId ?? undefined,
-              linearIssueUrl:
-                linearIssueUrlFromCreation ??
-                input.linear?.issueUrl ??
-                undefined,
+        void ensureMirrorNodes(
+          "user",
+          [
+            {
+              kind: "workflow_run",
+              id: runId,
+              label: deriveWorkflowTitle(input.requirement),
+              properties: {
+                entity: { kind: "workflow_run", id: runId },
+                workflowId: "plan",
+                status: "running",
+                linearIssueId:
+                  input.linear?.issueId ?? input.linear?.sessionId ?? undefined,
+                linearIssueUrl:
+                  linearIssueUrlFromCreation ??
+                  input.linear?.issueUrl ??
+                  undefined,
+              },
             },
-          },
-        ]).catch((error) => {
+          ],
+          { projectId }
+        ).catch((error) => {
           logger.warn("workflow_run_mirror_failed", {
             runId,
             error: error instanceof Error ? error.message : String(error),
@@ -357,6 +383,22 @@ export function orchestrateWorkflowStream(
         }
       }
 
+      const projectIdForConversation = await (async () => {
+        if (!process.env.DATABASE_URL) {
+          return;
+        }
+        const id = runId;
+        if (!id) {
+          return;
+        }
+        try {
+          const run = await workflowRepo.getRun(id);
+          return run?.projectId ?? undefined;
+        } catch {
+          return;
+        }
+      })();
+
       // After this point runId is guaranteed to be set
       const activeRunId = runId;
       if (!activeRunId) {
@@ -369,6 +411,7 @@ export function orchestrateWorkflowStream(
           userId: session.user.id,
           workflowId: activeRunId,
           title: deriveWorkflowTitle(input.requirement),
+          projectId: projectIdForConversation,
         });
         workflowConversationId = conversation.id;
         if (created) {

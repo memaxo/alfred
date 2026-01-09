@@ -78,9 +78,9 @@ Out of scope:
   - `docker/embed/Dockerfile` (CPU + GPU variants if needed)
   - `docker/voice/Dockerfile` (CPU + ROCm variants; CUDA only if explicitly needed)
   - Persistent model/cache volumes documented via Compose labels/comments.
-- [ ] Compose standardization
-  - Single canonical `docker/compose.yml` with profiles (`voice`, `embed`, `monitoring`).
-  - Health checks use endpoints (HTTP) or deterministic probes.
+- [~] (2026-01-09) Compose standardization
+  - Added canonical `docker/compose.yml` for `alfred` + `pg` (+ optional `redis` profile).
+  - TODO: add `voice|embed|monitoring` profiles as dedicated images land.
 
 ### Phase 3: Modular Ansible IaC (reusable, idempotent)
 

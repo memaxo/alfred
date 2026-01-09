@@ -1,0 +1,78 @@
+# ALFRED canonical Compose topology (single-host)
+
+version: "3.9"
+
+services:
+  pg:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-alfred}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alfred}
+      POSTGRES_DB: ${POSTGRES_DB:-alfred}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles: ["redis"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+
+  alfred:
+    build:
+      context: ..
+      dockerfile: docker/alfred/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      pg:
+        condition: service_healthy
+    env_file:
+      - ./alfred/env.example
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://alfred:alfred@pg:5432/alfred}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    ports:
+      - "${ALFRED_PORT:-3000}:3000"
+
+  embed:
+    build:
+      context: ..
+      dockerfile: docker/embed/Dockerfile
+      args:
+        DEVICE: ${EMBED_DEVICE:-cpu}
+    restart: unless-stopped
+    profiles: ["embed"]
+    environment:
+      EMBED_DEVICE: ${EMBED_DEVICE:-cpu}
+    volumes:
+      - embed_models:/app/packages/embed/models
+
+  voice:
+    build:
+      context: ..
+      dockerfile: docker/voice/Dockerfile
+      args:
+        DEVICE: ${VOICE_DEVICE:-cpu}
+    restart: unless-stopped
+    profiles: ["voice"]
+    environment:
+      VOICE_DEVICE: ${VOICE_DEVICE:-cpu}
+    volumes:
+      - voice_models:/app/packages/voice/models
+
+volumes:
+  pgdata:
+  redisdata:
+  embed_models:
+  voice_models:

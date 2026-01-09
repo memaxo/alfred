@@ -32,6 +32,19 @@ export async function workflowProvenance(options: {
   }
 
   try {
+    const projectId = await (async () => {
+      if (!process.env.DATABASE_URL) {
+        return;
+      }
+      try {
+        const workflowRepo = await import("@alfred/db/repo/workflow");
+        const run = await workflowRepo.getRun(executionId);
+        return run?.projectId ?? undefined;
+      } catch {
+        return;
+      }
+    })();
+
     const stopTimer =
       process.env.DISABLE_TRPC_METRICS === "1"
         ? null
@@ -46,11 +59,13 @@ export async function workflowProvenance(options: {
       executionId,
       auto,
       ragDocumentIds: context?.ragDocumentIds,
+      projectId,
     });
 
     await linkRagProvenanceToReasoning({
       runtimeResource: resource,
       executionId,
+      projectId,
     });
 
     try {

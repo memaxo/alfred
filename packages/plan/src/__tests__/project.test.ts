@@ -4,12 +4,16 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 const mockGetByWorkspace = mock();
 const mockUpdateLastActive = mock();
 const mockCreateProject = mock();
+const mockGetById = mock();
+const mockUnarchiveProject = mock();
 
 mock.module("@alfred/db", () => ({
   projectRepo: {
     getProjectByWorkspace: mockGetByWorkspace,
+    getProjectById: mockGetById,
     updateProjectLastActive: mockUpdateLastActive,
     createProject: mockCreateProject,
+    unarchiveProject: mockUnarchiveProject,
   },
 }));
 
@@ -19,6 +23,12 @@ describe("Project Detection", () => {
   beforeEach(() => {
     mockGetByWorkspace.mockReset();
     mockGetByWorkspace.mockResolvedValue(null);
+
+    mockGetById.mockReset();
+    mockGetById.mockResolvedValue(null);
+
+    mockUnarchiveProject.mockReset();
+    mockUnarchiveProject.mockResolvedValue(undefined);
 
     mockUpdateLastActive.mockReset();
     mockUpdateLastActive.mockResolvedValue(undefined);
@@ -75,12 +85,14 @@ describe("Project Detection", () => {
       workspace: "/Users/test/existing",
     };
     mockGetByWorkspace.mockResolvedValue(mockProject);
+    mockGetById.mockResolvedValue(mockProject);
 
     const project = await detectProject("/Users/test/existing", "user-123");
 
     expect(project).toBeDefined();
     expect(project.id).toBe("existing-123");
     expect(mockUpdateLastActive).toHaveBeenCalledWith("existing-123");
+    expect(mockGetById).toHaveBeenCalledWith("existing-123");
     expect(mockCreateProject).not.toHaveBeenCalled();
   });
 

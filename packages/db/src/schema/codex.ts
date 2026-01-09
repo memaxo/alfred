@@ -12,6 +12,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { projects } from "./project";
+
 const tsvector = customType<{ data: string; driverData: string }>({
   dataType() {
     return "tsvector";
@@ -25,6 +27,9 @@ export const codexSessions = pgTable(
     sessionId: varchar("session_id", { length: 255 }).notNull(),
     threadId: varchar("thread_id", { length: 255 }).notNull(),
     userId: varchar("user_id", { length: 255 }).notNull(),
+    projectId: uuid("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
     workingDirectory: text("working_directory").notNull(),
     status: varchar("status", { length: 50 }).notNull(),
     linearIssueId: varchar("linear_issue_id", { length: 255 }),
@@ -41,6 +46,7 @@ export const codexSessions = pgTable(
       table.sessionId
     ),
     userIdx: index("codex_sessions_user_idx").on(table.userId),
+    projectIdx: index("codex_sessions_project_idx").on(table.projectId),
     expiresIdx: index("codex_sessions_expires_idx").on(table.expiresAt),
   })
 );
@@ -53,6 +59,9 @@ export const codexRuns = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: text("user_id").notNull(),
+    projectId: uuid("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
     sessionId: varchar("session_id", { length: 255 }),
     threadId: varchar("thread_id", { length: 255 }),
     parentRunId: uuid("parent_run_id").references(
@@ -108,6 +117,10 @@ export const codexRuns = pgTable(
   (table) => ({
     userStartedIdx: index("codex_runs_user_started_idx").on(
       table.userId,
+      table.startedAt
+    ),
+    projectStartedIdx: index("codex_runs_project_started_idx").on(
+      table.projectId,
       table.startedAt
     ),
     userSessionStartedIdx: index("codex_runs_user_session_started_idx").on(

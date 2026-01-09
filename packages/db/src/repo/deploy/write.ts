@@ -16,6 +16,7 @@ export async function upsertDeployment(
   const existing = await findLatestDeployment(input.userId, input.app, type);
   const payload: DeploymentInsert = {
     userId: input.userId,
+    projectId: input.projectId ?? null,
     app: input.app,
     type,
     status: input.status ?? "pending",
@@ -34,6 +35,7 @@ export async function upsertDeployment(
 
   if (existing) {
     const patch = sanitize<DeploymentInsert>({
+      projectId: payload.projectId,
       status: payload.status,
       domain: payload.domain,
       url: payload.url,

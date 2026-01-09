@@ -16,6 +16,8 @@ export type DesktopIcon = {
 
 export type DesktopIconSlice = {
   desktopIcons: DesktopIcon[];
+  selectedIconIds: string[];
+  draggingIconId: string | null;
 
   addDesktopIcon: (
     type: WindowType,
@@ -28,6 +30,11 @@ export type DesktopIconSlice = {
   ) => void;
   setDesktopIconLabel: (iconId: string, label: string | undefined) => void;
   resetDesktopIcons: () => void;
+
+  selectIcon: (iconId: string, addToSelection?: boolean) => void;
+  selectAllIcons: () => void;
+  clearIconSelection: () => void;
+  setDraggingIcon: (iconId: string | null) => void;
 };
 
 const DEFAULT_ICONS: DesktopIcon[] = [
@@ -58,6 +65,8 @@ export const createDesktopIconSlice = (
   get: GetState
 ): DesktopIconSlice => ({
   desktopIcons: DEFAULT_ICONS,
+  selectedIconIds: [],
+  draggingIconId: null,
 
   addDesktopIcon: (type, position) => {
     const id = `icon-${type}-${iconIdCounter++}`;
@@ -95,7 +104,32 @@ export const createDesktopIconSlice = (
   },
 
   resetDesktopIcons: () => {
-    set({ desktopIcons: DEFAULT_ICONS });
+    set({ desktopIcons: DEFAULT_ICONS, selectedIconIds: [] });
+  },
+
+  selectIcon: (iconId, addToSelection = false) => {
+    const { selectedIconIds } = get();
+    if (addToSelection) {
+      if (selectedIconIds.includes(iconId)) {
+        set({ selectedIconIds: selectedIconIds.filter((id) => id !== iconId) });
+      } else {
+        set({ selectedIconIds: [...selectedIconIds, iconId] });
+      }
+    } else {
+      set({ selectedIconIds: [iconId] });
+    }
+  },
+
+  selectAllIcons: () => {
+    set({ selectedIconIds: get().desktopIcons.map((i) => i.id) });
+  },
+
+  clearIconSelection: () => {
+    set({ selectedIconIds: [] });
+  },
+
+  setDraggingIcon: (iconId) => {
+    set({ draggingIconId: iconId });
   },
 });
 

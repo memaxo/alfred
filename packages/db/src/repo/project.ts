@@ -1,5 +1,5 @@
 // packages/db/src/repo/project.ts
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "../client";
 import { type NewProject, type Project, projects } from "../schema/project";
 
@@ -38,6 +38,62 @@ export async function updateProjectLastActive(id: string): Promise<void> {
     .update(projects)
     .set({ lastActiveAt: sql`NOW()` as unknown as Date })
     .where(eq(projects.id, id));
+}
+
+export async function archiveProject(
+  id: string,
+  reason?: string | null
+): Promise<void> {
+  await db
+    .update(projects)
+    .set({
+      archivedAt: sql`NOW()` as unknown as Date,
+      archivedReason: reason ?? null,
+      updatedAt: sql`NOW()` as unknown as Date,
+    })
+    .where(eq(projects.id, id));
+}
+
+export async function unarchiveProject(id: string): Promise<void> {
+  await db
+    .update(projects)
+    .set({
+      archivedAt: null,
+      archivedReason: null,
+      updatedAt: sql`NOW()` as unknown as Date,
+    })
+    .where(eq(projects.id, id));
+}
+
+export async function listArchivedProjectIds(limit = 200): Promise<string[]> {
+  const rows = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(isNotNull(projects.archivedAt))
+    .limit(limit);
+
+  return rows.map((row) => row.id);
+}
+
+export async function listInactiveProjectIds(args: {
+  olderThanMs: number;
+  limit?: number;
+}): Promise<string[]> {
+  const threshold = new Date(Date.now() - args.olderThanMs);
+  const limit = args.limit ?? 200;
+
+  const rows = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(
+      and(
+        isNull(projects.archivedAt),
+        sql`COALESCE(${projects.lastActiveAt}, ${projects.createdAt}) < ${threshold.toISOString()}::timestamp`
+      )
+    )
+    .limit(limit);
+
+  return rows.map((row) => row.id);
 }
 
 /**

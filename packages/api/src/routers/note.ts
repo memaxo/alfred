@@ -18,12 +18,14 @@ const DEFAULT_NOTE_LIST_LIMIT = 100;
 const MAX_NOTE_LIST_LIMIT = 200;
 
 const noteMutationInput = z.object({
+  projectId: z.string().uuid().optional(),
   title: z.string().min(1).max(MAX_NOTE_TITLE_LENGTH).optional(),
   content: z.string().min(1),
   tags: z.array(z.string().min(1)).max(MAX_TAGS_COUNT).optional(),
 });
 
 const noteListInput = z.object({
+  projectId: z.string().uuid().optional(),
   limit: z
     .number()
     .int()
@@ -54,7 +56,8 @@ export const noteRouter = router({
         ctx.session.user.id,
         input.content,
         input.title,
-        input.tags
+        input.tags,
+        input.projectId
       );
 
       if (!note) {
@@ -66,19 +69,25 @@ export const noteRouter = router({
           ? note.title
           : input.content.trim().slice(0, 80);
 
-      await ensureMirrorNodes("user", [
-        {
-          kind: "note",
-          id: note.id,
-          label: mirrorLabel,
-          properties: {
-            entity: { kind: "note", id: note.id },
-            title: note.title,
-            updatedAt:
-              note.updated instanceof Date ? note.updated.toISOString() : null,
+      await ensureMirrorNodes(
+        "user",
+        [
+          {
+            kind: "note",
+            id: note.id,
+            label: mirrorLabel,
+            properties: {
+              entity: { kind: "note", id: note.id },
+              title: note.title,
+              updatedAt:
+                note.updated instanceof Date
+                  ? note.updated.toISOString()
+                  : null,
+            },
           },
-        },
-      ]);
+        ],
+        { projectId: input.projectId }
+      );
 
       // Fire-and-forget RAG embedding (non-blocking)
       // Skip embedding if content is empty or whitespace only
@@ -103,7 +112,7 @@ export const noteRouter = router({
   list: authedProcedure
     .input(noteListInput)
     .query(({ ctx, input }) =>
-      getNotes(ctx.session.user.id, input.limit, input.offset)
+      getNotes(ctx.session.user.id, input.limit, input.offset, input.projectId)
     ),
 
   get: authedProcedure

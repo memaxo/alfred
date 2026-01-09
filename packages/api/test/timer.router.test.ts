@@ -88,7 +88,41 @@ describe("timerRouter", () => {
       expect(createTimerMock).toHaveBeenCalledWith(
         "test-user",
         60,
-        "Test Timer"
+        "Test Timer",
+        undefined
+      );
+    });
+
+    it("creates timer with projectId", async () => {
+      const projectId = crypto.randomUUID();
+      const mockTimer = {
+        id: crypto.randomUUID(),
+        userId: "test-user",
+        projectId,
+        duration: 60,
+        label: "Project Timer",
+        started: new Date(),
+        completed: false,
+        cancelled: false,
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      createTimerMock.mockResolvedValue(mockTimer);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.timer.create({
+        projectId,
+        duration: 60,
+        label: "Project Timer",
+      });
+
+      expect(result).toEqual(mockTimer);
+      expect(createTimerMock).toHaveBeenCalledWith(
+        "test-user",
+        60,
+        "Project Timer",
+        projectId
       );
     });
 
@@ -113,7 +147,12 @@ describe("timerRouter", () => {
       });
 
       expect(result).toEqual(mockTimer);
-      expect(createTimerMock).toHaveBeenCalledWith("test-user", 30, undefined);
+      expect(createTimerMock).toHaveBeenCalledWith(
+        "test-user",
+        30,
+        undefined,
+        undefined
+      );
     });
 
     it("validates duration is positive", async () => {
@@ -193,7 +232,17 @@ describe("timerRouter", () => {
       const result = await caller.timer.active();
 
       expect(result).toEqual(mockTimers);
-      expect(getActiveTimersMock).toHaveBeenCalledWith("test-user");
+      expect(getActiveTimersMock).toHaveBeenCalledWith("test-user", undefined);
+    });
+
+    it("gets active timers scoped to project", async () => {
+      const projectId = crypto.randomUUID();
+      getActiveTimersMock.mockResolvedValue([]);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      await caller.timer.active({ projectId });
+
+      expect(getActiveTimersMock).toHaveBeenCalledWith("test-user", projectId);
     });
   });
 

@@ -17,11 +17,12 @@ The user-visible proof is:
 ## Progress
 
 - [x] (2026-01-09) Audit current state of Projects, Linear linkage, and AgentFS container reuse. Key files: `packages/db/src/schema/project.ts`, `packages/api/src/routers/project.ts`, `packages/plan/src/project/detect.ts`, `packages/plan/src/project/linear.ts`, `packages/agent/src/environment/agentfs.ts`, `packages/agent/src/orchestrator/tool/codex/spawn-process.ts`.
-- [ ] (2026-01-09) Milestone 1: Fix Project↔Linear linkage by storing Linear workspace (“space”) ID on projects and using it for Linear installation lookup (instead of filesystem workspace path).
-- [ ] (2026-01-09) Milestone 2: Attach `projectId` to Codex sessions/runs and propagate it through the runtime/orchestrator so learning and artifacts are project-scoped.
-- [ ] (2026-01-09) Milestone 3: Attach `projectId` to conversations/messages, RAG documents/chunks, and memory graph nodes/edges (or introduce an explicit project-scoping column that replaces implicit `resource` scoping).
-- [ ] (2026-01-09) Milestone 4: Introduce managed Project↔Container attachments: reuse a shared AgentFS container per project for development, and attach additional containers for deployments.
-- [ ] (2026-01-09) Milestone 5: Project lifecycle + learning decay integration: archival, relevance decay, and cross-project linkage (ALFRED self-improvement vs personal-assistant vs external codebases).
+- [x] (2026-01-09) Milestone 1: Fix Project↔Linear linkage by storing Linear workspace (“space”) ID on projects and using it for Linear installation lookup (instead of filesystem workspace path).
+- [x] (2026-01-09) Milestone 2: Attach `projectId` to Codex sessions/runs and propagate it through the runtime/orchestrator so learning and artifacts are project-scoped.
+- [x] (2026-01-09) Milestone 3: Attach `projectId` to conversations/messages, RAG documents/chunks, and memory graph nodes/edges (or introduce an explicit project-scoping column that replaces implicit `resource` scoping).
+- [x] (2026-01-09) Milestone 4: Introduce managed Project↔Container attachments: reuse a shared AgentFS container per project for development, and attach additional containers for deployments.
+- [x] (2026-01-09) Milestone 5: Project lifecycle + learning decay integration: archival, relevance decay, and cross-project linkage. (Project archival + scheduler + archived-project accelerated decay; internal research now reads project conventions and performs weighted cross-project pattern lookup; pattern lifecycle scheduler added to retire/quarantine stale patterns.)
+- [x] (2026-01-09) Milestone 6: Project-scope remaining durable entities (assistant artifacts + workflow replays). Added `project_id` to assistant tables (notes, reminders, timers, etc.), extended repo/routers to accept `projectId`, and updated `persistResult`/workflow suspension to store `projectId`.
 
 ## Surprises & Discoveries
 
@@ -34,6 +35,15 @@ The user-visible proof is:
 - Observation: Project↔Linear linkage currently uses `projects.workspace` as the key to fetch Linear installations, but `linear_installations.workspace_id` stores Linear organization IDs; `projects.workspace` is a filesystem path. This mismatch makes linking brittle/incorrect.
   Evidence: `packages/plan/src/project/linear.ts` calls `linearRepo.getLinearByWorkspace(project.workspace)`, while `packages/api/src/routers/linear.ts` stores `space: organizationId` into `linear_installations.workspace_id`.
 
+- Discovery: SQLite schema parity matters even for “optional” features; missing columns can cause silent persistence failures and test deadlocks.
+  Evidence: `packages/db/src/sqlite/schema.ts` needed workflow event columns to match Postgres.
+
+- Discovery: Graph `resource` scoping (via `scopeResource(projectId, resource)`) must be applied consistently across both persistence and retrieval; otherwise Codex learning context injection silently returns empty results.
+  Evidence: `persistCodexExecution()` scopes `resource`, so `buildCodexLearningContext()` must be called with the same scoped key.
+
+- Discovery: Plan internal research shipped with stubs for pattern lookup + convention extraction; once durable entities are project-scoped, retrieval must also become project-aware (and resilient when DB/embeddings are unavailable).
+  Evidence: `packages/plan/src/research/patterns.ts` and `packages/plan/src/research/conventions.ts` were returning `[]`.
+
 ## Decision Log
 
 - Decision: Keep `projects.workspace` as the filesystem workspace path and add a new `projects.linear_space_id` column for the Linear organization/workspace id.
@@ -44,9 +54,18 @@ The user-visible proof is:
   Rationale: Project scoping enables strong locality for retrieval + learning, enables per-project container reuse, and provides a clean lifecycle boundary for retention/decay policies.
   Date/Author: 2026-01-09 / agent
 
+- Decision: Keep RAG documents globally deduplicated while attaching them to projects via a join table (`project_rag_documents`).
+  Rationale: Preserves the existing `rag_documents.source` uniqueness constraint while enabling per-project document collections.
+  Date/Author: 2026-01-09 / agent
+
 ## Outcomes & Retrospective
 
-- (Pending) This ExecPlan has been drafted but implementation milestones are not yet complete.
+- Milestones 1-4 implemented: durable entities now carry `projectId` (or are project-attached via join tables), and AgentFS containers are reused per project.
+- Milestone 5 implemented: project archival + decay hooks are in place, internal research is project-aware (patterns + conventions), and pattern retention is automated.
+- Milestone 6 implemented: assistant entities (notes, reminders, timers, bookmarks, tasks, events) and workflow replays/suspensions are now project-scoped.
+- Added gated schedulers:
+  - `SCHED_PROJECT_LIFECYCLE=1` to auto-archive inactive projects.
+  - `SCHED_PATTERN_LIFECYCLE=1` to retire/quarantine stale workflow patterns.
 
 ## Context and Orientation
 
@@ -120,6 +139,44 @@ Implementation sketch:
 Acceptance:
 
 - Two separate workflow runs in the same project reuse the same AgentFS container (visible in logs and/or DB).
+
+### Milestone 5: Project lifecycle + retention + cross-project linkage
+
+Make project boundaries meaningful over time.
+
+Edits:
+
+- Add `projects.archived_at/archived_reason` and archive/unarchive endpoints.
+- Gate a lifecycle scheduler (`SCHED_PROJECT_LIFECYCLE=1`) to auto-archive inactive projects.
+- Accelerate memory-node decay for archived projects (best-effort, Postgres).
+- Implement internal research retrieval:
+  - `lookupPatterns(intent, projectId)` uses weighted cross-project semantic matching.
+  - `extractConventions(projectId)` returns stored project conventions.
+- Gate a pattern lifecycle scheduler (`SCHED_PATTERN_LIFECYCLE=1`) to retire/quarantine stale patterns.
+
+Acceptance:
+
+- Inactive projects can be auto-archived and manually unarchived.
+- Pattern lookup prefers same-project patterns but can fall back cross-project.
+- Pattern lifecycle retires unused patterns and quarantines failing ones.
+
+### Milestone 6: Project-scope assistant artifacts + workflow replays
+
+Extend project ऑर्गेनाइज़िंग axis to remaining durable writes.
+
+Edits:
+
+- Add `project_id` UUID columns + indexes to assistant tables (`assistant_tasks`, `assistant_notes`, `assistant_events`, `assistant_reminders`, `assistant_bookmarks`, `assistant_timers`).
+- Update SQLite schema parity in `packages/db/src/sqlite/schema.ts`.
+- Update assistant repo signatures in `packages/db/src/repo/assistant.ts` to accept optional `projectId`.
+- Update assistant API routers (`note`, `remind`, `timer`, `book`) to accept and propagate `projectId`.
+- Update AI `persistResult()` and workflow suspension to store `projectId`.
+
+Acceptance:
+
+- Assistant entities created in a project context are persisted with `projectId`.
+- Workflow runs created via replay or suspension are persisted with `projectId`.
+
 
 ## Concrete Steps
 

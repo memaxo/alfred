@@ -4,6 +4,7 @@
  */
 
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { projects } from "./project";
 
 // Index coverage: migrations 0041+ provide audit log and approval indexes.
 
@@ -13,6 +14,9 @@ import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   traceId: text("trace_id"), // For correlating related actions
   action: text("action").notNull(), // "droid.exec" | "home.control" | "deploy.promote" | etc.
   resource: text("resource").notNull(), // Resource identifier

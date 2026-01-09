@@ -7,6 +7,7 @@ const statements = [
     hash TEXT NOT NULL,
     kind TEXT NOT NULL,
     label TEXT NOT NULL,
+    project_id TEXT,
     properties TEXT,
     sanitized INTEGER NOT NULL DEFAULT 0,
     label_tsvector TEXT,
@@ -22,6 +23,7 @@ const statements = [
   "ALTER TABLE memory_nodes ADD COLUMN embedding BLOB;",
   "ALTER TABLE memory_nodes ADD COLUMN embedding_quantized BLOB;",
   "ALTER TABLE memory_nodes ADD COLUMN sanitized INTEGER DEFAULT 0;",
+  "ALTER TABLE memory_nodes ADD COLUMN project_id TEXT;",
   "ALTER TABLE memory_nodes ADD COLUMN access_count INTEGER DEFAULT 0;",
   "ALTER TABLE memory_nodes ADD COLUMN last_accessed_at TEXT;",
   `CREATE TABLE IF NOT EXISTS memory_edges (
@@ -31,6 +33,7 @@ const statements = [
     from_id TEXT NOT NULL,
     to_id TEXT NOT NULL,
     kind TEXT NOT NULL,
+    project_id TEXT,
     weight REAL DEFAULT 1.0,
     metadata TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -40,6 +43,7 @@ const statements = [
   );`,
   "ALTER TABLE memory_edges ADD COLUMN valid_from TEXT;",
   "ALTER TABLE memory_edges ADD COLUMN valid_to TEXT;",
+  "ALTER TABLE memory_edges ADD COLUMN project_id TEXT;",
   `CREATE INDEX IF NOT EXISTS memory_edges_from_idx
     ON memory_edges(resource, from_id, kind);`,
   `CREATE INDEX IF NOT EXISTS memory_edges_to_idx
@@ -86,8 +90,14 @@ const statements = [
     event_data TEXT,
     step_id TEXT,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    parent_id TEXT,
+    seq INTEGER,
+    lamport INTEGER,
     FOREIGN KEY (run_id) REFERENCES workflow_runs(id) ON DELETE CASCADE
   );`,
+  "ALTER TABLE workflow_events ADD COLUMN parent_id TEXT;",
+  "ALTER TABLE workflow_events ADD COLUMN seq INTEGER;",
+  "ALTER TABLE workflow_events ADD COLUMN lamport INTEGER;",
   `CREATE TABLE IF NOT EXISTS rag_documents (
     id TEXT PRIMARY KEY,
     source TEXT NOT NULL,
@@ -113,11 +123,13 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    project_id TEXT,
     title TEXT,
     workflow_id TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  "ALTER TABLE conversations ADD COLUMN project_id TEXT;",
   `CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
     conversation_id TEXT NOT NULL,
@@ -172,12 +184,79 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS assistant_notes (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    project_id TEXT,
     title TEXT,
     content TEXT NOT NULL,
     tags TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     metadata TEXT
+  );`,
+  "ALTER TABLE assistant_notes ADD COLUMN project_id TEXT;",
+  `CREATE TABLE IF NOT EXISTS assistant_tasks (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    priority INTEGER DEFAULT 0,
+    due_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT,
+    metadata TEXT
+  );`,
+  `CREATE TABLE IF NOT EXISTS assistant_events (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_at TEXT NOT NULL,
+    end_at TEXT,
+    location TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    metadata TEXT
+  );`,
+  `CREATE TABLE IF NOT EXISTS assistant_reminders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    due_at TEXT NOT NULL,
+    fired INTEGER DEFAULT 0,
+    fired_at TEXT,
+    recurring TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    metadata TEXT
+  );`,
+  `CREATE TABLE IF NOT EXISTS assistant_bookmarks (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    url TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    tags TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    metadata TEXT
+  );`,
+  `CREATE TABLE IF NOT EXISTS assistant_timers (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    label TEXT,
+    duration_seconds INTEGER NOT NULL,
+    start_at TEXT NOT NULL,
+    end_at TEXT NOT NULL,
+    cancelled INTEGER DEFAULT 0,
+    cancelled_at TEXT,
+    completed INTEGER DEFAULT 0,
+    completed_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
   `CREATE TABLE IF NOT EXISTS audit_logs (
     id TEXT PRIMARY KEY,
@@ -205,6 +284,7 @@ const statements = [
     session_id TEXT UNIQUE NOT NULL,
     thread_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
+    project_id TEXT,
     working_directory TEXT NOT NULL,
     status TEXT NOT NULL,
     linear_issue_id TEXT,
@@ -212,6 +292,7 @@ const statements = [
     last_accessed_at TEXT DEFAULT CURRENT_TIMESTAMP,
     expires_at TEXT NOT NULL
   );`,
+  "ALTER TABLE codex_sessions ADD COLUMN project_id TEXT;",
   `CREATE INDEX IF NOT EXISTS codex_sessions_user_idx
     ON codex_sessions(user_id);`,
   `CREATE INDEX IF NOT EXISTS codex_sessions_expires_idx

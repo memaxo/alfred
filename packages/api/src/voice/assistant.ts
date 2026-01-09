@@ -13,6 +13,7 @@ import { sanitizeResult } from "../utils/generate";
 export type VoiceAssistantInput = {
   text: string;
   userId: string;
+  projectId?: string;
   language?: string;
   thread?: string;
   resource?: string;
@@ -269,8 +270,10 @@ export async function runAssistantForVoice(
       : { ...sanitized, text: textWithOpening };
   const replayId = await persistResult({
     userId: input.userId,
+    projectId: input.projectId,
     kind: "assistant",
     input: {
+      projectId: input.projectId,
       thread: threadId,
       resource: resourceId,
       messages: [newMessage], // Persist the new interaction

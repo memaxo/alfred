@@ -1,18 +1,30 @@
-import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import {
+  afterAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 const mockProjectRepo = {
   getProjectById: mock(),
   getProjectsByUserId: mock(),
   updateProject: mock(),
+  archiveProject: mock(),
+  unarchiveProject: mock(),
 };
 
-const mockGetLinearByWorkspace = mock();
+const mockGetLinearByOAuth = mock();
 
 mock.module("@alfred/db", () => ({
   projectRepo: mockProjectRepo,
-  linearRepo: {
-    getLinearByWorkspace: mockGetLinearByWorkspace,
-  },
+}));
+
+mock.module("@alfred/db/repo/linear", () => ({
+  getLinearByOAuth: (...args: Parameters<typeof mockGetLinearByOAuth>) =>
+    mockGetLinearByOAuth(...args),
 }));
 
 const mockTeams = mock(() => ({
@@ -42,6 +54,7 @@ import { projectRouter } from "../src/routers/project";
 
 describe("projectRouter", () => {
   const VALID_UUID = "123e4567-e89b-12d3-a456-426614174000";
+  const originalLinearClientId = process.env.LINEAR_CLIENT_ID;
 
   const createCaller = (user: { id: string } | null = { id: "user-123" }) =>
     projectRouter.createCaller({
@@ -49,12 +62,19 @@ describe("projectRouter", () => {
     } as any);
 
   beforeEach(() => {
+    process.env.LINEAR_CLIENT_ID = "test-client-id";
     mockProjectRepo.getProjectById.mockReset();
     mockProjectRepo.getProjectsByUserId.mockReset();
     mockProjectRepo.updateProject.mockReset();
-    mockGetLinearByWorkspace.mockReset();
+    mockProjectRepo.archiveProject.mockReset();
+    mockProjectRepo.unarchiveProject.mockReset();
+    mockGetLinearByOAuth.mockReset();
     mockLinearProject.mockClear();
     mockTeams.mockClear();
+  });
+
+  afterAll(() => {
+    process.env.LINEAR_CLIENT_ID = originalLinearClientId;
   });
 
   describe("detect", () => {
@@ -93,13 +113,19 @@ describe("projectRouter", () => {
         config: {},
       } as any;
       mockProjectRepo.getProjectById.mockResolvedValue(mockProject);
-      mockGetLinearByWorkspace.mockResolvedValue({ token: "tk" });
-      mockProjectRepo.updateProject.mockImplementation(
-        async (_id: string, data: any) => ({
-          ...mockProject,
-          ...data,
-        })
-      );
+
+      mockGetLinearByOAuth.mockResolvedValue({
+        token: "tk",
+        space: "space-123",
+      });
+
+      const linkSpy = spyOn(plan, "linkLinearProject");
+      linkSpy.mockResolvedValue({
+        ...mockProject,
+        linearSpaceId: "space-123",
+        linearProjectId: "lin-123",
+        linearTeamId: "team-123",
+      } as any);
 
       const caller = createCaller();
       const result = await caller.linkLinear({
@@ -109,6 +135,13 @@ describe("projectRouter", () => {
 
       expect(result.linearProjectId).toBe("lin-123");
       expect(result.linearTeamId).toBe("team-123");
+
+      expect(mockGetLinearByOAuth).toHaveBeenCalledWith("test-client-id");
+      expect(linkSpy).toHaveBeenCalledWith(VALID_UUID, "lin-123", {
+        linearSpaceId: "space-123",
+      });
+
+      linkSpy.mockRestore();
     });
 
     it("throws FORBIDDEN if linking project owned by another user", async () => {
@@ -122,6 +155,61 @@ describe("projectRouter", () => {
           linearProjectId: "lin-123",
         })
       ).rejects.toThrow(TRPCError);
+    });
+  });
+
+  describe("archive", () => {
+    it("archives a project owned by the user", async () => {
+      const project = { id: VALID_UUID, userId: "user-123" } as any;
+      const archived = { ...project, archivedAt: new Date() } as any;
+
+      mockProjectRepo.getProjectById
+        .mockResolvedValueOnce(project)
+        .mockResolvedValueOnce(archived);
+      mockProjectRepo.archiveProject.mockResolvedValue(undefined);
+
+      const caller = createCaller();
+      const result = await caller.archive({ id: VALID_UUID, reason: "done" });
+
+      expect(mockProjectRepo.archiveProject).toHaveBeenCalledWith(
+        VALID_UUID,
+        "done"
+      );
+      expect(result.archivedAt).toBeTruthy();
+    });
+
+    it("throws FORBIDDEN if archiving project owned by another user", async () => {
+      mockProjectRepo.getProjectById.mockResolvedValue({
+        id: VALID_UUID,
+        userId: "other-user",
+      } as any);
+
+      const caller = createCaller();
+      await expect(caller.archive({ id: VALID_UUID })).rejects.toThrow(
+        TRPCError
+      );
+    });
+  });
+
+  describe("unarchive", () => {
+    it("unarchives a project owned by the user", async () => {
+      const project = {
+        id: VALID_UUID,
+        userId: "user-123",
+        archivedAt: new Date(),
+      } as any;
+      const unarchived = { ...project, archivedAt: null } as any;
+
+      mockProjectRepo.getProjectById
+        .mockResolvedValueOnce(project)
+        .mockResolvedValueOnce(unarchived);
+      mockProjectRepo.unarchiveProject.mockResolvedValue(undefined);
+
+      const caller = createCaller();
+      const result = await caller.unarchive({ id: VALID_UUID });
+
+      expect(mockProjectRepo.unarchiveProject).toHaveBeenCalledWith(VALID_UUID);
+      expect(result.archivedAt).toBeFalsy();
     });
   });
 

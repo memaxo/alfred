@@ -25,6 +25,7 @@ import { privacyRouter } from "./privacy";
 import { profileRouter } from "./profile";
 import { projectRouter } from "./project";
 import { remindRouter } from "./remind";
+import { runtimeRouter } from "./runtime";
 import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
 import { todoRouter } from "./todo";
@@ -70,6 +71,7 @@ export const appRouter = router({
   project: projectRouter,
   preference: preferenceRouter,
   privacy: privacyRouter,
+  runtime: runtimeRouter,
   visual: visualRouter,
   voice: voiceRouter,
   fs: fsRouter,

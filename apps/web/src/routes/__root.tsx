@@ -1,4 +1,5 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
+import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
   createRootRouteWithContext,
@@ -84,20 +85,25 @@ function RootDocument() {
   );
 
   const devtoolsPlugins = useMemo(
-    () => [
-      {
-        name: "Router",
-        component: TanStackRouterDevtoolsPanel,
-      },
-      {
-        name: "Query",
-        component: ReactQueryDevtoolsPanel,
-      },
-      {
-        name: "Desktop",
-        component: AlfredDesktopDevtoolsPanel,
-      },
-    ],
+    () =>
+      [
+        {
+          name: "Router",
+          // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires render property with incompatible type
+          render: TanStackRouterDevtoolsPanel as any,
+        },
+        {
+          name: "Query",
+          // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires render property with incompatible type
+          render: ReactQueryDevtoolsPanel as any,
+        },
+        {
+          name: "Desktop",
+          // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires render property with incompatible type
+          render: AlfredDesktopDevtoolsPanel as any,
+        },
+        // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires array with incompatible type
+      ] as any,
     []
   );
 

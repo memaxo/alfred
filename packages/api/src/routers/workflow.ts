@@ -223,6 +223,14 @@ export const workflowRouter = router({
         // Trigger Linear metadata sync if project is associated
         if (workflow.projectId) {
           void (async () => {
+            const url = process.env.DATABASE_URL;
+            if (url && !url.startsWith("sqlite")) {
+              await import("@alfred/db/repo/project")
+                .then((repo) =>
+                  repo.updateProjectLastActive(workflow.projectId!)
+                )
+                .catch(() => {});
+            }
             const { syncOnWorkflowStart } = await import("@alfred/plan");
             await syncOnWorkflowStart(
               workflow.projectId as string,
@@ -231,26 +239,31 @@ export const workflowRouter = router({
           })();
         }
 
-        await ensureMirrorNodes("user", [
-          {
-            kind: "workflow_run",
-            id: executor.runId,
-            label: deriveWorkflowTitle(workflowPayload.requirement),
-            properties: {
-              entity: { kind: "workflow_run", id: executor.runId },
-              workflowId: "plan",
-              status: "running",
-              linearIssueId,
-              linearIssueUrl,
+        await ensureMirrorNodes(
+          "user",
+          [
+            {
+              kind: "workflow_run",
+              id: executor.runId,
+              label: deriveWorkflowTitle(workflowPayload.requirement),
+              properties: {
+                entity: { kind: "workflow_run", id: executor.runId },
+                workflowId: "plan",
+                status: "running",
+                linearIssueId,
+                linearIssueUrl,
+              },
             },
-          },
-        ]);
+          ],
+          { projectId: workflow.projectId ?? undefined }
+        );
 
         try {
           const { conversation, created } = await ensureWorkflowConversation({
             userId: session.user.id,
             workflowId: executor.runId,
             title: deriveWorkflowTitle(workflowPayload.requirement),
+            projectId: workflow.projectId,
           });
           if (created) {
             const persisted = await persistWorkflowMessages({

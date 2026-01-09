@@ -6,6 +6,7 @@ export const timerRouter = router({
   create: authedProcedure
     .input(
       z.object({
+        projectId: z.string().uuid().optional(),
         duration: z.number().int().positive(),
         label: z.string().min(1).max(128).optional(),
       })
@@ -14,13 +15,16 @@ export const timerRouter = router({
       assistantRepo.createTimer(
         ctx.session.user.id,
         input.duration,
-        input.label
+        input.label,
+        input.projectId
       )
     ),
 
-  active: authedProcedure.query(({ ctx }) =>
-    assistantRepo.getActiveTimers(ctx.session.user.id)
-  ),
+  active: authedProcedure
+    .input(z.object({ projectId: z.string().uuid().optional() }).optional())
+    .query(({ ctx, input }) =>
+      assistantRepo.getActiveTimers(ctx.session.user.id, input?.projectId)
+    ),
 
   done: authedProcedure
     .input(z.object({ id: z.string().uuid() }))

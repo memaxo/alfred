@@ -228,6 +228,27 @@ export async function orchestrateWorkflowStream(
         runId = String(executor.runId);
         resolvedRunId = runId;
         outerRunId = runId;
+
+        const projectId = await (async () => {
+          const url = process.env.DATABASE_URL;
+          if (!url || url.startsWith("sqlite")) {
+            return;
+          }
+          try {
+            const { detectProject } = await import("@alfred/plan");
+            const workspace =
+              (typeof input.workspace === "string" && input.workspace.length > 0
+                ? input.workspace
+                : typeof input.cw === "string" && input.cw.length > 0
+                  ? input.cw
+                  : undefined) ?? process.cwd();
+            const project = await detectProject(workspace, session.user.id);
+            return project.id;
+          } catch {
+            return;
+          }
+        })();
+
         const storedInput: Record<string, unknown> = {
           ...input,
           executionId: runId,
@@ -236,6 +257,7 @@ export async function orchestrateWorkflowStream(
         await workflowRepo.createRun({
           id: runId,
           userId: session.user.id,
+          projectId,
           workflowId: "plan",
           status: "running",
           inputData: storedInput,
@@ -257,11 +279,28 @@ export async function orchestrateWorkflowStream(
         }
       }
 
+      const projectIdForConversation = await (async () => {
+        if (!process.env.DATABASE_URL) {
+          return;
+        }
+        const id = resolvedRunId;
+        if (!id) {
+          return;
+        }
+        try {
+          const run = await workflowRepo.getRun(id);
+          return run?.projectId ?? undefined;
+        } catch {
+          return;
+        }
+      })();
+
       try {
         const { conversation, created } = await ensureWorkflowConversation({
           userId: session.user.id,
           workflowId: resolvedRunId,
           title: deriveWorkflowTitle(input.requirement),
+          projectId: projectIdForConversation,
         });
         workflowConversationId = conversation.id;
         if (created) {
