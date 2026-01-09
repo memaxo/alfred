@@ -5,6 +5,7 @@ import type { AutonomyLevel } from "@/components/autonomy-slider";
 import { IntegrationsStep } from "@/components/onboarding/integrations-step";
 import { PreferencesStep } from "@/components/onboarding/preferences-step";
 import { TourStep } from "@/components/onboarding/tour-step";
+import { VoiceStep } from "@/components/onboarding/voice-step";
 import { WelcomeStep } from "@/components/onboarding/welcome-step";
 import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/onboarding")({
   errorComponent: RouteError,
 });
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 function OnboardingRoute() {
   const navigate = useNavigate();
@@ -96,10 +97,11 @@ function OnboardingRoute() {
               onAutonomyChange={setAutonomy}
             />
           )}
-          {currentStep === 3 && (
+          {currentStep === 3 && <VoiceStep onComplete={handleNext} />}
+          {currentStep === 4 && (
             <IntegrationsStep onSkip={handleSkipIntegrations} />
           )}
-          {currentStep === 4 && <TourStep onComplete={handleComplete} />}
+          {currentStep === 5 && <TourStep onComplete={handleComplete} />}
         </div>
 
         {/* Navigation */}
@@ -115,9 +117,13 @@ function OnboardingRoute() {
             </Button>
             <Button
               className="rounded-full"
-              onClick={currentStep === 3 ? handleSkipIntegrations : handleNext}
+              onClick={
+                currentStep === 3 || currentStep === 4
+                  ? handleSkipIntegrations
+                  : handleNext
+              }
             >
-              {currentStep === 3 ? "Skip" : "Next"}
+              {currentStep === 3 || currentStep === 4 ? "Skip" : "Next"}
             </Button>
           </div>
         )}
