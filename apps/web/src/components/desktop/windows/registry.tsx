@@ -11,8 +11,10 @@ import {
   Bell,
   Bot,
   Box,
+  Brain,
   Code,
   Code2,
+  Cpu,
   Database,
   FileText,
   FolderKanban,
@@ -21,6 +23,7 @@ import {
   GitPullRequest,
   Layers,
   LayoutDashboard,
+  LayoutGrid,
   List,
   ListTodo,
   MessageSquare,
@@ -30,6 +33,7 @@ import {
   Shield,
   Square,
   Terminal,
+  Wand2,
   Workflow,
 } from "lucide-react";
 // Phase 2/3 apps
@@ -39,15 +43,22 @@ import {
   AgentsAppWindow,
   ChatAppWindow,
   CodeAppWindow,
+  CortexAppWindow,
   DockerAppWindow,
   FilesAppWindow,
   KnowledgeAppWindow,
+  LearningAppWindow,
   LinearAppWindow,
   MetricsAppWindow,
   NotesAppWindow,
+  PlanAppWindow,
   PolicyAppWindow,
   PRReviewAppWindow,
+  RagAppWindow,
+  SettingsAppWindow,
   TaskManagerAppWindow,
+  TerminalAppWindow,
+  TuneAppWindow,
   WorkflowAppWindow,
 } from "@/components/apps";
 import { CodexWindow } from "@/components/windows/codex/codex-window";
@@ -57,8 +68,6 @@ import { IntegrationsWindow } from "@/components/windows/integrations/integratio
 import { NoteWindow } from "@/components/windows/note/note-window";
 import { ProjectWindow } from "@/components/windows/project/project-window";
 import { ReminderWindow } from "@/components/windows/reminder/reminder-window";
-import { SettingsWindow } from "@/components/windows/settings/settings-window";
-import { TerminalWindow } from "@/components/windows/terminal/terminal-window";
 import { TodoWindow } from "@/components/windows/todo/todo-window";
 import { VisualBuilderWindow } from "@/components/windows/visual-builder/visual-builder-window";
 import { WorkflowListWindow } from "@/components/windows/workflow/workflow-list-window";
@@ -91,7 +100,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   terminal: {
     type: "terminal",
-    component: TerminalWindow,
+    component: TerminalAppWindow,
     metadata: {
       label: "Terminal",
       icon: Terminal,
@@ -179,7 +188,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   // Tier 2: Productivity & Settings (Legacy)
   settings: {
     type: "settings",
-    component: SettingsWindow,
+    component: SettingsAppWindow,
     metadata: {
       label: "Settings",
       icon: Settings,
@@ -189,7 +198,7 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       singleton: true,
       tier: "tertiary",
     },
-    isLegacy: true,
+    isLegacy: false,
   },
   note: {
     type: "note",
@@ -393,11 +402,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   cortex: {
     type: "cortex",
-    component: null,
+    component: CortexAppWindow,
     metadata: {
       label: "Cortex",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: Cpu,
+      defaultSize: { width: 900, height: 600 },
+      minSize: { width: 600, height: 400 },
       resizable: true,
       singleton: true,
       tier: "tertiary",
@@ -406,11 +416,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   learning: {
     type: "learning",
-    component: null,
+    component: LearningAppWindow,
     metadata: {
       label: "Learning",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: Brain,
+      defaultSize: { width: 700, height: 500 },
+      minSize: { width: 500, height: 400 },
       resizable: true,
       singleton: true,
       tier: "tertiary",
@@ -433,11 +444,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   tune: {
     type: "tune",
-    component: null,
+    component: TuneAppWindow,
     metadata: {
       label: "Tune",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: Wand2,
+      defaultSize: { width: 800, height: 600 },
+      minSize: { width: 600, height: 400 },
       resizable: true,
       singleton: false,
       tier: "tertiary",
@@ -446,11 +458,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   plan: {
     type: "plan",
-    component: null,
+    component: PlanAppWindow,
     metadata: {
       label: "Plan",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: LayoutGrid,
+      defaultSize: { width: 900, height: 600 },
+      minSize: { width: 600, height: 400 },
       resizable: true,
       singleton: false,
       tier: "tertiary",
@@ -473,11 +486,12 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
   },
   rag: {
     type: "rag",
-    component: null,
+    component: RagAppWindow,
     metadata: {
       label: "RAG",
-      defaultSize: { width: 600, height: 400 },
-      minSize: { width: 400, height: 300 },
+      icon: Network,
+      defaultSize: { width: 900, height: 600 },
+      minSize: { width: 600, height: 400 },
       resizable: true,
       singleton: true,
       tier: "tertiary",
