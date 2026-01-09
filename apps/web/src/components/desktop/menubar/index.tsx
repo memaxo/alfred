@@ -5,7 +5,7 @@
  *
  * Provides:
  * - Alfred menu (logo, about, preferences, quit)
- * - App-specific menus (File, Edit, View, etc.)
+ * - App-specific menus (File, Edit, View, etc.) - dynamic based on focused window
  * - Status area (clock, system status)
  *
  * @see docs/execplans/desktop-evolution-prd.md Section 2.2
@@ -31,23 +31,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDesktopStore } from "@/store/desktop";
 import { Clock } from "./clock";
+import {
+  type AppMenuAction,
+  type AppMenuCategory,
+  DEFAULT_MENUS,
+} from "./types";
 
 type MenuBarProps = {
   style?: CSSProperties;
 };
 
 export function MenuBar({ style }: MenuBarProps) {
-  const { focusedWindowId, windows, spawnWindow } = useDesktopStore(
-    useShallow((s) => ({
-      focusedWindowId: s.focusedWindowId,
-      windows: s.windows,
-      spawnWindow: s.spawnWindow,
-    }))
-  );
+  const { focusedWindowId, windows, spawnWindow, getMenusForWindow } =
+    useDesktopStore(
+      useShallow((s) => ({
+        focusedWindowId: s.focusedWindowId,
+        windows: s.windows,
+        spawnWindow: s.spawnWindow,
+        getMenusForWindow: s.getMenusForWindow,
+      }))
+    );
 
   // Get focused window info for context-sensitive menus
   const focusedWindow = windows.find((w) => w.id === focusedWindowId);
   const focusedAppName = focusedWindow?.data?.label ?? "ALFRED";
+  const focusedWindowType = focusedWindow?.data?.type;
+
+  // Get menus for focused window, falling back to defaults
+  const windowMenus = getMenusForWindow(focusedWindowType);
+  const activeMenus = windowMenus ?? DEFAULT_MENUS;
 
   return (
     <div
@@ -61,7 +73,7 @@ export function MenuBar({ style }: MenuBarProps) {
         <AlfredMenu onOpenSettings={() => spawnWindow("settings")} />
 
         {/* App-specific menus */}
-        <AppMenus appName={focusedAppName} />
+        <AppMenus appName={focusedAppName} menus={activeMenus} />
       </div>
 
       {/* Right: Status Area */}
@@ -120,8 +132,19 @@ function AlfredMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
 // APP-SPECIFIC MENUS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function AppMenus({ appName }: { appName: string }) {
-  const menus = ["File", "Edit", "View", "Window", "Help"];
+type AppMenusProps = {
+  appName: string;
+  menus: Partial<Record<AppMenuCategory, AppMenuAction[]>>;
+};
+
+function AppMenus({ appName, menus }: AppMenusProps) {
+  const menuCategories: AppMenuCategory[] = [
+    "File",
+    "Edit",
+    "View",
+    "Window",
+    "Help",
+  ];
 
   return (
     <div className="flex items-center">
@@ -129,23 +152,45 @@ function AppMenus({ appName }: { appName: string }) {
       <span className="px-2 font-medium text-biolum text-sm">{appName}</span>
 
       {/* Standard menus */}
-      {menus.map((menu) => (
-        <DropdownMenu key={menu}>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="rounded px-2 py-1 text-biolum-dim text-sm transition-colors hover:bg-white/5 hover:text-biolum"
-              type="button"
-            >
-              {menu}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuItem className="text-biolum-dim">
-              {menu} menu items...
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ))}
+      {menuCategories.map((category) => {
+        const actions = menus[category];
+        if (!actions || actions.length === 0) {
+          return null;
+        }
+
+        return (
+          <DropdownMenu key={category}>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="rounded px-2 py-1 text-biolum-dim text-sm transition-colors hover:bg-white/5 hover:text-biolum"
+                type="button"
+              >
+                {category}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {actions.map((action) =>
+                action.separator ? (
+                  <DropdownMenuSeparator key={action.id} />
+                ) : (
+                  <DropdownMenuItem
+                    disabled={action.disabled}
+                    key={action.id}
+                    onClick={action.onClick}
+                  >
+                    {action.label}
+                    {action.shortcut && (
+                      <span className="ml-auto text-biolum-dim text-xs">
+                        {action.shortcut}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                )
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      })}
     </div>
   );
 }

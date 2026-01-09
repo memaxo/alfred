@@ -25,6 +25,7 @@ import { FocusIndicator, SkipLinks } from "./accessibility";
 import { DesktopCommandPalette } from "./command-palette";
 import { LayerErrorBoundary, ShellErrorBoundary } from "./error-boundary";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
+import { DesktopIcons } from "./layers/desktop-icons";
 import { MindscapeLayer } from "./layers/mindscape-layer";
 import { OrbLayer } from "./layers/orb-layer";
 import { WindowLayer } from "./layers/window-layer";
@@ -115,6 +116,9 @@ export function AlfredDesktopShell({
         >
           {/* Desktop background - gradient or image */}
           <div className="h-full w-full bg-gradient-to-br from-void via-void-surface to-void" />
+
+          {/* Desktop Icons (on background surface) */}
+          {mode === "desktop" && <DesktopIcons />}
         </div>
 
         {/* Mindscape Layer (ReactFlow - toggle) */}

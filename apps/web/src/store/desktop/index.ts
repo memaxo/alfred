@@ -1,7 +1,11 @@
 export { createCacheSlice } from "./cache";
 export { createContextSlice } from "./context";
 export { createGroupSlice } from "./groups";
+export type { DesktopIcon, DesktopIconSlice } from "./icons";
+export { createDesktopIconSlice } from "./icons";
 export { createKnowledgeSlice } from "./knowledge";
+export type { MenuSlice } from "./menus";
+export { createMenuSlice } from "./menus";
 export { DESKTOP_STORAGE_ID, persistOptions } from "./persist";
 export * from "./selectors";
 export { createTaskbarSlice } from "./taskbar";

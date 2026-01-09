@@ -9,23 +9,18 @@
  * - Running apps with previews
  * - System tray
  *
+ * Icons and labels are pulled from windowRegistry (single source of truth).
+ *
  * @see docs/execplans/desktop-evolution-prd.md Section 2.3
  */
 
-import {
-  Bell,
-  Bot,
-  CheckSquare,
-  FileText,
-  Layers,
-  LayoutGrid,
-  MessageSquare,
-  Settings,
-  Terminal,
-  Workflow,
-} from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { type CSSProperties, useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
+import {
+  getWindowIcon,
+  getWindowLabel,
+} from "@/components/desktop/windows/registry";
 import {
   Tooltip,
   TooltipContent,
@@ -35,38 +30,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import type { WindowType } from "@/store/desktop/types.new";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ICON MAP
-// ─────────────────────────────────────────────────────────────────────────────
-
-const windowIcons: Partial<Record<WindowType, typeof MessageSquare>> = {
-  chat: MessageSquare,
-  terminal: Terminal,
-  droid: Bot,
-  workflow: Workflow,
-  workflowlist: Workflow,
-  settings: Settings,
-  note: FileText,
-  reminder: Bell,
-  todo: CheckSquare,
-  knowledge: Layers,
-  integrations: LayoutGrid,
-};
-
-const windowLabels: Partial<Record<WindowType, string>> = {
-  chat: "Chat",
-  terminal: "Terminal",
-  droid: "Droid",
-  workflow: "Workflow",
-  workflowlist: "Workflows",
-  settings: "Settings",
-  note: "Notes",
-  reminder: "Reminders",
-  todo: "Todo",
-  knowledge: "Knowledge",
-  integrations: "Integrations",
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -207,8 +170,8 @@ function TaskbarButton({
   isFocused,
   onClick,
 }: TaskbarButtonProps) {
-  const Icon = windowIcons[type] ?? MessageSquare;
-  const label = windowLabels[type] ?? type;
+  const Icon = getWindowIcon(type) ?? MessageSquare;
+  const label = getWindowLabel(type);
 
   return (
     <Tooltip>

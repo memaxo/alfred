@@ -46,7 +46,8 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      if (isMeta && e.key === "`") {
+      // Mindscape toggle: Cmd+M (per PRD)
+      if (isMeta && e.key === "m") {
         e.preventDefault();
         setSpaceMode(!isSpaceMode);
         return;
