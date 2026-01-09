@@ -20,7 +20,7 @@ import {
   Settings,
   Wifi,
 } from "lucide-react";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
   DropdownMenu,
@@ -31,35 +31,157 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDesktopStore } from "@/store/desktop";
 import { Clock } from "./clock";
-import {
-  type AppMenuAction,
-  type AppMenuCategory,
-  DEFAULT_MENUS,
-} from "./types";
+import type { AppMenuAction, AppMenuCategory, AppMenus } from "./types";
 
 type MenuBarProps = {
   style?: CSSProperties;
 };
 
 export function MenuBar({ style }: MenuBarProps) {
-  const { focusedWindowId, windows, spawnWindow, getMenusForWindow } =
-    useDesktopStore(
-      useShallow((s) => ({
-        focusedWindowId: s.focusedWindowId,
-        windows: s.windows,
-        spawnWindow: s.spawnWindow,
-        getMenusForWindow: s.getMenusForWindow,
-      }))
-    );
+  const {
+    focusedWindowId,
+    windows,
+    spawnWindow,
+    getMenusForWindow,
+    removeWindow,
+    minimizeWindow,
+    maximizeWindow,
+    tileWindow,
+    setSpaceMode,
+    isSpaceMode,
+  } = useDesktopStore(
+    useShallow((s) => ({
+      focusedWindowId: s.focusedWindowId,
+      windows: s.windows,
+      spawnWindow: s.spawnWindow,
+      getMenusForWindow: s.getMenusForWindow,
+      removeWindow: s.removeWindow,
+      minimizeWindow: s.minimizeWindow,
+      maximizeWindow: s.maximizeWindow,
+      tileWindow: s.tileWindow,
+      setSpaceMode: s.setSpaceMode,
+      isSpaceMode: s.isSpaceMode,
+    }))
+  );
 
   // Get focused window info for context-sensitive menus
   const focusedWindow = windows.find((w) => w.id === focusedWindowId);
   const focusedAppName = focusedWindow?.data?.label ?? "ALFRED";
   const focusedWindowType = focusedWindow?.data?.type;
 
+  // Menu action handlers
+  const handleClose = useCallback(() => {
+    if (focusedWindowId) {
+      removeWindow(focusedWindowId);
+    }
+  }, [focusedWindowId, removeWindow]);
+
+  const handleMinimize = useCallback(() => {
+    if (focusedWindowId) {
+      minimizeWindow(focusedWindowId);
+    }
+  }, [focusedWindowId, minimizeWindow]);
+
+  const handleMaximize = useCallback(() => {
+    if (focusedWindowId) {
+      maximizeWindow(focusedWindowId);
+    }
+  }, [focusedWindowId, maximizeWindow]);
+
+  const handleToggleMindscape = useCallback(() => {
+    setSpaceMode(!isSpaceMode);
+  }, [setSpaceMode, isSpaceMode]);
+
+  const handleTileLeft = useCallback(() => {
+    if (focusedWindowId) {
+      tileWindow(focusedWindowId, "left");
+    }
+  }, [focusedWindowId, tileWindow]);
+
+  const handleTileRight = useCallback(() => {
+    if (focusedWindowId) {
+      tileWindow(focusedWindowId, "right");
+    }
+  }, [focusedWindowId, tileWindow]);
+
+  // Build default menus with bound handlers
+  const defaultMenus: AppMenus = useMemo(
+    () => ({
+      File: [
+        {
+          id: "close",
+          label: "Close Window",
+          shortcut: "⌘W",
+          onClick: handleClose,
+          disabled: !focusedWindowId,
+        },
+      ],
+      Edit: [
+        { id: "undo", label: "Undo", shortcut: "⌘Z", disabled: true },
+        { id: "redo", label: "Redo", shortcut: "⇧⌘Z", disabled: true },
+        { id: "sep-1", label: "", separator: true },
+        { id: "cut", label: "Cut", shortcut: "⌘X", disabled: true },
+        { id: "copy", label: "Copy", shortcut: "⌘C", disabled: true },
+        { id: "paste", label: "Paste", shortcut: "⌘V", disabled: true },
+      ],
+      View: [
+        {
+          id: "toggle-mindscape",
+          label: isSpaceMode ? "Exit Mindscape" : "Enter Mindscape",
+          shortcut: "⌘M",
+          onClick: handleToggleMindscape,
+        },
+      ],
+      Window: [
+        {
+          id: "minimize",
+          label: "Minimize",
+          shortcut: "⌘H",
+          onClick: handleMinimize,
+          disabled: !focusedWindowId,
+        },
+        {
+          id: "maximize",
+          label: "Maximize",
+          onClick: handleMaximize,
+          disabled: !focusedWindowId,
+        },
+        { id: "sep-1", label: "", separator: true },
+        {
+          id: "tile-left",
+          label: "Tile Left",
+          shortcut: "⌃⌘←",
+          onClick: handleTileLeft,
+          disabled: !focusedWindowId,
+        },
+        {
+          id: "tile-right",
+          label: "Tile Right",
+          shortcut: "⌃⌘→",
+          onClick: handleTileRight,
+          disabled: !focusedWindowId,
+        },
+      ],
+      Help: [
+        { id: "docs", label: "Documentation" },
+        { id: "shortcuts", label: "Keyboard Shortcuts", shortcut: "⌘/" },
+      ],
+    }),
+    [
+      focusedWindowId,
+      isSpaceMode,
+      handleClose,
+      handleMinimize,
+      handleMaximize,
+      handleToggleMindscape,
+      handleTileLeft,
+      handleTileRight,
+    ]
+  );
+
   // Get menus for focused window, falling back to defaults
   const windowMenus = getMenusForWindow(focusedWindowType);
-  const activeMenus = windowMenus ?? DEFAULT_MENUS;
+  const activeMenus = windowMenus ?? defaultMenus;
 
   return (
     <div
@@ -73,7 +195,7 @@ export function MenuBar({ style }: MenuBarProps) {
         <AlfredMenu onOpenSettings={() => spawnWindow("settings")} />
 
         {/* App-specific menus */}
-        <AppMenus appName={focusedAppName} menus={activeMenus} />
+        <AppMenuBar appName={focusedAppName} menus={activeMenus} />
       </div>
 
       {/* Right: Status Area */}
@@ -132,12 +254,12 @@ function AlfredMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
 // APP-SPECIFIC MENUS
 // ─────────────────────────────────────────────────────────────────────────────
 
-type AppMenusProps = {
+type AppMenuBarProps = {
   appName: string;
   menus: Partial<Record<AppMenuCategory, AppMenuAction[]>>;
 };
 
-function AppMenus({ appName, menus }: AppMenusProps) {
+function AppMenuBar({ appName, menus }: AppMenuBarProps) {
   const menuCategories: AppMenuCategory[] = [
     "File",
     "Edit",

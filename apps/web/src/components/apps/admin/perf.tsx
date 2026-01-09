@@ -33,6 +33,8 @@ import { trpc } from "@/utils/trpc";
 const REFRESH_INTERVAL_MS = 5000;
 const MAX_HISTORY_POINTS = 20;
 
+type TremorColor = "emerald" | "blue" | "amber" | "red";
+
 type HistoryPoint = {
   time: string;
   graphQueries: number;
