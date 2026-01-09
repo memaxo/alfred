@@ -16,6 +16,7 @@ export type WindowType =
   | "chat"
   | "terminal"
   | "code"
+  | "codex"
   | "agents"
   // Tier 1: System & Operations
   | "taskmanager"
@@ -429,6 +430,10 @@ export const WINDOW_DEFAULTS: Record<
   code: {
     minSize: { width: 600, height: 400 },
     defaultBounds: { x: 100, y: 100, width: 800, height: 600 },
+  },
+  codex: {
+    minSize: { width: 500, height: 400 },
+    defaultBounds: { x: 120, y: 120, width: 650, height: 550 },
   },
   agents: {
     minSize: { width: 500, height: 400 },

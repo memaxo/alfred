@@ -88,3 +88,28 @@ export async function getLinearByOAuth(
 
   return rows[0] ?? null;
 }
+
+export async function updateLinearToken(
+  oauthClient: string,
+  token: string,
+  refresh?: string | null,
+  expiresIn?: number | null
+): Promise<LinearInstallation> {
+  const expires = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
+
+  const [row] = await db
+    .update(linearInstallations)
+    .set({
+      token,
+      refresh: refresh ?? null,
+      expires,
+      updated: new Date(),
+    })
+    .where(eq(linearInstallations.oauthClient, oauthClient))
+    .returning();
+
+  if (!row) {
+    throw new Error("Failed to update Linear token");
+  }
+  return row;
+}
