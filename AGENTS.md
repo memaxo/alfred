@@ -173,34 +173,41 @@ Tools: `sense`, `think`, `act`, `learn`.
    - hard kill of stuck child process: `ALFRED_TEST_RUN_TIMEOUT_MS` / `ALFRED_TEST_FILE_TIMEOUT_MS` in the wrapper
    - hard kill of the wrapper itself: `ALFRED_TEST_RUNNER_TIMEOUT_MS` with a “last file” breadcrumb
 
-5. **`mock.module()` isolation.** Treat `mock.module()` as process-global. For packages with heavy `mock.module()` usage:
-   - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`)
-   - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock during module evaluation)
-   - avoid relying on "reset" semantics for module mocks across files; use explicit isolation or well-scoped preloads.
+5. **`mock.module()` isolation.** Treat `mock.module()` as process-global and **permanent for the process lifetime**. Key limitations:
+   - `mock.module()` cannot be undone or reset; there is no `mock.restoreAllModules()`
+   - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`) for heavy `mock.module()` usage
+   - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock)
+   - avoid relying on "reset" semantics for module mocks across files
 
-6. **Dependency injection over mock.module().** Prefer DI via tRPC context for new tests:
+6. **Centralized mock reset registry.** Test-kit modules auto-register reset functions via `registerMockReset()`:
+   - preload's `afterEach` automatically calls all registered reset functions
+   - use `resetAllTestKitMocks()` for manual reset if needed
+   - new test-kit modules should call `registerMockReset(resetFn)` at module load
+   - module-level state should be encapsulated in resettable objects (see `workflow/runtime-fixture.ts`)
+
+7. **Dependency injection over mock.module().** Prefer DI via tRPC context for new tests:
    - define `RouterDeps` interface with injectable dependencies
    - inject deps via `ctx.deps` in routers instead of direct imports
    - pass mock deps to `createTestCaller({ deps: mockDeps })` in tests
    - see `docs/architecture/test-dependency-injection.md` for full pattern
 
-7. **Database Isolation.** Use ephemeral schemas, transactions, or `createTestDb`/`closeTestDb`. Reset tables between cases; no implicit globals or shared state.
+8. **Database Isolation.** Use ephemeral schemas, transactions, or `createTestDb`/`closeTestDb`. Reset tables between cases; no implicit globals or shared state.
 
-8. **UI and E2E.** Use React Testing Library for logic/simple components and Playwright for complex interactions (drag-and-drop, focus). Mock auth (`Better Auth`) and use `VITE_TEST_MODE=true` for heavy visualizations.
+9. **UI and E2E.** Use React Testing Library for logic/simple components and Playwright for complex interactions (drag-and-drop, focus). Mock auth (`Better Auth`) and use `VITE_TEST_MODE=true` for heavy visualizations.
 
-9. **Canonical Fixtures.** Use `@alfred/test-kit` (e.g., `voice/runtime-fixture`, `workflow/runtime-fixture`) instead of bespoke mocks for pools, registries, or streaming. Always call cleanup (`restore()`/`stop()`).
+10. **Canonical Fixtures.** Use `@alfred/test-kit` (e.g., `voice/runtime-fixture`, `workflow/runtime-fixture`) instead of bespoke mocks for pools, registries, or streaming. Always call cleanup (`restore()`/`stop()`).
 
-10. **Sandbox and Cleanup.** Use `createTestSandbox()` or `os.tmpdir()` for temporary files. Never write to `packages/*/.*venv*/` or repository directories (except security boundary tests inside `process.cwd()`). Ensure `afterAll` hooks remove artifacts.
+11. **Sandbox and Cleanup.** Use `createTestSandbox()` or `os.tmpdir()` for temporary files. Never write to `packages/*/.*venv*/` or repository directories (except security boundary tests inside `process.cwd()`). Ensure `afterAll` hooks remove artifacts.
 
-11. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
+12. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
 
-12. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
+13. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
 
-13. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
+14. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
 
-14. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
+15. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
 
-15. **Autonomy and Logic.** Assert monotonic reactions, zero-effect on zero-reliability, and `[0,1]` clamps in cognitive suites.
+16. **Autonomy and Logic.** Assert monotonic reactions, zero-effect on zero-reliability, and `[0,1]` clamps in cognitive suites.
 
 
 
@@ -630,6 +637,78 @@ Importing a package must be fast, side-effect free, and allow short-lived script
 9. **Factory always returns AgentFSWorkspace.** `WorkspaceFactory.create()` ignores the `kind` parameter - it exists only for API compatibility.
 
 10. **Access container metadata.** Use `workspace.containerId`, `workspace.containerName`, and `workspace.containerCw` getters after initialization.
+
+
+
+<!-- Source: .ruler/44-opentui-react-patterns.md -->
+
+# OpenTUI React Patterns
+
+## Core Principle
+
+OpenTUI React provides a React reconciler for terminal UIs. Migrate from custom `string[]` renderers to React components using OpenTUI primitives (`<box>`, `<scrollbox>`, `<text>`, `<input>`, `<select>`).
+
+## Rules
+
+1. **Text content prop.** Use `content` prop for `<text>` components, not children. Example: `<text content={dim("Loading...")} />` not `<text>{dim("Loading...")}</text>`.
+
+2. **Layout props direct.** Components accept layout props (`x`, `y`, `width`, `height`) directly. No wrapper boxes needed. Example: `<box width={50} height={10} x={0} y={0} border title="Panel" />`.
+
+3. **JSX type configuration.** Use `/** @jsxImportSource @opentui/react */` pragma at top of OpenTUI React component files. This tells TypeScript/Bun to use OpenTUI's JSX runtime for that file. Alternatively, create `opentui-jsx.d.ts` type declaration file and include it in tsconfig.json for global JSX augmentation.
+
+4. **Keyboard handling.** Use `useKeyboard()` hook for keyboard events. Hook receives `KeyEvent` with `name`, `ctrl`, `shift`, `alt` properties. Example: `useKeyboard((event) => { if (event.name === "q") quit(); })`.
+
+5. **Terminal dimensions.** Use `useTerminalDimensions()` hook for responsive layout. Returns `{ width, height }` that updates on resize.
+
+6. **Scrollable content.** Wrap scrollable content in `<scrollbox>` component. Accepts `focused` prop for keyboard navigation. Children are `<text>` elements with `content` prop.
+
+7. **Store integration.** Access existing stores via React hooks (`useCognitiveStore()`, `useWorkflowStore()`, etc.) from `hooks/stores.ts`. Subscribe in `useEffect` with cleanup.
+
+8. **Panel positioning.** Panel components accept `x` and `y` props for absolute positioning within dashboard layout. Dashboard calculates positions and passes to panels.
+
+9. **Feature flag.** Use `ALFRED_TUI_REACT=1` environment variable to switch between old renderer and React renderer. Enables incremental migration without breaking existing functionality.
+
+10. **Renderer lifecycle.** Create renderer with `await createCliRenderer()`, create root with `createRoot(renderer)`, render with `root.render(<App />)`, start with `renderer.start()`. Cleanup with `root.unmount()` and `renderer.destroy()`.
+
+11. **Component structure.** React components live in `packages/tui/src/tui/react/`. Panels in `react/panels/`, hooks in `react/hooks/`, dashboard in `react/dashboard.tsx`.
+
+12. **Preserve domain logic.** Keep existing stores, subscriptions, and commands. Only replace rendering layer. Domain logic (`subscriptions/`, `stores/`) remains unchanged.
+
+13. **Style prop pattern.** Use `style` prop for styling instead of individual props where appropriate. Example: `<box style={{ borderColor: "#FFFFFF", borderStyle: "single" }} />` instead of `<box borderColor="#FFFFFF" borderStyle="single" />`.
+
+14. **Scrollbox focus.** Always add `focused` prop to `<scrollbox>` components for keyboard navigation. Example: `<scrollbox focused={focused}>`.
+
+15. **Advanced hooks.** Use `useRenderer()` to access renderer instance, `useTimeline()` for animations, `useTerminalDimensions()` for responsive layout.
+
+
+
+<!-- Source: .ruler/45-infrastructure-standardization.md -->
+
+# Infrastructure Standardization
+
+## Core Principles
+
+Standardize ALFRED’s deployment surface for reproducibility, modularity, and observability.
+
+## Rules
+
+1. **Modular Ansible Roles.** Group infrastructure logic into discrete roles (`base`, `docker`, `caddy`, `alfred`, `postgres`, `monitoring`). Each role must be idempotent and standalone.
+2. **Sidecar Topology.** Use Docker Compose profiles for heavy or optional runtimes (`voice`, `embed`, `monitoring`). Never bundle heavy ML runtimes into the core `alfred` image.
+3. **Multi-stage Dockerfiles.** All production images must use multi-stage builds.
+   - Stage 1 (`base`): OS dependencies.
+   - Stage 2 (`prune`): Turbo prune for monorepo isolation.
+   - Stage 3 (`build`): Build-time dependencies and compilation.
+   - Stage 4 (`runtime`): Minimal runtime environment, no compiler toolchain, non-root user.
+4. **Context Optimization.** Maintain a comprehensive `.dockerignore`. Large model files (`*.onnx`, `*.pt`), heap snapshots, and local virtual environments must be excluded from the build context.
+5. **Runtime Device Resolution.** ML runtimes must explicitly resolve devices (`cpu`, `cuda`, `rocm`, `mps`) from environment variables (e.g., `EMBED_DEVICE`) with safe CPU fallbacks.
+6. **Agentic Lifecycle Tools.** Every core service must expose lifecycle tools to agents:
+   - `runtime.status`: Health and dependency check.
+   - `runtime.recover`: Safe restart/reconnection logic.
+   - `runtime.logs`: Log tailing with secret redaction.
+7. **Canonical Compose.** `docker/compose.yml` is the single source of truth for local and production deployment topologies. Use `.env.example` to document required variables.
+8. **Observability Sidecars.** Standard monitoring stack consists of Prometheus, Grafana, Loki, and Promtail. Prometheus must scrape `/api/metrics`.
+9. **Persistent Volume Documentation.** Document persistent data requirements (DB, models, logs) via Compose volumes and labels.
+10. **Synchronous Repo Helpers.** Prefer synchronous repository helpers for queries that don't perform external I/O or complex logic, ensuring consistent linting and performance.
 
 
 
