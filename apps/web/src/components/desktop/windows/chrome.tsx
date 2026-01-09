@@ -1,11 +1,18 @@
 "use client";
 
-import { Maximize2, Minus, Square, X } from "lucide-react";
+import { Maximize2, Minus, Sparkles, Square, X } from "lucide-react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import type { TileZone, WindowInstance } from "@/store/desktop/types.new";
+import { useMindscapeStore } from "@/store/mindscape";
 import { useWindowAnimation } from "../animations";
 import { ResizeHandles } from "./resize-handles";
 import type { ResizeDirection } from "./types";
@@ -85,6 +92,16 @@ export function WindowChrome({
     } else {
       useDesktopStore.getState().maximizeWindow(windowId);
     }
+  }, [window, windowId]);
+
+  const handleVisualize = useCallback(() => {
+    if (!window) {
+      return;
+    }
+    const title = window.data?.label ?? window.data?.type ?? "Window";
+    useMindscapeStore.getState().spawnFromWindow(windowId, title);
+    useDesktopStore.getState().minimizeWindow(windowId);
+    useMindscapeStore.getState().activate();
   }, [window, windowId]);
 
   const handleFocus = useCallback(() => {
@@ -439,7 +456,23 @@ export function WindowChrome({
           {title}
         </span>
 
-        <div className="w-16" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                aria-label="Visualize in Mindscape"
+                className="flex h-5 w-5 items-center justify-center rounded text-biolum-dim transition-colors hover:bg-white/10 hover:text-biolum"
+                onClick={handleVisualize}
+                type="button"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Visualize in Mindscape</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div className="flex-1 overflow-auto">
