@@ -1,54 +1,33 @@
 "use client";
 
 /**
- * Retrieval Debugger - Debug retrieval queries
+ * Retrieval Debugger - Debug retrieval queries with live API
  */
 
-import { Search } from "lucide-react";
+import { Loader2, Search, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-type RetrievalResult = {
-  chunkId: string;
-  score: number;
-  content: string;
-  reranked: boolean;
-};
-
-const mockResults: RetrievalResult[] = [
-  {
-    chunkId: "chunk-1",
-    score: 0.92,
-    content: "ALFRED is a personal AI assistant designed for developers...",
-    reranked: true,
-  },
-  {
-    chunkId: "chunk-4",
-    score: 0.87,
-    content: "The cognitive loop manages ALFRED's state transitions...",
-    reranked: true,
-  },
-  {
-    chunkId: "chunk-2",
-    score: 0.78,
-    content: "The desktop shell provides a modern windowed interface...",
-    reranked: false,
-  },
-  {
-    chunkId: "chunk-3",
-    score: 0.65,
-    content: "ReactFlow is isolated to the graphs/ directory...",
-    reranked: false,
-  },
-];
+import { trpc } from "@/utils/trpc";
 
 export function RetrievalDebugger() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<RetrievalResult[] | null>(null);
+  const [topK, setTopK] = useState(10);
+  const [submitted, setSubmitted] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const { data, isLoading, refetch } = trpc.graph.getRagChunks.useQuery(
+    { text: query, topK },
+    { enabled: submitted && query.length > 0 }
+  );
+
+  const results = data?.chunks ?? null;
 
   const handleSearch = () => {
-    setResults(mockResults);
+    if (query.trim()) {
+      setSubmitted(true);
+      refetch();
+    }
   };
 
   return (
@@ -59,59 +38,101 @@ export function RetrievalDebugger() {
           <input
             className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-biolum-dim focus:border-biolum focus:outline-none"
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Enter a retrieval query..."
             value={query}
           />
-          <Button className="gap-1" onClick={handleSearch}>
-            <Search className="h-4 w-4" />
+          <Button
+            className="gap-1"
+            disabled={isLoading || !query.trim()}
+            onClick={handleSearch}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
             Search
           </Button>
+          <Button
+            onClick={() => setShowSettings(!showSettings)}
+            size="icon"
+            variant="outline"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
+
+        {showSettings && (
+          <div className="mt-3 flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center gap-2">
+              <label className="text-biolum-dim text-sm">Top-K:</label>
+              <input
+                className="w-16 rounded border border-white/10 bg-white/5 px-2 py-1 text-sm"
+                max={20}
+                min={1}
+                onChange={(e) =>
+                  setTopK(Math.min(20, Math.max(1, Number(e.target.value))))
+                }
+                type="number"
+                value={topK}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Results */}
       <ScrollArea className="flex-1">
-        {results ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin text-biolum" />
+            <span className="ml-2 text-biolum-dim">Searching...</span>
+          </div>
+        ) : results ? (
           <div className="space-y-3 p-4">
             <div className="text-biolum-dim text-sm">
-              {results.length} results • Top-k: 4 • Reranking: enabled
+              {results.length} results • Top-k: {topK} • Semantic search
             </div>
 
-            {results.map((result, idx) => (
-              <div
-                className="rounded-lg border border-white/10 bg-white/5 p-3"
-                key={result.chunkId}
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-biolum/20 font-mono text-biolum text-sm">
-                      {idx + 1}
-                    </span>
-                    <span className="font-mono text-sm">{result.chunkId}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {result.reranked && (
-                      <span className="rounded bg-purple-500/20 px-2 py-0.5 text-purple-400 text-xs">
-                        Reranked
-                      </span>
-                    )}
-                    <span className="font-mono text-biolum">
-                      {(result.score * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-sm">{result.content}</p>
-
-                {/* Score breakdown */}
-                <div className="mt-2 h-1.5 rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-biolum"
-                    style={{ width: `${result.score * 100}%` }}
-                  />
-                </div>
+            {results.length === 0 ? (
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center text-biolum-dim">
+                No results found for "{query}"
               </div>
-            ))}
+            ) : (
+              results.map((result, idx) => (
+                <div
+                  className="rounded-lg border border-white/10 bg-white/5 p-3"
+                  key={result.id}
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-biolum/20 font-mono text-biolum text-sm">
+                        {idx + 1}
+                      </span>
+                      <span className="max-w-[200px] truncate font-mono text-biolum-dim text-xs">
+                        {result.source}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-biolum">
+                        {(result.score * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="line-clamp-3 text-sm">{result.content}</p>
+
+                  {/* Score breakdown */}
+                  <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-biolum transition-all"
+                      style={{ width: `${result.score * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         ) : (
           <div className="flex h-full items-center justify-center text-biolum-dim">
