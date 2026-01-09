@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Process List - Running processes and agents
+ * Process List - Virtualized running processes and agents
  */
 
 import { Bot, Loader2, Server, Square, Terminal } from "lucide-react";
+import { Virtuoso } from "react-virtuoso";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
@@ -45,7 +45,7 @@ export function ProcessList({ className }: ProcessListProps) {
       </div>
 
       {/* Processes */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1">
         {isLoading && (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
@@ -61,10 +61,14 @@ export function ProcessList({ className }: ProcessListProps) {
             No processes found
           </div>
         )}
-        {processes.map((process) => (
-          <ProcessRow key={process.id} process={process} />
-        ))}
-      </ScrollArea>
+        {!(isLoading || error) && processes.length > 0 && (
+          <Virtuoso
+            className="h-full"
+            data={processes}
+            itemContent={(_, process) => <ProcessRow process={process} />}
+          />
+        )}
+      </div>
 
       {/* Summary */}
       <div className="flex items-center justify-between border-white/5 border-t px-4 py-2 text-biolum-dim text-xs">

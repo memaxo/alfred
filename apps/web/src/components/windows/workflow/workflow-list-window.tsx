@@ -2,10 +2,10 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { NodeProps } from "@xyflow/react";
 import { ListChecks, PlusCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Virtuoso } from "react-virtuoso";
 import { z } from "zod";
 import { BiolumBadge } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -197,45 +197,45 @@ export function WorkflowListWindow({ id, data, selected }: NodeProps) {
             </span>
           </div>
 
-          <ScrollArea className="h-[280px]">
-            <div className="space-y-2">
-              {sortedWorkflows.map((run) => (
-                <button
-                  className="flex w-full items-center justify-between rounded border border-white/5 bg-white/5 px-3 py-2 text-left transition-colors hover:border-biolum/30 hover:bg-white/10"
-                  key={run.id}
-                  onClick={() => focusWorkflowWindow(run)}
-                  onDoubleClick={() => {
-                    setDetailRun(run);
-                    setDetailOpen(true);
-                  }}
-                  type="button"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-sm text-white">
-                      {run.workflowId ?? "Untitled"}
-                    </span>
-                    <span className="text-biolum-faint text-xs">
-                      {run.created
-                        ? new Date(run.created).toLocaleString()
-                        : "Not started"}
-                    </span>
-                  </div>
-                  <BiolumBadge
-                    variant={statusVariants[run.status] ?? "default"}
+          {sortedWorkflows.length === 0 ? (
+            <div className="h-[280px] py-8 text-center text-biolum-faint text-sm">
+              {workflowsQuery.isLoading ? "Loading..." : "No workflows found"}
+            </div>
+          ) : (
+            <Virtuoso
+              className="h-[280px]"
+              data={sortedWorkflows}
+              itemContent={(_, run) => (
+                <div className="pb-2">
+                  <button
+                    className="flex w-full items-center justify-between rounded border border-white/5 bg-white/5 px-3 py-2 text-left transition-colors hover:border-biolum/30 hover:bg-white/10"
+                    onClick={() => focusWorkflowWindow(run)}
+                    onDoubleClick={() => {
+                      setDetailRun(run);
+                      setDetailOpen(true);
+                    }}
+                    type="button"
                   >
-                    {run.status}
-                  </BiolumBadge>
-                </button>
-              ))}
-              {sortedWorkflows.length === 0 && (
-                <div className="py-8 text-center text-biolum-faint text-sm">
-                  {workflowsQuery.isLoading
-                    ? "Loading..."
-                    : "No workflows found"}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-sm text-white">
+                        {run.workflowId ?? "Untitled"}
+                      </span>
+                      <span className="text-biolum-faint text-xs">
+                        {run.created
+                          ? new Date(run.created).toLocaleString()
+                          : "Not started"}
+                      </span>
+                    </div>
+                    <BiolumBadge
+                      variant={statusVariants[run.status] ?? "default"}
+                    >
+                      {run.status}
+                    </BiolumBadge>
+                  </button>
                 </div>
               )}
-            </div>
-          </ScrollArea>
+            />
+          )}
         </div>
       </WindowFrame>
       {detailRun && (

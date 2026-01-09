@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Container List - Docker container list with status
+ * Container List - Virtualized Docker container list with status
  */
 
-import { Bot, Circle, Loader2, Pause, Play, Square } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bot, Circle, Pause, Play, Square } from "lucide-react";
+import { VirtualList } from "@/components/ui/virtual-list";
 import { cn } from "@/lib/utils";
 import type { Container } from "./index";
 
@@ -40,40 +40,21 @@ export function ContainerList({
   });
 
   return (
-    <div className={cn("flex flex-col bg-void", className)}>
-      <div className="flex h-9 items-center border-white/5 border-b px-3">
-        <span className="font-medium text-biolum-dim text-xs uppercase tracking-wider">
-          {filteredContainers.length} Container
-          {filteredContainers.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {isLoading && (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
-            </div>
-          )}
-          {error && (
-            <div className="py-2 text-center text-red-400 text-xs">{error}</div>
-          )}
-          {!(isLoading || error) && filteredContainers.length === 0 && (
-            <div className="py-4 text-center text-biolum-dim text-sm">
-              No containers found
-            </div>
-          )}
-          {filteredContainers.map((container) => (
-            <ContainerItem
-              container={container}
-              isSelected={container.id === selectedId}
-              key={container.id}
-              onClick={() => onSelect(container.id)}
-            />
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+    <VirtualList
+      className={className}
+      data={filteredContainers}
+      emptyMessage="No containers found"
+      error={error}
+      headerText={`${filteredContainers.length} Container${filteredContainers.length !== 1 ? "s" : ""}`}
+      isLoading={isLoading}
+      renderItem={(container) => (
+        <ContainerItem
+          container={container}
+          isSelected={container.id === selectedId}
+          onClick={() => onSelect(container.id)}
+        />
+      )}
+    />
   );
 }
 

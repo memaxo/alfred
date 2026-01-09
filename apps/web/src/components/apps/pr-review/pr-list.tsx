@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * PR List - Filterable list of pull requests
+ * PR List - Virtualized list of pull requests
  */
 
-import { Bot, Check, GitPullRequest, Loader2, X } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bot, Check, GitPullRequest, X } from "lucide-react";
+import { VirtualList } from "@/components/ui/virtual-list";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import type { PR } from "./index";
@@ -14,6 +14,8 @@ type PRListProps = {
   filter: "all" | "open" | "agent";
   selectedId: string | null;
   onSelect: (id: string) => void;
+  owner?: string;
+  repo?: string;
   className?: string;
 };
 
@@ -21,11 +23,13 @@ export function PRList({
   filter,
   selectedId,
   onSelect,
+  owner,
+  repo,
   className,
 }: PRListProps) {
   const state = filter === "agent" ? "all" : filter === "open" ? "open" : "all";
   const { data, isLoading, error } = trpc.github.pullRequestsList.useQuery(
-    { state, limit: 30 },
+    { state, limit: 30, owner, repo },
     { refetchInterval: 30_000 }
   );
 
@@ -43,41 +47,21 @@ export function PRList({
   });
 
   return (
-    <div className={cn("flex flex-col bg-void", className)}>
-      <div className="flex h-9 items-center border-white/5 border-b px-3">
-        <span className="font-medium text-biolum-dim text-xs uppercase tracking-wider">
-          {filteredPRs.length} Pull Request{filteredPRs.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {isLoading && (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-biolum-dim" />
-            </div>
-          )}
-          {error && (
-            <div className="py-2 text-center text-red-400 text-xs">
-              Failed to load PRs
-            </div>
-          )}
-          {!isLoading && filteredPRs.length === 0 && !error && (
-            <div className="py-4 text-center text-biolum-dim text-sm">
-              No pull requests found
-            </div>
-          )}
-          {filteredPRs.map((pr) => (
-            <PRItem
-              isSelected={pr.id === selectedId}
-              key={pr.id}
-              onClick={() => onSelect(pr.id)}
-              pr={pr}
-            />
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+    <VirtualList
+      className={className}
+      data={filteredPRs}
+      emptyMessage="No pull requests found"
+      error={error ? "Failed to load PRs" : null}
+      headerText={`${filteredPRs.length} Pull Request${filteredPRs.length !== 1 ? "s" : ""}`}
+      isLoading={isLoading}
+      renderItem={(pr) => (
+        <PRItem
+          isSelected={pr.id === selectedId}
+          onClick={() => onSelect(pr.id)}
+          pr={pr}
+        />
+      )}
+    />
   );
 }
 
