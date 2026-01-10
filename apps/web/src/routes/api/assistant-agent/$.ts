@@ -1,13 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { UIMessage } from "ai";
 
 async function handleRequest(request: Request): Promise<Response> {
   const agentPkg = "@alfred/agent";
-  const agentStreamHandlerPkg = "@/lib/api/agent-stream-handler";
+  const adapterPkg = "@alfred/agent/assistant/src/adapter";
+  const streamHandlerPkg = "@/lib/api/stream-handler";
 
-  const { assistantAgent } = await import(agentPkg);
-  const { handleAgentStreamRequest } = await import(agentStreamHandlerPkg);
+  const { getAssistantAgentDefaults } = await import(agentPkg);
+  const { analyzeContext, getPersonaInstruction } = await import(adapterPkg);
+  const { handleStreamRequest } = await import(streamHandlerPkg);
 
-  return handleAgentStreamRequest(request, assistantAgent, "assistant");
+  return handleStreamRequest(
+    request,
+    getAssistantAgentDefaults,
+    "assistant",
+    async (messages: UIMessage[]) => {
+      const result = await analyzeContext(messages);
+      const persona = getPersonaInstruction(result.domains);
+      return {
+        system: persona ?? undefined,
+        activation: {
+          domains: result.domains,
+          paths: result.paths,
+        },
+      };
+    }
+  );
 }
 
 export const Route = createFileRoute("/api/assistant-agent/$")({
