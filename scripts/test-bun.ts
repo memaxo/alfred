@@ -10,6 +10,7 @@
  *   bunx playwright test --config apps/web/playwright.config.ts
  */
 
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { Glob } from "bun";
 
@@ -318,16 +319,138 @@ async function discoverTests(cwd: string): Promise<string[]> {
 
 const { flags, patterns } = splitArgs(args);
 
+const finalFlags = hasTimeoutFlag(flags)
+  ? flags
+  : (() => {
+      const timeout = process.env.ALFRED_TEST_TIMEOUT_MS?.trim();
+      if (!timeout) {
+        return flags;
+      }
+      return [...flags, `--timeout=${timeout}`];
+    })();
+
+function isGlobPattern(p: string): boolean {
+  return p.includes("**") || /[*?[\]{}()]/.test(p);
+}
+
+async function resolvePatternFiles(
+  cwd: string,
+  raw: string[]
+): Promise<string[]> {
+  const found = new Set<string>();
+
+  for (const pattern of raw) {
+    if (!pattern) {
+      continue;
+    }
+
+    if (isGlobPattern(pattern)) {
+      const g = new Glob(pattern);
+      for await (const rel of g.scan({ cwd, onlyFiles: true })) {
+        const abs = path.resolve(cwd, rel);
+        if (shouldSkipPath(abs)) {
+          continue;
+        }
+        found.add(abs);
+      }
+      continue;
+    }
+
+    const abs = path.isAbsolute(pattern) ? pattern : path.resolve(cwd, pattern);
+
+    try {
+      const info = await stat(abs);
+      if (info.isDirectory()) {
+        const tests = await discoverTests(abs);
+        for (const file of tests) {
+          found.add(file);
+        }
+        continue;
+      }
+      if (info.isFile()) {
+        found.add(abs);
+      }
+    } catch {
+      // Unknown path: fall back to Bun's pattern handling.
+      // We intentionally do not guess here; callers can pass globs.
+    }
+  }
+
+  return [...found];
+}
+
 // Back-compat: if the caller provides patterns/files, delegate to Bun discovery for that.
 // Repo scripts should avoid passing patterns for package tests so scope filtering can apply.
+const isolateFiles = process.env.ALFRED_TEST_ISOLATE_FILES?.trim() === "1";
 if (patterns.length > 0) {
-  const ms = parseMs(process.env.ALFRED_TEST_RUN_TIMEOUT_MS, 120_000);
-  const code = await runBunTestWithTimeout(
-    ["bun", "test", ...flags, ...patterns],
-    ms,
-    "patterns"
+  if (!isolateFiles) {
+    const ms = parseMs(process.env.ALFRED_TEST_RUN_TIMEOUT_MS, 120_000);
+    const code = await runBunTestWithTimeout(
+      ["bun", "test", ...finalFlags, ...patterns],
+      ms,
+      "patterns"
+    );
+    process.exit(code);
+  }
+
+  const expanded = await resolvePatternFiles(process.cwd(), patterns);
+  if (expanded.length === 0) {
+    const ms = parseMs(process.env.ALFRED_TEST_RUN_TIMEOUT_MS, 120_000);
+    const code = await runBunTestWithTimeout(
+      ["bun", "test", ...finalFlags, ...patterns],
+      ms,
+      "patterns_empty_expand"
+    );
+    process.exit(code);
+  }
+
+  const isolateConc = parsePositiveInt(
+    process.env.ALFRED_TEST_ISOLATE_CONCURRENCY,
+    1
   );
-  process.exit(code);
+  const bail = hasBailFlag(finalFlags);
+  const q = [...expanded];
+  let failCode = 0;
+
+  async function runFile(file: string): Promise<number> {
+    const start = Date.now();
+    (
+      globalThis as unknown as { __alfredTestLastFile?: string }
+    ).__alfredTestLastFile = file;
+    writeErr(`alfred_test_file_start file=${file}\n`);
+    const ms = parseMs(process.env.ALFRED_TEST_FILE_TIMEOUT_MS, 60_000);
+    const code = await runBunTestWithTimeout(
+      ["bun", "test", ...finalFlags, file],
+      ms,
+      file
+    );
+    const dur = Date.now() - start;
+    writeErr(`alfred_test_file_done file=${file} code=${code} ms=${dur}\n`);
+    return code;
+  }
+
+  const workerCount = Math.min(isolateConc, q.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (q.length > 0) {
+      if (bail && failCode !== 0) {
+        return;
+      }
+      const file = q.shift();
+      if (!file) {
+        return;
+      }
+      const code = await runFile(file);
+      if (code !== 0) {
+        failCode = code;
+        if (bail) {
+          return;
+        }
+      }
+    }
+  });
+
+  await Promise.all(workers);
+  process.exit(failCode);
 }
 
 const scope = parseScope(process.env.ALFRED_TEST_SCOPE);
@@ -347,17 +470,6 @@ if (picked.length === 0) {
   process.exit(code);
 }
 
-const finalFlags = hasTimeoutFlag(flags)
-  ? flags
-  : (() => {
-      const timeout = process.env.ALFRED_TEST_TIMEOUT_MS?.trim();
-      if (!timeout) {
-        return flags;
-      }
-      return [...flags, `--timeout=${timeout}`];
-    })();
-
-const isolateFiles = process.env.ALFRED_TEST_ISOLATE_FILES?.trim() === "1";
 if (!isolateFiles) {
   const ms = parseMs(process.env.ALFRED_TEST_RUN_TIMEOUT_MS, 120_000);
   const code = await runBunTestWithTimeout(

@@ -27,6 +27,7 @@
   },
   "scripts": {
     "test": "bun scripts/test-bun.ts",
+    "test:failfast": "bun scripts/test-failfast.ts",
     "check": "biome check --write .",
     "lint": "bunx biome check .",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --nested",
