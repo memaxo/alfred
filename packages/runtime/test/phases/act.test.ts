@@ -46,6 +46,33 @@ const streamMock = () => {
   })();
 };
 
+function createBarrier(count: number, timeoutMs: number) {
+  const arrived = new Set<string>();
+  let resolveReady: (() => void) | undefined;
+  let rejectReady: ((error: Error) => void) | undefined;
+
+  const ready = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
+
+  const timeout = setTimeout(() => {
+    rejectReady?.(new Error("barrier_timeout"));
+  }, timeoutMs);
+
+  return {
+    arrived,
+    async arrive(name: string) {
+      arrived.add(name);
+      if (arrived.size === count) {
+        clearTimeout(timeout);
+        resolveReady?.();
+      }
+      await ready;
+    },
+  };
+}
+
 function createDeps() {
   return {
     createAiAdapter: () =>
@@ -140,6 +167,60 @@ describe("executeActPhase", () => {
     expect(streamCallCount).toBe(1);
     expect(events.some((event) => event._ === "text-delta")).toBe(true);
     expect(result?.escalated).toBe(false);
+  });
+
+  it("prefers input.toolgraph over env tuning", async () => {
+    const barrier = createBarrier(2, 250);
+    process.env.RUNTIME_TOOL_GRAPH_MAX_PARALLEL = "1";
+
+    const tools = () => ({
+      a: tool({
+        description: "Barrier tool a",
+        inputSchema: z.object({}),
+        outputSchema: z.object({ ok: z.literal(true) }),
+        async execute() {
+          await barrier.arrive("a");
+          return { ok: true };
+        },
+      }),
+      b: tool({
+        description: "Barrier tool b",
+        inputSchema: z.object({}),
+        outputSchema: z.object({ ok: z.literal(true) }),
+        async execute() {
+          await barrier.arrive("b");
+          return { ok: true };
+        },
+      }),
+    });
+
+    const generator = executeActPhase(
+      { ...baseInput, toolgraph: { maxParallel: 2 } },
+      "run-toolgraph-precedence",
+      new AbortController().signal,
+      "test-model",
+      undefined,
+      undefined,
+      undefined,
+      sampleContext,
+      "Summary",
+      undefined,
+      {
+        ...createDeps(),
+        buildToolset: tools,
+        generateToolGraph: async () => ({
+          nodes: [
+            { id: "a", toolName: "a", input: {} },
+            { id: "b", toolName: "b", input: {} },
+          ],
+        }),
+      }
+    );
+
+    const { result } = await drain(generator);
+    expect(result?.escalated).toBe(false);
+    expect(streamCallCount).toBe(1);
+    expect(barrier.arrived.size).toBe(2);
   });
 
   it("escalates when tool graph execution fails", async () => {
