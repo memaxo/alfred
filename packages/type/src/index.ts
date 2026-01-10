@@ -24,6 +24,9 @@ export * from "./id";
 export * from "./knowledge";
 // CLI Manifest types
 export * from "./manifest";
+// Model selection types
+export * from "./model";
+export * from "./model.zod";
 // Personalization schemas
 export * from "./personal";
 // Personality traits (if exists)

@@ -63,6 +63,14 @@
       "types": "./dist/knowledge.d.ts",
       "default": "./src/knowledge.ts"
     },
+    "./model": {
+      "types": "./dist/model.d.ts",
+      "default": "./src/model.ts"
+    },
+    "./model.zod": {
+      "types": "./dist/model.zod.d.ts",
+      "default": "./src/model.zod.ts"
+    },
     "./msg": {
       "types": "./dist/msg.d.ts",
       "default": "./src/msg.ts"
