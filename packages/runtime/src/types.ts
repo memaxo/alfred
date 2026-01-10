@@ -48,6 +48,10 @@ export type RuntimeInput = {
   repoBase?: string;
   mode?: "sequential" | "parallel";
   interactive?: boolean; // Phase 12: Interactive Mode
+  toolgraph?: {
+    maxParallel?: number;
+    backoffMs?: number;
+  };
   linear?: {
     issueId?: string;
     sessionId: string;
@@ -169,6 +173,12 @@ export const runtimeInputSchema = z.object({
   repoBase: z.string().optional(),
   mode: z.enum(["sequential", "parallel"]).optional(),
   interactive: z.boolean().optional(),
+  toolgraph: z
+    .object({
+      maxParallel: z.number().int().min(1).max(32).optional(),
+      backoffMs: z.number().int().min(0).max(10_000).optional(),
+    })
+    .optional(),
   linear: z
     .object({
       issueId: z.string().min(1).optional(),

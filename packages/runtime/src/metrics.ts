@@ -102,6 +102,23 @@ export const runtimeAiEventsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+// Tool graph / chaining metrics
+
+export const runtimeToolGraphNodesTotal = new client.Counter({
+  name: "runtime_tool_graph_nodes_total",
+  help: "Count of tool graph node executions grouped by tool and status",
+  labelNames: ["tool", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runtimeToolGraphNodeDurationSeconds = new client.Histogram({
+  name: "runtime_tool_graph_node_duration_seconds",
+  help: "Duration of tool graph node executions in seconds",
+  labelNames: ["tool", "status"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+  registers: [metricsRegistry],
+});
+
 export const runtimeHistoryTokensTotal = new client.Counter({
   name: "runtime_history_tokens_total",
   help: "Token allocation for runtime history selection grouped by action.",

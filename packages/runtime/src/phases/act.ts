@@ -298,8 +298,12 @@ export async function* executeActPhase(
       tools,
       signal,
       toolCallMessages: toolGraphMessages,
-      maxParallel: readOptionalIntEnv("RUNTIME_TOOL_GRAPH_MAX_PARALLEL"),
-      backoffMs: readOptionalIntEnv("RUNTIME_TOOL_GRAPH_BACKOFF_MS"),
+      maxParallel:
+        input.toolgraph?.maxParallel ??
+        readOptionalIntEnv("RUNTIME_TOOL_GRAPH_MAX_PARALLEL"),
+      backoffMs:
+        input.toolgraph?.backoffMs ??
+        readOptionalIntEnv("RUNTIME_TOOL_GRAPH_BACKOFF_MS"),
     }) as AsyncGenerator<WorkflowEvent, ToolGraphResult, void>;
 
     const iter = graphIterator[Symbol.asyncIterator]();

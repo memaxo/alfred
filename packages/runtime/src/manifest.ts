@@ -73,7 +73,7 @@ export const manifest: CliManifest = {
       const start = performance.now();
       const latency = performance.now() - start;
 
-      await Promise.resolve(); // biome-ignore lint/suspicious/useAwait: required to satisfy async return type
+      await Promise.resolve();
       return {
         status: "healthy",
         message: "Runtime ready",
