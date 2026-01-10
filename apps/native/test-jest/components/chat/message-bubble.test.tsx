@@ -32,4 +32,15 @@ describe("MessageBubble", () => {
     );
     expect(getByText("**Bold Text**")).toBeTruthy();
   });
+
+  it("should render text content", () => {
+    const message = createMockMessage({
+      role: "assistant",
+      content: "**Bold Text**",
+    });
+    const { getByText } = renderWithProviders(
+      <MessageBubble message={message} />
+    );
+    expect(getByText("**Bold Text**")).toBeTruthy();
+  });
 });

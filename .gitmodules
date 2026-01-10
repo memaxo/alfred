@@ -5,3 +5,12 @@
 	path = vendor/opentui
 	url = https://github.com/anomalyco/opentui.git
 	branch = main
+[submodule "vendor/agent-client-protocol"]
+	path = vendor/agent-client-protocol
+	url = https://github.com/agentclientprotocol/agent-client-protocol
+[submodule "vendor/opencode"]
+	path = vendor/opencode
+	url = https://github.com/anomalyco/opencode
+[submodule "vendor/factory"]
+	path = vendor/factory
+	url = https://github.com/factory-ai/factory

@@ -1,7 +1,7 @@
 import { useChat } from "@ai-sdk/react";
 import { logger } from "@alfred/logger";
 import { DefaultChatTransport } from "ai";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useVoiceSessionNative } from "@/lib/voice/session";
 import { trpcClient } from "@/utils/trpc";
@@ -36,6 +36,7 @@ export function useChatLogic() {
   );
 
   const chat = useChat({
+    id: currentAgent,
     transport,
     onError: (err) => {
       logger.error("chat_error", { error: err });
@@ -44,22 +45,37 @@ export function useChatLogic() {
 
   const voice = useVoiceSessionNative(trpcClient, { surface: "native" });
 
+  // Voice transcript should send exactly once per "idle" cycle.
+  // We reset the guard whenever the stream leaves idle.
+  const voiceSentRef = useRef(false);
+
   // Handle voice transcript
   useEffect(() => {
-    if (voice.stream?.status === "idle" && voice.stream.transcript) {
-      const text = voice.stream.transcript.trim();
-      if (text.length > 0) {
-        chat.sendMessage({ text });
-      }
+    if (voice.stream?.status !== "idle") {
+      voiceSentRef.current = false;
+      return;
     }
-  }, [voice.stream?.status, voice.stream?.transcript, chat]);
+
+    const text = voice.stream.transcript.trim();
+    if (text.length === 0 || voiceSentRef.current) {
+      return;
+    }
+
+    voiceSentRef.current = true;
+    chat.sendMessage({ text });
+  }, [voice.stream?.status, voice.stream?.transcript, chat.sendMessage]);
 
   const toggleVoice = useCallback(async () => {
-    if (voice.stream?.isActive) {
-      await voice.stream.stop();
-    } else {
-      await voice.stream.start();
+    if (!voice.stream) {
+      return;
     }
+
+    if (voice.stream.status === "idle" || voice.stream.status === "error") {
+      await voice.stream.start();
+      return;
+    }
+
+    await voice.stream.stop();
   }, [voice]);
 
   const clearMessages = useCallback(() => {
@@ -73,15 +89,28 @@ export function useChatLogic() {
     [chat]
   );
 
+  const setAgent = useCallback(
+    (agent: AgentType) => {
+      if (agent === currentAgent) {
+        return;
+      }
+      chat.stop();
+      chat.setMessages([]);
+      setCurrentAgent(agent);
+    },
+    [chat, currentAgent]
+  );
+
   return {
     messages: chat.messages,
     isLoading: chat.status === "streaming" || chat.status === "submitted",
     error: chat.error,
     currentAgent,
-    setAgent: setCurrentAgent,
+    setAgent,
     handleSend,
     toggleVoice,
-    isRecording: voice.stream?.isActive,
+    isRecording:
+      voice.stream?.status !== "idle" && voice.stream?.status !== "error",
     clearMessages,
     stop: chat.stop,
     reload: chat.regenerate,

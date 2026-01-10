@@ -5,12 +5,42 @@ import {
   isReasoningPart,
   isTextPart,
   isToolCallPart,
+  isToolResultPart,
 } from "@alfred/ui/chat";
 import { Text, View } from "react-native";
 
 export type MessageBubbleProps = {
   message: UIMessage;
 };
+
+function formatStructured(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value === null) {
+    return "null";
+  }
+
+  if (value === undefined) {
+    return "undefined";
+  }
+
+  try {
+    const json = JSON.stringify(value, null, 2);
+    return json ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function isToolError(part: unknown): boolean {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { isError?: unknown }).isError === true
+  );
+}
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
@@ -79,11 +109,51 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             return (
               <View
                 accessibilityLabel={`Using tool: ${part.toolName}`}
-                className="mt-2 flex-row items-center gap-2 rounded-lg bg-foreground/5 p-2"
+                className="mt-2 rounded-lg border border-border/50 bg-foreground/5 p-3"
                 key={index}
               >
+                <Text className="mb-2 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Tool Call
+                </Text>
                 <Text className="font-medium text-foreground text-sm">
                   🛠 {part.toolName}
+                </Text>
+                <Text
+                  className="mt-2 text-muted-foreground text-xs leading-5"
+                  selectable
+                >
+                  {formatStructured(part.input)}
+                </Text>
+              </View>
+            );
+          }
+          if (isToolResultPart(part)) {
+            const errored = isToolError(part);
+            return (
+              <View
+                accessibilityLabel={`Tool result: ${part.toolName}`}
+                className={`mt-2 rounded-lg border p-3 ${
+                  errored
+                    ? "border-destructive/30 bg-destructive/10"
+                    : "border-border/50 bg-foreground/5"
+                }`}
+                key={index}
+              >
+                <Text
+                  className={`mb-2 font-bold text-[10px] uppercase tracking-wider ${
+                    errored ? "text-destructive" : "text-muted-foreground"
+                  }`}
+                >
+                  {errored ? "Tool Error" : "Tool Result"}
+                </Text>
+                <Text className="font-medium text-foreground text-sm">
+                  {part.toolName}
+                </Text>
+                <Text
+                  className="mt-2 text-muted-foreground text-xs leading-5"
+                  selectable
+                >
+                  {formatStructured(part.output)}
                 </Text>
               </View>
             );

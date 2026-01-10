@@ -1,26 +1,52 @@
+import { useChat as useChatAi } from "@ai-sdk/react";
 import { act, renderHook } from "@testing-library/react-native";
 import { useChatLogic } from "@/hooks/use-chat-logic";
+import { useVoiceSessionNative } from "@/lib/voice/session";
 
-// Mock analytics
-jest.mock("@/lib/analytics", () => ({
-  trackEvent: jest.fn(),
-}));
-
-// Mock useChat from ai-sdk
 jest.mock("@ai-sdk/react", () => ({
-  useChat: jest.fn(() => ({
-    messages: [],
-    input: "",
-    setInput: jest.fn(),
-    handleSubmit: jest.fn(),
-    isLoading: false,
-    error: undefined,
-  })),
+  useChat: jest.fn(),
 }));
 
-import { useChat as useChatAi } from "@ai-sdk/react";
+jest.mock("@/lib/voice/session", () => ({
+  useVoiceSessionNative: jest.fn(),
+}));
+
+type VoiceStreamMock = {
+  status:
+    | "idle"
+    | "connecting"
+    | "recording"
+    | "processing"
+    | "playing"
+    | "error";
+  transcript: string;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+};
 
 describe("useChatLogic", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    const stream: VoiceStreamMock = {
+      status: "idle",
+      transcript: "",
+      start: async () => {},
+      stop: async () => {},
+    };
+
+    (useVoiceSessionNative as jest.Mock).mockReturnValue({ stream });
+    (useChatAi as jest.Mock).mockReturnValue({
+      messages: [],
+      sendMessage: jest.fn(),
+      status: "idle",
+      error: null,
+      stop: jest.fn(),
+      regenerate: jest.fn(),
+      setMessages: jest.fn(),
+    });
+  });
+
   it("should initialize with default values", () => {
     const { result } = renderHook(() => useChatLogic());
 
@@ -30,13 +56,30 @@ describe("useChatLogic", () => {
   });
 
   it("should update agent when setAgent is called", () => {
+    const stop = jest.fn();
+    const setMessages = jest.fn();
+    (useChatAi as jest.Mock).mockReturnValue({
+      messages: [],
+      sendMessage: jest.fn(),
+      status: "idle",
+      error: null,
+      stop,
+      regenerate: jest.fn(),
+      setMessages,
+    });
+
     const { result } = renderHook(() => useChatLogic());
 
     act(() => {
       result.current.setAgent("orchestrator");
     });
 
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(setMessages).toHaveBeenCalledWith([]);
     expect(result.current.currentAgent).toBe("orchestrator");
+    expect(useChatAi).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: "orchestrator" })
+    );
   });
 
   it("should call handleSend when sendMessage is called", () => {
@@ -58,5 +101,61 @@ describe("useChatLogic", () => {
     });
 
     expect(sendMessage).toHaveBeenCalledWith({ text: "test message" });
+  });
+
+  it("should send a voice transcript exactly once per idle cycle", () => {
+    const sendMessage = jest.fn();
+    (useChatAi as jest.Mock).mockReturnValue({
+      messages: [],
+      sendMessage,
+      status: "idle",
+      error: null,
+      stop: jest.fn(),
+      regenerate: jest.fn(),
+      setMessages: jest.fn(),
+    });
+
+    const stream: VoiceStreamMock = {
+      status: "recording",
+      transcript: "",
+      start: async () => {},
+      stop: async () => {},
+    };
+    (useVoiceSessionNative as jest.Mock).mockReturnValue({ stream });
+
+    const { rerender } = renderHook(
+      (_props: { tick: number }) => useChatLogic(),
+      {
+        initialProps: { tick: 0 },
+      }
+    );
+
+    act(() => {
+      stream.status = "idle";
+      stream.transcript = "hello from voice";
+    });
+    rerender({ tick: 1 });
+
+    expect(sendMessage).toHaveBeenCalledWith({ text: "hello from voice" });
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+
+    // Re-rendering while still idle should not send again.
+    rerender({ tick: 2 });
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+
+    // Leaving idle should reset the guard so the next idle cycle sends again.
+    act(() => {
+      stream.status = "recording";
+      stream.transcript = "";
+    });
+    rerender({ tick: 3 });
+
+    act(() => {
+      stream.status = "idle";
+      stream.transcript = "hello from voice";
+    });
+    rerender({ tick: 4 });
+
+    expect(sendMessage).toHaveBeenCalledTimes(2);
   });
 });

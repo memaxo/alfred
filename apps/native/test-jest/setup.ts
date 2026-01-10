@@ -4,6 +4,9 @@ Object.defineProperty(globalThis, "__ExpoImportMetaRegistry", {
   writable: true,
 });
 
+// Suppress expo-modules-core warning in Jest when babel inlining is not active.
+process.env.EXPO_OS = process.env.EXPO_OS ?? "ios";
+
 Object.defineProperty(globalThis, "structuredClone", {
   value: (value: unknown) => JSON.parse(JSON.stringify(value)) as unknown,
   configurable: true,

@@ -41,7 +41,7 @@ export function ChatInput({
     if (onCall) {
       onCall();
     } else {
-      router.push("./call");
+      router.push("/(drawer)/call");
     }
   }, [onCall, router]);
 
@@ -67,7 +67,7 @@ export function ChatInput({
           <TouchableOpacity
             accessibilityHint="Speak to input text into the chat"
             accessibilityLabel={
-              isRecording ? "Stop recording" : "Record voice message"
+              isRecording ? "Stop voice input" : "Record voice message"
             }
             accessibilityRole="button"
             className={`h-11 w-11 items-center justify-center rounded-full ${
