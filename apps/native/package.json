@@ -4,8 +4,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "test": "jest",
-    "test:unit": "jest --testPathPattern=__tests__/(components|hooks|lib)",
-    "test:integration": "jest --testPathPattern=__tests__/integration",
+    "test:unit": "jest --testPathPatterns='test-jest/(components|hooks|lib)'",
+    "test:integration": "jest --testPathPatterns='test-jest/integration'",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
