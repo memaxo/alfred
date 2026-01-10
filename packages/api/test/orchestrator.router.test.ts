@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
+  getModelForRoleMock,
   getOrchestratorAgentDefaultsMock,
   resetAgentMocks,
 } from "./utils/agent-mock";
@@ -53,6 +54,10 @@ describe("orchestrator router", () => {
         prepareStep: vi.fn(),
       };
       getOrchestratorAgentDefaultsMock.mockReturnValue(mockDefaults);
+      getModelForRoleMock.mockResolvedValueOnce({
+        model: mockDefaults.model as any,
+        modelKey: "openai/orchestrator-model",
+      });
 
       generateMocks.generateText.mockResolvedValue({
         text: "orchestrator response",

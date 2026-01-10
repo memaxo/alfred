@@ -10,6 +10,7 @@ import {
   historyContextTokensTotal,
   runtimeHistorySelectionDurationSeconds,
 } from "../metrics";
+import { modelRoleForSource, resolveModelKey } from "./model";
 
 type PrepareMessagesArgs = {
   rawMessages: unknown[];
@@ -39,7 +40,7 @@ export function prepareModelMessagesForGenerate({
         messages: rawMessages,
         tools: tools as Parameters<typeof validateUIMessages>[0]["tools"],
       })) as UIMessage[];
-      const modelId = resolveModelId(model);
+      const modelId = resolveModelId(source, model);
       const stopHistoryTimer =
         runtimeHistorySelectionDurationSeconds.startTimer();
       const historyContext = await buildHistoryContext({
@@ -88,15 +89,9 @@ export function prepareModelMessagesForGenerate({
   });
 }
 
-function resolveModelId(model?: string | LanguageModel): string {
-  if (typeof model === "string" && model.length > 0) {
-    return model;
-  }
-  if (model && typeof model === "object") {
-    const maybeId = (model as { modelId?: unknown }).modelId;
-    if (typeof maybeId === "string" && maybeId.length > 0) {
-      return maybeId;
-    }
-  }
-  return process.env.AI_MODEL ?? "openai/gpt-4o-mini";
+function resolveModelId(
+  source: "assistant" | "orchestrator",
+  model?: string | LanguageModel
+): string {
+  return resolveModelKey({ role: modelRoleForSource(source), model });
 }

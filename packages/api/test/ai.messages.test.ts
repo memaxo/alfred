@@ -143,7 +143,7 @@ describe("prepareModelMessagesForGenerate", () => {
       rawMessages,
       tools: { helper: { description: "noop" } },
       source: "assistant",
-      model: "unit-test-model",
+      model: "openai:unit-test-model",
       system: "System prompt",
     });
 
@@ -151,7 +151,7 @@ describe("prepareModelMessagesForGenerate", () => {
     expect(buildHistoryContextMock).toHaveBeenCalledWith(
       expect.objectContaining({
         messages: rawMessages,
-        modelId: "unit-test-model",
+        modelId: "openai/unit-test-model",
         system: "System prompt",
         source: "assistant",
       })
@@ -159,12 +159,16 @@ describe("prepareModelMessagesForGenerate", () => {
     expect(result).toEqual(rawMessages.slice(-3));
     expect(metricMocks.historyContextTokensTotal.inc).toHaveBeenNthCalledWith(
       1,
-      { source: "assistant", model: "unit-test-model", action: "kept" },
+      { source: "assistant", model: "openai/unit-test-model", action: "kept" },
       120
     );
     expect(metricMocks.historyContextTokensTotal.inc).toHaveBeenNthCalledWith(
       2,
-      { source: "assistant", model: "unit-test-model", action: "dropped" },
+      {
+        source: "assistant",
+        model: "openai/unit-test-model",
+        action: "dropped",
+      },
       45
     );
     expect(metricMocks.historyContextTierDropsTotal.inc).toHaveBeenCalledWith({

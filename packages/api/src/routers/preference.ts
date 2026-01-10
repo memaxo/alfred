@@ -9,6 +9,7 @@ import {
   preferenceListSchema,
   preferenceSetSchema,
 } from "@alfred/type";
+import { isModelRole, type ModelRole, parseModelRef } from "@alfred/type/model";
 import {
   preferenceKeySchema,
   preferenceValueSchema,
@@ -57,6 +58,76 @@ async function ensureMessageOwnership(options: {
   return message;
 }
 
+function modelRoleFromPreferenceKey(key: string): ModelRole | null {
+  const prefix = "domain.ai.model.";
+  if (!key.startsWith(prefix)) {
+    return null;
+  }
+
+  const role = key.slice(prefix.length);
+  if (!isModelRole(role)) {
+    return null;
+  }
+
+  return role;
+}
+
+function coerceModelRef(raw: string): string {
+  const value = raw.trim();
+  if (value.length === 0) {
+    return value;
+  }
+  if (value.includes(":")) {
+    return value;
+  }
+
+  const slash = value.indexOf("/");
+  if (slash !== -1) {
+    const provider = value.slice(0, slash).trim();
+    const modelId = value.slice(slash + 1).trim();
+    return `${provider}:${modelId}`;
+  }
+
+  // Back-compat: older inputs used bare model ids (assume OpenAI).
+  return `openai:${value}`;
+}
+
+function normalizePreferenceValue(key: string, value: unknown): unknown {
+  if (!modelRoleFromPreferenceKey(key)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "invalid_model_preference_value",
+    });
+  }
+
+  try {
+    return parseModelRef(coerceModelRef(value)).ref;
+  } catch {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "invalid_model_ref",
+    });
+  }
+}
+
+async function invalidateUserPreferenceCache(
+  userId: string,
+  projectId?: string
+): Promise<void> {
+  const { invalidatePreferenceCache } = await import(
+    "@alfred/agent/preference/loader"
+  );
+  if (projectId) {
+    await invalidatePreferenceCache(userId, projectId);
+    return;
+  }
+  await invalidatePreferenceCache(userId);
+}
+
 export const preferenceRouter = router({
   list: authedProcedure
     .input(preferenceListSchema.optional())
@@ -70,7 +141,9 @@ export const preferenceRouter = router({
       }
 
       const params = preferenceListSchema.parse(input ?? {});
-      const preferences = await userRepo.getPreferences(session.user.id);
+      const preferences = params.projectId
+        ? await userRepo.getPreferences(session.user.id, params.projectId)
+        : await userRepo.getPreferences(session.user.id);
       const list = Array.isArray(preferences)
         ? (preferences as PreferenceRow[])
         : [];
@@ -95,13 +168,26 @@ export const preferenceRouter = router({
 
       ensureObligations(ctx);
 
-      const preference = await userRepo.setPreference(
-        session.user.id,
-        input.key,
-        input.value,
-        input.confidence ?? 1.0,
-        input.source ?? "user"
-      );
+      const value = normalizePreferenceValue(input.key, input.value);
+
+      const preference = input.projectId
+        ? await userRepo.setPreference(
+            session.user.id,
+            input.key,
+            value,
+            input.confidence ?? 1.0,
+            input.source ?? "user",
+            input.projectId
+          )
+        : await userRepo.setPreference(
+            session.user.id,
+            input.key,
+            value,
+            input.confidence ?? 1.0,
+            input.source ?? "user"
+          );
+
+      await invalidateUserPreferenceCache(session.user.id, input.projectId);
 
       recordMemoryUpdate("preference", input.source ?? "user");
       return preference as unknown as PreferenceRow;
@@ -125,9 +211,18 @@ export const preferenceRouter = router({
 
       ensureObligations(ctx);
 
-      const removed =
-        Number(await userRepo.deletePreference(session.user.id, input.key)) ||
-        0;
+      const removed = input.projectId
+        ? Number(
+            await userRepo.deletePreference(
+              session.user.id,
+              input.key,
+              input.projectId
+            )
+          ) || 0
+        : Number(await userRepo.deletePreference(session.user.id, input.key)) ||
+          0;
+
+      await invalidateUserPreferenceCache(session.user.id, input.projectId);
       if (removed > 0) {
         recordMemoryForget("preference");
       }
@@ -196,35 +291,56 @@ export const preferenceRouter = router({
 
       let updated = 0;
       for (const [key, value] of Object.entries(input.preferenceUpdates)) {
-        await userRepo.setPreference(
-          session.user.id,
-          key,
-          value,
-          0.9,
-          "learned",
-          input.projectId
-        );
+        const normalized = normalizePreferenceValue(key, value);
+        if (input.projectId) {
+          await userRepo.setPreference(
+            session.user.id,
+            key,
+            normalized,
+            0.9,
+            "learned",
+            input.projectId
+          );
+        } else {
+          await userRepo.setPreference(
+            session.user.id,
+            key,
+            normalized,
+            0.9,
+            "learned"
+          );
+        }
         updated += 1;
       }
 
       if (updated > 0) {
-        const { invalidatePreferenceCache } = await import(
-          "@alfred/agent/preference/loader"
-        );
-        await invalidatePreferenceCache(session.user.id);
+        await invalidateUserPreferenceCache(session.user.id, input.projectId);
         recordMemoryUpdate("preference", "learned");
       }
 
       if (input.rating || (input.tags && input.tags.length > 0)) {
-        await userRepo.addFeedback(
-          session.user.id,
-          input.conversationId ?? ownedMessage.conversationId ?? "",
-          input.messageId,
-          input.rating,
-          undefined,
-          input.tags,
-          input.projectId
-        );
+        const conversationId =
+          input.conversationId ?? ownedMessage.conversationId ?? "";
+        if (input.projectId) {
+          await userRepo.addFeedback(
+            session.user.id,
+            conversationId,
+            input.messageId,
+            input.rating,
+            undefined,
+            input.tags,
+            input.projectId
+          );
+        } else {
+          await userRepo.addFeedback(
+            session.user.id,
+            conversationId,
+            input.messageId,
+            input.rating,
+            undefined,
+            input.tags
+          );
+        }
       }
 
       return { updated };
@@ -279,20 +395,25 @@ export const preferenceRouter = router({
         return { inferred: 0 };
       }
 
-      await userRepo.setPreference(
-        session.user.id,
-        inferred.key,
-        inferred.value,
-        0.7,
-        "inferred",
-        input.projectId
-      );
-      {
-        const { invalidatePreferenceCache } = await import(
-          "@alfred/agent/preference/loader"
+      if (input.projectId) {
+        await userRepo.setPreference(
+          session.user.id,
+          inferred.key,
+          inferred.value,
+          0.7,
+          "inferred",
+          input.projectId
         );
-        await invalidatePreferenceCache(session.user.id);
+      } else {
+        await userRepo.setPreference(
+          session.user.id,
+          inferred.key,
+          normalizePreferenceValue(inferred.key, inferred.value),
+          0.7,
+          "inferred"
+        );
       }
+      await invalidateUserPreferenceCache(session.user.id, input.projectId);
       recordMemoryUpdate("preference", "inferred");
 
       return { inferred: 1 };

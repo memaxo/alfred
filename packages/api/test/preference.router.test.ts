@@ -142,8 +142,78 @@ describe("preference router", () => {
         1.0,
         "user"
       );
+      expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
       expect(recordMemoryUpdateMock).toHaveBeenCalledWith("preference", "user");
       expect(result).toEqual(mockPreference);
+    });
+
+    it("normalizes model preference values to provider:modelId", async () => {
+      setPreferenceMock.mockResolvedValue({
+        key: "domain.ai.model.chat",
+        value: "openai:gpt-4o-mini",
+        confidence: 1.0,
+      });
+
+      await caller.preference.set({
+        key: "domain.ai.model.chat",
+        value: "openai/gpt-4o-mini",
+        confidence: 1.0,
+      });
+
+      expect(setPreferenceMock).toHaveBeenCalledWith(
+        "test-user",
+        "domain.ai.model.chat",
+        "openai:gpt-4o-mini",
+        1.0,
+        "user"
+      );
+      expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
+    });
+
+    it("passes projectId through preference writes and invalidation", async () => {
+      const projectId = "00000000-0000-4000-8000-000000000000";
+
+      setPreferenceMock.mockResolvedValue({
+        key: "theme",
+        value: "dark",
+        confidence: 1.0,
+      });
+
+      await caller.preference.set({
+        projectId,
+        key: "theme",
+        value: "dark",
+        confidence: 1.0,
+      });
+
+      expect(setPreferenceMock).toHaveBeenCalledWith(
+        "test-user",
+        "theme",
+        "dark",
+        1.0,
+        "user",
+        projectId
+      );
+      expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith(
+        "test-user",
+        projectId
+      );
+    });
+
+    it("rejects invalid model preference values", async () => {
+      await expect(
+        caller.preference.set({
+          key: "domain.ai.model.chat",
+          value: "unknown/model",
+        })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+      await expect(
+        caller.preference.set({
+          key: "domain.ai.model.chat",
+          value: 123,
+        } as any)
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
   });
 
@@ -157,6 +227,7 @@ describe("preference router", () => {
 
       expect(deletePreferenceMock).toHaveBeenCalledWith("test-user", "theme");
       expect(recordMemoryForgetMock).toHaveBeenCalledWith("preference");
+      expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
       expect(result).toEqual({ removed: 1 });
     });
 
@@ -170,6 +241,7 @@ describe("preference router", () => {
       expect(result).toEqual({ removed: 0 });
       // No forget metrics should be emitted when nothing removed
       expect(recordMemoryForgetMock).toHaveBeenCalledTimes(0);
+      expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
     });
   });
 

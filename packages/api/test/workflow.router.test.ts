@@ -678,6 +678,7 @@ describe("workflow router", () => {
     it("marks workflow runs as cancelled when registry cancel is invoked", async () => {
       const mockRunId = "cancel-run-id";
       let active = true;
+      let cancelledOnce = false;
       const streamingExecutor = {
         runId: mockRunId,
         summary: "test",
@@ -709,17 +710,27 @@ describe("workflow router", () => {
         await caller.workflow.stream({ requirement: "test" })
       );
 
-      observable.subscribe({
-        next: () => {
-          const registerArgs = runRegistryMocks.register.mock.calls[0]?.[1];
-          registerArgs?.cancel?.();
-        },
-        error: (error) => {
-          throw error;
-        },
+      const completed = new Promise<void>((resolve, reject) => {
+        observable.subscribe({
+          next: () => {
+            if (cancelledOnce) {
+              return;
+            }
+            cancelledOnce = true;
+            const registerArgs = runRegistryMocks.register.mock.calls[0]?.[1];
+            registerArgs?.cancel?.();
+          },
+          error: reject,
+          complete: resolve,
+        });
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      await Promise.race([
+        completed,
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error("cancel_test_timeout")), 500)
+        ),
+      ]);
 
       const cancelCall = workflowRepoMocks.updateRun.mock.calls.find(
         ([, patch]) => patch.status === "cancelled"

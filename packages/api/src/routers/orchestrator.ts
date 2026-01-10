@@ -1,6 +1,6 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { TRPCError } from "@trpc/server";
-import { type LanguageModel, stepCountIs } from "ai";
+import { stepCountIs } from "ai";
 import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
@@ -56,8 +56,16 @@ export const orchestratorRouter = router({
         const { getOrchestratorAgentDefaults } = await import(
           "@alfred/agent/agents"
         );
+        const { getModelForRole } = await import("@alfred/agent/selector");
         const defaults = getOrchestratorAgentDefaults();
-        const model = defaults.model as LanguageModel;
+        const selection = input.projectId
+          ? await getModelForRole("orchestrator", {
+              userId: ctx.session.user.id,
+              projectId: input.projectId,
+            })
+          : await getModelForRole("orchestrator", {
+              userId: ctx.session.user.id,
+            });
         const system =
           typeof defaults.instructions === "string"
             ? defaults.instructions
@@ -66,7 +74,7 @@ export const orchestratorRouter = router({
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "orchestrator",
-          model,
+          model: selection.modelKey,
           system,
         });
         const stopWhen =
@@ -76,7 +84,7 @@ export const orchestratorRouter = router({
 
         const result = await generateText({
           ...defaults,
-          model,
+          model: selection.model,
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,

@@ -75,16 +75,24 @@ function mapResource(raw: unknown) {
 }
 
 export const assistantRouter = router({
-  getConfig: authedProcedure.query(async () => {
-    const [{ getModelSpec }, { getModelId }] = await Promise.all([
-      import("@alfred/agent/models"),
-      import("@alfred/agent/v6"),
-    ]);
-    const spec = getModelSpec(getModelId());
-    return {
-      modelId: spec.id,
-      contextWindow: spec.contextWindow,
-    };
+  getConfig: authedProcedure.query(async ({ ctx }) => {
+    try {
+      const { getModelSpec } = await import("@alfred/agent/models");
+      const { getModelForRole } = await import("@alfred/agent/selector");
+
+      const userId = ctx.session?.user?.id;
+      const selected = userId
+        ? await getModelForRole("chat", { userId })
+        : getModelForRole("chat");
+      const modelKey = selected.modelKey;
+      const spec = getModelSpec(modelKey);
+      return {
+        modelId: spec.id,
+        contextWindow: spec.contextWindow,
+      };
+    } catch (error) {
+      throw toTRPCError(error, "assistant_getconfig_failed");
+    }
   }),
 
   generate: authedProcedure
@@ -95,10 +103,25 @@ export const assistantRouter = router({
       const stopTimer = assistantGenerateDurationSeconds.startTimer();
       assistantGenerateRequestsTotal.inc({ status: "started" });
       try {
+        if (!ctx.session?.user?.id) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "session_required",
+          });
+        }
+
+        const userId = ctx.session.user.id;
         const { getAssistantAgentDefaults } = await import(
           "@alfred/agent/agents"
         );
+        const { getModelForRole } = await import("@alfred/agent/selector");
         const defaults = getAssistantAgentDefaults();
+        const selection = input.projectId
+          ? await getModelForRole("chat", {
+              userId,
+              projectId: input.projectId,
+            })
+          : await getModelForRole("chat", { userId });
 
         const { systemInstruction } = await buildAssistantContext({
           messages: input.messages,
@@ -110,8 +133,7 @@ export const assistantRouter = router({
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "assistant",
-          // @ts-expect-error - AI SDK model type needs manual assertion due to dynamic import
-          model: defaults.model as unknown,
+          model: selection.modelKey,
           system: systemInstruction, // Injected Persona + RAG
         });
         const stopWhen =
@@ -121,7 +143,7 @@ export const assistantRouter = router({
         const result = await generateText({
           ...defaults,
           // @ts-expect-error - AI SDK model type needs manual assertion
-          model: defaults.model as unknown,
+          model: selection.model as unknown,
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,
@@ -131,14 +153,8 @@ export const assistantRouter = router({
 
         const output = sanitizeResult(result);
         // Persist for replay
-        if (!ctx.session) {
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: "session_required",
-          });
-        }
         const replayId = await persistResult({
-          userId: ctx.session.user.id,
+          userId,
           projectId: input.projectId,
           kind: "assistant",
           input,
