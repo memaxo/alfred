@@ -207,7 +207,7 @@ describe("PackageRegistry", () => {
         name: "@alfred/error",
         version: "1.0.0",
         description: "Error package",
-        healthCheck: async () => {
+        healthCheck: () => {
           throw new Error("Health check failed");
         },
       });
