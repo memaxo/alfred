@@ -5,7 +5,7 @@
  * Provides consistent metric names and recording across all systems.
  */
 
-import { Histogram, Counter, Gauge, Registry } from "prom-client";
+import { Counter, Gauge, Histogram, Registry } from "prom-client";
 
 const register = new Registry();
 
@@ -74,7 +74,7 @@ export const warmPoolMetrics = {
   warmupDuration: new Histogram({
     name: "warm_pool_warmup_duration_ms",
     help: "Time to warmup a container in milliseconds",
-    buckets: [5000, 10000, 20000, 30000],
+    buckets: [5000, 10_000, 20_000, 30_000],
     registers: [register],
   }),
 
@@ -126,7 +126,7 @@ export const telemetryMetrics = {
   tuningCycleDuration: new Histogram({
     name: "telemetry_tuning_cycle_duration_ms",
     help: "Time to complete a tuning cycle",
-    buckets: [1000, 5000, 10000, 30000],
+    buckets: [1000, 5000, 10_000, 30_000],
     registers: [register],
   }),
 
