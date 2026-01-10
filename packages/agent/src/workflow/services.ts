@@ -62,6 +62,7 @@ export async function createWorkflowExecutor(
       repoBase: input.repoBase,
       mode: input.mode,
       interactive: input.interactive,
+      toolgraph: input.toolgraph,
       context: input.context,
       linear:
         input.linear?.sessionId && input.authzLinear

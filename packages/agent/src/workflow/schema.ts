@@ -14,6 +14,12 @@ export const workflowInput = z.object({
   auto: z.enum(["read", "low", "medium", "high"]).default("low"),
   mode: z.enum(["sequential", "parallel"]).default("sequential"),
   interactive: z.boolean().optional(),
+  toolgraph: z
+    .object({
+      maxParallel: z.number().int().min(1).max(32).optional(),
+      backoffMs: z.number().int().min(0).max(10_000).optional(),
+    })
+    .optional(),
   authz: z.string().optional(),
   cw: z.string().optional(),
   workspace: z.string().optional(),
