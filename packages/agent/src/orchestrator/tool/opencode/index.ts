@@ -1,3 +1,4 @@
+import type { ToolExecuteContext } from "../shared/context.js";
 import {
   type OpenCodeToolInput,
   opencodeInputSchema,
@@ -5,7 +6,6 @@ import {
 } from "./definition.js";
 import { executeWithOpenCode } from "./exec.js";
 import { enforcePolicy } from "./policy.js";
-import type { ToolExecuteContext } from "../shared/context.js";
 
 export type { OpenCodeToolInput } from "./definition.js";
 
@@ -25,4 +25,3 @@ export const toolOpenCode = {
 };
 
 export type ToolOpenCode = typeof toolOpenCode;
-

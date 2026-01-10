@@ -48,8 +48,6 @@ export type OrchestratorCallbacks = {
   ) => void;
 };
 
-const GLOBAL_TIMEOUT_MS = 30 * 60 * 1000;
-
 function workflowUrlFor(
   externalUrlBase: string | null,
   id: string | null
@@ -114,16 +112,7 @@ export function orchestrateWorkflowStream(
     callbacks.emitNext(event);
   };
 
-  let outerRunId: string | null = null;
-  const globalTimeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      cancelled = true;
-      abortController.abort();
-      reject(new Error("workflow_global_timeout"));
-    }, GLOBAL_TIMEOUT_MS);
-  });
-
-  const asyncTask = (async () => {
+  void (async () => {
     let runId: string | null = null;
     const persistedMessageKeys = new Set<string>();
     let workflowConversationId: string | null = null;
@@ -298,11 +287,9 @@ export function orchestrateWorkflowStream(
       // Initialize or resume run
       if (input.runId) {
         runId = input.runId;
-        outerRunId = runId;
         await workflowRepo.updateRun(input.runId, { status: "running" });
       } else {
         runId = executor.runId;
-        outerRunId = runId;
 
         const projectId = await (async () => {
           const url = process.env.DATABASE_URL;
@@ -617,6 +604,7 @@ export function orchestrateWorkflowStream(
         try {
           await workflowRepo.updateRun(runId, {
             status: "failed",
+            completedAt: new Date(),
             errorMessage:
               error instanceof Error ? error.message : String(error),
           });
@@ -644,36 +632,6 @@ export function orchestrateWorkflowStream(
       }
     }
   })();
-
-  Promise.race([asyncTask, globalTimeoutPromise]).catch((error) => {
-    if (error instanceof Error && error.message === "workflow_global_timeout") {
-      logger.error("workflow_global_timeout", {
-        runId: outerRunId ?? "unknown",
-      });
-      recordEvent("error");
-      closeTimer("error");
-      const resolvedRunId = outerRunId;
-      if (resolvedRunId) {
-        workflowRepo
-          .updateRun(resolvedRunId, {
-            status: "failed",
-            errorMessage: "workflow_global_timeout",
-          })
-          .catch((updateError) => {
-            logger.warn("workflow_timeout_update_failed", {
-              runId: resolvedRunId,
-              error:
-                updateError instanceof Error
-                  ? updateError.message
-                  : String(updateError),
-            });
-          });
-      }
-      callbacks.emitError(error);
-    } else {
-      callbacks.emitError(error);
-    }
-  });
 
   return Promise.resolve(() => {
     cancelled = true;

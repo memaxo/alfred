@@ -18,7 +18,10 @@ import { logger } from "@alfred/logger";
 import { z } from "zod";
 import { type CodexToolInput, toolCodex } from "../tool/codex/index.js";
 import { type DroidToolInput, toolDroid } from "../tool/droid.js";
-import { type OpenCodeToolInput, toolOpenCode } from "../tool/opencode/index.js";
+import {
+  type OpenCodeToolInput,
+  toolOpenCode,
+} from "../tool/opencode/index.js";
 import type { ToolWriter } from "../tool/shared/context.js";
 import {
   recordRalphCompletion,
@@ -278,17 +281,44 @@ async function executeIteration(
   result: string;
   artifacts: Array<{ path: string; kind: string }>;
 }> {
+  const execProfileStrict =
+    process.env.ORCH_EXEC_PROFILE_STRICT?.trim() === "1";
+
   if (executor === "codex") {
     const codexInput = toolInput as Omit<CodexToolInput, "prompt" | "action">;
-    const output = await toolCodex.execute({
-      input: {
-        action: "exec",
-        prompt,
-        ...codexInput,
-      },
-      writer,
-      signal,
-    });
+    const run = (overrides?: Partial<CodexToolInput>) =>
+      toolCodex.execute({
+        input: {
+          action: "exec",
+          prompt,
+          ...codexInput,
+          ...(overrides ?? {}),
+        },
+        writer,
+        signal,
+      });
+
+    let output: Awaited<ReturnType<typeof toolCodex.execute>>;
+    try {
+      output = await run();
+    } catch (error) {
+      if (
+        !(execProfileStrict || signal?.aborted) &&
+        error instanceof Error &&
+        error.message === "codex_server_start_failed" &&
+        codexInput.execProfile !== "default"
+      ) {
+        void Promise.resolve(
+          writer?.write?.({
+            type: "notice",
+            message: "executor_server_fallback_default",
+          })
+        ).catch(() => {});
+        output = await run({ execProfile: "default" });
+      } else {
+        throw error;
+      }
+    }
     return {
       result: output.result,
       artifacts: output.artifacts ?? [],
@@ -312,15 +342,39 @@ async function executeIteration(
   }
 
   const ocInput = toolInput as Omit<OpenCodeToolInput, "prompt" | "action">;
-  const output = await toolOpenCode.execute({
-    input: {
-      action: "exec",
-      prompt,
-      ...ocInput,
-    },
-    writer,
-    signal,
-  });
+  const run = (overrides?: Partial<OpenCodeToolInput>) =>
+    toolOpenCode.execute({
+      input: {
+        action: "exec",
+        prompt,
+        ...ocInput,
+        ...(overrides ?? {}),
+      },
+      writer,
+      signal,
+    });
+
+  let output: Awaited<ReturnType<typeof toolOpenCode.execute>>;
+  try {
+    output = await run();
+  } catch (error) {
+    if (
+      !(execProfileStrict || signal?.aborted) &&
+      error instanceof Error &&
+      error.message === "opencode_server_start_failed" &&
+      ocInput.execProfile !== "default"
+    ) {
+      void Promise.resolve(
+        writer?.write?.({
+          type: "notice",
+          message: "executor_server_fallback_default",
+        })
+      ).catch(() => {});
+      output = await run({ execProfile: "default" });
+    } else {
+      throw error;
+    }
+  }
   return {
     result: output.result,
     artifacts: output.artifacts ?? [],
@@ -527,6 +581,12 @@ export const ralphInputSchema = z.object({
     .describe("Which coding agent to use"),
   prompt: z.string().min(1).describe("The prompt to feed repeatedly"),
   config: ralphConfigSchema.describe("Ralph loop configuration"),
+  execProfile: z
+    .enum(["default", "server"])
+    .optional()
+    .describe(
+      "Execution profile: default spawns per prompt; server reuses a long-lived backend in AgentFS (codex/opencode)."
+    ),
   auto: z.enum(["read", "low", "medium", "high"]).default("low"),
   cw: z.string().optional().describe("Working directory"),
   model: z.string().optional().describe("Model to use"),
@@ -534,6 +594,10 @@ export const ralphInputSchema = z.object({
   timeoutSec: z.number().int().min(30).max(1800).optional(),
   sessionId: z.string().optional().describe("Session ID for Codex"),
   userId: z.string().optional().describe("User ID for session binding"),
+  agentfsDbPath: z
+    .string()
+    .optional()
+    .describe("AgentFS database path (Codex executor only)"),
   cmd: z
     .string()
     .optional()
@@ -545,11 +609,11 @@ export const ralphInputSchema = z.object({
   containerName: z
     .string()
     .optional()
-    .describe("AgentFS container name/id (OpenCode executor only)"),
+    .describe("AgentFS container name/id (Codex/OpenCode executors only)"),
   containerCw: z
     .string()
     .optional()
-    .describe("Workdir inside the container (OpenCode executor only)"),
+    .describe("Workdir inside the container (Codex/OpenCode executors only)"),
 });
 
 export type RalphToolInput = z.infer<typeof ralphInputSchema>;
@@ -577,6 +641,7 @@ export const toolRalph = {
       executor === "codex"
         ? {
             out: "text" as const,
+            execProfile: toolInputRest.execProfile,
             auto: toolInputRest.auto,
             cw: toolInputRest.cw,
             model: toolInputRest.model,
@@ -584,6 +649,9 @@ export const toolRalph = {
             timeoutSec: toolInputRest.timeoutSec,
             sessionId: toolInputRest.sessionId,
             userId: toolInputRest.userId,
+            agentfsDbPath: toolInputRest.agentfsDbPath,
+            containerName: toolInputRest.containerName,
+            containerCw: toolInputRest.containerCw,
           }
         : executor === "droid"
           ? {
@@ -595,6 +663,7 @@ export const toolRalph = {
               timeoutSec: toolInputRest.timeoutSec,
             }
           : {
+              execProfile: toolInputRest.execProfile,
               auto: toolInputRest.auto,
               cw: toolInputRest.cw,
               model: toolInputRest.model,

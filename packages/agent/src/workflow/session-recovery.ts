@@ -8,6 +8,11 @@ const DEFAULT_RECOVERY_LIMIT = Math.max(
   Number(process.env.WORKFLOW_RECOVERY_MAX ?? "200")
 );
 
+const DEFAULT_RUNNING_GRACE_MS = Math.max(
+  0,
+  Number(process.env.WORKFLOW_RUNNING_RECOVERY_GRACE_MS ?? "60000")
+);
+
 type PlaceholderHandle = RunHandle & { __placeholder: true };
 
 const placeholderHandles = new Map<string, PlaceholderHandle>();
@@ -30,7 +35,7 @@ function createPlaceholderHandle(runId: string): PlaceholderHandle {
   const handle: PlaceholderHandle = {
     __placeholder: true,
     abortController,
-    resume() {
+    async resume() {
       throw new StreamNotAttachedError(runId);
     },
     async cancel() {
@@ -90,6 +95,67 @@ export async function rehydrateSuspendedRuns(options?: {
     });
   } catch (error) {
     logger.error("workflow_rehydrate_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function failOrphanedRunningRuns(options?: {
+  limit?: number;
+  graceMs?: number;
+  now?: number;
+}): Promise<void> {
+  const backend = (process.env.RUN_REGISTRY_BACKEND ?? "memory").toLowerCase();
+  // In Redis mode, another instance may legitimately own an in-flight run, so we
+  // default to skipping fail-fast cleanup unless explicitly enabled later.
+  if (backend === "redis") {
+    return;
+  }
+
+  const limit = Math.max(1, options?.limit ?? DEFAULT_RECOVERY_LIMIT);
+  const graceMs = Math.max(0, options?.graceMs ?? DEFAULT_RUNNING_GRACE_MS);
+  const now = options?.now ?? Date.now();
+
+  try {
+    const runs = await workflowRepo.listRunsByStatuses(["running"], {
+      limit,
+      order: "asc",
+    });
+
+    if (runs.length === 0) {
+      return;
+    }
+
+    let failed = 0;
+    for (const run of runs) {
+      if (!run?.id) {
+        continue;
+      }
+      const createdAt = run.created?.getTime?.();
+      if (typeof createdAt === "number" && now - createdAt < graceMs) {
+        continue;
+      }
+
+      try {
+        await workflowRepo.updateRun(run.id, {
+          status: "failed",
+          completedAt: new Date(now),
+          errorMessage: "workflow_interrupted_restart",
+        });
+        failed += 1;
+      } catch (error) {
+        logger.warn("workflow_running_recovery_failed", {
+          runId: run.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    if (failed > 0) {
+      logger.info("workflow_running_recovery_complete", { failed });
+    }
+  } catch (error) {
+    logger.error("workflow_running_recovery_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

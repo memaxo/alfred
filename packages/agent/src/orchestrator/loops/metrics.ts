@@ -101,7 +101,7 @@ export function registerRalphDurationHistogram(
  * Record a Ralph loop iteration
  */
 export function recordRalphIteration(
-  executor: "codex" | "droid",
+  executor: "codex" | "droid" | "opencode",
   iteration: number
 ) {
   ralphIterationCounter?.labels(executor, String(iteration)).inc();
@@ -111,7 +111,7 @@ export function recordRalphIteration(
  * Record a Ralph loop completion (promise detected)
  */
 export function recordRalphCompletion(
-  executor: "codex" | "droid",
+  executor: "codex" | "droid" | "opencode",
   iterations: number
 ) {
   ralphCompletionCounter?.labels(executor).inc();
@@ -122,7 +122,10 @@ export function recordRalphCompletion(
 /**
  * Record a Ralph loop stuck termination
  */
-export function recordRalphStuck(executor: "codex" | "droid", reason: string) {
+export function recordRalphStuck(
+  executor: "codex" | "droid" | "opencode",
+  reason: string
+) {
   // Normalize reason to avoid high cardinality
   const normalizedReason = normalizeStuckReason(reason);
   ralphStuckCounter?.labels(executor, normalizedReason).inc();
@@ -131,14 +134,16 @@ export function recordRalphStuck(executor: "codex" | "droid", reason: string) {
 /**
  * Record a Ralph loop timeout
  */
-export function recordRalphTimeout(executor: "codex" | "droid") {
+export function recordRalphTimeout(executor: "codex" | "droid" | "opencode") {
   ralphTimeoutCounter?.labels(executor).inc();
 }
 
 /**
  * Start a Ralph loop duration timer
  */
-export function startRalphDurationTimer(executor: "codex" | "droid") {
+export function startRalphDurationTimer(
+  executor: "codex" | "droid" | "opencode"
+) {
   return ralphDurationHistogram?.startTimer({ executor }) ?? (() => {});
 }
 

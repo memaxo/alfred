@@ -1,6 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
-import type { UIMessage } from "@alfred/type/stream";
 
 const workflowRepoMocks = {
   createRun: vi.fn().mockResolvedValue(undefined),
@@ -10,15 +9,6 @@ const workflowRepoMocks = {
 };
 
 mock.module("@alfred/db/repo/workflow", () => workflowRepoMocks);
-
-// Use shared test utilities - import BEFORE any other imports
-import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
-
-// Install shared mocks
-installLoggerMock();
-
-// Use shared mocks for assertions
-const _loggerMock = loggerMocks;
 
 const createWorkflowExecutorMock = vi.fn();
 const ensureWorkflowConversationMock = vi
@@ -59,24 +49,6 @@ mock.module("../orchestrator/linear", () => ({
 const recordAuditMock = vi.fn().mockResolvedValue(undefined);
 mock.module("../utils/audit", () => ({ recordAudit: recordAuditMock }));
 
-const makeEventIdMock = vi.fn().mockImplementation(({ type }) => `${type}-id`);
-mock.module("../utils/event-id", () => ({ makeEventId: makeEventIdMock }));
-
-const eventToUiMessagesMock = vi.fn<[WorkflowEvent], UIMessage[] | null>(() => [
-  {
-    id: "msg-1",
-    role: "assistant",
-    parts: [{ type: "text", text: "Hi" }],
-  },
-]);
-mock.module("../utils/normalize", () => ({
-  eventToUiMessages: eventToUiMessagesMock,
-}));
-
-mock.module("../utils/redaction", () => ({
-  redactEventData: (event: WorkflowEvent) => event,
-}));
-
 mock.module("./metrics", () => ({
   workflowStreamDurationSeconds: { startTimer: () => () => {} },
   workflowStreamEventsTotal: { inc: vi.fn() },
@@ -115,7 +87,7 @@ describe("orchestrateWorkflowStream", () => {
 
   it("emits UI messages via callbacks after persistence", async () => {
     const streamedEvent: WorkflowEvent = {
-      type: "assistant",
+      _: "assistant",
       text: "Working",
     } as WorkflowEvent;
 
@@ -155,20 +127,26 @@ describe("orchestrateWorkflowStream", () => {
       }
     );
 
-    await flushMicrotasks();
+    await waitFor(() => emitComplete.mock.calls.length > 0);
 
-    expect(eventToUiMessagesMock).toHaveBeenCalledWith(streamedEvent);
+    expect(createWorkflowExecutorMock).toHaveBeenCalledTimes(1);
     expect(emitUiMessages).toHaveBeenCalledTimes(1);
     const [messages, meta] = emitUiMessages.mock.calls[0];
     expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      role: "assistant",
+      parts: expect.arrayContaining([
+        expect.objectContaining({ type: "text", text: "Working" }),
+      ]),
+    });
     expect(meta).toMatchObject({
       runId: "run-123",
-      eventId: "event-id",
-      eventType: "event",
+      eventId: expect.any(String),
+      eventType: "assistant",
     });
     expect(meta.originalEvent).toBe(streamedEvent);
     expect(workflowRepoMocks.appendEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ eventType: "event" })
+      expect.objectContaining({ eventType: "assistant" })
     );
     expect(workflowRepoMocks.appendEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "ui-message" })
@@ -180,8 +158,14 @@ describe("orchestrateWorkflowStream", () => {
   });
 });
 
-async function flushMicrotasks() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
+async function waitFor(predicate: () => boolean, timeoutMs = 500, stepMs = 5) {
+  const startedAt = Date.now();
+  while (!predicate()) {
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error("test_timeout_waiting_for_condition");
+    }
+    await new Promise((resolve) => setTimeout(resolve, stepMs));
+  }
 }
 
 afterAll(() => {

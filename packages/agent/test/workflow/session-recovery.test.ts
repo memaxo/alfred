@@ -17,11 +17,14 @@ mock.module("../../src/workflow/registry", () => ({
 }));
 
 describe("workflow session recovery", () => {
+  const originalRunRegistryBackend = process.env.RUN_REGISTRY_BACKEND;
+
   beforeEach(() => {
     workflowRepoMocks.listRunsByStatuses.mockReset().mockResolvedValue([]);
     workflowRepoMocks.updateRun.mockReset().mockResolvedValue(undefined);
     runRegistryMocks.register.mockReset().mockResolvedValue(undefined);
     runRegistryMocks.unregister.mockReset().mockResolvedValue(undefined);
+    process.env.RUN_REGISTRY_BACKEND = originalRunRegistryBackend;
   });
 
   it("registers placeholder handles that reject resume until stream reconnects", async () => {
@@ -89,5 +92,70 @@ describe("workflow session recovery", () => {
       resumeData: { event: "bio-authz", authz: "token" },
     });
     expect(delegateHandle.resume).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks orphaned running runs as failed on restart (memory registry)", async () => {
+    process.env.RUN_REGISTRY_BACKEND = "memory";
+
+    const now = Date.now();
+    workflowRepoMocks.listRunsByStatuses.mockResolvedValue([
+      {
+        id: "run-running",
+        userId: "user-1",
+        workflowId: "plan",
+        status: "running",
+        created: new Date(now - 5 * 60 * 1000),
+      },
+    ] as any);
+
+    const recovery = await import("../../src/workflow/session-recovery");
+    const { failOrphanedRunningRuns } = recovery;
+
+    await failOrphanedRunningRuns({ now, graceMs: 60_000 });
+
+    expect(workflowRepoMocks.updateRun).toHaveBeenCalledWith(
+      "run-running",
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: "workflow_interrupted_restart",
+      })
+    );
+  });
+
+  it("does not mark freshly started running runs within grace window", async () => {
+    process.env.RUN_REGISTRY_BACKEND = "memory";
+
+    const now = Date.now();
+    workflowRepoMocks.listRunsByStatuses.mockResolvedValue([
+      {
+        id: "run-fresh",
+        userId: "user-1",
+        workflowId: "plan",
+        status: "running",
+        created: new Date(now - 1000),
+      },
+    ] as any);
+
+    const recovery = await import("../../src/workflow/session-recovery");
+    const { failOrphanedRunningRuns } = recovery;
+
+    await failOrphanedRunningRuns({ now, graceMs: 60_000 });
+
+    expect(workflowRepoMocks.updateRun).not.toHaveBeenCalled();
+  });
+
+  it("skips running-run cleanup when registry backend is redis", async () => {
+    process.env.RUN_REGISTRY_BACKEND = "redis";
+
+    workflowRepoMocks.listRunsByStatuses.mockResolvedValue([
+      { id: "run-redis", status: "running" },
+    ] as any);
+
+    const recovery = await import("../../src/workflow/session-recovery");
+    const { failOrphanedRunningRuns } = recovery;
+
+    await failOrphanedRunningRuns({ graceMs: 0 });
+
+    expect(workflowRepoMocks.updateRun).not.toHaveBeenCalled();
   });
 });

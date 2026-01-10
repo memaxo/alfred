@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { openai } from "@ai-sdk/openai";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
@@ -7,6 +6,7 @@ import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import type { z } from "zod";
+import { getModelForRole } from "../selector";
 import type { WorkflowInputPayload, workflowInput } from "./schema.js";
 export type { WorkflowInputPayload };
 
@@ -47,7 +47,10 @@ export async function createWorkflowExecutor(
   history?: WorkflowEvent[],
   runtimeContext?: RuntimeContext<Record<string, unknown>>
 ): Promise<WorkflowExecutor> {
-  const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
+  const { model } = await getModelForRole("planner", {
+    userId: input.userId,
+    projectId: input.projectId,
+  });
   const createRuntime = await getCreateRuntime();
 
   return createRuntime({

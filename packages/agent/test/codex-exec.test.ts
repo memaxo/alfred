@@ -100,6 +100,7 @@ const buildCodexHeuristicContextMock = mock(() =>
 );
 
 let executeWithCodex: typeof import("@alfred/agent/orchestrator/tool/codex/exec").executeWithCodex;
+let codexServerInternals: typeof import("@alfred/agent/orchestrator/tool/codex/server").__internals;
 
 beforeAll(async () => {
   mock.module("@alfred/db/repo/codex-learning", () => ({
@@ -113,6 +114,10 @@ beforeAll(async () => {
 
   ({ executeWithCodex } = await import(
     "@alfred/agent/orchestrator/tool/codex/exec"
+  ));
+
+  ({ __internals: codexServerInternals } = await import(
+    "@alfred/agent/orchestrator/tool/codex/server"
   ));
 });
 
@@ -259,6 +264,7 @@ describe("executeWithCodex container workdir", () => {
       await executeWithCodex({
         input: {
           action: "exec",
+          execProfile: "default",
           prompt: "noop",
           auto: "read",
           out: "text",
@@ -275,6 +281,100 @@ describe("executeWithCodex container workdir", () => {
       expect(argsText).toContain("alfred-agentfs-container-123");
     } finally {
       process.env.PATH = prevPath;
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("executeWithCodex execProfile defaults", () => {
+  it("falls back to default when server start fails and strict is off", async () => {
+    // Provide a fake docker binary in PATH so resolveExecutable("docker") succeeds.
+    const binDir = await mkdtemp(path.join(tmpdir(), "codex-docker-bin-"));
+    const prevPath = process.env.PATH;
+    try {
+      const dockerPath = path.join(binDir, "docker");
+      await writeFile(dockerPath, "#!/bin/sh\nexit 0\n", "utf8");
+      await chmod(dockerPath, 0o755);
+
+      process.env.PATH = `${binDir}${path.delimiter}${prevPath ?? ""}`;
+      process.env.ORCH_EXEC_PROFILE_STRICT = "0";
+
+      // Force server start failure while allowing default mode to proceed.
+      codexServerInternals.setSpawn(() => {
+        throw new Error("spawn_failed");
+      });
+
+      setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+
+      const notices: string[] = [];
+      const writer = {
+        write: (chunk: unknown) => {
+          if (!chunk || typeof chunk !== "object") {
+            return;
+          }
+          const msg = (chunk as any).message;
+          if (typeof msg === "string") {
+            notices.push(msg);
+          }
+        },
+      };
+
+      await executeWithCodex({
+        input: {
+          action: "exec",
+          prompt: "noop",
+          auto: "read",
+          out: "text",
+          cw: process.cwd(),
+          containerName: "alfred-agentfs-container-123",
+          containerCw: "/workspace",
+        },
+        writer,
+      });
+
+      expect(notices).toContain("executor_server_fallback_default");
+    } finally {
+      process.env.PATH = prevPath;
+      process.env.ORCH_EXEC_PROFILE_STRICT = undefined;
+      codexServerInternals.resetSpawn();
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it("throws when server start fails and strict is on", async () => {
+    const binDir = await mkdtemp(path.join(tmpdir(), "codex-docker-bin-"));
+    const prevPath = process.env.PATH;
+    try {
+      const dockerPath = path.join(binDir, "docker");
+      await writeFile(dockerPath, "#!/bin/sh\nexit 0\n", "utf8");
+      await chmod(dockerPath, 0o755);
+
+      process.env.PATH = `${binDir}${path.delimiter}${prevPath ?? ""}`;
+      process.env.ORCH_EXEC_PROFILE_STRICT = "1";
+
+      codexServerInternals.setSpawn(() => {
+        throw new Error("spawn_failed");
+      });
+
+      setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+
+      await expect(
+        executeWithCodex({
+          input: {
+            action: "exec",
+            prompt: "noop",
+            auto: "read",
+            out: "text",
+            cw: process.cwd(),
+            containerName: "alfred-agentfs-container-123",
+            containerCw: "/workspace",
+          },
+        })
+      ).rejects.toThrow("codex_server_start_failed");
+    } finally {
+      process.env.PATH = prevPath;
+      process.env.ORCH_EXEC_PROFILE_STRICT = undefined;
+      codexServerInternals.resetSpawn();
       await rm(binDir, { recursive: true, force: true });
     }
   });

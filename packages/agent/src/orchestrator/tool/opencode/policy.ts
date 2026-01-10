@@ -14,4 +14,3 @@ export async function enforcePolicy(input: OpenCodeToolInput) {
     },
   });
 }
-
