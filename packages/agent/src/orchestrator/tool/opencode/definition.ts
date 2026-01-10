@@ -4,6 +4,12 @@ export const opencodeInputSchema = z.object({
   action: z
     .literal("exec")
     .describe("Operation to perform (OpenCode execution)."),
+  execProfile: z
+    .enum(["default", "server"])
+    .optional()
+    .describe(
+      "Execution profile: default spawns per prompt; server reuses a long-lived backend inside AgentFS."
+    ),
   prompt: z.string().min(1).describe("Full prompt to send to the agent."),
   auto: z
     .enum(["read", "low", "medium", "high"])
@@ -85,4 +91,3 @@ export const opencodeOutputSchema = z.object({
 });
 
 export type OpenCodeToolOutput = z.infer<typeof opencodeOutputSchema>;
-

@@ -29,6 +29,18 @@ export {
   persistReasoning,
   type ReasoningAccumulator,
 } from "./reasoning";
+// Long-lived server registry (executor server profile)
+export {
+  type ExecProfile,
+  ensureServer,
+  isExecProfileStrict,
+  normalizeExecProfile,
+  resolveExecProfile,
+  type ServerHandle,
+  serverKey,
+  stopAllServers,
+  stopServer,
+} from "./server";
 // Subprocess utilities
 export {
   appendOutput,

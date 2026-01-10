@@ -27,7 +27,6 @@ import { toolCognitiveState } from "./orchestrator/tool/cognitive";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
 import { toolGit } from "./orchestrator/tool/git";
-import { toolOpenCode } from "./orchestrator/tool/opencode";
 import {
   toolKnowledgeConnect,
   toolKnowledgeCorrect,
@@ -39,6 +38,7 @@ import {
   toolLearnPattern,
   toolLearnRecord,
 } from "./orchestrator/tool/learning";
+import { toolOpenCode } from "./orchestrator/tool/opencode";
 import { toolProxmox } from "./orchestrator/tool/proxmox";
 import {
   toolRagDelete,
@@ -82,6 +82,10 @@ function firstEnv(...keys: string[]) {
   return null;
 }
 
+export function resetGatewayForTests(): void {
+  cachedGateway = null;
+}
+
 export function getModelId(): string {
   return (
     firstEnv("AI_MODEL", "OPENAI_MODEL", "MASTRA_MODEL") ?? DEFAULT_MODEL_ID
@@ -95,9 +99,14 @@ export function getOpenAI() {
 
   // Test override: allow empty client in tests if key is missing
   if (process.env.NODE_ENV === "test" && !firstEnv("OPENAI_API_KEY")) {
-    return {
-      languageModel: () => ({}),
-    } as unknown as ReturnType<typeof createGatewayProvider>;
+    const stub = ((_: string) => ({})) as unknown as ReturnType<
+      typeof createGatewayProvider
+    >;
+    // Back-compat for call sites that still expect `.languageModel(modelKey)`.
+    (
+      stub as unknown as { languageModel?: (modelKey: string) => unknown }
+    ).languageModel = () => ({});
+    return stub;
   }
 
   const apiKey = firstEnv("AI_GATEWAY_API_KEY", "OPENAI_API_KEY");

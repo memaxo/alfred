@@ -33,11 +33,14 @@ import {
   createReasoningAccumulator,
   createStageRecorder,
   getAccumulatedOutput,
+  isExecProfileStrict,
   persistReasoning,
   recordToolExecution,
+  resolveExecProfile,
   startToolTimer,
   type ToolWriter,
 } from "../shared/index.js";
+import { executorServerFallbackTotal } from "../shared/metrics.js";
 import {
   type AlfredCodexEvent,
   type CodexArtifactSummary,
@@ -59,6 +62,7 @@ import {
   resolveExecutable,
 } from "./policy.js";
 import { CodexRunRecorder } from "./record.js";
+import { executeWithCodexServer } from "./server.js";
 import { createCodexSpawn } from "./spawn-process.js";
 
 type WriterPayload = { [key: string]: unknown };
@@ -355,6 +359,38 @@ export async function executeWithCodex({
 }: CodexExecuteArgs) {
   const cwdHandle = assertAllowedDirectory(input.cw ?? process.cwd());
   try {
+    const profile = resolveExecProfile(input.execProfile, input.containerName);
+    if (profile === "server") {
+      try {
+        const output = await executeWithCodexServer({
+          input,
+          writer,
+          signal,
+          cwdHandle,
+        });
+        return {
+          result: output.result,
+          artifacts: output.artifacts,
+        };
+      } catch (error) {
+        if (
+          !(isExecProfileStrict() || signal?.aborted) &&
+          error instanceof Error &&
+          error.message === "codex_server_start_failed"
+        ) {
+          executorServerFallbackTotal.inc({ executor: "codex" });
+          void Promise.resolve(
+            writer?.write?.({
+              type: "notice",
+              message: "executor_server_fallback_default",
+            })
+          ).catch(() => {});
+
+          return await runCodexWithCodex({ input, writer, signal, cwdHandle });
+        }
+        throw error;
+      }
+    }
     return await runCodexWithCodex({ input, writer, signal, cwdHandle });
   } finally {
     cwdHandle.close();

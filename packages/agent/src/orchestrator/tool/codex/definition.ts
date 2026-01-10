@@ -217,6 +217,12 @@ export const CODEX_ENV_ALLOWLIST = new Set([
 
 export const codexInputSchema = z.object({
   action: z.literal("exec"),
+  execProfile: z
+    .enum(["default", "server"])
+    .optional()
+    .describe(
+      "Execution profile: default spawns codex per prompt; server reuses a long-lived backend inside AgentFS."
+    ),
   prompt: z.string().min(1),
   out: z.enum(["text", "json", "debug"]).default("text"),
   auto: z.enum(["read", "low", "medium", "high"]).default("read"),

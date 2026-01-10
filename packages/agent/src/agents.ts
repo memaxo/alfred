@@ -7,7 +7,8 @@ import {
   type ToolLoopAgentSettings,
 } from "ai";
 
-import { buildAssistantTools, buildTools, getModelId, getOpenAI } from "./v6";
+import { getModelForRole } from "./selector";
+import { buildAssistantTools, buildTools } from "./v6";
 
 // Type-safe model accessor that returns LanguageModel
 type AgentModel = LanguageModel;
@@ -70,8 +71,9 @@ let cachedAssistantAgent: ToolLoopAgent<AssistantTools> | null = null;
 let cachedOrchestratorAgent: ToolLoopAgent<OrchestratorTools> | null = null;
 
 function createAssistantConfig(): ToolLoopAgentSettings<never, AssistantTools> {
+  const { model } = getModelForRole("chat");
   return {
-    model: getOpenAI().languageModel(getModelId()) as AgentModel,
+    model: model as AgentModel,
     tools: assistantTools,
     instructions: assistantInstructions,
     stopWhen: assistantStopWhen,
@@ -83,8 +85,9 @@ function createOrchestratorConfig(): ToolLoopAgentSettings<
   never,
   OrchestratorTools
 > {
+  const { model } = getModelForRole("orchestrator");
   return {
-    model: getOpenAI().languageModel(getModelId()) as AgentModel,
+    model: model as AgentModel,
     tools: orchestratorTools,
     instructions: orchestratorInstructions,
     stopWhen: orchestratorStopWhen,
@@ -99,7 +102,19 @@ function createAssistantDefaults(): ToolLoopAgentSettings<
 > {
   return {
     get model() {
-      return getOpenAI().languageModel(getModelId());
+      return getModelForRole("chat").model;
+    },
+    tools: assistantTools,
+    instructions: assistantInstructions,
+    stopWhen: assistantStopWhen,
+    prepareStep: assistantPrepareStep,
+  };
+}
+
+function createVoiceDefaults(): ToolLoopAgentSettings<never, AssistantTools> {
+  return {
+    get model() {
+      return getModelForRole("voice").model;
     },
     tools: assistantTools,
     instructions: assistantInstructions,
@@ -114,7 +129,7 @@ function createOrchestratorDefaults(): ToolLoopAgentSettings<
 > {
   return {
     get model() {
-      return getOpenAI().languageModel(getModelId());
+      return getModelForRole("orchestrator").model;
     },
     tools: orchestratorTools,
     instructions: orchestratorInstructions,
@@ -170,6 +185,13 @@ export function getAssistantAgentDefaults(): ToolLoopAgentSettings<
   AssistantTools
 > {
   return createAssistantDefaults();
+}
+
+export function getVoiceAgentDefaults(): ToolLoopAgentSettings<
+  never,
+  AssistantTools
+> {
+  return createVoiceDefaults();
 }
 
 export function getOrchestratorAgentDefaults(): ToolLoopAgentSettings<
