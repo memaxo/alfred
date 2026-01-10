@@ -1,4 +1,3 @@
-import { getModelId } from "@alfred/agent";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import {
   historyContextSelectionDurationSeconds,
@@ -215,7 +214,10 @@ export async function handleStreamRequest(
       .filter(Boolean)
       .join("\n\n");
 
-    const modelId = getModelId();
+    const { getModelForRole } = await import("@alfred/agent/selector");
+    const role = errorPrefix === "orchestrator" ? "orchestrator" : "chat";
+    const selection = await getModelForRole(role, { userId });
+    const modelId = selection.modelKey;
     const stopHistoryTimer = historyContextSelectionDurationSeconds.startTimer({
       source: errorPrefix,
     });
@@ -261,6 +263,7 @@ export async function handleStreamRequest(
 
     const result = streamText({
       ...defaults,
+      model: selection.model,
       messages: modelMessages,
       abortSignal: request.signal,
       system: combinedSystem,
@@ -364,6 +367,7 @@ export async function handleStreamRequest(
     if (conversationId) {
       response.headers.set("x-conversation-id", conversationId);
     }
+    response.headers.set("x-model", modelId);
     if (activationData) {
       response.headers.set(
         "x-mindscape-activation",

@@ -19,12 +19,12 @@ mock.module("@alfred/db/repo/conversation", () => ({
   createMessage: createMessageMock,
 }));
 
-mock.module("@alfred/agent", () => ({
-  getModelId: () => "mock-model",
-  buildTools: () => ({}),
-  buildAssistantTools: () => ({}),
-  getOpenAI: () => ({ chat: () => ({}) }),
-  wrapLegacyToolToAISDK: () => ({}),
+const getModelForRoleMock = vi.fn().mockResolvedValue({
+  model: { provider: "test", name: "mock-model" },
+  modelKey: "openai/mock-model",
+});
+mock.module("@alfred/agent/selector", () => ({
+  getModelForRole: getModelForRoleMock,
 }));
 
 mock.module("@alfred/agent/preference/prompt", () => ({
@@ -84,6 +84,11 @@ const buildHistoryContextMock = vi.fn(({ messages }) => {
 mock.module("@alfred/history", () => ({
   buildHistoryContext: buildHistoryContextMock,
   getHistoryBudgetDefaults: () => ({}),
+  historyContextSelectionDurationSeconds: {
+    startTimer: vi.fn(() => vi.fn()),
+  },
+  historyContextTierDropsTotal: { inc: vi.fn() },
+  historyContextTokensTotal: { inc: vi.fn() },
 }));
 
 const finishPromiseRef: { current: Promise<void> | null } = { current: null };
@@ -164,15 +169,16 @@ describe("handleStreamRequest history integration", () => {
     const callArgs = buildHistoryContextMock.mock.calls[0]?.[0];
     expect(callArgs.messages).toHaveLength(2);
     expect(callArgs.source).toBe("assistant");
+    expect(callArgs.modelId).toBe("openai/mock-model");
 
     expect(historyTokensIncSpy).toHaveBeenNthCalledWith(
       1,
-      { source: "assistant", model: "mock-model", action: "kept" },
+      { source: "assistant", model: "openai/mock-model", action: "kept" },
       50
     );
     expect(historyTokensIncSpy).toHaveBeenNthCalledWith(
       2,
-      { source: "assistant", model: "mock-model", action: "dropped" },
+      { source: "assistant", model: "openai/mock-model", action: "dropped" },
       25
     );
     expect(historyTierDropSpy).toHaveBeenCalledWith({
@@ -182,6 +188,58 @@ describe("handleStreamRequest history integration", () => {
     expect(preferenceHistoryPrunedSpy).toHaveBeenCalledWith(
       { source: "assistant" },
       1
+    );
+  });
+
+  it("picks the active model per request (supports immediate flips)", async () => {
+    getModelForRoleMock.mockResolvedValueOnce({
+      model: { provider: "test", name: "model-1" },
+      modelKey: "openai/model-1",
+    });
+    getModelForRoleMock.mockResolvedValueOnce({
+      model: { provider: "test", name: "model-2" },
+      modelKey: "openai/model-2",
+    });
+
+    const makeRequest = () =>
+      new Request("http://localhost/api/assistant", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            {
+              id: "user-1",
+              role: "user",
+              parts: [{ type: "text", text: "Hello" }],
+            },
+          ] satisfies UIMessage[],
+        }),
+      });
+
+    buildHistoryContextMock.mockClear();
+
+    const response1 = await handleStreamRequest(
+      makeRequest(),
+      () => ({ model: { provider: "test", name: "mock-model" } }) as any,
+      "assistant"
+    );
+    expect(response1.headers.get("x-model")).toBe("openai/model-1");
+    await finishPromiseRef.current;
+
+    const response2 = await handleStreamRequest(
+      makeRequest(),
+      () => ({ model: { provider: "test", name: "mock-model" } }) as any,
+      "assistant"
+    );
+    expect(response2.headers.get("x-model")).toBe("openai/model-2");
+    await finishPromiseRef.current;
+
+    expect(buildHistoryContextMock).toHaveBeenCalledTimes(2);
+    expect(buildHistoryContextMock.mock.calls[0]?.[0]?.modelId).toBe(
+      "openai/model-1"
+    );
+    expect(buildHistoryContextMock.mock.calls[1]?.[0]?.modelId).toBe(
+      "openai/model-2"
     );
   });
 

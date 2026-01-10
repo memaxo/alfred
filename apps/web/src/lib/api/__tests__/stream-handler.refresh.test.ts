@@ -17,12 +17,12 @@ mock.module("@alfred/db/repo/conversation", () => ({
   createMessage: createMessageMock,
 }));
 
-mock.module("@alfred/agent", () => ({
-  getModelId: () => "mock-model",
-  buildTools: () => ({}),
-  buildAssistantTools: () => ({}),
-  getOpenAI: () => ({ chat: () => ({}) }),
-  wrapLegacyToolToAISDK: () => ({}),
+const getModelForRoleMock = vi.fn().mockResolvedValue({
+  model: { provider: "test", name: "mock-model" },
+  modelKey: "openai/mock-model",
+});
+mock.module("@alfred/agent/selector", () => ({
+  getModelForRole: getModelForRoleMock,
 }));
 
 mock.module("@alfred/agent/preference/prompt", () => ({
@@ -56,7 +56,7 @@ const historyContextMock = vi.fn(async ({ messages }) => ({
     keptTokens: 100,
     droppedTokens: 0,
     budget: {
-      modelId: "mock-model",
+      modelId: "openai/mock-model",
       maxContextTokens: 1000,
       historyBudgetTokens: 900,
       systemTokens: 0,
@@ -67,6 +67,11 @@ const historyContextMock = vi.fn(async ({ messages }) => ({
 mock.module("@alfred/history", () => ({
   buildHistoryContext: historyContextMock,
   getHistoryBudgetDefaults: () => ({}),
+  historyContextSelectionDurationSeconds: {
+    startTimer: vi.fn(() => vi.fn()),
+  },
+  historyContextTierDropsTotal: { inc: vi.fn() },
+  historyContextTokensTotal: { inc: vi.fn() },
 }));
 
 const loggerErrorMock = vi.fn();

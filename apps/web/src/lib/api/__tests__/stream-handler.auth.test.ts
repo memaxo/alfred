@@ -40,6 +40,11 @@ mock.module("@alfred/agent/preference/prompt", () => ({
 mock.module("@alfred/history", () => ({
   buildHistoryContext: vi.fn(),
   getHistoryBudgetDefaults: () => ({}),
+  historyContextSelectionDurationSeconds: {
+    startTimer: vi.fn(() => vi.fn()),
+  },
+  historyContextTierDropsTotal: { inc: vi.fn() },
+  historyContextTokensTotal: { inc: vi.fn() },
 }));
 
 mock.module("@alfred/logger", () => ({
