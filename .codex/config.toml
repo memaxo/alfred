@@ -8,20 +8,17 @@ args = [ "-y", "@upstash/context7-mcp" ]
 
 [mcp_servers.shadcn]
 command = "npx"
-args = [ "shadcn@latest", "mcp" ]
+args = [ "-y", "shadcn@latest", "mcp" ]
 
 [mcp_servers.better-auth]
-command = "npx"
-args = [
-  "-y",
-  "mcp-remote@latest",
-  "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp"
-]
+url = "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp"
+startup_timeout_sec = 30
+tool_timeout_sec = 120
 
 [mcp_servers.linear]
 url = "https://mcp.linear.app/mcp"
 # OAuth login (recommended): codex mcp login linear
 # Bearer token fallback: set LINEAR_MCP_TOKEN env var (format: "Bearer lin_api_...")
 bearer_token_env_var = "LINEAR_MCP_TOKEN"
-startup_timeout_sec = 20
-tool_timeout_sec = 60
+startup_timeout_sec = 30
+tool_timeout_sec = 120
