@@ -78,22 +78,31 @@ export const privacyRouter = router({
 
       const params = privacyFactQuerySchema.parse(input ?? {});
       if (params.embedding) {
-        const matches = await searchFacts(
-          session.user.id,
-          params.embedding,
-          params.limit,
-          params.threshold,
-          params.projectId
-        );
+        const matches = params.projectId
+          ? await searchFacts(
+              session.user.id,
+              params.embedding,
+              params.limit,
+              params.threshold,
+              params.projectId
+            )
+          : await searchFacts(
+              session.user.id,
+              params.embedding,
+              params.limit,
+              params.threshold
+            );
         return Array.isArray(matches) ? matches : [];
       }
 
-      const listed = await listFacts(
-        session.user.id,
-        params.limit,
-        params.offset,
-        params.projectId
-      );
+      const listed = params.projectId
+        ? await listFacts(
+            session.user.id,
+            params.limit,
+            params.offset,
+            params.projectId
+          )
+        : await listFacts(session.user.id, params.limit, params.offset);
       return Array.isArray(listed) ? listed : [];
     }),
 
@@ -135,13 +144,20 @@ export const privacyRouter = router({
       }
 
       const params = privacyEventsQuerySchema.parse(input ?? {});
-      const events = await getEvents(
-        session.user.id,
-        params.type,
-        params.limit,
-        params.offset,
-        params.projectId
-      );
+      const events = params.projectId
+        ? await getEvents(
+            session.user.id,
+            params.type,
+            params.limit,
+            params.offset,
+            params.projectId
+          )
+        : await getEvents(
+            session.user.id,
+            params.type,
+            params.limit,
+            params.offset
+          );
       return Array.isArray(events) ? events : [];
     }),
 });

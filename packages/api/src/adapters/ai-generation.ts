@@ -1,4 +1,5 @@
 import type { AIAdapter } from "@alfred/type/ai-adapter";
+import type { ModelRole } from "@alfred/type/model";
 import type {
   GenerateObjectResult,
   GenerateTextResult,
@@ -8,16 +9,50 @@ import type {
 import { generateObject, generateText } from "ai";
 import type { z } from "zod";
 
+export type DefaultAIAdapterOpts = {
+  userId?: string;
+  projectId?: string;
+  role?: ModelRole;
+};
+
 export class DefaultAIAdapter implements AIAdapter {
+  private readonly userId?: string;
+  private readonly projectId?: string;
+  private readonly role: ModelRole;
+
+  constructor(opts: DefaultAIAdapterOpts = {}) {
+    this.userId = opts.userId;
+    this.projectId = opts.projectId;
+    this.role = opts.role ?? "chat";
+  }
+
+  private async resolveModel() {
+    if (!this.userId) {
+      const { getAssistantAgentDefaults } = await import(
+        "@alfred/agent/agents"
+      );
+      const defaults = getAssistantAgentDefaults();
+      return defaults.model;
+    }
+
+    const { getModelForRole } = await import("@alfred/agent/selector");
+    const selection = this.projectId
+      ? await getModelForRole(this.role, {
+          userId: this.userId,
+          projectId: this.projectId,
+        })
+      : await getModelForRole(this.role, { userId: this.userId });
+    return selection.model;
+  }
+
   async generateText(params: {
     messages: ModelMessage[];
     system?: string;
     tools?: ToolSet;
   }): Promise<GenerateTextResult<ToolSet, never>> {
-    const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
-    const defaults = getAssistantAgentDefaults();
+    const model = await this.resolveModel();
     return generateText({
-      model: defaults.model,
+      model,
       messages: params.messages,
       system: params.system,
       tools: params.tools,
@@ -30,11 +65,10 @@ export class DefaultAIAdapter implements AIAdapter {
     schema: z.ZodType<T>;
     prompt?: string;
   }): Promise<GenerateObjectResult<T>> {
-    const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
-    const defaults = getAssistantAgentDefaults();
+    const model = await this.resolveModel();
     // prompt and messages are mutually exclusive in AI SDK v6
     const baseParams = {
-      model: defaults.model,
+      model,
       schema: params.schema,
     } as const;
     if (params.prompt) {

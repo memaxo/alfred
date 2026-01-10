@@ -107,11 +107,15 @@ export function initApiServices(): void {
       })();
 
       void (async () => {
-        const { rehydrateSuspendedRuns } = await import(
-          "@alfred/agent/workflow/session-recovery"
-        );
+        const { failOrphanedRunningRuns, rehydrateSuspendedRuns } =
+          await import("@alfred/agent/workflow/session-recovery");
         rehydrateSuspendedRuns().catch((error) => {
           logger.error("workflow_rehydrate_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+        failOrphanedRunningRuns().catch((error) => {
+          logger.error("workflow_running_recovery_failed", {
             error: error instanceof Error ? error.message : String(error),
           });
         });
