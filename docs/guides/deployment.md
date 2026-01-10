@@ -15,6 +15,40 @@ This guide provides a production deployment checklist, environment variable conf
 - Domain name with SSL certificate
 - (Optional) GPU for local voice models (MLX/ROCm/CUDA)
 
+## Proxmox (Optional)
+
+This section targets **ALFRED itself** (not generated apps) and distinguishes:
+
+- **Provisioning (Proxmox resources)**: creating/starting containers on a Proxmox VE host.
+- **Deployment (inside the containers)**: installing Postgres/Redis and running the ALFRED server process.
+
+### Provisioning (host-side)
+
+Use the idempotent provisioning script:
+
+```bash
+bun run scripts/proxmox.ts
+```
+
+The script creates or reuses three LXCs (`alfred`, `alfred-db`, `alfred-redis`) and starts them if needed. It does **not** destroy anything by default.
+
+Required Proxmox env vars: `PROXMOX_HOST`, `PROXMOX_TOKEN_ID`, `PROXMOX_TOKEN_SECRET`, `PROXMOX_NODE`.
+
+Recommended provisioning env vars: `PROXMOX_OSTEMPLATE`, `PROXMOX_STORAGE`, `PROXMOX_BRIDGE`, `PROXMOX_GATEWAY`, `PROXMOX_CIDR`, and static IPs (`PROXMOX_ALFRED_IP`, `PROXMOX_DB_IP`, `PROXMOX_REDIS_IP`).
+
+### Deployment (in-container)
+
+Once containers exist, deploy ALFRED and its dependencies inside them (install Postgres 16 + pgvector in `alfred-db`, Redis in `alfred-redis`, and the ALFRED server in `alfred`).
+
+After ALFRED is running, verify:
+
+```bash
+curl http://<alfred-ip>:3000/healthz
+curl http://<alfred-ip>:3000/healthz/deps
+```
+
+See: `docs/architecture/deployment-proxmox.md` and `docs/architecture/production-proxmox.md`.
+
 ## Environment Variables
 
 ### Required Variables
@@ -353,4 +387,3 @@ psql -h host -U user -d alfred < backup-YYYYMMDD.sql
 - [Production Proxmox](../architecture/production-proxmox.md) - Proxmox-specific deployment
 - [Troubleshooting](./troubleshooting.md) - Common issues and solutions
 - [Developer Onboarding](./developer-onboarding.md) - Development setup
-

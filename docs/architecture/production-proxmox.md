@@ -5,6 +5,14 @@
 This guide details the deployment of ALFRED on a Proxmox host with an AMD RX 7900 XTX GPU. 
 The architecture runs the core API and Voice services in a privileged LXC container with direct GPU passthrough to enable low-latency inference (Maya1/NeMo) via `Bun.spawn` and ROCm.
 
+### Provisioning note
+
+If you want an idempotent “create or reuse” baseline for Proxmox resources (LXCs + starts), run:
+
+- `bun run scripts/proxmox.ts`
+
+That script provisions **containers only** (no GPU passthrough config, no in-container package install). This document covers the additional **manual** Proxmox/LXC configuration required for AMD GPU passthrough and ROCm.
+
 ## Hardware Context
 - **Host**: Proxmox VE 8.x
 - **GPU**: AMD RX 7900 XTX (24GB VRAM) -> Supports ROCm 6.x

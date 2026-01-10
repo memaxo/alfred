@@ -1,8 +1,115 @@
 # OpenCode Orchestrator Integration Analysis
 
 Owner: agent
-Status: Active
+Status: Complete ✅ (AgentFS-first + server profile shipped; OpenCode auth scope deferred)
 Created: 2026-01-09
+Last Updated: 2026-01-10
+Target: **ALFRED itself** (not the apps ALFRED generates)
+
+## Plan
+
+- Add `toolOpenCode` (ACP stdio) and register it in `orchestratorToolSources`.
+- Teach the workflow runtime `runAgent()` to dispatch by `AgentSpec.agentType` (`codex|droid|opencode`, default `codex`).
+- Extend the Ralph loop to support the `opencode` executor.
+- Add regression tests for dispatch + tool policy.
+- Keep this doc accurate by updating “verified” sections with concrete code evidence.
+- Add **executor execution profiles** (`default|server`) routed from `AgentSpec.profile`.
+- Implement **server profile** per executor:
+  - `codex`: long-lived `codex app-server` process inside AgentFS container; multi-turn via JSONL JSON-RPC.
+  - `opencode`: long-lived ACP stdio process inside AgentFS container; reuse across prompts.
+  - `droid`: explicitly **not server-capable** for now (default only), documented with rationale.
+- Add deterministic server lifecycle cleanup on workflow completion (must not leak container processes when `retainContainer=1`).
+- Add deterministic tests covering: success, crash recovery/restart, abort propagation, and no leaked servers on cleanup.
+
+## Assumptions (explicit)
+
+- **AgentFS is the default environment** (already enforced in `buildAgentSpec()` / AgentFS workspace dispatch).
+- **“Long-lived” is scoped to one AgentFS container** (project-scoped via `retainContainer`) and keyed by `(containerName, executor, profile)`.
+- **Server profile is deterministic + testable**: no random port allocation, no unmanaged background processes; lifecycle is explicit and tied to workflow execution.
+
+## Execution profiles (brief comparison)
+
+- **`default` (per-prompt process):** spawn a fresh backend process per prompt/turn, then exit; simplest semantics and lowest lifecycle risk, but higher per-turn overhead.
+- **`server` (long-lived inside AgentFS):** start a backend process once inside the AgentFS container, reuse it for multiple prompts in the same container, and stop it on workflow completion; lower per-turn overhead, but requires deterministic startup/health/cleanup.
+- **Container-default:** ALFRED routes executor work **inside AgentFS containers by default** via `containerName`/`containerCw`. For `codex` + `opencode`, execution profile defaults to `server` inside AgentFS when not explicitly set, with a deterministic fallback to `default` on server start failure (unless strict mode is enabled).
+
+## Progress
+
+- [x] 2026-01-09: Implemented `toolOpenCode` + ACP stdio execution scaffolding.
+- [x] 2026-01-09: Registered `toolOpenCode` in `packages/agent/src/v6.ts`.
+- [x] 2026-01-09: Updated `packages/runtime/src/orchestrator/agent.ts` to dispatch `codex|droid|opencode`.
+- [x] 2026-01-09: Extended Ralph loop executor enum + schema to include `opencode`.
+- [x] 2026-01-09: Added unit tests covering dispatch and OpenCode policy.
+- [x] 2026-01-10: Updated ExecPlan for opt-in `server` execution profile per executor (design + acceptance).
+- [x] 2026-01-10: Implement shared server registry keyed by `(containerName, executor, profile)` with single-flight + safe shutdown.
+- [x] 2026-01-10: Implement `opencode` server profile (long-lived ACP stdio process inside AgentFS container).
+- [x] 2026-01-10: Implement `codex` server profile (long-lived `codex app-server` inside AgentFS container).
+- [x] 2026-01-10: Wire runtime dispatch to pass execution profile into tools and stop servers on workflow completion.
+- [x] 2026-01-10: Add deterministic tests for server profile (success, crash recovery, abort, cleanup).
+- [x] 2026-01-10: Default `execProfile=server` inside AgentFS when `AgentSpec.profile` is unset (codex + opencode) with deterministic fallback to `default` on server-start failure.
+- [x] 2026-01-10: Default `execProfile=server` at the tool boundary inside AgentFS containers when `execProfile` is omitted (codex + opencode), keeping `execProfile=default` as an explicit opt-out.
+- [x] 2026-01-10: Fix Codex server stdin by adding `docker exec -i` and add a regression test.
+- [x] 2026-01-10: Add tool-level fallback + strict mode (`ORCH_EXEC_PROFILE_STRICT=1`) so direct tool callers behave deterministically (not just `runAgent()`).
+- [x] 2026-01-10: Add shared metrics for server registry outcomes + server→default fallbacks.
+- [x] 2026-01-10: Ensure non-agent phases that invoke Codex (`merge`, `conflict`, `review`) also route execution inside AgentFS containers by passing `containerName` + `containerCw`.
+- [x] 2026-01-10: Extend Ralph loop to pass `containerName`/`containerCw` + `execProfile`, with deterministic fallback + abort propagation tests.
+- [x] 2026-01-10: Install `opencode` CLI into the AgentFS Docker image with a pinned version.
+
+## Surprises & Discoveries
+
+- 2026-01-09: `Bun.spawn(..., { stdin: "pipe" })` exposes stdin as a `FileSink` (not a `WritableStream`), so ACP’s `ndJsonStream(...)` needs an adapter wrapper.
+- 2026-01-10: `AgentSpec.profile` already exists but `toolCodex` also has a `profile` field (Codex CLI profile). We need a separate field for “execution profile” (default vs server) to avoid breaking callers that use Codex CLI profiles.
+- 2026-01-10: TypeScript does not treat Promise executors as “synchronous for flow analysis”, so “assign inside `new Promise(...)` then use outside” patterns can narrow to `never`; use an explicit deferred helper for turn lifecycle state.
+- 2026-01-10: `codex app-server` over `docker exec` must be started with `-i` to keep stdin open; without it, JSON-RPC requests can deadlock or drop.
+
+## Decision Log
+
+- 2026-01-09: Reused `droid.exec` scope/policy gate for OpenCode execution to avoid introducing a new auth scope before OpenCode is production-ready.
+- 2026-01-09: Made the OpenCode command/args env-configurable (`OPENCODE_ACP_CMD`, `OPENCODE_ACP_ARGS`) instead of assuming a specific `opencode` CLI contract.
+- 2026-01-10: Treat `AgentSpec.profile` as the executor execution profile (`default|server`) and introduce a separate tool input field (e.g. `execProfile`) rather than overloading Codex’s existing `profile` (Codex CLI profile).
+- 2026-01-10: For `codex` server profile, use `codex app-server` (vendor protocol) over `codex exec --json` because it provides a real multi-turn, long-lived protocol.
+- 2026-01-10: For `opencode` server profile, prefer keeping the ACP stdio process alive (no ports) to stay deterministic and container-local; HTTP `opencode serve` remains a future option.
+- 2026-01-10: `droid` remains default-only until a documented long-lived backend exists; server profile will be rejected or treated as default with an explicit notice.
+- 2026-01-10: Prefer `server` execution by default inside AgentFS (when `AgentSpec.profile` is unset) and fall back to `default` on deterministic server-start failures (`*_server_start_failed`) with a runtime notice (`executor_server_fallback_default`).
+- 2026-01-10: Resolve `execProfile` inside the executor tools using `(execProfile, containerName)` so server-default behavior holds for direct tool callers (not just `runAgent()`), while preserving `default` as an explicit override.
+- 2026-01-10: Do **not** remove `default` execution yet; keep it as an explicit opt-out and as the deterministic fallback path when server start fails. Standardize on `server` as the default **only inside AgentFS** (where lifecycle is controlled and testable).
+- 2026-01-10: Add `ORCH_EXEC_PROFILE_STRICT=1` to disable server→default fallback in high-assurance runs (fail fast instead of silently degrading).
+
+## Outcomes & Retrospective
+
+- Implemented baseline wiring for OpenCode as an ACP-backed tool + runtime dispatch; OpenCode is now selectable via `AgentSpec.agentType` without breaking Codex/Droid.
+- Implemented `server` execution profile with deterministic lifecycle + tests; server is now the default inside AgentFS for `codex`/`opencode` when `AgentSpec.profile` is unset, with safe fallback to `default`.
+- Standardized server-default behavior inside AgentFS for any direct `toolCodex` / `toolOpenCode` callers by defaulting to `server` when `containerName` indicates AgentFS and `execProfile` is unset.
+- Standardized AgentFS container routing for all runtime Codex calls (including merge/conflict/review), so “AgentFS-first” is not limited to `runAgent()`.
+- Shipped strict-mode + metrics for observability and deterministic failure behavior.
+- Updated AgentFS Docker image to include `opencode` so server/default modes can run fully in-container.
+- Evidence (file:line):
+  - `packages/agent/src/orchestrator/tool/opencode/index.ts:12` defines `toolOpenCode`.
+  - `packages/agent/src/v6.ts:175` registers `toolOpenCode` in `orchestratorToolSources`.
+  - `packages/runtime/src/orchestrator/agent.ts:371` normalizes `agentType` and execution profile; dispatch begins at `packages/runtime/src/orchestrator/agent.ts:402`.
+  - `packages/agent/src/orchestrator/loops/ralph.ts:101` includes `opencode` in the executor union; executor dispatch starts at `packages/agent/src/orchestrator/loops/ralph.ts:275`.
+  - `packages/runtime/test/agentfs.test.ts:754` covers `opencode` AgentFS dispatch + execution profile and deterministic fallback tests.
+  - `packages/agent/src/orchestrator/tool/opencode/policy.test.ts:9` covers OpenCode policy + schema tests.
+  - `packages/agent/src/orchestrator/tool/shared/server.ts:91` defines the shared server registry (`ensureServer(...)`); `packages/agent/src/orchestrator/tool/shared/server.ts:26` defines `resolveExecProfile(...)` for AgentFS-default server mode.
+  - `packages/agent/src/orchestrator/tool/shared/server.test.ts:1` covers registry lifecycle + `resolveExecProfile(...)` semantics.
+  - `packages/agent/src/orchestrator/tool/shared/metrics.ts:95` defines `executor_server_registry_total` and `executor_server_fallback_total`.
+  - `packages/agent/src/orchestrator/tool/codex/server.ts:261` adds `docker exec -i` for Codex server stdin; regression test at `packages/agent/src/orchestrator/tool/codex/server.test.ts:1`.
+  - `packages/agent/src/orchestrator/tool/codex/exec.ts:355` routes execution via `execProfile` (`default|server`) with server→default fallback unless strict.
+  - `packages/agent/src/orchestrator/tool/codex/server.ts:699` implements the `codex app-server` long-lived execution path.
+  - `packages/agent/src/orchestrator/tool/opencode/exec.ts:557` routes OpenCode execution via `execProfile` and reuses a long-lived ACP process (with fallback unless strict).
+  - `packages/runtime/src/orchestrator/index.ts:129` stops all executor servers on workflow completion to prevent leaks.
+  - `packages/runtime/src/orchestrator/agentfs.ts:61` computes project-scoped/run-scoped AgentFS container names; `packages/runtime/src/orchestrator/agentfs.ts:47` computes deterministic `containerCw`.
+  - `packages/runtime/test/orchestrator.executor-cleanup.test.ts:1` asserts executor servers are stopped on success, escalation, and error paths.
+  - `packages/agent/src/orchestrator/tool/opencode/exec.test.ts:1` covers `opencode` server profile success/reuse + crash recovery + abort.
+  - `packages/agent/src/orchestrator/tool/shared/server.test.ts:1` covers registry lifecycle + safe shutdown.
+  - `docker/agentfs/Dockerfile:41` pins and installs the `opencode` CLI into the AgentFS image.
+- Not yet done (intentionally deferred):
+  - Dedicated auth scope for OpenCode (separate from `droid.exec`) once the execution surface stabilizes.
+
+## Execution modes (brief comparison)
+
+- **Default (per-prompt process):** each prompt spawns a fresh backend process (e.g. `codex exec --json`, ACP stdio), streams output, then exits. Simpler and stateless; higher overhead per prompt; always clean slate.
+- **Server (long-lived process in AgentFS container):** the first prompt starts a backend process inside the AgentFS container, subsequent prompts reuse it (keyed by container + executor + profile), and ALFRED stops it on workflow completion. Lower per-prompt overhead; requires lifecycle management + crash recovery + deterministic shutdown. **ALFRED defaults to `server` for `codex`/`opencode` in AgentFS when `AgentSpec.profile` is unset**, and falls back to `default` on server-start failure.
 
 ## ExecPlan tracking (ALFRED today + integration requirements)
 
@@ -50,13 +157,12 @@ This document guides integrating **OpenCode** into **ALFRED**’s multi-agent or
 
 - **Wave planning**: `packages/agent/src/orchestrator/multi/spawn.ts`
   - `planWaves(subTasks, { maxParallel, dependencies })` produces `WavePlan[]` using priority-stable topological scheduling.
-  - `AgentSpec` already carries **`agentType?: string`** (currently not used by the runtime dispatcher).
+  - `AgentSpec` carries **`agentType?: string`** (used by the runtime dispatcher to select Codex/Droid/OpenCode execution).
 - **Wave execution**: `packages/runtime/src/orchestrator/waves.ts`
   - `runWaves(ctx)` is the parallel execution orchestrator and emits `WorkflowEvent`s via an async generator.
   - Builds or reuses an execution context (`ContextBuilder`) and maintains ExecPlan progress/decision logging.
 - **Agent execution**: `packages/runtime/src/orchestrator/agent.ts`
-  - `runAgent({ spec, ... })` is currently **Codex-centric** (it imports and uses `toolCodex` directly).
-  - This file is the primary seam for introducing **backend dispatch** based on `spec.agentType` (Codex/Droid/OpenCode).
+  - `runAgent({ spec, ... })` dispatches based on `spec.agentType` and defaults to `codex`.
 - **Pipeline state machine**: `packages/agent/src/orchestrator/multi/pipeline.ts`
   - `PipelineStage` is a discriminated union for `init → planning → waves → merging → reviewing → completed`, plus `aborted/escalated`.
 

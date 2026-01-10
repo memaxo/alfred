@@ -6,6 +6,85 @@
 
 ALFRED is a Bun-based monorepo that combines a TanStack Start SSR web app with integrated tRPC API routes, background schedulers, and Python subprocesses for voice/embedding processing. This document analyzes the architecture and proposes optimized build strategies for Proxmox deployment (Docker, VM, or LXC).
 
+## Provisioning (Idempotent)
+
+For a reproducible, re-runnable Proxmox provisioning workflow, use:
+
+- `scripts/proxmox.ts` — creates or reuses **three LXCs** (`alfred`, `alfred-db`, `alfred-redis`) and starts them if needed.
+
+This script provisions **Proxmox resources only**. It does **not** install Postgres/Redis packages or deploy the ALFRED server binary inside the containers (that remains a follow-on “in-container” runbook step).
+
+### Required environment
+
+- `PROXMOX_HOST`, `PROXMOX_TOKEN_ID`, `PROXMOX_TOKEN_SECRET`, `PROXMOX_NODE`
+
+### Recommended environment
+
+- `PROXMOX_OSTEMPLATE` (e.g. `local:vztmpl/ubuntu-22.04-standard_*.tar.zst`)
+- `PROXMOX_STORAGE` (e.g. `local-lvm`)
+- `PROXMOX_BRIDGE`, `PROXMOX_GATEWAY`, `PROXMOX_CIDR`
+- `PROXMOX_ALFRED_IP`, `PROXMOX_DB_IP`, `PROXMOX_REDIS_IP` (static IPs enable deterministic health checks)
+
+### Defaults (script)
+
+`scripts/proxmox.ts` uses these defaults unless overridden via env vars:
+
+- VMIDs: `120` (alfred), `121` (alfred-db), `122` (alfred-redis)
+- Hostnames: `alfred`, `alfred-db`, `alfred-redis`
+- Rootfs: `local-lvm:32` (alfred), `local-lvm:64` (db), `local-lvm:8` (redis)
+- Resources:
+  - alfred: 4 cores, 4096 MB
+  - db: 4 cores, 4096 MB
+  - redis: 2 cores, 1024 MB
+
+### Run
+
+```bash
+bun run scripts/proxmox.ts
+```
+
+### Health checks (once ALFRED is deployed and running)
+
+```bash
+curl http://<alfred-ip>:3000/healthz
+curl http://<alfred-ip>:3000/healthz/deps
+```
+
+### In-container setup (example runbook)
+
+Provisioning creates **OS containers**. You still need to install and run services **inside** them.
+
+The exact commands depend on your template OS, but a typical Ubuntu 22.04 flow looks like:
+
+**In `alfred-db` (Postgres 16 + pgvector):**
+
+1. Install Postgres 16 + pgvector (via PGDG packages).
+2. Create an `alfred` database and user.
+3. Enable pgvector:
+
+   ```sql
+   create extension if not exists vector;
+   ```
+
+**In `alfred-redis` (Redis):**
+
+1. Install `redis-server`.
+2. Bind to the container’s interface (private network only) and enable the service.
+
+**In `alfred` (ALFRED server):**
+
+1. Install Bun and any required system deps (e.g. `git`).
+2. Deploy ALFRED (either as a Bun build output or a compiled executable).
+3. Configure env (example):
+
+   ```bash
+   DATABASE_URL=postgresql://alfred:<password>@<db-ip>:5432/alfred
+   REDIS_URL=redis://<redis-ip>:6379
+   PUBLIC_URL=https://your-domain.com
+   ```
+
+4. Start ALFRED and verify `/healthz` and `/healthz/deps`.
+
 ## Architecture Overview
 
 ### Core Components
@@ -555,4 +634,3 @@ ALFRED exposes Prometheus metrics at `/api/metrics`:
 4. Document Python dependency installation
 5. Create systemd service file
 6. Test deployment in Proxmox environment
-
