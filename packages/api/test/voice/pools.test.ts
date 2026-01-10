@@ -34,7 +34,7 @@ describe("Voice Pools Integration", () => {
   it("should throw when accessing pools before initialization", () => {
     expect(() => {
       getVoicePools();
-    }).toThrow("Voice pools not initialized");
+    }).toThrow("voice_pools_not_initialized");
   });
 
   // Note: Full integration test would require Python dependencies and models

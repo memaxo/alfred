@@ -27,6 +27,8 @@ mock.module("../src/voice/pools", () => ({
     ttsPool: {},
     voiceRegistry: {},
   }),
+  initializeVoicePools: async () => {},
+  shutdownVoicePools: async () => {},
 }));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;

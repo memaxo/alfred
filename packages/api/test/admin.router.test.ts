@@ -91,6 +91,8 @@ mock.module("@alfred/auth/biometric", () => ({
 
 mock.module("../src/voice/pools", () => ({
   getVoicePools: getVoicePoolsMock,
+  initializeVoicePools: async () => {},
+  shutdownVoicePools: async () => {},
 }));
 
 mock.module("../src/voice/telemetry", () => ({

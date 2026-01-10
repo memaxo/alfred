@@ -6,9 +6,12 @@ const noopTimer = vi.fn(() => () => {});
 const assistantTools = {};
 const orchestratorTools = {};
 
-const getOpenAI = vi.fn(() => ({
-  chat: vi.fn(() => ({ id: "mock-model" })),
-}));
+const mockModel = { id: "mock-model" };
+const gatewayProvider = Object.assign(((_: string) => mockModel) as any, {
+  languageModel: (_: string) => mockModel,
+  chat: (_: string) => mockModel,
+});
+const getOpenAI = vi.fn(() => gatewayProvider);
 
 const getModelId = vi.fn(() => "mock-model");
 
@@ -33,6 +36,30 @@ const orchestratorDefaults = {
 
 const getAssistantAgentDefaults = vi.fn(() => assistantDefaults);
 const getOrchestratorAgentDefaults = vi.fn(() => orchestratorDefaults);
+const voiceDefaults = {
+  model: { id: "voice-model", modelId: "voice-model" },
+  tools: orchestratorTools,
+  stopWhen: vi.fn(),
+  prepareStep: vi.fn(),
+  instructions: "voice_agent_defaults",
+};
+const getVoiceAgentDefaults = vi.fn(() => voiceDefaults);
+
+const getModelForRole = vi.fn(
+  (role: string, opts?: { userId?: string; projectId?: string }) => {
+    const selection =
+      role === "orchestrator"
+        ? { model: orchestratorDefaults.model, modelKey: "openai/orchestrator" }
+        : role === "voice"
+          ? { model: voiceDefaults.model, modelKey: "openai/voice" }
+          : { model: assistantDefaults.model, modelKey: "openai/assistant" };
+
+    if (opts && typeof opts === "object" && typeof opts.userId === "string") {
+      return Promise.resolve(selection);
+    }
+    return selection;
+  }
+);
 const recordMemoryUpdate = vi.fn();
 const recordMemoryForget = vi.fn();
 const recordPolicyCheckFailure = vi.fn();
@@ -155,6 +182,11 @@ mock.module("@alfred/agent/metrics", () => ({
 mock.module("@alfred/agent/agents", () => ({
   getAssistantAgentDefaults,
   getOrchestratorAgentDefaults,
+  getVoiceAgentDefaults,
+}));
+
+mock.module("@alfred/agent/selector", () => ({
+  getModelForRole,
 }));
 
 // Some runtime modules import the v6 tool builder directly. Provide a stable stub
@@ -175,10 +207,14 @@ export function resetAgentMocks() {
   wrapLegacyToolToAISDK.mockClear();
   getAssistantAgentDefaults.mockClear();
   getOrchestratorAgentDefaults.mockClear();
+  getVoiceAgentDefaults.mockClear();
+  getModelForRole.mockClear();
   assistantDefaults.stopWhen.mockClear();
   assistantDefaults.prepareStep.mockClear();
   orchestratorDefaults.stopWhen.mockClear();
   orchestratorDefaults.prepareStep.mockClear();
+  voiceDefaults.stopWhen.mockClear();
+  voiceDefaults.prepareStep.mockClear();
   noopTimer.mockClear();
   recordMemoryUpdate.mockClear();
   recordMemoryForget.mockClear();
@@ -191,6 +227,8 @@ export {
   buildTools as buildToolsMock,
   getAssistantAgentDefaults as getAssistantAgentDefaultsMock,
   getOrchestratorAgentDefaults as getOrchestratorAgentDefaultsMock,
+  getVoiceAgentDefaults as getVoiceAgentDefaultsMock,
+  getModelForRole as getModelForRoleMock,
   getOpenAI as getOpenAIMock,
   getModelId as getModelIdMock,
   recordMemoryUpdate as recordMemoryUpdateMock,

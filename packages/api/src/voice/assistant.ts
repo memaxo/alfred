@@ -65,23 +65,6 @@ function parseFocusState(value: unknown): FocusState | null {
   };
 }
 
-function resolveModelId(model: unknown): string {
-  if (typeof model === "string" && model.length > 0) {
-    return model;
-  }
-  if (isRecord(model)) {
-    const modelId = model.modelId;
-    if (typeof modelId === "string" && modelId.length > 0) {
-      return modelId;
-    }
-    const id = model.id;
-    if (typeof id === "string" && id.length > 0) {
-      return id;
-    }
-  }
-  return process.env.AI_MODEL ?? "openai/gpt-4o-mini";
-}
-
 function isJarvisPersonaEnabled(): boolean {
   const raw =
     typeof process !== "undefined"
@@ -169,10 +152,21 @@ export async function runAssistantForVoice(
 ): Promise<VoiceAssistantResult> {
   // Inject Adapter if missing (Backward Compat / Default behavior)
   if (!ctx.ai) {
-    ctx.ai = new DefaultAIAdapter();
+    ctx.ai = new DefaultAIAdapter({
+      userId: input.userId,
+      projectId: input.projectId,
+      role: "voice",
+    });
   }
-  const { getAssistantAgentDefaults } = await import("@alfred/agent/agents");
-  const defaults = getAssistantAgentDefaults();
+  const { getVoiceAgentDefaults } = await import("@alfred/agent/agents");
+  const { getModelForRole } = await import("@alfred/agent/selector");
+  const defaults = getVoiceAgentDefaults();
+  const selection = input.projectId
+    ? await getModelForRole("voice", {
+        userId: input.userId,
+        projectId: input.projectId,
+      })
+    : await getModelForRole("voice", { userId: input.userId });
   const threadId = input.thread ?? `voice:${input.userId}`;
   const resourceId = input.resource ?? threadId;
 
@@ -233,8 +227,8 @@ export async function runAssistantForVoice(
   // Combine history with the new message
   const allMessages = [...historyMessages, newMessage];
 
-  const model = defaults.model;
-  const modelIdStr = resolveModelId(model);
+  const model = selection.model;
+  const modelIdStr = selection.modelKey;
 
   // Apply history context selection (budgeting)
   const historyContext = await buildHistoryContext({
@@ -248,7 +242,7 @@ export async function runAssistantForVoice(
     rawMessages: historyContext.uiMessages, // Use pruned messages
     tools: defaults.tools,
     source: "assistant",
-    model,
+    model: modelIdStr,
     system: systemInstructions,
   });
 

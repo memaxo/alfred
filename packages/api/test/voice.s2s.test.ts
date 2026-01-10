@@ -36,6 +36,8 @@ mock.module("@alfred/api/voice/pools", () => ({
     ttsPool: { size: 1, activeCount: 0 } as any,
     voiceRegistry: { createSession: vi.fn(), removeSession: vi.fn() } as any,
   }),
+  initializeVoicePools: async () => {},
+  shutdownVoicePools: async () => {},
 }));
 
 mock.module("@alfred/voice/services/stt", () => ({
