@@ -5,6 +5,43 @@
  * Adjusts timeouts, cache sizes, and resource allocations.
  */
 
+type TelemetryMetrics = {
+  queryHistogramValues: (
+    metric: string,
+    startTime: number,
+    endTime: number
+  ) => Promise<number[]>;
+  tuningApplied: {
+    record: (payload: {
+      parameter: string;
+      old_value: number;
+      new_value: number;
+      confidence: number;
+    }) => void;
+    inc: (labels: { parameter: string; success: boolean }) => void;
+  };
+  tuningCycle: {
+    record: (payload: {
+      total_recommendations: number;
+      applied: number;
+      skipped: number;
+    }) => void;
+  };
+};
+
+const metrics: TelemetryMetrics = {
+  async queryHistogramValues() {
+    return [];
+  },
+  tuningApplied: {
+    record() {},
+    inc() {},
+  },
+  tuningCycle: {
+    record() {},
+  },
+};
+
 export interface TelemetryConfig {
   timeoutMultipliers: Map<string, number>;
   cacheSizes: Map<string, number>;

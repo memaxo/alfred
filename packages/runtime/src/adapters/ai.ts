@@ -12,7 +12,7 @@ import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel, Tool } from "ai";
-import { streamText, validateUIMessages } from "ai";
+import { stepCountIs, streamText, validateUIMessages } from "ai";
 import {
   runtimeAiEventsTotal,
   runtimeAiSdkCallsTotal,
@@ -30,7 +30,7 @@ export type StreamOptions = {
   abortSignal?: AbortSignal;
   system?: string;
   temperature?: number;
-  maxTokens?: number;
+  maxOutputTokens?: number;
 };
 
 export type AiAdapter = {
@@ -158,7 +158,8 @@ export class AISDKAdapter {
         abortSignal: options.abortSignal,
         system: systemPrompt,
         temperature: options.temperature,
-        // maxTokens and maxSteps will be used when integrating AI SDK properly
+        maxOutputTokens: options.maxOutputTokens,
+        stopWhen: options.maxSteps ? stepCountIs(options.maxSteps) : undefined,
       });
 
       for await (const event of result.fullStream) {

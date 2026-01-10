@@ -69,6 +69,41 @@ function normalizeAgentType(raw: unknown): AgentExecutor {
   return "codex";
 }
 
+type ExecProfile = "default" | "server";
+
+function normalizeExecProfile(raw: unknown): ExecProfile | undefined {
+  if (typeof raw !== "string") {
+    return;
+  }
+  const v = raw.trim().toLowerCase();
+  if (v === "server") {
+    return "server";
+  }
+  if (v === "default") {
+    return "default";
+  }
+  return;
+}
+
+function isServerStartFailure(
+  executor: AgentExecutor,
+  error: unknown
+): boolean {
+  const code =
+    executor === "codex"
+      ? "codex_server_start_failed"
+      : executor === "opencode"
+        ? "opencode_server_start_failed"
+        : undefined;
+  if (!code) {
+    return false;
+  }
+  if (error instanceof Error) {
+    return error.message === code;
+  }
+  return false;
+}
+
 /**
  * Run a single agent within a wave.
  * Handles workspace creation, TDD loop, codex execution, and error recovery.
@@ -337,6 +372,21 @@ export async function runAgent({
 
   const startedAt = Date.now();
   const executor = normalizeAgentType(spec.agentType);
+  const execProfileExplicit = normalizeExecProfile(spec.profile);
+  const profileRaw =
+    typeof spec.profile === "string" ? spec.profile.trim() : "";
+  const supportsServer = executor === "codex" || executor === "opencode";
+  const execProfileStrict =
+    process.env.ORCH_EXEC_PROFILE_STRICT?.trim() === "1";
+  const execProfile =
+    execProfileExplicit ??
+    (profileRaw.length === 0 && supportsServer && containerName
+      ? "server"
+      : undefined);
+  const codexCliProfile =
+    executor === "codex" && profileRaw.length > 0 && !execProfileExplicit
+      ? profileRaw
+      : undefined;
 
   // Checkpoint before execution
   if (workspaceEnv) {
@@ -357,33 +407,64 @@ export async function runAgent({
 
   try {
     if (executor === "codex") {
-      await toolCodex.execute({
-        input: {
-          action: "exec",
-          prompt,
-          out: "text",
-          auto: spec.auto,
-          cw: spec.workingDirectory,
-          sessionId: spec.sessionId,
-          agentfsDbPath,
-          containerName,
-          containerCw,
-          model: spec.model,
-          profile: spec.profile,
-          authz,
-          context: {
-            linearSessionId: spec.context.linearSessionId,
-            linearSpace: spec.context.linearSpace,
-            linearAuthz: spec.context.linearAuthz,
-            linearIssueId: spec.context.linearIssueId,
-            relevantFiles: spec.context.relevantFiles,
+      const run = (nextProfile: ExecProfile | undefined) =>
+        toolCodex.execute({
+          input: {
+            action: "exec",
+            execProfile: nextProfile,
+            prompt,
+            out: "text",
+            auto: spec.auto,
+            cw: spec.workingDirectory,
+            sessionId: spec.sessionId,
+            agentfsDbPath,
+            containerName,
+            containerCw,
+            model: spec.model,
+            profile: codexCliProfile,
+            authz,
+            context: {
+              linearSessionId: spec.context.linearSessionId,
+              linearSpace: spec.context.linearSpace,
+              linearAuthz: spec.context.linearAuthz,
+              linearIssueId: spec.context.linearIssueId,
+              relevantFiles: spec.context.relevantFiles,
+            },
+            userId,
           },
-          userId,
-        },
-        writer,
-        signal,
-      });
+          writer,
+          signal,
+        });
+
+      try {
+        await run(execProfile);
+      } catch (error) {
+        if (
+          execProfile === "server" &&
+          !execProfileStrict &&
+          !signal.aborted &&
+          isServerStartFailure("codex", error)
+        ) {
+          void Promise.resolve(
+            writer.write?.({
+              type: "notice",
+              message: "executor_server_fallback_default",
+            })
+          ).catch(() => {});
+          await run("default");
+        } else {
+          throw error;
+        }
+      }
     } else if (executor === "droid") {
+      if (execProfile === "server") {
+        void Promise.resolve(
+          writer.write?.({
+            type: "notice",
+            message: "droid_server_profile_unsupported",
+          })
+        ).catch(() => {});
+      }
       const { toolDroid } = await import(
         "@alfred/agent/orchestrator/tool/droid"
       );
@@ -403,23 +484,75 @@ export async function runAgent({
       const { toolOpenCode } = await import(
         "@alfred/agent/orchestrator/tool/opencode/index"
       );
-      await toolOpenCode.execute({
-        input: {
-          action: "exec",
-          prompt,
-          auto: spec.auto,
-          cw: spec.workingDirectory,
-          sessionId: spec.sessionId,
-          model: spec.model,
-          authz,
-          containerName,
-          containerCw,
-        },
-        writer,
-        signal,
-      });
+      const run = (nextProfile: ExecProfile | undefined) =>
+        toolOpenCode.execute({
+          input: {
+            action: "exec",
+            execProfile: nextProfile,
+            prompt,
+            auto: spec.auto,
+            cw: spec.workingDirectory,
+            sessionId: spec.sessionId,
+            model: spec.model,
+            authz,
+            containerName,
+            containerCw,
+          },
+          writer,
+          signal,
+        });
+
+      try {
+        await run(execProfile);
+      } catch (error) {
+        if (
+          execProfile === "server" &&
+          !execProfileStrict &&
+          !signal.aborted &&
+          isServerStartFailure("opencode", error)
+        ) {
+          void Promise.resolve(
+            writer.write?.({
+              type: "notice",
+              message: "executor_server_fallback_default",
+            })
+          ).catch(() => {});
+          await run("default");
+        } else {
+          throw error;
+        }
+      }
     }
   } catch (error: unknown) {
+    // Abort should propagate as an interruption (not a failure) so upstream waves
+    // can terminate promptly and runOrchestrator can guarantee cleanup.
+    const isAbort =
+      signal.aborted ||
+      (error instanceof DOMException && error.name === "AbortError") ||
+      (error instanceof Error && error.name === "AbortError");
+
+    if (isAbort) {
+      queue.enqueue({
+        type: "notice",
+        message: `agent_interrupted_abort:${spec.agentId}`,
+      } as unknown as WorkflowEvent);
+
+      const interruptedAt = Date.now();
+      const interruptedSeconds = Math.max(
+        0,
+        (interruptedAt - startedAt) / 1000
+      );
+
+      return {
+        agentId: spec.agentId,
+        phaseId,
+        stuck: false,
+        status: "interrupted",
+        durationSeconds: interruptedSeconds,
+        role: executor,
+      };
+    }
+
     // Handle Supervisor Interrupts
     if (
       executor === "codex" &&

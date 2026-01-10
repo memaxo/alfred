@@ -30,6 +30,8 @@ export {
   runtimeKnowledgeUpdatesTotal,
   runtimePhaseDurationSeconds,
   runtimePhasesTotal,
+  runtimeToolGraphNodeDurationSeconds,
+  runtimeToolGraphNodesTotal,
 } from "./metrics";
 export { convertPlanToWavePlan } from "./orchestrator/convert.js";
 export * from "./orchestrator/index.js";

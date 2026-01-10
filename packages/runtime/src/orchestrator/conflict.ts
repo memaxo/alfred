@@ -6,6 +6,7 @@ import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
+import { resolveAgentfsContainer, resolveAgentfsContainerCw } from "./agentfs";
 import type { OrchestratorContext } from "./types";
 
 export async function* runConflictPhase(
@@ -15,6 +16,17 @@ export async function* runConflictPhase(
   const { input, runId, workspace, authz, signal, userId } = ctx;
 
   if (conflictScanResult && conflictScanResult.totalMarkers > 0) {
+    const { containerName, containerBaseCw } = await resolveAgentfsContainer({
+      runId,
+      workspace,
+      userId,
+    });
+    const containerCw = resolveAgentfsContainerCw({
+      workspaceRoot: workspace,
+      workingDirectory: workspace,
+      containerBaseCw,
+    });
+
     yield {
       type: "event",
       kind: "merge-conflict",
@@ -84,6 +96,8 @@ export async function* runConflictPhase(
             out: "text",
             auto: "read", // Enforce read-only for analysis agents
             cw: workspace,
+            containerName,
+            containerCw,
             sessionId: `${runId}:conflict`,
             model: undefined,
             profile: undefined,
@@ -226,6 +240,8 @@ export async function* runConflictPhase(
             out: "text",
             auto: "medium", // Allow edits for resolution
             cw: workspace,
+            containerName,
+            containerCw,
             sessionId: `${runId}:conflict-resolve`,
             model: undefined,
             profile: undefined,

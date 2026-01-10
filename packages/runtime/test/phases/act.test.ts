@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import { tool } from "ai";
+import { z } from "zod";
 import type { ExecutionContext } from "../../src/context";
 import type { RuntimeInput } from "../../src/types";
 
@@ -14,12 +16,14 @@ async function* runOrchestratorMock(
 }
 
 const buildToolsMock = mock(() => ({
-  echo: {
-    name: "echo",
-    async execute(input: unknown) {
+  echo: tool({
+    description: "Echo input",
+    inputSchema: z.object({ message: z.string() }),
+    outputSchema: z.object({ message: z.string() }),
+    async execute(input) {
       return input;
     },
-  },
+  }),
 }));
 
 let streamCallCount = 0;
@@ -49,6 +53,15 @@ function createDeps() {
         stream: (..._args: unknown[]) => streamMock(),
       }) as any,
     buildToolset: buildToolsMock,
+    generateToolGraph: async () => ({
+      nodes: [
+        {
+          id: "echo-1",
+          toolName: "echo",
+          input: { message: "hi" },
+        },
+      ],
+    }),
     runOrchestratorFn: runOrchestratorMock as any,
   };
 }
@@ -96,7 +109,7 @@ beforeEach(() => {
     NODE_ENV: "test",
     RUNTIME_TEST_ORCHESTRATION: "1",
   };
-  buildToolsMock.mockReset();
+  buildToolsMock.mockClear();
   streamCallCount = 0;
   orchestratorCallCount = 0;
 });
@@ -127,6 +140,53 @@ describe("executeActPhase", () => {
     expect(streamCallCount).toBe(1);
     expect(events.some((event) => event._ === "text-delta")).toBe(true);
     expect(result?.escalated).toBe(false);
+  });
+
+  it("escalates when tool graph execution fails", async () => {
+    const failTools = () => ({
+      fail: tool({
+        description: "Always fails",
+        inputSchema: z.object({}),
+        outputSchema: z.object({ ok: z.literal(true) }),
+        async execute() {
+          throw new Error("boom");
+        },
+      }),
+    });
+
+    const generator = executeActPhase(
+      baseInput,
+      "run-escalate",
+      new AbortController().signal,
+      "test-model",
+      undefined,
+      undefined,
+      undefined,
+      sampleContext,
+      "Summary",
+      undefined,
+      {
+        ...createDeps(),
+        buildToolset: failTools,
+        generateToolGraph: async () => ({
+          nodes: [{ id: "fail-1", toolName: "fail", input: {} }],
+        }),
+      }
+    );
+
+    const { events, result } = await drain(generator);
+
+    expect(result?.escalated).toBe(true);
+    expect(result?.reason).toBe("tool_graph_failed");
+    expect(streamCallCount).toBe(0);
+    expect(orchestratorCallCount).toBe(0);
+    expect(
+      events.some(
+        (event) =>
+          (event as any)._ === "notice" &&
+          (event as any).message === "execution_tool_graph_execution_failed"
+      )
+    ).toBe(true);
   });
 
   it("delegates to orchestrator in parallel mode", async () => {

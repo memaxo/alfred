@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { openai } from "@ai-sdk/openai";
+import { getModelForRole } from "@alfred/agent/selector";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
@@ -7,7 +7,6 @@ import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
-import type { LanguageModel } from "ai";
 import { createRuntime } from "../core";
 import type { RuntimeInput } from "../types";
 
@@ -17,11 +16,7 @@ export function createWorkflowExecutor(
   history?: WorkflowEvent[],
   runtimeContext?: RuntimeContext<Record<string, unknown>>
 ) {
-  // Cast model type to resolve version mismatch between @ai-sdk/openai and ai package
-  // that can occur due to multiple versions of @ai-sdk/provider in the tree.
-  const model = openai(
-    process.env.OPENAI_MODEL_PLAN ?? "gpt-4o"
-  ) as unknown as LanguageModel;
+  const { model } = getModelForRole("planner");
 
   if (
     runtimeContext &&

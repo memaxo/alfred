@@ -37,6 +37,7 @@ export function startTimeout(args: {
       workflowRepo
         .updateRun(runId, {
           status: "failed",
+          completedAt: new Date(),
           errorMessage: "workflow_global_timeout",
         })
         .catch((error) => {

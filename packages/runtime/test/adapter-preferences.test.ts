@@ -12,6 +12,7 @@ const validateUIMessagesMock = vi.fn(async ({ messages }) => messages);
 mock.module("ai", () => ({
   streamText: streamTextMock,
   validateUIMessages: validateUIMessagesMock,
+  stepCountIs: () => () => false,
 }));
 
 const buildHistoryContextMock = vi.fn(

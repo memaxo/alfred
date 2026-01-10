@@ -18,6 +18,7 @@ import { toolGit } from "@alfred/agent/orchestrator/tool/git";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
+import { resolveAgentfsContainer, resolveAgentfsContainerCw } from "./agentfs";
 import type { OrchestratorContext } from "./types";
 import type { WavesResult } from "./waves";
 
@@ -290,6 +291,16 @@ export async function* runMergeAnalysis(
   mergePlan: MergePlan
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const { runId, workspace, authz, signal, userId } = ctx;
+  const { containerName, containerBaseCw } = await resolveAgentfsContainer({
+    runId,
+    workspace,
+    userId,
+  });
+  const containerCw = resolveAgentfsContainerCw({
+    workspaceRoot: workspace,
+    workingDirectory: workspace,
+    containerBaseCw,
+  });
 
   yield {
     type: "event",
@@ -364,6 +375,8 @@ export async function* runMergeAnalysis(
           out: "text",
           auto: "read", // Enforce read-only for analysis agents
           cw: workspace,
+          containerName,
+          containerCw,
           sessionId: `${runId}:merge`,
           model: undefined,
           profile: undefined,

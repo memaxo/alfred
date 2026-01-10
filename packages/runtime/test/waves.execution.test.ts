@@ -16,6 +16,7 @@ import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { worktreeManager } from "@alfred/agent/orchestrator/tool/worktree";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { ContextBuilder } from "../src/context";
+import { runOrchestrator } from "../src/orchestrator/index";
 import { runWaves } from "../src/orchestrator/waves";
 
 const codexExecute = mock(async ({ writer }: { writer: any }) => {
@@ -29,6 +30,8 @@ const codexExecute = mock(async ({ writer }: { writer: any }) => {
   });
 });
 
+const workspaceCleanup = mock(async () => {});
+
 const workspaceFactoryCreate = mock(
   async (
     _env: string,
@@ -40,7 +43,7 @@ const workspaceFactoryCreate = mock(
     root: workspacePath,
     branch: `agent/${agentId}`,
     initialize: async () => {},
-    cleanup: async () => {},
+    cleanup: workspaceCleanup,
     checkpoint: async () => {},
     restore: async () => {},
   })
@@ -75,6 +78,7 @@ beforeEach(() => {
 afterEach(async () => {
   codexExecute.mockReset();
   workspaceFactoryCreate.mockClear();
+  workspaceCleanup.mockClear();
   while (tempDirs.length) {
     const dir = tempDirs.pop();
     if (dir) {
@@ -265,4 +269,72 @@ describe("runWaves execution", () => {
       }
     }
   }, 5000);
+
+  it("propagates abort to agents and cleans up workspaces", async () => {
+    const workspace = await mkdtemp(path.join(tmpdir(), "waves-abort-"));
+    tempDirs.push(workspace);
+
+    const controller = new AbortController();
+    let resolveStarted: (() => void) | null = null;
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+
+    codexExecute.mockImplementation(
+      async ({ signal }: { signal?: AbortSignal }) => {
+        resolveStarted?.();
+        await new Promise<void>((_resolve, reject) => {
+          if (!signal) {
+            reject(new Error("missing abort signal"));
+            return;
+          }
+          if (signal.aborted) {
+            reject(new DOMException("aborted", "AbortError"));
+            return;
+          }
+          signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("aborted", "AbortError")),
+            { once: true }
+          );
+        });
+      }
+    );
+
+    const generator = runOrchestrator(
+      { requirement: "Abort test", auto: "low", workspace },
+      "run-abort",
+      controller.signal
+    );
+
+    const events: WorkflowEvent[] = [];
+    const drain = (async () => {
+      for await (const event of generator) {
+        events.push(event);
+      }
+    })();
+
+    await Promise.race([
+      started,
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error("agent_never_started")), 1000)
+      ),
+    ]);
+
+    controller.abort();
+
+    await Promise.race([
+      drain,
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error("abort_test_timeout")), 3000)
+      ),
+    ]);
+
+    expect(workspaceCleanup).toHaveBeenCalled();
+    expect(
+      events.some(
+        (e) => e._ === "notice" && (e as any).message === "workflow_interrupted"
+      )
+    ).toBe(true);
+  });
 });

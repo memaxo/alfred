@@ -122,6 +122,18 @@ export async function* runOrchestrator(
 
     return; // Placeholder for result type
   } finally {
+    try {
+      const { stopAllServers } = await import(
+        "@alfred/agent/orchestrator/tool/shared/server"
+      );
+      await stopAllServers("workflow_complete");
+    } catch (error) {
+      logger.warn("executor_server_cleanup_failed", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     const workspaces = wavesResult?.activeWorkspaces ?? [];
     for (const ws of workspaces) {
       try {

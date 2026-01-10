@@ -19,6 +19,7 @@ import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
+import { resolveAgentfsContainer, resolveAgentfsContainerCw } from "./agentfs";
 import type { OrchestratorContext } from "./types";
 
 const REVIEW_PLAN_FILE = (workspace: string, runId: string) =>
@@ -287,6 +288,11 @@ export async function* runReviewPhase(
   deps?: ReviewDeps
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const { input, runId, workspace, projectConfig, authz, signal, userId } = ctx; // Destructure projectConfig
+  const { containerName, containerBaseCw } = await resolveAgentfsContainer({
+    runId,
+    workspace,
+    userId,
+  });
 
   const reviewPlan = buildReviewPlan({
     files: mergePlan.expectedFiles ?? [],
@@ -704,6 +710,12 @@ export async function* runReviewPhase(
                   out: "text",
                   auto: fixerSpec.auto,
                   cw: fixerSpec.workingDirectory,
+                  containerName,
+                  containerCw: resolveAgentfsContainerCw({
+                    workspaceRoot: workspace,
+                    workingDirectory: fixerSpec.workingDirectory,
+                    containerBaseCw,
+                  }),
                   sessionId: fixerSpec.sessionId,
                   model: fixerSpec.model,
                   profile: fixerSpec.profile,
