@@ -15,6 +15,15 @@ globalThis.Node = window.Node;
 globalThis.MouseEvent = window.MouseEvent;
 globalThis.DocumentFragment = window.DocumentFragment;
 globalThis.MutationObserver = window.MutationObserver;
+
+if (typeof globalThis.KeyboardEvent === "undefined") {
+  globalThis.KeyboardEvent = window.KeyboardEvent;
+}
+
+if (typeof globalThis.InputEvent === "undefined") {
+  globalThis.InputEvent = window.InputEvent;
+}
+
 globalThis.navigator = window.navigator;
 globalThis.getComputedStyle = window.getComputedStyle;
 (globalThis.document as Document & { documentMode?: number }).documentMode =

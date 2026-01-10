@@ -23,6 +23,63 @@ export const Route = createFileRoute("/_protected/book")({
   errorComponent: RouteError,
 });
 
+function normalizeUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const hasProtocol =
+    trimmed.startsWith("http://") || trimmed.startsWith("https://");
+  const normalized = hasProtocol ? trimmed : `https://${trimmed}`;
+
+  try {
+    new URL(normalized);
+  } catch {
+    return null;
+  }
+
+  return normalized;
+}
+
+function parseTags(raw: string): string[] | undefined {
+  const parts = raw
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+
+  if (parts.length === 0) {
+    return;
+  }
+
+  const seen = new Set<string>();
+  const tags: string[] = [];
+
+  for (const tag of parts) {
+    const key = tag.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    tags.push(tag);
+    if (tags.length >= 32) {
+      break;
+    }
+  }
+
+  return tags.length > 0 ? tags : undefined;
+}
+
+function toIsoString(value: Date | string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === "string" ? value : null;
+}
+
 /**
  * Form for creating new bookmarks
  */
@@ -57,36 +114,19 @@ function BookmarkCreateForm() {
         return;
       }
 
-      // Basic URL validation
-      try {
-        if (
-          trimmedUrl.startsWith("http://") ||
-          trimmedUrl.startsWith("https://")
-        ) {
-          new URL(trimmedUrl);
-        } else {
-          // If no protocol, try prepending https://
-          new URL(`https://${trimmedUrl}`);
-        }
-      } catch {
+      const normalizedUrl = normalizeUrl(trimmedUrl);
+      if (!normalizedUrl) {
         toast.error("Please enter a valid URL");
         return;
       }
 
-      const finalUrl =
-        trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")
-          ? trimmedUrl
-          : `https://${trimmedUrl}`;
+      const tagList = parseTags(tags);
 
       createBookmark.mutate({
-        url: finalUrl,
+        url: normalizedUrl,
         title: title.trim() || undefined,
         description: description.trim() || undefined,
-        tags:
-          tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean) || undefined,
+        ...(tagList ? { tags: tagList } : {}),
       });
     },
     [createBookmark, url, title, description, tags]
@@ -101,7 +141,7 @@ function BookmarkCreateForm() {
           <Input
             className="pl-9"
             id="url"
-            onChange={(e) => setUrl(e.target.value)}
+            onInput={(event) => setUrl(event.currentTarget.value)}
             placeholder="example.com"
             required
             type="text"
@@ -115,7 +155,7 @@ function BookmarkCreateForm() {
           <Label htmlFor="title">Title (optional)</Label>
           <Input
             id="title"
-            onChange={(e) => setTitle(e.target.value)}
+            onInput={(event) => setTitle(event.currentTarget.value)}
             placeholder="Resource Title"
             value={title}
           />
@@ -127,7 +167,7 @@ function BookmarkCreateForm() {
             <Input
               className="pl-9"
               id="tags"
-              onChange={(e) => setTags(e.target.value)}
+              onInput={(event) => setTags(event.currentTarget.value)}
               placeholder="research, ai, tech"
               value={tags}
             />
@@ -140,7 +180,7 @@ function BookmarkCreateForm() {
         <Textarea
           className="min-h-[80px]"
           id="description"
-          onChange={(e) => setDescription(e.target.value)}
+          onInput={(event) => setDescription(event.currentTarget.value)}
           placeholder="What is this bookmark for?"
           value={description}
         />
@@ -208,15 +248,13 @@ function BookPane() {
       description: b.description ?? null,
       url: b.url,
       tags: b.tags,
-      createdAt: b.created ?? null,
+      createdAt: toIsoString(b.created),
     }));
 
     if (filterTag) {
       const ft = filterTag.toLowerCase();
       items = items.filter((item) =>
-        (item.tags as string[] | null)?.some((tag) =>
-          tag.toLowerCase().includes(ft)
-        )
+        item.tags?.some((tag) => tag.toLowerCase().includes(ft))
       );
     }
 
@@ -242,6 +280,17 @@ function BookPane() {
     );
   }
 
+  if (bookmarksQuery.isError) {
+    return (
+      <div className="space-y-3 py-12 text-center text-biolum-dim">
+        <p>Failed to load bookmarks.</p>
+        <Button onClick={() => bookmarksQuery.refetch()} variant="outline">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   const hasMore = (bookmarksQuery.data?.length ?? 0) === limit;
 
   return (
@@ -251,7 +300,7 @@ function BookPane() {
           <Search className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
           <Input
             className="pl-9"
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onInput={(event) => setSearchQuery(event.currentTarget.value)}
             placeholder="Search bookmarks..."
             value={searchQuery}
           />
@@ -260,12 +309,15 @@ function BookPane() {
           <Tag className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
           <Input
             className="pl-9"
-            onChange={(e) => setFilterTag(e.target.value)}
+            onInput={(event) => setFilterTag(event.currentTarget.value)}
             placeholder="Filter by tag"
             value={filterTag}
           />
         </div>
       </div>
+      <p className="text-biolum-faint text-xs">
+        Search and tag filters apply to the currently loaded page.
+      </p>
 
       <BookmarkPane items={filteredItems} onDelete={handleDelete} />
 
