@@ -7,7 +7,13 @@
 
 import { cn } from "@/lib/utils";
 
-export type ChatStatus = "ready" | "submitted" | "streaming" | "error";
+export type ChatStatus =
+  | "ready"
+  | "submitted"
+  | "streaming"
+  | "error"
+  | "degraded"
+  | "offline";
 
 type ConnectProps = {
   status: ChatStatus | string;
@@ -34,6 +40,18 @@ export function Connect({ status, agent, className }: ConnectProps) {
       color: "text-green-500",
       dot: "bg-green-500",
       ariaLabel: "streaming",
+    },
+    degraded: {
+      label: "Degraded",
+      color: "text-amber-500",
+      dot: "bg-amber-500 animate-pulse",
+      ariaLabel: "degraded performance",
+    },
+    offline: {
+      label: "Offline",
+      color: "text-red-500",
+      dot: "bg-red-500",
+      ariaLabel: "offline mode",
     },
     error: {
       label: "Error",

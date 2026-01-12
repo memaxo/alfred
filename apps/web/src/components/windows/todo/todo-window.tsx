@@ -1,8 +1,8 @@
 import type { NodeProps } from "@xyflow/react";
 import { CheckSquare, Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { z } from "zod";
+import { useTodoCollection } from "@/collections/provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import {
   WindowFrame,
 } from "@/components/windows/shared";
 import { useDesktopStore } from "@/store/desktop";
-import { trpc } from "@/utils/trpc";
 
 const FILTERS = [
   { label: "All", value: "all" },
@@ -43,33 +42,10 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
   const [filter, setFilter] = useState<FilterValue>(windowData.filter ?? "all");
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
 
-  const utils = trpc.useUtils();
-  const todosQuery = trpc.todo.getAll.useQuery();
-  const todos = todosQuery.data ?? [];
-
-  const createTodo = trpc.todo.create.useMutation({
-    onSuccess: async () => {
-      toast.success("Todo added");
-      setText("");
-      await utils.todo.getAll.invalidate();
-    },
-    onError: (error) => toast.error(error.message ?? "Failed to add todo"),
-  });
-
-  const toggleTodo = trpc.todo.toggle.useMutation({
-    onSuccess: async () => {
-      await utils.todo.getAll.invalidate();
-    },
-    onError: (error) => toast.error(error.message ?? "Failed to update todo"),
-  });
-
-  const deleteTodo = trpc.todo.delete.useMutation({
-    onSuccess: async () => {
-      toast.success("Todo removed");
-      await utils.todo.getAll.invalidate();
-    },
-    onError: (error) => toast.error(error.message ?? "Failed to delete todo"),
-  });
+  const { collection, insertTodo, toggleTodo, deleteTodo } =
+    useTodoCollection();
+  const todos = collection.useItems();
+  const isLoading = collection.useIsLoading();
 
   const filteredTodos = useMemo(() => {
     switch (filter) {
@@ -87,7 +63,8 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
     if (!text.trim()) {
       return;
     }
-    createTodo.mutate({ text });
+    insertTodo.mutate({ text });
+    setText("");
   };
 
   const handleFilterChange = (value: FilterValue) => {
@@ -127,8 +104,8 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
             placeholder="Add a task"
             value={text}
           />
-          <Button disabled={createTodo.isPending || !text.trim()} type="submit">
-            {createTodo.isPending ? (
+          <Button disabled={insertTodo.isPending || !text.trim()} type="submit">
+            {insertTodo.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               "Add"
@@ -150,7 +127,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
         </div>
 
         <ScrollArea className="h-[220px] rounded-md border border-white/10 p-2">
-          {todosQuery.isLoading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-6 text-biolum-faint text-sm">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
             </div>
@@ -192,7 +169,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
                   </div>
                   <Button
                     disabled={deleteTodo.isPending}
-                    onClick={() => deleteTodo.mutate({ id: todo.id })}
+                    onClick={() => deleteTodo.mutate(todo.id)}
                     size="icon"
                     variant="ghost"
                   >

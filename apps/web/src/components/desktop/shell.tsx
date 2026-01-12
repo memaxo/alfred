@@ -18,8 +18,10 @@
  * @see docs/execplans/desktop-evolution-prd.md Part II
  */
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import { FocusIndicator, SkipLinks } from "./accessibility";
 import { DesktopCommandPalette } from "./command-palette";
@@ -78,6 +80,28 @@ export function AlfredDesktopShell({
 
   useKeyboardShortcuts();
 
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      toast.success("Back online", { duration: 2000 });
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      toast.error("Lost connection. Running in offline mode.", {
+        sticky: true,
+      });
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   useEffect(() => {
     const updateDesktopArea = () => {
       const area = {
@@ -115,7 +139,14 @@ export function AlfredDesktopShell({
           style={{ zIndex: Z_INDEX.BACKGROUND }}
         >
           {/* Desktop background - gradient or image */}
-          <div className="h-full w-full bg-gradient-to-br from-void via-void-surface to-void" />
+          <div
+            className={cn(
+              "h-full w-full bg-gradient-to-br transition-colors duration-1000",
+              isOffline
+                ? "from-red-950/20 via-void to-red-950/20"
+                : "from-void via-void-surface to-void"
+            )}
+          />
 
           {/* Desktop Icons (on background surface) */}
           {mode === "desktop" && <DesktopIcons />}

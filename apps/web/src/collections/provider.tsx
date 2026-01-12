@@ -9,13 +9,16 @@ import {
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { createNoteCollection } from "./note";
 import { createReminderCollection } from "./reminder";
+import { createTodoCollection } from "./todo";
 
 type NoteCollectionType = ReturnType<typeof createNoteCollection>;
 type ReminderCollectionType = ReturnType<typeof createReminderCollection>;
+type TodoCollectionType = ReturnType<typeof createTodoCollection>;
 
 type CollectionsContextValue = {
   notes: NoteCollectionType;
   reminders: ReminderCollectionType;
+  todos: TodoCollectionType;
 };
 
 const CollectionsContext = createContext<CollectionsContextValue | null>(null);
@@ -34,6 +37,7 @@ export function CollectionsProvider({
     () => ({
       notes: createNoteCollection(queryClient, trpcClient),
       reminders: createReminderCollection(queryClient, trpcClient),
+      todos: createTodoCollection(queryClient, trpcClient),
     }),
     [queryClient, trpcClient]
   );
@@ -59,4 +63,8 @@ export function useNoteCollection(): NoteCollectionType {
 
 export function useReminderCollection(): ReminderCollectionType {
   return useCollections().reminders;
+}
+
+export function useTodoCollection(): TodoCollectionType {
+  return useCollections().todos;
 }

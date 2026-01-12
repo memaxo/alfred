@@ -1,8 +1,20 @@
+import { toast } from "sonner";
 import type { PersistOptions } from "zustand/middleware";
 import type { DesktopState, WindowData, WindowInstance } from "./types.new";
 
 /** Shared storage identifier for desktop layout persistence */
 export const DESKTOP_STORAGE_ID = "desktop-layout-v1";
+/** Storage budget in bytes (50KB) */
+export const STORAGE_BUDGET_BYTES = 50 * 1024;
+
+function calculateStorageSize(state: unknown): number {
+  try {
+    const serialized = JSON.stringify(state);
+    return new TextEncoder().encode(serialized).length;
+  } catch {
+    return 0;
+  }
+}
 
 function sanitizeWindowForPersist(window: WindowInstance): WindowInstance {
   return {
@@ -37,8 +49,8 @@ function sanitizeWindowData(data: WindowData | undefined): WindowData {
 export const persistOptions: PersistOptions<DesktopState> = {
   name: DESKTOP_STORAGE_ID,
   version: 3,
-  partialize: (state) =>
-    ({
+  partialize: (state) => {
+    const persisted = {
       // Layout state (persisted)
       windows: state.windows.map(sanitizeWindowForPersist),
       focusedWindowId: state.focusedWindowId,
@@ -50,7 +62,20 @@ export const persistOptions: PersistOptions<DesktopState> = {
       contextCache: state.contextCache,
       feedbackByWindow: state.feedbackByWindow,
       // Note: ragDocCache is NOT persisted - it's ephemeral and can be large
-    }) as unknown as DesktopState,
+    };
+
+    const size = calculateStorageSize(persisted);
+    if (
+      size > STORAGE_BUDGET_BYTES &&
+      Object.keys(persisted.contextCache).length > 0
+    ) {
+      // Basic pruning: clear old context caches if over budget
+      persisted.contextCache = {};
+      toast.warning("Pruning old desktop context to save space.");
+    }
+
+    return persisted as unknown as DesktopState;
+  },
   migrate: (persistedState, version) => {
     if (version < 3) {
       // Migration from v1/v2: restructure for new type system

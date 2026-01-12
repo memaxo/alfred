@@ -59,3 +59,13 @@ export const edgeSchema = z.object({
 });
 
 export type EdgeResource = z.infer<typeof edgeSchema>;
+
+export const todoSchema = z.object({
+  id: z.string().uuid(),
+  text: z.string(),
+  completed: z.boolean(),
+  created: z.string(),
+  updated: z.string().nullable(),
+});
+
+export type TodoResource = z.infer<typeof todoSchema>;
