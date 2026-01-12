@@ -62,7 +62,6 @@ export async function parseIntent(
   });
 
   const output = result.object;
-  // console.log("DEBUG: output", JSON.stringify(output, null, 2));
 
   // Handle Multi-Intent
   if (output.multiIntent.split && output.multiIntent.parts.length > 1) {

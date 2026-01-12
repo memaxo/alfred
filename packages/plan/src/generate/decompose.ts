@@ -202,7 +202,6 @@ export function decomposeTask(
       }
     } catch (_e) {
       // Fallback to legacy bucket heuristic if semantic fails
-      // console.warn("Semantic decomposition failed", e);
     }
   }
 

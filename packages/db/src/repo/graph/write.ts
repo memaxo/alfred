@@ -106,7 +106,6 @@ export async function upsertNodes(
     embedding: seed.embedding ?? null,
     sanitized: true,
   }));
-  // console.log("DEBUG: Upserting values", values[0]);
 
   const rows = await db
     .insert(memoryNodes)

@@ -111,7 +111,6 @@ export class PlanRunner {
         });
       }
 
-      // console.log(`Executing step: ${step.description}`);
       const stepStartedAt = Date.now();
       const result = await this.executeStep(step, this.tools);
       const stepDurationMs = Date.now() - stepStartedAt;

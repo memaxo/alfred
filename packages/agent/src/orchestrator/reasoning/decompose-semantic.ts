@@ -78,7 +78,6 @@ export function analyzeDependencyGraph(
       }
     } catch (_e) {
       // Fallback or ignore parse errors
-      // console.warn(`Failed to parse ${file.path}:`, e);
     }
   }
 
