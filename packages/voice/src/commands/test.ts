@@ -6,11 +6,9 @@
 
 import { Buffer } from "node:buffer";
 import { extname, join } from "node:path";
+import { logger } from "@alfred/logger";
 import { decodeToPCM16, PCM_MIME_TYPE } from "../audio/codec";
 import type { ProcessConfig } from "../process/stt";
-
-// biome-ignore lint/suspicious/noConsole: CLI output
-const log = console.log;
 
 function guessMimeType(file: string): string {
   const ext = extname(file).toLowerCase();
@@ -51,7 +49,7 @@ function buildDefaultProcessConfig(kind: "stt" | "tts"): ProcessConfig {
 export async function testSTT(args: { file?: string }): Promise<void> {
   const file = args.file ?? "test.wav";
 
-  log(`Testing STT with file: ${file}`);
+  logger.info("voice_test_stt_started", { file });
 
   try {
     const { STTPool } = await import("../process/stt");
@@ -59,12 +57,12 @@ export async function testSTT(args: { file?: string }): Promise<void> {
 
     await pool.initialize();
 
-    log("STT pool initialized, transcribing...");
+    logger.info("voice_test_stt_pool_initialized");
 
     // Read file and transcribe
     const audioFile = Bun.file(file);
     if (!(await audioFile.exists())) {
-      log(`Error: File not found: ${file}`);
+      logger.warn("voice_test_stt_file_missing", { file });
       return;
     }
 
@@ -79,10 +77,9 @@ export async function testSTT(args: { file?: string }): Promise<void> {
       mimeType: decoded.mimeType,
     });
 
-    log("Transcription result:");
-    log(result);
+    logger.info("voice_test_stt_transcription_complete", { result });
   } catch (error) {
-    log(`STT test failed: ${(error as Error).message}`);
+    logger.error("voice_test_stt_failed", { error });
   }
 }
 
@@ -93,7 +90,7 @@ export async function testTTS(args: { text?: string }): Promise<void> {
   const text =
     args.text ?? "Hello, this is a test of the text to speech system.";
 
-  log(`Testing TTS with text: "${text}"`);
+  logger.info("voice_test_tts_started", { text });
 
   try {
     const { TTSPool } = await import("../process/tts");
@@ -101,22 +98,24 @@ export async function testTTS(args: { text?: string }): Promise<void> {
 
     await pool.initialize();
 
-    log("TTS pool initialized, synthesizing...");
+    logger.info("voice_test_tts_pool_initialized");
 
     const chunk = await pool.synthesize({ text });
     const audioBuffer = Buffer.from(chunk.audioBase64, "base64");
 
     const sampleRate = chunk.sampleRate ?? 16_000;
-    log(
-      `Generated ${audioBuffer.byteLength} bytes of audio (${chunk.mimeType}, ${sampleRate} Hz)`
-    );
+    logger.info("voice_test_tts_synthesized", {
+      bytes: audioBuffer.byteLength,
+      mimeType: chunk.mimeType,
+      sampleRate,
+    });
 
     // Write to file
     const outFile =
       chunk.mimeType === PCM_MIME_TYPE ? "tts-output.pcm" : "tts-output.raw";
     await Bun.write(outFile, audioBuffer);
-    log(`Audio written to: ${outFile}`);
+    logger.info("voice_test_tts_audio_written", { outFile });
   } catch (error) {
-    log(`TTS test failed: ${(error as Error).message}`);
+    logger.error("voice_test_tts_failed", { error });
   }
 }

@@ -6,10 +6,8 @@
 
 import { Buffer } from "node:buffer";
 import { join } from "node:path";
+import { logger } from "@alfred/logger";
 import type { ProcessConfig } from "../process/tts";
-
-// biome-ignore lint/suspicious/noConsole: CLI output
-const log = console.log;
 
 type BenchmarkResult = {
   stt: {
@@ -27,7 +25,7 @@ type BenchmarkResult = {
  * Run voice pipeline benchmark
  */
 export async function benchmark(): Promise<BenchmarkResult> {
-  log("Starting voice pipeline benchmark...\n");
+  logger.info("voice_benchmark_started");
 
   const results: BenchmarkResult = {
     stt: { avgLatencyMs: 0, samples: 0 },
@@ -35,7 +33,7 @@ export async function benchmark(): Promise<BenchmarkResult> {
   };
 
   // TTS Benchmark
-  log("Testing TTS performance...");
+  logger.info("voice_benchmark_tts_started");
   try {
     const { TTSPool } = await import("../process/tts");
     const whisperModelPath =
@@ -76,7 +74,12 @@ export async function benchmark(): Promise<BenchmarkResult> {
       const sampleRate = chunk.sampleRate ?? 16_000;
       const durationMs = (bytes / 2 / sampleRate) * 1000;
       audioLengthsMs.push(durationMs);
-      log(`  "${phrase.slice(0, 30)}..." - ${latency.toFixed(1)}ms`);
+      logger.info("voice_benchmark_tts_sample", {
+        phrase: phrase.slice(0, 80),
+        latencyMs: Number(latency.toFixed(1)),
+        audioBytes: bytes,
+        audioDurationMs: Number(durationMs.toFixed(1)),
+      });
     }
 
     results.tts.avgLatencyMs =
@@ -84,22 +87,22 @@ export async function benchmark(): Promise<BenchmarkResult> {
     results.tts.avgAudioLengthMs =
       audioLengthsMs.reduce((a, b) => a + b, 0) / audioLengthsMs.length;
     results.tts.samples = latencies.length;
-    log(`\nTTS Average: ${results.tts.avgLatencyMs.toFixed(1)}ms\n`);
+    logger.info("voice_benchmark_tts_complete", {
+      avgLatencyMs: Number(results.tts.avgLatencyMs.toFixed(1)),
+      avgAudioLengthMs: Number(results.tts.avgAudioLengthMs.toFixed(1)),
+      samples: results.tts.samples,
+    });
   } catch (error) {
-    log(`TTS benchmark failed: ${(error as Error).message}\n`);
+    logger.error("voice_benchmark_tts_failed", { error });
   }
 
   // STT Benchmark (would need actual audio files)
-  log("STT benchmark requires audio files - skipping\n");
+  logger.info("voice_benchmark_stt_skipped", {
+    reason: "requires_audio_files",
+  });
 
   // Summary
-  log("=== Benchmark Summary ===");
-  log(
-    `TTS: ${results.tts.avgLatencyMs.toFixed(1)}ms avg (${results.tts.samples} samples)`
-  );
-  log(
-    `STT: ${results.stt.avgLatencyMs.toFixed(1)}ms avg (${results.stt.samples} samples)`
-  );
+  logger.info("voice_benchmark_summary", results);
 
   return results;
 }

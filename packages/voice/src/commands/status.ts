@@ -4,8 +4,7 @@
  * Shows voice pipeline configuration and environment status.
  */
 
-// biome-ignore lint/suspicious/noConsole: CLI output
-const log = console.log;
+import { logger } from "@alfred/logger";
 
 type StatusResult = {
   stt: {
@@ -67,30 +66,10 @@ export function status(args: { json?: boolean }): StatusResult {
     result.tts.poolSize > 0
   );
 
-  // Output
-  if (args.json) {
-    log(JSON.stringify(result, null, 2));
-  } else {
-    log("\n🎤 Voice Pipeline Configuration\n");
-
-    log("STT (Speech-to-Text):");
-    log(`  Configured: ${result.stt.configured ? "✅" : "⚠️ (using defaults)"}`);
-    log(`  Pool Size: ${result.stt.poolSize}`);
-    log(`  Model: ${result.stt.env.VOICE_STT_MODEL || "(default)"}`);
-    log(`  Device: ${result.stt.env.VOICE_STT_DEVICE || "(auto)"}`);
-
-    log("\nTTS (Text-to-Speech):");
-    log(`  Configured: ${result.tts.configured ? "✅" : "⚠️ (using defaults)"}`);
-    log(`  Pool Size: ${result.tts.poolSize}`);
-    log(`  Model: ${result.tts.env.VOICE_TTS_MODEL || "(default Maya1)"}`);
-    log(`  Supertonic: ${result.tts.useSupertonic ? "enabled" : "disabled"}`);
-
-    log("\nPython Runtime:");
-    log(`  UV Enabled: ${result.python.useUv ? "✅" : "❌"}`);
-    log(`  Path: ${result.python.path || "(auto-detect)"}`);
-
-    log("");
-  }
+  logger.info("voice_status", {
+    out: args.json ? "json" : "pretty",
+    ...result,
+  });
 
   return result;
 }
