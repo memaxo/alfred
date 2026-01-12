@@ -1,6 +1,6 @@
 name: Cursor Automation
 
-on:
+"on":
   pull_request:
     types: [opened, synchronize]
   workflow_run:
