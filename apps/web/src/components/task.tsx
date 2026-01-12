@@ -16,8 +16,14 @@ type TaskProps = {
 };
 
 export function Task({ title, status, progress, className }: TaskProps) {
+  const a11yLabel = `Task: ${title}${progress !== undefined ? `, ${progress}% complete` : ""}. Status: ${status}.`;
+
   return (
-    <div className={cn("rounded border p-3", className)}>
+    <div
+      aria-label={a11yLabel}
+      className={cn("rounded border p-3", className)}
+      role="group"
+    >
       <div className="flex items-center justify-between">
         <span className="font-medium text-sm">{title}</span>
         <span
@@ -34,7 +40,13 @@ export function Task({ title, status, progress, className }: TaskProps) {
       </div>
       {progress !== undefined && (
         <div className="mt-2">
-          <div className="h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={progress}
+            className="h-2 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+          >
             <div
               className="h-full bg-primary transition-all"
               style={{ width: `${progress}%` }}

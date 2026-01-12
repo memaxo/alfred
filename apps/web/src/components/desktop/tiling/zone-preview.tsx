@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 
@@ -11,6 +11,7 @@ export function TileZonePreview() {
   }));
 
   const zone = zones.find((z) => z.id === activeTilePreview);
+  const reduced = useReducedMotion();
 
   return (
     <AnimatePresence>
@@ -28,23 +29,30 @@ export function TileZonePreview() {
             "pointer-events-none absolute rounded-2xl border-2 border-biolum/40 bg-biolum/10 shadow-[0_0_50px_rgba(0,255,136,0.2)] backdrop-blur-sm"
           )}
           data-tile-preview={activeTilePreview}
-          exit={{ opacity: 0, scale: 0.95 }}
-          initial={{ opacity: 0, scale: 0.95 }}
+          exit={{ opacity: 0, scale: reduced ? 1 : 0.95 }}
+          initial={{ opacity: 0, scale: reduced ? 1 : 0.95 }}
           transition={{
-            type: "spring",
+            type: reduced ? "tween" : "spring",
             stiffness: 400,
             damping: 30,
+            duration: reduced ? 0.2 : undefined,
           }}
         >
           <div className="flex h-full items-center justify-center">
             <motion.div
-              animate={{ opacity: [0.4, 0.8, 0.4] }}
+              animate={
+                reduced ? { opacity: 0.6 } : { opacity: [0.4, 0.8, 0.4] }
+              }
               className="flex flex-col items-center gap-2 rounded-full bg-void-surface/60 p-4 px-6 shadow-2xl ring-1 ring-biolum/30"
-              transition={{
-                repeat: Number.POSITIVE_INFINITY,
-                duration: 2,
-                ease: "easeInOut",
-              }}
+              transition={
+                reduced
+                  ? { duration: 0.2 }
+                  : {
+                      repeat: Number.POSITIVE_INFINITY,
+                      duration: 2,
+                      ease: "easeInOut",
+                    }
+              }
             >
               <div className="h-1.5 w-12 rounded-full bg-biolum/40" />
               <span className="font-medium text-biolum text-xs uppercase tracking-widest">

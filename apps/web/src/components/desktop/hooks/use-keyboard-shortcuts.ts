@@ -103,8 +103,11 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Cmd+Arrows - Tiling and Maximize/Restore
       if (
         isMeta &&
+        !e.shiftKey &&
+        !e.altKey &&
         ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
       ) {
         e.preventDefault();
@@ -122,9 +125,34 @@ export function useKeyboardShortcuts() {
           case "ArrowUp":
             maximizeWindow(focusedWindowId);
             break;
-          case "ArrowDown":
-            minimizeWindow(focusedWindowId);
+          case "ArrowDown": {
+            const win = windows.find((w) => w.id === focusedWindowId);
+            if (win?.state === "maximized") {
+              restoreWindow(focusedWindowId);
+            } else {
+              minimizeWindow(focusedWindowId);
+            }
             break;
+          }
+        }
+        return;
+      }
+
+      // Cmd+Shift+Arrows - Quadrant Tiling
+      if (isMeta && e.shiftKey && ["ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        if (!focusedWindowId) {
+          return;
+        }
+
+        const win = windows.find((w) => w.id === focusedWindowId);
+        const isTop =
+          win?.tileZone?.includes("top") || !win?.tileZone?.includes("bottom");
+
+        if (e.key === "ArrowLeft") {
+          tileWindow(focusedWindowId, isTop ? "top-left" : "bottom-left");
+        } else {
+          tileWindow(focusedWindowId, isTop ? "top-right" : "bottom-right");
         }
         return;
       }

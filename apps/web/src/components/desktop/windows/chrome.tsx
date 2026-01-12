@@ -1,7 +1,7 @@
 "use client";
 
 import { Maximize2, Minus, Sparkles, Square, X } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
@@ -68,6 +68,7 @@ export function WindowChrome({
   }, [windowId]);
 
   const gravity = useFocusGravity(windowId, isFocused);
+  const reduced = useReducedMotion();
 
   const handleMaximize = useCallback(() => {
     if (!window) {
@@ -383,8 +384,8 @@ export function WindowChrome({
       )}
       data-focused={isFocused}
       data-window-id={windowId}
-      exit={{ opacity: 0, scale: 0.95 }}
-      initial={{ opacity: 0, scale: 0.95 }}
+      exit={{ opacity: 0, scale: reduced ? 1 : 0.95 }}
+      initial={{ opacity: 0, scale: reduced ? 1 : 0.95 }}
       layoutId={windowId}
       onMouseDown={handleFocus}
       ref={containerRef}
@@ -395,12 +396,27 @@ export function WindowChrome({
       tabIndex={isFocused ? 0 : -1}
       transition={{
         damping: 30,
-        height: { type: "spring", stiffness: 400, damping: 30 },
-        layout: { type: "spring", stiffness: 400, damping: 30 },
+        height: {
+          type: reduced ? "tween" : "spring",
+          stiffness: 400,
+          damping: 30,
+          duration: reduced ? 0.2 : undefined,
+        },
+        layout: {
+          type: reduced ? "tween" : "spring",
+          stiffness: 400,
+          damping: 30,
+          duration: reduced ? 0.2 : undefined,
+        },
         opacity: { duration: 0.2 },
         stiffness: 400,
-        type: "spring",
-        width: { type: "spring", stiffness: 400, damping: 30 },
+        type: reduced ? "tween" : "spring",
+        width: {
+          type: reduced ? "tween" : "spring",
+          stiffness: 400,
+          damping: 30,
+          duration: reduced ? 0.2 : undefined,
+        },
       }}
     >
       <div

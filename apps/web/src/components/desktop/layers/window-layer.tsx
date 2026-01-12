@@ -9,7 +9,7 @@
  * @see docs/execplans/desktop-type-migration.md
  */
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { CSSProperties } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { WindowErrorBoundary } from "@/components/windows/shared/error-boundary";
@@ -67,6 +67,8 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
     }))
   );
 
+  const reduced = useReducedMotion();
+
   return (
     <div
       className="pointer-events-none absolute inset-0"
@@ -103,18 +105,22 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
             <motion.div
               animate={{ opacity: 1, y: 0 }}
               className="flex h-full items-center justify-center"
-              exit={{ opacity: 0, y: -20 }}
-              initial={{ opacity: 0, y: 20 }}
+              exit={{ opacity: 0, y: reduced ? 0 : -20 }}
+              initial={{ opacity: 0, y: reduced ? 0 : 20 }}
             >
               <div className="text-center text-biolum-dim">
                 <motion.div
-                  animate={{ scale: [1, 1.05, 1] }}
+                  animate={reduced ? { opacity: 1 } : { scale: [1, 1.05, 1] }}
                   className="mb-4 inline-block"
-                  transition={{
-                    duration: 4,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                  }}
+                  transition={
+                    reduced
+                      ? { duration: 0.2 }
+                      : {
+                          duration: 4,
+                          repeat: Number.POSITIVE_INFINITY,
+                          ease: "easeInOut",
+                        }
+                  }
                 >
                   <p className="font-semibold text-2xl text-biolum tracking-tighter">
                     ALFRED
