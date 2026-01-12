@@ -1,100 +1,126 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { configure, logger } from "./index";
 
 describe("logger", () => {
-  let consoleLogSpy: ReturnType<typeof spyOn>;
-  const _originalEnv = process.env.NODE_ENV;
+  const lines: string[] = [];
+  const transport = {
+    write: vi.fn((line: string) => {
+      lines.push(line);
+    }),
+  };
 
   beforeEach(() => {
-    consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
-    configure({ service: "test-service" });
-  });
-
-  afterEach(() => {
-    consoleLogSpy.mockRestore();
-  });
-
-  describe("JSON formatting (non-development)", () => {
-    beforeEach(() => {
-      configure({ environment: "production" });
-    });
-
-    it("should log info message as JSON", () => {
-      logger.info("hello world");
-      expect(consoleLogSpy).toHaveBeenCalled();
-
-      const callArg = consoleLogSpy.mock.calls[0][0];
-      const parsed = JSON.parse(callArg as string);
-
-      expect(parsed.level).toBe("info");
-      expect(parsed.message).toBe("hello world");
-      expect(parsed.service).toBe("test-service");
-      expect(parsed.timestamp).toBeDefined();
-      expect(parsed.environment).toBe("production");
-    });
-
-    it("should include context in JSON", () => {
-      logger.warn("something happened", { userId: "123", foo: "bar" });
-
-      const callArg = consoleLogSpy.mock.calls[0][0];
-      const parsed = JSON.parse(callArg as string);
-
-      expect(parsed.level).toBe("warn");
-      expect(parsed.userId).toBe("123");
-      expect(parsed.foo).toBe("bar");
+    lines.length = 0;
+    transport.write.mockClear();
+    configure({
+      service: "test-service",
+      environment: "production",
+      level: "debug",
+      transport,
     });
   });
 
-  describe("Pretty printing (development)", () => {
-    beforeEach(() => {
-      configure({ environment: "development" });
-    });
+  it("logs JSON in non-development environments", () => {
+    logger.info("hello world");
+    expect(transport.write).toHaveBeenCalledTimes(1);
 
-    it("should log readable string prefix", () => {
-      logger.error("critical error");
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.level).toBe("info");
+    expect(parsed.message).toBe("hello world");
+    expect(parsed.service).toBe("test-service");
+    expect(parsed.timestamp).toBeDefined();
+    expect(parsed.environment).toBe("production");
+  });
 
-      expect(consoleLogSpy).toHaveBeenCalled();
-      const callArgs = consoleLogSpy.mock.calls[0];
-      expect(callArgs[0]).toBe("[ERROR] critical error");
-    });
+  it("includes structured context fields at the top-level", () => {
+    logger.warn("something happened", { userId: "123", foo: "bar" });
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.level).toBe("warn");
+    expect(parsed.userId).toBe("123");
+    expect(parsed.foo).toBe("bar");
+  });
 
-    it("should pass context as second argument", () => {
-      const context = { error: "failed" };
-      logger.debug("debugging", context);
+  it("supports child logger context propagation", () => {
+    const runLogger = logger.child({ runId: "run-1" });
+    runLogger.info("started", { step: 1 });
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.runId).toBe("run-1");
+    expect(parsed.step).toBe(1);
+  });
 
-      expect(consoleLogSpy).toHaveBeenCalled();
-      const callArgs = consoleLogSpy.mock.calls[0];
-      expect(callArgs[0]).toBe("[DEBUG] debugging");
-      expect(callArgs[1]).toEqual(context);
-    });
+  it("supports per-call context overriding child context", () => {
+    const runLogger = logger.child({ runId: "run-1", foo: "a" });
+    runLogger.info("event", { foo: "b" });
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.runId).toBe("run-1");
+    expect(parsed.foo).toBe("b");
+  });
+
+  it("redacts common secret keys", () => {
+    logger.info("auth", { token: "secret", password: "p", apiKey: "k" });
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.token).toBe("[REDACTED]");
+    expect(parsed.password).toBe("[REDACTED]");
+    expect(parsed.apiKey).toBe("[REDACTED]");
+  });
+
+  it("does not crash on circular references", () => {
+    const ctx: Record<string, unknown> = { a: 1 };
+    ctx.self = ctx;
+    logger.info("circular", ctx);
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.a).toBe(1);
+    // The logger flattens context into the entry, so a circular reference can
+    // show up as a nested object with a circular marker inside.
+    if (parsed.self === "[Circular]") {
+      expect(parsed.self).toBe("[Circular]");
+      return;
+    }
+    expect(parsed.self?.self).toBe("[Circular]");
+  });
+
+  it("normalizes Error objects", () => {
+    logger.error("failed", { error: new Error("boom") });
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.error?.message).toBe("boom");
+    expect(parsed.error?.name).toBe("Error");
+  });
+
+  it("pretty-prints in development", () => {
+    configure({ environment: "development" });
+    logger.error("critical error", { runId: "run-1" });
+    expect(transport.write).toHaveBeenCalled();
+    expect(lines[0]).toContain("ERROR");
+    expect(lines[0]).toContain("critical error");
+    expect(lines[0]).toContain("run-1");
   });
 
   describe("Levels", () => {
     beforeEach(() => {
-      configure({ environment: "production" });
+      configure({ environment: "production", level: "debug" });
     });
 
     it("should support debug", () => {
       logger.debug("msg");
-      const parsed = JSON.parse(consoleLogSpy.mock.calls[0][0] as string);
+      const parsed = JSON.parse(lines[0] ?? "");
       expect(parsed.level).toBe("debug");
     });
 
     it("should support info", () => {
       logger.info("msg");
-      const parsed = JSON.parse(consoleLogSpy.mock.calls[0][0] as string);
+      const parsed = JSON.parse(lines[0] ?? "");
       expect(parsed.level).toBe("info");
     });
 
     it("should support warn", () => {
       logger.warn("msg");
-      const parsed = JSON.parse(consoleLogSpy.mock.calls[0][0] as string);
+      const parsed = JSON.parse(lines[0] ?? "");
       expect(parsed.level).toBe("warn");
     });
 
     it("should support error", () => {
       logger.error("msg");
-      const parsed = JSON.parse(consoleLogSpy.mock.calls[0][0] as string);
+      const parsed = JSON.parse(lines[0] ?? "");
       expect(parsed.level).toBe("error");
     });
   });
@@ -107,7 +133,7 @@ describe("logger", () => {
     it("should update service name", () => {
       configure({ service: "new-service" });
       logger.info("test");
-      const parsed = JSON.parse(consoleLogSpy.mock.calls[0][0] as string);
+      const parsed = JSON.parse(lines[0] ?? "");
       expect(parsed.service).toBe("new-service");
     });
   });

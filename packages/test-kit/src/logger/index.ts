@@ -23,6 +23,26 @@ export const loggerMocks = {
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn(),
+  child: vi.fn(),
+  configure: vi.fn(),
+};
+
+const mockLogger = {
+  info: (...args: Parameters<typeof loggerMocks.info>) =>
+    loggerMocks.info(...args),
+  warn: (...args: Parameters<typeof loggerMocks.warn>) =>
+    loggerMocks.warn(...args),
+  error: (...args: Parameters<typeof loggerMocks.error>) =>
+    loggerMocks.error(...args),
+  debug: (...args: Parameters<typeof loggerMocks.debug>) =>
+    loggerMocks.debug(...args),
+  child: (context: unknown) => {
+    loggerMocks.child(context);
+    return mockLogger;
+  },
+  configure: (cfg: unknown) => {
+    loggerMocks.configure(cfg);
+  },
 };
 
 /**
@@ -31,12 +51,7 @@ export const loggerMocks = {
  */
 export function installLoggerMock() {
   mock.module("@alfred/logger", () => ({
-    logger: {
-      info: loggerMocks.info,
-      warn: loggerMocks.warn,
-      error: loggerMocks.error,
-      debug: loggerMocks.debug,
-    },
+    logger: mockLogger,
   }));
 }
 
@@ -49,6 +64,8 @@ export function resetLoggerMocks() {
   loggerMocks.warn.mockClear();
   loggerMocks.error.mockClear();
   loggerMocks.debug.mockClear();
+  loggerMocks.child.mockClear();
+  loggerMocks.configure.mockClear();
 }
 
 // Auto-install when this module is imported
