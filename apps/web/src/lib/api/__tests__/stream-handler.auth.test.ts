@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, mock, vi } from "bun:test";
+import { createRequire } from "node:module";
 import type { UIMessage } from "@alfred/type/stream";
 import { z } from "zod";
 
@@ -57,7 +58,10 @@ mock.module("@alfred/logger", () => ({
 }));
 
 const streamTextMock = vi.fn();
+const require = createRequire(import.meta.url);
+const realAi = require("ai") as typeof import("ai");
 mock.module("ai", () => ({
+  ...realAi,
   consumeStream: vi.fn(),
   generateId: () => "msg-generated",
   streamText: streamTextMock,

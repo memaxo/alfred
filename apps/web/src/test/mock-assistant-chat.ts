@@ -21,8 +21,11 @@ function ensureAssistantMessage(
 
 export const assistantChatMock = {
   sendSpy: vi.fn<(text: string) => void>(),
+  approveSpy:
+    vi.fn<(args: { id: string; approved: boolean; reason?: string }) => void>(),
   reset() {
     this.sendSpy.mockReset();
+    this.approveSpy.mockReset();
   },
   emitAssistantMessage(message: AssistantUIMessage) {
     const sanitized = ensureAssistantMessage(message);
@@ -79,6 +82,17 @@ mock.module("@ai-sdk/react", () => {
       };
 
       const clearError = () => setError(null);
+      const regenerate = () => {
+        assistantChatMock.sendSpy("__regenerate__");
+      };
+
+      const addToolApprovalResponse = (args: {
+        id: string;
+        approved: boolean;
+        reason?: string;
+      }) => {
+        assistantChatMock.approveSpy(args);
+      };
 
       return {
         messages,
@@ -86,6 +100,8 @@ mock.module("@ai-sdk/react", () => {
         status,
         error,
         sendMessage,
+        regenerate,
+        addToolApprovalResponse,
         clearError,
       };
     },

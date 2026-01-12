@@ -9,6 +9,7 @@
  * Reference: https://datatracker.ietf.org/doc/html/rfc7662
  */
 
+import { logger } from "@alfred/logger";
 import { createFileRoute } from "@tanstack/react-router";
 
 async function getDbHelpers() {
@@ -121,8 +122,7 @@ export const Route = createFileRoute("/api/auth/introspect")({
             },
           });
         } catch (error) {
-          // biome-ignore lint/suspicious/noConsole: Error logging
-          console.error("Token introspection failed:", error);
+          logger.error("auth_token_introspection_failed", { error });
 
           // Don't expose internal errors - return inactive
           return Response.json(

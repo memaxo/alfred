@@ -9,6 +9,7 @@
  * Reference: https://datatracker.ietf.org/doc/html/rfc7009
  */
 
+import { logger } from "@alfred/logger";
 import { createFileRoute } from "@tanstack/react-router";
 
 async function getDbHelpers() {
@@ -79,8 +80,7 @@ export const Route = createFileRoute("/api/auth/revoke")({
             },
           });
         } catch (error) {
-          // biome-ignore lint/suspicious/noConsole: Error logging
-          console.error("Token revocation failed:", error);
+          logger.error("auth_token_revocation_failed", { error });
 
           // RFC 7009: Even on server error, respond with 200 to prevent
           // information leakage about token validity

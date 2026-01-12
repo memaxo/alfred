@@ -1,4 +1,5 @@
 import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { createRequire } from "node:module";
 import type { UIMessage } from "@alfred/type/stream";
 import { z } from "zod";
 
@@ -25,6 +26,13 @@ const getModelForRoleMock = vi.fn().mockResolvedValue({
 });
 mock.module("@alfred/agent/selector", () => ({
   getModelForRole: getModelForRoleMock,
+}));
+
+mock.module("@alfred/agent/mcp", () => ({
+  loadMcpTools: vi.fn().mockResolvedValue({
+    tools: {},
+    close: async () => {},
+  }),
 }));
 
 mock.module("@alfred/agent/preference/prompt", () => ({
@@ -92,8 +100,11 @@ mock.module("@alfred/history", () => ({
 }));
 
 const finishPromiseRef: { current: Promise<void> | null } = { current: null };
+const require = createRequire(import.meta.url);
+const realAi = require("ai") as typeof import("ai");
 
 mock.module("ai", () => ({
+  ...realAi,
   consumeStream: vi.fn(),
   generateId: () => "msg-generated",
   streamText: vi.fn().mockImplementation(() => ({

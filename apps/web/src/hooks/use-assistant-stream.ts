@@ -1,5 +1,10 @@
 import { useChat } from "@ai-sdk/react";
 import type { AssistantUIMessage } from "@alfred/agent";
+import {
+  getToolInvocationName,
+  getToolInvocationState,
+  isToolInvocationPart,
+} from "@alfred/ui/chat/parts";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -37,7 +42,11 @@ export type UseAssistantStreamReturn = {
   hydrate: (messages: AssistantUIMessage[]) => void;
   setMessages: (messages: AssistantUIMessage[]) => void;
   conversationId: string | null;
-  addToolResult: (result: { toolCallId: string; result: unknown }) => void;
+  addToolApprovalResponse: (args: {
+    id: string;
+    approved: boolean;
+    reason?: string;
+  }) => void;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -108,6 +117,37 @@ export function deriveActions(
           args: existing?.args ?? {},
           status: "completed",
           result: part.output,
+        });
+      }
+
+      if (isToolInvocationPart(part)) {
+        const id = part.toolCallId;
+        const name = getToolInvocationName(part);
+        const state = getToolInvocationState(part);
+        const args = toArgs(part.input);
+        const existing = actionMap.get(id);
+
+        const status: AssistantActionStatus =
+          state === "approval-requested"
+            ? "pending"
+            : state === "output-available"
+              ? "completed"
+              : state === "output-error" || state === "output-denied"
+                ? "error"
+                : "running";
+
+        actionMap.set(id, {
+          id,
+          name,
+          args,
+          status,
+          result: part.output ?? existing?.result,
+          error:
+            state === "output-denied"
+              ? "Denied"
+              : typeof part.errorText === "string"
+                ? part.errorText
+                : existing?.error,
         });
       }
     }
@@ -242,13 +282,9 @@ export function useAssistantStream(
     [chat]
   );
 
-  const addToolResult = useCallback(
-    (result: { toolCallId: string; result: unknown }) => {
-      chat.addToolResult({
-        tool: "unknown",
-        toolCallId: result.toolCallId,
-        output: result.result,
-      });
+  const addToolApprovalResponse = useCallback(
+    (args: { id: string; approved: boolean; reason?: string }) => {
+      void chat.addToolApprovalResponse(args);
     },
     [chat]
   );
@@ -264,6 +300,6 @@ export function useAssistantStream(
     hydrate,
     setMessages,
     conversationId,
-    addToolResult,
+    addToolApprovalResponse,
   };
 }

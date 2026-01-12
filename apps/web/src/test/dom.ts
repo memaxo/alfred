@@ -347,31 +347,37 @@ if (typeof globalThis.PointerEvent === "undefined") {
 }
 
 // Suppress specific warnings that are noisy in tests
-// biome-ignore lint/suspicious/noConsole: test environment setup
-const originalConsoleWarn = console.warn;
-// biome-ignore lint/suspicious/noConsole: test environment setup
-const originalConsoleError = console.error;
+const con = globalThis.console;
+if (con) {
+  const originalWarn = con.warn.bind(con);
+  const originalError = con.error.bind(con);
 
-console.warn = (...args) => {
-  const msg = args[0];
-  if (typeof msg === "string") {
-    if (msg.includes("THREE.WebGLRenderer")) {
-      return;
+  con.warn = (...args) => {
+    const msg = args[0];
+    if (typeof msg === "string") {
+      if (msg.includes("THREE.WebGLRenderer")) {
+        return;
+      }
+      if (
+        msg.includes('The pseudo class ":first-child" is potentially unsafe')
+      ) {
+        return;
+      }
+      if (msg.includes('The pseudo class ":nth-child" is potentially unsafe')) {
+        return;
+      }
     }
-    if (msg.includes('The pseudo class ":first-child" is potentially unsafe')) {
-      return;
-    }
-    if (msg.includes('The pseudo class ":nth-child" is potentially unsafe')) {
-      return;
-    }
-  }
-  originalConsoleWarn(...args);
-};
+    originalWarn(...args);
+  };
 
-console.error = (...args) => {
-  const msg = args[0];
-  if (typeof msg === "string" && msg.includes("Error creating WebGL context")) {
-    return;
-  }
-  originalConsoleError(...args);
-};
+  con.error = (...args) => {
+    const msg = args[0];
+    if (
+      typeof msg === "string" &&
+      msg.includes("Error creating WebGL context")
+    ) {
+      return;
+    }
+    originalError(...args);
+  };
+}

@@ -21,6 +21,7 @@ import { auth } from "@alfred/auth";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
+import { classifyAiSdkError } from "@alfred/type/aierror";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { isTextPart } from "@alfred/ui/chat/parts";
 import { consumeStream, generateId, streamText, type UIMessage } from "ai";
@@ -61,6 +62,7 @@ export async function handleStreamRequest(
   let connectionId: string | null = null;
   let userId: string | null = null;
   let firstChunkSent = false;
+  let closeMcp: (() => Promise<void>) | null = null;
 
   try {
     const rawBody = await request.json();
@@ -182,7 +184,9 @@ export async function handleStreamRequest(
         contextSystem = analysis.system;
         activationData = analysis.activation;
       } catch (e) {
-        logger.warn(`${errorPrefix}_context_analysis_failed`, {
+        logger.warn("api_stream_context_analysis_failed", {
+          prefix: errorPrefix,
+          userId: userId ?? undefined,
           error: String(e),
         });
       }
@@ -190,6 +194,7 @@ export async function handleStreamRequest(
 
     const defaults = getDefaults();
     const tools = defaults.tools ?? {};
+    let mergedTools = tools;
 
     if (userId) {
       try {
@@ -203,8 +208,9 @@ export async function handleStreamRequest(
         }
       } catch (error) {
         preferencePromptFailuresTotal.inc({ source: errorPrefix });
-        logger.warn(`${errorPrefix}_preference_prompt_failed`, {
-          userId,
+        logger.warn("api_stream_preference_prompt_failed", {
+          prefix: errorPrefix,
+          userId: userId ?? undefined,
           error: error instanceof Error ? error.message : String(error),
         });
       }
@@ -213,6 +219,21 @@ export async function handleStreamRequest(
     const combinedSystem = [preferencePrompt, contextSystem]
       .filter(Boolean)
       .join("\n\n");
+
+    try {
+      const { loadMcpTools } = await import("@alfred/agent/mcp");
+      const mcp = await loadMcpTools(userId, request.signal);
+      if (Object.keys(mcp.tools).length > 0) {
+        mergedTools = { ...tools, ...mcp.tools };
+      }
+      closeMcp = mcp.close;
+    } catch (error) {
+      logger.warn("api_stream_mcp_tools_failed", {
+        prefix: errorPrefix,
+        userId: userId ?? undefined,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     const { getModelForRole } = await import("@alfred/agent/selector");
     const role = errorPrefix === "orchestrator" ? "orchestrator" : "chat";
@@ -225,6 +246,7 @@ export async function handleStreamRequest(
       messages,
       modelId,
       system: combinedSystem,
+      tools: mergedTools,
       source: errorPrefix,
       budget: getHistoryBudgetDefaults(),
     });
@@ -253,7 +275,8 @@ export async function handleStreamRequest(
 
     if (dropped > 0) {
       preferenceHistoryPrunedTotal.inc({ source: errorPrefix }, dropped);
-      logger.info(`${errorPrefix}_history_pruned`, {
+      logger.info("api_stream_history_pruned", {
+        prefix: errorPrefix,
         dropped,
         kept: preparedUiMessages.length,
         keptTokens: historyContext.keptTokens,
@@ -261,16 +284,36 @@ export async function handleStreamRequest(
       });
     }
 
+    const telemetry =
+      process.env.AI_TELEMETRY === "1"
+        ? {
+            experimental_telemetry: {
+              isEnabled: true,
+              functionId: `web.${errorPrefix}.stream`,
+              recordInputs: false,
+              recordOutputs: false,
+            },
+          }
+        : {};
+
     const result = streamText({
       ...defaults,
       model: selection.model,
+      tools: mergedTools,
+      ...telemetry,
       messages: modelMessages,
       abortSignal: request.signal,
       system: combinedSystem,
+      onFinish: async () => {
+        await closeMcp?.();
+      },
       onAbort: ({ steps }) => {
-        logger.warn(`${errorPrefix}_stream_aborted`, {
+        logger.warn("api_stream_aborted", {
+          prefix: errorPrefix,
+          userId: userId ?? undefined,
           steps: steps.length,
         });
+        void closeMcp?.();
         if (connectionId && userId) {
           removeConnection(connectionId);
           connectionId = null;
@@ -349,7 +392,9 @@ export async function handleStreamRequest(
         }
 
         if (isAborted) {
-          logger.warn(`${errorPrefix}_stream_aborted_on_finish`, {
+          logger.warn("api_stream_aborted_on_finish", {
+            prefix: errorPrefix,
+            userId: userId ?? undefined,
             persisted: streamedMessages.length,
           });
         }
@@ -385,6 +430,7 @@ export async function handleStreamRequest(
       const globalConnectionCount = getConnectionCount();
       sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
     }
+    void closeMcp?.();
 
     if (error instanceof SyntaxError) {
       return new Response(JSON.stringify({ error: "invalid_json" }), {
@@ -392,13 +438,26 @@ export async function handleStreamRequest(
         headers: { "Content-Type": "application/json" },
       });
     }
-    logger.error(`${errorPrefix}_stream_error`, {
-      error: error instanceof Error ? error.message : String(error),
+
+    const classified = classifyAiSdkError(error);
+
+    logger.error("api_stream_error", {
+      prefix: errorPrefix,
+      userId: userId ?? undefined,
+      safeCode: classified.safeCode,
+      kind: classified.kind,
+      retryable: classified.retryable,
+      ...classified.log,
     });
+
     return new Response(
-      JSON.stringify({ error: `${errorPrefix}_stream_failed` }),
+      JSON.stringify({
+        error: classified.safeCode,
+        message: classified.safeMessage,
+        retryable: classified.retryable,
+      }),
       {
-        status: 500,
+        status: classified.httpStatus,
         headers: { "Content-Type": "application/json" },
       }
     );

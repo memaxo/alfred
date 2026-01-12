@@ -37,7 +37,7 @@ export function useChatLogic({
     clear,
     hydrate,
     setMessages,
-    addToolResult,
+    addToolApprovalResponse,
   } = useAssistantStream({
     api: apiBase,
     onError: (_err) => {
@@ -251,6 +251,6 @@ export function useChatLogic({
     toggleVoice,
     clear,
     hydrate,
-    addToolResult,
+    addToolApprovalResponse,
   };
 }

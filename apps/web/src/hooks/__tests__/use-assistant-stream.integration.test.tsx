@@ -121,4 +121,22 @@ describe("useAssistantStream integration (without network)", () => {
     expect(result.current.messages).toHaveLength(0);
     expect(result.current.error).toBeNull();
   });
+
+  it("delegates tool approval responses through the chat instance", () => {
+    const { result } = renderHook(() => useAssistantStream());
+
+    act(() => {
+      result.current.addToolApprovalResponse({
+        id: "approval-1",
+        approved: true,
+        reason: "ok",
+      });
+    });
+
+    expect(assistantChatMock.approveSpy).toHaveBeenCalledWith({
+      id: "approval-1",
+      approved: true,
+      reason: "ok",
+    });
+  });
 });
