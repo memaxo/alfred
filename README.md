@@ -1374,7 +1374,17 @@ bun run db:studio     # Launch Drizzle Studio
 bun run test:sqlite      # Fast tests with in-memory SQLite
 bun run test:postgres    # Full tests against PostgreSQL
 bun run test:integration # Integration suites
+bun run test:failfast   # Fast-fail runner with progress tracking
 ```
+
+The `test:failfast` runner provides:
+- Real-time progress: `[N/total] path/to/test.test.ts... ✓ 12ms`
+- Stops on first failure
+- Shows full output only for failed test
+- Summary with passed/failed counts and total time
+- Scope filtering via `ALFRED_TEST_SCOPE` (unit/integration/e2e/perf/slow)
+
+Resume from failed test with `ALFRED_FAILED_FILE=absolute/path/to/test.test.ts bun run test:failfast`
 
 ### Naming Conventions
 
