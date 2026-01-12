@@ -84,71 +84,317 @@ export type ComponentName = keyof typeof componentRegistry;
 /**
  * Status tracking for component installation
  *
- * - pending: Not yet implemented
- * - installed: Component exists but needs integration work
- * - integrated: Component fully implemented and ready for use
+ * - pending: No local implementation exists yet
+ * - installed: Local implementation exists but is not yet used by a real product surface
+ * - integrated: Implemented and used by at least one real (non-demo) product surface
  */
 export const componentStatus: Record<
   ComponentName,
   "pending" | "installed" | "integrated"
 > = {
   // Phase 1: AI Chat UI
-  connect: "pending",
-  ctx: "pending",
-  actions: "pending",
-  think: "pending",
-  load: "pending",
-  plan: "pending",
-  tool: "pending",
-  task: "pending",
-  queue: "pending",
-  confirm: "pending",
-  cite: "pending",
-  branch: "pending",
-  thought: "pending",
-  code: "pending",
+  connect: "integrated",
+  ctx: "integrated",
+  actions: "integrated",
+  think: "integrated",
+  load: "integrated",
+  plan: "integrated",
+  tool: "integrated",
+  task: "integrated",
+  queue: "integrated",
+  confirm: "integrated",
+  cite: "integrated",
+  branch: "integrated",
+  thought: "integrated",
+  code: "integrated",
   controls: "integrated",
 
   // Voice & Audio (ElevenLabs)
-  audio: "integrated", // components/audio.tsx + components/ui/audio-player.tsx
-  viz: "integrated", // components/viz.tsx + components/ui/bar-visualizer.tsx
-  chat: "integrated", // components/ui/conversation.tsx
-  chatbar: "integrated", // components/ui/conversation-bar.tsx
-  voice: "integrated", // components/voice.tsx + components/ui/voice-picker.tsx
-  orb: "integrated", // components/orb.tsx + components/ui/orb.tsx (3D WebGL)
-  wave: "integrated", // components/ui/live-waveform.tsx + components/ui/waveform/*
-  response: "integrated", // components/ui/response.tsx (Streamdown)
-  mic: "integrated", // components/mic.tsx + components/ui/mic-selector.tsx
-  msg: "integrated", // components/ui/message.tsx
-  voiceBtn: "integrated", // components/voice-btn.tsx + components/ui/voice-button.tsx
+  audio: "integrated",
+  viz: "integrated",
+  chat: "integrated",
+  chatbar: "integrated",
+  voice: "integrated",
+  orb: "integrated",
+  wave: "integrated",
+  response: "integrated",
+  mic: "integrated",
+  msg: "integrated",
+  voiceBtn: "integrated",
 
   // Canvas & Preview
-  preview: "pending",
-  node: "pending",
-  artifact: "pending",
-  panel: "pending",
-  toolbar: "pending",
-  canvas: "pending",
-  edge: "pending",
-  loading: "pending",
-  list: "pending",
+  preview: "integrated",
+  node: "integrated",
+  artifact: "integrated",
+  panel: "integrated",
+  toolbar: "integrated",
+  canvas: "integrated",
+  edge: "integrated",
+  loading: "integrated",
+  list: "integrated",
 
   // Phase 2: Data Visualization
-  number: "pending",
-  chart: "pending",
-  matrix: "integrated", // components/ui/matrix.tsx (VU, digits, patterns)
-  grid: "pending",
-  dock: "pending",
-  term: "pending",
+  number: "integrated",
+  chart: "integrated",
+  matrix: "integrated",
+  grid: "integrated",
+  dock: "integrated",
+  term: "integrated",
 
   // Phase 3: Forms & Input
-  text: "installed", // components/ui/input.tsx exists
-  select: "installed", // components/ui/select.tsx exists
-  date: "pending",
-  daterange: "pending",
-  checkbox: "installed", // components/ui/checkbox.tsx exists
-  choice: "pending",
-  autocomplete: "pending",
-  dropdown: "installed", // components/ui/dropdown-menu.tsx exists
-  profile: "pending",
+  text: "integrated",
+  select: "integrated",
+  date: "integrated",
+  daterange: "integrated",
+  checkbox: "integrated",
+  choice: "integrated",
+  autocomplete: "integrated",
+  dropdown: "integrated",
+  profile: "integrated",
 };
+
+export type ComponentUse = {
+  /**
+   * File path relative to `apps/web/`.
+   *
+   * This must point at a non-demo product surface module (Decision B).
+   */
+  file: string;
+  /**
+   * A stable "proof" substring that must exist in the target file.
+   *
+   * Prefer matching import lines (e.g. `from "./code"` or `from "@/components/code"`)
+   * so drift is caught mechanically.
+   */
+  match: string;
+};
+
+/**
+ * Contract gate for `componentStatus[name] === "integrated"`.
+ *
+ * Integrated (Decision B) means:
+ * - Local implementation exists, AND
+ * - The component is used in at least one real (non-demo) product surface.
+ *
+ * Demo surfaces are explicitly excluded (e.g. the Components window and the
+ * `/components` inspection routes).
+ */
+export const componentUsage: Record<ComponentName, readonly ComponentUse[]> = {
+  // Phase 1: AI Chat UI
+  connect: [
+    { file: "src/components/chat-container.tsx", match: 'from "./connect"' },
+  ],
+  ctx: [
+    {
+      file: "src/components/shared/context-lens.tsx",
+      match: 'from "@/components/ctx"',
+    },
+  ],
+  actions: [
+    { file: "src/components/chat-container.tsx", match: 'from "./actions"' },
+  ],
+  think: [{ file: "src/components/chat-render.tsx", match: 'from "./think"' }],
+  load: [{ file: "src/components/chat-container.tsx", match: 'from "./load"' }],
+  plan: [{ file: "src/components/chat-render.tsx", match: 'from "./plan"' }],
+  tool: [{ file: "src/components/chat-render.tsx", match: 'from "./tool"' }],
+  task: [{ file: "src/components/chat-render.tsx", match: 'from "./task"' }],
+  queue: [
+    { file: "src/components/chat-container.tsx", match: 'from "./queue"' },
+  ],
+  confirm: [
+    { file: "src/components/chat-render.tsx", match: 'from "./confirm"' },
+  ],
+  cite: [{ file: "src/components/chat-render.tsx", match: 'from "./cite"' }],
+  branch: [
+    { file: "src/components/chat-render.tsx", match: 'from "./branch"' },
+  ],
+  thought: [
+    { file: "src/components/chat-render.tsx", match: 'from "./thought"' },
+  ],
+  code: [{ file: "src/components/chat-render.tsx", match: 'from "./code"' }],
+  controls: [
+    { file: "src/components/chat-container.tsx", match: 'from "./controls"' },
+  ],
+
+  // Voice & Audio (ElevenLabs)
+  audio: [
+    {
+      file: "src/routes/_protected/drive.tsx",
+      match: 'from "@/components/audio"',
+    },
+  ],
+  viz: [
+    {
+      file: "src/routes/_protected/voice-s2s.tsx",
+      match: 'from "@/components/viz"',
+    },
+  ],
+  chat: [
+    {
+      file: "src/routes/_protected/voice-s2s.tsx",
+      match: 'from "@/components/ui/conversation"',
+    },
+  ],
+  chatbar: [
+    {
+      file: "src/routes/_protected/voice-s2s.tsx",
+      match: 'from "@/components/ui/conversation-bar"',
+    },
+  ],
+  voice: [
+    {
+      file: "src/routes/_protected/voice-s2s.tsx",
+      match: 'from "@/components/voice"',
+    },
+  ],
+  orb: [{ file: "src/components/drive-mode.tsx", match: 'from "./orb"' }],
+  wave: [
+    {
+      file: "src/components/onboarding/voice-step.tsx",
+      match: 'from "@/components/ui/live-waveform"',
+    },
+  ],
+  response: [
+    { file: "src/components/chat-render.tsx", match: 'from "./response"' },
+  ],
+  mic: [
+    {
+      file: "src/routes/_protected/drive.tsx",
+      match: 'from "@/components/mic"',
+    },
+  ],
+  msg: [
+    {
+      file: "src/routes/_protected/voice-s2s.tsx",
+      match: 'from "@/components/ui/message"',
+    },
+  ],
+  voiceBtn: [
+    { file: "src/components/drive-mode.tsx", match: 'from "./voice-btn"' },
+  ],
+
+  // Canvas & Preview
+  preview: [
+    { file: "src/components/chat-render.tsx", match: 'from "./preview"' },
+  ],
+  node: [{ file: "src/components/chat-render.tsx", match: 'from "./node"' }],
+  artifact: [
+    { file: "src/components/chat-render.tsx", match: 'from "./artifact"' },
+  ],
+  panel: [{ file: "src/components/chat-render.tsx", match: 'from "./panel"' }],
+  toolbar: [
+    {
+      file: "src/components/apps/metrics/dashboard-builder.tsx",
+      match: 'from "@/components/toolbar"',
+    },
+  ],
+  canvas: [
+    { file: "src/components/chat-render.tsx", match: 'from "./canvas"' },
+  ],
+  edge: [{ file: "src/components/chat-render.tsx", match: 'from "./edge"' }],
+
+  // Loading & Animation
+  loading: [
+    {
+      file: "src/components/apps/metrics/dashboard-builder.tsx",
+      match: 'from "@/components/loading"',
+    },
+  ],
+  list: [
+    {
+      file: "src/components/apps/settings/index.tsx",
+      match: 'from "@/components/list"',
+    },
+  ],
+
+  // Phase 2: Data Visualization
+  number: [
+    {
+      file: "src/components/apps/metrics/dashboard-builder.tsx",
+      match: 'from "@/components/number"',
+    },
+  ],
+  chart: [
+    {
+      file: "src/components/apps/metrics/dashboard-builder.tsx",
+      match: 'from "@/components/chart"',
+    },
+  ],
+  matrix: [
+    {
+      file: "src/routes/_protected/voice-s2s.tsx",
+      match: 'from "@/components/ui/matrix"',
+    },
+  ],
+  grid: [
+    {
+      file: "src/components/apps/metrics/dashboard-builder.tsx",
+      match: 'from "@/components/grid"',
+    },
+  ],
+  dock: [
+    {
+      file: "src/components/desktop/taskbar/index.tsx",
+      match: 'from "@/components/dock"',
+    },
+  ],
+  term: [
+    {
+      file: "src/components/windows/droid/droid-window.tsx",
+      match: 'from "@/components/term"',
+    },
+  ],
+
+  // Phase 3: Forms & Input
+  text: [
+    {
+      file: "src/routes/_protected/voice-s2s.tsx",
+      match: 'from "@/components/text"',
+    },
+  ],
+  select: [
+    {
+      file: "src/components/windows/droid/droid-window.tsx",
+      match: 'from "@/components/select"',
+    },
+  ],
+  date: [
+    {
+      file: "src/components/apps/settings/index.tsx",
+      match: 'from "@/components/date"',
+    },
+  ],
+  daterange: [
+    {
+      file: "src/components/apps/settings/index.tsx",
+      match: 'from "@/components/daterange"',
+    },
+  ],
+  checkbox: [
+    {
+      file: "src/components/apps/settings/index.tsx",
+      match: 'from "@/components/checkbox"',
+    },
+  ],
+  choice: [
+    {
+      file: "src/components/apps/settings/index.tsx",
+      match: 'from "@/components/choice"',
+    },
+  ],
+  autocomplete: [
+    {
+      file: "src/routes/_protected/settings/profile.tsx",
+      match: 'from "@/components/autocomplete"',
+    },
+  ],
+  dropdown: [
+    {
+      file: "src/components/profile.tsx",
+      match: 'from "@/components/dropdown"',
+    },
+  ],
+  profile: [
+    { file: "src/components/user-menu.tsx", match: 'from "./profile"' },
+  ],
+} as const;

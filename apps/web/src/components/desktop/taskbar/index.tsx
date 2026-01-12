@@ -14,6 +14,7 @@
 
 import { type CSSProperties, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { Dock } from "@/components/dock";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useDesktopStore } from "@/store/desktop";
 import type { WindowInstance, WindowType } from "@/store/desktop/types.new";
@@ -108,7 +109,7 @@ export function Taskbar({ style }: TaskbarProps) {
         data-layer="taskbar"
         style={style}
       >
-        <div className="flex items-center gap-1 rounded-full bg-white/5 px-2 py-1">
+        <Dock>
           {/* App Launcher */}
           <AppLauncherButton />
 
@@ -133,7 +134,7 @@ export function Taskbar({ style }: TaskbarProps) {
               />
             );
           })}
-        </div>
+        </Dock>
       </div>
     </TooltipProvider>
   );

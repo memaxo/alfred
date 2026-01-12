@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/utils/trpc";
 
 type UseVoiceCaptureOptions = {
+  deviceId?: string;
   onTranscript?: (text: string) => Promise<void> | void;
   onError?: (error: Error) => void;
 };
@@ -29,14 +30,19 @@ const setTimeoutClient = createClientOnlyFn(
   (callback: () => void, delay: number) => window.setTimeout(callback, delay)
 );
 
-const getUserMediaClient = createClientOnlyFn(async () => {
+const getUserMediaClient = createClientOnlyFn(async (deviceId?: string) => {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("media_devices_unavailable");
   }
-  return await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  const audio: MediaTrackConstraints | boolean = deviceId
+    ? { deviceId: { exact: deviceId } }
+    : true;
+  return await navigator.mediaDevices.getUserMedia({ audio });
 });
 
 export function useVoiceCapture({
+  deviceId,
   onTranscript,
   onError,
 }: UseVoiceCaptureOptions = {}): UseVoiceCaptureReturn {
@@ -149,7 +155,7 @@ export function useVoiceCapture({
       return;
     }
     try {
-      const stream = await getUserMediaClient();
+      const stream = await getUserMediaClient(deviceId);
       const recorder = new MediaRecorder(stream);
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
@@ -186,6 +192,7 @@ export function useVoiceCapture({
     }
   }, [
     cleanupStream,
+    deviceId,
     handleError,
     isProcessing,
     isRecording,

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ComponentDemo } from "../demo";
 import {
   type ComponentName,
   componentRegistry,
   componentStatus,
+  componentUsage,
 } from "../manifest";
 
 const COMPONENTS_DIR = resolve(import.meta.dir, "..");
@@ -293,8 +295,11 @@ describe("manifest", () => {
         counts[status]++;
       }
 
-      expect(counts.integrated).toBeGreaterThanOrEqual(13);
-      expect(counts.installed).toBeGreaterThanOrEqual(4);
+      // This suite enforces the current integration contract: every manifest
+      // component is implemented and used in a real product surface.
+      expect(counts.pending).toBe(0);
+      expect(counts.installed).toBe(0);
+      expect(counts.integrated).toBe(Object.keys(componentRegistry).length);
       expect(counts.pending + counts.installed + counts.integrated).toBe(
         Object.keys(componentRegistry).length
       );
@@ -349,6 +354,33 @@ describe("manifest", () => {
         expect(registryKeys[i]).toBe(statusKeys[i]);
       }
     });
+
+    it("every component has a demo entry in ComponentDemo", () => {
+      for (const name of Object.keys(componentRegistry) as ComponentName[]) {
+        // ComponentDemo returns null if no match, we want it to return a ReactNode
+        const rendered = ComponentDemo({ name });
+        expect(rendered).not.toBeNull();
+      }
+    });
+  });
+
+  describe("component root wrappers", () => {
+    it("every manifest component has a root wrapper file", () => {
+      for (const name of Object.keys(componentRegistry) as ComponentName[]) {
+        // Map manifest names to file names
+        const fileNameMap: Partial<Record<ComponentName, string>> = {
+          voiceBtn: "voice-btn.tsx",
+        };
+
+        const fileName = fileNameMap[name] || `${name}.tsx`;
+        const path = resolve(COMPONENTS_DIR, fileName);
+
+        expect({ name, exists: existsSync(path) }).toEqual({
+          name,
+          exists: true,
+        });
+      }
+    });
   });
 
   describe("component requirements", () => {
@@ -369,6 +401,46 @@ describe("manifest", () => {
       expect(componentStatus.viz).toBe("integrated");
       expect(componentStatus.audio).toBe("integrated");
       expect(componentStatus.matrix).toBe("integrated");
+    });
+  });
+
+  describe("integrated usage contract", () => {
+    const webRoot = resolve(COMPONENTS_DIR, "../..");
+    const demoPrefixes = [
+      "src/components/demo.tsx",
+      "src/components/apps/components/",
+      "src/routes/_protected/components",
+    ];
+
+    it("componentUsage covers every manifest key", () => {
+      expect(Object.keys(componentUsage)).toEqual(
+        Object.keys(componentRegistry)
+      );
+    });
+
+    it("every integrated component has at least one non-demo usage site", () => {
+      for (const [name, status] of Object.entries(componentStatus) as [
+        ComponentName,
+        "pending" | "installed" | "integrated",
+      ][]) {
+        if (status !== "integrated") {
+          continue;
+        }
+        const uses = componentUsage[name] ?? [];
+        expect(uses.length).toBeGreaterThan(0);
+
+        for (const use of uses) {
+          // Enforce Decision B: non-demo product surface only.
+          for (const prefix of demoPrefixes) {
+            expect(use.file.startsWith(prefix)).toBe(false);
+          }
+
+          const abs = resolve(webRoot, use.file);
+          expect(existsSync(abs)).toBe(true);
+          const content = readFileSync(abs, "utf8");
+          expect(content.includes(use.match)).toBe(true);
+        }
+      }
     });
   });
 });
@@ -401,20 +473,17 @@ describe("manifest helpers", () => {
 
   it("helper: getIntegratedComponents returns correct count", () => {
     const integrated = getIntegratedComponents();
-    expect(integrated.length).toBeGreaterThanOrEqual(13);
+    expect(integrated.length).toBe(Object.keys(componentRegistry).length);
   });
 
   it("helper: getPendingComponents returns AI SDK elements", () => {
     const pending = getPendingComponents();
-    expect(pending).toContain("connect");
-    expect(pending).toContain("think");
-    expect(pending).toContain("canvas");
+    expect(pending).toEqual([]);
   });
 
   it("helper: getInstalledComponents returns form primitives", () => {
     const installed = getInstalledComponents();
-    expect(installed).toContain("text");
-    expect(installed).toContain("select");
+    expect(installed).toEqual([]);
   });
 
   it("helper: getComponentsBySource finds ElevenLabs components", () => {

@@ -5,15 +5,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ObligationChallengeDialog } from "@/components/biometric-challenge-dialog";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/select";
+import { Term } from "@/components/term";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   SmallCard,
@@ -333,15 +333,12 @@ export function DroidWindow({ id, data, selected }: NodeProps) {
 
   const logScrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (logScrollRef.current) {
-      const el = logScrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      );
-      if (el) {
-        el.scrollTop = el.scrollHeight;
-      }
+    const el = logScrollRef.current;
+    if (!el) {
+      return;
     }
-  }, [log]);
+    el.scrollTop = el.scrollHeight;
+  }, [log.length]);
 
   if (lod === "tiny") {
     return <TinyDot color="bg-emerald-500" shadow="shadow-emerald-500/50" />;
@@ -478,30 +475,7 @@ export function DroidWindow({ id, data, selected }: NodeProps) {
             </div>
           )}
 
-          <ScrollArea
-            className="h-[200px] rounded bg-zinc-950 p-2"
-            ref={logScrollRef}
-          >
-            <div className="space-y-0.5 font-mono text-xs">
-              {log.map((entry) => (
-                <div
-                  className={
-                    entry.channel === "stderr"
-                      ? "text-red-400"
-                      : entry.channel === "system"
-                        ? "text-biolum-dim"
-                        : "text-zinc-300"
-                  }
-                  key={entry.id}
-                >
-                  {entry.text}
-                </div>
-              ))}
-              {log.length === 0 && (
-                <div className="text-biolum-faint">No output yet</div>
-              )}
-            </div>
-          </ScrollArea>
+          <Term lines={log} maxHeight={200} scrollRef={logScrollRef} />
         </div>
       </WindowFrame>
       <ObligationChallengeDialog

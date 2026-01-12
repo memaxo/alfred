@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 type Voice = {
   id: string;
   name: string;
-  gender: "male" | "female";
 };
 
 type VoiceProps = {

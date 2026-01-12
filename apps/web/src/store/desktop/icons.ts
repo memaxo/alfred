@@ -44,6 +44,7 @@ const DEFAULT_ICONS: DesktopIcon[] = [
   { id: "icon-agents", type: "agents", position: { row: 3, col: 0 } },
   { id: "icon-workflow", type: "workflow", position: { row: 4, col: 0 } },
   { id: "icon-knowledge", type: "knowledge", position: { row: 5, col: 0 } },
+  { id: "icon-components", type: "components", position: { row: 6, col: 0 } },
 ];
 
 let iconIdCounter = 100;

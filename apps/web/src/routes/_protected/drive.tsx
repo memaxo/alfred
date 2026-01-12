@@ -2,7 +2,9 @@ import type { AssistantUIMessage } from "@alfred/agent";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AudioPlayer } from "@/components/audio";
 import { DriveMode } from "@/components/drive-mode";
+import { Mic } from "@/components/mic";
 import { RouteError } from "@/components/route-error";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
 import { trpc } from "@/utils/trpc";
@@ -19,6 +21,9 @@ function DriveModeRoute() {
   const navigate = Route.useNavigate();
   const [reply, setReply] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [micDeviceId, setMicDeviceId] = useState<string>("");
+  const [micMuted, setMicMuted] = useState(false);
 
   const assistantGenerate = trpc.assistant.generate.useMutation();
   const voiceSynthesize = trpc.voice.ttsSynthesize.useMutation();
@@ -30,9 +35,9 @@ function DriveModeRoute() {
     error,
     startRecording,
     stopRecording,
-    playAudio,
     clearTranscript,
   } = useVoiceCapture({
+    deviceId: micDeviceId || undefined,
     onTranscript: async (text) => {
       setErrorMessage(null);
       try {
@@ -59,9 +64,11 @@ function DriveModeRoute() {
           voice: "alloy",
           format: "mp3",
         });
-        if (audio?.audioBase64) {
-          playAudio(audio.audioBase64, audio.mimeType);
+        if (!audio?.audioBase64) {
+          setAudioSrc(null);
+          return;
         }
+        setAudioSrc(`data:${audio.mimeType};base64,${audio.audioBase64}`);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "voice_pipeline_failed";
@@ -83,6 +90,10 @@ function DriveModeRoute() {
   );
 
   const handleToggle = useCallback(() => {
+    if (micMuted) {
+      toast.error("Microphone is muted");
+      return;
+    }
     if (isRecording) {
       stopRecording();
       return;
@@ -91,6 +102,7 @@ function DriveModeRoute() {
       return;
     }
     setReply("");
+    setAudioSrc(null);
     setErrorMessage(null);
     clearTranscript();
     startRecording().catch((err) => {
@@ -99,21 +111,42 @@ function DriveModeRoute() {
       setErrorMessage(message);
       toast.error(message);
     });
-  }, [busy, clearTranscript, isRecording, startRecording, stopRecording]);
+  }, [
+    busy,
+    clearTranscript,
+    isRecording,
+    micMuted,
+    startRecording,
+    stopRecording,
+  ]);
 
   const handleExit = useCallback(() => {
     navigate({ to: "/" });
   }, [navigate]);
 
   return (
-    <DriveMode
-      error={errorMessage ?? error?.message ?? null}
-      isProcessing={busy}
-      isRecording={isRecording}
-      onComplete={handleExit}
-      onToggle={handleToggle}
-      reply={reply}
-      transcript={transcript}
-    />
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between gap-3 border-white/5 border-b p-3">
+        <Mic
+          className="w-64"
+          muted={micMuted}
+          onMutedChange={setMicMuted}
+          onValueChange={setMicDeviceId}
+          value={micDeviceId}
+        />
+        {audioSrc ? <AudioPlayer autoPlay={true} src={audioSrc} /> : null}
+      </div>
+      <div className="flex-1">
+        <DriveMode
+          error={errorMessage ?? error?.message ?? null}
+          isProcessing={busy}
+          isRecording={isRecording}
+          onComplete={handleExit}
+          onToggle={handleToggle}
+          reply={reply}
+          transcript={transcript}
+        />
+      </div>
+    </div>
   );
 }

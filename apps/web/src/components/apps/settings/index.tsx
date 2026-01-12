@@ -18,7 +18,13 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
+import { Checkbox } from "@/components/checkbox";
+import { Choice } from "@/components/choice";
+import { DateField } from "@/components/date";
+import { DateRangeField, type DateRangeValue } from "@/components/daterange";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+import { List } from "@/components/list";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { PolicySection } from "./policy-section";
@@ -121,28 +127,31 @@ function AccountSection() {
 }
 
 function AppearanceSection() {
+  const [theme, setTheme] = useState("dark");
+
   return (
     <div className="p-6">
       <h2 className="mb-4 font-semibold text-lg">Appearance</h2>
       <div className="space-y-4">
         <div className="rounded-lg border border-white/10 bg-white/5 p-4">
           <div className="mb-2 font-medium">Theme</div>
-          <div className="flex gap-2">
-            {["Dark", "Light", "System"].map((theme) => (
-              <button
-                className={cn(
-                  "rounded-lg border px-4 py-2 text-sm transition-colors",
-                  theme === "Dark"
-                    ? "border-biolum bg-biolum/20 text-biolum"
-                    : "border-white/10 hover:border-white/20"
-                )}
-                key={theme}
-                type="button"
-              >
-                {theme}
-              </button>
-            ))}
-          </div>
+          <Choice
+            onValueChange={setTheme}
+            options={[
+              {
+                value: "dark",
+                label: "Dark",
+                description: "Void-first, high contrast.",
+              },
+              { value: "light", label: "Light", description: "Bright UI." },
+              {
+                value: "system",
+                label: "System",
+                description: "Follow OS preference.",
+              },
+            ]}
+            value={theme}
+          />
         </div>
       </div>
     </div>
@@ -164,55 +173,104 @@ function KeyboardSection() {
   return (
     <div className="p-6">
       <h2 className="mb-4 font-semibold text-lg">Keyboard Shortcuts</h2>
-      <div className="grid gap-2">
-        {shortcuts.map((s) => (
-          <div
-            className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 px-4"
-            key={s.key}
-          >
-            <span className="text-biolum-dim text-sm">{s.description}</span>
-            <kbd className="rounded bg-void px-2 py-1 font-mono text-biolum text-xs shadow-inner">
-              {s.key}
-            </kbd>
-          </div>
-        ))}
-      </div>
+      <List
+        items={shortcuts.map((s) => ({
+          id: s.key,
+          content: (
+            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 px-4">
+              <span className="text-biolum-dim text-sm">{s.description}</span>
+              <kbd className="rounded bg-void px-2 py-1 font-mono text-biolum text-xs shadow-inner">
+                {s.key}
+              </kbd>
+            </div>
+          ),
+        }))}
+      />
     </div>
   );
 }
 
 function NotificationsSection() {
+  const [snoozeUntil, setSnoozeUntil] = useState<Date | undefined>(undefined);
+  const [vacation, setVacation] = useState<DateRangeValue>({});
+
+  const [settings, setSettings] = useState(() => ({
+    completions: true,
+    workflow: true,
+    alerts: true,
+  }));
+
   return (
     <div className="p-6">
       <h2 className="mb-4 font-semibold text-lg">Notifications</h2>
       <div className="space-y-4">
         {[
           {
+            id: "completions",
             label: "Agent completions",
             description: "Notify when agents finish tasks",
           },
           {
+            id: "workflow",
             label: "Workflow events",
             description: "Notify on workflow state changes",
           },
           {
+            id: "alerts",
             label: "System alerts",
             description: "Critical system notifications",
           },
-        ].map((setting) => (
-          <div
-            className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-4"
-            key={setting.label}
-          >
-            <div>
-              <div className="font-medium">{setting.label}</div>
-              <div className="text-biolum-dim text-sm">
-                {setting.description}
+        ].map((setting) => {
+          const key = setting.id as keyof typeof settings;
+          const checked = settings[key];
+
+          return (
+            <div
+              className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-4"
+              key={setting.label}
+            >
+              <div>
+                <div className="font-medium">{setting.label}</div>
+                <div className="text-biolum-dim text-sm">
+                  {setting.description}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="sr-only" htmlFor={`notify-${setting.id}`}>
+                  {setting.label}
+                </Label>
+                <Checkbox
+                  checked={checked}
+                  id={`notify-${setting.id}`}
+                  onCheckedChange={(next) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      [key]: Boolean(next),
+                    }))
+                  }
+                />
               </div>
             </div>
-            <input className="accent-biolum" defaultChecked type="checkbox" />
+          );
+        })}
+
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+          <div className="mb-2 font-medium">Quiet Time</div>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <div className="text-biolum-dim text-sm">Snooze until</div>
+              <DateField
+                onChange={setSnoozeUntil}
+                placeholder="Pick a date"
+                value={snoozeUntil}
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="text-biolum-dim text-sm">Vacation range</div>
+              <DateRangeField onChange={setVacation} value={vacation} />
+            </div>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );

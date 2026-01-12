@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { SpeechToSpeechResponse } from "@alfred/voice/types";
 import { VoiceS2SRouteView } from "@/routes/_protected/voice-s2s";
-import { fireEvent, render, waitFor } from "../../test/testing-library";
+import { fireEvent, render, waitFor, within } from "../../test/testing-library";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -17,6 +17,16 @@ const useVoiceSessionWebMock = vi.fn();
 
 mock.module("@/hooks/use-voice-session-web", () => ({
   useVoiceSessionWeb: useVoiceSessionWebMock,
+}));
+
+mock.module("@/utils/trpc", () => ({
+  trpc: {
+    voice: {
+      listVoices: {
+        useQuery: () => ({ data: [], isLoading: false }),
+      },
+    },
+  },
 }));
 
 // Build a default stream mock object
@@ -101,7 +111,12 @@ describe("VoiceS2SRouteView", () => {
 
     await waitFor(() => {
       expect(speechToSpeech).toHaveBeenCalledTimes(1);
-      expect(view.getByText(/hello/i)).toBeTruthy();
+      const replyHeading = view.getByRole("heading", {
+        name: /assistant reply/i,
+      });
+      const replyPanel = replyHeading.parentElement;
+      expect(replyPanel).toBeTruthy();
+      expect(within(replyPanel!).getByText(/hello/i)).toBeTruthy();
       expect(toastSuccess).toHaveBeenCalledTimes(1);
     });
   });

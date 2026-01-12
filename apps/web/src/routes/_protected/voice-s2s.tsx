@@ -2,8 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { RouteError } from "@/components/route-error";
+import { Input } from "@/components/text";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ui/conversation";
+import { ConversationBar } from "@/components/ui/conversation-bar";
+import { Matrix } from "@/components/ui/matrix";
+import { Message, MessageContent } from "@/components/ui/message";
 import { Viz } from "@/components/viz";
+import { Voice } from "@/components/voice";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
+import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_protected/voice-s2s")({
   component: VoiceS2SRouteView,
@@ -25,9 +37,14 @@ export function VoiceS2SRouteView() {
   } = useVoiceSessionWeb();
 
   const [assistantText, setAssistantText] = useState("");
+  const [agentId, setAgentId] = useState("");
+  const [voiceId, setVoiceId] = useState<string>("");
   const [frequencyData, setFrequencyData] = useState<number[]>(
     new Array(20).fill(0)
   );
+
+  const voicesQuery = trpc.voice.listVoices.useQuery();
+  const voices = voicesQuery.data ?? [];
 
   useEffect(() => {
     if (!stream.analyser) {
@@ -240,6 +257,26 @@ export function VoiceS2SRouteView() {
 
       <div className="rounded-2xl border border-border bg-card p-4">
         <h2 className="font-medium text-muted-foreground text-sm">
+          Voice (TTS)
+        </h2>
+        <p className="mt-2 text-muted-foreground text-xs">
+          Select a synthesis voice (local provider).
+        </p>
+        {voices.length > 0 ? (
+          <div className="mt-3">
+            <Voice
+              onSelect={setVoiceId}
+              selected={voiceId || voices[0]?.id || ""}
+              voices={voices}
+            />
+          </div>
+        ) : (
+          <p className="mt-3 text-biolum-dim text-sm">No voices available.</p>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="font-medium text-muted-foreground text-sm">
           Assistant Reply
         </h2>
         <p className="mt-2 min-h-[48px] text-base text-foreground">
@@ -271,6 +308,20 @@ export function VoiceS2SRouteView() {
                 <Viz
                   className="h-16 gap-1 text-emerald-500"
                   data={frequencyData}
+                />
+              </div>
+            )}
+            {stream.isActive && stream.analyser && (
+              <div className="mt-4 flex justify-center">
+                <Matrix
+                  ariaLabel="voice levels matrix"
+                  className="text-emerald-500"
+                  cols={20}
+                  gap={2}
+                  levels={frequencyData}
+                  mode="vu"
+                  rows={8}
+                  size={6}
                 />
               </div>
             )}
@@ -307,6 +358,59 @@ export function VoiceS2SRouteView() {
           ) : null}
         </div>
       ) : null}
+
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="font-medium text-muted-foreground text-sm">
+          Conversation (UI primitives)
+        </h2>
+        <div className="mt-3 h-64 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+          <Conversation>
+            <ConversationContent>
+              {state.transcript || assistantText || lastResponse ? (
+                <>
+                  {state.transcript ? (
+                    <Message from="user">
+                      <MessageContent>{state.transcript}</MessageContent>
+                    </Message>
+                  ) : null}
+                  {assistantText || lastResponse?.assistant?.text ? (
+                    <Message from="assistant">
+                      <MessageContent>
+                        {assistantText || lastResponse?.assistant?.text}
+                      </MessageContent>
+                    </Message>
+                  ) : null}
+                </>
+              ) : (
+                <ConversationEmptyState
+                  description="Speak or stream to populate the conversation."
+                  title="No voice messages yet"
+                />
+              )}
+            </ConversationContent>
+            <ConversationScrollButton />
+          </Conversation>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="font-medium text-muted-foreground text-sm">
+          ElevenLabs Agent Conversation Bar
+        </h2>
+        <p className="mt-2 text-muted-foreground text-xs">
+          Optional: enter an ElevenLabs agent ID to enable the conversation bar.
+        </p>
+        <div className="mt-3 space-y-3">
+          <Input
+            onChange={(e) => setAgentId(e.target.value)}
+            placeholder="Agent ID (optional)"
+            value={agentId}
+          />
+          {agentId.trim().length > 0 ? (
+            <ConversationBar agentId={agentId.trim()} />
+          ) : null}
+        </div>
+      </div>
       <div className="rounded-2xl border border-border bg-card p-4 text-muted-foreground text-sm">
         <p className="font-medium text-foreground">Session</p>
         <p className="mt-1 text-base text-foreground">

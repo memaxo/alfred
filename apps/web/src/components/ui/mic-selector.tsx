@@ -177,6 +177,14 @@ export function useAudioDevices() {
   const [hasPermission, setHasPermission] = useState(false);
 
   const loadDevicesWithoutPermission = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      setDevices([]);
+      setError("media_devices_unavailable");
+      setHasPermission(false);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -209,6 +217,19 @@ export function useAudioDevices() {
 
   const loadDevicesWithPermission = useCallback(async () => {
     if (loading) {
+      return;
+    }
+
+    if (
+      !(
+        navigator.mediaDevices?.getUserMedia &&
+        navigator.mediaDevices?.enumerateDevices
+      )
+    ) {
+      setDevices([]);
+      setError("media_devices_unavailable");
+      setHasPermission(false);
+      setLoading(false);
       return;
     }
 
@@ -260,6 +281,10 @@ export function useAudioDevices() {
         loadDevicesWithoutPermission();
       }
     };
+
+    if (!navigator.mediaDevices?.addEventListener) {
+      return;
+    }
 
     navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
 

@@ -16,6 +16,7 @@ export { AgentFSApp, AgentFSAppWindow } from "./agentfs";
 export { AgentsApp, AgentsAppWindow } from "./agents";
 export { ChatApp, ChatAppWindow } from "./chat";
 export { CodeApp, CodeAppWindow } from "./code";
+export { ComponentsApp, ComponentsAppWindow } from "./components";
 export { CortexApp, CortexAppWindow } from "./cortex";
 export { DockerApp, DockerAppWindow } from "./docker";
 // Knowledge & Integration Apps

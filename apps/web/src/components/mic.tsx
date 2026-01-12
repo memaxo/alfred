@@ -5,55 +5,29 @@
  * Microphone input selection for voice recording
  */
 
-import { Mic as MicIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  MicSelector,
+  type MicSelectorProps,
+} from "@/components/ui/mic-selector";
 
-type MicDevice = {
-  id: string;
-  label: string;
-};
-
-type MicProps = {
-  devices: MicDevice[];
-  selected: string;
-  onSelect: (deviceId: string) => void;
-  isRecording: boolean;
-  onToggleRecord: () => void;
-  className?: string;
-};
+export type MicProps = MicSelectorProps;
 
 export function Mic({
-  devices,
-  selected,
-  onSelect,
-  isRecording,
-  onToggleRecord,
+  value,
+  onValueChange,
+  muted,
+  onMutedChange,
+  disabled,
   className,
 }: MicProps) {
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex flex-wrap gap-2">
-        {devices.map((device) => (
-          <Button
-            key={device.id}
-            onClick={() => onSelect(device.id)}
-            size="sm"
-            variant={selected === device.id ? "default" : "outline"}
-          >
-            {device.label}
-          </Button>
-        ))}
-      </div>
-      <Button
-        className="w-full"
-        onClick={onToggleRecord}
-        size="lg"
-        variant={isRecording ? "destructive" : "default"}
-      >
-        <MicIcon className="mr-2 size-4" />
-        {isRecording ? "Stop Recording" : "Start Recording"}
-      </Button>
-    </div>
+    <MicSelector
+      className={className}
+      disabled={disabled}
+      muted={muted}
+      onMutedChange={onMutedChange}
+      onValueChange={onValueChange}
+      value={value}
+    />
   );
 }

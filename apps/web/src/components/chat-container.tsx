@@ -36,6 +36,7 @@ import { Connect } from "./connect";
 import { Controls } from "./controls";
 import { ErrorBoundary } from "./error-boundary";
 import { Load } from "./load";
+import { Queue } from "./queue";
 
 export type ChatContainerProps = {
   agent?: "assistant" | "orchestrator";
@@ -100,6 +101,17 @@ export function ChatContainer({
         onAddToolApprovalResponse: addToolApprovalResponse,
       }),
     [addToolApprovalResponse]
+  );
+
+  const queueItems = useMemo(
+    () =>
+      activeActions.map((action) => ({
+        id: action.id,
+        title: action.name,
+        priority:
+          action.status === "running" ? ("high" as const) : ("medium" as const),
+      })),
+    [activeActions]
   );
 
   const handleFeedbackIntent = useCallback(
@@ -275,6 +287,14 @@ export function ChatContainer({
                 isLoading={focused.isLoading}
                 label={focused.label}
                 ragDocuments={focused.ragDocuments}
+                runtimeContext={
+                  focused.content
+                    ? {
+                        nodeType: focused.nodeType,
+                        contentPreview: focused.content.slice(0, 500),
+                      }
+                    : { nodeType: focused.nodeType }
+                }
               />
             )}
             {activeActions.length > 0 && (
@@ -316,6 +336,7 @@ export function ChatContainer({
             {activeActions.length > 0 && (
               <div className="border-t lg:w-80 lg:border-t-0 lg:border-l xl:w-96">
                 <div className="h-full overflow-auto p-4">
+                  <Queue items={queueItems} />
                   <Actions actions={actions} />
                 </div>
               </div>

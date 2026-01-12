@@ -26,6 +26,8 @@ import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
 import { Route as ProtectedDriveRouteImport } from './routes/_protected/drive'
 import { Route as ProtectedBookRouteImport } from './routes/_protected/book'
+import { Route as ProtectedComponentsRouteImport } from './routes/_protected/components'
+import { Route as ProtectedComponentsNameRouteImport } from './routes/_protected/components.$name'
 import { Route as ProtectedAdminRouteImport } from './routes/_protected/admin'
 import { Route as ProtectedAdminIndexRouteImport } from './routes/_protected/admin/index'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
@@ -129,6 +131,16 @@ const ProtectedDriveRoute = ProtectedDriveRouteImport.update({
 const ProtectedBookRoute = ProtectedBookRouteImport.update({
   id: '/book',
   path: '/book',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedComponentsRoute = ProtectedComponentsRouteImport.update({
+  id: '/components',
+  path: '/components',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedComponentsNameRoute = ProtectedComponentsNameRouteImport.update({
+  id: '/components/$name',
+  path: '/components/$name',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedAdminRoute = ProtectedAdminRouteImport.update({
@@ -244,6 +256,8 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof ProtectedAdminRouteWithChildren
   '/book': typeof ProtectedBookRoute
+  '/components': typeof ProtectedComponentsRoute
+  '/components/$name': typeof ProtectedComponentsNameRoute
   '/drive': typeof ProtectedDriveRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
@@ -281,6 +295,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/book': typeof ProtectedBookRoute
+  '/components': typeof ProtectedComponentsRoute
+  '/components/$name': typeof ProtectedComponentsNameRoute
   '/drive': typeof ProtectedDriveRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
@@ -321,6 +337,8 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/_protected/admin': typeof ProtectedAdminRouteWithChildren
   '/_protected/book': typeof ProtectedBookRoute
+  '/_protected/components': typeof ProtectedComponentsRoute
+  '/_protected/components/$name': typeof ProtectedComponentsNameRoute
   '/_protected/drive': typeof ProtectedDriveRoute
   '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
   '/_protected/timer': typeof ProtectedTimerRoute
@@ -361,6 +379,8 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/admin'
     | '/book'
+    | '/components'
+    | '/components/$name'
     | '/drive'
     | '/settings'
     | '/timer'
@@ -397,6 +417,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/book'
+    | '/components'
+    | '/components/$name'
     | '/drive'
     | '/settings'
     | '/timer'
@@ -584,6 +606,20 @@ declare module '@tanstack/react-router' {
       path: '/timer'
       fullPath: '/timer'
       preLoaderRoute: typeof ProtectedTimerRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/components': {
+      id: '/_protected/components'
+      path: '/components'
+      fullPath: '/components'
+      preLoaderRoute: typeof ProtectedComponentsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/components/$name': {
+      id: '/_protected/components/$name'
+      path: '/components/$name'
+      fullPath: '/components/$name'
+      preLoaderRoute: typeof ProtectedComponentsNameRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/settings': {
@@ -788,6 +824,8 @@ const ProtectedSettingsRouteWithChildren =
 interface ProtectedRouteChildren {
   ProtectedAdminRoute: typeof ProtectedAdminRouteWithChildren
   ProtectedBookRoute: typeof ProtectedBookRoute
+  ProtectedComponentsRoute: typeof ProtectedComponentsRoute
+  ProtectedComponentsNameRoute: typeof ProtectedComponentsNameRoute
   ProtectedDriveRoute: typeof ProtectedDriveRoute
   ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
   ProtectedTimerRoute: typeof ProtectedTimerRoute
@@ -800,6 +838,8 @@ interface ProtectedRouteChildren {
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedAdminRoute: ProtectedAdminRouteWithChildren,
   ProtectedBookRoute: ProtectedBookRoute,
+  ProtectedComponentsRoute: ProtectedComponentsRoute,
+  ProtectedComponentsNameRoute: ProtectedComponentsNameRoute,
   ProtectedDriveRoute: ProtectedDriveRoute,
   ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
   ProtectedTimerRoute: ProtectedTimerRoute,

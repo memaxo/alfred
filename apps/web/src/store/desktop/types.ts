@@ -42,6 +42,7 @@ export type WindowType =
   | "project"
   // Tier 4: Productivity & Settings
   | "settings"
+  | "components"
   | "notes"
   | "reminders"
   | "todos"
@@ -520,6 +521,10 @@ export const WINDOW_DEFAULTS: Record<
   settings: {
     minSize: { width: 400, height: 400 },
     defaultBounds: { x: 200, y: 100, width: 500, height: 500 },
+  },
+  components: {
+    minSize: { width: 500, height: 400 },
+    defaultBounds: { x: 140, y: 90, width: 900, height: 650 },
   },
   notes: {
     minSize: { width: 300, height: 300 },

@@ -1,4 +1,5 @@
 import { AlertTriangle, BookOpen, Info, Network, Sparkles } from "lucide-react";
+import { Ctx } from "@/components/ctx";
 import {
   Popover,
   PopoverContent,
@@ -12,6 +13,7 @@ export function ContextLens({
   isLoading,
   isError,
   contextSnapshot,
+  runtimeContext,
 }: {
   label: string;
   ragDocuments: Array<{
@@ -26,6 +28,7 @@ export function ContextLens({
     summary?: string;
     timestamp: Date;
   } | null;
+  runtimeContext?: Record<string, unknown> | null;
 }) {
   // Determine trigger appearance
   let Icon = Info;
@@ -159,6 +162,14 @@ export function ContextLens({
               ))}
             </div>
           )}
+          {runtimeContext && Object.keys(runtimeContext).length > 0 ? (
+            <div className="mt-3">
+              <Ctx
+                className="border-white/10 bg-white/5"
+                runtimeContext={runtimeContext}
+              />
+            </div>
+          ) : null}
         </div>
       </PopoverContent>
     </Popover>

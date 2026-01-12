@@ -78,6 +78,10 @@ function generateSpawnActions(): DesktopAction[] {
     metrics: { aliases: ["stats", "analytics", "performance"] },
     rag: { aliases: ["retrieval", "vector", "search"] },
     linear: { aliases: ["ticket", "issue", "project"] },
+    components: {
+      shortcut: "K",
+      aliases: ["manifest", "ui", "blocks", "demo"],
+    },
     notes: { aliases: ["notes-app", "notepad"] },
     reminders: { aliases: ["alarms", "notifications", "alerts"] },
     todos: { aliases: ["tasks-app", "checklist-app"] },

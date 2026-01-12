@@ -6,12 +6,13 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Save, User } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Autocomplete, type AutocompleteItem } from "@/components/autocomplete";
+import { Input } from "@/components/text";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Breadcrumb, type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/utils/trpc";
 
@@ -27,6 +28,17 @@ export const Route = createFileRoute("/_protected/settings/profile")({
 export function ProfileSettingsPage() {
   const utils = trpc.useUtils();
   const { data: profile, isLoading } = trpc.profile.get.useQuery();
+
+  const timezoneItems: AutocompleteItem[] = useMemo(() => {
+    const supportedValuesOf = (
+      Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+    ).supportedValuesOf;
+    const tz =
+      typeof supportedValuesOf === "function"
+        ? supportedValuesOf("timeZone")
+        : [];
+    return tz.map((value) => ({ value, label: value, keywords: [value] }));
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -153,14 +165,26 @@ export function ProfileSettingsPage() {
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="profile-timezone">Timezone</Label>
-            <Input
-              id="profile-timezone"
-              onChange={(e) =>
-                setFormData({ ...formData, timezone: e.target.value })
-              }
-              placeholder="UTC, America/New_York, etc."
-              value={formData.timezone}
-            />
+            {timezoneItems.length > 0 ? (
+              <Autocomplete
+                items={timezoneItems}
+                onValueChange={(timezone) =>
+                  setFormData({ ...formData, timezone })
+                }
+                placeholder="Select a timezone…"
+                searchPlaceholder="Search timezones…"
+                value={formData.timezone}
+              />
+            ) : (
+              <Input
+                id="profile-timezone"
+                onChange={(e) =>
+                  setFormData({ ...formData, timezone: e.target.value })
+                }
+                placeholder="UTC, America/New_York, etc."
+                value={formData.timezone}
+              />
+            )}
             <p className="text-biolum-faint text-xs">
               Used for scheduling and contextual reminders.
             </p>

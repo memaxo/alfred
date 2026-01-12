@@ -22,19 +22,23 @@ import {
   type ToolResultPart,
 } from "@alfred/ui/chat/parts";
 import type { ReactNode } from "react";
-import {
-  Tool,
-  ToolActions,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "./ai-elements/tool";
+import { Artifact } from "./artifact";
+import { Branch } from "./branch";
+import { Canvas } from "./canvas";
 import { Cite } from "./cite";
 import { Code } from "./code";
+import { Confirm } from "./confirm";
+import { Edge } from "./edge";
+import { Node } from "./node";
+import { Panel } from "./panel";
 import { Plan } from "./plan";
+import { Preview } from "./preview";
+import { Queue } from "./queue";
+import { Response as MarkdownResponse } from "./response";
 import { Task } from "./task";
 import { Think } from "./think";
+import { Thought } from "./thought";
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "./tool";
 
 type TaskData = {
   id: string;
@@ -122,6 +126,195 @@ function isThinkData(data: unknown): data is Array<{
   );
 }
 
+function isBranchData(data: unknown): data is {
+  branches: Array<{
+    id: string;
+    label: string;
+    reasoning: string;
+    selected?: boolean;
+  }>;
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  const branches = obj.branches;
+  return (
+    Array.isArray(branches) &&
+    branches.every(
+      (branch) =>
+        branch &&
+        typeof branch === "object" &&
+        typeof (branch as Record<string, unknown>).id === "string" &&
+        typeof (branch as Record<string, unknown>).label === "string" &&
+        typeof (branch as Record<string, unknown>).reasoning === "string"
+    )
+  );
+}
+
+function isThoughtData(data: unknown): data is {
+  thoughts: Array<{
+    id: string;
+    step: number;
+    thought: string;
+    evidence?: string[];
+  }>;
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  const thoughts = obj.thoughts;
+  return (
+    Array.isArray(thoughts) &&
+    thoughts.every(
+      (thought) =>
+        thought &&
+        typeof thought === "object" &&
+        typeof (thought as Record<string, unknown>).id === "string" &&
+        typeof (thought as Record<string, unknown>).step === "number" &&
+        typeof (thought as Record<string, unknown>).thought === "string"
+    )
+  );
+}
+
+function isQueueData(data: unknown): data is {
+  items: Array<{
+    id: string;
+    title: string;
+    priority: "low" | "medium" | "high";
+  }>;
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  const items = obj.items;
+  return (
+    Array.isArray(items) &&
+    items.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        typeof (item as Record<string, unknown>).id === "string" &&
+        typeof (item as Record<string, unknown>).title === "string" &&
+        typeof (item as Record<string, unknown>).priority === "string"
+    )
+  );
+}
+
+function isPreviewData(data: unknown): data is {
+  url: string;
+  title: string;
+  status: "preview" | "active" | "failed";
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  const status = obj.status;
+  return (
+    typeof obj.url === "string" &&
+    typeof obj.title === "string" &&
+    (status === "preview" || status === "active" || status === "failed")
+  );
+}
+
+function isArtifactData(data: unknown): data is {
+  name: string;
+  path: string;
+  kind: "file" | "directory" | "code";
+  size?: number;
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  const kind = obj.kind;
+  return (
+    typeof obj.name === "string" &&
+    typeof obj.path === "string" &&
+    (kind === "file" || kind === "directory" || kind === "code")
+  );
+}
+
+function isPanelData(
+  data: unknown
+): data is { title: string; content?: string } {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.title === "string" &&
+    (obj.content === undefined || typeof obj.content === "string")
+  );
+}
+
+function isNodeData(data: unknown): data is {
+  id: string;
+  label: string;
+  type: "task" | "decision" | "action";
+  status: "pending" | "running" | "completed" | "error";
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  const type = obj.type;
+  const status = obj.status;
+  return (
+    typeof obj.id === "string" &&
+    typeof obj.label === "string" &&
+    (type === "task" || type === "decision" || type === "action") &&
+    (status === "pending" ||
+      status === "running" ||
+      status === "completed" ||
+      status === "error")
+  );
+}
+
+function isEdgeData(data: unknown): data is {
+  from: string;
+  to: string;
+  label?: string;
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.from === "string" &&
+    typeof obj.to === "string" &&
+    (obj.label === undefined || typeof obj.label === "string")
+  );
+}
+
+function isCanvasData(data: unknown): data is {
+  nodes: Array<{
+    id: string;
+    label: string;
+    type: "task" | "decision" | "action";
+    status: "pending" | "running" | "completed" | "error";
+  }>;
+  edges?: Array<{ from: string; to: string; label?: string }>;
+} {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+  const nodes = obj.nodes;
+  const edges = obj.edges;
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    return false;
+  }
+  const nodesOk = nodes.every((node) => isNodeData(node));
+  const edgesOk =
+    edges === undefined ||
+    (Array.isArray(edges) && edges.every((edge) => isEdgeData(edge)));
+  return nodesOk && edgesOk;
+}
+
 type AssistantPart = AssistantUIMessage["parts"][number];
 
 type PartRenderer = (
@@ -164,11 +357,95 @@ const dataPartRenderers: PartRenderer[] = [
     renderStructuredPart(part, "think", (data) =>
       isThinkData(data) ? <Think reasoning={data} /> : null
     ),
+  (part) =>
+    renderStructuredPart(part, "branch", (data) =>
+      isBranchData(data) ? <Branch branches={data.branches} /> : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "thought", (data) =>
+      isThoughtData(data) ? <Thought thoughts={data.thoughts} /> : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "queue", (data) =>
+      isQueueData(data) ? <Queue items={data.items} /> : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "preview", (data) =>
+      isPreviewData(data) ? (
+        <Preview status={data.status} title={data.title} url={data.url} />
+      ) : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "artifact", (data) =>
+      isArtifactData(data) ? (
+        <Artifact
+          kind={data.kind}
+          name={data.name}
+          path={data.path}
+          size={data.size}
+        />
+      ) : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "panel", (data) =>
+      isPanelData(data) ? (
+        <Panel title={data.title}>{data.content ?? null}</Panel>
+      ) : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "node", (data) =>
+      isNodeData(data) ? (
+        <Node
+          id={data.id}
+          label={data.label}
+          status={data.status}
+          type={data.type}
+        />
+      ) : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "edge", (data) =>
+      isEdgeData(data) ? (
+        <Edge from={data.from} label={data.label} to={data.to} />
+      ) : null
+    ),
+  (part) =>
+    renderStructuredPart(part, "canvas", (data) =>
+      isCanvasData(data) ? (
+        <Canvas>
+          <div className="flex flex-wrap gap-6">
+            <div className="space-y-3">
+              {data.nodes.map((node) => (
+                <Node
+                  id={node.id}
+                  key={node.id}
+                  label={node.label}
+                  status={node.status}
+                  type={node.type}
+                />
+              ))}
+            </div>
+            {data.edges && data.edges.length > 0 ? (
+              <div className="flex flex-1 flex-col gap-2">
+                {data.edges.map((edge, idx) => (
+                  <Edge
+                    from={edge.from}
+                    key={`${edge.from}-${edge.to}-${idx}`}
+                    label={edge.label}
+                    to={edge.to}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </Canvas>
+      ) : null
+    ),
 ];
 
 function renderText(part: AssistantPart): ReactNode | null {
   if (isTextPart(part)) {
-    return <div className="whitespace-pre-wrap">{part.text}</div>;
+    return <MarkdownResponse>{part.text}</MarkdownResponse>;
   }
   return null;
 }
@@ -293,20 +570,22 @@ function renderToolInvocation(
         {state === "approval-requested" &&
         approvalId &&
         handlers?.onAddToolApprovalResponse ? (
-          <ToolActions
-            onApprove={() =>
-              handlers.onAddToolApprovalResponse?.({
-                id: approvalId,
-                approved: true,
-              })
-            }
-            onDeny={() =>
+          <Confirm
+            description="This tool invocation requires explicit approval."
+            onCancel={() =>
               handlers.onAddToolApprovalResponse?.({
                 id: approvalId,
                 approved: false,
               })
             }
-            state="approval-requested"
+            onConfirm={() =>
+              handlers.onAddToolApprovalResponse?.({
+                id: approvalId,
+                approved: true,
+              })
+            }
+            requireBio={true}
+            title={`Approve: ${title}`}
           />
         ) : null}
         {state === "output-available" && output !== undefined ? (
