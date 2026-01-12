@@ -1,19 +1,16 @@
 name: Cursor Automation
 
-"on":
+on:
   pull_request:
     types: [opened, synchronize]
   workflow_run:
     workflows: ["CI"]
     types: [completed]
 
-env:
-  CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-
 jobs:
   code-review:
     name: AI Code Review
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request != null && github.event.pull_request.head.repo.full_name == github.repository && env.CURSOR_API_KEY != '' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request != null && github.event.pull_request.head.repo.full_name == github.repository && secrets.CURSOR_API_KEY != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,7 +28,7 @@ jobs:
           command -v cursor-agent || command -v cursor
       - name: Run Code Review
         env:
-          CURSOR_API_KEY: ${{ env.CURSOR_API_KEY }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
           if command -v cursor-agent >/dev/null 2>&1; then
             cursor-agent \
@@ -70,7 +67,7 @@ jobs:
 
   autofix-ci:
     name: Auto-fix CI Failures
-    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run != null && github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_repository.full_name == github.repository && env.CURSOR_API_KEY != '' }}
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run != null && github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_repository.full_name == github.repository && secrets.CURSOR_API_KEY != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -89,7 +86,7 @@ jobs:
           command -v cursor-agent || command -v cursor || true
       - name: Attempt Auto-fix
         env:
-          CURSOR_API_KEY: ${{ env.CURSOR_API_KEY }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
           export PATH="$HOME/.local/bin:$HOME/.cursor/bin:$PATH"
           if command -v cursor-agent >/dev/null 2>&1; then
@@ -124,7 +121,7 @@ jobs:
 
   update-docs:
     name: Update Documentation
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request != null && contains(github.event.pull_request.labels.*.name, 'docs:update') && github.event.pull_request.head.repo.full_name == github.repository && env.CURSOR_API_KEY != '' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request != null && contains(github.event.pull_request.labels.*.name, 'docs:update') && github.event.pull_request.head.repo.full_name == github.repository && secrets.CURSOR_API_KEY != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -138,7 +135,7 @@ jobs:
           command -v cursor-agent || command -v cursor
       - name: Update Docs
         env:
-          CURSOR_API_KEY: ${{ env.CURSOR_API_KEY }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
           if command -v cursor-agent >/dev/null 2>&1; then
             cursor-agent \
