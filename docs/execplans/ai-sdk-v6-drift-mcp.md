@@ -15,11 +15,11 @@ Additionally, ALFRED will gain first-class “outbound MCP” integration: a use
 ## Progress
 
 - [x] (2026-01-10) Confirmed AI SDK v6 tool approval semantics and MCP client API shape via v6 documentation research.
-- [ ] Add explicit AI SDK v6 error handling spec + tests (completed: none; remaining: classify + map + tests across web stream + tRPC + runtime).
-- [ ] Fix web approval UI to track AI SDK v6 tool invocation state (completed: none; remaining: all UI + schema changes + tests).
-- [ ] Fix web “approval response” wiring to use the correct v6 mechanism (completed: none; remaining: hook API + transport path + tests).
-- [ ] Implement outbound MCP client integration (completed: none; remaining: storage + server module + tool merging + tests).
-- [ ] Implement optional AI SDK v6 DevTools + Telemetry wiring behind env flags (completed: none; remaining: model wrapping + docs + tests).
+- [x] (2026-01-10) Add explicit AI SDK v6 error handling spec + tests (classifier + web/tRPC/runtime wiring + per-error mapping tests).
+- [x] (2026-01-10) Fix web approval UI to track AI SDK v6 tool invocation state (schema accepts `tool-*` + renderer gates approval UI on real `state`).
+- [x] (2026-01-10) Fix web “approval response” wiring to use the correct v6 mechanism (hook delegates to `chat.addToolApprovalResponse`, renderer uses `approval.id`, integration tests prove approve/deny gates execution).
+- [x] (2026-01-10) Implement outbound MCP client integration (DB storage + agent MCP tool loader + tool merging in stream handler + settings UI + tests).
+- [x] (2026-01-10) Implement optional AI SDK v6 DevTools + Telemetry wiring behind env flags (model wrapping in selector + per-call `experimental_telemetry` gates + docs + tests).
 
 ## Surprises & Discoveries
 
@@ -32,6 +32,12 @@ Additionally, ALFRED will gain first-class “outbound MCP” integration: a use
 - Observation: ALFRED already supports “inbound MCP” OAuth (ALFRED as an OAuth provider for MCP clients), but does not currently implement “outbound MCP” (ALFRED connecting to external MCP servers and importing their tools).
   Evidence: `docs/guides/mcp-integration.md` and `packages/auth/src/index.ts` document and implement OIDC Provider + scopes for MCP clients, but no `@ai-sdk/mcp` usage exists in `packages/*`.
 
+- Discovery: Not all AI SDK error classes expose `static isInstance` (e.g. `AI_NoSpeechGeneratedError` in `ai`), so classifier logic must fall back to `error.name` for some v6 errors.
+  Evidence: `node_modules/ai/dist/index.mjs` defines `NoSpeechGeneratedError` without an `isInstance` helper.
+
+- Discovery: When resuming an in-progress assistant message (e.g. after tool approval), `readUIMessageStream` must be seeded with the prior `message` so tool output deltas can apply to the existing tool invocation skeleton.
+  Evidence: `apps/web/src/lib/api/__tests__/stream-handler.approval.integration.test.ts` uses `readUIMessageStream({ stream, message: approvedAssistant })` to deterministically observe the `output-available` transition.
+
 ## Decision Log
 
 - Decision: Fix tool approval UX by aligning with AI SDK v6’s tool approval surface (approval-requested state + explicit approval response API), rather than inventing ALFRED-specific approval UI semantics.
@@ -42,9 +48,41 @@ Additionally, ALFRED will gain first-class “outbound MCP” integration: a use
   Rationale: This preserves ALFRED’s existing tool policy/security model while enabling heterogeneous MCP servers. It also avoids import-time network connections and keeps streaming endpoints stable.
   Date/Author: 2026-01-10 / assistant
 
+- Decision: Map `AI_InvalidToolInputError` to HTTP `422` (unprocessable entity) and stable code `ai_invalid_tool_input`.
+  Rationale: Tool input failures are structurally valid requests whose tool payload fails schema validation; `422` communicates “well-formed but semantically invalid” better than a generic `400`.
+  Date/Author: 2026-01-10 / assistant
+
+- Decision: Map `AI_UnsupportedFunctionalityError` to HTTP `501` (not implemented) and stable code `ai_unsupported`.
+  Rationale: When the selected model/provider cannot support a requested feature, `501` communicates a capability gap without implying user input is malformed.
+  Date/Author: 2026-01-10 / assistant
+
+- Decision: Store outbound MCP bearer tokens as environment variable references (not raw token strings) and default imported MCP tools to `needsApproval: true`.
+  Rationale: This keeps secrets out of the database and ensures external tool execution is gated by explicit user approval by default.
+  Date/Author: 2026-01-10 / assistant
+
+- Decision: Defer outbound MCP OAuth client support (HTTP/SSE + bearer auth only in this implementation).
+  Rationale: A correct OAuth client provider requires token storage/refresh semantics and careful UX/security review; bearer/env provides a safe minimal path that unblocks MCP tool import.
+  Date/Author: 2026-01-10 / assistant
+
+- Decision: Enable AI SDK `experimental_telemetry` only when `AI_TELEMETRY=1`, and default `recordInputs=false` / `recordOutputs=false` for privacy.
+  Rationale: OpenTelemetry exports are valuable for ops, but ALFRED’s prompts and outputs may contain sensitive personal data.
+  Date/Author: 2026-01-10 / assistant
+
 ## Outcomes & Retrospective
 
-(Fill at completion.)
+- Outcome: Web UI approval controls now map to AI SDK v6 tool approval semantics (no speculative approve/deny UI; approval requests round-trip via `chat.addToolApprovalResponse`).
+  Evidence: `apps/web/src/hooks/use-assistant-stream.ts`, `apps/web/src/components/chat-render.tsx`, `apps/web/src/components/chat-container.tsx`.
+
+- Outcome: End-to-end approval gating is covered by deterministic streaming tests (approve executes tool; deny does not execute tool and surfaces a terminal tool state).
+  Evidence: `apps/web/src/lib/api/__tests__/stream-handler.approval.integration.test.ts`.
+
+- Outcome: Outbound MCP is now first-class (config in DB, settings UI, namespaced tool import and safe-by-default approval gating).
+  Evidence: `packages/db/src/migrations/0081_mcp.sql`, `packages/agent/src/mcp.ts`, `packages/api/src/routers/mcp.ts`, `apps/web/src/routes/_protected/settings/mcp.tsx`, `apps/web/src/lib/api/stream-handler.ts`.
+
+- Outcome: DevTools and telemetry are opt-in via env vars and do not impact production by default.
+  Evidence: `packages/agent/src/selector.ts`, `docs/reference/ai-devtools.md`, `config/env.example`.
+
+- Retrospective: Keeping v6 semantics “library-first” (tool parts + approvals + error types) reduced drift and made it easier to add MCP as just another tool source. The main deferred follow-up is outbound MCP OAuth client support (token storage/refresh + UX).
 
 ## Context and Orientation
 
@@ -364,4 +402,3 @@ All changes should be additive and safe to run multiple times:
 - DB migrations should be forward-only and idempotent in application.
 - MCP connections must be cleaned up (client closed) even on abort/error.
 - Feature flags (DevTools/telemetry) must default to off and must not cause import-time work.
-

@@ -53,8 +53,8 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
   Evidence: `mindscape.workflow-route.test.tsx` at 2025-12-15 01:42Z failed with "window.cancelAnimationFrame is not a function" until `dom.ts` added window.* polyfills.
 - Observation: The `useVoiceSessionWeb` hook returns a `stream` object that components destructure directly; tests must include this in mocks.
   Evidence: `voice-s2s.route.test.tsx` at 2025-12-15 01:43Z failed with "undefined is not an object (evaluating 'stream.analyser')" until the mock included the stream object.
-- Observation: AI SDK v6's `validateUIMessages` export creates circular dependency issues when importing through the agent-stream-handler chain in tests.
-  Evidence: `assistant-agent/integration.test.ts` at 2025-12-15 01:43Z failed with "Export named 'buildTools' not found" and then "Export named 'validateUIMessages' not found"; skipped pending proper mock chain fix.
+- Observation: AI SDK v6's `validateUIMessages` export created circular dependency issues when importing through the legacy `assistant-agent` streaming handler chain in tests.
+  Evidence: `assistant-agent/integration.test.ts` at 2025-12-15 01:43Z failed with "Export named 'buildTools' not found" and then "Export named 'validateUIMessages' not found" (route/handler removed 2026-01-10 in favor of the unified `stream-handler` tests).
 
 ## Decision Log
 
@@ -104,7 +104,7 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
   Rationale: Server functions rely on AsyncLocalStorage context that isn't available in test environments.
   Date/Author: 2025-12-15 / Agent
 - Decision: Skip `assistant-agent/integration.test.ts` pending proper AI SDK mock chain fix.
-  Rationale: The test's module import chain triggers AI SDK circular dependencies; fixing requires comprehensive mock of all AI SDK exports.
+  Rationale: The test's module import chain triggers AI SDK circular dependencies; fixing requires comprehensive mock of all AI SDK exports (superseded by removal of `/api/assistant-agent` + legacy handler on 2026-01-10).
   Date/Author: 2025-12-15 / Agent
 
 ## Outcomes & Retrospective
@@ -120,11 +120,11 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 
 **Test Results:**
 - 6 passing tests (voice admin, voice s2s, mindscape workflow navigation)
-- 15 skipped tests (E2E tests requiring database, assistant-agent integration)
+- 15 skipped tests (E2E tests requiring database, assistant-agent integration; removed 2026-01-10)
 - 0 failing tests
 
 **What Remains:**
-- `assistant-agent/integration.test.ts` needs proper AI SDK mock chain to run
+- `assistant-agent/integration.test.ts` needed proper AI SDK mock chain to run (file removed 2026-01-10; see `apps/web/src/lib/api/__tests__/stream-handler.*.test.ts` for current coverage)
 - E2E tests require `RUN_DB_TESTS=1` environment variable and PostgreSQL to execute
 - Original smoke tests from Milestone 1 appear to have been relocated or refactored
 

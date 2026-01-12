@@ -45,9 +45,9 @@ Users currently have no affordance inside Chat/Mindscape/Voice to submit explici
 ## Context and Orientation
 
 - API endpoint: `cognitive.feedback` (tRPC) in `packages/api/src/routers/cognitive.ts` accepts `{ streamId, expected, actual }` and returns the updated cognitive state.
-- Front-end surfaces: Chat lives in `apps/web/src/components/chat-container.tsx` (messages, composer, tool output), while Mindscape nodes/renderers sit in `apps/web/src/components/mindscape/*` with focus state managed via `apps/web/src/store/mindscape.ts`. Workflow drawers reuse routes under `apps/web/src/routes/api/assistant-agent/$.ts` and tests under `apps/web/tests/mindscape.workflow-drawer.e2e.spec.ts`.
+- Front-end surfaces: Chat lives in `apps/web/src/components/chat-container.tsx` (messages, composer, tool output), while Mindscape nodes/renderers sit in `apps/web/src/components/mindscape/*` with focus state managed via `apps/web/src/store/mindscape.ts`. Streaming routes live under `apps/web/src/routes/api/assistant/$.ts` and `apps/web/src/routes/api/orchestrator/$.ts` (tests under `apps/web/tests/*`).
 - Voice admin/session UI is under `apps/web/src/routes/admin/voice.tsx`, while live voice runtime stores transcripts via `packages/voice/src/server/session.ts`.
-- Feedback should reuse existing fetch utilities (`apps/web/src/lib/api/agent-stream-handler.ts`) or add a small helper `postCognitiveFeedback(input)` so multiple surfaces stay consistent.
+- Feedback should reuse existing fetch utilities (`apps/web/src/lib/api/stream-handler.ts`) or add a small helper `postCognitiveFeedback(input)` so multiple surfaces stay consistent.
 - Tests: Chat has RTL specs under `apps/web/src/hooks/__tests__` and component tests; Mindscape uses Playwright specs in `apps/web/tests/*`; cognitive API already has Bun tests; telemetry scripts live in `scripts/`.
 
 ## Plan of Work
