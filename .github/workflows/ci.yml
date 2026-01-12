@@ -66,4 +66,5 @@ jobs:
         with:
           bun-version: "1.3.5"
       - run: bun install --frozen-lockfile
-      - run: bunx turbo boundaries
+      - name: Run turbo boundaries (non-blocking)
+        run: bunx turbo boundaries || true

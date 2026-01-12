@@ -17,4 +17,4 @@ jobs:
       - uses: rharkor/caching-for-turbo@v1.7
       - run: bun install --frozen-lockfile
       - name: Run slow tests
-        run: bun run test:slow
+        run: bun run test:slow:ci

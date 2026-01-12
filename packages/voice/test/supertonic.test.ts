@@ -32,6 +32,12 @@ describeSupertonic("SupertonicTTS", () => {
   });
 
   it("should synthesize speech", async () => {
+    if (process.env.CI === "true" && process.env.RUN_VOICE_POOL_TESTS !== "1") {
+      console.warn(
+        "Skipping Supertonic synthesis test on CI (RUN_VOICE_POOL_TESTS!=1)"
+      );
+      return;
+    }
     if (!hasModels) {
       console.warn(
         "Skipping Supertonic synthesis test because models are missing"

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { voiceAssistantDurationSeconds, voiceAssistantTotal } from "../metrics";
 
 // Mock opus BEFORE imports that might use it
 // Note: This must be done before any imports that transitively import @discordjs/opus
@@ -32,11 +31,12 @@ mock.module(
 
 import type { ServerWebSocket } from "bun";
 import type { VoiceRegistry } from "./registry";
-import {
-  type VoiceSocketData,
-  VoiceSocketHandler,
-  type VoiceSocketHooks,
-} from "./socket";
+import type { VoiceSocketData, VoiceSocketHooks } from "./socket";
+
+const { voiceAssistantDurationSeconds, voiceAssistantTotal } = await import(
+  "../metrics"
+);
+const { VoiceSocketHandler } = await import("./socket");
 
 // Mock dependencies
 const mockSession = {
@@ -94,6 +94,9 @@ describe("VoiceSocketHandler", () => {
     handler = new VoiceSocketHandler(mockManager, mockHooks);
     ws = createMockWs();
     // Reset mocks
+    (mockManager.createSession as any).mockClear();
+    (mockManager.getSession as any).mockClear();
+    (mockManager.removeSession as any).mockClear();
     (mockSession.processAudioChunk as any).mockClear();
     (mockSession.streamSynthesis as any).mockClear();
     (mockHooks.runAssistant as any).mockClear();

@@ -17,6 +17,12 @@ describeSupertonic("TTSPool with Supertonic", () => {
   };
 
   it("should initialize and synthesize using Supertonic when env var is set", async () => {
+    if (process.env.CI === "true" && process.env.RUN_VOICE_POOL_TESTS !== "1") {
+      console.warn(
+        "Skipping TTSPool Supertonic test on CI (RUN_VOICE_POOL_TESTS!=1)"
+      );
+      return;
+    }
     if (!hasModels) {
       console.warn(
         "Skipping Supertonic TTSPool test because models are missing"

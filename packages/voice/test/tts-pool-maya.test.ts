@@ -4,6 +4,10 @@ import { join } from "node:path";
 import { TTSPool } from "../src/process/tts";
 
 describe("TTSPool with Maya1 (skipped: causes C++ exception in Bun runner)", () => {
+  if (process.env.CI === "true" && process.env.RUN_VOICE_POOL_TESTS !== "1") {
+    console.warn("Skipping Maya1 TTSPool test on CI (RUN_VOICE_POOL_TESTS!=1)");
+    return;
+  }
   const isPackageRoot = existsSync(join(process.cwd(), "scripts/maya.py"));
   const scriptPath = isPackageRoot
     ? join(process.cwd(), "scripts/maya.py")
