@@ -17,11 +17,11 @@ You can see it working by running ALFRED’s tests which cover:
 
 ## Progress
 
-- [ ] (2026-01-12) Canonicalize Codex tool entrypoint (remove duplicate; make all imports explicit and consistent).
-- [ ] (2026-01-12) Implement ACP filesystem operations for OpenCode (host + AgentFS container), with ALFRED security boundaries.
-- [ ] (2026-01-12) Integrate ACP thought/plan/diff events end-to-end (writer → tracker → workflow event stream).
-- [ ] (2026-01-12) Add missing tests and verification script(s) for OpenCode parity and no-regression coverage.
-- [ ] (2026-01-12) Run comprehensive validation: typecheck + targeted tests (unit/integration) and fix regressions.
+- [x] (2026-01-12) Canonicalize Codex tool entrypoint (remove duplicate; make all imports explicit and consistent).
+- [x] (2026-01-12) Implement ACP filesystem operations for OpenCode (host + AgentFS container), with ALFRED security boundaries.
+- [x] (2026-01-12) Integrate ACP thought/plan/diff events end-to-end (writer → tracker → workflow event stream).
+- [x] (2026-01-12) Add tests for ACP filesystem + thought/plan/diff mapping and update tracker tests after event type generalization.
+- [x] (2026-01-12) Run validation: workspace `typecheck` and targeted executor/runtime tests; fix regressions found.
 
 ## Surprises & Discoveries
 
@@ -43,7 +43,9 @@ You can see it working by running ALFRED’s tests which cover:
 
 ## Outcomes & Retrospective
 
-- Pending.
+- Completed: Codex now has a single canonical tool entrypoint, and the legacy duplicate was removed.
+- Completed: OpenCode ACP now has real filesystem read/write (host + container proxy), plus thought/plan/diff handling mapped into ALFRED events and artifacts.
+- Completed: Tracker events are executor-agnostic (`agent/*`), and runtime marks agents completed even when only notice events were emitted (fixes server-fallback regressions).
 
 ## Context and Orientation
 
@@ -55,7 +57,7 @@ ALFRED executor work happens in two layers:
 
 2) **Executor tools** implement execution:
 
-   - Codex: `packages/agent/src/orchestrator/tool/codex/` (modern) and `packages/agent/src/orchestrator/tool/codex.ts` (legacy duplicate, to be removed).
+   - Codex: `packages/agent/src/orchestrator/tool/codex/` (canonical).
    - OpenCode: `packages/agent/src/orchestrator/tool/opencode/` runs an ACP stdio backend, either host-spawned (default) or container-spawned (server).
 
 OpenCode’s ACP client surface is implemented inside `packages/agent/src/orchestrator/tool/opencode/exec.ts` via `ClientSideConnection`. This file currently stubs filesystem calls and only partially handles ACP session update events.
