@@ -140,6 +140,18 @@ export const assistantRouter = router({
           typeof input.maxSteps === "number"
             ? stepCountIs(input.maxSteps)
             : defaults.stopWhen;
+
+        const telemetry =
+          process.env.AI_TELEMETRY === "1"
+            ? {
+                experimental_telemetry: {
+                  isEnabled: true,
+                  functionId: "api.assistant.generate",
+                  recordInputs: false,
+                  recordOutputs: false,
+                },
+              }
+            : {};
         const result = await generateText({
           ...defaults,
           // @ts-expect-error - AI SDK model type needs manual assertion
@@ -147,6 +159,7 @@ export const assistantRouter = router({
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,
+          ...telemetry,
         });
         assistantGenerateRequestsTotal.inc({ status: "success" });
         stopTimer({ status: "success" });

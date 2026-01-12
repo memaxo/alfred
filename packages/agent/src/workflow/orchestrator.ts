@@ -354,7 +354,7 @@ export function orchestrateWorkflowStream(
           { projectId }
         ).catch((error) => {
           logger.warn("workflow_run_mirror_failed", {
-            runId,
+            runId: runId ?? undefined,
             error: error instanceof Error ? error.message : String(error),
           });
         });
@@ -626,7 +626,7 @@ export function orchestrateWorkflowStream(
         }
       } catch (error) {
         logger.warn("workflow_unregister_failed", {
-          runId,
+          runId: runId ?? undefined,
           error: error instanceof Error ? error.message : String(error),
         });
       }

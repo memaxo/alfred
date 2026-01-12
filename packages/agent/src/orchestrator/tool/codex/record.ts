@@ -304,7 +304,7 @@ export class CodexRunRecorder {
         });
       } catch (error) {
         logger.warn("codex_run_append_failed", {
-          runId: this.runId,
+          runId: this.runId ?? undefined,
           count: batch.length,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -353,7 +353,7 @@ export class CodexRunRecorder {
       })
       .catch((error) => {
         logger.warn("codex_run_finalize_failed", {
-          runId: this.runId,
+          runId: this.runId ?? undefined,
           error: error instanceof Error ? error.message : String(error),
         });
       });
@@ -384,7 +384,7 @@ export class CodexRunRecorder {
       })
       .catch((error) => {
         logger.warn("codex_run_finalize_failed", {
-          runId: this.runId,
+          runId: this.runId ?? undefined,
           error: error instanceof Error ? error.message : String(error),
         });
       });

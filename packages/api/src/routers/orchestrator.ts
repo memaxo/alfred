@@ -82,12 +82,24 @@ export const orchestratorRouter = router({
             ? stepCountIs(input.maxSteps)
             : defaults.stopWhen;
 
+        const telemetry =
+          process.env.AI_TELEMETRY === "1"
+            ? {
+                experimental_telemetry: {
+                  isEnabled: true,
+                  functionId: "api.orchestrator.generate",
+                  recordInputs: false,
+                  recordOutputs: false,
+                },
+              }
+            : {};
         const result = await generateText({
           ...defaults,
           model: selection.model,
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,
+          ...telemetry,
         });
         const output = sanitizeResult(result);
         const replayId = await persistResult({

@@ -246,12 +246,25 @@ export async function runAssistantForVoice(
     system: systemInstructions,
   });
 
+  const telemetry =
+    process.env.AI_TELEMETRY === "1"
+      ? {
+          experimental_telemetry: {
+            isEnabled: true,
+            functionId: "api.voice.assistant",
+            recordInputs: false,
+            recordOutputs: false,
+          },
+        }
+      : {};
+
   const assistantStart = performance.now();
   const result = await generateText({
     model,
     tools: defaults.tools,
     system: systemInstructions,
     messages: modelMessages,
+    ...telemetry,
   });
   const durationSeconds = (performance.now() - assistantStart) / 1000;
   const sanitized = sanitizeResult(result);

@@ -3,6 +3,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Obligation } from "@alfred/type";
 
+import "@alfred/test-kit/logger";
+
 const createMetricStub = () => ({
   inc: vi.fn(),
   dec: vi.fn(),
@@ -191,20 +193,6 @@ function applyMockPolicy(): void {
   }));
 }
 
-// Logger mock - commonly needed across all test files
-export const loggerStub = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-};
-
-function applyMockLogger(): void {
-  mock.module("@alfred/logger", () => ({
-    logger: loggerStub,
-  }));
-}
-
 // Workflow metrics from @alfred/agent - needed by workflow runner tests
 // Include all metrics that are re-exported from @alfred/api/metrics
 const workflowMetricsStub = {
@@ -239,7 +227,6 @@ function applyAllModuleMocks(): void {
   applyMockMetrics();
   applyMockAi();
   applyMockPolicy();
-  applyMockLogger();
   applyMockWorkflowMetrics();
 }
 

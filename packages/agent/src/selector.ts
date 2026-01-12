@@ -1,3 +1,4 @@
+import { devToolsMiddleware } from "@ai-sdk/devtools";
 import {
   type ModelRef,
   type ModelRole,
@@ -5,7 +6,7 @@ import {
   toModelKey,
 } from "@alfred/type/model";
 import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
-import type { LanguageModel } from "ai";
+import { type LanguageModel, wrapLanguageModel } from "ai";
 
 import * as prefLoader from "./preference/loader";
 import { getOpenAI } from "./v6";
@@ -148,7 +149,21 @@ function resolveRefSync(role: ModelRole): ModelRef {
 
 function buildSelection(ref: ModelRef): ModelSelection {
   const modelKey = toModelKey(ref);
-  const model = getOpenAI()(modelKey) as LanguageModel;
+  let model = getOpenAI()(modelKey) as LanguageModel;
+
+  if (
+    process.env.AI_DEVTOOLS === "1" &&
+    process.env.NODE_ENV !== "production"
+  ) {
+    model = wrapLanguageModel({
+      model: model as unknown as Parameters<
+        typeof wrapLanguageModel
+      >[0]["model"],
+      middleware: devToolsMiddleware() as unknown as Parameters<
+        typeof wrapLanguageModel
+      >[0]["middleware"],
+    }) as unknown as LanguageModel;
+  }
   return { model, modelKey };
 }
 

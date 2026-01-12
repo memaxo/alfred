@@ -15,7 +15,7 @@ let VoiceStreamAuthError: any;
 // Only setup mocks and imports when tests should run
 if (SHOULD_RUN) {
   await import("./utils/agent-mock");
-  const { policyStub, loggerStub: _ } = await import("./utils/mock-metrics");
+  const { policyStub } = await import("./utils/mock-metrics");
 
   getSessionMock = vi.fn();
   mock.module("@alfred/auth", () => ({

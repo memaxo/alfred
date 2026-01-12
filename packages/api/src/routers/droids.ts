@@ -248,9 +248,9 @@ async function consumeResumeResult(
 function createScript(prompt: string, out: DroidRunInput["out"]) {
   if (out === "json") {
     const payload = { prompt };
-    return `console.log(JSON.stringify(${JSON.stringify(payload)}));`;
+    return `process.stdout.write(JSON.stringify(${JSON.stringify(payload)}) + "\\n");`;
   }
-  return `console.log(${JSON.stringify(`[droid] ${prompt}`)});`;
+  return `process.stdout.write(${JSON.stringify(`[droid] ${prompt}\\n`)});`;
 }
 
 function spawnDroidProcess(input: DroidRunInput) {

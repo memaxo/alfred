@@ -11,6 +11,10 @@
       "types": "./dist/ai-adapter.d.ts",
       "default": "./src/ai-adapter.ts"
     },
+    "./aierror": {
+      "types": "./dist/aierror.d.ts",
+      "default": "./src/aierror.ts"
+    },
     "./build-constants": {
       "types": "./dist/build-constants.d.ts",
       "default": "./src/build-constants.ts"

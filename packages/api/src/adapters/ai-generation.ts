@@ -51,11 +51,23 @@ export class DefaultAIAdapter implements AIAdapter {
     tools?: ToolSet;
   }): Promise<GenerateTextResult<ToolSet, never>> {
     const model = await this.resolveModel();
+    const telemetry =
+      process.env.AI_TELEMETRY === "1"
+        ? {
+            experimental_telemetry: {
+              isEnabled: true,
+              functionId: `api.${this.role}.generateText`,
+              recordInputs: false,
+              recordOutputs: false,
+            },
+          }
+        : {};
     return generateText({
       model,
       messages: params.messages,
       system: params.system,
       tools: params.tools,
+      ...telemetry,
     });
   }
 
@@ -66,10 +78,22 @@ export class DefaultAIAdapter implements AIAdapter {
     prompt?: string;
   }): Promise<GenerateObjectResult<T>> {
     const model = await this.resolveModel();
+    const telemetry =
+      process.env.AI_TELEMETRY === "1"
+        ? {
+            experimental_telemetry: {
+              isEnabled: true,
+              functionId: `api.${this.role}.generateObject`,
+              recordInputs: false,
+              recordOutputs: false,
+            },
+          }
+        : {};
     // prompt and messages are mutually exclusive in AI SDK v6
     const baseParams = {
       model,
       schema: params.schema,
+      ...telemetry,
     } as const;
     if (params.prompt) {
       return generateObject({

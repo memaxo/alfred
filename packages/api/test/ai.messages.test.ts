@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { loggerMocks } from "@alfred/test-kit/logger";
 import type { UIMessage } from "@alfred/type/stream";
 // Import mock-metrics first - it provides logger, metrics, ai, and policy stubs
-import { aiStub, loggerStub, metricsStub } from "./utils/mock-metrics";
+import { aiStub, metricsStub } from "./utils/mock-metrics";
 
 type HistoryTier = "anchor" | "high" | "medium" | "low";
 
@@ -89,7 +90,7 @@ beforeEach(() => {
         },
       },
     }));
-  loggerStub.info.mockClear();
+  loggerMocks.info.mockClear();
   metricMocks.historyContextTokensTotal.inc.mockClear();
   metricMocks.historyContextTierDropsTotal.inc.mockClear();
   metricMocks.historyContextSelectionDurationSeconds.startTimer.mockClear();
@@ -175,7 +176,7 @@ describe("prepareModelMessagesForGenerate", () => {
       source: "assistant",
       tier: "low",
     });
-    expect(loggerStub.info).toHaveBeenCalledWith(
+    expect(loggerMocks.info).toHaveBeenCalledWith(
       "assistant_history_pruned_generate",
       expect.objectContaining({
         dropped: 5,
