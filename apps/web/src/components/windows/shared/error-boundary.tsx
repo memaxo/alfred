@@ -1,3 +1,4 @@
+import { logger } from "@alfred/logger";
 import { AlertTriangle } from "lucide-react";
 import { Component, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,12 +28,11 @@ export class WindowErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
 
-    // biome-ignore lint/suspicious/noConsole: Error logging is intentional for debugging
-    console.error(
-      `[WindowErrorBoundary] Window "${this.props.windowId}" crashed:`,
+    logger.error("desktop_window_crashed", {
+      windowId: this.props.windowId,
       error,
-      errorInfo.componentStack
-    );
+      componentStack: errorInfo.componentStack,
+    });
 
     // Allow custom error handler
     this.props.onError?.(error, errorInfo);

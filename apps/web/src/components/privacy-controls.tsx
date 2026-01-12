@@ -5,6 +5,7 @@
  * Single-word naming: PrivacyControls
  */
 
+import { logger } from "@alfred/logger";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,12 +39,21 @@ export function PrivacyControls({
       setConfirmForget(true);
       return;
     }
-    onForget?.();
-    setConfirmForget(false);
+    try {
+      onForget?.();
+    } catch (error) {
+      logger.error("privacy_forget_failed", { error });
+    } finally {
+      setConfirmForget(false);
+    }
   };
 
   const handleExportClick = () => {
-    onExport?.();
+    try {
+      onExport?.();
+    } catch (error) {
+      logger.error("privacy_export_failed", { error });
+    }
   };
 
   return (

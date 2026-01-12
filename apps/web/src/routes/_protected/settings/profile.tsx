@@ -4,15 +4,21 @@
  * Manage user profile information (name, email, avatar, timezone).
  */
 
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, Save, User } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Loader2, Save, User } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Breadcrumb, type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/utils/trpc";
+
+const breadcrumbItems: BreadcrumbItem[] = [
+  { label: "Settings", href: "/settings" },
+  { label: "Profile" },
+];
 
 export const Route = createFileRoute("/_protected/settings/profile")({
   component: ProfileSettingsPage,
@@ -81,16 +87,11 @@ export function ProfileSettingsPage() {
 
   return (
     <div className="container mx-auto max-w-2xl space-y-8 py-10">
+      <Breadcrumb items={breadcrumbItems} />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <Link
-            className="mb-2 inline-flex items-center gap-1 text-biolum-dim text-sm transition-colors hover:text-biolum"
-            to="/settings"
-          >
-            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
-            Back to Settings
-          </Link>
           <h1 className="font-bold text-3xl text-biolum tracking-tight">
             Profile Settings
           </h1>

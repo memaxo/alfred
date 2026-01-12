@@ -1,15 +1,13 @@
 import "@/test/dom";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { fireEvent, render } from "@testing-library/react";
-import { LayerErrorBoundary, ShellErrorBoundary } from "../error-boundary";
+import "@alfred/test-kit/logger";
+import { loggerMocks } from "@alfred/test-kit/logger";
+
+// Import after the logger mock is installed.
+const { LayerErrorBoundary, ShellErrorBoundary } = await import(
+  "../error-boundary"
+);
 
 // Component that throws on render
 function ThrowingComponent({ shouldThrow = true }: { shouldThrow?: boolean }) {
@@ -20,14 +18,8 @@ function ThrowingComponent({ shouldThrow = true }: { shouldThrow?: boolean }) {
 }
 
 describe("ShellErrorBoundary", () => {
-  let consoleErrorSpy: ReturnType<typeof spyOn>;
-
   beforeEach(() => {
-    consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
+    loggerMocks.error.mockClear();
   });
 
   it("renders children when no error", () => {
@@ -51,15 +43,20 @@ describe("ShellErrorBoundary", () => {
     expect(getByText("Test error")).toBeTruthy();
   });
 
-  it("logs error to console", () => {
+  it("logs error", () => {
     render(
       <ShellErrorBoundary>
         <ThrowingComponent />
       </ShellErrorBoundary>
     );
 
-    // React logs errors through console.error, our handler also logs
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "desktop_shell_crashed",
+      expect.objectContaining({
+        error: expect.any(Error),
+        componentStack: expect.any(String),
+      })
+    );
   });
 
   it("calls onError callback when provided", () => {
@@ -123,14 +120,8 @@ describe("ShellErrorBoundary", () => {
 });
 
 describe("LayerErrorBoundary", () => {
-  let consoleErrorSpy: ReturnType<typeof spyOn>;
-
   beforeEach(() => {
-    consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
+    loggerMocks.error.mockClear();
   });
 
   it("renders children when no error", () => {
@@ -153,15 +144,21 @@ describe("LayerErrorBoundary", () => {
     expect(getByText("TestLayer unavailable")).toBeTruthy();
   });
 
-  it("logs error to console", () => {
+  it("logs error", () => {
     render(
       <LayerErrorBoundary layerName="MyLayer">
         <ThrowingComponent />
       </LayerErrorBoundary>
     );
 
-    // React logs errors through console.error, our handler also logs
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "desktop_layer_crashed",
+      expect.objectContaining({
+        layerName: "MyLayer",
+        error: expect.any(Error),
+        componentStack: expect.any(String),
+      })
+    );
   });
 
   it("shows retry button on first error", () => {

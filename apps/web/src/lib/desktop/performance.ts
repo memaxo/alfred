@@ -7,6 +7,7 @@
  * - localStorage size: <50KB
  */
 
+import { logger } from "@alfred/logger";
 import { DESKTOP_STORAGE_ID } from "@/store/desktop/persist";
 
 /** Max bytes for layout storage (50KB) */
@@ -35,15 +36,18 @@ export function getLayoutStorageSize(): {
 }
 
 /**
- * Log localStorage usage to console (for debugging).
+ * Log localStorage usage (for debugging).
  */
 export function logStorageUsage(): void {
   const { kb, withinBudget, percentUsed } = getLayoutStorageSize();
   const status = withinBudget ? "OK" : "OVER BUDGET";
-  // biome-ignore lint/suspicious/noConsole: intentional debug logging
-  console.log(
-    `[Desktop Storage] ${kb.toFixed(2)}KB / 50KB (${percentUsed.toFixed(1)}%) [${status}]`
-  );
+  logger.debug("desktop_storage_usage", {
+    kb: Number(kb.toFixed(2)),
+    budgetKb: Number((BUDGET_BYTES / 1024).toFixed(2)),
+    percentUsed: Number(percentUsed.toFixed(1)),
+    withinBudget,
+    status,
+  });
 }
 
 /**
@@ -56,10 +60,12 @@ export function measureTime<T>(label: string, fn: () => T, budgetMs = 16): T {
   const status = duration <= budgetMs ? "OK" : "SLOW";
 
   if (duration > budgetMs) {
-    // biome-ignore lint/suspicious/noConsole: intentional performance warning
-    console.warn(
-      `[Performance] ${label}: ${duration.toFixed(2)}ms (budget: ${budgetMs}ms) [${status}]`
-    );
+    logger.warn("desktop_performance_budget_exceeded", {
+      label,
+      durationMs: Number(duration.toFixed(2)),
+      budgetMs,
+      status,
+    });
   }
 
   return result;
@@ -79,10 +85,12 @@ export async function measureTimeAsync<T>(
   const status = duration <= budgetMs ? "OK" : "SLOW";
 
   if (duration > budgetMs) {
-    // biome-ignore lint/suspicious/noConsole: intentional performance warning
-    console.warn(
-      `[Performance] ${label}: ${duration.toFixed(2)}ms (budget: ${budgetMs}ms) [${status}]`
-    );
+    logger.warn("desktop_performance_budget_exceeded", {
+      label,
+      durationMs: Number(duration.toFixed(2)),
+      budgetMs,
+      status,
+    });
   }
 
   return result;

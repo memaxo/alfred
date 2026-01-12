@@ -62,7 +62,7 @@ export function AutonomySlider({
         id="autonomy-slider"
         max={maxIndex}
         min={0}
-        onChange={handleChange}
+        onInput={handleChange}
         step={1}
         type="range"
         value={currentIndex}

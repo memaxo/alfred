@@ -4,6 +4,7 @@
  * Input Area - Text and voice input for chat
  */
 
+import { logger } from "@alfred/logger";
 import { Mic, Paperclip, Send, Sparkles } from "lucide-react";
 import { type KeyboardEvent, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -32,8 +33,15 @@ export function InputArea({
   const handleSubmit = useCallback(() => {
     const trimmed = input.trim();
     if (trimmed && !disabled) {
-      onSubmit(trimmed);
       setInput("");
+      // Defer submission to allow event processing to complete.
+      setTimeout(() => {
+        try {
+          onSubmit(trimmed);
+        } catch (error) {
+          logger.error("chat_submit_failed", { error });
+        }
+      }, 0);
     }
   }, [input, disabled, onSubmit]);
 
@@ -46,6 +54,14 @@ export function InputArea({
     },
     [handleSubmit]
   );
+
+  const handleVoiceToggle = useCallback(() => {
+    try {
+      onVoiceToggle();
+    } catch (error) {
+      logger.error("chat_voice_toggle_failed", { error });
+    }
+  }, [onVoiceToggle]);
 
   return (
     <div className={cn("border-white/5 border-t", className)}>
@@ -87,7 +103,7 @@ export function InputArea({
               isRecording && "bg-red-500/20 text-red-400"
             )}
             disabled={disabled}
-            onClick={onVoiceToggle}
+            onClick={handleVoiceToggle}
             size="icon"
             variant="ghost"
           >

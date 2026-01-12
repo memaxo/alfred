@@ -95,19 +95,18 @@ describe("Actions", () => {
       createAction({ id: "tool-1", name: "search" }),
       createAction({ id: "tool-2", name: "create" }),
     ];
-    const { getAllByRole, getByText, queryByText } = render(
-      <Actions actions={actions} />
-    );
+    const { getAllByRole } = render(<Actions actions={actions} />);
 
     const toggles = getAllByRole("button");
     expect(toggles).toHaveLength(2);
 
     fireEvent.click(toggles[0]);
-    expect(getByText(/search/i)).toBeTruthy();
-    expect(queryByText(/create/i)).toBeNull();
+    expect(toggles[0].getAttribute("aria-expanded")).toBe("true");
+    expect(toggles[1].getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(toggles[1]);
-    expect(getByText(/create/i)).toBeTruthy();
+    expect(toggles[0].getAttribute("aria-expanded")).toBe("true");
+    expect(toggles[1].getAttribute("aria-expanded")).toBe("true");
   });
 
   describe("error cases", () => {

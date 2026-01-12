@@ -37,13 +37,14 @@ import { Route as ApiAuthRevokeRouteImport } from './routes/api/auth/revoke'
 import { Route as ApiAuthIntrospectRouteImport } from './routes/api/auth/introspect'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
-import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assistant-agent/$'
 import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/workflow.$runId'
 import { Route as ProtectedSettingsVisualRouteImport } from './routes/_protected/settings/visual'
 import { Route as ProtectedSettingsProfileRouteImport } from './routes/_protected/settings/profile'
 import { Route as ProtectedSettingsPrivacyRouteImport } from './routes/_protected/settings/privacy'
+import { Route as ProtectedSettingsMcpRouteImport } from './routes/_protected/settings/mcp'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
 import { Route as ProtectedAdminVoiceRouteImport } from './routes/_protected/admin/voice'
+import { Route as ProtectedAdminVoiceTableRouteImport } from './routes/_protected/admin/voice-table'
 import { Route as ProtectedAdminMetricsRouteImport } from './routes/_protected/admin/metrics'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -185,11 +186,6 @@ const ApiAssistantSplatRoute = ApiAssistantSplatRouteImport.update({
   path: '/api/assistant/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAssistantAgentSplatRoute = ApiAssistantAgentSplatRouteImport.update({
-  id: '/api/assistant-agent/$',
-  path: '/api/assistant-agent/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProtectedWorkflowRunIdRoute = ProtectedWorkflowRunIdRouteImport.update({
   id: '/workflow/$runId',
   path: '/workflow/$runId',
@@ -212,6 +208,11 @@ const ProtectedSettingsPrivacyRoute =
     path: '/privacy',
     getParentRoute: () => ProtectedSettingsRoute,
   } as any)
+const ProtectedSettingsMcpRoute = ProtectedSettingsMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => ProtectedSettingsRoute,
+} as any)
 const ProtectedExperimentalTuneRoute =
   ProtectedExperimentalTuneRouteImport.update({
     id: '/experimental/tune',
@@ -221,6 +222,11 @@ const ProtectedExperimentalTuneRoute =
 const ProtectedAdminVoiceRoute = ProtectedAdminVoiceRouteImport.update({
   id: '/voice',
   path: '/voice',
+  getParentRoute: () => ProtectedAdminRoute,
+} as any)
+const ProtectedAdminVoiceTableRoute = ProtectedAdminVoiceTableRouteImport.update({
+  id: '/voice-table',
+  path: '/voice-table',
   getParentRoute: () => ProtectedAdminRoute,
 } as any)
 const ProtectedAdminMetricsRoute = ProtectedAdminMetricsRouteImport.update({
@@ -249,12 +255,13 @@ export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
   '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
+  '/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/settings/mcp': typeof ProtectedSettingsMcpRoute
   '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
   '/settings/profile': typeof ProtectedSettingsProfileRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
-  '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
@@ -285,12 +292,13 @@ export interface FileRoutesByTo {
   '/': typeof ProtectedIndexRoute
   '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
+  '/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/settings/mcp': typeof ProtectedSettingsMcpRoute
   '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
   '/settings/profile': typeof ProtectedSettingsProfileRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
-  '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
@@ -324,12 +332,13 @@ export interface FileRoutesById {
   '/_protected/': typeof ProtectedIndexRoute
   '/_protected/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
+  '/_protected/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/_protected/settings/mcp': typeof ProtectedSettingsMcpRoute
   '/_protected/settings/privacy': typeof ProtectedSettingsPrivacyRoute
   '/_protected/settings/profile': typeof ProtectedSettingsProfileRoute
   '/_protected/settings/visual': typeof ProtectedSettingsVisualRoute
   '/_protected/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
-  '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
@@ -364,11 +373,11 @@ export interface FileRouteTypes {
     | '/admin/metrics'
     | '/admin/voice'
     | '/experimental/tune'
+    | '/settings/mcp'
     | '/settings/privacy'
     | '/settings/profile'
     | '/settings/visual'
     | '/workflow/$runId'
-    | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/auth/introspect'
@@ -400,11 +409,11 @@ export interface FileRouteTypes {
     | '/admin/metrics'
     | '/admin/voice'
     | '/experimental/tune'
+    | '/settings/mcp'
     | '/settings/privacy'
     | '/settings/profile'
     | '/settings/visual'
     | '/workflow/$runId'
-    | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/auth/introspect'
@@ -438,11 +447,11 @@ export interface FileRouteTypes {
     | '/_protected/admin/metrics'
     | '/_protected/admin/voice'
     | '/_protected/experimental/tune'
+    | '/_protected/settings/mcp'
     | '/_protected/settings/privacy'
     | '/_protected/settings/profile'
     | '/_protected/settings/visual'
     | '/_protected/workflow/$runId'
-    | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/auth/introspect'
@@ -466,7 +475,6 @@ export interface RootRouteChildren {
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiSearchRoute: typeof ApiSearchRoute
   DocsSplatRoute: typeof DocsSplatRoute
-  ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthIntrospectRoute: typeof ApiAuthIntrospectRoute
@@ -676,13 +684,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssistantSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/assistant-agent/$': {
-      id: '/api/assistant-agent/$'
-      path: '/api/assistant-agent/$'
-      fullPath: '/api/assistant-agent/$'
-      preLoaderRoute: typeof ApiAssistantAgentSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_protected/workflow/$runId': {
       id: '/_protected/workflow/$runId'
       path: '/workflow/$runId'
@@ -711,6 +712,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedSettingsPrivacyRouteImport
       parentRoute: typeof ProtectedSettingsRoute
     }
+    '/_protected/settings/mcp': {
+      id: '/_protected/settings/mcp'
+      path: '/mcp'
+      fullPath: '/settings/mcp'
+      preLoaderRoute: typeof ProtectedSettingsMcpRouteImport
+      parentRoute: typeof ProtectedSettingsRoute
+    }
     '/_protected/experimental/tune': {
       id: '/_protected/experimental/tune'
       path: '/experimental/tune'
@@ -718,18 +726,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedExperimentalTuneRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/admin/voice': {
-      id: '/_protected/admin/voice'
-      path: '/voice'
-      fullPath: '/admin/voice'
-      preLoaderRoute: typeof ProtectedAdminVoiceRouteImport
-      parentRoute: typeof ProtectedAdminRoute
-    }
-    '/_protected/admin/metrics': {
-      id: '/_protected/admin/metrics'
-      path: '/metrics'
-      fullPath: '/admin/metrics'
-      preLoaderRoute: typeof ProtectedAdminMetricsRouteImport
+	    '/_protected/admin/voice': {
+	      id: '/_protected/admin/voice'
+	      path: '/voice'
+	      fullPath: '/admin/voice'
+	      preLoaderRoute: typeof ProtectedAdminVoiceRouteImport
+	      parentRoute: typeof ProtectedAdminRoute
+	    }
+	    '/_protected/admin/voice-table': {
+	      id: '/_protected/admin/voice-table'
+	      path: '/voice-table'
+	      fullPath: '/admin/voice-table'
+	      preLoaderRoute: typeof ProtectedAdminVoiceTableRouteImport
+	      parentRoute: typeof ProtectedAdminRoute
+	    }
+	    '/_protected/admin/metrics': {
+	      id: '/_protected/admin/metrics'
+	      path: '/metrics'
+	      fullPath: '/admin/metrics'
+	      preLoaderRoute: typeof ProtectedAdminMetricsRouteImport
       parentRoute: typeof ProtectedAdminRoute
     }
   }
@@ -738,12 +753,14 @@ declare module '@tanstack/react-router' {
 interface ProtectedAdminRouteChildren {
   ProtectedAdminMetricsRoute: typeof ProtectedAdminMetricsRoute
   ProtectedAdminVoiceRoute: typeof ProtectedAdminVoiceRoute
+  ProtectedAdminVoiceTableRoute: typeof ProtectedAdminVoiceTableRoute
   ProtectedAdminIndexRoute: typeof ProtectedAdminIndexRoute
 }
 
 const ProtectedAdminRouteChildren: ProtectedAdminRouteChildren = {
   ProtectedAdminMetricsRoute: ProtectedAdminMetricsRoute,
   ProtectedAdminVoiceRoute: ProtectedAdminVoiceRoute,
+  ProtectedAdminVoiceTableRoute: ProtectedAdminVoiceTableRoute,
   ProtectedAdminIndexRoute: ProtectedAdminIndexRoute,
 }
 
@@ -752,12 +769,14 @@ const ProtectedAdminRouteWithChildren = ProtectedAdminRoute._addFileChildren(
 )
 
 interface ProtectedSettingsRouteChildren {
+  ProtectedSettingsMcpRoute: typeof ProtectedSettingsMcpRoute
   ProtectedSettingsPrivacyRoute: typeof ProtectedSettingsPrivacyRoute
   ProtectedSettingsProfileRoute: typeof ProtectedSettingsProfileRoute
   ProtectedSettingsVisualRoute: typeof ProtectedSettingsVisualRoute
 }
 
 const ProtectedSettingsRouteChildren: ProtectedSettingsRouteChildren = {
+  ProtectedSettingsMcpRoute: ProtectedSettingsMcpRoute,
   ProtectedSettingsPrivacyRoute: ProtectedSettingsPrivacyRoute,
   ProtectedSettingsProfileRoute: ProtectedSettingsProfileRoute,
   ProtectedSettingsVisualRoute: ProtectedSettingsVisualRoute,
@@ -816,7 +835,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMetricsRoute: ApiMetricsRoute,
   ApiSearchRoute: ApiSearchRoute,
   DocsSplatRoute: DocsSplatRoute,
-  ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthIntrospectRoute: ApiAuthIntrospectRoute,

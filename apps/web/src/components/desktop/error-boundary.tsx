@@ -10,6 +10,7 @@
  * @see docs/execplans/desktop-evolution-prd.md
  */
 
+import { logger } from "@alfred/logger";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Component, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -55,12 +56,10 @@ export class ShellErrorBoundary extends Component<
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
 
-    // biome-ignore lint/suspicious/noConsole: Error logging is intentional for debugging
-    console.error(
-      "[ShellErrorBoundary] Desktop shell crashed:",
+    logger.error("desktop_shell_crashed", {
       error,
-      errorInfo.componentStack
-    );
+      componentStack: errorInfo.componentStack,
+    });
 
     this.props.onError?.(error, errorInfo);
   }
@@ -136,12 +135,11 @@ export class LayerErrorBoundary extends Component<
     this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
 
     const layerName = this.props.layerName ?? "unknown";
-    // biome-ignore lint/suspicious/noConsole: Error logging is intentional for debugging
-    console.error(
-      `[LayerErrorBoundary] Layer "${layerName}" crashed:`,
+    logger.error("desktop_layer_crashed", {
+      layerName,
       error,
-      errorInfo.componentStack
-    );
+      componentStack: errorInfo.componentStack,
+    });
 
     this.props.onError?.(error, errorInfo);
   }

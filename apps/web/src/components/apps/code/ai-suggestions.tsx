@@ -60,7 +60,7 @@ export function AISuggestions({
       },
       {
         id: crypto.randomUUID(),
-        code: "try {\n  // code\n} catch (error) {\n  console.error(error);\n}",
+        code: 'try {\\n  // code\\n} catch (error) {\\n  logger.error("caught_error", { error });\\n}',
         description: "Add error handling",
       },
     ]);

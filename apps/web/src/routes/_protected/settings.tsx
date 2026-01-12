@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { SettingsContent } from "@/components/windows/settings/content";
+import { SettingsContent } from "@/components/windows/settings/content-tabs";
 
 export const Route = createFileRoute("/_protected/settings")({
   component: SettingsRoute,

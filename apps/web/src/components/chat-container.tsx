@@ -67,6 +67,7 @@ export function ChatContainer({
     clear,
     handleEdit,
     handleRegenerate,
+    addToolApprovalResponse,
   } = useChatLogic({
     initialAgent: agent,
     initialMessages,
@@ -93,7 +94,13 @@ export function ChatContainer({
 
   const focused = useFocusedContext();
 
-  const partRenderer = useMemo(() => createPartRenderer(), []);
+  const partRenderer = useMemo(
+    () =>
+      createPartRenderer({
+        onAddToolApprovalResponse: addToolApprovalResponse,
+      }),
+    [addToolApprovalResponse]
+  );
 
   const handleFeedbackIntent = useCallback(
     (message: AssistantUIMessage, intent: "positive" | "negative") => {

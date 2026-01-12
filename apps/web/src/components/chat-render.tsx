@@ -9,10 +9,16 @@ import type { AssistantUIMessage } from "@alfred/agent";
 import type { UIMessage } from "@alfred/type/stream";
 import {
   extractStructuredData,
+  getToolInvocationName,
+  getToolInvocationState,
   isDataPartNamed,
+  isReasoningPart,
+  isTextPart,
   isToolCallPart,
+  isToolInvocationPart,
   isToolResultPart,
   type ToolCallPart,
+  type ToolInvocationPart,
   type ToolResultPart,
 } from "@alfred/ui/chat/parts";
 import type { ReactNode } from "react";
@@ -125,7 +131,11 @@ type PartRenderer = (
 ) => ReactNode | null;
 
 type PartHandlers = {
-  onAddToolResult?: (result: { toolCallId: string; result: unknown }) => void;
+  onAddToolApprovalResponse?: (args: {
+    id: string;
+    approved: boolean;
+    reason?: string;
+  }) => void;
 };
 
 const dataPartRenderers: PartRenderer[] = [
@@ -156,8 +166,27 @@ const dataPartRenderers: PartRenderer[] = [
     ),
 ];
 
+function renderText(part: AssistantPart): ReactNode | null {
+  if (isTextPart(part)) {
+    return <div className="whitespace-pre-wrap">{part.text}</div>;
+  }
+  return null;
+}
+
+function renderReasoning(part: AssistantPart): ReactNode | null {
+  if (isReasoningPart(part)) {
+    return (
+      <div className="text-muted-foreground italic opacity-70">{part.text}</div>
+    );
+  }
+  return null;
+}
+
 const partRenderers: PartRenderer[] = [
+  renderText,
+  renderReasoning,
   ...dataPartRenderers,
+  renderToolInvocation,
   renderToolCall,
   renderToolResult,
 ];
@@ -191,7 +220,7 @@ function renderStructuredPart(
 function renderToolCall(
   part: AssistantPart,
   message: AssistantUIMessage,
-  handlers?: PartHandlers
+  _handlers?: PartHandlers
 ): ReactNode | null {
   if (!isToolCallPart(part)) {
     return null;
@@ -211,57 +240,6 @@ function renderToolCall(
 
   const state = resultPart ? "output-available" : "input-available";
 
-  // Check for approval state based on internal convention
-  // AI SDK v6 currently doesn't expose 'state' on the message part directly for UIMessage
-  // But if we are using 'useChat', the 'tool-call' part might have 'args' but not state.
-  // Wait, UIMessage from AI SDK v6 does not have 'state'.
-  // However, 'useChat' handles pending tool calls.
-  // If tool call is present and no result part, it is pending or executing.
-  // If the tool required approval, we need to know.
-  // The standard AI SDK `ToolCallPart` doesn't carry approval state.
-  // But our tool wrapper might emit an event or we rely on `useChat` state?
-  // Actually, `useChat` provides `isLoading` but that's global.
-
-  // For now, let's assume if we receive a tool-call and no result, we might want to show approval UI if it's configured.
-  // But we don't know if approval is requested just from the message part.
-  // We need to check if the 'state' field exists on the part (it might be extended).
-  // Our `tool.tsx` expects `ToolUIPart["state"]`.
-  // But `AssistantPart` is from `AssistantUIMessage` which is `UIMessage`.
-
-  // Let's check if we can infer 'approval-requested'.
-  // In AI SDK v6, if a tool needs approval, the `tool-call` part is emitted.
-  // The client needs to call `addToolResult` with approval.
-
-  // Assuming we can check a property or just show actions if it's pending.
-  // But we don't want to show actions for tools that auto-execute.
-  // Currently, there is no easy way to distinguish unless we have that metadata.
-  // However, the user asked for UI controls.
-
-  // Let's optimistically add the buttons if we have handlers and no result.
-  // But maybe check if tool name implies approval needed? No, that's brittle.
-
-  // The `ToolUIPart` type in `tool.tsx` has `state`.
-  // But we are mapping `UIMessage` parts to it.
-  // Let's default to 'input-available' or 'approval-requested' if we have some indicator.
-  // For now, I'll wire the buttons. If clicked, they call `addToolResult`.
-
-  // Note: AI SDK v6 'useChat' handles approval via 'addToolResult'.
-  // If we call it, the stream continues.
-
-  const handleApprove = () => {
-    handlers?.onAddToolResult?.({
-      toolCallId,
-      result: "Approved",
-    });
-  };
-
-  const handleDeny = () => {
-    handlers?.onAddToolResult?.({
-      toolCallId,
-      result: "Denied",
-    });
-  };
-
   // Get result for output display
   const output = resultPart
     ? (resultPart as unknown as ToolResultPart).output
@@ -272,15 +250,69 @@ function renderToolCall(
       <ToolHeader state={state} title={toolName} type="tool-call" />
       <ToolContent>
         <ToolInput input={input} />
-        {state !== "output-available" && handlers?.onAddToolResult ? (
+        {output !== undefined ? (
+          <ToolOutput errorText={undefined} output={output} />
+        ) : null}
+      </ToolContent>
+    </Tool>
+  );
+}
+
+function renderToolInvocation(
+  part: AssistantPart,
+  _message: AssistantUIMessage,
+  handlers?: PartHandlers
+): ReactNode | null {
+  if (!isToolInvocationPart(part)) {
+    return null;
+  }
+
+  const invocation = part as unknown as ToolInvocationPart;
+  const title = getToolInvocationName(invocation);
+  const state = getToolInvocationState(invocation);
+
+  const approvalId =
+    invocation.approval && typeof invocation.approval.id === "string"
+      ? invocation.approval.id
+      : null;
+
+  const input = invocation.input;
+  const output = invocation.output;
+  const errorText =
+    state === "output-denied"
+      ? "Denied"
+      : typeof invocation.errorText === "string"
+        ? invocation.errorText
+        : undefined;
+
+  return (
+    <Tool defaultOpen={state !== "output-available"}>
+      <ToolHeader state={state} title={title} type="tool-call" />
+      <ToolContent>
+        {input !== undefined ? <ToolInput input={input} /> : null}
+        {state === "approval-requested" &&
+        approvalId &&
+        handlers?.onAddToolApprovalResponse ? (
           <ToolActions
-            onApprove={handleApprove}
-            onDeny={handleDeny}
+            onApprove={() =>
+              handlers.onAddToolApprovalResponse?.({
+                id: approvalId,
+                approved: true,
+              })
+            }
+            onDeny={() =>
+              handlers.onAddToolApprovalResponse?.({
+                id: approvalId,
+                approved: false,
+              })
+            }
             state="approval-requested"
           />
         ) : null}
-        {output !== undefined ? (
+        {state === "output-available" && output !== undefined ? (
           <ToolOutput errorText={undefined} output={output} />
+        ) : state === "output-error" || state === "output-denied" ? (
+          <ToolOutput errorText={errorText} output={output} />
         ) : null}
       </ToolContent>
     </Tool>

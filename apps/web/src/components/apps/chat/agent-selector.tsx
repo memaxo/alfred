@@ -4,6 +4,7 @@
  * Agent Selector - Choose between different AI agents
  */
 
+import { logger } from "@alfred/logger";
 import { Bot, Cpu, Sparkles, Terminal, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -97,7 +98,16 @@ export function AgentSelector({
                 value === agent.id && "bg-white/5"
               )}
               key={agent.id}
-              onClick={() => onChange(agent.id)}
+              onClick={() => {
+                try {
+                  onChange(agent.id);
+                } catch (error) {
+                  logger.error("chat_agent_change_failed", {
+                    agentId: agent.id,
+                    error,
+                  });
+                }
+              }}
             >
               <AgentIcon className={cn("mt-0.5 h-4 w-4", agent.color)} />
               <div>

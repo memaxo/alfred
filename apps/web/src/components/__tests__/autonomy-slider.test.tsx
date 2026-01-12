@@ -5,18 +5,20 @@ import { AutonomySlider } from "../autonomy-slider";
 
 describe("AutonomySlider", () => {
   it("renders with correct labels and description", () => {
-    const { getByText } = render(
+    const { getAllByText } = render(
       <AutonomySlider onChange={() => {}} value="low" />
     );
 
-    expect(getByText("Autonomy Level")).toBeTruthy();
-    expect(getByText("Low")).toBeTruthy();
-    expect(getByText("Suggestions only, no execution")).toBeTruthy();
+    expect(getAllByText("Autonomy Level").length).toBeGreaterThan(0);
+    expect(getAllByText("Low").length).toBeGreaterThan(1); // One in header, one in scale
+    expect(
+      getAllByText("Suggestions only, no execution").length
+    ).toBeGreaterThan(0);
 
     // Check all levels are present in the bottom labels
-    expect(getByText("Read Only")).toBeTruthy();
-    expect(getByText("Medium")).toBeTruthy();
-    expect(getByText("High")).toBeTruthy();
+    expect(getAllByText("Read Only").length).toBeGreaterThan(0);
+    expect(getAllByText("Medium").length).toBeGreaterThan(0);
+    expect(getAllByText("High").length).toBeGreaterThan(0);
   });
 
   it("calls onChange when slider value changes", () => {
@@ -28,21 +30,25 @@ describe("AutonomySlider", () => {
     const slider = getByLabelText("Autonomy Level") as HTMLInputElement;
 
     // Change to "high" (index 3)
-    fireEvent.change(slider, { target: { value: "3" } });
+    fireEvent.input(slider, { target: { value: "3" } });
 
     expect(handleChange).toHaveBeenCalledWith("high");
   });
 
   it("updates labels when value prop changes", () => {
-    const { rerender, getByText } = render(
+    const { rerender, getAllByText } = render(
       <AutonomySlider onChange={() => {}} value="read" />
     );
-    expect(getByText("Read Only")).toBeTruthy();
-    expect(getByText("No execution, read-only access")).toBeTruthy();
+    expect(getAllByText("Read Only").length).toBeGreaterThan(0);
+    expect(
+      getAllByText("No execution, read-only access").length
+    ).toBeGreaterThan(0);
 
     rerender(<AutonomySlider onChange={() => {}} value="high" />);
-    expect(getByText("High")).toBeTruthy();
-    expect(getByText("Full execution with supervision")).toBeTruthy();
+    expect(getAllByText("High").length).toBeGreaterThan(0);
+    expect(
+      getAllByText("Full execution with supervision").length
+    ).toBeGreaterThan(0);
   });
 
   it("disables input when disabled prop is true", () => {
@@ -73,7 +79,7 @@ describe("AutonomySlider", () => {
       expect(slider.value).toBe("0");
 
       // Change to low (index 1)
-      fireEvent.change(slider, { target: { value: "1" } });
+      fireEvent.input(slider, { target: { value: "1" } });
       expect(handleChange).toHaveBeenCalledWith("low");
       expect(handleChange).toHaveBeenCalledTimes(1);
     });
@@ -85,23 +91,20 @@ describe("AutonomySlider", () => {
       );
 
       // Change from read (0) to low (1)
-      fireEvent.change(getByLabelText("Autonomy Level") as HTMLInputElement, {
-        target: { value: "1" },
-      });
+      const input = getByLabelText("Autonomy Level") as HTMLInputElement;
+      fireEvent.input(input, { target: { value: "1" } });
       expect(handleChange).toHaveBeenLastCalledWith("low");
 
       // Update component with new value and change to medium
       rerender(<AutonomySlider onChange={handleChange} value="low" />);
-      fireEvent.change(getByLabelText("Autonomy Level") as HTMLInputElement, {
-        target: { value: "2" },
-      });
+      const input2 = getByLabelText("Autonomy Level") as HTMLInputElement;
+      fireEvent.input(input2, { target: { value: "2" } });
       expect(handleChange).toHaveBeenLastCalledWith("medium");
 
       // Update component with new value and change to high
       rerender(<AutonomySlider onChange={handleChange} value="medium" />);
-      fireEvent.change(getByLabelText("Autonomy Level") as HTMLInputElement, {
-        target: { value: "3" },
-      });
+      const input3 = getByLabelText("Autonomy Level") as HTMLInputElement;
+      fireEvent.input(input3, { target: { value: "3" } });
       expect(handleChange).toHaveBeenLastCalledWith("high");
     });
   });

@@ -1,20 +1,12 @@
 /**
- * Unified Settings Content Component
+ * Unified Settings Content Component with Tabs
  *
  * Shared settings UI that can be used in both route and window contexts.
- * Consolidates voice, autonomy, preferences, and navigation settings.
+ * Organizes voice, autonomy, and preferences into tabbed sections.
  */
 
 import type { inferRouterInputs } from "@trpc/server";
-import {
-  ChevronRight,
-  Palette,
-  Plug,
-  Shield,
-  Trash2,
-  User,
-  Volume2,
-} from "lucide-react";
+import { Trash2, User, Volume2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -24,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
@@ -41,44 +34,6 @@ export type SettingsContentProps = {
 };
 
 const listInput = { limit: 100, offset: 0 } as const;
-
-type SettingsLinkProps = {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  onClick?: () => void;
-};
-
-function SettingsLink({
-  icon,
-  title,
-  description,
-  onClick,
-}: SettingsLinkProps) {
-  return (
-    <button
-      className={cn(
-        "flex w-full items-center gap-4 rounded-xl border p-4 text-left transition-colors",
-        "hover:border-biolum/30 hover:bg-biolum/5",
-        "border-white/10 bg-void-surface/40"
-      )}
-      onClick={onClick}
-      type="button"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-biolum/10 text-biolum">
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <h3 className="font-semibold text-biolum">{title}</h3>
-        <p className="truncate text-biolum-dim text-sm">{description}</p>
-      </div>
-      <ChevronRight
-        className="h-5 w-5 shrink-0 text-biolum-faint"
-        strokeWidth={1.5}
-      />
-    </button>
-  );
-}
 
 function VoiceSection({ mode }: { mode: SettingsMode }) {
   const [previewText, setPreviewText] = useState("Hello, I am Alfred.");
@@ -120,39 +75,30 @@ function VoiceSection({ mode }: { mode: SettingsMode }) {
   const isCompact = mode === "compact";
 
   return (
-    <div
-      className={cn(
-        "space-y-4 rounded-xl border border-white/10 bg-void-surface/40",
-        isCompact ? "p-4" : "p-6"
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div
+    <div className={cn("space-y-4 py-4", isCompact ? "px-4" : "px-6")}>
+      <div className="space-y-4">
+        <input
           className={cn(
-            "flex items-center justify-center rounded-xl bg-biolum/10 text-biolum",
-            isCompact ? "h-8 w-8" : "h-10 w-10"
+            "flex h-10 w-full rounded-full border px-4 py-2 text-sm",
+            "border-white/10 bg-void-surface/50 text-biolum",
+            "placeholder:text-biolum-faint",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-biolum/50"
           )}
+          onChange={(e) => setPreviewText(e.target.value)}
+          placeholder="Type something to preview..."
+          value={previewText}
+        />
+        <Button
+          className="rounded-full"
+          disabled={!currentVoice || previewVoice.isPending}
+          onClick={() => {
+            if (currentVoice) {
+              previewVoice.mutate({ voice: currentVoice, text: previewText });
+            }
+          }}
         >
-          <Volume2
-            className={isCompact ? "h-4 w-4" : "h-5 w-5"}
-            strokeWidth={1.5}
-          />
-        </div>
-        <div>
-          <h2
-            className={cn(
-              "font-semibold text-biolum",
-              isCompact ? "text-sm" : "text-xl"
-            )}
-          >
-            Voice
-          </h2>
-          {!isCompact && (
-            <p className="text-biolum-dim text-sm">
-              Choose the voice Alfred uses for speech-to-speech responses.
-            </p>
-          )}
-        </div>
+          {previewVoice.isPending ? "..." : "Preview Voice"}
+        </Button>
       </div>
 
       <div
@@ -165,7 +111,7 @@ function VoiceSection({ mode }: { mode: SettingsMode }) {
           <div
             className={cn(
               "relative flex cursor-pointer flex-col gap-1 rounded-xl border transition-colors",
-              isCompact ? "p-3" : "p-4",
+              "p-3",
               currentVoice === voice.id
                 ? "border-biolum/50 bg-biolum/10"
                 : "border-white/10 hover:border-biolum/30 hover:bg-biolum/5"
@@ -173,11 +119,7 @@ function VoiceSection({ mode }: { mode: SettingsMode }) {
             key={voice.id}
             onClick={() => handleVoiceChange(voice.id)}
           >
-            <div
-              className={cn("font-medium text-biolum", isCompact && "text-sm")}
-            >
-              {voice.name}
-            </div>
+            <div className="font-medium text-biolum text-sm">{voice.name}</div>
             {!isCompact && (
               <div className="text-biolum-faint text-xs">ID: {voice.id}</div>
             )}
@@ -187,33 +129,6 @@ function VoiceSection({ mode }: { mode: SettingsMode }) {
           </div>
         ))}
       </div>
-
-      {!isCompact && (
-        <div className="flex gap-2 pt-2">
-          <input
-            className={cn(
-              "flex h-10 w-full rounded-full border px-4 py-2 text-sm",
-              "border-white/10 bg-void-surface/50 text-biolum",
-              "placeholder:text-biolum-faint",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-biolum/50"
-            )}
-            onChange={(e) => setPreviewText(e.target.value)}
-            placeholder="Type something to preview..."
-            value={previewText}
-          />
-          <Button
-            className="rounded-full"
-            disabled={!currentVoice || previewVoice.isPending}
-            onClick={() => {
-              if (currentVoice) {
-                previewVoice.mutate({ voice: currentVoice, text: previewText });
-              }
-            }}
-          >
-            {previewVoice.isPending ? "..." : "Preview"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -253,22 +168,12 @@ function AutonomySection({ mode }: { mode: SettingsMode }) {
   const isCompact = mode === "compact";
 
   return (
-    <section
-      className={cn(
-        "rounded-xl border border-white/10 bg-void-surface/40",
-        isCompact ? "p-4" : "p-6"
-      )}
-    >
-      <h3
-        className={cn(
-          "mb-3 font-semibold text-biolum",
-          isCompact ? "text-sm" : "text-lg"
-        )}
-      >
-        Autonomy Level
-      </h3>
+    <div className={cn("py-4", isCompact ? "px-4" : "px-6")}>
+      <p className="mb-4 text-biolum-dim text-sm">
+        Control Alfred's autonomy level for autonomous actions.
+      </p>
       <AutonomySlider onChange={handleAutonomyChange} value={currentAutonomy} />
-    </section>
+    </div>
   );
 }
 
@@ -348,22 +253,8 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
   );
 
   return (
-    <section
-      className={cn(
-        "rounded-xl border border-white/10 bg-void-surface/40",
-        isCompact ? "p-4" : "p-6"
-      )}
-    >
-      <h3
-        className={cn(
-          "mb-3 font-semibold text-biolum",
-          isCompact ? "text-sm" : "text-lg"
-        )}
-      >
-        Custom Preferences
-      </h3>
-
-      <form className="mb-4 flex flex-col gap-2" onSubmit={handleCustomSave}>
+    <div className={cn("space-y-4 py-4", isCompact ? "px-4" : "px-6")}>
+      <form className="flex flex-col gap-2" onSubmit={handleCustomSave}>
         <Input
           className="bg-void-surface/50"
           onChange={(e) => setCustomKey(e.target.value)}
@@ -425,7 +316,7 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
           )}
         </ScrollArea>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -438,38 +329,43 @@ export function SettingsContent({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      {!isCompact && onNavigate && (
-        <div className="space-y-3">
-          <SettingsLink
-            description="Manage your personal information and profile"
-            icon={<User className="h-5 w-5" strokeWidth={1.5} />}
-            onClick={() => onNavigate("/settings/profile")}
-            title="Profile"
-          />
-          <SettingsLink
-            description="Customize Mindscape visual effects and performance"
-            icon={<Palette className="h-5 w-5" strokeWidth={1.5} />}
-            onClick={() => onNavigate("/settings/visual")}
-            title="Visual Appearance"
-          />
-          <SettingsLink
-            description="Manage your data privacy and autonomy levels"
-            icon={<Shield className="h-5 w-5" strokeWidth={1.5} />}
-            onClick={() => onNavigate("/settings/privacy")}
-            title="Privacy"
-          />
-          <SettingsLink
-            description="Configure outbound MCP servers and imported tools"
-            icon={<Plug className="h-5 w-5" strokeWidth={1.5} />}
-            onClick={() => onNavigate("/settings/mcp")}
-            title="MCP"
-          />
-        </div>
-      )}
-
-      <AutonomySection mode={mode} />
-      <VoiceSection mode={mode} />
-      <PreferencesSection mode={mode} />
+      <Tabs className="w-full" defaultValue="voice">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="voice">
+            <Volume2 className="mr-2 h-4 w-4" />
+            Voice
+          </TabsTrigger>
+          <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          {onNavigate && !isCompact && (
+            <TabsTrigger
+              onClick={() => onNavigate("/settings/profile")}
+              value="profile"
+            >
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </TabsTrigger>
+          )}
+        </TabsList>
+        <TabsContent value="voice">
+          <VoiceSection mode={mode} />
+        </TabsContent>
+        <TabsContent value="autonomy">
+          <AutonomySection mode={mode} />
+        </TabsContent>
+        <TabsContent value="preferences">
+          <PreferencesSection mode={mode} />
+        </TabsContent>
+        {onNavigate && !isCompact && (
+          <TabsContent value="profile">
+            <div className="px-6 py-4">
+              <p className="text-biolum-dim">
+                Profile settings are in navigation.
+              </p>
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import "@/test/dom";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { assistantChatMock } from "@/test/mock-assistant-chat";
+import { createTestTrpcClient, renderRoute } from "@/test/render-route";
 
 mock.module("react-virtuoso", () => ({
   Virtuoso: ({
@@ -35,12 +36,21 @@ mock.module("@/hooks/use-voice-capture", () => ({
 const { ChatContainer } = await import("../chat-container");
 
 describe("ChatContainer integration", () => {
+  const trpcClient = createTestTrpcClient({
+    queries: {
+      "assistant.getConfig": () => ({ contextWindow: 128_000 }),
+      "graph.runQuery": () => ({ nodes: [], edges: [] }),
+    },
+  });
+
   beforeEach(() => {
     assistantChatMock.reset();
   });
 
   it("renders assistant stream messages", async () => {
-    const { getByText } = render(<ChatContainer agent="assistant" />);
+    const { getByText } = renderRoute(<ChatContainer agent="assistant" />, {
+      trpcClient,
+    });
 
     act(() => {
       assistantChatMock.emitAssistantMessage({
@@ -56,8 +66,9 @@ describe("ChatContainer integration", () => {
   });
 
   it("clears messages when the clear button is pressed", async () => {
-    const { getByText, queryByText, getAllByRole } = render(
-      <ChatContainer agent="assistant" />
+    const { getByText, queryByText, getAllByRole } = renderRoute(
+      <ChatContainer agent="assistant" />,
+      { trpcClient }
     );
 
     act(() => {
@@ -81,8 +92,9 @@ describe("ChatContainer integration", () => {
   });
 
   it("hydrates saved messages when switching agents", async () => {
-    const { getByText, queryByText, getAllByRole } = render(
-      <ChatContainer agent="assistant" />
+    const { getByText, queryByText, getAllByRole } = renderRoute(
+      <ChatContainer agent="assistant" />,
+      { trpcClient }
     );
 
     act(() => {
@@ -123,8 +135,9 @@ describe("ChatContainer integration", () => {
       },
     ];
 
-    const { getByText } = render(
-      <ChatContainer agent="assistant" initialMessages={initial} />
+    const { getByText } = renderRoute(
+      <ChatContainer agent="assistant" initialMessages={initial} />,
+      { trpcClient }
     );
 
     expect(getByText("Persisted hello")).toBeTruthy();
