@@ -12,8 +12,11 @@
  */
 
 import {
+  Activity,
   Battery,
   Bell,
+  Cpu,
+  Flame,
   HelpCircle,
   Info,
   LogOut,
@@ -29,6 +32,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCognitivePhysiology } from "@/hooks/use-cognitive-physiology";
+import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import { Clock } from "./clock";
 import type { AppMenuAction, AppMenuCategory, AppMenus } from "./types";
@@ -322,8 +327,76 @@ function AppMenuBar({ appName, menus }: AppMenuBarProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StatusIcons() {
+  const { energy, frustration, entropy } = useCognitivePhysiology();
+
   return (
     <div className="flex items-center gap-2 text-biolum-dim">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            aria-label="Cognitive Physiology"
+            className="flex items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-white/5 hover:text-biolum"
+            type="button"
+          >
+            <div className="flex items-center gap-1">
+              <Battery
+                className={cn(
+                  "h-3.5 w-3.5",
+                  energy < 0.2 ? "text-red-400" : "text-emerald-400"
+                )}
+              />
+              <span className="font-mono text-[10px]">
+                {Math.round(energy * 100)}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Flame
+                className={cn(
+                  "h-3.5 w-3.5",
+                  frustration > 0.7 ? "text-orange-400" : "text-biolum-dim"
+                )}
+              />
+              <span className="font-mono text-[10px]">
+                {Math.round(frustration * 100)}%
+              </span>
+            </div>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <div className="px-2 py-1.5 font-medium text-biolum text-xs uppercase tracking-widest opacity-60">
+            Cognitive State
+          </div>
+          <DropdownMenuSeparator />
+          <div className="space-y-3 p-3">
+            <PhysiologyBar
+              color="bg-emerald-500"
+              icon={Battery}
+              label="Energy"
+              value={energy}
+            />
+            <PhysiologyBar
+              color="bg-orange-500"
+              icon={Flame}
+              label="Frustration"
+              value={frustration}
+            />
+            <PhysiologyBar
+              color="bg-blue-500"
+              icon={Activity}
+              label="Entropy"
+              value={entropy}
+            />
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => useDesktopStore.getState().spawnWindow("cortex")}
+          >
+            <Cpu className="mr-2 h-4 w-4" />
+            Open Cortex Analyzer
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       <button
         aria-label="Notifications"
         className="rounded p-1 transition-colors hover:bg-white/5 hover:text-biolum"
@@ -338,9 +411,37 @@ function StatusIcons() {
       >
         <Wifi className="h-4 w-4" />
       </button>
-      <div aria-label="Battery 100%" className="flex items-center gap-0.5">
-        <Battery className="h-4 w-4" />
-        <span className="text-xs">100%</span>
+    </div>
+  );
+}
+
+function PhysiologyBar({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  color: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className="h-3 w-3 text-biolum-dim" />
+          <span className="text-biolum text-xs">{label}</span>
+        </div>
+        <span className="font-mono text-[10px] text-biolum-dim">
+          {Math.round(value * 100)}%
+        </span>
+      </div>
+      <div className="h-1 w-full overflow-hidden rounded-full bg-white/5">
+        <div
+          className={cn("h-full transition-all duration-1000", color)}
+          style={{ width: `${value * 100}%` }}
+        />
       </div>
     </div>
   );

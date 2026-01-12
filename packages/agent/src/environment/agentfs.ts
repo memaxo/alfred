@@ -90,14 +90,10 @@ export class AgentFSWorkspace implements Workspace {
     // agentfs-sdk requires IDs to match /^[a-zA-Z0-9_-]+$/
     this._agentfsId = id.replace(/[^a-zA-Z0-9_-]/g, "-");
 
-    // Default path: .agentfs/{runId}/{agentId}.db
+    // Default path: .agentfs/{runId}/agentfs.db (single DB per run)
     this._dbPath =
       config.dbPath ??
-      path.join(
-        ".agentfs",
-        runId.replace(/[^a-zA-Z0-9-]/g, "-"),
-        `${id.replace(/[^a-zA-Z0-9-]/g, "-")}.db`
-      );
+      path.join(".agentfs", runId.replace(/[^a-zA-Z0-9-]/g, "-"), "agentfs.db");
 
     // Docker container configuration
     this._containerName =

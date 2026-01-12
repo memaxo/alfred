@@ -76,7 +76,7 @@ export type AgentFSDirEntry = {
 export type AgentFSWorkspaceConfig = {
   /** Enable overlay mode over base directory (copy-on-write) */
   overlay?: boolean;
-  /** Custom database path (default: .agentfs/{runId}/{agentId}.db) */
+  /** Custom database path (default: .agentfs/{runId}/agentfs.db) */
   dbPath?: string;
   /** Chunk size for file storage (default: 4096) */
   chunkSize?: number;

@@ -9,9 +9,11 @@
 
 import {
   Bell,
+  Bookmark,
   Bot,
   Box,
   Brain,
+  Clock,
   Code,
   Code2,
   Cpu,
@@ -59,9 +61,11 @@ import {
   SettingsAppWindow,
   TaskManagerAppWindow,
   TerminalAppWindow,
+  TimersAppWindow,
   TuneAppWindow,
   WorkflowAppWindow,
 } from "@/components/apps";
+import { BookmarksAppWindow } from "@/components/apps/bookmarks";
 import { CodexWindow } from "@/components/windows/codex/codex-window";
 import { ConceptWindow } from "@/components/windows/concept/concept-window";
 import { DroidWindow } from "@/components/windows/droid/droid-window";
@@ -284,6 +288,34 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       tier: "tertiary",
     },
     isLegacy: true,
+  },
+  bookmarks: {
+    type: "bookmarks",
+    component: BookmarksAppWindow,
+    metadata: {
+      label: "Bookmarks",
+      icon: Bookmark,
+      defaultSize: { width: 400, height: 500 },
+      minSize: { width: 300, height: 300 },
+      resizable: true,
+      singleton: true,
+      tier: "tertiary",
+    },
+    isLegacy: false,
+  },
+  timers: {
+    type: "timers",
+    component: TimersAppWindow,
+    metadata: {
+      label: "Timers",
+      icon: Clock,
+      defaultSize: { width: 300, height: 400 },
+      minSize: { width: 250, height: 250 },
+      resizable: true,
+      singleton: true,
+      tier: "tertiary",
+    },
+    isLegacy: false,
   },
 
   // Tier 0: Codex Direct UI

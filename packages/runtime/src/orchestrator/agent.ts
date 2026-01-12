@@ -169,8 +169,7 @@ export async function runAgent({
     }
 
     const safeRunId = runId.replace(/[^a-zA-Z0-9-]/g, "-");
-    const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9-]/g, "-");
-    const absFile = path.join(absDir, safeRunId, `${safeAgentId}.db`);
+    const absFile = path.join(absDir, safeRunId, "agentfs.db");
     return path.relative(repoBase, absFile);
   })();
 

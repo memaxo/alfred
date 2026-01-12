@@ -31,6 +31,7 @@ import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
 import { todoRouter } from "./todo";
 import { tokenRouter } from "./token";
+import { trajectoryRouter } from "./trajectory";
 import { tuneRouter } from "./tune";
 import { userRouter } from "./user";
 import { visualRouter } from "./visual";
@@ -62,6 +63,7 @@ export const appRouter = router({
   token: tokenRouter,
   workflow: workflowRouter,
   eval: evalRouter,
+  trajectory: trajectoryRouter,
   deploy: deployRouter,
   linear: linearRouter,
   metrics: metricsRouter,

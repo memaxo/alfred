@@ -10,6 +10,7 @@
  */
 
 import {
+  Activity,
   Code,
   Cpu,
   Download,
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { GpuMonitor } from "./gpu-monitor";
 import { ParameterTuner } from "./parameter-tuner";
+import { PhysiologyMonitor } from "./physiology-monitor";
 import { PresetBrowser } from "./preset-browser";
 import { ShaderPreview } from "./shader-preview";
 
@@ -48,9 +50,9 @@ export function CortexApp({ window: _window }: WindowComponentProps) {
     null
   );
   const [showMonitor, setShowMonitor] = useState(false);
-  const [tab, setTab] = useState<"presets" | "parameters" | "editor">(
-    "presets"
-  );
+  const [tab, setTab] = useState<
+    "presets" | "parameters" | "physiology" | "editor"
+  >("physiology");
 
   return (
     <div className="flex h-full flex-col bg-void">
@@ -58,7 +60,7 @@ export function CortexApp({ window: _window }: WindowComponentProps) {
       <div className="flex h-10 items-center justify-between border-white/5 border-b px-3">
         <div className="flex items-center gap-2">
           <Cpu className="h-4 w-4 text-biolum" />
-          <span className="font-medium text-sm">Cortex Visualizer</span>
+          <span className="font-medium text-sm">Cortex Analyzer</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -84,13 +86,14 @@ export function CortexApp({ window: _window }: WindowComponentProps) {
           {/* Tabs */}
           <div className="flex border-white/5 border-b">
             {[
+              { id: "physiology", icon: Activity, label: "Physiology" },
               { id: "presets", icon: Palette, label: "Presets" },
               { id: "parameters", icon: Sliders, label: "Params" },
               { id: "editor", icon: Code, label: "WGSL" },
             ].map((t) => (
               <button
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1 py-2 text-xs transition-colors",
+                  "flex flex-1 items-center justify-center gap-1 py-2 text-[10px] transition-colors",
                   tab === t.id
                     ? "border-biolum border-b-2 text-biolum"
                     : "text-biolum-dim hover:text-biolum"
@@ -107,6 +110,11 @@ export function CortexApp({ window: _window }: WindowComponentProps) {
 
           {/* Tab Content */}
           <div className="flex-1 overflow-auto">
+            {tab === "physiology" && (
+              <div className="p-3 text-biolum-dim text-xs">
+                <p>Monitoring internal cognitive signals and drive levels.</p>
+              </div>
+            )}
             {tab === "presets" && (
               <PresetBrowser
                 onSelect={setSelectedPreset}
@@ -126,17 +134,23 @@ export function CortexApp({ window: _window }: WindowComponentProps) {
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-1 flex-col">
-          {/* Shader Preview */}
-          <div className="flex-1">
-            <ShaderPreview preset={selectedPreset} />
-          </div>
+        <div className="flex flex-1 flex-col overflow-auto">
+          {tab === "physiology" ? (
+            <PhysiologyMonitor />
+          ) : (
+            <>
+              {/* Shader Preview */}
+              <div className="flex-1">
+                <ShaderPreview preset={selectedPreset} />
+              </div>
 
-          {/* GPU Monitor */}
-          {showMonitor && (
-            <div className="h-32 border-white/5 border-t">
-              <GpuMonitor />
-            </div>
+              {/* GPU Monitor */}
+              {showMonitor && (
+                <div className="h-32 border-white/5 border-t">
+                  <GpuMonitor />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

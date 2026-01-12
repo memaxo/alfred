@@ -28,12 +28,7 @@ function createWorkspace(args: {
   agentId: string;
 }) {
   const relBase = path.relative(args.repoRoot, args.baseDir);
-  const dbRel = path.join(
-    relBase,
-    ".agentfs",
-    args.runId,
-    `${args.agentId}.db`
-  );
+  const dbRel = path.join(relBase, ".agentfs", args.runId, "agentfs.db");
   mkdirSync(path.dirname(path.resolve(dbRel)), { recursive: true });
 
   const workspace = new AgentFSWorkspace(

@@ -5,15 +5,18 @@
  */
 
 import { Loader2, RefreshCw, Sparkles, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type AISuggestionsProps = {
   onDismiss: () => void;
   onAccept: (code: string) => void;
+  path: string;
   currentCode: string;
   cursorLine: number;
+  cursorColumn: number;
   language: string;
   className?: string;
 };
@@ -27,45 +30,44 @@ type Suggestion = {
 export function AISuggestions({
   onDismiss,
   onAccept,
-  currentCode: _currentCode,
-  cursorLine: _cursorLine,
+  path,
+  currentCode,
+  cursorLine,
+  cursorColumn,
   language,
   className,
 }: AISuggestionsProps) {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([
-    {
-      id: "1",
-      code: "export function useKeyboardShortcuts() {",
-      description: "Add keyboard shortcuts hook",
-    },
-    {
-      id: "2",
-      code: "const [isLoading, setIsLoading] = useState(false);",
-      description: "Add loading state",
-    },
-  ]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const generateSuggestions = useCallback(async () => {
-    setIsLoading(true);
-    // In production, this would call the Codex API
-    // For now, simulate with placeholder suggestions
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSuggestions([
-      {
-        id: crypto.randomUUID(),
-        code: `// TODO: implement ${language} logic`,
-        description: "Add implementation placeholder",
-      },
-      {
-        id: crypto.randomUUID(),
-        code: 'try {\\n  // code\\n} catch (error) {\\n  logger.error("caught_error", { error });\\n}',
-        description: "Add error handling",
-      },
-    ]);
-    setIsLoading(false);
-  }, [language]);
+  const { data, isLoading, refetch } = trpc.codex.suggest.useQuery(
+    {
+      path,
+      content: currentCode,
+      line: cursorLine,
+      column: cursorColumn,
+      language,
+    },
+    {
+      enabled: false,
+    }
+  );
+
+  useEffect(() => {
+    if (data?.suggestion) {
+      setSuggestions([
+        {
+          id: crypto.randomUUID(),
+          code: data.suggestion,
+          description: "Codex Completion",
+        },
+      ]);
+    }
+  }, [data]);
+
+  const generateSuggestions = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

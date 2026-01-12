@@ -172,7 +172,7 @@ describe("AgentFSWorkspace", () => {
     });
 
     it("generates default dbPath from runId and agentId", () => {
-      expect(workspace.dbPath).toBe(".agentfs/test-run-123/test-agent.db");
+      expect(workspace.dbPath).toBe(".agentfs/test-run-123/agentfs.db");
     });
 
     it("uses custom dbPath when provided", () => {
@@ -188,7 +188,7 @@ describe("AgentFSWorkspace", () => {
         "run:with:colons",
         tempDir
       );
-      expect(ws.dbPath).toBe(".agentfs/run-with-colons/agent-with-slashes.db");
+      expect(ws.dbPath).toBe(".agentfs/run-with-colons/agentfs.db");
     });
   });
 

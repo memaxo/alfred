@@ -33,5 +33,6 @@ export { RagApp, RagAppWindow } from "./rag";
 export { SettingsApp, SettingsAppWindow } from "./settings";
 export { TaskManagerApp, TaskManagerAppWindow } from "./taskmanager";
 export { TerminalApp, TerminalAppWindow } from "./terminal";
+export { TimersApp, TimersAppWindow } from "./timers";
 export { TuneApp, TuneAppWindow } from "./tune";
 export { WorkflowApp, WorkflowAppWindow } from "./workflow";

@@ -264,12 +264,24 @@ export function buildAtifTrajectory(args: {
   const steps: AtifStep[] = [];
   let stepId = 1;
 
-  if (args.requirement && args.requirement.trim().length > 0) {
+  const requirement = args.requirement?.trim() ?? "";
+  const hasUserUiMessage = ordered.some((e) => {
+    if (e.eventType !== "ui-message") {
+      return false;
+    }
+    const { data } = unwrapEventEnvelope(e.eventData);
+    if (!isUiMessageArray(data)) {
+      return false;
+    }
+    return data.some((m) => m.role === "user");
+  });
+
+  if (requirement.length > 0 && !hasUserUiMessage) {
     steps.push({
       step_id: stepId++,
       timestamp: safeIso(ordered[0]?.timestamp ?? null),
       source: "user",
-      message: args.requirement,
+      message: requirement,
       extra: { kind: "alfred_requirement" },
     });
   }

@@ -17,6 +17,10 @@
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./src/*.ts"
+    },
+    "./trajectory/*": {
+      "types": "./dist/trajectory/*.d.ts",
+      "default": "./src/trajectory/*.ts"
     }
   },
   "dependencies": {

@@ -120,7 +120,7 @@ describe("AgentFS Integration", () => {
           tempDir,
           ".agentfs",
           "test-run-123",
-          "test-agent.db"
+          "agentfs.db"
         );
         expect(existsSync(dbPath)).toBe(true);
 

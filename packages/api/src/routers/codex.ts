@@ -775,6 +775,60 @@ const codexProcedures = {
         };
       }
     }),
+
+  suggest: authedProcedure
+    .input(
+      z.object({
+        path: z.string().min(1),
+        content: z.string(),
+        line: z.number().int(),
+        column: z.number().int(),
+        language: z.string().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const { toolCodex } = await import(
+          "@alfred/agent/orchestrator/tool/codex/index"
+        );
+
+        // Use codex in "read" mode to generate a suggestion
+        const result = await toolCodex.execute({
+          input: {
+            action: "exec",
+            prompt: `Suggest a completion for the code in ${input.path} at line ${input.line}, column ${input.column}.
+            
+Code context:
+\`\`\`${input.language ?? ""}
+${input.content}
+\`\`\``,
+            out: "text",
+            auto: "read",
+            userId,
+          },
+        });
+
+        return {
+          suggestion: result.result,
+        };
+      } catch (error) {
+        const { sanitized, correlationId, trpcCode, cause } =
+          buildCodexErrorResponse(error, "codex_suggest_failed");
+        throw new TRPCError({
+          code: trpcCode,
+          message: formatCodexErrorMessage(sanitized, correlationId),
+          cause,
+        });
+      }
+    }),
 };
 
 export const codexRouter = router(codexProcedures);

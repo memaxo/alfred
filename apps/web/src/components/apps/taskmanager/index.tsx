@@ -14,7 +14,7 @@
  * @see docs/execplans/desktop-evolution-prd.md Section 3.6
  */
 
-import { Activity, Cpu, History, Network, RefreshCw } from "lucide-react";
+import { Activity, Bot, Cpu, History, Network, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { HistoryTab } from "./history-tab";
 import { NetworkTab } from "./network-tab";
 import { PerformanceChart } from "./performance-chart";
 import { ProcessList } from "./process-list";
+import { RunList } from "./run-list";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -42,8 +43,8 @@ export function TaskManagerApp({
   className,
 }: TaskManagerAppProps) {
   const [tab, setTab] = useState<
-    "processes" | "performance" | "network" | "history"
-  >("processes");
+    "runs" | "processes" | "performance" | "network" | "history"
+  >("runs");
 
   return (
     <div
@@ -63,7 +64,13 @@ export function TaskManagerApp({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-white/5 border-b">
+      <div className="no-scrollbar flex overflow-x-auto border-white/5 border-b">
+        <TabButton
+          active={tab === "runs"}
+          icon={<Bot className="h-4 w-4" />}
+          label="Agent Runs"
+          onClick={() => setTab("runs")}
+        />
         <TabButton
           active={tab === "processes"}
           icon={<Cpu className="h-4 w-4" />}
@@ -92,6 +99,7 @@ export function TaskManagerApp({
 
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
+        {tab === "runs" && <RunList />}
         {tab === "processes" && <ProcessList className="h-full" />}
         {tab === "performance" && <PerformanceChart className="h-full" />}
         {tab === "network" && <NetworkTab className="h-full" />}

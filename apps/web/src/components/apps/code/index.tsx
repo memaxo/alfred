@@ -299,7 +299,9 @@ export function CodeApp({
         return;
       }
       const lines = activeTab.content.split("\n");
-      lines.splice(cursorPosition.line, 0, code);
+      // Split the code if it contains multiple lines
+      const codeLines = code.split("\\n");
+      lines.splice(cursorPosition.line, 0, ...codeLines);
       handleContentChange(lines.join("\n"));
     },
     [activeTab, cursorPosition.line, handleContentChange]
@@ -575,10 +577,12 @@ export function CodeApp({
         {showSuggestions && activeTab && (
           <AISuggestions
             currentCode={activeTab.content}
+            cursorColumn={cursorPosition.column}
             cursorLine={cursorPosition.line}
             language={activeTab.language}
             onAccept={handleAcceptSuggestion}
             onDismiss={() => setShowSuggestions(false)}
+            path={activeTab.path}
           />
         )}
 

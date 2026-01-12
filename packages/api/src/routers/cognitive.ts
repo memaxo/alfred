@@ -194,6 +194,16 @@ export const cognitiveRouter = router({
     }),
 
   /**
+   * Get the latest physiological state
+   */
+  physiologyGet: authedProcedure
+    .input(z.object({ streamId: z.string().default("default") }))
+    .query(async ({ input }) => {
+      const { state } = await reconstructState(input.streamId);
+      return state.physiology;
+    }),
+
+  /**
    * List feedback/mistake history from the learning ledger
    */
   feedbackList: authedProcedure

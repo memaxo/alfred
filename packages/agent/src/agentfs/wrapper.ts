@@ -447,7 +447,7 @@ export function createEphemeralAgentFS(): Promise<AlfredAgentFS> {
 /**
  * Create a persistent AgentFS instance for a workflow run.
  *
- * The database is stored at `.agentfs/{runId}/{agentId}.db`
+ * The database is stored at `.agentfs/{runId}/agentfs.db`
  * for later analysis and learning.
  *
  * @param runId Workflow run identifier
@@ -460,10 +460,9 @@ export function createRunAgentFS(
   basePath?: string
 ): Promise<AlfredAgentFS> {
   const sanitizedRunId = runId.replace(/[^a-zA-Z0-9-]/g, "-");
-  const sanitizedAgentId = agentId.replace(/[^a-zA-Z0-9-]/g, "-");
   const dbPath = basePath
-    ? `${basePath}/.agentfs/${sanitizedRunId}/${sanitizedAgentId}.db`
-    : `.agentfs/${sanitizedRunId}/${sanitizedAgentId}.db`;
+    ? `${basePath}/.agentfs/${sanitizedRunId}/agentfs.db`
+    : `.agentfs/${sanitizedRunId}/agentfs.db`;
 
   return AlfredAgentFS.open(
     {
