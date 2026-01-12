@@ -31,6 +31,7 @@ export const createViewportSliceNew: StateCreator<
   mode: "desktop",
   desktopArea: DEFAULT_DESKTOP_AREA,
   focusedWindowId: null,
+  onboardingCompleted: false,
 
   // Legacy compatibility
   isSpaceMode: false,
@@ -53,6 +54,10 @@ export const createViewportSliceNew: StateCreator<
       mode: newMode,
       isSpaceMode: newMode === "mindscape",
     });
+  },
+
+  setOnboardingCompleted: (onboardingCompleted: boolean) => {
+    set({ onboardingCompleted });
   },
 
   // ─────────────────────────────────────────────────────────────────────────

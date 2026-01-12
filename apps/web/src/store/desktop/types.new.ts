@@ -42,6 +42,7 @@ export type WindowType =
   | "project"
   // Tier 4: Productivity & Settings
   | "settings"
+  | "components"
   | "notes"
   | "reminders"
   | "todos"
@@ -166,6 +167,20 @@ export type WindowGroup = {
   zIndex: number;
   isFocused: boolean;
   createdAt: number;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WIDGET TYPES — Pinned background elements
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WidgetType = "chart" | "number";
+
+export type WidgetInstance = {
+  id: string;
+  type: WidgetType;
+  title: string;
+  metricName: string;
+  bounds: Bounds;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -340,10 +355,12 @@ export type ViewportSlice = {
   mode: DesktopMode;
   desktopArea: DesktopArea;
   focusedWindowId: string | null;
+  onboardingCompleted: boolean;
 
   // Mode switching
   setMode: (mode: DesktopMode) => void;
   toggleMindscape: () => void;
+  setOnboardingCompleted: (completed: boolean) => void;
 
   // Desktop area (recalculated on resize)
   setDesktopArea: (area: DesktopArea) => void;
@@ -380,6 +397,17 @@ export type TaskbarSlice = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// WIDGET SLICE — Pinned background elements
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WidgetSlice = {
+  pinnedWidgets: WidgetInstance[];
+  pinWidget: (widget: Omit<WidgetInstance, "id">) => void;
+  unpinWidget: (id: string) => void;
+  updateWidgetBounds: (id: string, bounds: Bounds) => void;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DESKTOP STATE — Composed state (no ReactFlow dependency)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -403,6 +431,7 @@ export type DesktopState = WindowSlice &
   TilingSlice &
   ViewportSlice &
   TaskbarSlice &
+  WidgetSlice &
   CacheSlice &
   ContextSlice &
   KnowledgeSlice;
@@ -522,6 +551,10 @@ export const WINDOW_DEFAULTS: Record<
   settings: {
     minSize: { width: 400, height: 400 },
     defaultBounds: { x: 200, y: 100, width: 500, height: 500 },
+  },
+  components: {
+    minSize: { width: 500, height: 400 },
+    defaultBounds: { x: 140, y: 90, width: 900, height: 650 },
   },
   notes: {
     minSize: { width: 300, height: 300 },

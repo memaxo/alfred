@@ -8,70 +8,20 @@
  * @see @alfred/policy package
  */
 
-import { AlertTriangle, Info, Shield } from "lucide-react";
+import { AlertTriangle, Info, Loader2, Shield } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/select";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
-type PolicyPreference = {
-  id: string;
-  name: string;
-  description: string;
-  scope: string;
-  level: "ask" | "allow" | "deny";
-  risk: "low" | "medium" | "high";
-};
+type PolicyLevel = "ask" | "allow" | "deny";
 
-const mockPreferences: PolicyPreference[] = [
-  {
-    id: "1",
-    name: "File System Access",
-    description: "Allow ALFRED to read and write files in the workspace",
-    scope: "filesystem",
-    level: "allow",
-    risk: "low",
-  },
-  {
-    id: "2",
-    name: "Git Operations",
-    description: "Allow commits, branch creation, and local git operations",
-    scope: "git",
-    level: "allow",
-    risk: "low",
-  },
-  {
-    id: "3",
-    name: "Git Push",
-    description: "Allow pushing changes to remote repositories",
-    scope: "git.push",
-    level: "ask",
-    risk: "medium",
-  },
-  {
-    id: "4",
-    name: "Shell Commands",
-    description: "Allow executing shell commands in the terminal",
-    scope: "shell",
-    level: "ask",
-    risk: "high",
-  },
-  {
-    id: "5",
-    name: "External API Calls",
-    description: "Allow making HTTP requests to external services",
-    scope: "network.external",
-    level: "ask",
-    risk: "medium",
-  },
-  {
-    id: "6",
-    name: "Database Modifications",
-    description: "Allow modifying database schemas and data",
-    scope: "database.write",
-    level: "ask",
-    risk: "high",
-  },
-];
-
-const levelColors = {
+const levelColors: Record<PolicyLevel, string> = {
   ask: "border-yellow-500/50 bg-yellow-500/10",
   allow: "border-green-500/50 bg-green-500/10",
   deny: "border-red-500/50 bg-red-500/10",
@@ -84,6 +34,23 @@ const riskColors = {
 };
 
 export function PolicySection() {
+  const utils = trpc.useUtils();
+  const { data: preferences, isLoading } = trpc.policy.list.useQuery();
+
+  const updatePolicy = trpc.policy.update.useMutation({
+    onSuccess: () => {
+      utils.policy.list.invalidate();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-biolum" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="mb-4">
@@ -107,27 +74,45 @@ export function PolicySection() {
       </div>
 
       <div className="space-y-3">
-        {mockPreferences.map((pref) => (
+        {preferences?.map((pref) => (
           <div
-            className={cn("rounded-lg border p-4", levelColors[pref.level])}
+            className={cn(
+              "rounded-lg border p-4",
+              levelColors[pref.level as PolicyLevel]
+            )}
             key={pref.id}
           >
             <div className="mb-2 flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-biolum" />
                 <span className="font-medium">{pref.name}</span>
-                <span className={cn("text-xs", riskColors[pref.risk])}>
+                <span
+                  className={cn(
+                    "text-xs uppercase tracking-wider",
+                    riskColors[pref.risk as keyof typeof riskColors]
+                  )}
+                >
                   {pref.risk} risk
                 </span>
               </div>
-              <select
-                className="rounded border border-white/20 bg-void px-2 py-1 text-sm focus:border-biolum focus:outline-none"
+              <Select
                 defaultValue={pref.level}
+                onValueChange={(level) =>
+                  updatePolicy.mutate({
+                    id: pref.id,
+                    level: level as PolicyLevel,
+                  })
+                }
               >
-                <option value="allow">Allow</option>
-                <option value="ask">Ask First</option>
-                <option value="deny">Deny</option>
-              </select>
+                <SelectTrigger className="h-8 w-[110px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="allow">Allow</SelectItem>
+                  <SelectItem value="ask">Ask First</SelectItem>
+                  <SelectItem value="deny">Deny</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <p className="text-biolum-dim text-sm">{pref.description}</p>

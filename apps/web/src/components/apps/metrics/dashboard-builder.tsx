@@ -4,28 +4,50 @@
  * Dashboard Builder - Create custom metric dashboards
  */
 
-import { Loader2, Maximize2, Plus, Settings } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Maximize2, Pin, PinOff, Plus, Settings } from "lucide-react";
+import { useCallback, useMemo } from "react";
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
+import { Chart } from "@/components/chart";
+import { Grid } from "@/components/grid";
+import { Loading } from "@/components/loading";
+import { Number as SlidingNumber } from "@/components/number";
+import { Toolbar } from "@/components/toolbar";
 import { Button } from "@/components/ui/button";
+import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
 import type { Metric } from "./index";
 
 export function DashboardBuilder() {
+  const pinWidget = useDesktopStore((s) => s.pinWidget);
+  const unpinWidget = useDesktopStore((s) => s.unpinWidget);
+  const pinnedWidgets = useDesktopStore((s) => s.pinnedWidgets);
+
   const { data, error, isLoading, refetch } = trpc.admin.metricsList.useQuery(
     undefined,
     {
       retry: false,
     }
+  );
+
+  const handleSettingsClick = useCallback(() => {}, []);
+  const handleAddPanelClick = useCallback(() => {}, []);
+
+  const toolbarActions = useMemo(
+    () => [
+      {
+        id: "settings",
+        label: "Settings",
+        icon: <Settings className="h-3 w-3" />,
+        onClick: handleSettingsClick,
+      },
+      {
+        id: "add",
+        label: "Add Panel",
+        icon: <Plus className="h-3 w-3" />,
+        onClick: handleAddPanelClick,
+      },
+    ],
+    [handleAddPanelClick, handleSettingsClick]
   );
 
   if (isBiometricError(error)) {
@@ -38,9 +60,8 @@ export function DashboardBuilder() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center text-biolum-dim">
-        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-        Loading metrics...
+      <div className="flex h-full items-center justify-center">
+        <Loading message="Loading metrics..." />
       </div>
     );
   }
@@ -77,20 +98,11 @@ export function DashboardBuilder() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-white/5 border-b p-4">
         <span className="font-medium">System Overview</span>
-        <div className="flex gap-2">
-          <Button className="gap-1" size="sm" variant="outline">
-            <Settings className="h-3 w-3" />
-            Settings
-          </Button>
-          <Button className="gap-1" size="sm">
-            <Plus className="h-3 w-3" />
-            Add Panel
-          </Button>
-        </div>
+        <Toolbar actions={toolbarActions} />
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        <div className="grid grid-cols-3 gap-4">
+        <Grid cols={3}>
           {/* Stats Panels */}
           <StatPanel
             subtitle="Total generations"
@@ -112,50 +124,56 @@ export function DashboardBuilder() {
           <div className="col-span-2 rounded-lg border border-white/10 bg-white/5">
             <div className="flex items-center justify-between border-white/5 border-b p-2">
               <span className="text-sm">Top Tool Invocations</span>
-              <Button className="h-6 w-6" size="icon" variant="ghost">
-                <Maximize2 className="h-3 w-3" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {pinnedWidgets.some(
+                  (w) => w.metricName === "assistant_tool_calls_total"
+                ) ? (
+                  <Button
+                    className="h-6 w-6"
+                    onClick={() => {
+                      const widget = pinnedWidgets.find(
+                        (w) => w.metricName === "assistant_tool_calls_total"
+                      );
+                      if (widget) {
+                        unpinWidget(widget.id);
+                      }
+                    }}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <PinOff className="h-3 w-3 text-biolum" />
+                  </Button>
+                ) : (
+                  <Button
+                    className="h-6 w-6"
+                    onClick={() =>
+                      pinWidget({
+                        type: "chart",
+                        title: "Tool Invocations",
+                        metricName: "assistant_tool_calls_total",
+                        bounds: { x: 20, y: 100, width: 300, height: 200 },
+                      })
+                    }
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <Pin className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button className="h-6 w-6" size="icon" variant="ghost">
+                  <Maximize2 className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
             <div className="h-64 p-4">
-              {toolCallsData.length > 0 ? (
-                <ResponsiveContainer height="100%" width="100%">
-                  <BarChart data={toolCallsData} layout="vertical">
-                    <CartesianGrid
-                      horizontal={false}
-                      stroke="#333"
-                      strokeDasharray="3 3"
-                    />
-                    <XAxis fontSize={12} stroke="#666" type="number" />
-                    <YAxis
-                      dataKey="name"
-                      fontSize={12}
-                      stroke="#666"
-                      type="category"
-                      width={100}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#111",
-                        border: "1px solid #333",
-                        borderRadius: "8px",
-                      }}
-                      itemStyle={{ color: "#00f3ff" }}
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                      {toolCallsData.map((_entry, index) => (
-                        <Cell
-                          fill={`rgba(0, 243, 255, ${1 - index * 0.15})`}
-                          key={`cell-${index}`}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center text-biolum-dim italic">
-                  No tool call data available
-                </div>
-              )}
+              <Chart
+                data={toolCallsData}
+                empty={
+                  <div className="flex h-full items-center justify-center text-biolum-dim italic">
+                    No tool call data available
+                  </div>
+                }
+              />
             </div>
           </div>
 
@@ -187,7 +205,7 @@ export function DashboardBuilder() {
               </table>
             </div>
           </div>
-        </div>
+        </Grid>
       </div>
     </div>
   );
@@ -208,7 +226,7 @@ function StatPanel({
         {title}
       </div>
       <div className="mt-2 font-mono text-3xl text-biolum">
-        {value.toLocaleString()}
+        <SlidingNumber value={value} />
       </div>
       <div className="mt-1 text-[10px] text-biolum-dim">{subtitle}</div>
     </div>

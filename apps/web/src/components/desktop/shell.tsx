@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
+import { OnboardingOverlay } from "../onboarding/overlay";
 import { FocusIndicator, SkipLinks } from "./accessibility";
 import { DesktopCommandPalette } from "./command-palette";
 import { LayerErrorBoundary, ShellErrorBoundary } from "./error-boundary";
@@ -30,6 +31,7 @@ import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { DesktopIcons } from "./layers/desktop-icons";
 import { MindscapeLayer } from "./layers/mindscape-layer";
 import { OrbLayer } from "./layers/orb-layer";
+import { WidgetLayer } from "./layers/widget-layer";
 import { WindowLayer } from "./layers/window-layer";
 import { MenuBar } from "./menubar";
 import { Taskbar } from "./taskbar";
@@ -150,6 +152,9 @@ export function AlfredDesktopShell({
 
           {/* Desktop Icons (on background surface) */}
           {mode === "desktop" && <DesktopIcons />}
+
+          {/* Widget Layer (pinned charts/metrics) */}
+          {mode === "desktop" && <WidgetLayer />}
         </div>
 
         {/* Mindscape Layer (ReactFlow - toggle) */}
@@ -196,6 +201,9 @@ export function AlfredDesktopShell({
 
         {/* Additional children (portals, etc.) */}
         {children}
+
+        {/* Onboarding Overlay */}
+        <OnboardingOverlay />
       </div>
     </ShellErrorBoundary>
   );
