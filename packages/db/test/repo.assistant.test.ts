@@ -193,6 +193,54 @@ describeFn("assistantRepo", () => {
       expect(reminders[0]?.fired).toBe(true);
     });
 
+    it("advances reminder with CAS semantics", async () => {
+      const due = new Date("2025-01-27T11:00:00Z");
+      const reminder = await assistantRepo.createReminder(
+        TEST_USER,
+        "Recurring",
+        due,
+        undefined,
+        "daily"
+      );
+
+      const nextDue = new Date("2025-01-28T11:00:00Z");
+
+      // Succeeds when due_at matches and fired=false.
+      const updated1 = await assistantRepo.advanceReminder(
+        reminder.id,
+        due,
+        nextDue
+      );
+      expect(updated1).toBe(1);
+
+      const rows1 = await assistantRepo.getReminders(TEST_USER);
+      expect(rows1).toHaveLength(1);
+      expect(rows1[0]?.fired).toBe(false);
+      expect(rows1[0]?.due).toEqual(nextDue);
+
+      // Fails when due_at no longer matches (CAS prevents double-processing).
+      const updated2 = await assistantRepo.advanceReminder(
+        reminder.id,
+        due,
+        new Date("2025-01-29T11:00:00Z")
+      );
+      expect(updated2).toBe(0);
+
+      const rows2 = await assistantRepo.getReminders(TEST_USER);
+      expect(rows2[0]?.due).toEqual(nextDue);
+
+      // Mark as fired only when current due_at matches.
+      const updated3 = await assistantRepo.advanceReminder(
+        reminder.id,
+        nextDue,
+        null
+      );
+      expect(updated3).toBe(1);
+
+      const rows3 = await assistantRepo.getReminders(TEST_USER);
+      expect(rows3[0]?.fired).toBe(true);
+    });
+
     it("deletes reminder", async () => {
       const reminder = await assistantRepo.createReminder(
         TEST_USER,

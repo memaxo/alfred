@@ -12,6 +12,23 @@ import {
   stopReminderScheduler,
 } from "../../src/scheduler/remind";
 
+async function waitFor(
+  cond: () => boolean,
+  {
+    timeoutMs = 2000,
+    intervalMs = 10,
+  }: { timeoutMs?: number; intervalMs?: number } = {}
+): Promise<void> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (cond()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error("test_wait_for_timeout");
+}
+
 const getDueRemindersAllMock = vi.fn();
 const advanceReminderMock = vi.fn();
 const getProfileMock = vi.fn();
@@ -69,8 +86,7 @@ describe("ReminderScheduler", () => {
         now: () => new Date("2025-01-27T12:00:00Z"),
       });
 
-      // Wait for first tick
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await waitFor(() => getDueRemindersAllMock.mock.calls.length > 0);
 
       expect(getDueRemindersAllMock).toHaveBeenCalled();
       stopReminderScheduler();
@@ -119,8 +135,7 @@ describe("ReminderScheduler", () => {
         now: () => new Date("2025-01-27T12:00:00Z"),
       });
 
-      // Wait for first tick
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await waitFor(() => advanceReminderMock.mock.calls.length === 2);
 
       expect(getDueRemindersAllMock).toHaveBeenCalledWith(
         expect.any(Date),
@@ -168,7 +183,7 @@ describe("ReminderScheduler", () => {
         now: () => new Date("2025-01-27T12:00:00Z"),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await waitFor(() => advanceReminderMock.mock.calls.length === 1);
 
       expect(getProfileMock).toHaveBeenCalledWith("test-user");
       expect(advanceReminderMock).toHaveBeenCalledWith(
@@ -207,7 +222,7 @@ describe("ReminderScheduler", () => {
         now: () => new Date("2025-01-27T12:00:00Z"),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await waitFor(() => advanceReminderMock.mock.calls.length === 1);
 
       expect(loggerMock.warn).toHaveBeenCalledWith(
         expect.stringContaining("Invalid recurring schedule"),
@@ -247,8 +262,13 @@ describe("ReminderScheduler", () => {
         now: () => new Date("2025-01-27T12:00:00Z"),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await waitFor(() => advanceReminderMock.mock.calls.length === 1);
 
+      expect(advanceReminderMock).toHaveBeenCalledWith(
+        mockReminder.id,
+        mockReminder.due,
+        null
+      );
       expect(onFireMock).not.toHaveBeenCalled();
 
       stopReminderScheduler();
@@ -263,7 +283,7 @@ describe("ReminderScheduler", () => {
         now: () => new Date("2025-01-27T12:00:00Z"),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await waitFor(() => getDueRemindersAllMock.mock.calls.length > 0);
 
       expect(getDueRemindersAllMock).toHaveBeenCalled();
       expect(advanceReminderMock).not.toHaveBeenCalled();
