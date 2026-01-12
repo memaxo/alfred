@@ -683,6 +683,8 @@ export async function runAgent({
       if (escalationContent.trim().length > 0) {
         escalationReason = escalationContent;
         logger.warn("agent_escalated", {
+          runId,
+          userId,
           agentId: spec.agentId,
           reason: escalationReason,
         });
@@ -712,8 +714,13 @@ export async function runAgent({
       const { processForLearning } = await import(
         "@alfred/agent/agentfs/learning-bridge"
       );
-      await processForLearning(workspaceEnv.dbPath).catch((e: Error) =>
-        logger.warn("agentfs_learning_failed", { err: e.message })
+      await processForLearning(workspaceEnv.dbPath).catch((error: Error) =>
+        logger.warn("agentfs_learning_failed", {
+          runId,
+          userId,
+          agentId: spec.agentId,
+          error,
+        })
       );
     } catch {
       // Learning extraction is best-effort

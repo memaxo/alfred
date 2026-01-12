@@ -9,6 +9,7 @@ import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import { llmConcurrency, llmRateLimit } from "@alfred/agent/utils/rate-limiter";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
+import { classifyAiSdkError, isAbortError } from "@alfred/type/aierror";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel, Tool } from "ai";
@@ -151,10 +152,23 @@ export class AISDKAdapter {
 
       const modelMessages = historyContext.modelMessages;
 
+      const telemetry =
+        process.env.AI_TELEMETRY === "1"
+          ? {
+              experimental_telemetry: {
+                isEnabled: true,
+                functionId: "runtime.stream",
+                recordInputs: false,
+                recordOutputs: false,
+              },
+            }
+          : {};
+
       const result = streamText({
         model: options.model,
         messages: modelMessages,
         tools: options.tools,
+        ...telemetry,
         abortSignal: options.abortSignal,
         system: systemPrompt,
         temperature: options.temperature,
@@ -192,12 +206,37 @@ export class AISDKAdapter {
       runtimeAiSdkCallsTotal.inc({ model: modelId, status: "failed" });
       stopAi();
 
+      if (isAbortError(error)) {
+        logger.warn("runtime_ai_sdk_aborted", {
+          runId: this.runId,
+          model: modelId,
+          durationMs,
+        });
+        throw error;
+      }
+
+      const classified = classifyAiSdkError(error);
+
       logger.error("runtime_ai_sdk_error", {
         runId: this.runId,
         model: modelId,
-        error: error instanceof Error ? error.message : String(error),
+        safeCode: classified.safeCode,
+        kind: classified.kind,
+        retryable: classified.retryable,
+        ...classified.log,
         durationMs,
       });
+
+      yield {
+        _: "error",
+        message: classified.safeCode,
+        chunk: {
+          code: classified.safeCode,
+          message: classified.safeMessage,
+          kind: classified.kind,
+          retryable: classified.retryable,
+        },
+      } as WorkflowEvent;
 
       throw error;
     } finally {

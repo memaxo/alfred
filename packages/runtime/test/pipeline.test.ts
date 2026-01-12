@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { PipelineRunner } from "../src/pipeline/runner";
 import type { Phase, PhaseResult, PipelineState } from "../src/pipeline/types";
 
@@ -30,7 +31,7 @@ describe("PipelineRunner", () => {
     const state: PipelineState = {
       currentPhaseId: "phase1",
       history: [],
-      context: {} as any,
+      context: new RuntimeContext(),
     };
     const runner = new PipelineRunner(state);
     runner.register(new TestPhase("phase1"));
@@ -57,7 +58,7 @@ describe("PipelineRunner", () => {
     const state: PipelineState = {
       currentPhaseId: "phase1",
       history: [],
-      context: {} as any,
+      context: new RuntimeContext(),
     };
     const runner = new PipelineRunner(state);
     runner.register(new TestPhase("phase1", "phase2"));
@@ -88,7 +89,7 @@ describe("PipelineRunner", () => {
     const state: PipelineState = {
       currentPhaseId: "phase1",
       history: [],
-      context: {} as any,
+      context: new RuntimeContext(),
     };
 
     const runner = new PipelineRunner(state);

@@ -474,7 +474,7 @@ export async function orchestrateWorkflowStream(
         }
       } catch (error) {
         logger.warn("workflow_unregister_failed", {
-          runId,
+          runId: runId ?? undefined,
           error: error instanceof Error ? error.message : String(error),
         });
       }

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { PhaseTimeoutError, PipelineRunner } from "../../src/pipeline/runner";
 import type { Phase, PipelineState } from "../../src/pipeline/types";
 
 const createState = (): PipelineState => ({
   currentPhaseId: "start",
-  context: {} as any,
+  context: new RuntimeContext(),
   history: [],
 });
 

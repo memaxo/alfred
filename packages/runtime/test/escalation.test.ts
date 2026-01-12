@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { PipelineRunner } from "../src/pipeline/runner";
 import type { Phase, PhaseResult, PipelineState } from "../src/pipeline/types";
 
@@ -33,7 +34,7 @@ describe("PipelineRunner Escalation", () => {
     const state: PipelineState = {
       currentPhaseId: "act",
       history: [],
-      context: {} as any,
+      context: new RuntimeContext(),
     };
 
     const actConfig = { escalate: true, target: "plan", escalated: false };

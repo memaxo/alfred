@@ -1,5 +1,6 @@
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
 import { runtimePhaseDurationSeconds, runtimePhasesTotal } from "../metrics";
 import type { Phase, PhaseResult, PipelineState } from "./types";
 
@@ -16,6 +17,26 @@ type PipelineRunnerOptions = {
   phaseTimeouts?: Record<string, number>;
   defaultPhaseTimeoutMs?: number;
 };
+
+function readId(
+  ctx: RuntimeContext,
+  key: "runId" | "workflowId" | "userId"
+): string | undefined {
+  const v = ctx.get(key);
+  return typeof v === "string" ? v : undefined;
+}
+
+function readIds(ctx: RuntimeContext): {
+  runId?: string;
+  workflowId?: string;
+  userId?: string;
+} {
+  return {
+    runId: readId(ctx, "runId"),
+    workflowId: readId(ctx, "workflowId"),
+    userId: readId(ctx, "userId"),
+  };
+}
 
 export class PhaseTimeoutError extends Error {
   constructor(
@@ -76,6 +97,7 @@ export class PipelineRunner {
     const currentInput = initialInput;
     let phaseId = this.state.currentPhaseId;
     let transitionCount = 0;
+    const ids = readIds(this.state.context);
 
     while (true) {
       if (transitionCount++ > this.MAX_TRANSITIONS) {
@@ -91,7 +113,7 @@ export class PipelineRunner {
 
       this.state.currentPhaseId = phaseId;
 
-      logger.info("pipeline_phase_start", { phaseId });
+      logger.info("pipeline_phase_start", { ...ids, phaseId });
       yield { _: "step-start", phase: phaseId } as any;
       const timeoutMs = this.resolvePhaseTimeout(phaseId);
       const timeoutGuard = this.createPhaseTimeoutGuard(phaseId, timeoutMs);
@@ -123,7 +145,7 @@ export class PipelineRunner {
         });
 
         if (result.status === "success") {
-          logger.info("pipeline_phase_success", { phaseId });
+          logger.info("pipeline_phase_success", { ...ids, phaseId });
           runtimePhasesTotal.inc({ phase: phaseId, status: "success" });
           yield { _: "step-complete", phase: phaseId } as any;
           const nextId = this.nextPhaseId(phaseId);
@@ -135,6 +157,7 @@ export class PipelineRunner {
         }
         if (result.status === "failure") {
           logger.error("pipeline_phase_failure", {
+            ...ids,
             phaseId,
             error: result.error.message,
           });
@@ -143,6 +166,7 @@ export class PipelineRunner {
         }
         if (result.status === "escalate") {
           logger.warn("pipeline_phase_escalation", {
+            ...ids,
             phaseId,
             reason: result.reason,
             target: result.targetPhase,
@@ -172,6 +196,7 @@ export class PipelineRunner {
           timestamp: Date.now(),
         });
         logger.error("pipeline_execution_error", {
+          ...ids,
           phaseId,
           error: error instanceof Error ? error.message : String(error),
           timeoutMs:

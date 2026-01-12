@@ -1,4 +1,5 @@
 import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { createRequire } from "node:module";
 
 const streamTextMock = vi.fn(() => ({
   fullStream: (async function* () {
@@ -9,7 +10,11 @@ const streamTextMock = vi.fn(() => ({
 
 const validateUIMessagesMock = vi.fn(async ({ messages }) => messages);
 
+const require = createRequire(import.meta.url);
+const realAi = require("ai") as typeof import("ai");
+
 mock.module("ai", () => ({
+  ...realAi,
   streamText: streamTextMock,
   validateUIMessages: validateUIMessagesMock,
   stepCountIs: () => () => false,
