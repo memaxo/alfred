@@ -1,3 +1,4 @@
+import { classifyAiSdkError } from "@alfred/type/aierror";
 import { TRPCError } from "@trpc/server";
 
 /**
@@ -11,6 +12,7 @@ export function toTRPCError(
   if (error instanceof TRPCError) {
     return error;
   }
+
   const message =
     error instanceof Error
       ? error.message
@@ -26,6 +28,16 @@ export function toTRPCError(
   if (message === "codex_timeout_exceeds_limit") {
     return new TRPCError({ code: "BAD_REQUEST", message });
   }
+
+  const classified = classifyAiSdkError(error);
+  if (classified.name?.startsWith("AI_")) {
+    return new TRPCError({
+      code: classified.trpcCode,
+      message: classified.safeCode,
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     message,
