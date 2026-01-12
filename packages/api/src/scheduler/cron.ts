@@ -143,15 +143,24 @@ export function nextDueAt({
     strict: true,
   });
 
+  const toDate = (value: unknown): Date => {
+    if (value instanceof Date) {
+      return value;
+    }
+    if (value && typeof value === "object" && "toDate" in value) {
+      const toDateFn = (value as { toDate?: unknown }).toDate;
+      if (typeof toDateFn === "function") {
+        const d = toDateFn.call(value) as unknown;
+        if (d instanceof Date) {
+          return d;
+        }
+      }
+    }
+    return new Date(String(value));
+  };
+
   for (let i = 0; i < maxTransitions; i++) {
-    const next = interval.next() as unknown;
-    const nextDate =
-      next instanceof Date
-        ? next
-        : next && typeof next === "object" && "toDate" in next
-          ? // biome-ignore lint/suspicious/noExplicitAny: cron-parser's CronDate typing is not exported consistently
-            ((next as any).toDate?.() as Date)
-          : new Date(String(next));
+    const nextDate = toDate(interval.next() as unknown);
     if (nextDate.getTime() > after.getTime()) {
       return nextDate;
     }
