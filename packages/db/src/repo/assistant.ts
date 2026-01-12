@@ -295,6 +295,39 @@ export async function markReminderFired(reminderId: string): Promise<number> {
   return rows.length;
 }
 
+/**
+ * Conditional reminder fire/reschedule to prevent duplicate processing across scheduler instances.
+ *
+ * - If `nextDueAt` is null: mark as fired (one-shot).
+ * - If `nextDueAt` is provided: keep `fired=false` and move `due_at` forward.
+ *
+ * Update succeeds only if the row is still unfired AND `due_at` still matches the value the
+ * scheduler read (CAS on `due_at`).
+ */
+export async function advanceReminder(
+  reminderId: string,
+  dueAt: Date,
+  nextDueAt: Date | null
+): Promise<number> {
+  const patch = nextDueAt
+    ? { fired: false, firedAt: sql`NOW()`, due: nextDueAt }
+    : { fired: true, firedAt: sql`NOW()` };
+
+  const rows = await db
+    .update(reminders)
+    .set(patch)
+    .where(
+      and(
+        eq(reminders.id, reminderId),
+        eq(reminders.fired, false),
+        eq(reminders.due, dueAt)
+      )
+    )
+    .returning({ id: reminders.id });
+
+  return rows.length;
+}
+
 export async function deleteReminder(reminderId: string): Promise<number> {
   const rows = await db
     .delete(reminders)

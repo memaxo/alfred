@@ -1,13 +1,26 @@
 import * as assistantRepo from "@alfred/db/repo/assistant";
 import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import z from "zod";
+import { isRecurringValid } from "../scheduler/cron";
 import { authedProcedure, router } from "../trpc";
+
+const recurringSchema = z
+  .string()
+  .max(128)
+  .optional()
+  .transform((value) => (value === undefined ? undefined : value.trim()))
+  .refine((value) => value === undefined || value.length > 0, {
+    message: "recurring_empty",
+  })
+  .refine((value) => value === undefined || isRecurringValid(value), {
+    message: "recurring_invalid",
+  });
 
 const reminderBase = z.object({
   projectId: z.string().uuid().optional(),
   title: z.string().min(1).max(256),
   description: z.string().max(2048).optional(),
-  recurring: z.string().max(128).optional(),
+  recurring: recurringSchema,
 });
 
 const reminderCreateInput = reminderBase.extend({

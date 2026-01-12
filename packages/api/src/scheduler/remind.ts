@@ -1,5 +1,7 @@
 import * as assistantRepo from "@alfred/db/repo/assistant";
+import * as userRepo from "@alfred/db/repo/user";
 import { bridgeReminder } from "../webhooks/cognitive-bridge";
+import { nextDueAt } from "./cron";
 
 type Reminder = Awaited<ReturnType<typeof assistantRepo.getReminders>>[number];
 
@@ -77,8 +79,51 @@ async function tick(
       options.batchSize
     );
 
+    const tzByUser = new Map<string, string>();
+    const getTz = async (userId: string) => {
+      const cached = tzByUser.get(userId);
+      if (cached) {
+        return cached;
+      }
+      const profile = await userRepo.getProfile(userId);
+      const tz = profile?.timezone ?? "UTC";
+      tzByUser.set(userId, tz);
+      return tz;
+    };
+
     for (const reminder of reminders) {
-      await assistantRepo.markReminderFired(reminder.id);
+      let next: Date | null = null;
+      if (reminder.recurring) {
+        try {
+          const tz = await getTz(reminder.userId);
+          next = nextDueAt({
+            recurring: reminder.recurring,
+            after: now,
+            baseDueAt: reminder.due ?? now,
+            tz,
+          });
+        } catch (error) {
+          options.logger.warn?.(
+            "[assistant-remind] Invalid recurring schedule",
+            {
+              reminderId: reminder.id,
+              recurring: reminder.recurring,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          );
+          next = null;
+        }
+      }
+
+      const updated = await assistantRepo.advanceReminder(
+        reminder.id,
+        reminder.due,
+        next
+      );
+      if (updated !== 1) {
+        continue;
+      }
+
       if (options.onFire) {
         await options.onFire(reminder);
       } else {
@@ -129,6 +174,7 @@ export function startReminderScheduler({
       await run();
       scheduleNext();
     }, delay);
+    schedulerHandle.unref();
   };
 
   void run().then(scheduleNext, (error) => {

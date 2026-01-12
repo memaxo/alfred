@@ -13,11 +13,16 @@ import {
 } from "../../src/scheduler/remind";
 
 const getDueRemindersAllMock = vi.fn();
-const markReminderFiredMock = vi.fn();
+const advanceReminderMock = vi.fn();
+const getProfileMock = vi.fn();
 
 mock.module("@alfred/db/repo/assistant", () => ({
   getDueRemindersAll: getDueRemindersAllMock,
-  markReminderFired: markReminderFiredMock,
+  advanceReminder: advanceReminderMock,
+}));
+
+mock.module("@alfred/db/repo/user", () => ({
+  getProfile: getProfileMock,
 }));
 
 describe("ReminderScheduler", () => {
@@ -30,7 +35,8 @@ describe("ReminderScheduler", () => {
 
   beforeEach(() => {
     getDueRemindersAllMock.mockReset();
-    markReminderFiredMock.mockReset();
+    advanceReminderMock.mockReset();
+    getProfileMock.mockReset();
     loggerMock.info.mockReset();
     loggerMock.warn.mockReset();
     loggerMock.error.mockReset();
@@ -87,7 +93,6 @@ describe("ReminderScheduler", () => {
           recurring: null,
           fired: false,
           created: new Date(),
-          updated: new Date(),
         },
         {
           id: "223e4567-e89b-12d3-a456-426614174001",
@@ -98,12 +103,11 @@ describe("ReminderScheduler", () => {
           recurring: null,
           fired: false,
           created: new Date(),
-          updated: new Date(),
         },
       ];
 
       getDueRemindersAllMock.mockResolvedValue(mockReminders);
-      markReminderFiredMock.mockResolvedValue(1);
+      advanceReminderMock.mockResolvedValue(1);
 
       const onFireMock = vi.fn().mockResolvedValue(undefined);
 
@@ -122,14 +126,130 @@ describe("ReminderScheduler", () => {
         expect.any(Date),
         100
       );
-      expect(markReminderFiredMock).toHaveBeenCalledTimes(2);
-      expect(markReminderFiredMock).toHaveBeenCalledWith(
-        "123e4567-e89b-12d3-a456-426614174000"
+      expect(advanceReminderMock).toHaveBeenCalledTimes(2);
+      expect(advanceReminderMock).toHaveBeenCalledWith(
+        "123e4567-e89b-12d3-a456-426614174000",
+        mockReminders[0].due,
+        null
       );
-      expect(markReminderFiredMock).toHaveBeenCalledWith(
-        "223e4567-e89b-12d3-a456-426614174001"
+      expect(advanceReminderMock).toHaveBeenCalledWith(
+        "223e4567-e89b-12d3-a456-426614174001",
+        mockReminders[1].due,
+        null
       );
       expect(onFireMock).toHaveBeenCalledTimes(2);
+
+      stopReminderScheduler();
+    });
+
+    it("reschedules recurring reminders", async () => {
+      const mockReminder = {
+        id: "323e4567-e89b-12d3-a456-426614174002",
+        userId: "test-user",
+        title: "Daily Reminder",
+        description: null,
+        due: new Date("2025-01-27T11:00:00Z"),
+        recurring: "daily",
+        fired: false,
+        created: new Date(),
+      };
+
+      getDueRemindersAllMock.mockResolvedValue([mockReminder]);
+      getProfileMock.mockResolvedValue({ timezone: "UTC" });
+      advanceReminderMock.mockResolvedValue(1);
+
+      const onFireMock = vi.fn().mockResolvedValue(undefined);
+
+      startReminderScheduler({
+        intervalMs: 100,
+        batchSize: 100,
+        logger: loggerMock,
+        onFire: onFireMock,
+        now: () => new Date("2025-01-27T12:00:00Z"),
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(getProfileMock).toHaveBeenCalledWith("test-user");
+      expect(advanceReminderMock).toHaveBeenCalledWith(
+        mockReminder.id,
+        mockReminder.due,
+        new Date("2025-01-28T11:00:00.000Z")
+      );
+      expect(onFireMock).toHaveBeenCalledTimes(1);
+
+      stopReminderScheduler();
+    });
+
+    it("treats invalid recurring schedules as one-shot and continues", async () => {
+      const mockReminder = {
+        id: "423e4567-e89b-12d3-a456-426614174003",
+        userId: "test-user",
+        title: "Bad Schedule",
+        description: null,
+        due: new Date("2025-01-27T11:00:00Z"),
+        recurring: "not a cron",
+        fired: false,
+        created: new Date(),
+      };
+
+      getDueRemindersAllMock.mockResolvedValue([mockReminder]);
+      getProfileMock.mockResolvedValue({ timezone: "UTC" });
+      advanceReminderMock.mockResolvedValue(1);
+
+      const onFireMock = vi.fn().mockResolvedValue(undefined);
+
+      startReminderScheduler({
+        intervalMs: 100,
+        batchSize: 100,
+        logger: loggerMock,
+        onFire: onFireMock,
+        now: () => new Date("2025-01-27T12:00:00Z"),
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(loggerMock.warn).toHaveBeenCalledWith(
+        expect.stringContaining("Invalid recurring schedule"),
+        expect.objectContaining({ reminderId: mockReminder.id })
+      );
+      expect(advanceReminderMock).toHaveBeenCalledWith(
+        mockReminder.id,
+        mockReminder.due,
+        null
+      );
+      expect(onFireMock).toHaveBeenCalledTimes(1);
+
+      stopReminderScheduler();
+    });
+
+    it("does not fire when reminder CAS update fails", async () => {
+      const mockReminder = {
+        id: "523e4567-e89b-12d3-a456-426614174004",
+        userId: "test-user",
+        title: "Due Reminder",
+        description: null,
+        due: new Date("2025-01-27T11:00:00Z"),
+        recurring: null,
+        fired: false,
+        created: new Date(),
+      };
+
+      getDueRemindersAllMock.mockResolvedValue([mockReminder]);
+      advanceReminderMock.mockResolvedValue(0);
+
+      const onFireMock = vi.fn().mockResolvedValue(undefined);
+
+      startReminderScheduler({
+        intervalMs: 100,
+        logger: loggerMock,
+        onFire: onFireMock,
+        now: () => new Date("2025-01-27T12:00:00Z"),
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(onFireMock).not.toHaveBeenCalled();
 
       stopReminderScheduler();
     });
@@ -146,7 +266,7 @@ describe("ReminderScheduler", () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       expect(getDueRemindersAllMock).toHaveBeenCalled();
-      expect(markReminderFiredMock).not.toHaveBeenCalled();
+      expect(advanceReminderMock).not.toHaveBeenCalled();
 
       stopReminderScheduler();
     });
