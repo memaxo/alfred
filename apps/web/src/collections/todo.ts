@@ -10,7 +10,7 @@ type TodoInput = {
 };
 
 type TodoToggleInput = {
-  id: string;
+  id: number;
   completed: boolean;
 };
 
@@ -19,7 +19,7 @@ export function createTodoCollection(
   trpcClient: inferRouterClient<TRPCAppRouter>
 ) {
   const collection = createCollection(
-    queryCollectionOptions<TodoResource, string>({
+    queryCollectionOptions<TodoResource, number | string>({
       queryKey: ["todos"],
       queryFn: async () => {
         const todos = await trpcClient.todo.getAll.query();
@@ -28,8 +28,6 @@ export function createTodoCollection(
             id: t.id,
             text: t.text,
             completed: t.completed ?? false,
-            created: t.created ?? new Date().toISOString(),
-            updated: t.updated ?? t.created ?? new Date().toISOString(),
           })
         );
       },
@@ -50,7 +48,7 @@ export function createTodoCollection(
         const items = transaction.mutations.map((m) => m.modified);
         for (const item of items) {
           await trpcClient.todo.toggle.mutate({
-            id: item.id,
+            id: Number(item.id),
             completed: item.completed,
           });
         }
@@ -60,7 +58,7 @@ export function createTodoCollection(
       onDelete: async ({ transaction }) => {
         const ids = transaction.mutations.map((m) => m.key);
         for (const id of ids) {
-          await trpcClient.todo.delete.mutate({ id });
+          await trpcClient.todo.delete.mutate({ id: Number(id) });
         }
         return { refetch: true };
       },
@@ -71,11 +69,9 @@ export function createTodoCollection(
   const insertTodo = createOptimisticAction<TodoInput>({
     onMutate: (input) => {
       collection.insert({
-        id: crypto.randomUUID(),
+        id: `temp-${crypto.randomUUID()}`,
         text: input.text,
         completed: false,
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
       });
       return input;
     },
@@ -90,7 +86,6 @@ export function createTodoCollection(
     onMutate: (input) => {
       collection.update(input.id, (draft) => {
         draft.completed = input.completed;
-        draft.updated = new Date().toISOString();
       });
       return input;
     },
@@ -104,13 +99,15 @@ export function createTodoCollection(
   });
 
   // Optimistic delete action
-  const deleteTodo = createOptimisticAction<string>({
+  const deleteTodo = createOptimisticAction<number | string>({
     onMutate: (id) => {
       collection.delete(id);
       return id;
     },
     mutationFn: async (id) => {
-      await trpcClient.todo.delete.mutate({ id });
+      if (typeof id === "number") {
+        await trpcClient.todo.delete.mutate({ id });
+      }
       await collection.utils.refetch();
     },
   });

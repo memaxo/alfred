@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { detectZoneFromPosition } from "../../../components/desktop/tiling/utils";
 
 describe("Tiling System Integration", () => {
   it("should calculate zone bounds for split-h layout", () => {
@@ -79,40 +80,7 @@ describe("Tiling System Integration", () => {
     const x = 400;
     const y = 400;
 
-    const relativeX = x - desktopArea.x;
-    const relativeY = y - desktopArea.y;
-
-    let zone: string | null = null;
-
-    if (
-      relativeX < desktopArea.width * 0.3 &&
-      relativeY < desktopArea.height * 0.3
-    ) {
-      zone = "top-left";
-    } else if (
-      relativeX > desktopArea.width * 0.7 &&
-      relativeY < desktopArea.height * 0.3
-    ) {
-      zone = "top-right";
-    } else if (
-      relativeX < desktopArea.width * 0.3 &&
-      relativeY > desktopArea.height * 0.7
-    ) {
-      zone = "bottom-left";
-    } else if (
-      relativeX > desktopArea.width * 0.7 &&
-      relativeY > desktopArea.height * 0.7
-    ) {
-      zone = "bottom-right";
-    } else if (relativeX < desktopArea.width * 0.5) {
-      zone = "left";
-    } else if (relativeX > desktopArea.width * 0.5) {
-      zone = "right";
-    } else if (relativeY < desktopArea.height * 0.5) {
-      zone = "top";
-    } else {
-      zone = "bottom";
-    }
+    const zone = detectZoneFromPosition(x, y, desktopArea);
 
     expect(zone).toBe("left");
   });

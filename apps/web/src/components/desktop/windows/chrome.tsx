@@ -13,8 +13,9 @@ import {
 import { useFocusGravity } from "@/hooks/use-focus-gravity";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { TileZone, WindowInstance } from "@/store/desktop/types.new";
+import type { WindowInstance } from "@/store/desktop/types.new";
 import { useMindscapeStore } from "@/store/mindscape";
+import { detectZoneFromPosition } from "../tiling/utils";
 import { ResizeHandles } from "./resize-handles";
 import type { ResizeDirection } from "./types";
 
@@ -97,38 +98,6 @@ export function WindowChrome({
     }
   }, [focusWindow, windowId, isFocused]);
 
-  const detectZoneFromPosition = useCallback(
-    (x: number, y: number): TileZone | null => {
-      const { width, height } = desktopArea;
-      const relativeX = x - desktopArea.x;
-      const relativeY = y - desktopArea.y;
-
-      if (relativeX < width * 0.3 && relativeY < height * 0.3) {
-        return "top-left";
-      }
-      if (relativeX > width * 0.7 && relativeY < height * 0.3) {
-        return "top-right";
-      }
-      if (relativeX < width * 0.3 && relativeY > height * 0.7) {
-        return "bottom-left";
-      }
-      if (relativeX > width * 0.7 && relativeY > height * 0.7) {
-        return "bottom-right";
-      }
-      if (relativeX < width * 0.5) {
-        return "left";
-      }
-      if (relativeX > width * 0.5) {
-        return "right";
-      }
-      if (relativeY < height * 0.5) {
-        return "top";
-      }
-      return "bottom";
-    },
-    [desktopArea]
-  );
-
   const handleDragStart = useCallback(
     (e: React.MouseEvent) => {
       if (e.target !== e.currentTarget) {
@@ -160,7 +129,8 @@ export function WindowChrome({
 
         const zone = detectZoneFromPosition(
           moveEvent.clientX,
-          moveEvent.clientY
+          moveEvent.clientY,
+          desktopArea
         );
         if (zone) {
           showTilePreview(zone);
@@ -175,7 +145,11 @@ export function WindowChrome({
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
 
-        const zone = detectZoneFromPosition(upEvent.clientX, upEvent.clientY);
+        const zone = detectZoneFromPosition(
+          upEvent.clientX,
+          upEvent.clientY,
+          desktopArea
+        );
         if (zone) {
           tileWindow(windowId, zone);
         }

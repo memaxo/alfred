@@ -6,12 +6,14 @@
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   bigint,
+  boolean,
   index,
   integer,
   jsonb,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
@@ -138,6 +140,44 @@ const _workflowEventsTable = pgTable(
 
 export const workflowEvents = _workflowEventsTable;
 
+export type WorkflowTrajectoryFormat = "atif";
+
+export const workflowTrajectories = pgTable(
+  "workflow_trajectories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => workflowRuns.id, { onDelete: "cascade" }),
+    format: text("format").$type<WorkflowTrajectoryFormat>().notNull(),
+    schemaVersion: text("schema_version").notNull().default("ATIF-v1.4"),
+    // JSONB handling. Use as any for Drizzle limitation.
+    data: jsonb("data").notNull(),
+    valid: boolean("valid").notNull().default(true),
+    errors: jsonb("errors"),
+    lastEventId: uuid("last_event_id").references(
+      (): AnyPgColumn => workflowEvents.eventId
+    ),
+    lastSeq: integer("last_seq"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    runFormatIdx: uniqueIndex("workflow_trajectories_run_format_idx").on(
+      t.runId,
+      t.format
+    ),
+    runUpdatedIdx: index("workflow_trajectories_run_updated_idx").on(
+      t.runId,
+      t.updatedAt
+    ),
+  })
+);
+
 export const workflowSnapshots = pgTable(
   "workflow_snapshots",
   {
@@ -171,5 +211,7 @@ export type WorkflowRun = typeof workflowRuns.$inferSelect;
 export type NewWorkflowRun = typeof workflowRuns.$inferInsert;
 export type WorkflowEvent = typeof workflowEvents.$inferSelect;
 export type NewWorkflowEvent = typeof workflowEvents.$inferInsert;
+export type WorkflowTrajectory = typeof workflowTrajectories.$inferSelect;
+export type NewWorkflowTrajectory = typeof workflowTrajectories.$inferInsert;
 export type WorkflowSnapshot = typeof workflowSnapshots.$inferSelect;
 export type NewWorkflowSnapshot = typeof workflowSnapshots.$inferInsert;

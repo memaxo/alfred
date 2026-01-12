@@ -1,8 +1,10 @@
+import { useLiveQuery } from "@tanstack/react-db";
 import type { NodeProps } from "@xyflow/react";
 import { CheckSquare, Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useTodoCollection } from "@/collections/provider";
+import type { TodoResource } from "@/collections/schemas";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -44,17 +46,21 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
 
   const { collection, insertTodo, toggleTodo, deleteTodo } =
     useTodoCollection();
-  const todos = collection.useItems();
-  const isLoading = collection.useIsLoading();
+
+  const { data: todos = [], isLoading } = useLiveQuery(
+    (q) => q.from({ todo: collection }).select(({ todo }) => todo),
+    [collection]
+  );
 
   const filteredTodos = useMemo(() => {
+    const list = todos as TodoResource[];
     switch (filter) {
       case "active":
-        return todos.filter((todo) => !todo.completed);
+        return list.filter((todo) => !todo.completed);
       case "completed":
-        return todos.filter((todo) => todo.completed);
+        return list.filter((todo) => todo.completed);
       default:
-        return todos;
+        return list;
     }
   }, [todos, filter]);
 
@@ -63,7 +69,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
     if (!text.trim()) {
       return;
     }
-    insertTodo.mutate({ text });
+    insertTodo({ text });
     setText("");
   };
 
@@ -104,12 +110,8 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
             placeholder="Add a task"
             value={text}
           />
-          <Button disabled={insertTodo.isPending || !text.trim()} type="submit">
-            {insertTodo.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              "Add"
-            )}
+          <Button disabled={!text.trim()} type="submit">
+            Add
           </Button>
         </form>
 
@@ -148,11 +150,10 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
                 >
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={todo.completed ?? false}
-                      disabled={toggleTodo.isPending}
+                      checked={todo.completed}
                       onCheckedChange={() =>
-                        toggleTodo.mutate({
-                          id: todo.id,
+                        toggleTodo({
+                          id: todo.id as number,
                           completed: !todo.completed,
                         })
                       }
@@ -168,8 +169,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
                     </span>
                   </div>
                   <Button
-                    disabled={deleteTodo.isPending}
-                    onClick={() => deleteTodo.mutate(todo.id)}
+                    onClick={() => deleteTodo(todo.id)}
                     size="icon"
                     variant="ghost"
                   >

@@ -45,21 +45,21 @@ export type AgentStatus =
 
 export type AgentEvent =
   | {
-      type: "codex/thought";
+      type: "agent/thought";
       agentId: AgentId;
       text: string;
       ts: number;
       embedding?: number[];
     }
   | {
-      type: "codex/command";
+      type: "agent/command";
       agentId: AgentId;
       command: string;
       status: "running" | "completed" | "failed";
       ts: number;
     }
   | {
-      type: "codex/file";
+      type: "agent/file";
       agentId: AgentId;
       path: string;
       kind: string;
@@ -244,7 +244,7 @@ export function updateTrackerWithContext(
   const detector = getOrCreateDetector(next, event.agentId);
 
   switch (event.type) {
-    case "codex/thought": {
+    case "agent/thought": {
       ensureAgent(next.state, event.agentId, undefined, ts);
       const agent = next.state.agents[event.agentId];
       if (!agent) {
@@ -260,7 +260,7 @@ export function updateTrackerWithContext(
       }
       break;
     }
-    case "codex/command": {
+    case "agent/command": {
       ensureAgent(next.state, event.agentId, undefined, ts);
       const agent = next.state.agents[event.agentId];
       if (!agent) {
@@ -281,7 +281,7 @@ export function updateTrackerWithContext(
       }
       break;
     }
-    case "codex/file": {
+    case "agent/file": {
       ensureAgent(next.state, event.agentId, undefined, ts);
       const agent = next.state.agents[event.agentId];
       if (!agent) {

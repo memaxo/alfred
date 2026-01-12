@@ -21,7 +21,7 @@ import { toolTimer } from "../assistant/src/tool/timer";
 import { toolVoiceControl, toolVoiceStatus } from "../assistant/src/tool/voice";
 import { toolWebAssistant } from "../assistant/src/tool/web";
 import { toolRalph } from "./orchestrator/loops/ralph";
-import { toolCodex } from "./orchestrator/tool/codex";
+import { toolCodex } from "./orchestrator/tool/codex/index";
 import { toolCodexlog } from "./orchestrator/tool/codexlog";
 import { toolCognitiveState } from "./orchestrator/tool/cognitive";
 import { toolDocker } from "./orchestrator/tool/docker";

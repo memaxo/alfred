@@ -37,6 +37,8 @@
 
 15. **Shared constants extraction.** When the same constant value appears in multiple files (e.g., spawn radius, fetch limits), extract it to a shared config file (e.g., `apps/web/src/config/<domain>.ts`). Export as `const DOMAIN_CONFIG = { CONSTANT_NAME: value } as const`. Import and use the constant instead of hardcoding values. This ensures consistency and makes updates easier.
 
+16. **Component Manifest and Root Wrappers.** Every UI building block must be registered in `apps/web/src/components/manifest.ts`. Components must provide a single-word root wrapper in `apps/web/src/components/` that re-exports its implementation. This abstracts internal folder structure and ensures stable imports for manifest verification.
+
 
 
 <!-- Source: .ruler/21-tanstack-start.md -->
@@ -98,6 +100,10 @@ Leverage AI SDK v6 native patterns for structured content rendering. Use pure fu
 11. **Performance.** Memoize pane item mappings with `useMemo`. Stabilize callbacks with `useCallback`. Keep part rendering pure. Use virtualization for long message lists.
 
 12. **Accessibility.** All interactive controls have ARIA labels. Support keyboard navigation. Announce loading states to screen readers. Manage focus for modals/confirmations.
+
+13. **Component Manifest Integration.** Every UI primitive must be registered in `apps/web/src/components/manifest.ts`. A component is "integrated" only if it has a local implementation, a demo in the `ComponentDemo` gallery, and at least one verified non-demo usage site.
+
+14. **Canonical Root Wrappers.** Manifest components must provide a single-word root wrapper in `apps/web/src/components/` (e.g. `tool.tsx`). This wrapper re-exports the internal implementation (from `ai-elements/` or `ui/`) to ensure stable import paths for manifest usage proofs.
 
 
 

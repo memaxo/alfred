@@ -11,7 +11,7 @@ type CellPosition = {
   y: number;
 };
 
-interface MatrixProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface MatrixProps extends React.HTMLAttributes<HTMLDivElement> {
   rows: number;
   cols: number;
   pattern?: Frame;

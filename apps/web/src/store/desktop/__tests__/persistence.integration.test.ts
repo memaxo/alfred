@@ -1,7 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createCacheSlice } from "../cache";
+
+const toastWarning = mock(() => {});
+mock.module("sonner", () => ({
+  toast: {
+    warning: toastWarning,
+  },
+}));
 
 // Inline performance helper (avoids cross-package dependency)
 async function withBudget<T>(
@@ -349,6 +356,33 @@ describe("Desktop Persistence Integration", () => {
 
       const sizeKB = new Blob([stored!]).size / 1024;
       expect(sizeKB).toBeLessThan(50);
+    });
+
+    it("prunes context cache when over 50KB budget", async () => {
+      const store = createTestStore();
+
+      // Add one massive window to exceed budget
+      const massiveWindow = createTestWindow("big-1");
+      massiveWindow.data.label = "x".repeat(60 * 1024); // ~60KB
+      store.getState().addWindow(massiveWindow);
+
+      // Add something to the context cache
+      store.getState().recordContextReceipt("win-1", {
+        focusedGraphNodeId: "g1",
+        ragDocIds: ["d1"],
+        timestamp: Date.now(),
+      });
+
+      // Trigger persist
+      await new Promise((r) => setTimeout(r, 50));
+
+      const stored = mockStorage.get(DESKTOP_STORAGE_ID);
+      expect(stored).toBeDefined();
+
+      const parsed = JSON.parse(stored!);
+      // contextCache should have been pruned (empty object)
+      expect(parsed.state.contextCache).toEqual({});
+      expect(toastWarning).toHaveBeenCalled();
     });
   });
 });

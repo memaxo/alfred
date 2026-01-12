@@ -33,13 +33,21 @@ const riskColors = {
   high: "text-red-400",
 };
 
+type Preference = {
+  id: string;
+  key: string;
+  value: unknown;
+  confidence: number;
+  source: string;
+};
+
 export function PolicySection() {
   const utils = trpc.useUtils();
-  const { data: preferences, isLoading } = trpc.policy.list.useQuery();
+  const { data: preferences, isLoading } = trpc.preference.list.useQuery();
 
-  const updatePolicy = trpc.policy.update.useMutation({
+  const updatePolicy = trpc.preference.set.useMutation({
     onSuccess: () => {
-      utils.policy.list.invalidate();
+      utils.preference.list.invalidate();
     },
   });
 
@@ -74,33 +82,33 @@ export function PolicySection() {
       </div>
 
       <div className="space-y-3">
-        {preferences?.map((pref) => (
+        {(preferences as unknown as Preference[])?.map((pref) => (
           <div
             className={cn(
               "rounded-lg border p-4",
-              levelColors[pref.level as PolicyLevel]
+              levelColors[pref.value as PolicyLevel] || levelColors.ask
             )}
             key={pref.id}
           >
             <div className="mb-2 flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-biolum" />
-                <span className="font-medium">{pref.name}</span>
+                <span className="font-medium">{pref.key}</span>
                 <span
                   className={cn(
                     "text-xs uppercase tracking-wider",
-                    riskColors[pref.risk as keyof typeof riskColors]
+                    pref.confidence < 0.5 ? riskColors.high : riskColors.low
                   )}
                 >
-                  {pref.risk} risk
+                  {pref.confidence < 0.5 ? "high" : "low"} risk
                 </span>
               </div>
               <Select
-                defaultValue={pref.level}
+                defaultValue={pref.value as string}
                 onValueChange={(level) =>
                   updatePolicy.mutate({
-                    id: pref.id,
-                    level: level as PolicyLevel,
+                    key: pref.key,
+                    value: level,
                   })
                 }
               >
@@ -115,10 +123,10 @@ export function PolicySection() {
               </Select>
             </div>
 
-            <p className="text-biolum-dim text-sm">{pref.description}</p>
+            <p className="text-biolum-dim text-sm">Preference for {pref.key}</p>
 
             <div className="mt-2 font-mono text-biolum-dim text-xs">
-              Scope: {pref.scope}
+              Source: {pref.source}
             </div>
           </div>
         ))}

@@ -31,7 +31,7 @@ export function WidgetLayer() {
     }
     return metric.values
       .map((v) => ({
-        name: v.labels.tool || v.labels.agent || "value",
+        name: String(v.labels.tool || v.labels.agent || "value"),
         value: v.value,
       }))
       .slice(0, 5);

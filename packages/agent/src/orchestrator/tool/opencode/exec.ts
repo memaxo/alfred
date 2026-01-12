@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import path from "node:path";
 import { logger } from "@alfred/logger";
 import {
   type Client,
@@ -5,10 +7,19 @@ import {
   mapAutonomyToAcpMode,
   ndJsonStream,
   PROTOCOL_VERSION,
+  type ReadTextFileRequest,
+  type ReadTextFileResponse,
   type Stream,
+  type WriteTextFileRequest,
+  type WriteTextFileResponse,
 } from "@alfred/protocol/acp";
 import type { FileSink } from "bun";
 import { spawn } from "bun";
+import {
+  DEFAULT_ALLOW_PREFIXES,
+  isPathAllowed,
+  openDirectorySecure,
+} from "../../../security/filesystem.js";
 import type { ToolExecuteContext } from "../shared/context.js";
 import { executorServerFallbackTotal } from "../shared/metrics.js";
 import {
@@ -100,6 +111,30 @@ function emitText(writer: Writer, text: string) {
   ).catch(() => {});
 }
 
+function emitThought(writer: Writer, text: string) {
+  if (!text) {
+    return;
+  }
+  void Promise.resolve(
+    writer?.write?.({
+      type: "stdout",
+      event: { type: "thought", content: text, timestamp: Date.now() },
+    })
+  ).catch(() => {});
+}
+
+function emitArtifact(writer: Writer, filePath: string, kind: string) {
+  if (!filePath) {
+    return;
+  }
+  void Promise.resolve(
+    writer?.write?.({
+      type: "stdout",
+      event: { type: "artifact", path: filePath, kind, timestamp: Date.now() },
+    })
+  ).catch(() => {});
+}
+
 function emitCommand(
   writer: Writer,
   title: string,
@@ -117,6 +152,11 @@ type ClientCtx = {
   writer: Writer;
   auto: OpenCodeToolInput["auto"];
   append: (text: string) => void;
+  addArtifact: (filePath: string, kind: string) => void;
+  onPlan: (entries: unknown) => void;
+  sessionCw: string;
+  hostCw: string | undefined;
+  containerName: string | undefined;
 };
 
 function createClient(
@@ -185,6 +225,29 @@ function createClient(
         return;
       }
 
+      if (kind === "agent_thought_chunk") {
+        const content = (update as { content?: unknown }).content as
+          | { type?: unknown; text?: unknown }
+          | undefined;
+        if (content?.type === "text" && typeof content.text === "string") {
+          emitThought(writer, content.text);
+        }
+        return;
+      }
+
+      if (kind === "plan") {
+        const entries = (update as { entries?: unknown }).entries;
+        ctx?.onPlan(entries);
+        void Promise.resolve(
+          writer?.write?.({
+            type: "notice",
+            message: "opencode_plan",
+            entries,
+          })
+        ).catch(() => {});
+        return;
+      }
+
       if (kind === "tool_call") {
         const title = (update as { title?: unknown }).title;
         const status = (update as { status?: unknown }).status;
@@ -206,16 +269,270 @@ function createClient(
               ? "failed"
               : "running";
         emitCommand(writer, titleStr, mapped);
+
+        // Capture diff payloads (ACP tool_call_update may include `content` array).
+        const content = (update as { content?: unknown }).content;
+        if (Array.isArray(content)) {
+          for (const item of content) {
+            if (!item || typeof item !== "object") {
+              continue;
+            }
+            const type = (item as { type?: unknown }).type;
+            if (type !== "diff") {
+              continue;
+            }
+            const p = (item as { path?: unknown }).path;
+            if (typeof p === "string" && p.trim().length > 0) {
+              ctx?.addArtifact(p, "file");
+              emitArtifact(writer, p, "file");
+            }
+          }
+        }
       }
     },
 
-    async readTextFile(_params: unknown) {
-      return { content: "" };
+    async readTextFile(
+      params: ReadTextFileRequest
+    ): Promise<ReadTextFileResponse> {
+      const sessionId =
+        params && typeof params.sessionId === "string" ? params.sessionId : "";
+      const ctx = sessionId ? getCtx(sessionId) : undefined;
+      if (!ctx) {
+        throw new Error("opencode_fs_unknown_session");
+      }
+      const filePath =
+        params && typeof params.path === "string" ? params.path : "";
+      if (!filePath) {
+        throw new Error("opencode_fs_path_missing");
+      }
+      return await readTextFileImpl({
+        path: filePath,
+        sessionCw: ctx.sessionCw,
+        hostCw: ctx.hostCw,
+        containerName: ctx.containerName,
+      });
     },
-    async writeTextFile(_params: unknown) {
-      return {};
+
+    async writeTextFile(
+      params: WriteTextFileRequest
+    ): Promise<WriteTextFileResponse> {
+      const sessionId =
+        params && typeof params.sessionId === "string" ? params.sessionId : "";
+      const ctx = sessionId ? getCtx(sessionId) : undefined;
+      if (!ctx) {
+        throw new Error("opencode_fs_unknown_session");
+      }
+      const filePath =
+        params && typeof params.path === "string" ? params.path : "";
+      if (!filePath) {
+        throw new Error("opencode_fs_path_missing");
+      }
+      const content =
+        params && typeof params.content === "string" ? params.content : "";
+      return await writeTextFileImpl({
+        path: filePath,
+        content,
+        sessionCw: ctx.sessionCw,
+        hostCw: ctx.hostCw,
+        containerName: ctx.containerName,
+      });
     },
   };
+}
+
+const MAX_FS_BYTES = 5 * 1024 * 1024;
+
+function normalizeHostPath(args: {
+  sessionCw: string;
+  rawPath: string;
+}): string {
+  const p = args.rawPath.trim();
+  if (!p) {
+    throw new Error("opencode_fs_path_missing");
+  }
+  if (path.isAbsolute(p)) {
+    return p;
+  }
+  return path.resolve(args.sessionCw, p);
+}
+
+function normalizeContainerPath(args: {
+  sessionCw: string;
+  rawPath: string;
+}): string {
+  const p = args.rawPath.trim();
+  if (!p) {
+    throw new Error("opencode_fs_path_missing");
+  }
+  const base = args.sessionCw.trim() || DEFAULT_CONTAINER_CW;
+  const joined = p.startsWith("/") ? p : `${base.replace(/\/+$/g, "")}/${p}`;
+  const parts = joined.split("/").filter(Boolean);
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part === ".") {
+      continue;
+    }
+    if (part === "..") {
+      out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  const normalized = `/${out.join("/")}`;
+  if (
+    !normalized.startsWith("/workspace") ||
+    (normalized !== "/workspace" && !normalized.startsWith("/workspace/"))
+  ) {
+    throw new Error("opencode_container_cwd_invalid");
+  }
+  return normalized;
+}
+
+async function dockerExecText(args: {
+  containerName: string;
+  argv: string[];
+  stdinText?: string;
+}): Promise<{ stdout: string; exitCode: number }> {
+  const proc = spawnProc(
+    ["docker", "exec", "-i", args.containerName, ...args.argv],
+    {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      env: process.env,
+    }
+  );
+  if (args.stdinText !== undefined) {
+    if (!proc.stdin || typeof proc.stdin === "number") {
+      proc.kill();
+      throw new Error("opencode_stdin_unavailable");
+    }
+    const bytes = new TextEncoder().encode(args.stdinText);
+    (proc.stdin as FileSink).write(bytes);
+    await (proc.stdin as FileSink).end();
+  } else if (proc.stdin && typeof proc.stdin !== "number") {
+    await (proc.stdin as FileSink).end();
+  }
+  const stdout = proc.stdout ? await new Response(proc.stdout).text() : "";
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    const stderr = proc.stderr ? await new Response(proc.stderr).text() : "";
+    logger.warn("opencode_docker_exec_failed", {
+      exitCode,
+      stderr: stderr.slice(0, 1000),
+      argv: args.argv.slice(0, 8),
+    });
+  }
+  return { stdout, exitCode };
+}
+
+async function readTextFileImpl(args: {
+  path: string;
+  sessionCw: string;
+  hostCw: string | undefined;
+  containerName: string | undefined;
+}): Promise<ReadTextFileResponse> {
+  if (args.containerName) {
+    const filePath = normalizeContainerPath({
+      sessionCw: normalizeContainerCw(args.sessionCw),
+      rawPath: args.path,
+    });
+    const { stdout, exitCode } = await dockerExecText({
+      containerName: args.containerName,
+      argv: ["cat", filePath],
+    });
+    if (exitCode !== 0) {
+      throw new Error("opencode_fs_read_failed");
+    }
+    if (stdout.length > MAX_FS_BYTES) {
+      throw new Error("opencode_fs_read_too_large");
+    }
+    return { content: stdout };
+  }
+
+  const cw = args.hostCw ?? process.cwd();
+  const handle = openDirectorySecure(cw, {
+    allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+  });
+  try {
+    const abs = normalizeHostPath({
+      sessionCw: handle.path,
+      rawPath: args.path,
+    });
+    if (
+      !isPathAllowed(abs, DEFAULT_ALLOW_PREFIXES, { noFollowSymlinks: true })
+    ) {
+      throw new Error("opencode_fs_path_disallowed");
+    }
+    const file = Bun.file(abs);
+    if (!(await file.exists())) {
+      throw new Error("opencode_fs_not_found");
+    }
+    const text = await file.text();
+    if (text.length > MAX_FS_BYTES) {
+      throw new Error("opencode_fs_read_too_large");
+    }
+    return { content: text };
+  } finally {
+    handle.close();
+  }
+}
+
+async function writeTextFileImpl(args: {
+  path: string;
+  content: string;
+  sessionCw: string;
+  hostCw: string | undefined;
+  containerName: string | undefined;
+}): Promise<WriteTextFileResponse> {
+  if (args.content.length > MAX_FS_BYTES) {
+    throw new Error("opencode_fs_write_too_large");
+  }
+
+  if (args.containerName) {
+    const filePath = normalizeContainerPath({
+      sessionCw: normalizeContainerCw(args.sessionCw),
+      rawPath: args.path,
+    });
+    const dir = filePath.split("/").slice(0, -1).join("/") || "/workspace";
+    const mkdirRes = await dockerExecText({
+      containerName: args.containerName,
+      argv: ["mkdir", "-p", dir],
+    });
+    if (mkdirRes.exitCode !== 0) {
+      throw new Error("opencode_fs_write_failed");
+    }
+    const writeRes = await dockerExecText({
+      containerName: args.containerName,
+      argv: ["tee", filePath],
+      stdinText: args.content,
+    });
+    if (writeRes.exitCode !== 0) {
+      throw new Error("opencode_fs_write_failed");
+    }
+    return {};
+  }
+
+  const cw = args.hostCw ?? process.cwd();
+  const handle = openDirectorySecure(cw, {
+    allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+  });
+  try {
+    const abs = normalizeHostPath({
+      sessionCw: handle.path,
+      rawPath: args.path,
+    });
+    if (
+      !isPathAllowed(abs, DEFAULT_ALLOW_PREFIXES, { noFollowSymlinks: true })
+    ) {
+      throw new Error("opencode_fs_path_disallowed");
+    }
+    await fs.mkdir(path.dirname(abs), { recursive: true });
+    await Bun.write(abs, args.content);
+    return {};
+  } finally {
+    handle.close();
+  }
 }
 
 function sinkToWritableStream(sink: FileSink): WritableStream<Uint8Array> {
@@ -273,12 +590,6 @@ function resolveSpawnSpec(input: OpenCodeToolInput, cmd: AgentCmd): SpawnSpec {
   };
 }
 
-type SessionState = {
-  writer: Writer;
-  auto: OpenCodeToolInput["auto"];
-  append: (text: string) => void;
-};
-
 type OpenCodeServer = ServerHandle & {
   exited: boolean;
   runPrompt: (args: {
@@ -328,18 +639,9 @@ async function startOpenCodeServer(args: {
     throw new Error("opencode_stdout_unavailable");
   }
 
-  const sessions = new Map<string, SessionState>();
-  const getCtx = (sessionId: string): ClientCtx | undefined => {
-    const session = sessions.get(sessionId);
-    if (!session) {
-      return;
-    }
-    return {
-      writer: session.writer,
-      auto: session.auto,
-      append: session.append,
-    };
-  };
+  const sessions = new Map<string, ClientCtx>();
+  const getCtx = (sessionId: string): ClientCtx | undefined =>
+    sessions.get(sessionId);
 
   const stream = ndJsonStream(sinkToWritableStream(proc.stdin), proc.stdout);
   const connection = createConnection(() => createClient(getCtx), stream);
@@ -387,6 +689,18 @@ async function startOpenCodeServer(args: {
         const append = (delta: string) => {
           sessionText.value += delta;
         };
+        const artifacts: Array<{ path: string; kind: string }> = [];
+        const addArtifact = (p: string, kind: string) => {
+          const trimmed = p.trim();
+          if (!trimmed) {
+            return;
+          }
+          if (artifacts.some((a) => a.path === trimmed && a.kind === kind)) {
+            return;
+          }
+          artifacts.push({ path: trimmed, kind });
+        };
+        const onPlan = (_entries: unknown) => {};
 
         const sessionCw = input.containerName
           ? normalizeContainerCw(input.containerCw)
@@ -404,6 +718,11 @@ async function startOpenCodeServer(args: {
           writer,
           auto: input.auto,
           append,
+          addArtifact,
+          onPlan,
+          sessionCw,
+          hostCw: input.cw,
+          containerName: input.containerName,
         });
 
         let didTimeout = false;
@@ -451,7 +770,7 @@ async function startOpenCodeServer(args: {
 
         return {
           result: sessionText.value,
-          artifacts: [],
+          artifacts,
           stopReason: undefined,
         };
       }),
@@ -486,16 +805,32 @@ async function execOnce(args: ToolExecuteContext<OpenCodeToolInput>) {
     text += delta;
   };
 
+  const artifacts: Array<{ path: string; kind: string }> = [];
+  const addArtifact = (p: string, kind: string) => {
+    const trimmed = p.trim();
+    if (!trimmed) {
+      return;
+    }
+    if (artifacts.some((a) => a.path === trimmed && a.kind === kind)) {
+      return;
+    }
+    artifacts.push({ path: trimmed, kind });
+  };
+  const onPlan = (_entries: unknown) => {};
+
   const ctx: ClientCtx = {
     writer: args.writer,
     auto: args.input.auto,
     append,
+    addArtifact,
+    onPlan,
+    sessionCw: spec.sessionCw,
+    hostCw: args.input.cw,
+    containerName: args.input.containerName,
   };
+  const getCtx = (_sessionId: string) => ctx;
 
-  const connection = new ClientSideConnection(
-    () => createClient(() => ctx),
-    stream
-  );
+  const connection = createConnection(() => createClient(getCtx), stream);
 
   const timer = setTimeout(() => {
     proc.kill();
@@ -566,7 +901,7 @@ async function execOnce(args: ToolExecuteContext<OpenCodeToolInput>) {
     proc.kill();
   }
 
-  return { result: text, artifacts: [], stopReason: undefined };
+  return { result: text, artifacts, stopReason: undefined };
 }
 
 export async function executeWithOpenCode({

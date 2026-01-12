@@ -92,7 +92,7 @@ export function AlfredDesktopShell({
     const handleOffline = () => {
       setIsOffline(true);
       toast.error("Lost connection. Running in offline mode.", {
-        sticky: true,
+        duration: Number.POSITIVE_INFINITY,
       });
     };
 

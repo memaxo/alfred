@@ -220,12 +220,8 @@ export function useAudioDevices() {
       return;
     }
 
-    if (
-      !(
-        navigator.mediaDevices?.getUserMedia &&
-        navigator.mediaDevices?.enumerateDevices
-      )
-    ) {
+    const mediaDevices = navigator.mediaDevices;
+    if (!mediaDevices) {
       setDevices([]);
       setError("media_devices_unavailable");
       setHasPermission(false);
@@ -237,12 +233,12 @@ export function useAudioDevices() {
       setLoading(true);
       setError(null);
 
-      const tempStream = await navigator.mediaDevices.getUserMedia({
+      const tempStream = await mediaDevices.getUserMedia({
         audio: true,
       });
       tempStream.getTracks().forEach((track) => track.stop());
 
-      const deviceList = await navigator.mediaDevices.enumerateDevices();
+      const deviceList = await mediaDevices.enumerateDevices();
 
       const audioInputs = deviceList
         .filter((device) => device.kind === "audioinput")

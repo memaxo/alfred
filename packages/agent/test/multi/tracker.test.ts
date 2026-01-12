@@ -24,7 +24,7 @@ describe("tracker.updateTrackerWithContext", () => {
     const now = Date.now();
     const ctx = createEmptyContext();
     const next = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-1" as AgentId,
       text: "thinking",
       ts: now,
@@ -42,7 +42,7 @@ describe("tracker.updateTrackerWithContext", () => {
     const ts2 = ts1 + 1000;
 
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/command",
+      type: "agent/command",
       agentId: "agent-2" as AgentId,
       command: "bun test src/",
       status: "running",
@@ -51,7 +51,7 @@ describe("tracker.updateTrackerWithContext", () => {
 
     // Use a different command to avoid loop detection
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/command",
+      type: "agent/command",
       agentId: "agent-2" as AgentId,
       command: "bun test packages/",
       status: "completed",
@@ -68,7 +68,7 @@ describe("tracker.updateTrackerWithContext", () => {
     const ts = Date.now();
 
     const next = updateTrackerWithContext(ctx, {
-      type: "codex/file",
+      type: "agent/file",
       agentId: "agent-3" as AgentId,
       path: "src/app.ts",
       kind: "file",
@@ -100,7 +100,7 @@ describe("tracker.updateTrackerWithContext", () => {
     // Send same command multiple times - should trigger exact_match
     for (let i = 0; i < 3; i++) {
       ctx = updateTrackerWithContext(ctx, {
-        type: "codex/command",
+        type: "agent/command",
         agentId: "agent-loop" as AgentId,
         command: "bun test",
         status: "running",
@@ -118,7 +118,7 @@ describe("tracker.detectStuckWithContext", () => {
     const now = Date.now();
     let ctx = createEmptyContext();
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-4" as AgentId,
       text: "ok",
       ts: now,
@@ -133,7 +133,7 @@ describe("tracker.detectStuckWithContext", () => {
     const now = Date.now();
     let ctx = createTrackerContext(emptySubTasks, { noProgressMs: 120_000 });
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-5" as AgentId,
       text: "stalled",
       ts: now,
@@ -153,13 +153,13 @@ describe("tracker.detectStuckWithContext", () => {
 
     // Same thought twice should mark as stuck
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-6" as AgentId,
       text: "checking the same thing",
       ts: baseTs,
     });
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-6" as AgentId,
       text: "checking the same thing",
       ts: baseTs + 1,
@@ -186,7 +186,7 @@ describe("tracker.detectStuckWithContext", () => {
 
     for (let i = 0; i < thoughts.length; i++) {
       ctx = updateTrackerWithContext(ctx, {
-        type: "codex/thought",
+        type: "agent/thought",
         agentId: "agent-varied" as AgentId,
         text: thoughts[i],
         ts: baseTs + i * 1000,
@@ -264,7 +264,7 @@ describe("detectStuckWithContext with custom thresholds", () => {
     const now = Date.now();
     let ctx = createTrackerContext(emptySubTasks, { noProgressMs: 60_000 });
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-env" as AgentId,
       text: "thinking",
       ts: now,
@@ -283,7 +283,7 @@ describe("detectStuckWithContext with custom thresholds", () => {
     const now = Date.now();
     let ctx = createTrackerContext(emptySubTasks, { noProgressMs: 300_000 });
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-complex" as AgentId,
       text: "complex analysis",
       ts: now,
@@ -308,7 +308,7 @@ describe("clearAgentDetectorWithContext", () => {
 
     // First occurrence
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-clear" as AgentId,
       text: thought,
       ts: Date.now(),
@@ -317,7 +317,7 @@ describe("clearAgentDetectorWithContext", () => {
 
     // Second occurrence - should be stuck
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-clear" as AgentId,
       text: thought,
       ts: Date.now() + 1,
@@ -332,7 +332,7 @@ describe("clearAgentDetectorWithContext", () => {
 
     // Same content should not immediately trigger stuck after clear
     ctx = updateTrackerWithContext(ctx, {
-      type: "codex/thought",
+      type: "agent/thought",
       agentId: "agent-clear" as AgentId,
       text: thought,
       ts: Date.now() + 2,

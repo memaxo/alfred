@@ -43,7 +43,7 @@ describe("multi-agent performance budgets", () => {
     const start = performance.now();
     for (let i = 0; i < events; i += 1) {
       ctx = updateTrackerWithContext(ctx, {
-        type: "codex/command",
+        type: "agent/command",
         agentId: "agent-perf" as AgentId,
         command: `bun test ${i}`,
         status: "running",

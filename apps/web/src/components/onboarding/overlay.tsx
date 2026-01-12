@@ -2,7 +2,8 @@
 
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { type ReactElement, useState } from "react";
+import type { AutonomyLevel } from "@/components/autonomy-slider";
 import { Button } from "@/components/ui/button";
 import { useDesktopStore } from "@/store/desktop";
 import { IntegrationsStep } from "./integrations-step";
@@ -11,16 +12,44 @@ import { TourStep } from "./tour-step";
 import { VoiceStep } from "./voice-step";
 import { WelcomeStep } from "./welcome-step";
 
-const STEPS = [
-  { id: "welcome", component: WelcomeStep, title: "Welcome" },
-  { id: "voice", component: VoiceStep, title: "Voice Setup" },
-  { id: "preferences", component: PreferencesStep, title: "Autonomy & Policy" },
+type Step = {
+  id: "welcome" | "voice" | "preferences" | "integrations" | "tour";
+  title: string;
+  render: (ctx: {
+    autonomy: AutonomyLevel;
+    onAutonomyChange: (next: AutonomyLevel) => void;
+    onNext: () => void;
+    onSkip: () => void;
+  }) => ReactElement;
+};
+
+const STEPS: Step[] = [
+  { id: "welcome", title: "Welcome", render: () => <WelcomeStep /> },
+  {
+    id: "voice",
+    title: "Voice Setup",
+    render: ({ onNext }) => <VoiceStep onComplete={onNext} />,
+  },
+  {
+    id: "preferences",
+    title: "Autonomy & Policy",
+    render: ({ autonomy, onAutonomyChange }) => (
+      <PreferencesStep
+        autonomy={autonomy}
+        onAutonomyChange={onAutonomyChange}
+      />
+    ),
+  },
   {
     id: "integrations",
-    component: IntegrationsStep,
     title: "Connect Services",
+    render: ({ onSkip }) => <IntegrationsStep onSkip={onSkip} />,
   },
-  { id: "tour", component: TourStep, title: "Quick Tour" },
+  {
+    id: "tour",
+    title: "Quick Tour",
+    render: ({ onNext }) => <TourStep onComplete={onNext} />,
+  },
 ];
 
 export function OnboardingOverlay() {
@@ -29,12 +58,17 @@ export function OnboardingOverlay() {
     (s) => s.setOnboardingCompleted
   );
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  const [autonomy, setAutonomy] = useState<AutonomyLevel>("low");
 
   if (onboardingCompleted) {
     return null;
   }
 
   const step = STEPS[currentStepIdx];
+  if (!step) {
+    return null;
+  }
+
   const isLast = currentStepIdx === STEPS.length - 1;
   const isFirst = currentStepIdx === 0;
 
@@ -51,8 +85,6 @@ export function OnboardingOverlay() {
       setCurrentStepIdx((p) => p - 1);
     }
   };
-
-  const StepComponent = step.component;
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-void/80 backdrop-blur-md">
@@ -98,7 +130,12 @@ export function OnboardingOverlay() {
               key={step.id}
               transition={{ duration: 0.2 }}
             >
-              <StepComponent />
+              {step.render({
+                autonomy,
+                onAutonomyChange: setAutonomy,
+                onNext: handleNext,
+                onSkip: () => setOnboardingCompleted(true),
+              })}
             </motion.div>
           </AnimatePresence>
         </div>

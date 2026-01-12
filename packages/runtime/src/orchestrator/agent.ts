@@ -404,6 +404,8 @@ export async function runAgent({
   let status = "completed";
   let stuck = false;
   let durationSeconds = 0;
+  const agentKey =
+    spec.agentId as import("@alfred/agent/orchestrator/multi/spawn").AgentId;
 
   try {
     if (executor === "codex") {
@@ -644,8 +646,22 @@ export async function runAgent({
   const finishedAt = Date.now();
 
   // Use context-aware stuck detection
-  const agentKey =
-    spec.agentId as import("@alfred/agent/orchestrator/multi/spawn").AgentId;
+  if (status !== "failed") {
+    // Ensure a successful run always marks the agent as completed even if the
+    // executor emitted only notices (which create the agent entry but do not
+    // advance status).
+    trackerContextRef.current = updateTrackerWithContext(
+      trackerContextRef.current,
+      {
+        type: "agent/command",
+        agentId: agentKey,
+        command: "agent_finished",
+        status: "completed",
+        ts: finishedAt,
+      }
+    );
+  }
+
   stuck = detectStuckWithContext(
     trackerContextRef.current,
     agentKey,
@@ -835,7 +851,7 @@ function createAgentWriter(
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
-                type: "codex/thought",
+                type: "agent/thought",
                 agentId: spec.agentId,
                 text: typeof inner.content === "string" ? inner.content : "",
                 ts,
@@ -845,7 +861,7 @@ function createAgentWriter(
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
-                type: "codex/command",
+                type: "agent/command",
                 agentId: spec.agentId,
                 command: typeof inner.command === "string" ? inner.command : "",
                 status:
@@ -862,7 +878,7 @@ function createAgentWriter(
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
-                type: "codex/file",
+                type: "agent/file",
                 agentId: spec.agentId,
                 path: filePath,
                 kind: typeof inner.kind === "string" ? inner.kind : "file",
@@ -889,6 +905,15 @@ function createAgentWriter(
           typeof payload.message === "string"
             ? payload.message
             : "codex_notice";
+        trackerContextRef.current = updateTrackerWithContext(
+          trackerContextRef.current,
+          {
+            type: "notice",
+            agentId: spec.agentId,
+            message,
+            ts: Date.now(),
+          }
+        );
         queue.enqueue({ type: "notice", message } as unknown as WorkflowEvent);
       }
       return Promise.resolve();

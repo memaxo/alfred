@@ -37,6 +37,7 @@ export * as planRepo from "./repo/plan";
 export * as policyRepo from "./repo/policy";
 export * as projectRepo from "./repo/project";
 export * as ragRepo from "./repo/rag";
+export * as trajectoryRepo from "./repo/trajectory";
 export * as userRepo from "./repo/user";
 export * as workflowRepo from "./repo/workflow";
 

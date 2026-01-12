@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
+import { createNoteCollection } from "../note";
 
 // Mock tRPC client
 const mockTrpcClient = {
@@ -46,7 +47,7 @@ const mockTrpcClient = {
       mutate: mock(() => Promise.resolve({ success: true })),
     },
   },
-};
+} as any;
 
 describe("Note Collection Integration", () => {
   let queryClient: QueryClient;
@@ -73,10 +74,13 @@ describe("Note Collection Integration", () => {
   });
 
   describe("Query operations", () => {
-    it("fetches notes on initial query", async () => {
-      const result = await mockTrpcClient.note.list.query();
+    it("fetches notes correctly", async () => {
+      createNoteCollection(queryClient, mockTrpcClient);
+      const result = await mockTrpcClient.note.list.query({ limit: 100 });
 
-      expect(mockTrpcClient.note.list.query).toHaveBeenCalled();
+      expect(mockTrpcClient.note.list.query).toHaveBeenCalledWith({
+        limit: 100,
+      });
       expect(result).toHaveLength(1);
       expect(result[0]?.title).toBe("Existing Note");
     });
@@ -84,138 +88,74 @@ describe("Note Collection Integration", () => {
 
   describe("Mutation operations", () => {
     it("creates a note with correct data", async () => {
+      const { insertNote } = createNoteCollection(queryClient, mockTrpcClient);
       const newNote = {
         title: "New Note",
         content: "New content",
+        tags: [],
       };
 
-      const result = await mockTrpcClient.note.create.mutate(newNote);
+      await insertNote(newNote);
 
-      expect(mockTrpcClient.note.create.mutate).toHaveBeenCalledWith(newNote);
-      expect(result.title).toBe("New Note");
-      expect(result.id).toBeDefined();
+      expect(mockTrpcClient.note.create.mutate).toHaveBeenCalledWith({
+        title: "New Note",
+        content: "New content",
+        tags: [],
+      });
     });
 
     it("updates a note with partial data", async () => {
-      const update = {
-        id: "550e8400-e29b-41d4-a716-446655440001",
-        title: "Updated Title",
-      };
+      const { collection, updateNote } = createNoteCollection(
+        queryClient,
+        mockTrpcClient
+      );
 
-      const result = await mockTrpcClient.note.update.mutate(update);
-
-      expect(mockTrpcClient.note.update.mutate).toHaveBeenCalledWith(update);
-      expect(result.title).toBe("Updated Title");
-    });
-
-    it("deletes a note", async () => {
       const noteId = "550e8400-e29b-41d4-a716-446655440001";
-
-      const result = await mockTrpcClient.note.delete.mutate({ id: noteId });
-
-      expect(mockTrpcClient.note.delete.mutate).toHaveBeenCalled();
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("Error handling", () => {
-    it("handles create failure", async () => {
-      mockTrpcClient.note.create.mutate.mockImplementationOnce(() =>
-        Promise.reject(new Error("Create failed"))
-      );
-
-      await expect(
-        mockTrpcClient.note.create.mutate({ title: "Fail", content: "Fail" })
-      ).rejects.toThrow("Create failed");
-    });
-
-    it("handles update failure", async () => {
-      mockTrpcClient.note.update.mutate.mockImplementationOnce(() =>
-        Promise.reject(new Error("Update failed"))
-      );
-
-      await expect(
-        mockTrpcClient.note.update.mutate({ id: "123", title: "Fail" })
-      ).rejects.toThrow("Update failed");
-    });
-
-    it("handles delete failure", async () => {
-      mockTrpcClient.note.delete.mutate.mockImplementationOnce(() =>
-        Promise.reject(new Error("Delete failed"))
-      );
-
-      await expect(
-        mockTrpcClient.note.delete.mutate({ id: "123" })
-      ).rejects.toThrow("Delete failed");
-    });
-  });
-
-  describe("Optimistic updates simulation", () => {
-    it("simulates optimistic insert flow", async () => {
-      // 1. Optimistic: Add to local state immediately
-      const optimisticNote = {
-        id: "temp-id",
-        title: "Optimistic Note",
-        content: "Content",
+      collection.insert({
+        id: noteId,
+        title: "Original",
+        content: "Original",
         tags: [],
         created: new Date().toISOString(),
         updated: new Date().toISOString(),
+      });
+
+      const update = {
+        id: noteId,
+        title: "Updated Title",
       };
 
-      // 2. Server mutation
-      const serverNote = await mockTrpcClient.note.create.mutate({
-        title: optimisticNote.title,
-        content: optimisticNote.content,
-      });
+      await updateNote(update);
 
-      // 3. Reconcile: Replace temp ID with server ID
-      expect(serverNote.id).not.toBe("temp-id");
-      expect(serverNote.title).toBe(optimisticNote.title);
-    });
-
-    it("simulates optimistic update flow", async () => {
-      const noteId = "550e8400-e29b-41d4-a716-446655440001";
-
-      // 1. Optimistic: Update local state immediately
-      const optimisticUpdate = { title: "Optimistic Title" };
-
-      // 2. Server mutation
-      const result = await mockTrpcClient.note.update.mutate({
+      expect(mockTrpcClient.note.update.mutate).toHaveBeenCalledWith({
         id: noteId,
-        ...optimisticUpdate,
+        title: "Updated Title",
+        content: undefined,
+        tags: undefined,
       });
-
-      // 3. Reconcile: Server confirms update
-      expect(result.title).toBe(optimisticUpdate.title);
     });
 
-    it("simulates optimistic delete with rollback", async () => {
+    it("deletes a note", async () => {
+      const { collection, deleteNote } = createNoteCollection(
+        queryClient,
+        mockTrpcClient
+      );
       const noteId = "550e8400-e29b-41d4-a716-446655440001";
 
-      // 1. Optimistic: Remove from local state
-      let localNotes = [{ id: noteId, title: "To Delete" }];
-      const deletedNote = localNotes.find((n) => n.id === noteId);
-      localNotes = localNotes.filter((n) => n.id !== noteId);
+      collection.insert({
+        id: noteId,
+        title: "Original",
+        content: "Original",
+        tags: [],
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+      });
 
-      expect(localNotes).toHaveLength(0);
+      await deleteNote(noteId);
 
-      // 2. Server mutation fails
-      mockTrpcClient.note.delete.mutate.mockImplementationOnce(() =>
-        Promise.reject(new Error("Delete failed"))
-      );
-
-      try {
-        await mockTrpcClient.note.delete.mutate({ id: noteId });
-      } catch {
-        // 3. Rollback: Restore deleted note
-        if (deletedNote) {
-          localNotes.push(deletedNote);
-        }
-      }
-
-      // Note should be restored
-      expect(localNotes).toHaveLength(1);
-      expect(localNotes[0]?.id).toBe(noteId);
+      expect(mockTrpcClient.note.delete.mutate).toHaveBeenCalledWith({
+        id: noteId,
+      });
     });
   });
 });
