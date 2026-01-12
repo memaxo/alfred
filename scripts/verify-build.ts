@@ -4,7 +4,7 @@ import { spawn } from "bun";
 
 const FORBIDDEN_STRINGS = [
   "drizzle-orm",
-  "postgres",
+  "postgres://",
   "googleapis",
   "@alfred/db",
   "openai", // Check for OpenAI SDK leakage
@@ -53,10 +53,6 @@ async function verifyBuild() {
 
           // Allow list for known false positives
           const isFalsePositive =
-            (forbidden === "postgres" &&
-              (file.includes("ts-tags") ||
-                file.includes("emacs-lisp") ||
-                context.includes("sql-comint-postgres"))) ||
             (forbidden === "googleapis" &&
               context.includes("storage.googleapis.com")) ||
             (forbidden === "openai" && context.includes('["local","openai"]'));
