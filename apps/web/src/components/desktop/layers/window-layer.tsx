@@ -9,6 +9,7 @@
  * @see docs/execplans/desktop-type-migration.md
  */
 
+import { AnimatePresence, motion } from "motion/react";
 import type { CSSProperties } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { WindowErrorBoundary } from "@/components/windows/shared/error-boundary";
@@ -84,29 +85,52 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
         <TileZonePreview />
 
         {/* Window instances (skip minimized) */}
-        {windows
-          .filter((w) => w.state !== "minimized")
-          .map((window) => (
-            <WindowRenderer
-              isFocused={window.id === focusedWindowId}
-              key={window.id}
-              windowId={window.id}
-            />
-          ))}
+        <AnimatePresence>
+          {windows
+            .filter((w) => w.state !== "minimized")
+            .map((window) => (
+              <WindowRenderer
+                isFocused={window.id === focusedWindowId}
+                key={window.id}
+                windowId={window.id}
+              />
+            ))}
+        </AnimatePresence>
 
         {/* Empty state */}
-        {windows.length === 0 && (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center text-biolum-dim">
-              <p className="font-medium text-lg">Welcome to ALFRED</p>
-              <p className="mt-1 text-sm">
-                Press{" "}
-                <kbd className="rounded bg-white/10 px-1.5 py-0.5">⌘K</kbd> to
-                open command palette
-              </p>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {windows.length === 0 && (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="flex h-full items-center justify-center"
+              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: 20 }}
+            >
+              <div className="text-center text-biolum-dim">
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  className="mb-4 inline-block"
+                  transition={{
+                    duration: 4,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <p className="font-semibold text-2xl text-biolum tracking-tighter">
+                    ALFRED
+                  </p>
+                </motion.div>
+                <p className="text-sm tracking-tight opacity-60">
+                  Press{" "}
+                  <kbd className="mx-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-xs">
+                    ⌘K
+                  </kbd>{" "}
+                  to begin
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

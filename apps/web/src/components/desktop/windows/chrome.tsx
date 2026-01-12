@@ -1,6 +1,7 @@
 "use client";
 
 import { Maximize2, Minus, Sparkles, Square, X } from "lucide-react";
+import { motion } from "motion/react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
@@ -9,11 +10,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFocusGravity } from "@/hooks/use-focus-gravity";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import type { TileZone, WindowInstance } from "@/store/desktop/types.new";
 import { useMindscapeStore } from "@/store/mindscape";
-import { useWindowAnimation } from "../animations";
 import { ResizeHandles } from "./resize-handles";
 import type { ResizeDirection } from "./types";
 
@@ -31,7 +32,6 @@ export function WindowChrome({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
 
   const {
     window,
@@ -59,35 +59,15 @@ export function WindowChrome({
     }))
   );
 
-  // Animation hook with close callback
-  const {
-    styles: animationStyles,
-    animateClose,
-    animateMinimize,
-    startTileAnimation,
-    startResizeAnimation,
-    endResizeAnimation,
-    isAnimating,
-  } = useWindowAnimation({
-    onCloseComplete: () => removeWindow(windowId),
-    onMinimizeComplete: () =>
-      useDesktopStore.getState().minimizeWindow(windowId),
-  });
-
   const handleClose = useCallback(() => {
-    if (isClosing) {
-      return;
-    }
-    setIsClosing(true);
-    animateClose();
-  }, [animateClose, isClosing]);
+    removeWindow(windowId);
+  }, [removeWindow, windowId]);
 
   const handleMinimize = useCallback(() => {
-    // Target position for minimize animation (bottom center)
-    const targetX = 0;
-    const targetY = desktopArea.height;
-    animateMinimize(targetX, targetY);
-  }, [animateMinimize, desktopArea.height]);
+    useDesktopStore.getState().minimizeWindow(windowId);
+  }, [windowId]);
+
+  const gravity = useFocusGravity(windowId, isFocused);
 
   const handleMaximize = useCallback(() => {
     if (!window) {
@@ -196,7 +176,6 @@ export function WindowChrome({
 
         const zone = detectZoneFromPosition(upEvent.clientX, upEvent.clientY);
         if (zone) {
-          startTileAnimation();
           tileWindow(windowId, zone);
         }
       };
@@ -213,7 +192,6 @@ export function WindowChrome({
       showTilePreview,
       hideTilePreview,
       tileWindow,
-      startTileAnimation,
     ]
   );
 
@@ -221,7 +199,6 @@ export function WindowChrome({
     (direction: ResizeDirection, e: React.MouseEvent) => {
       e.preventDefault();
       setIsResizing(true);
-      startResizeAnimation();
       handleFocus();
 
       const startX = e.clientX;
@@ -359,7 +336,6 @@ export function WindowChrome({
 
       const handleMouseUp = () => {
         setIsResizing(false);
-        endResizeAnimation();
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
       };
@@ -367,15 +343,7 @@ export function WindowChrome({
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [
-      handleFocus,
-      window,
-      windowId,
-      setBounds,
-      desktopArea,
-      startResizeAnimation,
-      endResizeAnimation,
-    ]
+    [handleFocus, window, windowId, setBounds, desktopArea]
   );
 
   if (!window) {
@@ -394,7 +362,16 @@ export function WindowChrome({
   const isMaximized = window.state === "maximized";
 
   return (
-    <div
+    <motion.div
+      animate={{
+        height: isMaximized ? desktopArea.height : bounds.height,
+        left: isMaximized ? desktopArea.x : bounds.x,
+        opacity: gravity.opacity,
+        scale: gravity.scale,
+        top: isMaximized ? desktopArea.y : bounds.y,
+        width: isMaximized ? desktopArea.width : bounds.width,
+        filter: gravity.blur > 0 ? `blur(${gravity.blur}px)` : "none",
+      }}
       aria-label={title}
       className={cn(
         "pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl border-2 bg-void-surface/95 shadow-2xl backdrop-blur-xl",
@@ -402,26 +379,29 @@ export function WindowChrome({
           ? "border-biolum/50 shadow-[0_0_50px_rgba(0,255,136,0.3)] ring-2 ring-biolum/20 ring-offset-2 ring-offset-void"
           : "border-white/10 shadow-lg",
         isDragging && "cursor-grabbing",
-        isResizing && "select-none",
-        isAnimating && "pointer-events-none",
-        // Apply smooth transitions when not manually interacting
-        !(isDragging || isResizing) &&
-          "transition-[left,top,width,height,border-color,box-shadow,ring] duration-300 ease-out"
+        isResizing && "select-none"
       )}
       data-focused={isFocused}
       data-window-id={windowId}
+      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      layoutId={windowId}
       onMouseDown={handleFocus}
       ref={containerRef}
       role="dialog"
       style={{
-        left: isMaximized ? desktopArea.x : bounds.x,
-        top: isMaximized ? desktopArea.y : bounds.y,
-        width: isMaximized ? desktopArea.width : bounds.width,
-        height: isMaximized ? desktopArea.height : bounds.height,
         zIndex: window.zIndex,
-        ...animationStyles,
       }}
       tabIndex={isFocused ? 0 : -1}
+      transition={{
+        damping: 30,
+        height: { type: "spring", stiffness: 400, damping: 30 },
+        layout: { type: "spring", stiffness: 400, damping: 30 },
+        opacity: { duration: 0.2 },
+        stiffness: 400,
+        type: "spring",
+        width: { type: "spring", stiffness: 400, damping: 30 },
+      }}
     >
       <div
         className={cn(
@@ -493,6 +473,6 @@ export function WindowChrome({
       </div>
 
       {!isMaximized && <ResizeHandles onResizeStart={handleResizeStart} />}
-    </div>
+    </motion.div>
   );
 }
