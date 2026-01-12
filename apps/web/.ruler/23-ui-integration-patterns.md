@@ -30,3 +30,6 @@ Leverage AI SDK v6 native patterns for structured content rendering. Use pure fu
 
 12. **Accessibility.** All interactive controls have ARIA labels. Support keyboard navigation. Announce loading states to screen readers. Manage focus for modals/confirmations.
 
+13. **Component Manifest Integration.** Every UI primitive must be registered in `apps/web/src/components/manifest.ts`. A component is "integrated" only if it has a local implementation, a demo in the `ComponentDemo` gallery, and at least one verified non-demo usage site.
+
+14. **Canonical Root Wrappers.** Manifest components must provide a single-word root wrapper in `apps/web/src/components/` (e.g. `tool.tsx`). This wrapper re-exports the internal implementation (from `ai-elements/` or `ui/`) to ensure stable import paths for manifest usage proofs.
