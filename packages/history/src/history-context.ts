@@ -267,12 +267,20 @@ export async function buildHistoryContext(
     };
 
     const uiMessages = keptMessages;
-    const modelMessages = uiMessages.length
-      ? pruneMessages({
-          messages: convertToModelMessages(uiMessages),
-          emptyMessages: "remove",
-        })
-      : [];
+    const modelMessagesRaw =
+      uiMessages.length === 0
+        ? []
+        : options.tools
+          ? convertToModelMessages(uiMessages, { tools: options.tools })
+          : convertToModelMessages(uiMessages);
+
+    const modelMessages =
+      modelMessagesRaw.length === 0
+        ? []
+        : pruneMessages({
+            messages: modelMessagesRaw,
+            emptyMessages: "remove",
+          });
 
     return {
       uiMessages,

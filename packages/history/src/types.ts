@@ -1,4 +1,5 @@
 import type { ModelMessage, UIMessage } from "@alfred/type/stream";
+import type { Tool } from "ai";
 
 export type HistoryTier = "anchor" | "high" | "medium" | "low";
 
@@ -15,6 +16,7 @@ export type BuildHistoryContextOptions = {
   messages: readonly UIMessage[];
   modelId: string;
   system?: string;
+  tools?: Record<string, Tool>;
   budget?: Partial<HistoryBudget>;
   source?: string;
   forceKeepIds?: Set<string> | readonly string[];

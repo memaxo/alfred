@@ -37,6 +37,34 @@ export type ToolResultPart = {
   output: unknown;
 };
 
+export type ToolInvocationState =
+  | "input-streaming"
+  | "input-available"
+  | "approval-requested"
+  | "approval-responded"
+  | "output-available"
+  | "output-error"
+  | "output-denied";
+
+export type ToolInvocationPart = {
+  type: `tool-${string}` | "dynamic-tool";
+  toolCallId: string;
+  toolName?: string;
+  input?: unknown;
+  output?: unknown;
+  errorText?: string;
+  state?: string;
+  approval?: {
+    id: string;
+    approved?: boolean;
+    reason?: string;
+  };
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * Type guard for text parts.
  */
@@ -85,6 +113,94 @@ export function isToolResultPart(part: unknown): part is ToolResultPart {
     part !== null &&
     (part as { type?: unknown }).type === "tool-result"
   );
+}
+
+/**
+ * Type guard for AI SDK v6 tool invocation parts (tool-${toolName}) and dynamic tool invocations.
+ */
+export function isToolInvocationPart(
+  part: unknown
+): part is ToolInvocationPart {
+  if (!isRecord(part)) {
+    return false;
+  }
+
+  const type = part.type;
+  if (typeof type !== "string") {
+    return false;
+  }
+
+  if (
+    type !== "dynamic-tool" &&
+    (type === "tool-call" ||
+      type === "tool-result" ||
+      type === "tool-approval-request" ||
+      !type.startsWith("tool-"))
+  ) {
+    return false;
+  }
+
+  return typeof part.toolCallId === "string";
+}
+
+export function getToolInvocationName(part: ToolInvocationPart): string {
+  if (part.type === "dynamic-tool") {
+    return typeof part.toolName === "string" && part.toolName.length > 0
+      ? part.toolName
+      : "tool";
+  }
+
+  return part.type.slice("tool-".length) || "tool";
+}
+
+const toolStates = new Set<string>([
+  "input-streaming",
+  "input-available",
+  "approval-requested",
+  "approval-responded",
+  "output-available",
+  "output-error",
+  "output-denied",
+]);
+
+export function getToolInvocationState(
+  part: ToolInvocationPart
+): ToolInvocationState {
+  if (typeof part.state === "string" && toolStates.has(part.state)) {
+    return part.state as ToolInvocationState;
+  }
+
+  const approval = part.approval;
+  if (approval && typeof approval === "object") {
+    const id = (approval as { id?: unknown }).id;
+    const approved = (approval as { approved?: unknown }).approved;
+
+    if (typeof id === "string" && id.length > 0) {
+      if (approved === undefined) {
+        return "approval-requested";
+      }
+      if (approved === false) {
+        return "output-denied";
+      }
+      if (approved === true) {
+        return "approval-responded";
+      }
+    }
+  }
+
+  if (typeof part.errorText === "string" && part.errorText.length > 0) {
+    return "output-error";
+  }
+
+  if (part.output !== undefined) {
+    return "output-available";
+  }
+
+  if (part.input !== undefined) {
+    return "input-available";
+  }
+
+  return "input-streaming";
 }
 
 /**
