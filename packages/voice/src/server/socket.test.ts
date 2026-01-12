@@ -31,12 +31,16 @@ mock.module(
 
 import type { ServerWebSocket } from "bun";
 import type { VoiceRegistry } from "./registry";
-import type { VoiceSocketData, VoiceSocketHooks } from "./socket";
+import type {
+  VoiceSocketData,
+  VoiceSocketHandler,
+  VoiceSocketHooks,
+} from "./socket";
 
 const { voiceAssistantDurationSeconds, voiceAssistantTotal } = await import(
   "../metrics"
 );
-const { VoiceSocketHandler } = await import("./socket");
+const { VoiceSocketHandler: VoiceSocketHandlerCtor } = await import("./socket");
 
 // Mock dependencies
 const mockSession = {
@@ -91,7 +95,7 @@ describe("VoiceSocketHandler", () => {
   beforeEach(() => {
     voiceAssistantTotal.reset();
     voiceAssistantDurationSeconds.reset();
-    handler = new VoiceSocketHandler(mockManager, mockHooks);
+    handler = new VoiceSocketHandlerCtor(mockManager, mockHooks);
     ws = createMockWs();
     // Reset mocks
     (mockManager.createSession as any).mockClear();
