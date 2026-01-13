@@ -24,8 +24,8 @@ After implementation:
 - **Milestone 3:** ✅ COMPLETE - Stage implementations (init, context, plan, schedule, execute, review, learn, summarize)
 - **Milestone 4:** ✅ COMPLETE - Observer implementations (console, metrics, linear, events)
 - **Milestone 5:** ✅ COMPLETE - Integration with existing orchestrator
-- **Milestone 6:** ⏳ PENDING - Golden path integration test
-- **Milestone 7:** ⏳ PENDING - Documentation and cleanup
+- **Milestone 6:** ✅ COMPLETE - Golden path integration test (6 tests passing)
+- **Milestone 7:** 🔄 IN PROGRESS - Documentation and cleanup
 
 **Current Status (2026-01-12):**
 
@@ -43,6 +43,12 @@ After implementation:
 **2026-01-12:** TypeScript `rootDir` configuration required adjustment. Initially set to `src/`, which prevented test files from being included properly. Changed to `"."` to allow both `src/` and `test/` directories.
 
 **2026-01-12:** Observer pattern provides excellent extensibility. The separation of concerns between PipelineRunner (orchestration) and PipelineObserver (side effects) makes it trivial to add new capabilities like Linear sync, metrics, or custom logging without modifying core pipeline logic.
+
+**2026-01-12:** AsyncQueue import path correction. Initially tried to import from `@alfred/agent/orchestrator/utils/concurrency` (didn't exist), then tried custom implementation, finally found correct path at `@alfred/runtime/utils/concurrency`. The AsyncQueue class is used for event buffering in agent execution.
+
+**2026-01-12:** Integration tests reveal expected auth failures in test environment. Agent execution stage properly handles "unauthorized" errors from Docker workspace creation. The pipeline continues executing remaining stages even when agents fail, proving resilience.
+
+**2026-01-12:** All 6 integration tests passing. Tests validate: sequential execution, progress events, ExecPlan creation, duration tracking, error handling, and timeout handling. Total test execution time: ~7 seconds including AI SDK calls for summarization.
 
 ## Decision Log
 

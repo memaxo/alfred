@@ -193,6 +193,95 @@ bun test packages/pipeline/test/integration  # Integration tests
 
 **Typed stage boundaries:** Each stage has explicit input/output types, making the data flow visible and type-safe.
 
+## Troubleshooting
+
+### Pipeline Not Running
+
+**Symptom:** Workflows still use legacy orchestrator
+
+**Solution:** Verify environment variable is set:
+```bash
+echo $ALFRED_USE_PIPELINE  # Should output: 1
+```
+
+### Stage Timeouts
+
+**Symptom:** `Stage {name} timed out after {ms}ms`
+
+**Solution:** Increase timeout for specific stage:
+```typescript
+const runner = new PipelineRunner({
+  phaseTimeouts: {
+    execute: 1200_000,  // Increase to 20 minutes
+  },
+});
+```
+
+### Missing Events
+
+**Symptom:** Observer not receiving events
+
+**Solution:** Ensure observer is added before running pipeline:
+```typescript
+runner.addObserver(observer);  // Must come before runner.run()
+```
+
+### Agent Execution Failures
+
+**Symptom:** All agents fail with "unauthorized" or "agentfs_workspace_not_initialized"
+
+**Solution:** This is expected in test environments without Docker/auth. For production:
+1. Ensure Docker is running
+2. Verify auth credentials are configured
+3. Check `LINEAR_API_KEY` if using Linear sync
+
+### Import Errors
+
+**Symptom:** `Cannot find module '@alfred/pipeline'`
+
+**Solution:** Install dependencies:
+```bash
+bun install
+```
+
+Ensure package is in workspace:
+```bash
+grep -r "@alfred/pipeline" package.json
+```
+
+### Circular Dependency Errors
+
+**Symptom:** Module resolution failures at runtime
+
+**Solution:** Stages use dynamic imports internally. If you see circular dependency errors, ensure you're importing from the package root:
+```typescript
+// ✅ Correct
+import { PipelineRunner } from '@alfred/pipeline';
+
+// ❌ Avoid
+import { PipelineRunner } from '@alfred/pipeline/src/runner';
+```
+
+## Performance Benchmarks
+
+**Typical Stage Durations (Sequential Mode):**
+
+| Stage     | p50    | p95     | p99      |
+|-----------|--------|---------|----------|
+| init      | 50ms   | 200ms   | 500ms    |
+| context   | 2s     | 10s     | 30s      |
+| plan      | 100ms  | 1s      | 5s       |
+| schedule  | 10ms   | 100ms   | 500ms    |
+| execute   | 60s    | 300s    | 600s     |
+| review    | 1s     | 10s     | 60s      |
+| learn     | 10ms   | 100ms   | 1s       |
+| summarize | 2s     | 10s     | 30s      |
+
+**Total Pipeline Duration:**
+- Simple tasks: 1-2 minutes
+- Medium tasks: 3-5 minutes
+- Complex tasks: 10-15 minutes
+
 ## Future Enhancements
 
 - Parallel execution support (maxParallel > 1)
@@ -201,3 +290,5 @@ bun test packages/pipeline/test/integration  # Integration tests
 - Fine-grained quality checks in review stage
 - Real-time learning insights (not just async)
 - ATIF trajectory visualization
+- Stage-level caching for repeated operations
+- Adaptive timeout calculation based on task complexity

@@ -21,6 +21,8 @@ The pipeline consists of 8 sequential stages:
 
 ## Usage
 
+### Basic Example
+
 ```typescript
 import { PipelineRunner, registerDefaultStages } from '@alfred/pipeline';
 import { ConsoleObserver, MetricsObserver } from '@alfred/pipeline/observers';
@@ -38,6 +40,67 @@ for await (const event of runner.run({
 })) {
   console.log(event);
 }
+```
+
+### With Linear Integration
+
+```typescript
+import { PipelineRunner, registerDefaultStages } from '@alfred/pipeline';
+import { LinearSyncObserver } from '@alfred/pipeline/observers';
+
+const runner = new PipelineRunner({
+  maxParallel: 1,
+  enableLinearSync: true,
+  linearSyncInterval: 30_000, // 30 seconds
+});
+
+registerDefaultStages(runner);
+
+// Add Linear observer
+runner.addObserver(new LinearSyncObserver({
+  syncIntervalMs: 30_000,
+  issueId: 'ALF-123',
+  authz: 'your-linear-token',
+}));
+
+for await (const event of runner.run(input)) {
+  // Linear updates happen automatically via observer
+}
+```
+
+### Custom Observer
+
+```typescript
+import type { PipelineObserver, PipelineEvent } from '@alfred/pipeline';
+
+class SlackNotifier implements PipelineObserver {
+  onEvent(event: PipelineEvent): void {
+    if (event.type === 'pipeline:complete') {
+      sendSlackMessage(`✓ Workflow complete: ${event.summary.requirement}`);
+    } else if (event.type === 'pipeline:failed') {
+      sendSlackMessage(`✗ Workflow failed: ${event.error}`);
+    }
+  }
+}
+
+runner.addObserver(new SlackNotifier());
+```
+
+### CLI Usage
+
+```bash
+# Run pipeline from command line
+bun scripts/pipeline.ts --requirement "Create a hello.ts file"
+
+# With custom workspace
+bun scripts/pipeline.ts \
+  --requirement "Add tests" \
+  --workspace /path/to/repo
+
+# Parallel execution
+bun scripts/pipeline.ts \
+  --requirement "Large refactor" \
+  --parallel
 ```
 
 ## Observers
