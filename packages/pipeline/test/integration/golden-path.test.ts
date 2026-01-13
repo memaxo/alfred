@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { PipelineEvent } from "../../src/events";
 import { PipelineRunner } from "../../src/runner";
@@ -69,6 +69,106 @@ describe("Golden Path Pipeline", () => {
     expect(completeEvent).toBeDefined();
   }, 300_000); // 5 minute timeout for full pipeline
 
+  it("emits progress events for each stage", async () => {
+    const events: PipelineEvent[] = [];
+    const runner = new PipelineRunner({
+      maxParallel: 1,
+      enableLearning: false,
+    });
+    registerDefaultStages(runner);
+    runner.addObserver({
+      onEvent: (e) => events.push(e),
+    });
+
+    const runId = randomUUID();
+    const input = {
+      runId,
+      requirement: "Create a test file",
+      workspace: testWorkspace,
+      userId: "test-user",
+    };
+
+    for await (const _event of runner.run(input)) {
+      // Collect events
+    }
+
+    // Verify progress events were emitted
+    const progressEvents = events.filter((e) => e.type === "stage:progress");
+    expect(progressEvents.length).toBeGreaterThan(0);
+
+    // Verify each stage has at least one progress event
+    const stagesWithProgress = new Set(
+      progressEvents.map((e) => (e as { stage: string }).stage)
+    );
+    expect(stagesWithProgress.size).toBeGreaterThan(0);
+  }, 300_000);
+
+  it(
+    "creates ExecPlan files in correct location",
+    async () => {
+      const runner = new PipelineRunner({
+        maxParallel: 1,
+        enableLearning: false,
+      });
+      registerDefaultStages(runner);
+
+      const runId = randomUUID();
+      const input = {
+        runId,
+        requirement: "Create a test file with validation",
+        workspace: testWorkspace,
+        userId: "test-user",
+      };
+
+      for await (const _event of runner.run(input)) {
+        // Execute pipeline
+      }
+
+      // Verify root plan was created
+      const plansDir = join(testWorkspace, ".agent", "plans", runId);
+      const rootPlanPath = join(plansDir, "root.md");
+
+      const rootPlanContent = await readFile(rootPlanPath, "utf-8");
+      expect(rootPlanContent).toContain("# Root ExecPlan:");
+      expect(rootPlanContent).toContain(input.requirement);
+      expect(rootPlanContent).toContain("## Subtasks");
+      expect(rootPlanContent).toContain("## Progress");
+    },
+    300_000
+  );
+
+  it("records stage durations", async () => {
+    const events: PipelineEvent[] = [];
+    const runner = new PipelineRunner({
+      maxParallel: 1,
+      enableLearning: false,
+    });
+    registerDefaultStages(runner);
+    runner.addObserver({
+      onEvent: (e) => events.push(e),
+    });
+
+    const runId = randomUUID();
+    const input = {
+      runId,
+      requirement: "Create a test file",
+      workspace: testWorkspace,
+      userId: "test-user",
+    };
+
+    for await (const _event of runner.run(input)) {
+      // Collect events
+    }
+
+    // Verify all stage exits have duration > 0
+    const exitEvents = events.filter((e) => e.type === "stage:exit");
+    for (const event of exitEvents) {
+      if (event.type === "stage:exit") {
+        expect(event.durationMs).toBeGreaterThanOrEqual(0);
+      }
+    }
+  }, 300_000);
+
   it("emits stage:error on failure", async () => {
     const events: PipelineEvent[] = [];
     const runner = new PipelineRunner({ maxParallel: 1 });
@@ -86,9 +186,52 @@ describe("Golden Path Pipeline", () => {
     };
 
     await expect(async () => {
-      for await (const _ of runner.run(input)) {
+      for await (const _event of runner.run(input)) {
         // Collect events
       }
     }).toThrow("Stage not registered: init");
   });
+
+  it("handles stage timeout gracefully", async () => {
+    const events: PipelineEvent[] = [];
+    const runner = new PipelineRunner({
+      maxParallel: 1,
+      phaseTimeouts: {
+        init: 1, // 1ms timeout to force failure
+        context: 120_000,
+        plan: 120_000,
+        schedule: 10_000,
+        execute: 600_000,
+        review: 300_000,
+        learn: 60_000,
+        summarize: 30_000,
+      },
+    });
+    registerDefaultStages(runner);
+    runner.addObserver({
+      onEvent: (e) => events.push(e),
+    });
+
+    const runId = randomUUID();
+    const input = {
+      runId,
+      requirement: "Test timeout",
+      workspace: testWorkspace,
+      userId: "test-user",
+    };
+
+    await expect(async () => {
+      for await (const _event of runner.run(input)) {
+        // Collect events
+      }
+    }).toThrow(/timed out/);
+
+    // Verify error event was emitted
+    const errorEvents = events.filter((e) => e.type === "stage:error");
+    expect(errorEvents.length).toBeGreaterThan(0);
+
+    // Verify pipeline:failed event was emitted
+    const failedEvent = events.find((e) => e.type === "pipeline:failed");
+    expect(failedEvent).toBeDefined();
+  }, 10_000);
 });

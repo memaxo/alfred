@@ -34,16 +34,14 @@ export class ExecuteStage
     const { buildAgentSpec } = await import(
       "@alfred/agent/orchestrator/multi/spawn"
     );
-    const { createAsyncQueue } = await import(
-      "@alfred/agent/orchestrator/utils/concurrency"
-    );
+    const { AsyncQueue } = await import("@alfred/runtime/utils/concurrency");
 
     // Get subtasks and exec plans from context
     const subtasks = ctx.get<SubTask[]>("subtasks") ?? [];
     const subTaskById = new Map(subtasks.map((t) => [t.id, t]));
     const execPlans = ctx.get<Map<string, string>>("execPlans") ?? new Map();
     const rootExecPlanPath = ctx.get<string>("rootPlanPath") ?? "";
-    const queue = createAsyncQueue();
+    const queue = new AsyncQueue();
 
     // Sequential execution for POC
     for (let waveIndex = 0; waveIndex < input.waves.length; waveIndex++) {
