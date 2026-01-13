@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "references": [
+    { "path": "../agent" },
+    { "path": "../db" },
+    { "path": "../logger" },
+    { "path": "../metrics" },
+    { "path": "../plan" },
+    { "path": "../runtime" },
+    { "path": "../type" },
+    { "path": "../test-kit" }
+  ]
+}

@@ -19,6 +19,7 @@
     { "path": "packages/metrics" },
     { "path": "packages/tune" },
     { "path": "packages/plan" },
+    { "path": "packages/pipeline" },
     { "path": "packages/cognitive" },
     { "path": "packages/cortex" },
     { "path": "packages/knowledge" },

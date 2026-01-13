@@ -1,0 +1,30 @@
+{
+  "name": "@alfred/pipeline",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./stages": "./src/stages/index.ts",
+    "./observers": "./src/observers/index.ts",
+    "./events": "./src/events.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "bun test",
+    "test:integration": "bun test --timeout 120000 test/integration"
+  },
+  "dependencies": {
+    "@alfred/agent": "workspace:*",
+    "@alfred/db": "workspace:*",
+    "@alfred/logger": "workspace:*",
+    "@alfred/metrics": "workspace:*",
+    "@alfred/plan": "workspace:*",
+    "@alfred/runtime": "workspace:*",
+    "@alfred/type": "workspace:*"
+  },
+  "devDependencies": {
+    "@alfred/test-kit": "workspace:*"
+  }
+}
