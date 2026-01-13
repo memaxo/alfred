@@ -32,6 +32,10 @@ import {
 } from "./linear";
 import { observeEvent } from "./observe";
 import { persistStreamEvent } from "./persist";
+import {
+  isPipelineEnabled,
+  runWorkflowPipeline,
+} from "./pipeline-bridge";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
 import { startTimeout } from "./timeout";
 
@@ -78,6 +82,45 @@ export async function orchestrateWorkflowStream(
   session: { user: { id: string } },
   callbacks: OrchestratorCallbacks
 ): Promise<() => void> {
+  // Feature flag: Use new pipeline architecture if enabled
+  if (isPipelineEnabled()) {
+    logger.info("using_pipeline_architecture", {
+      runId: input.runId,
+      requirement: input.requirement.slice(0, 100),
+    });
+
+    const abortController = new AbortController();
+    let completed = false;
+
+    const asyncTask = (async () => {
+      try {
+        for await (const event of runWorkflowPipeline(input, session)) {
+          if (abortController.signal.aborted) {
+            break;
+          }
+          callbacks.emitNext(event);
+        }
+        if (!abortController.signal.aborted) {
+          callbacks.emitComplete();
+        }
+      } catch (error) {
+        if (!abortController.signal.aborted) {
+          callbacks.emitError(error);
+        }
+      } finally {
+        completed = true;
+      }
+    })();
+
+    // Return cleanup function
+    return () => {
+      if (!completed) {
+        abortController.abort();
+      }
+    };
+  }
+
+  // Legacy orchestrator path (existing implementation)
   // Enforce obligations for medium/high autonomy workflows
   if (input.auto === "medium" || input.auto === "high") {
     try {

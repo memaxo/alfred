@@ -23,7 +23,7 @@ After implementation:
 - **Milestone 2:** ✅ COMPLETE - PipelineRunner with generator-based event emission
 - **Milestone 3:** ✅ COMPLETE - Stage implementations (init, context, plan, schedule, execute, review, learn, summarize)
 - **Milestone 4:** ✅ COMPLETE - Observer implementations (console, metrics, linear, events)
-- **Milestone 5:** 🔄 IN PROGRESS - Integration with existing orchestrator
+- **Milestone 5:** ✅ COMPLETE - Integration with existing orchestrator
 - **Milestone 6:** ⏳ PENDING - Golden path integration test
 - **Milestone 7:** ⏳ PENDING - Documentation and cleanup
 
@@ -60,6 +60,12 @@ After implementation:
 **Date:** 2026-01-12
 - **Decision:** Use dynamic imports (`await import()`) in stage execute methods
 **Rationale:** The pipeline package depends on `@alfred/agent`, `@alfred/runtime`, and `@alfred/plan`, which have complex interdependencies. Static imports would create circular dependency errors. Dynamic imports allow clean compilation while still accessing necessary functions at runtime.
+**Date:** 2026-01-12
+- **Decision:** Feature flag (`ALFRED_USE_PIPELINE=1`) for gradual rollout
+**Rationale:** Allows testing new pipeline in production alongside legacy orchestrator. Teams can opt-in selectively, reducing risk. The bridge maintains full backwards compatibility by converting PipelineEvent to WorkflowEvent.
+**Date:** 2026-01-12
+- **Decision:** Create bridge module (`pipeline-bridge.ts`) rather than modifying orchestrator directly
+**Rationale:** Keeps integration code isolated and testable. The bridge handles event conversion and observer wiring, making it easy to remove once migration is complete.
 **Date:** 2026-01-12
 
 ## Outcomes & Retrospective
