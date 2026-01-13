@@ -15,7 +15,7 @@ export type LinearObserverConfig = {
 
 export class LinearSyncObserver implements PipelineObserver {
   private pendingUpdates: LinearUpdate[] = [];
-  private rateLimiter: ReturnType<
+  private rateLimiter: InstanceType<
     typeof import("@alfred/agent/orchestrator/linear-rate-limiter").LinearRateLimiter
   > | null = null;
   private flushInterval: ReturnType<typeof setInterval> | null = null;
@@ -101,7 +101,7 @@ export class LinearSyncObserver implements PipelineObserver {
 
     for (const update of updates) {
       try {
-        await this.rateLimiter.throttle();
+        await this.rateLimiter.throttle("session");
         await this.applyUpdate(update);
       } catch (error) {
         logger.warn("linear_update_failed", {

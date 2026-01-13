@@ -22,7 +22,8 @@
     "@alfred/metrics": "workspace:*",
     "@alfred/plan": "workspace:*",
     "@alfred/runtime": "workspace:*",
-    "@alfred/type": "workspace:*"
+    "@alfred/type": "workspace:*",
+    "prom-client": "^15.1.3"
   },
   "devDependencies": {
     "@alfred/test-kit": "workspace:*"

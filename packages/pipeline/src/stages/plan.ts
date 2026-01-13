@@ -30,7 +30,7 @@ export class PlanStage implements PipelineStage<ContextOutput, PlanOutput> {
     // Decompose using existing function
     const decomposed = decomposeTask(ctx.requirement, {
       bundle: input.bundle,
-    });
+    } as Parameters<typeof decomposeTask>[1]);
 
     ctx.emit(
       createEvent("stage:progress", {

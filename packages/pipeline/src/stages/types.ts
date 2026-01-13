@@ -1,5 +1,13 @@
 import type { KnowledgeInsight, ReviewCheck } from "../events";
 
+// Import actual types from dependencies to avoid type mismatches
+import type { SubTask } from "@alfred/type/plan";
+import type { AgentOutcome } from "@alfred/runtime/orchestrator/agent";
+import type { WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
+
+// Re-export for convenience
+export type { SubTask, AgentOutcome, WavePlan, ReviewCheck };
+
 // File change record
 export type FileChange = {
   path: string;
@@ -23,45 +31,29 @@ export type ATIFTrajectory = {
   }>;
 };
 
-// Context bundle (simplified interface - actual type from @alfred/runtime)
+// Context bundle from runtime
 export type ContextBundle = {
-  files?: Array<{ path: string; content: string }>;
-  totalTokens: number;
+  maxTokens: number;
+  estimatedTokens: number;
+  files: Array<{
+    path: string;
+    startLine: number;
+    endLine: number;
+    tokens: number;
+    content: string;
+  }>;
+  links?: Array<{
+    url: string;
+    title?: string;
+    score?: number;
+  }>;
+  note?: string;
 };
 
-// Search receipt (simplified interface)
+// Search receipt
 export type SearchReceipt = {
   sources: string[];
   totalResults: number;
-};
-
-// SubTask (from @alfred/type/plan)
-export type SubTask = {
-  id: string;
-  title: string;
-  description: string;
-  dependsOn: string[];
-};
-
-// Wave plan (from @alfred/agent)
-export type WavePlan = {
-  wave: number;
-  agents: string[];
-};
-
-// Agent outcome (from @alfred/runtime)
-export type AgentOutcome = {
-  agentId: string;
-  phaseId: string;
-  stuck: boolean;
-  status: "success" | "failure" | "timeout";
-  durationSeconds: number;
-  role: string;
-  escalation?: string;
-  result?: {
-    summary?: string;
-    changes?: string[];
-  };
 };
 
 // --- Stage Output Types ---

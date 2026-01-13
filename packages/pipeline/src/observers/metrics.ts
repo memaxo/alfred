@@ -1,28 +1,28 @@
-import { Counter, Histogram } from "@alfred/metrics";
+import * as client from "prom-client";
 import type { PipelineEvent } from "../events";
 import type { StageName } from "../pipeline";
 import type { PipelineObserver } from "../runner";
 
-const pipelineStageTotal = new Counter({
+const pipelineStageTotal = new client.Counter({
   name: "pipeline_stage_total",
   help: "Total pipeline stage executions",
   labelNames: ["stage", "status"],
 });
 
-const pipelineStageDuration = new Histogram({
+const pipelineStageDuration = new client.Histogram({
   name: "pipeline_stage_duration_seconds",
   help: "Pipeline stage duration in seconds",
   labelNames: ["stage"],
   buckets: [0.1, 0.5, 1, 5, 10, 30, 60, 120, 300],
 });
 
-const pipelineAgentTotal = new Counter({
+const pipelineAgentTotal = new client.Counter({
   name: "pipeline_agent_total",
   help: "Total agents spawned",
   labelNames: ["status"],
 });
 
-const pipelineTotal = new Counter({
+const pipelineTotal = new client.Counter({
   name: "pipeline_total",
   help: "Total pipeline executions",
   labelNames: ["status"],

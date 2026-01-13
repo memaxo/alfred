@@ -46,6 +46,10 @@ export class ExecuteStage
     // Sequential execution for POC
     for (let waveIndex = 0; waveIndex < input.waves.length; waveIndex++) {
       const wave = input.waves[waveIndex];
+      if (!wave) {
+        continue;
+      }
+
       ctx.emit(
         createEvent("stage:progress", {
           stage: "execute",
@@ -88,8 +92,23 @@ export class ExecuteStage
             signal: ctx.signal,
             authz: ctx.get("authz"),
             userId: ctx.userId,
-            trackerContextRef: { current: null },
-            queue,
+            trackerContextRef: { 
+              current: {
+                state: {
+                  agents: {},
+                  waves: {},
+                },
+                blockedBy: new Map(),
+                dependsOn: new Map(),
+                detectors: new Map(),
+                options: {
+                  noProgressMs: 60_000,
+                  maxTransitions: 200,
+                  similarityThreshold: 0.92,
+                },
+              },
+            },
+            queue: queue as unknown as import("@alfred/runtime/utils/concurrency").AsyncQueue<import("@alfred/type").WorkflowEvent>,
           });
 
           const outcome: AgentOutcome = {
@@ -107,13 +126,13 @@ export class ExecuteStage
 
           ctx.emit(
             createEvent("agent:complete", {
-              agentId: agentSpec.agentId,
-              outcome: {
-                status: result.status,
-                durationMs: result.durationSeconds * 1000,
-                handoff: result.result?.summary,
-                error: result.escalation,
-              },
+            agentId: agentSpec.agentId,
+            outcome: {
+              status: result.status as "success" | "failure" | "escalated" | "timeout",
+              durationMs: result.durationSeconds * 1000,
+              handoff: result.result?.summary,
+              error: result.escalation,
+            },
             })
           );
 

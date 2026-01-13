@@ -6,7 +6,7 @@ import type { ExecuteOutput, ReviewCheck, ReviewOutput } from "./types";
 export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
   readonly name = "review" as const;
 
-  execute(input: ExecuteOutput, ctx: PipelineContext): ReviewOutput {
+  async execute(input: ExecuteOutput, ctx: PipelineContext): Promise<ReviewOutput> {
     ctx.emit(
       createEvent("stage:progress", {
         stage: "review",

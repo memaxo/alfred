@@ -36,7 +36,7 @@ export class LearnStage implements PipelineStage<ReviewOutput, LearnOutput> {
 
       startLearningWorker({
         enabled: true,
-        pollIntervalMs: 60_000, // Check every minute
+        intervalMs: 60_000, // Check every minute
         batchSize: 10,
       });
 

@@ -29,10 +29,12 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
         web: false, // Default to code-only for POC
       });
 
+      const totalTokens = result.bundle?.estimatedTokens ?? 0;
+
       ctx.emit(
         createEvent("stage:progress", {
           stage: "context",
-          message: `Gathered ${result.bundle.totalTokens} tokens of context`,
+          message: `Gathered ${totalTokens} tokens of context`,
         })
       );
 
@@ -40,10 +42,13 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
       ctx.set("contextBundle", result.bundle);
 
       return {
-        bundle: result.bundle,
-        receipts: result.receipts,
+        bundle: result.bundle ?? { files: [], maxTokens: 0, estimatedTokens: 0 },
+        receipts: {
+          sources: result.receipts.code.map((r) => r.path ?? "unknown"),
+          totalResults: result.receipts.code.length,
+        },
         ragChunks: [], // RAG chunks not directly available from ExecutionContext
-        totalTokens: result.bundle.totalTokens,
+        totalTokens,
       };
     } catch (error) {
       logger.error("context_gathering_failed", {
@@ -53,7 +58,7 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
 
       // Return minimal context on failure
       return {
-        bundle: { files: [], totalTokens: 0 },
+        bundle: { files: [], maxTokens: 0, estimatedTokens: 0 },
         receipts: { sources: [], totalResults: 0 },
         ragChunks: [],
         totalTokens: 0,
