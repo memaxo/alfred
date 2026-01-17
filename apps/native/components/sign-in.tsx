@@ -15,6 +15,7 @@ export function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -28,6 +29,7 @@ export function SignIn() {
 
     setIsLoading(true);
     setError(null);
+    setDebugError(null);
 
     await authClient.signIn.email(
       {
@@ -37,6 +39,7 @@ export function SignIn() {
       {
         onError: (error) => {
           setError(error.error?.message || "Failed to sign in");
+          setDebugError(__DEV__ ? JSON.stringify(error, null, 2) : null);
           setIsLoading(false);
         },
         onSuccess: () => {
@@ -59,6 +62,7 @@ export function SignIn() {
 
     setIsPasskeyLoading(true);
     setError(null);
+    setDebugError(null);
 
     try {
       await authClient.signIn.passkey(
@@ -66,6 +70,7 @@ export function SignIn() {
         {
           onError: (error: { error?: { message?: string } }) => {
             setError(error.error?.message ?? "Passkey sign-in failed");
+            setDebugError(__DEV__ ? JSON.stringify(error, null, 2) : null);
             setIsPasskeyLoading(false);
           },
           onSuccess: () => {
@@ -80,6 +85,7 @@ export function SignIn() {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Passkey sign-in failed");
+      setDebugError(__DEV__ ? String(err) : null);
       setIsPasskeyLoading(false);
     }
   };
@@ -95,6 +101,11 @@ export function SignIn() {
       {error && (
         <View className="mb-4 rounded-md bg-destructive/10 p-3">
           <Text className="text-destructive text-sm">{error}</Text>
+          {__DEV__ && debugError && (
+            <Text className="mt-2 font-mono text-destructive text-xs">
+              {debugError}
+            </Text>
+          )}
         </View>
       )}
 
