@@ -15,6 +15,12 @@ describe("Pricing Registry", () => {
       expect(pricing.completionCostPer1M).toBe(0.6);
     });
 
+    it("returns correct pricing for Cerebras llama3.1-8b (used in tests/examples)", () => {
+      const pricing = getModelPricing("cerebras", "llama3.1-8b");
+      expect(pricing.promptCostPer1M).toBe(0.1);
+      expect(pricing.completionCostPer1M).toBe(0.1);
+    });
+
     it("returns correct pricing for OpenRouter models", () => {
       const pricing = getModelPricing(
         "openrouter",

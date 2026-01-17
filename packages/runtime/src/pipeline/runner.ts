@@ -94,7 +94,7 @@ export class PipelineRunner {
    * Run the pipeline starting from the current phase
    */
   async *run<I>(initialInput: I): AsyncGenerator<WorkflowEvent, void, void> {
-    const currentInput = initialInput;
+    let currentInput: unknown = initialInput;
     let phaseId = this.state.currentPhaseId;
     let transitionCount = 0;
     const ids = readIds(this.state.context);
@@ -148,6 +148,7 @@ export class PipelineRunner {
           logger.info("pipeline_phase_success", { ...ids, phaseId });
           runtimePhasesTotal.inc({ phase: phaseId, status: "success" });
           yield { _: "step-complete", phase: phaseId } as any;
+          currentInput = result.data;
           const nextId = this.nextPhaseId(phaseId);
           if (!nextId) {
             return;
@@ -175,7 +176,6 @@ export class PipelineRunner {
 
           if (result.targetPhase) {
             phaseId = result.targetPhase;
-            // TODO: Input transformation?
             this.state.currentPhaseId = phaseId;
           } else {
             throw new Error(

@@ -178,6 +178,23 @@ describe("getModelForRole", () => {
     }
   });
 
+  it("throws clear error for missing Cerebras key (orchestrator role)", () => {
+    setEnv("CEREBRAS_API_KEY", undefined);
+    setEnv("AI_MODEL_ORCHESTRATOR", "cerebras:llama3.1-8b");
+
+    try {
+      getModelForRole("orchestrator");
+      throw new Error("expected_cerebras_missing_key_error");
+    } catch (error) {
+      if (!(error instanceof Error)) {
+        throw error;
+      }
+      expect(error.message).toBe(
+        "cerebras_api_key_missing: Set CEREBRAS_API_KEY environment variable"
+      );
+    }
+  });
+
   it("throws clear error for missing OpenRouter key", () => {
     setEnv("OPENROUTER_API_KEY", undefined);
     setEnv("AI_MODEL_CHAT", "openrouter:anthropic/claude-3.5-sonnet");

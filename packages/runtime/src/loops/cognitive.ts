@@ -252,13 +252,6 @@ export async function runAssistantGeneration(
   const defaults = getAssistantAgentDefaults();
   const startedAt = Date.now();
 
-  // Simulate a message from the user (TODO: Use for context building)
-  // const _newMessage: UIMessage = {
-  //   id: `cog-${Date.now()}`,
-  //   role: "user",
-  //   parts: [{ type: "text", text: input }],
-  // };
-
   try {
     const system =
       typeof defaults.instructions === "string"

@@ -10,6 +10,7 @@ import { llmConcurrency, llmRateLimit } from "@alfred/agent/utils/rate-limiter";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { classifyAiSdkError, isAbortError } from "@alfred/type/aierror";
+import { parseModelKey } from "@alfred/type/model";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel, Tool } from "ai";
@@ -22,6 +23,21 @@ import {
   runtimeHistoryTierDropsTotal,
   runtimeHistoryTokensTotal,
 } from "../metrics";
+
+export function normalizeModelLabel(raw: string): string {
+  const v = raw.trim();
+  if (v.length === 0) {
+    return "unknown";
+  }
+
+  const normalized = v.includes(":") ? v.replace(":", "/") : v;
+  try {
+    // Ensure we emit provider/modelId style keys when possible.
+    return parseModelKey(normalized).key;
+  } catch {
+    return normalized;
+  }
+}
 
 export type StreamOptions = {
   model: LanguageModel;
@@ -248,18 +264,19 @@ export class AISDKAdapter {
    * Extract model ID from LanguageModel object
    */
   private getModelId(model: LanguageModel): string {
-    if (typeof model === "string") {
-      return model;
+    const raw =
+      typeof model === "string"
+        ? model
+        : typeof model === "object" && model !== null
+          ? ((model as { id?: unknown }).id ??
+              (model as { modelId?: unknown }).modelId)
+          : undefined;
+
+    if (typeof raw !== "string" || raw.trim().length === 0) {
+      return "unknown";
     }
 
-    if (typeof model === "object" && model !== null) {
-      const maybeId = (model as { modelId?: unknown }).modelId;
-      if (typeof maybeId === "string") {
-        return maybeId;
-      }
-    }
-
-    return "unknown";
+    return normalizeModelLabel(raw);
   }
 
   /**
