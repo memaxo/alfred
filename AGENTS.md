@@ -908,6 +908,476 @@ Subprocess-based tools must be deterministic, sandboxed, and debuggable under Bu
 
 
 
+<!-- Source: .ruler/51-package-creation.md -->
+
+# Package Creation Standards
+
+## Core Principle
+
+New packages must follow consistent structure and conventions. Every exported module must use explicit `.js` extensions for ESM compatibility, and package metadata must be complete before any code is written.
+
+## Rules
+
+1. **Package structure first.** Create `package.json`, `tsconfig.json`, `turbo.json`, and `README.md` before writing any code.
+
+2. **Explicit file extensions.** All imports and exports in `index.ts` must use `.js` extensions for ESM compatibility (e.g., `export * from "./abort.js"`).
+
+3. **TypeScript extends path.** Use relative path to tsconfig base: `"extends": "../tsconfig/tsconfig.json"` not catalog reference.
+
+4. **Explicit TypeScript version.** Use explicit version like `"typescript": "^5.7.3"` not `"typescript": "catalog:"` in package-specific devDependencies.
+
+5. **Readonly class properties.** Mark class properties as `readonly` if they should never be reassigned after construction (e.g., `private readonly handlers: Handler[]`).
+
+6. **No redundant async.** Don't mark functions `async` if they only return a Promise without using `await` internally (e.g., `function race() { return Promise.race(...) }` not `async function race()`).
+
+7. **Alphabetize exports.** Order module exports alphabetically in `index.ts` for consistency and merge conflict reduction.
+
+8. **Workspace dependency format.** Reference other packages with `"workspace:*"` in dependencies, never explicit versions.
+
+9. **Minimal turbo config.** Start with minimal turbo.json extending root config; add only package-specific overrides.
+
+10. **README first.** Write comprehensive README with API reference before implementation to clarify package purpose and scope.
+
+11. **Single-word package names.** Package names under `@alfred/` namespace must be single lowercase words matching the domain (e.g., `@alfred/resilience` not `@alfred/resilience-patterns`).
+
+12. **Subpath exports.** Define explicit subpath exports for major modules (e.g., `"./abort": "./src/abort.ts"`) to enable tree-shaking and clear API surface.
+
+## Package Structure Template
+
+```
+packages/<name>/
+├── package.json          # Metadata, dependencies, exports
+├── tsconfig.json         # TypeScript config extending base
+├── turbo.json            # Build orchestration
+├── README.md             # API reference and examples
+├── src/
+│   ├── index.ts          # Main entry with .js exports
+│   ├── <module-a>.ts     # Logical module
+│   ├── <module-b>.ts     # Another module
+│   └── types.ts          # Shared types (if needed)
+└── test/
+    ├── <module-a>.test.ts
+    └── <module-b>.test.ts
+```
+
+## package.json Template
+
+```json
+{
+  "name": "@alfred/<name>",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./<module>": "./src/<module>.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@alfred/<dep>": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.3"
+  }
+}
+```
+
+## tsconfig.json Template
+
+```json
+{
+  "extends": "../tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"]
+}
+```
+
+## Validation Checklist
+
+Before committing a new package:
+
+- [ ] `bun install` succeeds without errors
+- [ ] `bun run typecheck` passes in package directory
+- [ ] All exports use `.js` extensions in `index.ts`
+- [ ] README includes purpose, installation, usage, and API reference
+- [ ] Class properties marked `readonly` where appropriate
+- [ ] No redundant `async` keywords
+- [ ] Exports alphabetized in `index.ts`
+- [ ] Subpath exports defined for all major modules
+
+## Common Mistakes
+
+1. **Forgetting .js extensions** - ESM requires explicit extensions even for TypeScript imports
+2. **Using catalog: reference** - Not supported in all contexts; use explicit versions
+3. **Absolute tsconfig paths** - Use relative paths like `../tsconfig/tsconfig.json`
+4. **Mutable class state** - Mark private properties `readonly` unless mutation is required
+5. **Async wrappers** - Don't wrap Promise-returning functions in `async` without `await`
+
+## Integration After Creation
+
+After creating a package, integrate it:
+
+1. Run `bun install` at repo root to update lockfile
+2. Reference new package in consumers with `"@alfred/<name>": "workspace:*"`
+3. Update root `tsconfig.json` references if needed for project builds
+4. Add to relevant `.ruler/` documentation mentioning the package
+
+
+
+<!-- Source: .ruler/52-ticket-and-doc-updates.md -->
+
+# Ticket Updates and Documentation Standards
+
+## Core Principle
+
+After completing implementation, update Linear tickets with specific evidence and create user-facing documentation that enables adoption without requiring codebase archaeology.
+
+## Rules
+
+### Linear Ticket Updates
+
+1. **Update on completion.** Close tickets and add comments immediately after implementation, not days later when details are forgotten.
+
+2. **Evidence over claims.** List specific file paths, commit SHAs, and test counts rather than vague "implemented" statements.
+
+3. **Link commits.** Include commit SHAs in ticket comments so reviewers can see exact changes without searching.
+
+4. **Test coverage stats.** State exact test counts (e.g., "Added 15 tests covering X, Y, Z") not "added tests".
+
+5. **Files changed list.** Enumerate every file created or modified, grouped by category (Created, Modified, Tested).
+
+6. **Implementation notes.** Document any deviations from original ticket scope or unexpected discoveries.
+
+### Documentation Writing
+
+7. **User-first perspective.** Write for developers using the feature, not implementing it. Start with "How do I..." not "The system..."
+
+8. **Quick start required.** Every feature doc must have a working example in the first 3 paragraphs that a new user can copy-paste.
+
+9. **Progressive complexity.** Order sections: Quick Start → Common Patterns → Advanced Usage → API Reference → Examples.
+
+10. **Link to code.** Reference test files for comprehensive examples instead of duplicating code in docs.
+
+11. **Migration guides.** When introducing new patterns, show before/after for migrating existing code.
+
+12. **Assume zero context.** Define domain terms on first use; don't assume reader knows the codebase.
+
+13. **Debugging section.** Include common errors, their causes, and fixes in every feature doc.
+
+14. **Visual hierarchy.** Use consistent heading levels, code blocks, and lists. Never nest code blocks in lists.
+
+## Ticket Comment Template
+
+```markdown
+✅ **Implemented**
+
+[One-sentence summary of what was delivered]
+
+**Modules Created:**
+- `path/to/module.ts` - [Purpose]
+- `path/to/helper.ts` - [Purpose]
+
+**Features:**
+- [Specific capability enabled]
+- [Another specific capability]
+- [Budget/limit/constraint implemented]
+
+**Test Coverage:**
+- N tests for [area]
+- M tests for [area]
+- All tests passing
+
+**Commits:**
+- `sha` - [commit message]
+- `sha` - [commit message]
+```
+
+## Documentation Structure Template
+
+```markdown
+# Feature Name - Usage Guide
+
+## Overview
+[One paragraph: What is this? Why would I use it?]
+
+## Quick Start
+[Minimal working example, copy-pasteable]
+
+## Available [Components/Functions/Tools]
+[Categorized list with brief descriptions]
+
+### Category 1
+**name** - Description
+- Prop: `{ key: type }`
+
+## Patterns
+### Pattern 1: [Use Case Name]
+[Code example with explanation]
+
+### Pattern 2: [Another Use Case]
+[Code example]
+
+## Best Practices
+1. [Specific, actionable advice]
+2. [Another specific practice]
+
+## Debugging
+[Common errors and solutions]
+
+## Examples
+See `path/to/tests/` for comprehensive examples.
+```
+
+## Evidence Standards
+
+When updating tickets:
+
+- **Commit SHA** - Full 8-character SHA, not "recent commit"
+- **File paths** - Absolute from repo root, not relative
+- **Test counts** - Exact numbers per test suite
+- **Lines changed** - Use `git diff --stat` output
+- **Performance** - Actual measurements if relevant
+
+## Documentation Anti-Patterns
+
+Avoid:
+
+1. **Implementation details in usage docs** - Users don't need to know how it works internally
+2. **Outdated examples** - Test examples on copy-paste before publishing
+3. **Missing imports** - Show all required imports in code examples
+4. **Wall of text** - Break long paragraphs into bullets or code blocks
+5. **Jargon without definition** - Define terms on first use
+6. **"See codebase" links** - Extract the relevant code into the doc
+
+## Validation Checklist
+
+Before closing a ticket:
+
+- [ ] Ticket status updated to "Done"
+- [ ] Comment added with specific evidence
+- [ ] Commit SHAs included
+- [ ] Test counts stated
+- [ ] Files changed enumerated
+- [ ] User-facing docs created (if applicable)
+- [ ] Quick start example tested
+- [ ] Debugging section included
+- [ ] Links to test files provided
+
+
+
+<!-- Source: .ruler/53-code-quality-corrections.md -->
+
+# Code Quality Corrections
+
+## Overview
+
+This document captures common code quality issues detected by linters or human review, codified from actual corrections made during package development.
+
+## Core Principle
+
+Write code that passes linters and human review on first attempt by following these specific patterns. These are not style preferences—they prevent real bugs and improve maintainability.
+
+## Rules
+
+### TypeScript Specifics
+
+1. **Readonly class properties.** Mark class properties `readonly` if they should never be reassigned after initialization. This prevents accidental mutation bugs.
+
+```typescript
+// ✅ Correct: readonly prevents reassignment
+class Detector {
+  private readonly handlers: Handler[] = [];
+}
+
+// ❌ Wrong: allows accidental reassignment
+class Detector {
+  private handlers: Handler[] = [];
+}
+```
+
+2. **No redundant async.** Don't mark functions `async` if they only return a Promise without using `await` internally. The async keyword adds overhead and hides the synchronous nature.
+
+```typescript
+// ✅ Correct: returns Promise directly
+export function race<T>(a: Promise<T>, b: Promise<T>): Promise<T> {
+  return Promise.race([a, b]);
+}
+
+// ❌ Wrong: unnecessary async wrapper
+export async function race<T>(a: Promise<T>, b: Promise<T>): Promise<T> {
+  return Promise.race([a, b]);
+}
+```
+
+3. **Explicit .js extensions in exports.** ESM requires explicit file extensions even when importing TypeScript files. Always use `.js` extensions in `export` statements.
+
+```typescript
+// ✅ Correct: explicit .js extensions
+export * from "./abort.js";
+export * from "./transitions.js";
+
+// ❌ Wrong: missing extensions
+export * from "./abort";
+export * from "./transitions";
+```
+
+4. **Alphabetize exports.** Sort module exports alphabetically to reduce merge conflicts and improve scanability.
+
+```typescript
+// ✅ Correct: alphabetical order
+export * from "./abort.js";
+export * from "./escalation.js";
+export * from "./transitions.js";
+
+// ❌ Wrong: random order
+export * from "./abort.js";
+export * from "./transitions.js";
+export * from "./escalation.js";
+```
+
+### Function Formatting
+
+5. **Multi-line type signatures.** Break long type signatures across lines at logical boundaries (after parameter names or return types).
+
+```typescript
+// ✅ Correct: broken at parameter
+export type Handler = (
+  event: EscalationEvent
+) => void | Promise<void>;
+
+// ❌ Wrong: long single line
+export type Handler = (event: EscalationEvent) => void | Promise<void>;
+```
+
+### Class Design
+
+6. **Readonly collections.** Mark private collections `readonly` unless the collection reference itself needs to change. Items can still be added/removed from readonly arrays/maps.
+
+```typescript
+// ✅ Correct: readonly reference, mutable contents
+class Store {
+  private readonly items: Item[] = [];
+  
+  add(item: Item) {
+    this.items.push(item); // Works fine
+  }
+}
+
+// ❌ Wrong: allows accidental reassignment of entire array
+class Store {
+  private items: Item[] = [];
+  
+  reset() {
+    this.items = []; // Dangerous - easy to do by mistake
+  }
+}
+```
+
+## Detection and Prevention
+
+### Pre-commit Checks
+
+These issues are caught by:
+
+- **Biome linter** - Catches async/readonly/formatting issues
+- **Lefthook pre-commit** - Runs formatters automatically
+- **TypeScript compiler** - Catches missing .js extensions
+
+### Manual Review Patterns
+
+When reviewing code, check for:
+
+1. Class properties that could be `readonly`
+2. `async` functions that don't use `await`
+3. Missing `.js` extensions in exports
+4. Non-alphabetical export ordering
+5. Long type signatures on single lines
+
+### IDE Configuration
+
+Configure your IDE to:
+
+- Auto-add `.js` extensions on imports
+- Highlight `async` functions without `await`
+- Sort exports alphabetically on save
+- Suggest `readonly` modifiers
+
+## Migration Guide
+
+To fix existing code:
+
+```bash
+# Run Biome linter with auto-fix
+bun run lint --fix
+
+# Check for missing .js extensions
+rg "from ['\"]\./" packages/*/src/index.ts
+
+# Check for non-readonly class properties
+rg "private \w+:" packages/*/src/*.ts
+```
+
+## Rationale
+
+### Why readonly matters
+
+```typescript
+class Guard {
+  private maxCount = 50; // Oops, reassignable
+  
+  someMethod() {
+    this.maxCount = 100; // Accidental mutation
+  }
+}
+```
+
+With `readonly`, the compiler prevents this bug.
+
+### Why async matters
+
+```typescript
+async function wrapper() {
+  return Promise.race([a, b]);
+}
+
+// Creates: async wrapper -> Promise -> Promise (nested!)
+// Instead of: wrapper -> Promise (direct)
+```
+
+The extra promise wrapper adds overhead and makes stack traces harder to read.
+
+### Why .js extensions matter
+
+```typescript
+// Works in TypeScript, breaks in Node ESM
+import { foo } from "./bar";
+
+// Works everywhere
+import { foo } from "./bar.js";
+```
+
+Node's ESM loader doesn't do extension resolution—you must be explicit.
+
+## Enforcement
+
+Add to CI:
+
+```yaml
+- name: Check code quality
+  run: |
+    bun run lint --check
+    bun run typecheck
+```
+
+This catches all these issues before merge.
+
+
+
 <!-- Source: .ruler/bts.md -->
 
 # ALFRED Monorepo Overview
