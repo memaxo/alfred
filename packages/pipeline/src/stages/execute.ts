@@ -407,8 +407,8 @@ export class ExecuteStage
 
     // Store tracker state for resume (only serializable metadata)
     ctx.set("trackerState", {
-      agentCount: trackerContext.state.agents.size,
-      waveCount: trackerContext.state.waves.length,
+      agentCount: Object.keys(trackerContext.state.agents).length,
+      waveCount: Object.keys(trackerContext.state.waves).length,
     });
 
     // Store execute output in context for summarize stage
