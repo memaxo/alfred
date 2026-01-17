@@ -1,19 +1,49 @@
-import { describe, expect, it } from "bun:test";
+/**
+ * Sense Repository Tests
+ *
+ * These tests require Postgres with the sense schema tables.
+ * Run with: RUN_DB_TESTS=1 bun test test/repo.sense.test.ts
+ */
 
-async function loadSenseRepo() {
-  // Force sqlite for deterministic unit tests even when DATABASE_URL is set.
-  process.env.DATABASE_URL = "sqlite::memory:";
-  const mod = await import("../src/repo/sense");
-  return mod;
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
+import { sql } from "drizzle-orm";
+import * as senseRepo from "../src/repo/sense";
+
+const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
+
+const TEST_USER = "repo-sense-test";
+
+let db: typeof import("@alfred/db").db;
+
+async function resetSenseTables() {
+  if (!db) {
+    return;
+  }
+  await db.execute(
+    sql`TRUNCATE sense_captures, sense_bundles, sense_receipts, sense_workingsets RESTART IDENTITY CASCADE`
+  );
 }
 
-describe("senseRepo (sqlite)", () => {
+describeFn("senseRepo", () => {
+  beforeAll(async () => {
+    requirePostgresTestEnv(
+      "senseRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+    );
+    const mod = await import("@alfred/db");
+    db = mod.db;
+  });
+
+  beforeEach(async () => {
+    await resetSenseTables();
+  });
+
   it("creates capture + bundle + receipt and lists inbox", async () => {
-    const { createBundle, createCapture, listInbox, upsertReceipt } =
-      await loadSenseRepo();
+    const { createBundle, createCapture, listInbox, upsertReceipt } = senseRepo;
 
     const capture = await createCapture({
-      userId: "u1",
+      userId: TEST_USER,
       kind: "text",
       evidence: { capturedAt: new Date("2025-01-01T00:00:00.000Z") },
     });
@@ -34,7 +64,7 @@ describe("senseRepo (sqlite)", () => {
       corrections: [],
     });
 
-    const rows = await listInbox({ userId: "u1", limit: 10 });
+    const rows = await listInbox({ userId: TEST_USER, limit: 10 });
     const row = rows.find((r) => r.capture.id === capture.id) ?? null;
 
     expect(row).not.toBeNull();
@@ -43,15 +73,14 @@ describe("senseRepo (sqlite)", () => {
   });
 
   it("supports working set get/set", async () => {
-    const { getInboxItem, getWorkingSet, setWorkingSet } =
-      await loadSenseRepo();
+    const { getInboxItem, getWorkingSet, setWorkingSet } = senseRepo;
 
-    const initial = await getWorkingSet("u2");
-    expect(initial.userId).toBe("u2");
+    const initial = await getWorkingSet(TEST_USER);
+    expect(initial.userId).toBe(TEST_USER);
     expect(initial.items.length).toBe(0);
 
     const updated = await setWorkingSet({
-      userId: "u2",
+      userId: TEST_USER,
       items: [{ kind: "project", id: "p1", label: "Project" }],
       focus: { kind: "project", id: "p1", label: "Project" },
     });
@@ -59,7 +88,10 @@ describe("senseRepo (sqlite)", () => {
     expect(updated.items.length).toBe(1);
     expect(updated.focus?.id).toBe("p1");
 
-    const item = await getInboxItem({ userId: "u2", captureId: "missing" });
+    const item = await getInboxItem({
+      userId: TEST_USER,
+      captureId: "missing",
+    });
     expect(item).toBeNull();
   });
 });
