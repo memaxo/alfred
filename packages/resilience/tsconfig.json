@@ -1,0 +1,9 @@
+{
+  "extends": "@alfred/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"],
+  "references": [{ "path": "../logger" }, { "path": "../type" }]
+}
