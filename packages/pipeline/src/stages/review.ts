@@ -57,11 +57,13 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
       // Run initial checks on agent outcomes
       await this.checkAgentOutcomes(input, gate, ctx);
 
-      // Save gate state after initial checks
-      ctx.set(
-        "reviewGateState",
-        gate.serialize() as unknown as SerializableValue
-      );
+      // Save gate state metadata (not full serialization)
+      const gateSummary = gate.summary();
+      ctx.set("reviewGateSummary", {
+        totalChecks: gateSummary.length,
+        passedChecks: gateSummary.filter((c) => c.status === "passed").length,
+        satisfied: gate.isSatisfied(),
+      });
 
       // Fixer loop (if enabled and gate not satisfied)
       const fixerConfig = ctx.config.reviewFixer;
@@ -69,12 +71,14 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
         fixAttempts = await this.runFixerLoop(input, gate, ctx, fixAttempts);
       }
 
-      // Final gate state
-      ctx.set(
-        "reviewGateState",
-        gate.serialize() as unknown as SerializableValue
-      );
-      ctx.set("fixAttempts", fixAttempts as SerializableValue);
+      // Final gate state metadata
+      const finalSummary = gate.summary();
+      ctx.set("reviewGateSummary", {
+        totalChecks: finalSummary.length,
+        passedChecks: finalSummary.filter((c) => c.status === "passed").length,
+        satisfied: gate.isSatisfied(),
+      });
+      ctx.set("fixAttempts", fixAttempts);
 
       logger.info("review_stage_complete", {
         runId: ctx.runId,
@@ -102,7 +106,7 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
       allPassed: gate.isSatisfied(),
       fixAttempts,
     };
-    ctx.set("reviewOutput", reviewOutput as unknown as SerializableValue);
+    // Don't store review output - checks array contains data that's not guaranteed serializable
 
     return reviewOutput;
   }
@@ -260,11 +264,15 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
           })
         );
 
-        // Save gate state after each attempt
-        ctx.set(
-          "reviewGateState",
-          gate.serialize() as unknown as SerializableValue
-        );
+        // Save gate state metadata after each attempt
+        const attemptSummary = gate.summary();
+        ctx.set("reviewGateSummary", {
+          totalChecks: attemptSummary.length,
+          passedChecks: attemptSummary.filter((c) => c.status === "passed")
+            .length,
+          satisfied: gate.isSatisfied(),
+          lastAttempt: attempts,
+        });
 
         logger.info("review_fixer_complete", {
           runId: ctx.runId,

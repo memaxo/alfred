@@ -86,9 +86,10 @@ ${decomposed.map((st, idx) => `${idx + 1}. ${st.title} (${st.id})`).join("\n")}
       rootPlanPath,
     });
 
-    // Store subtasks and exec plans in context for later stages
+    // Store subtasks and exec plan paths in context for later stages
+    // Convert Map to plain object for serialization
     ctx.set("subtasks", decomposed);
-    ctx.set("execPlans", execPlans);
+    ctx.set("execPlanPaths", Object.fromEntries(execPlans));
 
     return {
       subtasks: decomposed,

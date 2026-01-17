@@ -2,7 +2,6 @@ import * as crypto from "node:crypto";
 import { logger } from "@alfred/logger";
 import { createEvent } from "../events";
 import type { PipelineContext, PipelineStage } from "../pipeline";
-import type { SerializableValue } from "../snapshot";
 import type { ContextOutput, InitOutput } from "./types";
 
 /**
@@ -52,9 +51,8 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
       await this.cacheResult(ctx, output);
     }
 
-    // Store context for later stages
-    ctx.set("contextBundle", output.bundle as unknown as SerializableValue);
-    ctx.set("contextOutput", output as unknown as SerializableValue);
+    // Don't store complex objects in context - they're not serializable
+    // Context will be rebuilt on resume if needed
 
     return output;
   }
@@ -67,7 +65,8 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
   ): Promise<ContextOutput | null> {
     const cacheKey = `context:${ctx.workspace}:${hashRequirement(ctx.requirement)}`;
     const cached = ctx.get<{
-      output: ContextOutput;
+      totalTokens: number;
+      fileCount: number;
       cachedAt: number;
     }>(cacheKey);
 
@@ -88,26 +87,16 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
       return null;
     }
 
-    logger.info("context_cache_hit", {
+    // Cache hit - but we only cached metadata, not the full output
+    // Context caching is disabled for now until we have proper serialization
+    logger.info("context_cache_metadata_found", {
       runId: ctx.runId,
       cacheKey,
       ageMs: age,
+      note: "Full caching disabled - rebuilding context",
     });
 
-    ctx.emit(
-      createEvent("context:cache-hit", {
-        cacheKey,
-      })
-    );
-
-    ctx.emit(
-      createEvent("stage:progress", {
-        stage: "context",
-        message: `Using cached context (${cached.output.totalTokens} tokens)`,
-      })
-    );
-
-    return cached.output;
+    return null;
   }
 
   /**
@@ -119,10 +108,12 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
   ): Promise<void> {
     const cacheKey = `context:${ctx.workspace}:${hashRequirement(ctx.requirement)}`;
 
+    // Store only serializable metadata about the cache
     ctx.set(cacheKey, {
-      output,
+      totalTokens: output.totalTokens,
+      fileCount: output.bundle.files.length,
       cachedAt: Date.now(),
-    } as unknown as SerializableValue);
+    });
 
     logger.info("context_cached", {
       runId: ctx.runId,

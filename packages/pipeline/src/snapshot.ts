@@ -95,8 +95,8 @@ export function createInitialSnapshot(): PipelineSnapshot {
 
 /**
  * Check if a value is serializable (JSON-safe).
- * Now supports Map, Set, and Date by allowing them in the initial check,
- * but they must be converted to plain objects/arrays before final serialization.
+ * Only allows primitive types, arrays, and plain objects.
+ * Rejects class instances (Map, Set, Date), functions, and undefined.
  */
 export function isSerializable(value: unknown): value is SerializableValue {
   if (value === null) {
@@ -111,21 +111,21 @@ export function isSerializable(value: unknown): value is SerializableValue {
   if (typeof value === "boolean") {
     return true;
   }
-  if (value instanceof Date) {
-    return true;
+  if (typeof value === "function" || typeof value === "undefined") {
+    return false;
   }
-  if (value instanceof Map) {
-    return true;
-  }
-  if (value instanceof Set) {
-    return true;
+  if (value instanceof Date || value instanceof Map || value instanceof Set) {
+    return false;
   }
   if (Array.isArray(value)) {
     return value.every(isSerializable);
   }
   if (typeof value === "object") {
-    // Allow plain objects and class instances that we know how to serialize
-    // or objects that have already been serialized with __type
+    // Only allow plain objects (not class instances)
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) {
+      return false;
+    }
     return Object.values(value).every(isSerializable);
   }
   return false;

@@ -2,7 +2,6 @@ import * as path from "node:path";
 import { logger } from "@alfred/logger";
 import { createEvent } from "../events";
 import type { PipelineContext, PipelineStage } from "../pipeline";
-import type { SerializableValue } from "../snapshot";
 import type {
   AgentOutcome,
   ExecuteOutput,
@@ -68,20 +67,18 @@ export class ExecuteStage
     };
     let trackerContext = createTrackerContext(subtasks, stuckDetectionOptions);
 
-    // Restore tracker state if resuming
+    // Restore tracker metadata if resuming (not the full state)
     const savedTrackerState = ctx.get<{
-      agents: Record<string, unknown>;
-      waves: Record<string, unknown>;
+      agentCount: number;
+      waveCount: number;
     }>("trackerState");
     if (savedTrackerState) {
-      trackerContext = {
-        ...trackerContext,
-        state: {
-          agents:
-            savedTrackerState.agents as typeof trackerContext.state.agents,
-          waves: savedTrackerState.waves as typeof trackerContext.state.waves,
-        },
-      };
+      logger.info("tracker_metadata_found", {
+        runId: ctx.runId,
+        agentCount: savedTrackerState.agentCount,
+        waveCount: savedTrackerState.waveCount,
+        note: "Full tracker state not restored - will rebuild",
+      });
     }
 
     // Retry configuration
@@ -408,11 +405,11 @@ export class ExecuteStage
       }
     }
 
-    // Store tracker state for resume (serializable)
+    // Store tracker state for resume (only serializable metadata)
     ctx.set("trackerState", {
-      agents: trackerContext.state.agents,
-      waves: trackerContext.state.waves,
-    } as unknown as SerializableValue);
+      agentCount: trackerContext.state.agents.size,
+      waveCount: trackerContext.state.waves.length,
+    });
 
     // Store execute output in context for summarize stage
     const executeOutput: ExecuteOutput = {
@@ -421,19 +418,8 @@ export class ExecuteStage
       handoffs,
     };
 
-    // Store serializable version for resume
-    const serializableOutcomes: [string, AgentOutcome][] = [];
-    for (const [key, value] of outcomes) {
-      serializableOutcomes.push([key, value]);
-    }
-    ctx.set("executeOutputSerialized", {
-      outcomes: serializableOutcomes,
-      fileChanges,
-      handoffs,
-    } as unknown as SerializableValue);
-
-    ctx.set("executeOutput", executeOutput as unknown as SerializableValue);
-    ctx.set("fileChanges", fileChanges as unknown as SerializableValue);
+    // Don't store complex execute output - it contains non-serializable data
+    // The execute stage result is returned directly, not persisted for resume
 
     return executeOutput;
   }
