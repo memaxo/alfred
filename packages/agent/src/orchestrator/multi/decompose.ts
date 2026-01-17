@@ -1,9 +1,13 @@
 import { logger } from "@alfred/logger";
+import { classifyPath, type PathBucket } from "@alfred/plan/classify";
 import type { DecomposeContext, SubTask, SubTaskId } from "@alfred/type/plan";
 import { decomposeSemantically } from "../reasoning/decompose-semantic";
 
 // Re-export types for backward compatibility with existing imports from ./decompose
 export type { SubTask, SubTaskId, DecomposeContext };
+
+// Type alias for backward compatibility
+type Bucket = PathBucket;
 
 const MAX_SUBTASKS =
   Number.parseInt(process.env.MAX_SUBTASKS ?? "10", 10) || 10;
@@ -16,40 +20,6 @@ function getDecompositionTruncatedMetric() {
   } catch {
     return null;
   }
-}
-
-type Bucket = "backend" | "frontend" | "test" | "misc";
-
-function classifyPath(path: string): Bucket {
-  const lower = path.toLowerCase();
-  if (
-    lower.includes("/api/") ||
-    lower.includes("/server/") ||
-    lower.includes("/backend/") ||
-    lower.endsWith(".server.ts") ||
-    lower.endsWith(".server.tsx")
-  ) {
-    return "backend";
-  }
-  if (
-    lower.includes("/app/") ||
-    lower.includes("/pages/") ||
-    lower.includes("/components/") ||
-    lower.endsWith(".client.tsx") ||
-    lower.endsWith(".tsx")
-  ) {
-    return "frontend";
-  }
-  if (
-    lower.includes("__tests__") ||
-    lower.endsWith(".test.ts") ||
-    lower.endsWith(".spec.ts") ||
-    lower.endsWith(".test.tsx") ||
-    lower.endsWith(".spec.tsx")
-  ) {
-    return "test";
-  }
-  return "misc";
 }
 
 function normalisePrefix(path: string): string {

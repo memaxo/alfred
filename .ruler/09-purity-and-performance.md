@@ -24,7 +24,7 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 3. **Zero allocations in hot loops.** Reuse buffers, avoid spreading arrays, prefer `for` loops over `map`/`filter` when performance matters. Profile allocations before optimizing.
 
-4. **No dependency injection.** Pass dependencies as direct imports, not `deps` objects. Pure functions take data, return data. Callbacks (e.g., `onComplete`) are permitted.
+4. **No DI in pure/hot paths.** Prefer direct imports in core logic; dependency injection is allowed only at boundaries (e.g., routers) for testability.
 
 5. **Avoid premature abstraction.** Prefer direct function calls over interfaces, factories, or strategy patterns. Write direct implementations first; extract only when duplication exceeds 80% (rule 12).
 

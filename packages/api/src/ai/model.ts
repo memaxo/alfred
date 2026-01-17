@@ -14,6 +14,7 @@ const ENV_KEYS_REF: Record<ModelRole, string> = {
   planner: "AI_MODEL_REF_PLANNER",
   background: "AI_MODEL_REF_BACKGROUND",
   voice: "AI_MODEL_REF_VOICE",
+  classify: "AI_MODEL_REF_CLASSIFY",
 };
 
 const ENV_KEYS: Record<ModelRole, string> = {
@@ -22,6 +23,7 @@ const ENV_KEYS: Record<ModelRole, string> = {
   planner: "AI_MODEL_PLANNER",
   background: "AI_MODEL_BACKGROUND",
   voice: "AI_MODEL_VOICE",
+  classify: "AI_MODEL_CLASSIFY",
 };
 
 const FALLBACK_REFS: Record<ModelRole, ModelRef> = {
@@ -30,6 +32,8 @@ const FALLBACK_REFS: Record<ModelRole, ModelRef> = {
   planner: parseModelRef("openai:gpt-4o").ref,
   background: parseModelRef("openai:gpt-4o-mini").ref,
   voice: parseModelRef("openai:gpt-4o-mini").ref,
+  // Classification defaults to a fast structured-output model; can be overridden via env.
+  classify: parseModelRef("cerebras:gpt-oss-120b").ref,
 };
 
 function firstEnv(...keys: string[]): string | null {

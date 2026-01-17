@@ -21,6 +21,7 @@ export {
   CheckpointObserver,
   type CheckpointStorage,
   ConsoleObserver,
+  CostCleanupObserver,
   InMemoryCheckpointStorage,
   MetricsObserver,
   WorkflowEventObserver,

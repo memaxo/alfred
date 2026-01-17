@@ -253,6 +253,11 @@ export default defineConfig({
           __dirname,
           "../../packages/db/src/testing.ts"
         ),
+        "@alfred/rerank": resolve(__dirname, "../../packages/rerank/src/index.ts"),
+        "@alfred/rerank/cohere": resolve(
+          __dirname,
+          "../../packages/rerank/src/cohere.ts"
+        ),
         "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
       },
     },
@@ -301,6 +306,11 @@ export default defineConfig({
       "@alfred/db/testing": resolve(
         __dirname,
         "../../packages/db/src/testing.ts"
+      ),
+      "@alfred/rerank": resolve(__dirname, "../../packages/rerank/src/index.ts"),
+      "@alfred/rerank/cohere": resolve(
+        __dirname,
+        "../../packages/rerank/src/cohere.ts"
       ),
       "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
     },

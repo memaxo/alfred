@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { PhaseTimeoutError, PipelineRunner } from "../../src/pipeline/runner";
+import { PhaseRunner, PhaseTimeoutError } from "../../src/pipeline/runner";
 import type { Phase, PipelineState } from "../../src/pipeline/types";
 
 const createState = (): PipelineState => ({
@@ -11,10 +11,10 @@ const createState = (): PipelineState => ({
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("PipelineRunner phase timeouts", () => {
+describe("PhaseRunner phase timeouts", () => {
   it("throws PhaseTimeoutError when a phase exceeds its timeout", async () => {
     const state = createState();
-    const runner = new PipelineRunner(state, {
+    const runner = new PhaseRunner(state, {
       phaseTimeouts: { start: 10 },
       defaultPhaseTimeoutMs: 10,
     });
@@ -45,7 +45,7 @@ describe("PipelineRunner phase timeouts", () => {
 
   it("completes when the phase finishes before the timeout", async () => {
     const state = createState();
-    const runner = new PipelineRunner(state, {
+    const runner = new PhaseRunner(state, {
       phaseTimeouts: { start: 100 },
       defaultPhaseTimeoutMs: 100,
     });

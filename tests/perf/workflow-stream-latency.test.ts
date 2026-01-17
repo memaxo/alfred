@@ -3,6 +3,7 @@ process.env.DISABLE_TRPC_METRICS = "1";
 
 import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { performance } from "node:perf_hooks";
+import type { PipelineEvent } from "@alfred/pipeline";
 import { toObservable } from "../../packages/api/test/utils/stream";
 import { createWorkflowCaller } from "../../packages/api/test/utils/workflow-caller";
 
@@ -11,11 +12,44 @@ if (useRealLatencyMode) {
   console.info("[latency] real mode enabled - using live orchestrator");
 }
 
-const orchestrateWorkflowStreamMock = useRealLatencyMode ? null : vi.fn();
-if (orchestrateWorkflowStreamMock) {
-  mock.module("@alfred/agent/workflow/orchestrator", () => ({
-    orchestrateWorkflowStream: orchestrateWorkflowStreamMock,
-  }));
+const pipelineRunnerMock = useRealLatencyMode ? null : vi.fn();
+if (pipelineRunnerMock) {
+  mock.module("@alfred/pipeline", () => {
+    class PipelineRunner {
+      private readonly observers = new Set<{
+        onEvent: (event: PipelineEvent) => void;
+        onComplete?: () => void;
+      }>();
+
+      addObserver(observer: { onEvent: (event: PipelineEvent) => void }) {
+        this.observers.add(observer);
+        return this;
+      }
+
+      async *run(input: {
+        runId: string;
+        requirement: string;
+      }): AsyncGenerator<PipelineEvent, void, void> {
+        const start: PipelineEvent = {
+          type: "pipeline:start",
+          runId: input.runId,
+          requirement: input.requirement,
+          timestamp: Date.now(),
+        };
+        for (const observer of this.observers) {
+          observer.onEvent(start);
+        }
+        for (const observer of this.observers) {
+          observer.onComplete?.();
+        }
+      }
+    }
+
+    return {
+      PipelineRunner,
+      registerDefaultStages: () => {},
+    };
+  });
 }
 
 const enforceWorkflowPlanPolicyMock = useRealLatencyMode
@@ -31,6 +65,28 @@ if (!useRealLatencyMode) {
   mock.module("@alfred/api/preference/refresh", () => ({
     triggerPreferenceRefresh: vi.fn(),
   }));
+  mock.module("@alfred/agent/workflow/session-recovery", () => ({
+    registerRunHandle: async () => {},
+    unregisterRunHandle: async () => {},
+  }));
+  mock.module("@alfred/agent/workflow/linear", () => ({
+    ensureLinearTicket: async (params: { linear?: unknown }) => ({
+      linear: params.linear,
+      ticket: undefined,
+    }),
+  }));
+  mock.module("@alfred/runtime/workflow/linear", () => ({
+    bootstrapLinearSession: async () => {},
+  }));
+  mock.module("@alfred/db/repo/workflow", () => ({
+    PostgresCheckpointStorage: class {
+      async save() {}
+      async load() {
+        return null;
+      }
+      async delete() {}
+    },
+  }));
 }
 
 const baseInput = {
@@ -41,16 +97,14 @@ const baseInput = {
 
 describe("workflow stream latency", () => {
   afterEach(() => {
-    orchestrateWorkflowStreamMock?.mockReset?.();
+    pipelineRunnerMock?.mockReset?.();
     enforceWorkflowPlanPolicyMock?.mockClear?.();
   });
 
   it("emits the first TRPC workflow event under 100ms", async () => {
-    mockImmediateWorkflow();
-
     const caller = await createWorkflowCaller();
     const startedAt = performance.now();
-    const observable = toObservable(await caller.stream(baseInput));
+    const observable = toObservable(await caller.streamPipeline(baseInput));
     const latency = await new Promise<number>((resolve, reject) => {
       observable.subscribe({
         next: () => resolve(performance.now() - startedAt),
@@ -66,27 +120,3 @@ describe("workflow stream latency", () => {
     expect(latency).toBeLessThan(100);
   });
 });
-
-function mockImmediateWorkflow(_delayMs = 0) {
-  if (orchestrateWorkflowStreamMock) {
-    orchestrateWorkflowStreamMock.mockImplementation(() => {
-      const response = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              `data: ${JSON.stringify({ type: "turn_started", id: "1" })}\n\n`
-            );
-            controller.close();
-          },
-        }),
-        {
-          headers: {
-            "Content-Type": "text/event-stream",
-            "x-vercel-ai-data-stream": "v1",
-          },
-        }
-      );
-      return response as unknown;
-    });
-  }
-}

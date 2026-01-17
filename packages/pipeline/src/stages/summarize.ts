@@ -4,7 +4,7 @@ import type { PipelineContext, PipelineStage } from "../pipeline";
 import type {
   AgentOutcome,
   ATIFTrajectory,
-  FileChange,
+  ExecuteOutput,
   LearnOutput,
   SummarizeOutput,
 } from "./types";
@@ -31,10 +31,7 @@ export class SummarizeStage
     );
 
     // Get outcomes and file changes from context
-    const executeOutput = ctx.get<{
-      outcomes: Map<string, AgentOutcome>;
-      fileChanges: FileChange[];
-    }>("executeOutput");
+    const executeOutput = ctx.get<ExecuteOutput>("executeOutput");
     const outcomes: AgentOutcome[] = executeOutput
       ? Array.from(executeOutput.outcomes.values())
       : [];

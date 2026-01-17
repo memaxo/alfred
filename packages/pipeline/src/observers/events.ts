@@ -54,6 +54,7 @@ export class WorkflowEventObserver implements PipelineObserver {
       case "pipeline:complete":
         return {
           _: "workflow-complete",
+          runId: event.summary.runId,
           summary: event.summary,
         };
 

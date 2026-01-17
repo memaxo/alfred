@@ -14,7 +14,7 @@ export class InitStage implements PipelineStage<PipelineInput, InitOutput> {
     ctx.emit(
       createEvent("stage:progress", {
         stage: "init",
-        message: "Detecting project and initializing Linear integration",
+        message: "Detecting project and initializing inputs",
       })
     );
 
@@ -33,40 +33,15 @@ export class InitStage implements PipelineStage<PipelineInput, InitOutput> {
     }
 
     // Initialize Linear integration if configured
-    let linearProjectId: string | undefined;
-    let linearIssueId: string | undefined;
+    const linearProjectId =
+      input.linear && ctx.config.enableLinearSync ? input.linear.space : undefined;
+    const linearIssueId =
+      input.linear && ctx.config.enableLinearSync ? input.linear.issueId : undefined;
 
     if (input.linear && ctx.config.enableLinearSync) {
-      try {
-        // Import dynamically to avoid circular dependencies
-        const { ensureLinearTicket } = await import(
-          "@alfred/agent/workflow/linear"
-        );
-
-        const ticketResult = await ensureLinearTicket({
-          linear: input.linear,
-          authzLinear: input.linear.authz,
-          requirement: ctx.requirement,
-        });
-
-        linearIssueId = ticketResult.ticket?.issueId;
-        linearProjectId = ticketResult.linear?.space;
-
-        ctx.set("linearIssueId", linearIssueId);
-        ctx.set("linearSessionId", input.linear.sessionId);
-
-        ctx.emit(
-          createEvent("stage:progress", {
-            stage: "init",
-            message: `Linear issue ${linearIssueId ?? "created"}`,
-          })
-        );
-      } catch (error) {
-        logger.warn("linear_init_failed", {
-          runId: ctx.runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+      ctx.set("linearIssueId", linearIssueId ?? null);
+      ctx.set("linearSessionId", input.linear.sessionId);
+      ctx.set("linearSpace", input.linear.space);
     }
 
     return {

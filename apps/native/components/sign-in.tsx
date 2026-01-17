@@ -38,7 +38,23 @@ export function SignIn() {
       },
       {
         onError: (error) => {
-          setError(error.error?.message || "Failed to sign in");
+          const message = error.error?.message || "Failed to sign in";
+          const resp = (error as unknown as { response?: unknown }).response as
+            | { headers?: { map?: Record<string, string[]> } }
+            | undefined;
+          const map = resp?.headers?.map;
+          const dbgOrigin = map?.["x-alfred-origin"]?.[0];
+          const dbgExpoOrigin = map?.["x-alfred-expo-origin"]?.[0];
+          const dbgExpoNorm = map?.["x-alfred-expo-origin-normalized"]?.[0];
+
+          const debugSuffix =
+            __DEV__ && (dbgOrigin || dbgExpoOrigin || dbgExpoNorm)
+              ? ` (origin=${dbgOrigin ?? "?"}, expo-origin=${
+                  dbgExpoOrigin ?? "?"
+                }, expo-origin-normalized=${dbgExpoNorm ?? "?"})`
+              : "";
+
+          setError(`${message}${debugSuffix}`);
           setDebugError(__DEV__ ? JSON.stringify(error, null, 2) : null);
           setIsLoading(false);
         },

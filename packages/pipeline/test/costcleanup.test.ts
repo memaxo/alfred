@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { clearRunCosts, getTrackedRuns, recordCost } from "@alfred/metrics";
+import { CostCleanupObserver } from "../src/observers/costcleanup";
 import { PipelineRunner } from "../src/runner";
 
 describe("Cost cleanup on pipeline termination", () => {
@@ -14,6 +15,7 @@ describe("Cost cleanup on pipeline termination", () => {
       maxParallel: 1,
       enableLearning: false,
     });
+    runner.addObserver(new CostCleanupObserver());
 
     runner
       .registerStage({

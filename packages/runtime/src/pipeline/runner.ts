@@ -48,7 +48,7 @@ export class PhaseTimeoutError extends Error {
   }
 }
 
-export class PipelineRunner {
+export class PhaseRunner {
   private readonly state: PipelineState;
   private readonly phases: Map<string, Phase<any, any>> = new Map();
   private readonly phaseOrder: string[] = [];

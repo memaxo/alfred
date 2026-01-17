@@ -77,11 +77,21 @@ export function Dashboard({
     }
   }, [callbacks, stores.workflow]);
 
+  const setMode = useCallback(
+    (mode: ModeId) => {
+      if (mode !== "none") {
+        void callbacks.onMode?.(mode);
+      }
+      setActiveMode(mode);
+    },
+    [callbacks]
+  );
+
   // Create standard commands
   const commands: Command[] = createStandardCommands({
     quit: requestQuit,
     help: () => {
-      setActiveMode("help");
+      setMode("help");
     },
     refresh: () => {
       callbacks.onRefresh?.();
@@ -97,7 +107,7 @@ export function Dashboard({
       callbacks.onToggleFocusMode?.();
     },
     openMode: (mode: "chat" | "debug" | "plan") => {
-      setActiveMode(mode);
+      setMode(mode);
     },
   });
 
@@ -129,22 +139,22 @@ export function Dashboard({
       // Mode switches
       if (event.ctrl) {
         if (event.name === "d") {
-          setActiveMode("debug");
+          setMode("debug");
           return;
         }
         if (event.name === "t") {
-          setActiveMode("chat");
+          setMode("chat");
           return;
         }
         if (event.name === "p") {
-          setActiveMode("plan");
+          setMode("plan");
           return;
         }
       }
 
       // Help
       if (event.name === "?" || (event.name === "/" && event.shift)) {
-        setActiveMode("help");
+        setMode("help");
         return;
       }
 
@@ -287,19 +297,19 @@ export function Dashboard({
         {/* Modes Overlays */}
         <HelpMode
           isOpen={activeMode === "help"}
-          onClose={() => setActiveMode("none")}
+          onClose={() => setMode("none")}
         />
         <ChatMode
           isOpen={activeMode === "chat"}
-          onClose={() => setActiveMode("none")}
+          onClose={() => setMode("none")}
         />
         <DebugMode
           isOpen={activeMode === "debug"}
-          onClose={() => setActiveMode("none")}
+          onClose={() => setMode("none")}
         />
         <PlanMode
           isOpen={activeMode === "plan"}
-          onClose={() => setActiveMode("none")}
+          onClose={() => setMode("none")}
         />
       </box>
     </StoresContext.Provider>

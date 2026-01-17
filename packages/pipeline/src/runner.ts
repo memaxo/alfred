@@ -1,5 +1,4 @@
 import { logger } from "@alfred/logger";
-import { clearRunCosts } from "@alfred/metrics";
 import { createPipelineContext } from "./context";
 import type { ExecutionSummary, PipelineEvent } from "./events";
 import { createEvent } from "./events";
@@ -213,6 +212,15 @@ export class PipelineRunner {
 
       // Emit start event only if starting from beginning
       if (startStageIndex === 0) {
+        // Persist cross-stage inputs in context for resume and observers.
+        ctx.set("authz", input.authz ?? null);
+        ctx.set("workspace", input.workspace);
+        ctx.set("userId", input.userId);
+        ctx.set("linearAuthz", input.linear?.authz ?? null);
+        ctx.set("linearSessionId", input.linear?.sessionId ?? null);
+        ctx.set("linearSpace", input.linear?.space ?? null);
+        ctx.set("linearIssueId", input.linear?.issueId ?? null);
+
         const startEvent = createEvent("pipeline:start", {
           runId,
           requirement: input.requirement,
@@ -257,6 +265,10 @@ export class PipelineRunner {
             timeoutGuard.promise,
             abortGuard.promise,
           ]);
+
+          // Store stage output in context for resume.
+          // Note: ctx.set enforces JSON-serializable storage (with Map/Set/Date conversion).
+          ctx.set(`${currentStage}Output`, result);
 
           const durationMs = Math.round(performance.now() - stageStart);
           stageResults.push({
@@ -371,7 +383,6 @@ export class PipelineRunner {
       for (const observer of this.observers) {
         observer.onComplete?.();
       }
-      clearRunCosts(runId);
     }
   }
 

@@ -41,8 +41,12 @@
     "preflight": "bun scripts/preflight.ts",
     "codex:build": "bun scripts/build-codex.ts",
     "ci": "turbo run typecheck && bun run test:sqlite && bun run test:postgres && bun run test:integration && bun run test:workflow-integration && bun run smoke:hypergraph",
-    "dev": "turbo dev --concurrency=25",
-    "dev:debug": "bun --inspect run dev",
+    "dev": "bun scripts/dev.ts",
+    "dev:unsafe": "turbo dev --concurrency=25",
+    "dev:guard": "bun scripts/dev-guard.ts",
+    "dev:guard:fix": "bun scripts/dev-guard.ts --fix",
+    "dev:guard:kill": "bun scripts/dev-guard.ts --kill",
+    "dev:debug": "bun --inspect run dev:unsafe",
     "dev:debug:web": "bun --inspect run dev:web",
     "dev:debug:api": "bun --inspect run --filter @alfred/api dev",
     "debug:test": "bun --inspect-brk test",
@@ -99,6 +103,8 @@
     "harbor:dataset": "bun scripts/harbor-dataset.ts",
     "harbor:ingest": "bun scripts/harbor-ingest.ts",
     "harbor:smoke": "bun scripts/harbor-smoke.ts",
+    "load:workflow": "bun scripts/load-workflow.ts",
+    "load:workflow:stream": "bun scripts/load-workflow-stream.ts",
     "prepare": "lefthook install"
   },
   "dependencies": {

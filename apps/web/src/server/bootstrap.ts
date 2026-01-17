@@ -16,14 +16,25 @@ import {
   stopProjectLifecycleScheduler,
 } from "@alfred/api/scheduler/project-lifecycle";
 import {
+  startReembedScheduler,
+  stopReembedScheduler,
+} from "@alfred/api/scheduler/reembed";
+import {
   startReminderScheduler,
   stopReminderScheduler,
 } from "@alfred/api/scheduler/remind";
+import {
+  initEmbedding,
+  shutdownEmbedding,
+} from "@alfred/embed";
 import { logger } from "@alfred/logger";
 import {
+  getEmbedDefaultModel,
+  getEmbedEagerInit,
   getSchedPatternLifecycle,
   getSchedPreferenceInference,
   getSchedProjectLifecycle,
+  getSchedReembed,
   getSchedRemind,
 } from "@/lib/env/server-only";
 
@@ -116,6 +127,42 @@ export function initServer() {
     });
   }
 
+  // Initialize embedding system (registry with providers)
+  try {
+    const defaultModel = getEmbedDefaultModel() === "kalm" ? "kalm" : "qwen";
+    const eager = getEmbedEagerInit() === "1";
+
+    void initEmbedding({ defaultModel, eager, logger }).then(() => {
+      logger.info("embed_init_complete", {
+        defaultModel,
+        eager,
+      });
+    });
+  } catch (error) {
+    logger.error("embed_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Initialize re-embedding scheduler (if enabled)
+  // Used during model migration to re-embed existing content
+  try {
+    if (getSchedReembed() === "1") {
+      startReembedScheduler({ logger });
+      logger.info("reembed_scheduler_init", {
+        message: "Re-embedding scheduler started (SCHED_REEMBED=1)",
+      });
+    } else {
+      logger.info("reembed_scheduler_disabled", {
+        message: "Set SCHED_REEMBED=1 to enable re-embedding scheduler",
+      });
+    }
+  } catch (error) {
+    logger.error("reembed_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   // Initialize API services (compression worker, voice pools)
   initApiServices();
 
@@ -132,6 +179,7 @@ export function initServer() {
         stopPreferenceDecayScheduler();
         stopProjectLifecycleScheduler();
         stopPatternLifecycleScheduler();
+        stopReembedScheduler();
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
           context: "before_reload",
@@ -147,6 +195,8 @@ export function initServer() {
         stopPreferenceDecayScheduler();
         stopProjectLifecycleScheduler();
         stopPatternLifecycleScheduler();
+        stopReembedScheduler();
+        void shutdownEmbedding(logger);
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
           context: "on_dispose",
@@ -161,7 +211,7 @@ export function initServer() {
 /**
  * Gracefully shutdown all server-side services
  */
-export function shutdown() {
+export async function shutdown() {
   if (!initialized) {
     return;
   }
@@ -202,6 +252,26 @@ export function shutdown() {
     logger.info("pattern_lifecycle_scheduler_stopped");
   } catch (error) {
     logger.error("pattern_lifecycle_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Stop re-embedding scheduler
+  try {
+    stopReembedScheduler();
+    logger.info("reembed_scheduler_stopped");
+  } catch (error) {
+    logger.error("reembed_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Shutdown embedding system
+  try {
+    await shutdownEmbedding(logger);
+    logger.info("embed_shutdown_complete");
+  } catch (error) {
+    logger.error("embed_shutdown_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

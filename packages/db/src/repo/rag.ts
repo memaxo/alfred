@@ -122,6 +122,7 @@ export function addChunks(
     content: string;
     order?: number;
     embedding?: number[];
+    embeddingModelId?: string;
     metadata?: unknown;
   }>
 ): Promise<ChunkRow[]> {
@@ -134,6 +135,7 @@ export function addChunks(
     content: chunk.content,
     order: chunk.order ?? index,
     embedding: chunk.embedding ?? null,
+    embeddingModelId: chunk.embeddingModelId ?? null,
     metadata: chunk.metadata ?? null,
   }));
 
@@ -152,12 +154,23 @@ export type ChunkSearchResult = typeof ragChunks.$inferSelect & {
   score: number;
 };
 
+export type SearchChunksOptions = {
+  embedding: number[];
+  limit?: number;
+  threshold?: number;
+  documentId?: string;
+  efSearch?: number;
+  /** Filter by embedding model ID (only return chunks embedded with this model) */
+  modelId?: string;
+};
+
 export async function searchChunks(
   embedding: number[],
   limit = 10,
   threshold = 0.7,
   documentId?: string,
-  efSearch?: number
+  efSearch?: number,
+  modelId?: string
 ): Promise<ChunkSearchResult[]> {
   // Set LOCAL ef_search for query-time recall tuning (default: 40 for <1ms latency)
   const ef = efSearch ?? 40;
@@ -168,6 +181,15 @@ export async function searchChunks(
   return await db.transaction(async (tx) => {
     await tx.execute(sql.raw(`SET LOCAL hnsw.ef_search = ${ef}`));
 
+    // Build conditions
+    const conditions = [isNotNull(ragChunks.embedding)];
+    if (documentId) {
+      conditions.push(eq(ragChunks.documentId, documentId));
+    }
+    if (modelId) {
+      conditions.push(eq(ragChunks.embeddingModelId, modelId));
+    }
+
     const rows = await tx
       .select({
         id: ragChunks.id,
@@ -177,17 +199,11 @@ export async function searchChunks(
         metadata: ragChunks.metadata,
         created: ragChunks.created,
         embedding: ragChunks.embedding,
+        embeddingModelId: ragChunks.embeddingModelId,
         score: sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,
       })
       .from(ragChunks)
-      .where(
-        documentId
-          ? and(
-              isNotNull(ragChunks.embedding),
-              eq(ragChunks.documentId, documentId)
-            )
-          : isNotNull(ragChunks.embedding)
-      )
+      .where(and(...conditions))
       .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
       .limit(limit * 3);
 
@@ -208,6 +224,8 @@ export type HybridSearchOptions = {
   sparseWeight?: number;
   efSearch?: number;
   boostConcepts?: string[]; // Concepts to boost (e.g. "Coding", "Security")
+  /** Filter by embedding model ID (only return chunks embedded with this model) */
+  modelId?: string;
 };
 
 export async function searchChunksHybrid({
@@ -220,6 +238,7 @@ export async function searchChunksHybrid({
   sparseWeight = 0.3,
   efSearch = 40,
   boostConcepts = [],
+  modelId,
 }: HybridSearchOptions): Promise<ChunkSearchResult[]> {
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
   const ef = efSearch;
@@ -242,6 +261,11 @@ export async function searchChunksHybrid({
   return await db.transaction(async (tx) => {
     await tx.execute(sql.raw(`SET LOCAL hnsw.ef_search = ${ef}`));
 
+    // Build WHERE clause for model filtering
+    const modelFilter = modelId
+      ? sql` AND embedding_model_id = ${modelId}`
+      : sql``;
+
     // Dense vector similarity search
     let denseQuery = sql`
       SELECT 
@@ -251,9 +275,10 @@ export async function searchChunksHybrid({
         "order",
         metadata,
         created_at as "created",
+        embedding_model_id as "embeddingModelId",
         1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector) AS dense_score
       FROM rag_chunks
-      WHERE embedding IS NOT NULL
+      WHERE embedding IS NOT NULL${modelFilter}
     `;
 
     if (documentId) {
@@ -302,6 +327,7 @@ export async function searchChunksHybrid({
         COALESCE(d."order", s."order") as "order",
         COALESCE(d.metadata, s.metadata) as metadata,
         COALESCE(d."created", s."created") as "created",
+        d."embeddingModelId" as "embeddingModelId",
         (COALESCE(d.dense_score, 0) * ${denseWeight} + COALESCE(s.sparse_score, 0) * ${sparseWeight}) AS score
       FROM dense_results d
       FULL OUTER JOIN sparse_results s ON d.id = s.id
@@ -325,4 +351,64 @@ export async function deleteChunk(chunkId: string): Promise<number> {
     .where(eq(ragChunks.id, chunkId))
     .returning({ id: ragChunks.id });
   return rows.length;
+}
+
+/**
+ * Get chunks with stale embeddings (model ID doesn't match target)
+ * Used by the re-embedding worker to find chunks that need re-processing
+ */
+export async function getStaleChunks(
+  targetModelId: string,
+  limit = 100
+): Promise<ChunkRow[]> {
+  return db
+    .select()
+    .from(ragChunks)
+    .where(
+      and(
+        isNotNull(ragChunks.embedding),
+        sql`(embedding_model_id IS NULL OR embedding_model_id != ${targetModelId})`
+      )
+    )
+    .limit(limit);
+}
+
+/**
+ * Update chunk embedding and model ID
+ * Used by the re-embedding worker
+ */
+export async function updateChunkEmbedding(
+  chunkId: string,
+  embedding: number[],
+  modelId: string
+): Promise<void> {
+  await db
+    .update(ragChunks)
+    .set({
+      embedding,
+      embeddingModelId: modelId,
+    })
+    .where(eq(ragChunks.id, chunkId));
+}
+
+/**
+ * Count chunks by embedding model
+ * Used for migration progress monitoring
+ */
+export async function countChunksByModel(): Promise<
+  Array<{ modelId: string | null; count: number }>
+> {
+  const rows = await db
+    .select({
+      modelId: ragChunks.embeddingModelId,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(ragChunks)
+    .where(isNotNull(ragChunks.embedding))
+    .groupBy(ragChunks.embeddingModelId);
+
+  return rows.map((row) => ({
+    modelId: row.modelId,
+    count: Number(row.count),
+  }));
 }

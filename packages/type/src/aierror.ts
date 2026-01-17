@@ -183,6 +183,27 @@ export function classifyAiSdkError(error: unknown): AiSdkErrorClassification {
   const name = errName(error);
   const message = errMessage(error);
 
+  // Some providers throw plain Errors for missing keys (not LoadAPIKeyError).
+  // Normalize those into a misconfiguration classification so UIs can show a clear fix.
+  if (
+    typeof message === "string" &&
+    (message.includes("ai_provider_api_key_missing") ||
+      message.includes("AI_GATEWAY_API_KEY") ||
+      message.includes("OPENAI_API_KEY"))
+  ) {
+    return {
+      name,
+      kind: "misconfig",
+      retryable: false,
+      httpStatus: 500,
+      trpcCode: "INTERNAL_SERVER_ERROR",
+      safeCode: "ai_api_key_missing",
+      safeMessage:
+        "AI provider API key is missing. Set AI_GATEWAY_API_KEY or OPENAI_API_KEY.",
+      log: { name, message },
+    };
+  }
+
   if (isAbortError(error)) {
     return {
       name,

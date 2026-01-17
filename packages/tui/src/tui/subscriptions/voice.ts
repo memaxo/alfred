@@ -6,6 +6,7 @@
 
 import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
+import { addPollingWithFallback, type DataMode } from "./mode";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -170,7 +171,7 @@ export type VoiceSubscriptionOptions = {
   manager: SubscriptionManager;
   store: VoiceStore;
   pollingInterval?: number;
-  useMockData?: boolean;
+  mode?: DataMode;
 };
 
 export function setupVoiceSubscription(
@@ -180,58 +181,57 @@ export function setupVoiceSubscription(
     manager,
     store,
     pollingInterval = 3000,
-    useMockData = false,
+    mode,
   } = options;
 
-  if (useMockData) {
-    manager.addPolling({
-      id: "voice",
-      fetch: async () => mockVoiceState(),
-      onData: (state) => store.update(state),
-      onError: (_error) => {},
-      interval: pollingInterval,
-      immediate: true,
-    });
-  } else {
-    manager.addPolling({
-      id: "voice",
-      fetch: async () => {
-        const client = getApiClient();
-        const result = await client.getAdminStats();
-        if (result.error || !result.data) {
-          return mockVoiceState();
+  addPollingWithFallback({
+    manager,
+    id: "voice",
+    mode,
+    interval: pollingInterval,
+    immediate: true,
+    maxFailures: 3,
+    fetchMock: async () => mockVoiceState(),
+    fetchLive: async () => {
+      const client = getApiClient();
+      const result = await client.getAdminStats();
+      if (result.error || !result.data) {
+        const code = result.error?.code;
+        const msg = result.error?.message ?? "";
+        const isAuth = code === "HTTP_ERROR" && /HTTP (401|403)\b/.test(msg);
+        if (code === "NETWORK_ERROR" || isAuth) {
+          throw new Error("tui_live_unavailable");
         }
+        throw new Error("tui_voice_fetch_failed");
+      }
 
-        const activeSessions = result.data.voice.activeSessions;
-        const status: VoicePipelineStatus =
-          activeSessions > 0 ? "processing" : "standby";
-        return {
-          status,
-          sttPool: {
-            name: "stt",
-            workers: 0,
-            maxWorkers: 0,
-            queueDepth: 0,
-            processing: 0,
-          },
-          ttsPool: {
-            name: "tts",
-            workers: 0,
-            maxWorkers: 0,
-            queueDepth: 0,
-            processing: 0,
-          },
-          latency: { sttP50: 0, sttP99: 0, ttsP50: 0, ttsP99: 0 },
-          activeSessions,
-          timestamp: Date.now(),
-        };
-      },
-      onData: (state) => store.update(state),
-      onError: (_error) => {},
-      interval: pollingInterval,
-      immediate: true,
-    });
-  }
+      const activeSessions = result.data.voice.activeSessions;
+      const status: VoicePipelineStatus =
+        activeSessions > 0 ? "processing" : "standby";
+      return {
+        status,
+        sttPool: {
+          name: "stt",
+          workers: 0,
+          maxWorkers: 0,
+          queueDepth: 0,
+          processing: 0,
+        },
+        ttsPool: {
+          name: "tts",
+          workers: 0,
+          maxWorkers: 0,
+          queueDepth: 0,
+          processing: 0,
+        },
+        latency: { sttP50: 0, sttP99: 0, ttsP50: 0, ttsP99: 0 },
+        activeSessions,
+        timestamp: Date.now(),
+      };
+    },
+    onData: (state) => store.update(state),
+    onError: (_error) => {},
+  });
 }
 
 // ─── Factory ─────────────────────────────────────────────────────────────────

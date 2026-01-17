@@ -1,9 +1,11 @@
 import { useChat } from "@ai-sdk/react";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DefaultChatTransport } from "ai";
+import type { UIMessage } from "ai";
 import { fetch as expoFetch } from "expo/fetch";
 import { Redirect } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -29,24 +31,135 @@ const generateAPIUrl = (relativePath: string) => {
   return serverUrl.concat(path);
 };
 
+function friendlyChatError(message: string): string {
+  if (message.includes("ai_api_key_missing")) {
+    return "AI is not configured on the server yet. Set AI_GATEWAY_API_KEY or OPENAI_API_KEY on the server and restart it.";
+  }
+  if (message.includes("session_required")) {
+    return "Your session expired. Please sign in again.";
+  }
+  return message;
+}
+
+function conversationStorageKey(serverUrl: string | undefined): string {
+  const url = typeof serverUrl === "string" ? serverUrl : "unknown";
+  return `alfred.ai.conversationId.${url}`;
+}
+
 export default function AIScreen() {
   const { data: session } = authClient.useSession();
   const [input, setInput] = useState("");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isHydrating, setIsHydrating] = useState(true);
+
+  const conversationIdRef = useRef<string | null>(null);
+  conversationIdRef.current = conversationId;
+
+  type FetchArgs = Parameters<typeof globalThis.fetch>;
+
   const {
     messages,
     error: chatError,
     sendMessage,
+    setMessages,
   } = useChat({
     transport: new DefaultChatTransport({
-      fetch: expoFetch as unknown as typeof globalThis.fetch,
-      api: generateAPIUrl("/ai"),
+      fetch: (async (input: FetchArgs[0], init?: FetchArgs[1]) => {
+        const storageKey = conversationStorageKey(
+          process.env.EXPO_PUBLIC_SERVER_URL
+        );
+
+        const updatedInit = (() => {
+          if (!init?.body || typeof init.body !== "string") {
+            return init;
+          }
+          try {
+            const parsed = JSON.parse(init.body) as Record<string, unknown>;
+            const cid = conversationIdRef.current;
+            if (cid && typeof parsed.conversationId !== "string") {
+              parsed.conversationId = cid;
+              return { ...init, body: JSON.stringify(parsed) };
+            }
+          } catch {
+            // ignore
+          }
+          return init;
+        })();
+
+        const response = (await (
+          expoFetch as unknown as typeof globalThis.fetch
+        )(input, updatedInit)) as Response;
+
+        const nextConversationId = response.headers.get("x-conversation-id");
+        if (nextConversationId && nextConversationId.length > 0) {
+          if (conversationIdRef.current !== nextConversationId) {
+            conversationIdRef.current = nextConversationId;
+            setConversationId(nextConversationId);
+            void AsyncStorage.setItem(storageKey, nextConversationId);
+          }
+        }
+
+        return response;
+      }) as unknown as typeof globalThis.fetch,
+      api: generateAPIUrl("/api/assistant"),
+      headers: () => {
+        const cookies = authClient.getCookie();
+        const headers: Record<string, string> = {};
+        if (cookies) {
+          headers.Cookie = cookies;
+        }
+        return headers;
+      },
     }),
     onError: (caughtError) => {
-      Alert.alert("AI Chat Error", caughtError.message);
+      Alert.alert("AI Chat Error", friendlyChatError(caughtError.message));
     },
   });
 
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const hydrate = async () => {
+      const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
+      const storageKey = conversationStorageKey(serverUrl);
+
+      try {
+        const storedId = await AsyncStorage.getItem(storageKey);
+        if (!storedId) {
+          return;
+        }
+
+        setConversationId(storedId);
+        conversationIdRef.current = storedId;
+
+        // Load messages from server to restore chat across app restarts.
+        const cookies = authClient.getCookie();
+        if (!cookies || !serverUrl) {
+          return;
+        }
+
+        const res = await expoFetch(
+          `${serverUrl}/api/conversation/${storedId}`,
+          {
+            headers: { Cookie: cookies },
+          }
+        );
+        if (!res.ok) {
+          return;
+        }
+
+        const json = (await res.json()) as { messages?: unknown };
+        const loaded = json.messages;
+        if (Array.isArray(loaded)) {
+          setMessages(loaded as UIMessage[]);
+        }
+      } finally {
+        setIsHydrating(false);
+      }
+    };
+
+    void hydrate();
+  }, [setMessages]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -67,20 +180,12 @@ export default function AIScreen() {
     }
   };
 
-  if (chatError) {
-    return (
-      <Container>
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="mb-4 text-center text-destructive text-lg">
-            Error: {chatError.message}
-          </Text>
-          <Text className="text-center text-muted-foreground">
-            Please check your connection and try again.
-          </Text>
-        </View>
-      </Container>
-    );
-  }
+  const subtitle = useMemo(() => {
+    if (isHydrating) {
+      return "Loading history...";
+    }
+    return "Chat with our AI assistant";
+  }, [isHydrating]);
 
   return (
     <Container>
@@ -94,9 +199,20 @@ export default function AIScreen() {
               AI Chat
             </Text>
             <Text className="text-muted-foreground">
-              Chat with our AI assistant
+              {subtitle}
             </Text>
           </View>
+
+          {chatError && (
+            <View className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3">
+              <Text className="text-destructive text-sm">
+                {friendlyChatError(chatError.message)}
+              </Text>
+              <Text className="mt-1 text-muted-foreground text-xs">
+                You can keep typing and retry sending.
+              </Text>
+            </View>
+          )}
 
           <ScrollView
             className="mb-4 flex-1"
@@ -135,14 +251,26 @@ export default function AIScreen() {
                             </Text>
                           );
                         }
-                        return (
-                          <Text
-                            className="text-foreground leading-relaxed"
-                            key={`${message.id}-${i}`}
-                          >
-                            {JSON.stringify(part)}
-                          </Text>
-                        );
+                        // Most non-text parts are stream protocol metadata (step starts, etc).
+                        // Keep the UI clean by default.
+                        if (
+                          part.type === "tool-call" ||
+                          part.type === "tool-result" ||
+                          part.type === "reasoning"
+                        ) {
+                          if (!__DEV__) {
+                            return null;
+                          }
+                          return (
+                            <Text
+                              className="font-mono text-muted-foreground text-xs"
+                              key={`${message.id}-${i}`}
+                            >
+                              {JSON.stringify(part)}
+                            </Text>
+                          );
+                        }
+                        return null;
                       })}
                     </View>
                   </View>

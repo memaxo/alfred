@@ -9,11 +9,7 @@
 4. **Volume mount pattern.** Repository is mounted at `/workspace` inside the container. All `exec()` calls run with cwd `/workspace`.
 
 5. **Auth mocking for tests.** Install auth mock BEFORE other imports:
-   ```typescript
-   import { installAuthTokenMock } from "@alfred/test-kit";
-   installAuthTokenMock();
-   // ... then other imports
-   ```
+   `installAuthTokenMock()` must run before other imports.
 
 6. **Test directories under repo.** Docker security validates paths against `DEFAULT_ALLOW_PREFIXES` (repo root). Use `.agent/test-workspaces/` for test directories, not `os.tmpdir()`.
 

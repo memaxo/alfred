@@ -64,6 +64,14 @@ Observable outcome: After completing this work, a user can ask ALFRED a question
   - Added `extractGenUISchema()` helper in `packages/ui/src/chat/parts.ts`
   - Added explicit `@alfred/ui` subpath exports for `@alfred/ui/genui` and `@alfred/ui/chat/parts`
   - Added web integration tests in `apps/web/src/components/__tests__/genui.test.tsx`
+- (2026-01-17) Test Review: Comprehensive test quality improvements.
+  - Fixed `beforeEach` placement in streaming tests (was after tests, causing potential pollution)
+  - Added error boundary integration tests (2 new tests for boundary behavior)
+  - Added schema edge case tests (9 new tests: null/undefined, special chars, unicode, deep nesting, empty children, various prop types)
+  - Added tool result validation tests (7 new tests verifying all helpers produce valid schemas)
+  - Strengthened weak assertions (replaced `not.toBeNull` with structure verification)
+  - Expanded web integration tests (3 new tests: nested components, non-GenUI tool results, schema validation)
+  - Total: 111 passing tests (80 genui, 8 web integration, 23 selector)
 
 ## Surprises & Discoveries
 
@@ -102,9 +110,10 @@ Date/Author: 2026-01-17 / Codex
 - Web integration tests for GenUI chat rendering
 
 **Test Coverage:**
-- 49 passing tests across 6 test suites
+- 111 passing tests across 3 test files (200 assertions)
 - Registry, interpreter, validation, type guards, boundary, tool integration, streaming
-- Web integration tests cover: data-ui rendering, unknown component placeholder, malformed data-ui handling, error boundary fallback, tool-result GenUI output rendering
+- Web integration: data-ui rendering, unknown component placeholder, malformed data-ui handling, error boundary fallback, tool-result GenUI output rendering, nested components, schema validation, non-GenUI tool results
+- Validation: schema edge cases (null/undefined, unicode, deep nesting), tool result validation (helpers produce valid schemas), orchestrator components
 
 **Files Created:**
 - `packages/type/src/genui.ts` - Core types
@@ -137,11 +146,19 @@ Date/Author: 2026-01-17 / Codex
   - `ErrorPanel` - Error visualization
   - `ArtifactBrowser` - Output artifact management
   - `ResourceMonitor` - Container/VM resource monitoring
-- Added 14 tests for orchestrator components and helpers
-- Total: 63 passing tests in genui package, 22 in selector
+
+**Test Quality Review (2026-01-17):**
+- Fixed structural issues: `beforeEach` placement in streaming tests
+- Added 21 new tests covering edge cases and validation:
+  - Schema edge cases (null, deep nesting, unicode, special chars)
+  - Tool result validation (all helpers produce valid schemas)
+  - Error boundary behavior
+  - Web integration expansion
+- Strengthened assertions from existence checks to structure verification
+- Final: 111 tests, 200 assertions across genui (80), web integration (8), selector (23)
 
 ### Remaining Work
-None - all milestones complete.
+None - all milestones and test review complete.
 
 ## Context and Orientation
 

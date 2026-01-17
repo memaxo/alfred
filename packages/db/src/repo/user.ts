@@ -229,6 +229,7 @@ export async function searchFacts(
       created: facts.created,
       updated: facts.updated,
       embedding: facts.embedding,
+      embeddingModelId: facts.embeddingModelId,
       score: sql<number>`(1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)) + ${projectScoreExpr}`,
     })
     .from(facts)

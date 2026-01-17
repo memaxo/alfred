@@ -34,7 +34,10 @@
         "RECORD_AUDIO",
         "CAMERA",
         "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "USE_FINGERPRINT",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "WAKE_LOCK"
       ],
       "intentFilters": [
         {

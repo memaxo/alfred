@@ -21,7 +21,7 @@ import {
   it,
 } from "bun:test";
 import path from "node:path";
-import type { WorkflowEvent } from "@alfred/type";
+import type { PipelineEvent } from "@alfred/pipeline";
 
 // VCR for AI provider responses
 const cassettePath = path.join(
@@ -80,7 +80,7 @@ describe("Workflow Pipeline Integration", () => {
 
   it("streams workflow events through full pipeline", async () => {
     const caller = await harness.createCaller();
-    const events: WorkflowEvent[] = [];
+    const events: PipelineEvent[] = [];
 
     const input = {
       requirement: "Create a simple hello world function",
@@ -88,8 +88,8 @@ describe("Workflow Pipeline Integration", () => {
       mode: "sequential" as const,
     };
 
-    const subscription = await caller.stream(input);
-    const observable = toObservable<WorkflowEvent>(subscription);
+    const subscription = await caller.streamPipeline(input);
+    const observable = toObservable<PipelineEvent>(subscription);
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -117,26 +117,25 @@ describe("Workflow Pipeline Integration", () => {
     expect(events.length).toBeGreaterThan(0);
 
     // Should have a run event with the workflow ID
-    const runEvent = events.find((e) => e._ === "run");
+    const runEvent = events.find((e) => e.type === "pipeline:start");
     expect(runEvent).toBeDefined();
-    expect(runEvent?.id).toBeDefined();
+    expect(runEvent?.runId).toBeDefined();
 
     // Verify we got meaningful workflow events (run, ui-message, complete, etc.)
     // Note: "status" events may not be emitted by all workflow configurations
     const meaningfulEvents = events.filter(
       (e) =>
-        e._ === "run" ||
-        e._ === "ui-message" ||
-        e._ === "complete" ||
-        e._ === "status" ||
-        e._ === "phase"
+        e.type === "pipeline:start" ||
+        e.type === "stage:enter" ||
+        e.type === "stage:exit" ||
+        e.type === "pipeline:complete"
     );
     expect(meaningfulEvents.length).toBeGreaterThanOrEqual(1);
   });
 
   it("handles workflow with context settings", async () => {
     const caller = await harness.createCaller();
-    const events: WorkflowEvent[] = [];
+    const events: PipelineEvent[] = [];
 
     const input = {
       requirement: "Explain the code structure of a TypeScript project",
@@ -150,8 +149,8 @@ describe("Workflow Pipeline Integration", () => {
       },
     };
 
-    const subscription = await caller.stream(input);
-    const observable = toObservable<WorkflowEvent>(subscription);
+    const subscription = await caller.streamPipeline(input);
+    const observable = toObservable<PipelineEvent>(subscription);
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -174,7 +173,7 @@ describe("Workflow Pipeline Integration", () => {
     });
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.some((e) => e._ === "run")).toBeTruthy();
+    expect(events.some((e) => e.type === "pipeline:start")).toBeTruthy();
   });
 
   it("persists workflow run to database", async () => {
@@ -187,16 +186,16 @@ describe("Workflow Pipeline Integration", () => {
       mode: "sequential" as const,
     };
 
-    const subscription = await caller.stream(input);
-    const observable = toObservable<WorkflowEvent>(subscription);
+    const subscription = await caller.streamPipeline(input);
+    const observable = toObservable<PipelineEvent>(subscription);
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => resolve(), 10_000);
 
       const sub = observable.subscribe({
         next: (event) => {
-          if (event._ === "run" && event.id) {
-            runId = event.id;
+          if (event.type === "pipeline:start") {
+            runId = event.runId;
           }
         },
         error: (error) => {
@@ -232,7 +231,7 @@ describe("Workflow Pipeline Integration", () => {
       mode: "sequential" as const,
     };
 
-    await expect(unauthCaller.stream(input)).rejects.toMatchObject({
+    await expect(unauthCaller.streamPipeline(input)).rejects.toMatchObject({
       message: expect.stringContaining("Authentication"),
     });
   });
@@ -247,15 +246,15 @@ describe("Workflow Pipeline Integration", () => {
       mode: "sequential" as const,
     };
 
-    const subscription = await caller.stream(input);
-    const observable = toObservable<WorkflowEvent>(subscription);
+    const subscription = await caller.streamPipeline(input);
+    const observable = toObservable<PipelineEvent>(subscription);
 
     // Start workflow and capture run ID
     await new Promise<void>((resolve) => {
       const sub = observable.subscribe({
         next: (event) => {
-          if (event._ === "run" && event.id) {
-            runId = event.id;
+          if (event.type === "pipeline:start") {
+            runId = event.runId;
             sub.unsubscribe?.();
             resolve();
           }

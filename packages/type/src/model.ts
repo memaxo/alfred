@@ -4,6 +4,7 @@ export const MODEL_ROLES = [
   "planner",
   "background",
   "voice",
+  "classify",
 ] as const;
 
 export type ModelRole = (typeof MODEL_ROLES)[number];

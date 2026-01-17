@@ -2,6 +2,11 @@
 
 This document compares the new canonical pipeline (`@alfred/pipeline`) with the legacy orchestrator system (`packages/runtime/src/workflow/orchestrator.ts` + phases).
 
+## Further reading
+
+- For a code-verified, signature-level comparison (API surfaces, event contracts, boundary violations, and convergence plan), see:
+  - `docs/architecture/orchestrator-vs-pipeline-signature-comparison.md`
+
 ## High-Level Comparison
 
 | Aspect | Legacy Orchestrator | Canonical Pipeline |
@@ -61,7 +66,7 @@ PipelineRunner.run()
   ↓
 1. INIT Stage
    - detectProject()
-   - ensureLinearTicket()
+   - (Linear ticket/bootstrap happens outside the pipeline core via the runtime bridge)
    - Returns: InitOutput
   ↓
 2. CONTEXT Stage

@@ -12,7 +12,11 @@
 import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
-import { ConsoleObserver, MetricsObserver } from "@alfred/pipeline/observers";
+import {
+  ConsoleObserver,
+  CostCleanupObserver,
+  MetricsObserver,
+} from "@alfred/pipeline/observers";
 
 async function main() {
   const { values } = parseArgs({
@@ -62,6 +66,7 @@ async function main() {
   registerDefaultStages(runner);
   runner.addObserver(new ConsoleObserver());
   runner.addObserver(new MetricsObserver());
+  runner.addObserver(new CostCleanupObserver());
 
   try {
     for await (const _event of runner.run({

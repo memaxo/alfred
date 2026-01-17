@@ -5,6 +5,14 @@
 
 export { ANTONYM_PAIRS } from "./antonyms.js";
 export {
+  type ClassifyDomainLLMOptions,
+  classifyDomainLLM,
+  DOMAIN_CATEGORIES,
+  type DomainCategory,
+  enhanceDomainClassification,
+  isAmbiguousClassification,
+} from "./classify-llm.js";
+export {
   DEV_TOOLS,
   FILE_EXTENSIONS,
   FRAMEWORKS,

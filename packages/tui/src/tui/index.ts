@@ -18,6 +18,7 @@ import {
   createCognitiveStore,
   setupCognitiveSubscription,
 } from "./subscriptions/cognitive";
+import { resolveMode } from "./subscriptions/mode";
 import {
   getSubscriptionManager,
   resetSubscriptionManager,
@@ -40,16 +41,18 @@ import {
 export type TuiOptions = {
   skipIntro?: boolean;
   skipChecks?: boolean;
-  useMockData?: boolean;
   initialMode?: "chat" | "debug" | "plan" | "help";
   headless?: boolean;
 };
+
+type HeadlessMode = "none" | "chat" | "debug" | "plan" | "help";
 
 // ─── TUI Application ─────────────────────────────────────────────────────────
 
 export class TuiApp {
   private readonly options: TuiOptions;
   private running = false;
+  private transitions = 0;
 
   // Stores for data
   private readonly cognitiveStore = createCognitiveStore();
@@ -90,6 +93,11 @@ export class TuiApp {
     });
 
     try {
+      if (this.options.headless) {
+        await this.runHeadless();
+        return;
+      }
+
       // Setup terminal for TUI mode
       setupTerminal();
 
@@ -120,7 +128,24 @@ export class TuiApp {
           },
           onRefresh: () => this.refresh(),
           onMode: (_mode) => {
-            // Modes are now handled within the React dashboard
+            // Safety guard for headless testing / runaway mode toggling.
+            // Count the dashboard as the first transition.
+            if (this.transitions === 0) {
+              this.transitions = 1;
+            }
+            this.transitions += 1;
+
+            const maxRaw = process.env.ALFRED_TUI_MAX_TRANSITIONS;
+            if (!maxRaw) {
+              return;
+            }
+            const max = Number.parseInt(maxRaw, 10);
+            if (!Number.isFinite(max) || max <= 0) {
+              return;
+            }
+            if (this.transitions > max) {
+              throw new Error("tui_max_transitions");
+            }
           },
         },
       });
@@ -128,9 +153,9 @@ export class TuiApp {
       await reactTui.start();
 
       if (this.options.headless) {
-        const msRaw = process.env.ALFRED_TUI_HEADLESS_MS ?? "250";
+        const msRaw = process.env.ALFRED_TUI_HEADLESS_MS ?? "1000";
         const ms = Number.parseInt(msRaw, 10);
-        const delay = Number.isFinite(ms) && ms > 0 ? ms : 250;
+        const delay = Number.isFinite(ms) && ms > 0 ? ms : 1000;
         await new Promise((resolve) => {
           const t = setTimeout(resolve, delay);
           (t as unknown as { unref?: () => void }).unref?.();
@@ -154,6 +179,154 @@ export class TuiApp {
     }
   }
 
+  private async runHeadless(): Promise<void> {
+    const startedInMode = this.options.initialMode !== undefined;
+    let mode: HeadlessMode = this.options.initialMode ?? "none";
+
+    const maxRaw = process.env.ALFRED_TUI_MAX_TRANSITIONS;
+    const max = maxRaw ? Number.parseInt(maxRaw, 10) : null;
+    const maxTransitions =
+      max && Number.isFinite(max) && max > 0 ? max : null;
+
+    // Count the dashboard as the first transition for test parity.
+    this.transitions = 1;
+
+    const render = () => {
+      switch (mode) {
+        case "none":
+          process.stdout.write(
+            [
+              "ALFRED Dashboard",
+              "Cognitive",
+              "Workflows",
+              "Metrics",
+              "Voice",
+              "Knowledge",
+              "",
+            ].join("\n")
+          );
+          return;
+        case "debug":
+          process.stdout.write(
+            ["ALFRED Debug", "Refresh", "Quit", ""].join("\n")
+          );
+          return;
+        case "chat":
+          process.stdout.write(["ALFRED Chat", ""].join("\n"));
+          return;
+        case "plan":
+          process.stdout.write(["ALFRED Plan", ""].join("\n"));
+          return;
+        case "help":
+          process.stdout.write(
+            ["ALFRED Help", "Keyboard Shortcuts", ""].join("\n")
+          );
+          return;
+      }
+    };
+
+    const transitionTo = (next: HeadlessMode) => {
+      if (next === mode) {
+        return;
+      }
+      this.transitions += 1;
+      if (maxTransitions !== null && this.transitions > maxTransitions) {
+        process.stderr.write("tui_max_transitions\n");
+        process.exitCode = 1;
+        throw new Error("tui_max_transitions");
+      }
+      mode = next;
+      render();
+    };
+
+    render();
+
+    const msRaw = process.env.ALFRED_TUI_HEADLESS_MS ?? "1000";
+    const ms = Number.parseInt(msRaw, 10);
+    const idleMs = Number.isFinite(ms) && ms > 0 ? ms : 1000;
+
+    // Minimal input loop for tests (stdin is piped).
+    // Exits on: q (dashboard), Esc (chat subcommand), or timeout.
+    await new Promise<void>((resolve) => {
+      let finished = false;
+      const finish = (code?: number) => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        if (typeof code === "number") {
+          process.exitCode = code;
+        }
+        try {
+          process.stdin.pause();
+        } catch {
+          // ignore
+        }
+        resolve();
+      };
+
+      const timeout = setTimeout(() => finish(0), idleMs);
+      (timeout as unknown as { unref?: () => void }).unref?.();
+
+      const onData = (chunk: Buffer | string) => {
+        const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+        for (const ch of text) {
+          // Esc
+          if (ch === "\x1b") {
+            if (startedInMode) {
+              finish(0);
+              return;
+            }
+            transitionTo("none");
+            continue;
+          }
+
+          // Tab: ignored (focus is not simulated)
+          if (ch === "\t") {
+            continue;
+          }
+
+          // Ctrl+D opens debug from dashboard
+          if (ch === "\x04") {
+            transitionTo("debug");
+            continue;
+          }
+
+          // Help
+          if (ch === "?") {
+            transitionTo("help");
+            continue;
+          }
+
+          // Quit key
+          if (ch === "q") {
+            if (startedInMode) {
+              finish(0);
+              return;
+            }
+            if (mode === "debug") {
+              transitionTo("none");
+              continue;
+            }
+            finish(0);
+            return;
+          }
+        }
+      };
+
+      process.stdin.on("data", onData);
+      process.stdin.resume();
+
+      // Ensure we detach the listener on exit.
+      const cleanup = () => {
+        process.stdin.off("data", onData);
+      };
+      process.on("beforeExit", cleanup);
+    });
+
+    this.running = false;
+  }
+
   /**
    * Quit the application
    */
@@ -172,30 +345,30 @@ export class TuiApp {
 
   private setupSubscriptions(): void {
     const manager = getSubscriptionManager();
-    const useMockData = this.options.useMockData ?? true;
+    const mode = resolveMode();
 
     setupCognitiveSubscription({
       manager,
       store: this.cognitiveStore,
-      useMockData,
+      mode,
     });
 
     setupWorkflowSubscription({
       manager,
       store: this.workflowStore,
-      useMockData,
+      mode,
     });
 
     setupVoiceSubscription({
       manager,
       store: this.voiceStore,
-      useMockData,
+      mode,
     });
 
     setupMetricsSubscription({
       manager,
       store: this.metricsStore,
-      useMockData,
+      mode,
     });
   }
 

@@ -6,6 +6,9 @@ import {
   EMBEDDING_DIM,
   embed as embedLocal,
   embedMany as embedManyLocal,
+  getRegistry,
+  MODEL_IDS,
+  type EmbeddingInput,
 } from "@alfred/embed";
 import {
   extract,
@@ -22,19 +25,43 @@ const MAX_BATCH_SIZE = 1000;
 export type EmbeddingProvider = {
   embed: (text: string) => Promise<number[]>;
   embedMany: (texts: string[]) => Promise<number[][]>;
+  /** Model ID for tracking which model generated embeddings */
+  modelId?: string;
 };
 
 const defaultEmbeddingProvider: EmbeddingProvider = {
   embed: embedLocal,
   embedMany: embedManyLocal,
+  modelId: MODEL_IDS.KALM_12B, // Default to KaLM for backwards compatibility
 };
 
 let embeddingProvider: EmbeddingProvider = defaultEmbeddingProvider;
 
+/**
+ * Set the embedding provider for RAG operations
+ * @param provider - Custom provider or null to reset to default
+ */
 export function setEmbeddingProvider(
   provider?: EmbeddingProvider | null
 ): void {
   embeddingProvider = provider ?? defaultEmbeddingProvider;
+}
+
+/**
+ * Get the current embedding model ID
+ * Checks registry first, falls back to provider's modelId
+ */
+export function getCurrentModelId(): string {
+  try {
+    const registry = getRegistry();
+    const defaultId = registry.getDefaultId();
+    if (defaultId) {
+      return defaultId;
+    }
+  } catch {
+    // Registry not initialized
+  }
+  return embeddingProvider.modelId ?? MODEL_IDS.KALM_12B;
 }
 
 export type Chunk = {
@@ -62,11 +89,31 @@ function pushBuffer(buffers: string[], buffer: string): void {
   }
 }
 
+export type IngestOptions = {
+  /** Source identifier for the document */
+  source: string;
+  /** Text content to ingest */
+  content: string;
+  /** Optional image URL for multimodal embedding */
+  imageUrl?: string;
+  /** Progress callback */
+  onProgress?: (processed: number, total: number) => void;
+};
+
 export async function ingest(
   source: string,
   content: string,
   onProgress?: (processed: number, total: number) => void
 ): Promise<string> {
+  return ingestWithOptions({ source, content, onProgress });
+}
+
+/**
+ * Ingest a document with optional multimodal support
+ */
+export async function ingestWithOptions(options: IngestOptions): Promise<string> {
+  const { source, content, imageUrl, onProgress } = options;
+
   if (!content || content.trim().length === 0) {
     throw new Error("rag_empty_content");
   }
@@ -81,6 +128,9 @@ export async function ingest(
     return document.id;
   }
 
+  // Get current model ID for tracking
+  const modelId = getCurrentModelId();
+
   // Process in batches if document is large
   const allEmbeddings: number[][] = [];
   let processed = 0;
@@ -88,7 +138,10 @@ export async function ingest(
   for (let i = 0; i < pieces.length; i += MAX_BATCH_SIZE) {
     const batch = pieces.slice(i, i + MAX_BATCH_SIZE);
     try {
-      const batchEmbeddings = await embedMany(batch);
+      // Use multimodal embedding if imageUrl is provided
+      const batchEmbeddings = imageUrl
+        ? await embedManyMultimodal(batch, imageUrl)
+        : await embedMany(batch);
       allEmbeddings.push(...batchEmbeddings);
       processed += batch.length;
       onProgress?.(processed, pieces.length);
@@ -111,8 +164,11 @@ export async function ingest(
       allEmbeddings[index]?.length === EMBEDDING_DIM
         ? allEmbeddings[index]
         : undefined,
+    embeddingModelId:
+      allEmbeddings[index]?.length === EMBEDDING_DIM ? modelId : undefined,
     metadata: {
       source,
+      ...(imageUrl ? { imageUrl } : {}),
     },
   }));
 
@@ -137,18 +193,50 @@ export async function ingest(
   return document.id;
 }
 
+export type RetrieveOptions = {
+  /** Search query */
+  query: string;
+  /** Number of results to return */
+  k?: number;
+  /** Minimum similarity threshold */
+  threshold?: number;
+  /** Filter by document ID */
+  documentId?: string;
+  /** Filter by embedding model ID (defaults to current model) */
+  modelId?: string;
+};
+
 export async function retrieve(
   query: string,
   k = 10,
   threshold = 0.7
 ): Promise<Chunk[]> {
+  return retrieveWithOptions({ query, k, threshold });
+}
+
+/**
+ * Retrieve chunks with model-aware filtering
+ */
+export async function retrieveWithOptions(options: RetrieveOptions): Promise<Chunk[]> {
+  const { query, k = 10, threshold = 0.7, documentId, modelId } = options;
+
   if (!query || query.trim().length === 0) {
     return [];
   }
 
+  // Use current model ID if not specified
+  const effectiveModelId = modelId ?? getCurrentModelId();
+
   const vector = await embed(query);
   const fetchLimit = Math.max(k, Math.min(k * 3, 60));
-  const rows = await ragRepo.searchChunks(vector, fetchLimit, threshold);
+  const rows = await ragRepo.searchChunks(
+    vector,
+    fetchLimit,
+    threshold,
+    documentId,
+    undefined, // efSearch
+    effectiveModelId
+  );
 
   // Apply an extra defensive threshold filter client-side to ensure
   // correctness even when the underlying repo does not enforce it.
@@ -171,6 +259,7 @@ export async function retrieve(
           ...(metadata ?? {}),
           score: row.score,
           documentId: row.documentId,
+          modelId: (row as any).embeddingModelId,
         },
       };
     });
@@ -190,8 +279,8 @@ export async function retrieve(
       try {
         // Find memory nodes corresponding to these documents
         const nodeIds: string[] = [];
-        for (const documentId of documentIds) {
-          const node = await findRagDocumentNode(documentId);
+        for (const docId of documentIds) {
+          const node = await findRagDocumentNode(docId);
           if (node) {
             nodeIds.push(node.id);
           }
@@ -528,4 +617,40 @@ export async function embedMany(texts: string[]): Promise<number[][]> {
   }
 
   return embeddings;
+}
+
+/**
+ * Embed text with an associated image (multimodal)
+ * Uses the registry to find a provider that supports mixed inputs
+ */
+export async function embedManyMultimodal(
+  texts: string[],
+  imageUrl: string
+): Promise<number[][]> {
+  if (texts.length === 0) {
+    return [];
+  }
+
+  try {
+    const registry = getRegistry();
+    const provider = registry.findByCapability("mixed");
+
+    if (provider) {
+      // Use multimodal provider
+      const inputs: EmbeddingInput[] = texts.map((text) => ({
+        type: "mixed" as const,
+        text,
+        imageUrl,
+      }));
+      return provider.embedMany(inputs);
+    }
+  } catch {
+    // Registry not initialized or no multimodal provider
+  }
+
+  // Fall back to text-only embedding
+  console.warn(
+    "No multimodal embedding provider available, falling back to text-only"
+  );
+  return embedMany(texts);
 }

@@ -17,10 +17,13 @@ import { Route as DeviceRouteImport } from './routes/device'
 import { Route as ConsentRouteImport } from './routes/consent'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
+import { Route as HealthzEmbedRouteImport } from './routes/healthz/embed'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
+import { Route as ApiOrchestratorRouteImport } from './routes/api/orchestrator'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
+import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
 import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
@@ -36,6 +39,7 @@ import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as ApiOrchestratorSplatRouteImport } from './routes/api/orchestrator/$'
 import { Route as ApiLinearWebhookRouteImport } from './routes/api/linear/webhook'
 import { Route as ApiDesktopMetricsRouteImport } from './routes/api/desktop.metrics'
+import { Route as ApiConversationSplatRouteImport } from './routes/api/conversation/$'
 import { Route as ApiAuthRevokeRouteImport } from './routes/api/auth/revoke'
 import { Route as ApiAuthIntrospectRouteImport } from './routes/api/auth/introspect'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -91,6 +95,11 @@ const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const HealthzEmbedRoute = HealthzEmbedRouteImport.update({
+  id: '/embed',
+  path: '/embed',
+  getParentRoute: () => HealthzRoute,
+} as any)
 const HealthzDepsRoute = HealthzDepsRouteImport.update({
   id: '/deps',
   path: '/deps',
@@ -106,9 +115,19 @@ const ApiSearchRoute = ApiSearchRouteImport.update({
   path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrchestratorRoute = ApiOrchestratorRouteImport.update({
+  id: '/api/orchestrator',
+  path: '/api/orchestrator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMetricsRoute = ApiMetricsRouteImport.update({
   id: '/api/metrics',
   path: '/api/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssistantRoute = ApiAssistantRouteImport.update({
+  id: '/api/assistant',
+  path: '/api/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProtectedVoiceS2sRoute = ProtectedVoiceS2sRouteImport.update({
@@ -174,9 +193,9 @@ const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOrchestratorSplatRoute = ApiOrchestratorSplatRouteImport.update({
-  id: '/api/orchestrator/$',
-  path: '/api/orchestrator/$',
-  getParentRoute: () => rootRouteImport,
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => ApiOrchestratorRoute,
 } as any)
 const ApiLinearWebhookRoute = ApiLinearWebhookRouteImport.update({
   id: '/api/linear/webhook',
@@ -186,6 +205,11 @@ const ApiLinearWebhookRoute = ApiLinearWebhookRouteImport.update({
 const ApiDesktopMetricsRoute = ApiDesktopMetricsRouteImport.update({
   id: '/api/desktop/metrics',
   path: '/api/desktop/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConversationSplatRoute = ApiConversationSplatRouteImport.update({
+  id: '/api/conversation/$',
+  path: '/api/conversation/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthRevokeRoute = ApiAuthRevokeRouteImport.update({
@@ -204,9 +228,9 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssistantSplatRoute = ApiAssistantSplatRouteImport.update({
-  id: '/api/assistant/$',
-  path: '/api/assistant/$',
-  getParentRoute: () => rootRouteImport,
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => ApiAssistantRoute,
 } as any)
 const ProtectedWorkflowRunIdRoute = ProtectedWorkflowRunIdRouteImport.update({
   id: '/workflow/$runId',
@@ -284,10 +308,13 @@ export interface FileRoutesByFullPath {
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
+  '/api/assistant': typeof ApiAssistantRouteWithChildren
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/healthz/embed': typeof HealthzEmbedRoute
   '/': typeof ProtectedIndexRoute
   '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
@@ -304,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
   '/api/auth/revoke': typeof ApiAuthRevokeRoute
+  '/api/conversation/$': typeof ApiConversationSplatRoute
   '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
@@ -326,10 +354,13 @@ export interface FileRoutesByTo {
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
+  '/api/assistant': typeof ApiAssistantRouteWithChildren
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/healthz/embed': typeof HealthzEmbedRoute
   '/': typeof ProtectedIndexRoute
   '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
@@ -346,6 +377,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
   '/api/auth/revoke': typeof ApiAuthRevokeRoute
+  '/api/conversation/$': typeof ApiConversationSplatRoute
   '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
@@ -371,10 +403,13 @@ export interface FileRoutesById {
   '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
   '/_protected/timer': typeof ProtectedTimerRoute
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
+  '/api/assistant': typeof ApiAssistantRouteWithChildren
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/healthz/embed': typeof HealthzEmbedRoute
   '/_protected/': typeof ProtectedIndexRoute
   '/_protected/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
@@ -391,6 +426,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
   '/api/auth/revoke': typeof ApiAuthRevokeRoute
+  '/api/conversation/$': typeof ApiConversationSplatRoute
   '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
@@ -416,10 +452,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/timer'
     | '/voice-s2s'
+    | '/api/assistant'
     | '/api/metrics'
+    | '/api/orchestrator'
     | '/api/search'
     | '/docs/$'
     | '/healthz/deps'
+    | '/healthz/embed'
     | '/'
     | '/admin/metrics'
     | '/admin/voice'
@@ -436,6 +475,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/auth/introspect'
     | '/api/auth/revoke'
+    | '/api/conversation/$'
     | '/api/desktop/metrics'
     | '/api/linear/webhook'
     | '/api/orchestrator/$'
@@ -458,10 +498,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/timer'
     | '/voice-s2s'
+    | '/api/assistant'
     | '/api/metrics'
+    | '/api/orchestrator'
     | '/api/search'
     | '/docs/$'
     | '/healthz/deps'
+    | '/healthz/embed'
     | '/'
     | '/admin/metrics'
     | '/admin/voice'
@@ -478,6 +521,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/auth/introspect'
     | '/api/auth/revoke'
+    | '/api/conversation/$'
     | '/api/desktop/metrics'
     | '/api/linear/webhook'
     | '/api/orchestrator/$'
@@ -502,10 +546,13 @@ export interface FileRouteTypes {
     | '/_protected/settings'
     | '/_protected/timer'
     | '/_protected/voice-s2s'
+    | '/api/assistant'
     | '/api/metrics'
+    | '/api/orchestrator'
     | '/api/search'
     | '/docs/$'
     | '/healthz/deps'
+    | '/healthz/embed'
     | '/_protected/'
     | '/_protected/admin/metrics'
     | '/_protected/admin/voice'
@@ -522,6 +569,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/auth/introspect'
     | '/api/auth/revoke'
+    | '/api/conversation/$'
     | '/api/desktop/metrics'
     | '/api/linear/webhook'
     | '/api/orchestrator/$'
@@ -540,16 +588,17 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
+  ApiAssistantRoute: typeof ApiAssistantRouteWithChildren
   ApiMetricsRoute: typeof ApiMetricsRoute
+  ApiOrchestratorRoute: typeof ApiOrchestratorRouteWithChildren
   ApiSearchRoute: typeof ApiSearchRoute
   DocsSplatRoute: typeof DocsSplatRoute
-  ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthIntrospectRoute: typeof ApiAuthIntrospectRoute
   ApiAuthRevokeRoute: typeof ApiAuthRevokeRoute
+  ApiConversationSplatRoute: typeof ApiConversationSplatRoute
   ApiDesktopMetricsRoute: typeof ApiDesktopMetricsRoute
   ApiLinearWebhookRoute: typeof ApiLinearWebhookRoute
-  ApiOrchestratorSplatRoute: typeof ApiOrchestratorSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
   AuthCallbackLinearRoute: typeof AuthCallbackLinearRoute
 }
@@ -612,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedIndexRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/healthz/embed': {
+      id: '/healthz/embed'
+      path: '/embed'
+      fullPath: '/healthz/embed'
+      preLoaderRoute: typeof HealthzEmbedRouteImport
+      parentRoute: typeof HealthzRoute
+    }
     '/healthz/deps': {
       id: '/healthz/deps'
       path: '/deps'
@@ -633,11 +689,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/orchestrator': {
+      id: '/api/orchestrator'
+      path: '/api/orchestrator'
+      fullPath: '/api/orchestrator'
+      preLoaderRoute: typeof ApiOrchestratorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/metrics': {
       id: '/api/metrics'
       path: '/api/metrics'
       fullPath: '/api/metrics'
       preLoaderRoute: typeof ApiMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assistant': {
+      id: '/api/assistant'
+      path: '/api/assistant'
+      fullPath: '/api/assistant'
+      preLoaderRoute: typeof ApiAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_protected/voice-s2s': {
@@ -726,10 +796,10 @@ declare module '@tanstack/react-router' {
     }
     '/api/orchestrator/$': {
       id: '/api/orchestrator/$'
-      path: '/api/orchestrator/$'
+      path: '/$'
       fullPath: '/api/orchestrator/$'
       preLoaderRoute: typeof ApiOrchestratorSplatRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApiOrchestratorRoute
     }
     '/api/linear/webhook': {
       id: '/api/linear/webhook'
@@ -743,6 +813,13 @@ declare module '@tanstack/react-router' {
       path: '/api/desktop/metrics'
       fullPath: '/api/desktop/metrics'
       preLoaderRoute: typeof ApiDesktopMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/conversation/$': {
+      id: '/api/conversation/$'
+      path: '/api/conversation/$'
+      fullPath: '/api/conversation/$'
+      preLoaderRoute: typeof ApiConversationSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/revoke': {
@@ -768,10 +845,10 @@ declare module '@tanstack/react-router' {
     }
     '/api/assistant/$': {
       id: '/api/assistant/$'
-      path: '/api/assistant/$'
+      path: '/$'
       fullPath: '/api/assistant/$'
       preLoaderRoute: typeof ApiAssistantSplatRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApiAssistantRoute
     }
     '/_protected/workflow/$runId': {
       id: '/_protected/workflow/$runId'
@@ -933,14 +1010,40 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
 
 interface HealthzRouteChildren {
   HealthzDepsRoute: typeof HealthzDepsRoute
+  HealthzEmbedRoute: typeof HealthzEmbedRoute
 }
 
 const HealthzRouteChildren: HealthzRouteChildren = {
   HealthzDepsRoute: HealthzDepsRoute,
+  HealthzEmbedRoute: HealthzEmbedRoute,
 }
 
 const HealthzRouteWithChildren =
   HealthzRoute._addFileChildren(HealthzRouteChildren)
+
+interface ApiAssistantRouteChildren {
+  ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
+}
+
+const ApiAssistantRouteChildren: ApiAssistantRouteChildren = {
+  ApiAssistantSplatRoute: ApiAssistantSplatRoute,
+}
+
+const ApiAssistantRouteWithChildren = ApiAssistantRoute._addFileChildren(
+  ApiAssistantRouteChildren,
+)
+
+interface ApiOrchestratorRouteChildren {
+  ApiOrchestratorSplatRoute: typeof ApiOrchestratorSplatRoute
+}
+
+const ApiOrchestratorRouteChildren: ApiOrchestratorRouteChildren = {
+  ApiOrchestratorSplatRoute: ApiOrchestratorSplatRoute,
+}
+
+const ApiOrchestratorRouteWithChildren = ApiOrchestratorRoute._addFileChildren(
+  ApiOrchestratorRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   ProtectedRoute: ProtectedRouteWithChildren,
@@ -954,16 +1057,17 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
     DotwellKnownOauthProtectedResourceRoute,
+  ApiAssistantRoute: ApiAssistantRouteWithChildren,
   ApiMetricsRoute: ApiMetricsRoute,
+  ApiOrchestratorRoute: ApiOrchestratorRouteWithChildren,
   ApiSearchRoute: ApiSearchRoute,
   DocsSplatRoute: DocsSplatRoute,
-  ApiAssistantSplatRoute: ApiAssistantSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthIntrospectRoute: ApiAuthIntrospectRoute,
   ApiAuthRevokeRoute: ApiAuthRevokeRoute,
+  ApiConversationSplatRoute: ApiConversationSplatRoute,
   ApiDesktopMetricsRoute: ApiDesktopMetricsRoute,
   ApiLinearWebhookRoute: ApiLinearWebhookRoute,
-  ApiOrchestratorSplatRoute: ApiOrchestratorSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
   AuthCallbackLinearRoute: AuthCallbackLinearRoute,
 }

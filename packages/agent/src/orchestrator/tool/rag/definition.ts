@@ -15,6 +15,13 @@ export const ragIngestInputSchema = z.object({
     .min(1)
     .describe("Source identifier (URL, path, or descriptive name)"),
   content: z.string().min(1).describe("Document content (text)"),
+  imageUrl: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "Optional image URL for multimodal embedding (requires Qwen provider)"
+    ),
   metadata: z
     .record(z.string(), z.unknown())
     .optional()

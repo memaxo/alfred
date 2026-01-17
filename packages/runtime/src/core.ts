@@ -37,7 +37,7 @@ import { ActPhase } from "./pipeline/phases/act";
 import { PlanPhase } from "./pipeline/phases/plan";
 import { ReportPhase } from "./pipeline/phases/report";
 import { ScanPhase } from "./pipeline/phases/scan";
-import { PipelineRunner } from "./pipeline/runner";
+import { PhaseRunner } from "./pipeline/runner";
 import type { PipelineState } from "./pipeline/types";
 
 export class WorkflowRuntime implements IWorkflowRuntime {
@@ -311,7 +311,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         context: this.runtimeContext,
       };
 
-      const runner = new PipelineRunner(pipelineState)
+      const runner = new PhaseRunner(pipelineState)
         .register(new ScanPhase(this.runId))
         .register(new PlanPhase(this.runId, this.model, this.createAiAdapter))
         .register(new ActPhase(this.runId, this.model, this.createAiAdapter))

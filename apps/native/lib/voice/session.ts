@@ -16,7 +16,7 @@ import { Audio } from "expo-av";
 import { deleteAsync, EncodingType, readAsStringAsync } from "expo-file-system";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExpoCapture } from "./capture";
-import { configureAudioSession } from "./config";
+import { configureAudioSession, resetAudioSession } from "./config";
 import { getVoiceStreamUrl } from "./env";
 import { playBase64 } from "./play";
 import { enqueue } from "./queue";

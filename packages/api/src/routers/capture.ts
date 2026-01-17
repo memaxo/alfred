@@ -87,6 +87,67 @@ async function transcribeVoiceClip({
   return (result.text ?? "").trim();
 }
 
+/**
+ * Process a photo capture by embedding the image using Qwen multimodal provider
+ * Returns a description placeholder and the image embedding
+ */
+async function processPhotoCapture({
+  imageBase64,
+  mimeType,
+}: {
+  imageBase64: string;
+  mimeType: string;
+}): Promise<{ text: string; embedding: number[]; modelId: string }> {
+  const { getRegistry, MODEL_IDS, isEmbeddingInitialized, initEmbedding } =
+    await import("@alfred/embed");
+
+  // Ensure embedding system is initialized
+  if (!isEmbeddingInitialized()) {
+    await initEmbedding({ defaultModel: "qwen" });
+  }
+
+  const registry = getRegistry();
+  const provider = registry.get(MODEL_IDS.QWEN3_VL_2B);
+
+  if (!provider) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "embed_multimodal_provider_unavailable",
+    });
+  }
+
+  // Initialize provider if not already
+  if (!provider.isHealthy()) {
+    await provider.initialize();
+  }
+
+  // Create data URL for the image
+  const dataUrl = `data:${mimeType};base64,${imageBase64}`;
+
+  // Embed the image using Qwen multimodal provider
+  const embedding = await provider.embed({
+    type: "image",
+    url: dataUrl,
+    mimeType,
+  });
+
+  // For now, use a placeholder description
+  // Future enhancement: Use vision LLM to generate description for text search
+  const text = "[Photo capture]";
+
+  logger.info("photo_capture_embedded", {
+    mimeType,
+    embeddingLength: embedding.length,
+    modelId: MODEL_IDS.QWEN3_VL_2B,
+  });
+
+  return {
+    text,
+    embedding,
+    modelId: MODEL_IDS.QWEN3_VL_2B,
+  };
+}
+
 export const captureRouter = router({
   create: authedProcedure
     .input(captureCreateInput)
@@ -111,6 +172,8 @@ export const captureRouter = router({
       };
 
       let derivedText = "";
+      let photoEmbedding: { embedding: number[]; modelId: string } | undefined;
+
       if (input.payload.kind === "text") {
         derivedText = input.payload.text.trim();
       } else if (input.payload.kind === "voice") {
@@ -120,11 +183,17 @@ export const captureRouter = router({
           mimeType: input.payload.mimeType,
           language: input.payload.language,
         });
-      } else {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "photo_capture_not_supported_yet",
+      } else if (input.payload.kind === "photo") {
+        // Process photo capture with multimodal embedding
+        const result = await processPhotoCapture({
+          imageBase64: input.payload.imageBase64,
+          mimeType: input.payload.mimeType,
         });
+        derivedText = result.text;
+        photoEmbedding = {
+          embedding: result.embedding,
+          modelId: result.modelId,
+        };
       }
 
       if (!derivedText) {
@@ -145,6 +214,42 @@ export const captureRouter = router({
         captureId: capture.id,
         text: derivedText,
       });
+
+      // If photo capture, store embedding in RAG for visual search
+      if (photoEmbedding) {
+        void (async () => {
+          try {
+            const { ragRepo } = await import("@alfred/db");
+            const document = await ragRepo.createDocument(
+              `capture:photo:${capture.id}`,
+              `Photo capture ${capturedAt.toISOString()}`,
+              undefined,
+              { kind: "photo", captureId: capture.id }
+            );
+            await ragRepo.addChunks(document.id, [
+              {
+                content: derivedText,
+                order: 0,
+                embedding: photoEmbedding.embedding,
+                embeddingModelId: photoEmbedding.modelId,
+                metadata: {
+                  captureId: capture.id,
+                  kind: "photo",
+                },
+              },
+            ]);
+            logger.info("photo_capture_rag_stored", {
+              captureId: capture.id,
+              documentId: document.id,
+            });
+          } catch (error) {
+            logger.warn("photo_capture_rag_failed", {
+              captureId: capture.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })();
+      }
 
       const workingSet = await getWorkingSet(session.user.id);
       const route = scoreRoute({ text: derivedText, workingSet });

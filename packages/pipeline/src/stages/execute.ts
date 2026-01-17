@@ -1,4 +1,6 @@
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { Workspace } from "@alfred/agent/environment/types";
 import { logger } from "@alfred/logger";
 import { createEvent } from "../events";
 import type { PipelineContext, PipelineStage } from "../pipeline";
@@ -6,9 +8,10 @@ import type {
   AgentOutcome,
   ExecuteOutput,
   FileChange,
+  PlanOutput,
   ScheduleOutput,
-  SubTask,
 } from "./types";
+import type { WorkflowEvent } from "@alfred/type";
 
 /**
  * Execute Stage
@@ -25,6 +28,20 @@ export class ExecuteStage
 {
   readonly name = "execute" as const;
 
+  private formatQueueEvent(event: WorkflowEvent): string {
+    const payload = event as unknown as Record<string, unknown>;
+    if (typeof payload.message === "string" && payload.message.length > 0) {
+      return payload.message;
+    }
+    if (typeof payload.kind === "string" && payload.kind.length > 0) {
+      return payload.kind;
+    }
+    if (typeof payload.type === "string" && payload.type.length > 0) {
+      return payload.type;
+    }
+    return "agent_event";
+  }
+
   async execute(
     input: ScheduleOutput,
     ctx: PipelineContext
@@ -32,6 +49,7 @@ export class ExecuteStage
     const outcomes = new Map<string, AgentOutcome>();
     const fileChanges: FileChange[] = [];
     const handoffs: string[] = [];
+    const activeWorkspaces: Workspace[] = [];
 
     ctx.emit(
       createEvent("stage:progress", {
@@ -52,13 +70,12 @@ export class ExecuteStage
       detectStuckWithContext,
     } = await import("@alfred/agent/orchestrator/multi/tracker");
 
-    // Get subtasks and exec plans from context
-    const subtasks = ctx.get<SubTask[]>("subtasks") ?? [];
+    // Get plan outputs from context (runner stores `${stage}Output` keys)
+    const planOutput = ctx.get<PlanOutput>("planOutput");
+    const subtasks = planOutput?.subtasks ?? [];
     const subTaskById = new Map(subtasks.map((t) => [t.id, t]));
-    const execPlans = ctx.get<Map<string, string>>("execPlans") ?? new Map();
-    const rootExecPlanPath = ctx.get<string>("rootPlanPath") ?? "";
-    const queue = new AsyncQueue();
-
+    const execPlans = planOutput?.execPlans ?? new Map();
+    const rootExecPlanPath = planOutput?.rootPlanPath ?? "";
     // Initialize TrackerContext for stuck detection
     const stuckDetectionOptions = ctx.config.stuckDetection ?? {
       noProgressMs: 60_000,
@@ -99,12 +116,13 @@ export class ExecuteStage
     let totalFailed = 0;
     let abortedWave: { waveId: string; reason: string } | null = null;
 
-    // Sequential execution for POC
-    for (let waveIndex = 0; waveIndex < input.waves.length; waveIndex++) {
-      const wave = input.waves[waveIndex];
-      if (!wave) {
-        continue;
-      }
+    try {
+      // Sequential execution for POC
+      for (let waveIndex = 0; waveIndex < input.waves.length; waveIndex++) {
+        const wave = input.waves[waveIndex];
+        if (!wave) {
+          continue;
+        }
 
       // Check if wave should be aborted
       if (abortedWave) {
@@ -155,27 +173,44 @@ export class ExecuteStage
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           try {
             const trackerContextRef = { current: trackerContext };
+            const queue = new AsyncQueue<WorkflowEvent>();
+            const drainQueue = (async () => {
+              for await (const event of queue) {
+                ctx.emit(
+                  createEvent("agent:progress", {
+                    agentId: agentSpec.agentId,
+                    message: this.formatQueueEvent(event),
+                  })
+                );
+              }
+            })();
 
-            const result = await runAgent({
-              spec: agentSpec,
-              phaseId: "execute",
-              runId: ctx.runId,
-              workspace: ctx.workspace,
-              workspaceRoot: ctx.workspace,
-              subTaskById,
-              projectConfig: ctx.get("projectConfig") ?? null,
-              activeWorkspaces: [],
-              agentFileHints: new Map(),
-              rootExecPlanPath,
-              signal: ctx.signal,
-              authz: ctx.get("authz"),
-              userId: ctx.userId,
-              trackerContextRef,
-              queue:
-                queue as unknown as import("@alfred/runtime/utils/concurrency").AsyncQueue<
-                  import("@alfred/type").WorkflowEvent
-                >,
-            });
+            let result: Awaited<ReturnType<typeof runAgent>> | null = null;
+            try {
+              result = await runAgent({
+                spec: agentSpec,
+                phaseId: "execute",
+                runId: ctx.runId,
+                workspace: ctx.workspace,
+                workspaceRoot: ctx.workspace,
+                subTaskById,
+                projectConfig: ctx.get("projectConfig") ?? null,
+                activeWorkspaces,
+                agentFileHints: new Map(),
+                rootExecPlanPath,
+                signal: ctx.signal,
+                authz: ctx.get("authz"),
+                userId: ctx.userId,
+                trackerContextRef,
+                queue,
+              });
+            } finally {
+              queue.close();
+              await drainQueue;
+            }
+            if (!result) {
+              throw new Error("agent_run_missing_result");
+            }
 
             // Update tracker context after agent completion
             trackerContext = updateTrackerWithContext(trackerContext, {
@@ -405,23 +440,60 @@ export class ExecuteStage
       }
     }
 
-    // Store tracker state for resume (only serializable metadata)
-    ctx.set("trackerState", {
-      agentCount: Object.keys(trackerContext.state.agents).length,
-      waveCount: Object.keys(trackerContext.state.waves).length,
-    });
+      // Store tracker state for resume (only serializable metadata)
+      ctx.set("trackerState", {
+        agentCount: Object.keys(trackerContext.state.agents).length,
+        waveCount: Object.keys(trackerContext.state.waves).length,
+      });
 
-    // Store execute output in context for summarize stage
-    const executeOutput: ExecuteOutput = {
-      outcomes,
-      fileChanges,
-      handoffs,
-    };
+      return {
+        outcomes,
+        fileChanges,
+        handoffs,
+      };
+    } finally {
+      // Mirror legacy orchestrator cleanup guarantees.
+      try {
+        const { stopAllServers } = await import(
+          "@alfred/agent/orchestrator/tool/shared/server"
+        );
+        await stopAllServers("workflow_complete");
+      } catch (error) {
+        logger.warn("executor_server_cleanup_failed", {
+          runId: ctx.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
 
-    // Don't store complex execute output - it contains non-serializable data
-    // The execute stage result is returned directly, not persisted for resume
+      for (const ws of activeWorkspaces) {
+        try {
+          await ws.cleanup();
+        } catch (error) {
+          logger.warn("workspace_cleanup_failed", {
+            workspaceId: ws.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
 
-    return executeOutput;
+      try {
+        const isGitWorkspace = await fs
+          .stat(path.join(ctx.workspace, ".git"))
+          .then(() => true)
+          .catch(() => false);
+        if (isGitWorkspace) {
+          const { worktreeManager } = await import(
+            "@alfred/agent/orchestrator/tool/worktree"
+          );
+          await worktreeManager.cleanup(ctx.workspace, ctx.runId);
+        }
+      } catch (error) {
+        logger.warn("worktree_cleanup_failed", {
+          runId: ctx.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 
   /**

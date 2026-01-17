@@ -3,12 +3,10 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { orchestrateWorkflowStream } from "@alfred/agent/workflow/orchestrator";
+import type { PipelineEvent } from "@alfred/pipeline";
+import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
+import { PipelineEventQueueObserver } from "@alfred/pipeline/observers";
 import { workflowInput } from "@alfred/agent/workflow/schema";
-import * as workflowRepo from "@alfred/db/repo/workflow";
-import { buildAtifTrajectory } from "@alfred/runtime/trajectory/atif";
-import { validateAtifTrajectory } from "@alfred/runtime/trajectory/validate";
-import { RuntimeContext } from "@alfred/type/runtime-context";
 
 type RunArgs = {
   requirement: string;
@@ -88,27 +86,14 @@ async function ensureParent(filePath: string): Promise<void> {
 
 async function writeTrajectory(args: {
   runId: string;
-  requirement: string | null;
+  events: PipelineEvent[];
   outPath: string;
-}): Promise<{ ok: boolean; steps: number }> {
-  const rows = await workflowRepo.listEvents(args.runId);
-  const events = rows.map((e) => ({
-    eventId: e.eventId,
-    eventType: e.eventType,
-    eventData: e.eventData,
-    timestamp: e.timestamp ?? null,
-    seq: e.seq ?? null,
-  }));
-
-  const traj = buildAtifTrajectory({
-    runId: args.runId,
-    requirement: args.requirement,
-    events,
-  });
-  const v = validateAtifTrajectory(traj);
+}): Promise<void> {
   await ensureParent(args.outPath);
-  await Bun.write(args.outPath, JSON.stringify(traj, null, 2));
-  return { ok: v.ok, steps: traj.steps.length };
+  await Bun.write(
+    args.outPath,
+    JSON.stringify({ runId: args.runId, events: args.events }, null, 2)
+  );
 }
 
 async function runWorkflow(args: RunArgs) {
@@ -125,66 +110,55 @@ async function runWorkflow(args: RunArgs) {
   });
 
   const session = { user: { id: payload.userId ?? "harbor" } };
-  const runtimeContext = new RuntimeContext<Record<string, unknown>>([
-    ["requestId", randomUUID()],
-    ["receivedAt", new Date().toISOString()],
-    ["method", "cli"],
-    ["url", "cli://workflow"],
-    ["ip", null],
-    ["forwardedFor", []],
-    ["userId", session.user.id],
-    ["userRoles", ["owner"]],
-    ["userScopes", ["*"]],
-    ["scanContext", null],
-  ]);
 
-  await workflowRepo.createRun({
-    id: runId,
-    userId: session.user.id,
-    workflowId: "plan",
-    status: "running",
-    requirement: args.requirement,
-    inputData: payload,
+  const runner = new PipelineRunner({
+    maxParallel: payload.mode === "parallel" ? 4 : 1,
+    enableLearning: true,
   });
+  registerDefaultStages(runner);
 
-  let resolveDone: (() => void) | null = null;
-  let rejectDone: ((err: unknown) => void) | null = null;
-  let runError: unknown | null = null;
-  const done = new Promise<void>((resolve, reject) => {
-    resolveDone = resolve;
-    rejectDone = reject;
-  });
+  const queueObserver = new PipelineEventQueueObserver();
+  runner.addObserver(queueObserver);
 
-  const stop = await orchestrateWorkflowStream(payload, session, {
-    triggerPreferenceRefresh: () => {},
-    context: { runtimeContext },
-    emitError: (error) => {
-      runError = error;
-      rejectDone?.(error);
-    },
-    emitNext: (_event) => {},
-    emitComplete: () => {
-      resolveDone?.();
-    },
-  });
-
-  try {
-    await done;
-  } catch (error) {
-    if (!runError) {
-      runError = error;
+  const events: PipelineEvent[] = [];
+  const collectEvents = (async () => {
+    for await (const event of queueObserver.stream()) {
+      events.push(event);
     }
+  })();
+
+  let runError: unknown | null = null;
+  try {
+    for await (const _event of runner.run({
+      runId,
+      requirement: payload.requirement,
+      workspace,
+      userId: session.user.id,
+      authz: payload.authz,
+      linear: payload.linear
+        ? {
+            sessionId: payload.linear.sessionId ?? "",
+            space: payload.linear.space,
+            issueId: payload.linear.issueId,
+            authz: payload.authzLinear ?? "",
+          }
+        : undefined,
+    })) {
+      void _event;
+    }
+  } catch (error) {
+    runError = error;
   } finally {
-    stop();
+    queueObserver.close();
+    await collectEvents;
   }
 
-  let traj: { ok: boolean; steps: number } | null = null;
   let trajError: string | null = null;
   if (args.outTrajectory) {
     try {
-      traj = await writeTrajectory({
+      await writeTrajectory({
         runId,
-        requirement: args.requirement,
+        events,
         outPath: args.outTrajectory,
       });
     } catch (error) {
@@ -196,8 +170,8 @@ async function runWorkflow(args: RunArgs) {
     `${JSON.stringify(
       {
         runId,
-        trajectory: traj,
         trajectoryError: trajError,
+        eventCount: events.length,
         error:
           runError instanceof Error
             ? runError.message

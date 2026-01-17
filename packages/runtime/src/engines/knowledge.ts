@@ -11,7 +11,8 @@ import { searchChunks, searchChunksHybrid } from "@alfred/db/repo/rag";
 import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 import { execute, parse, semanticQuery } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
-import { type Chunk, embed, rerank } from "@alfred/rag";
+import { type Chunk, embed } from "@alfred/rag";
+import { rerank } from "@alfred/rerank";
 
 /**
  * KnowledgeEngine provides knowledge graph query operations
@@ -115,7 +116,6 @@ export class KnowledgeEngine {
               text: row.content,
             })),
             topN: topK,
-            model: "rerank-v3.5",
           });
 
           if (rerankResults.length > 0) {

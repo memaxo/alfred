@@ -35,6 +35,7 @@
     "@alfred/plan": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/rag": "workspace:*",
+    "@alfred/rerank": "workspace:*",
     "@alfred/type": "workspace:*",
     "@trpc/server": "catalog:",
     "ai": "catalog:",

@@ -122,6 +122,23 @@ export {
   voiceWebSocketUpgradeDurationSeconds,
   voiceWebSocketUpgradeRateLimitHitsTotal,
 } from "@alfred/voice/metrics";
+// Embedding metrics (queue, pool, batch processing)
+export {
+  embedBatchesProcessed,
+  embedBatchSize,
+  embedProcessingMs,
+  embedQueueCapacity,
+  embedQueueLength,
+  embedQueueWaitMs,
+  embedRequestsDropped,
+  embedRequestsProcessed,
+  embedRequestsQueued,
+  embedRetries,
+  embedWorkersActive,
+  embedWorkersBusy,
+  embedWorkersError,
+  getEmbedMetricsRegistry,
+} from "@alfred/embed";
 // API-local metrics
 export * from "./metrics/index";
 
@@ -273,6 +290,28 @@ export function initMetricsHooks(): void {
       });
     } catch (error) {
       logger.warn("metrics_policy_hooks_disabled", {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Register embed metrics with main registry
+    try {
+      const { getEmbedMetricsRegistry } = await import("@alfred/embed");
+      const embedRegistry = getEmbedMetricsRegistry();
+      // Merge embed metrics into main registry
+      const embedMetrics = await embedRegistry.getMetricsAsJSON();
+      for (const metric of embedMetrics) {
+        const existing = metricsRegistry.getSingleMetric(metric.name);
+        if (!existing) {
+          // Re-register the metric from embed registry to main registry
+          const embedMetric = embedRegistry.getSingleMetric(metric.name);
+          if (embedMetric) {
+            metricsRegistry.registerMetric(embedMetric);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn("metrics_embed_hooks_disabled", {
         reason: error instanceof Error ? error.message : String(error),
       });
     }

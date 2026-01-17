@@ -2,7 +2,6 @@
 
 import type { LanguageModelUsage } from "ai";
 import { type ComponentProps, createContext, useContext } from "react";
-import { getUsage } from "tokenlens";
 import { Button } from "@/components/ui/button";
 import {
   HoverCard,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 const PERCENT_MAX = 100;
 const ICON_RADIUS = 10;
@@ -25,6 +25,13 @@ type ContextSchema = {
   maxTokens: number;
   usage?: LanguageModelUsage;
   modelId?: ModelId;
+  cost?: {
+    totalUsd: number;
+    inputUsd: number;
+    outputUsd: number;
+    reasoningUsd: number;
+    cacheUsd: number;
+  };
 };
 
 const ContextContext = createContext<ContextSchema | null>(null);
@@ -47,18 +54,42 @@ export const Context = ({
   usage,
   modelId,
   ...props
-}: ContextProps) => (
-  <ContextContext.Provider
-    value={{
-      usedTokens,
-      maxTokens,
-      usage,
-      modelId,
-    }}
-  >
-    <HoverCard closeDelay={0} openDelay={0} {...props} />
-  </ContextContext.Provider>
-);
+}: ContextProps) => {
+  const hasUsage =
+    Boolean(modelId) &&
+    Boolean(usage) &&
+    ((usage?.inputTokens ?? 0) > 0 ||
+      (usage?.outputTokens ?? 0) > 0 ||
+      (usage?.reasoningTokens ?? 0) > 0 ||
+      (usage?.cachedInputTokens ?? 0) > 0);
+
+  const { data } = trpc.metrics.estimateCost.useQuery(
+    {
+      modelId: modelId ?? "",
+      usage: {
+        inputTokens: usage?.inputTokens ?? 0,
+        outputTokens: usage?.outputTokens ?? 0,
+        reasoningTokens: usage?.reasoningTokens ?? 0,
+        cachedInputTokens: usage?.cachedInputTokens ?? 0,
+      },
+    },
+    { enabled: hasUsage }
+  );
+
+  return (
+    <ContextContext.Provider
+      value={{
+        usedTokens,
+        maxTokens,
+        usage,
+        modelId,
+        cost: data?.costUsd,
+      }}
+    >
+      <HoverCard closeDelay={0} openDelay={0} {...props} />
+    </ContextContext.Provider>
+  );
+};
 
 const ContextIcon = () => {
   const { usedTokens, maxTokens } = useContextValue();
@@ -195,16 +226,8 @@ export const ContextContentFooter = ({
   className,
   ...props
 }: ContextContentFooterProps) => {
-  const { modelId, usage } = useContextValue();
-  const costUSD = modelId
-    ? getUsage({
-        modelId,
-        usage: {
-          input: usage?.inputTokens ?? 0,
-          output: usage?.outputTokens ?? 0,
-        },
-      }).costUSD?.totalUSD
-    : undefined;
+  const { cost } = useContextValue();
+  const costUSD = cost?.totalUsd;
   const totalCost = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -235,7 +258,7 @@ export const ContextInputUsage = ({
   children,
   ...props
 }: ContextInputUsageProps) => {
-  const { usage, modelId } = useContextValue();
+  const { usage, cost } = useContextValue();
   const inputTokens = usage?.inputTokens ?? 0;
 
   if (children) {
@@ -246,12 +269,7 @@ export const ContextInputUsage = ({
     return null;
   }
 
-  const inputCost = modelId
-    ? getUsage({
-        modelId,
-        usage: { input: inputTokens, output: 0 },
-      }).costUSD?.totalUSD
-    : undefined;
+  const inputCost = cost?.inputUsd;
   const inputCostText = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -275,7 +293,7 @@ export const ContextOutputUsage = ({
   children,
   ...props
 }: ContextOutputUsageProps) => {
-  const { usage, modelId } = useContextValue();
+  const { usage, cost } = useContextValue();
   const outputTokens = usage?.outputTokens ?? 0;
 
   if (children) {
@@ -286,12 +304,7 @@ export const ContextOutputUsage = ({
     return null;
   }
 
-  const outputCost = modelId
-    ? getUsage({
-        modelId,
-        usage: { input: 0, output: outputTokens },
-      }).costUSD?.totalUSD
-    : undefined;
+  const outputCost = cost?.outputUsd;
   const outputCostText = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -315,7 +328,7 @@ export const ContextReasoningUsage = ({
   children,
   ...props
 }: ContextReasoningUsageProps) => {
-  const { usage, modelId } = useContextValue();
+  const { usage, cost } = useContextValue();
   const reasoningTokens = usage?.reasoningTokens ?? 0;
 
   if (children) {
@@ -326,12 +339,7 @@ export const ContextReasoningUsage = ({
     return null;
   }
 
-  const reasoningCost = modelId
-    ? getUsage({
-        modelId,
-        usage: { reasoningTokens },
-      }).costUSD?.totalUSD
-    : undefined;
+  const reasoningCost = cost?.reasoningUsd;
   const reasoningCostText = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -355,7 +363,7 @@ export const ContextCacheUsage = ({
   children,
   ...props
 }: ContextCacheUsageProps) => {
-  const { usage, modelId } = useContextValue();
+  const { usage, cost } = useContextValue();
   const cacheTokens = usage?.cachedInputTokens ?? 0;
 
   if (children) {
@@ -366,12 +374,7 @@ export const ContextCacheUsage = ({
     return null;
   }
 
-  const cacheCost = modelId
-    ? getUsage({
-        modelId,
-        usage: { cacheReads: cacheTokens, input: 0, output: 0 },
-      }).costUSD?.totalUSD
-    : undefined;
+  const cacheCost = cost?.cacheUsd;
   const cacheCostText = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

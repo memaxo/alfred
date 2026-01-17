@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { randomUUID } from "node:crypto";
+import { mkdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import type { PipelineEvent } from "../../src/events";
 import { createEvent } from "../../src/events";
 import {
@@ -10,6 +13,7 @@ import { DEFAULT_CONFIG } from "../../src/pipeline";
 import { PipelineRunner } from "../../src/runner";
 import type { PipelineSnapshot } from "../../src/snapshot";
 import { PipelineReconstructor } from "../../src/snapshot";
+import { registerDefaultStages } from "../../src/stages";
 
 /**
  * Mock stages for testing resume functionality.
@@ -318,6 +322,95 @@ describe("Pipeline Resume Integration", () => {
 
       expect(contextValue).toBe("customValue");
     });
+
+    it("resumes default stages from a real checkpoint snapshot", async () => {
+      const testWorkspace = join(
+        process.cwd(),
+        ".agent/test-workspaces/pipeline-resume"
+      );
+      await mkdir(testWorkspace, { recursive: true });
+
+      const runId = randomUUID();
+      const input = {
+        runId,
+        requirement: "Create a simple hello.ts file",
+        workspace: testWorkspace,
+        userId: "test-user",
+      };
+
+      const checkpointStorage = new InMemoryCheckpointStorage();
+      const checkpointObserver = new CheckpointObserver(checkpointStorage);
+
+      const runner1 = new PipelineRunner({
+        maxParallel: 1,
+        enableLearning: false,
+      });
+      registerDefaultStages(runner1);
+      runner1.addObserver(checkpointObserver);
+
+      const abortController = new AbortController();
+      runner1.addObserver({
+        onEvent: (event) => {
+          if (event.type === "stage:exit" && event.stage === "plan") {
+            abortController.abort();
+          }
+        },
+      });
+
+      try {
+        for await (const _event of runner1.run(input, abortController.signal)) {
+          // Drain events until aborted
+        }
+      } catch {
+        // Expected: abort stops pipeline mid-run
+      }
+
+      const waitForSnapshot = async (): Promise<PipelineSnapshot | null> => {
+        for (let i = 0; i < 50; i++) {
+          const snap = await checkpointStorage.load(runId);
+          if (snap) {
+            return snap;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        return null;
+      };
+
+      const snapshot = await waitForSnapshot();
+      expect(snapshot).not.toBeNull();
+      expect(snapshot?.runId).toBe(runId);
+      expect(snapshot?.lastCompletedStage).toBe("plan");
+
+      // Resume with a fresh runner using default stages
+      const runner2 = new PipelineRunner({
+        maxParallel: 1,
+        enableLearning: false,
+      });
+      registerDefaultStages(runner2);
+
+      const resumedEvents: PipelineEvent[] = [];
+      runner2.addObserver({ onEvent: (e) => resumedEvents.push(e) });
+
+      for await (const _event of runner2.resume(snapshot!, input)) {
+        // Drain resumed events
+      }
+
+      const stageEnters = resumedEvents
+        .filter((e) => e.type === "stage:enter")
+        .map((e) => (e as Extract<PipelineEvent, { type: "stage:enter" }>).stage);
+
+      expect(stageEnters[0]).toBe("schedule");
+      expect(stageEnters).not.toContain("init");
+      expect(stageEnters).not.toContain("context");
+      expect(stageEnters).not.toContain("plan");
+
+      const completeEvents = resumedEvents.filter(
+        (e) => e.type === "pipeline:complete"
+      );
+      expect(completeEvents).toHaveLength(1);
+
+      await rm(testWorkspace, { recursive: true, force: true });
+    }, 300_000);
   });
 
   describe("PipelineReconstructor integration", () => {

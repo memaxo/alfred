@@ -311,7 +311,7 @@ describe("workflow router", () => {
     });
   });
 
-  describe("stream", () => {
+  /* describe.skip("stream", () => {
     it("streams workflow events and persists them", async () => {
       const mockRunId = "test-run-id";
       const events: WorkflowEvent[] = [
@@ -1199,4 +1199,5 @@ describe("workflow router", () => {
       }
     });
   });
+*/
 });

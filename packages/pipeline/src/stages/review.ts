@@ -3,6 +3,7 @@ import { createEvent } from "../events";
 import type { PipelineContext, PipelineStage } from "../pipeline";
 import type { SerializableValue } from "../snapshot";
 import type { ExecuteOutput, ReviewCheck, ReviewOutput } from "./types";
+import type { WorkflowEvent } from "@alfred/type";
 
 /**
  * Review Stage
@@ -15,6 +16,20 @@ import type { ExecuteOutput, ReviewCheck, ReviewOutput } from "./types";
  */
 export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
   readonly name = "review" as const;
+
+  private formatQueueEvent(event: WorkflowEvent): string {
+    const payload = event as unknown as Record<string, unknown>;
+    if (typeof payload.message === "string" && payload.message.length > 0) {
+      return payload.message;
+    }
+    if (typeof payload.kind === "string" && payload.kind.length > 0) {
+      return payload.kind;
+    }
+    if (typeof payload.type === "string" && payload.type.length > 0) {
+      return payload.type;
+    }
+    return "agent_event";
+  }
 
   async execute(
     input: ExecuteOutput,
@@ -99,6 +114,14 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
       passed: check.status === "passed",
       message: check.evidence,
     }));
+
+    // Store gate state for resume (serializable)
+    // This enables restoring ReviewGate progress across resume boundaries.
+    try {
+      ctx.set("reviewGateState", gate.serialize());
+    } catch {
+      // best-effort; do not fail review stage on serialization issues
+    }
 
     // Store output for resume
     const reviewOutput: ReviewOutput = {
@@ -210,39 +233,51 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
         fixerSpec.execPlanPath = ctx.get<string>("rootPlanPath") ?? "";
 
         // Run fixer agent
-        const queue = new AsyncQueue();
-        await runAgent({
-          spec: fixerSpec,
-          phaseId: "review-fixer",
-          runId: ctx.runId,
-          workspace: ctx.workspace,
-          workspaceRoot: ctx.workspace,
-          subTaskById: new Map(),
-          projectConfig: ctx.get("projectConfig") ?? null,
-          activeWorkspaces: [],
-          agentFileHints: new Map(),
-          rootExecPlanPath: ctx.get<string>("rootPlanPath") ?? "",
-          signal: ctx.signal,
-          authz: ctx.get("authz"),
-          userId: ctx.userId,
-          trackerContextRef: {
-            current: {
-              state: { agents: {}, waves: {} },
-              blockedBy: new Map(),
-              dependsOn: new Map(),
-              detectors: new Map(),
-              options: {
-                noProgressMs: 60_000,
-                maxTransitions: 200,
-                similarityThreshold: 0.92,
+        const queue = new AsyncQueue<WorkflowEvent>();
+        const drainQueue = (async () => {
+          for await (const event of queue) {
+            ctx.emit(
+              createEvent("agent:progress", {
+                agentId: fixerSpec.agentId,
+                message: this.formatQueueEvent(event),
+              })
+            );
+          }
+        })();
+        try {
+          await runAgent({
+            spec: fixerSpec,
+            phaseId: "review-fixer",
+            runId: ctx.runId,
+            workspace: ctx.workspace,
+            workspaceRoot: ctx.workspace,
+            subTaskById: new Map(),
+            projectConfig: ctx.get("projectConfig") ?? null,
+            activeWorkspaces: [],
+            agentFileHints: new Map(),
+            rootExecPlanPath: ctx.get<string>("rootPlanPath") ?? "",
+            signal: ctx.signal,
+            authz: ctx.get("authz"),
+            userId: ctx.userId,
+            trackerContextRef: {
+              current: {
+                state: { agents: {}, waves: {} },
+                blockedBy: new Map(),
+                dependsOn: new Map(),
+                detectors: new Map(),
+                options: {
+                  noProgressMs: 60_000,
+                  maxTransitions: 200,
+                  similarityThreshold: 0.92,
+                },
               },
             },
-          },
-          queue:
-            queue as unknown as import("@alfred/runtime/utils/concurrency").AsyncQueue<
-              import("@alfred/type").WorkflowEvent
-            >,
-        });
+            queue,
+          });
+        } finally {
+          queue.close();
+          await drainQueue;
+        }
 
         // Re-check outcomes after fix
         // In a real implementation, this would re-run the failed checks

@@ -84,3 +84,31 @@ export const getMindscapeTest = createServerOnlyFn(
  * Throws if called from client code.
  */
 export const getBunTest = createServerOnlyFn(() => process.env.BUN_TEST);
+
+/**
+ * Get SCHED_REEMBED environment variable (server-only).
+ * Used to enable/disable re-embedding scheduler for model migration.
+ * Throws if called from client code.
+ */
+export const getSchedReembed = createServerOnlyFn(
+  () => process.env.SCHED_REEMBED
+);
+
+/**
+ * Get EMBED_DEFAULT_MODEL environment variable (server-only).
+ * Used to set the default embedding model (kalm or qwen).
+ * Defaults to qwen for multimodal support.
+ * Throws if called from client code.
+ */
+export const getEmbedDefaultModel = createServerOnlyFn(
+  () => process.env.EMBED_DEFAULT_MODEL
+);
+
+/**
+ * Get EMBED_EAGER_INIT environment variable (server-only).
+ * If set to "1", loads embedding models at startup instead of lazily.
+ * Throws if called from client code.
+ */
+export const getEmbedEagerInit = createServerOnlyFn(
+  () => process.env.EMBED_EAGER_INIT
+);

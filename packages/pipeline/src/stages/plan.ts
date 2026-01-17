@@ -86,10 +86,12 @@ ${decomposed.map((st, idx) => `${idx + 1}. ${st.title} (${st.id})`).join("\n")}
       rootPlanPath,
     });
 
-    // Store subtasks and exec plan paths in context for later stages
-    // Convert Map to plain object for serialization
+    // Store useful plan outputs in context for later stages / resume.
+    // Note: PipelineRunner also stores `${stage}Output`, but other stages may
+    // read these convenience keys.
     ctx.set("subtasks", decomposed);
-    ctx.set("execPlanPaths", Object.fromEntries(execPlans));
+    ctx.set("execPlans", execPlans);
+    ctx.set("rootPlanPath", rootPlanPath);
 
     return {
       subtasks: decomposed,

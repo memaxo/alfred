@@ -6,6 +6,11 @@ import type {
   SubTaskId,
 } from "@alfred/type/plan";
 
+import { classifyPath, type PathBucket } from "../classify/index.js";
+
+// Type alias for backward compatibility
+type Bucket = PathBucket;
+
 const MAX_SUBTASKS =
   Number.parseInt(process.env.MAX_SUBTASKS ?? "10", 10) || 10;
 
@@ -28,40 +33,6 @@ export function decomposeSemantically(
   _bundle: ContextBundle
 ): SubTask[] {
   return [];
-}
-
-type Bucket = "backend" | "frontend" | "test" | "misc";
-
-function classifyPath(path: string): Bucket {
-  const lower = path.toLowerCase();
-  if (
-    lower.includes("/api/") ||
-    lower.includes("/server/") ||
-    lower.includes("/backend/") ||
-    lower.endsWith(".server.ts") ||
-    lower.endsWith(".server.tsx")
-  ) {
-    return "backend";
-  }
-  if (
-    lower.includes("/app/") ||
-    lower.includes("/pages/") ||
-    lower.includes("/components/") ||
-    lower.endsWith(".client.tsx") ||
-    lower.endsWith(".tsx")
-  ) {
-    return "frontend";
-  }
-  if (
-    lower.includes("__tests__") ||
-    lower.endsWith(".test.ts") ||
-    lower.endsWith(".spec.ts") ||
-    lower.endsWith(".test.tsx") ||
-    lower.endsWith(".spec.tsx")
-  ) {
-    return "test";
-  }
-  return "misc";
 }
 
 function normalisePrefix(path: string): string {

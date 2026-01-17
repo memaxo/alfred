@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-describe("workflow.stream rate limit", () => {
+describe("workflow.streamPipeline rate limit", () => {
   it("enforces per-minute limit for subscription", async () => {
     const prevLimit = process.env.ROUTE_RATE_LIMIT_PER_MINUTE;
     process.env.ROUTE_RATE_LIMIT_PER_MINUTE = "2";
@@ -14,9 +14,9 @@ describe("workflow.stream rate limit", () => {
 
     let msg = "";
     try {
-      consumeRouteRateLimit("workflow.stream", "sess-1");
-      consumeRouteRateLimit("workflow.stream", "sess-1");
-      consumeRouteRateLimit("workflow.stream", "sess-1");
+      consumeRouteRateLimit("workflow.streamPipeline", "sess-1");
+      consumeRouteRateLimit("workflow.streamPipeline", "sess-1");
+      consumeRouteRateLimit("workflow.streamPipeline", "sess-1");
     } catch (err) {
       msg = err instanceof Error ? err.message : String(err);
     }

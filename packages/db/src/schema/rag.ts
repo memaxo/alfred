@@ -48,6 +48,7 @@ export const ragChunks = pgTable("rag_chunks", {
   content: text("content").notNull(),
   order: integer("order").notNull().default(0), // Chunk order within document
   embedding: vector("embedding", { dimensions: VECTOR_DIM }),
+  embeddingModelId: text("embedding_model_id"), // FK to embedding_models.id
   metadata: jsonb("metadata"), // Chunk-level metadata (section, page, etc.)
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

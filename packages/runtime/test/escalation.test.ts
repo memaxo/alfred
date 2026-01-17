@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { PipelineRunner } from "../src/pipeline/runner";
+import { PhaseRunner } from "../src/pipeline/runner";
 import type { Phase, PhaseResult, PipelineState } from "../src/pipeline/types";
 
 class MockPhase implements Phase<any, any> {
@@ -29,7 +29,7 @@ class MockPhase implements Phase<any, any> {
   }
 }
 
-describe("PipelineRunner Escalation", () => {
+describe("PhaseRunner Escalation", () => {
   it("handles escalation by switching phases", async () => {
     const state: PipelineState = {
       currentPhaseId: "act",
@@ -40,7 +40,7 @@ describe("PipelineRunner Escalation", () => {
     const actConfig = { escalate: true, target: "plan", escalated: false };
     const planConfig = { escalate: false };
 
-    const runner = new PipelineRunner(state);
+    const runner = new PhaseRunner(state);
     runner.register(new MockPhase("act", actConfig));
     runner.register(new MockPhase("plan", planConfig));
 

@@ -36,6 +36,10 @@
     "./project": {
       "types": "./dist/project/index.d.ts",
       "default": "./src/project/index.ts"
+    },
+    "./classify": {
+      "types": "./dist/classify/index.d.ts",
+      "default": "./src/classify/index.ts"
     }
   },
   "scripts": {

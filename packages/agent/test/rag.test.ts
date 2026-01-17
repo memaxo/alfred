@@ -22,10 +22,14 @@ const mockRequireToolScopesAndPolicy =
   authTokenMocks.requireToolScopesAndPolicy;
 
 const mockIngest = mock();
+const mockIngestWithOptions = mock();
 const mockRetrieve = mock();
+const mockGetCurrentModelId = mock(() => "kalm-12b-1024");
 mock.module("@alfred/rag", () => ({
   ingest: mockIngest,
+  ingestWithOptions: mockIngestWithOptions,
   retrieve: mockRetrieve,
+  getCurrentModelId: mockGetCurrentModelId,
 }));
 
 const mockCreateDocument = mock();
@@ -53,7 +57,10 @@ describe("RAG Tools", () => {
   beforeEach(() => {
     resetAuthTokenMocks();
     mockIngest.mockReset();
+    mockIngestWithOptions.mockReset();
     mockRetrieve.mockReset();
+    mockGetCurrentModelId.mockReset();
+    mockGetCurrentModelId.mockReturnValue("kalm-12b-1024");
     mockCreateDocument.mockReset();
     mockGetDocument.mockReset();
     mockListDocuments.mockReset();
@@ -140,6 +147,33 @@ describe("RAG Tools", () => {
 
       await expect(toolRagIngest.execute({ input })).rejects.toThrow(
         "rag_content_too_large"
+      );
+    });
+
+    it("ingests with imageUrl for multimodal embedding", async () => {
+      const documentId = "doc-multimodal";
+      const chunks = [{ id: "chunk-1", content: "image description", order: 0 }];
+
+      mockIngestWithOptions.mockResolvedValue(documentId);
+      mockGetChunks.mockResolvedValue(chunks);
+
+      const input: RagIngestInput = {
+        source: "test-image-doc",
+        content: "Image description text",
+        imageUrl: "https://example.com/image.jpg",
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolRagIngest.execute({ input });
+
+      expect(result.documentId).toBe(documentId);
+      expect(result.chunks).toBe(1);
+      expect(mockIngestWithOptions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: "test-image-doc",
+          content: "Image description text",
+          imageUrl: "https://example.com/image.jpg",
+        })
       );
     });
   });
@@ -394,6 +428,26 @@ describe("RAG Tools", () => {
   describe("Schema Validation", () => {
     it("rag_ingest requires source and content", () => {
       const invalid = {};
+      const result = toolRagIngest.inputSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+    });
+
+    it("rag_ingest accepts optional imageUrl for multimodal", () => {
+      const valid = {
+        source: "test-doc",
+        content: "Test content",
+        imageUrl: "https://example.com/image.jpg",
+      };
+      const result = toolRagIngest.inputSchema.safeParse(valid);
+      expect(result.success).toBe(true);
+    });
+
+    it("rag_ingest rejects invalid imageUrl", () => {
+      const invalid = {
+        source: "test-doc",
+        content: "Test content",
+        imageUrl: "not-a-url",
+      };
       const result = toolRagIngest.inputSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });

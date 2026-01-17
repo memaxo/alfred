@@ -71,8 +71,30 @@ services:
     volumes:
       - voice_models:/app/packages/voice/models
 
+  rerank:
+    build:
+      context: ..
+      dockerfile: docker/rerank/Dockerfile
+      args:
+        DEVICE: ${RERANK_DEVICE:-cpu}
+    restart: unless-stopped
+    profiles: ["rerank"]
+    environment:
+      RERANK_DEVICE: ${RERANK_DEVICE:-cpu}
+      RERANK_MODEL: ${RERANK_MODEL:-Qwen/Qwen3-VL-Reranker-2B}
+    ports:
+      - "${RERANK_PORT:-8200}:8000"
+    volumes:
+      - rerank_models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   pgdata:
   redisdata:
   embed_models:
   voice_models:
+  rerank_models:

@@ -6,7 +6,7 @@ import {
   recordVoiceTts,
   voiceStreamLatencySeconds,
 } from "../metrics";
-import type { STTPool, STTResult } from "../process/stt";
+import type { ChunkSize, STTPool, STTResult } from "../process/stt";
 import type { TTSPool } from "../process/tts";
 
 export type VoiceLogger = {
@@ -24,6 +24,8 @@ export type VoiceSessionConfig = {
   sttPool: STTPool;
   ttsPool: TTSPool;
   logger?: VoiceLogger;
+  /** Default chunk size for STT latency/accuracy tradeoff */
+  defaultChunkSize?: ChunkSize;
 };
 
 export class VoiceSession {
@@ -35,21 +37,35 @@ export class VoiceSession {
   private readonly sttProvider: string;
   private readonly ttsProvider: string;
 
+  /** Track if we've cleared the STT cache for this session */
+  private sttCacheCleared = false;
+
+  /** Current chunk size setting */
+  private chunkSize: ChunkSize;
+
   constructor(config: VoiceSessionConfig) {
     this.config = config;
     this.logger = config.logger ?? defaultLogger;
+    this.chunkSize = config.defaultChunkSize ?? "medium";
     // Provider labels are inferred from env since pool internals are not exposed.
-    // This is a limitation: actual provider may differ if pools are reconfigured.
-    // Note: consider exposing provider from pool configuration for accurate labeling.
-    this.sttProvider = "maya1";
+    this.sttProvider = "nemotron";
     this.ttsProvider =
       process.env.TTS_PROVIDER === "supertonic" ? "supertonic" : "maya1";
   }
 
+  /**
+   * Process an audio chunk for transcription.
+   * Uses cache-aware streaming with session affinity.
+   */
   async processAudioChunk(
     audioBase64: string,
     mimeType: string,
-    options?: { vadThreshold?: number; sessionId?: string }
+    options?: {
+      vadThreshold?: number;
+      sessionId?: string;
+      chunkSize?: ChunkSize;
+      clearCache?: boolean;
+    }
   ): Promise<STTResult | null> {
     this.lastActivity = Date.now();
     this.audioBuffer.push(Buffer.from(audioBase64, "base64"));
@@ -64,6 +80,8 @@ export class VoiceSession {
         streaming: true,
         vadThreshold: options?.vadThreshold,
         sessionId: options?.sessionId ?? this.config.sessionId,
+        chunkSize: options?.chunkSize ?? this.chunkSize,
+        clearCache: options?.clearCache,
       });
 
       const wallSeconds = (performance.now() - timerStart) / 1000;
@@ -102,6 +120,48 @@ export class VoiceSession {
       });
       return null;
     }
+  }
+
+  /**
+   * Clear the STT cache for this session.
+   * Call this when starting a new utterance or after errors.
+   */
+  async clearSttCache(): Promise<boolean> {
+    try {
+      const cleared = await this.config.sttPool.clearSessionCache(
+        this.config.sessionId
+      );
+      this.sttCacheCleared = true;
+      this.logger.info("voice_session_cache_cleared", {
+        sessionId: this.config.sessionId,
+        cleared,
+      });
+      return cleared;
+    } catch (error) {
+      this.logger.error("voice_session_cache_clear_error", {
+        sessionId: this.config.sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Set the chunk size for latency/accuracy tradeoff.
+   */
+  setChunkSize(size: ChunkSize): void {
+    this.chunkSize = size;
+    this.logger.info("voice_session_chunk_size_changed", {
+      sessionId: this.config.sessionId,
+      chunkSize: size,
+    });
+  }
+
+  /**
+   * Get current chunk size setting.
+   */
+  getChunkSize(): ChunkSize {
+    return this.chunkSize;
   }
 
   async synthesizeText(text: string, voice?: string): Promise<Buffer[]> {
@@ -212,10 +272,19 @@ export class VoiceSession {
 
   activate(): void {
     this.lastActivity = Date.now();
+    // Clear STT cache on activation for fresh start
+    this.sttCacheCleared = false;
   }
 
-  deactivate(): void {
-    // Session is deactivated (no-op for now, could add cleanup logic)
+  /**
+   * Deactivate session and cleanup resources.
+   */
+  async deactivate(): Promise<void> {
+    // Release session affinity in the STT pool
+    this.config.sttPool.releaseSession(this.config.sessionId);
+    this.logger.info("voice_session_deactivated", {
+      sessionId: this.config.sessionId,
+    });
   }
 
   getSessionId(): string {
@@ -228,5 +297,28 @@ export class VoiceSession {
 
   getLastActivity(): number {
     return this.lastActivity;
+  }
+
+  /**
+   * Get session state for debugging/telemetry.
+   */
+  getState(): {
+    sessionId: string;
+    userId: string;
+    lastActivity: number;
+    transcriptLength: number;
+    audioChunksBuffered: number;
+    chunkSize: ChunkSize;
+    sttCacheCleared: boolean;
+  } {
+    return {
+      sessionId: this.config.sessionId,
+      userId: this.config.userId,
+      lastActivity: this.lastActivity,
+      transcriptLength: this.transcriptBuffer.length,
+      audioChunksBuffered: this.audioBuffer.length,
+      chunkSize: this.chunkSize,
+      sttCacheCleared: this.sttCacheCleared,
+    };
   }
 }

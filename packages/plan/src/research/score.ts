@@ -2,6 +2,10 @@
  * Reliability scoring logic for external research sources
  */
 
+import type { LanguageModel } from "ai";
+import { z } from "zod";
+
+import { classify } from "../classify/index.js";
 import { detectFrameworkVersion } from "./filter.js";
 
 const DOMAIN_AUTHORITY: Record<string, number> = {
@@ -79,9 +83,56 @@ export function calculateReliability(params: {
 }
 
 /**
- * Calculate semantic relevance score (0.0-1.0) between source and intent
+ * Schema for relevance scoring output
  */
-export function calculateRelevance(
+const relevanceSchema = z.object({
+  relevance: z.number().min(0).max(1),
+  reasoning: z.string().optional(),
+});
+
+/**
+ * Options for relevance calculation
+ */
+export type CalculateRelevanceOptions = {
+  /** Model to use for semantic relevance (optional) */
+  model?: LanguageModel;
+  /** Model key for logging */
+  modelKey?: string;
+  /** Maximum text length to send (truncate if longer) */
+  maxContentLength?: number;
+};
+
+/**
+ * Build the relevance scoring prompt.
+ */
+function buildRelevancePrompt(
+  source: { title: string; summary: string; content?: string },
+  intentDescription: string,
+  maxContentLength: number
+): string {
+  const content = source.content ?? "";
+  const truncatedContent =
+    content.length > maxContentLength
+      ? `${content.substring(0, maxContentLength)}...`
+      : content;
+
+  return `Rate how relevant this source is to the user's intent (0.0-1.0).
+
+Intent: "${intentDescription}"
+
+Source:
+Title: ${source.title}
+Summary: ${source.summary}
+${truncatedContent ? `Content: ${truncatedContent}` : ""}
+
+Return a relevance score (0.0 = not relevant, 1.0 = highly relevant).`;
+}
+
+/**
+ * Heuristic fallback for relevance calculation.
+ * Uses keyword matching (original implementation).
+ */
+function calculateRelevanceHeuristic(
   source: { title: string; summary: string; content?: string },
   intentDescription: string
 ): number {
@@ -111,4 +162,65 @@ export function calculateRelevance(
 
   const maxPossible = terms.length * 3.5;
   return Math.min(matches / maxPossible + 0.2, 1.0); // Bias slightly upwards
+}
+
+/**
+ * Calculate semantic relevance score (0.0-1.0) between source and intent.
+ *
+ * This is the synchronous version using keyword matching for backward compatibility.
+ * For better semantic understanding with LLM, use `calculateRelevanceWithLLM()`.
+ *
+ * @see .ruler/55-llm-first-classification.md
+ */
+export function calculateRelevance(
+  source: { title: string; summary: string; content?: string },
+  intentDescription: string
+): number {
+  return calculateRelevanceHeuristic(source, intentDescription);
+}
+
+/**
+ * Calculate semantic relevance score using LLM (async).
+ *
+ * Uses LLM-based semantic scoring for better understanding.
+ * Falls back to keyword matching when:
+ * - ALFRED_CLASSIFY_OFFLINE=1 is set
+ * - No model is provided
+ * - LLM call fails
+ */
+export async function calculateRelevanceWithLLM(
+  source: { title: string; summary: string; content?: string },
+  intentDescription: string,
+  options: CalculateRelevanceOptions & { model: LanguageModel }
+): Promise<number> {
+  const { model, modelKey, maxContentLength = 500 } = options;
+
+  try {
+    const result = await classify(
+      relevanceSchema,
+      buildRelevancePrompt(source, intentDescription, maxContentLength),
+      {
+        model,
+        modelKey,
+        fallback: () => ({
+          relevance: calculateRelevanceHeuristic(source, intentDescription),
+        }),
+      }
+    );
+
+    return result.result.relevance;
+  } catch {
+    // Fall back to heuristic on error
+    return calculateRelevanceHeuristic(source, intentDescription);
+  }
+}
+
+/**
+ * @deprecated Use calculateRelevance() for sync or calculateRelevanceWithLLM() for async LLM-based scoring
+ */
+export function calculateRelevanceSync(
+  source: { title: string; summary: string; content?: string },
+  intentDescription: string
+): number {
+  return calculateRelevanceHeuristic(source, intentDescription);
 }

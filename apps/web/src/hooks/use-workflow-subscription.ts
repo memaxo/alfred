@@ -1,5 +1,6 @@
 import { skipToken } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
+import type { PipelineEvent } from "@alfred/pipeline";
 import type { WindowData } from "@/store/desktop/types.new";
 import { trpc } from "@/utils/trpc";
 
@@ -132,78 +133,66 @@ export function useWorkflowSubscription(
   );
 
   // biome-ignore lint/suspicious/noExplicitAny: trpc subscription input typing mismatch with skipToken
-  trpc.workflow.stream.useSubscription((input as any) ?? skipToken, {
+  trpc.workflow.streamPipeline.useSubscription((input as any) ?? skipToken, {
     enabled: enabled && !!input,
     onStarted: () => {
       setStatus("running");
       onWindowUpdate?.({ status: "running" });
     },
-    // biome-ignore lint/suspicious/noExplicitAny: WorkflowEvent type doesn't match runtime event structure
-    onData: (event: any) => {
-      switch (event._) {
-        case "run":
-          // Initial run event might contain runId
-          break;
-
-        case "step-start":
-        case "step_start": {
-          const phaseId =
-            typeof event.phase === "string" ? event.phase : "step";
-          const phaseName = (event.phase as { name?: string })?.name ?? phaseId;
-          ensureStep(phaseId, phaseName, "running");
+    onData: (event: PipelineEvent) => {
+      switch (event.type) {
+        case "pipeline:start": {
+          setRunId(event.runId);
           break;
         }
 
-        case "step-complete":
-        case "step_complete": {
-          const phaseId =
-            typeof event.phase === "string" ? event.phase : "step";
-          updateStep(phaseId, "completed");
+        case "stage:enter": {
+          ensureStep(event.stage, event.stage, "running");
           break;
         }
 
-        case "progress": {
-          if (event.pct !== undefined) {
-            const message = event.message ?? `Progress ${event.pct}%`;
-            ensureStep("progress", message, "running");
-          }
+        case "stage:exit": {
+          updateStep(event.stage, "completed");
           break;
         }
 
-        case "notice": {
-          ensureStep("notice", event.message, "completed");
-          break;
-        }
-
-        case "error": {
-          setError(new Error(event.message));
+        case "stage:error": {
+          updateStep(event.stage, "failed");
+          setError(new Error(event.error));
           setStatus("error");
-          onError?.(new Error(event.message));
+          onError?.(new Error(event.error));
           onWindowUpdate?.({ status: "failed" });
           break;
         }
 
-        case "obligation": {
-          setStatus("suspended");
-          setRunId(event.runId);
-          onWindowUpdate?.({
-            status: "suspended",
-            runId: event.runId,
-          });
+        case "stage:progress": {
+          ensureStep(event.stage, event.stage, "running");
           break;
         }
 
-        case "finish": {
+        case "pipeline:suspend": {
+          setStatus("suspended");
+          onWindowUpdate?.({ status: "suspended" });
+          break;
+        }
+
+        case "pipeline:resume": {
+          setStatus("running");
+          onWindowUpdate?.({ status: "running" });
+          break;
+        }
+
+        case "pipeline:complete": {
           setStatus("completed");
           onWindowUpdate?.({ status: "completed" });
           break;
         }
 
-        case "ui-message": {
-          // Sync messages to window store
-          onWindowUpdate?.({
-            messages: event.messages,
-          });
+        case "pipeline:failed": {
+          setError(new Error(event.error));
+          setStatus("error");
+          onError?.(new Error(event.error));
+          onWindowUpdate?.({ status: "failed" });
           break;
         }
       }

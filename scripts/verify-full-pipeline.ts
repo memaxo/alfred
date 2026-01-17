@@ -136,20 +136,22 @@ async function verifyWorkflowStreaming(): Promise<boolean> {
     const hasGetRun = typeof workflowRepo.getRun === "function";
     const hasUpdateRun = typeof workflowRepo.updateRun === "function";
 
-    // Test orchestrator can be imported
-    const { orchestrateWorkflowStream } = await import(
-      "@alfred/agent/workflow/orchestrator"
+    // Test pipeline can be imported
+    const { PipelineRunner, registerDefaultStages } = await import(
+      "@alfred/pipeline"
     );
-    const hasOrchestrator = typeof orchestrateWorkflowStream === "function";
+    const hasPipeline =
+      typeof PipelineRunner === "function" &&
+      typeof registerDefaultStages === "function";
 
     const allComponentsPresent =
-      hasCreateRun && hasGetRun && hasUpdateRun && hasOrchestrator;
+      hasCreateRun && hasGetRun && hasUpdateRun && hasPipeline;
 
     recordResult(
       "Workflow Streaming",
       allComponentsPresent ? "pass" : "fail",
       Date.now() - start,
-      `schema=${parsed.success}, repo=[create=${hasCreateRun},get=${hasGetRun},update=${hasUpdateRun}], orchestrator=${hasOrchestrator}`
+      `schema=${parsed.success}, repo=[create=${hasCreateRun},get=${hasGetRun},update=${hasUpdateRun}], pipeline=${hasPipeline}`
     );
 
     return allComponentsPresent;

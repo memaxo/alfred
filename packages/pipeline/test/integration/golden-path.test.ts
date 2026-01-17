@@ -67,6 +67,12 @@ describe("Golden Path Pipeline", () => {
     // Verify pipeline completed
     const completeEvent = events.find((e) => e.type === "pipeline:complete");
     expect(completeEvent).toBeDefined();
+
+    // Verify execute output is persisted in context for summarize stage
+    const executeOutputSet = events.find(
+      (e) => e.type === "context:set" && e.key === "executeOutput"
+    );
+    expect(executeOutputSet).toBeDefined();
   }, 300_000); // 5 minute timeout for full pipeline
 
   it("emits progress events for each stage", async () => {

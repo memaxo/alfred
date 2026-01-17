@@ -11,7 +11,7 @@ import {
   expect,
   it,
 } from "bun:test";
-import type { WorkflowEvent } from "@alfred/type";
+import type { PipelineEvent } from "@alfred/pipeline";
 
 const [{ WorkflowTestHarness }, { toObservable }, { createWorkflowCaller }] =
   await Promise.all([
@@ -26,7 +26,7 @@ const minimalInput = {
   mode: "sequential" as const,
 };
 
-describe("workflowRouter.stream integration", () => {
+describe("workflowRouter.streamPipeline integration", () => {
   let harness: WorkflowTestHarness;
 
   beforeAll(() => {
@@ -41,12 +41,12 @@ describe("workflowRouter.stream integration", () => {
     await harness.close();
   });
 
-  it("streams workflow events end-to-end", async () => {
+  it("streams pipeline events end-to-end", async () => {
     const caller = await harness.createCaller();
-    const events: WorkflowEvent[] = [];
+    const events: PipelineEvent[] = [];
 
-    const subscription = await caller.stream(minimalInput);
-    const observable = toObservable<WorkflowEvent>(subscription);
+    const subscription = await caller.streamPipeline(minimalInput);
+    const observable = toObservable<PipelineEvent>(subscription);
 
     await new Promise<void>((resolve, reject) => {
       const sub = observable.subscribe({
@@ -63,12 +63,12 @@ describe("workflowRouter.stream integration", () => {
     });
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.some((event) => event._ === "run")).toBeTruthy();
+    expect(events.some((event) => event.type === "pipeline:start")).toBeTruthy();
   });
 
   it("rejects unauthenticated callers", async () => {
     const caller = await createWorkflowCaller({ user: null });
-    await expect(caller.stream(minimalInput)).rejects.toMatchObject({
+    await expect(caller.streamPipeline(minimalInput)).rejects.toMatchObject({
       message: "Authentication required",
     });
   });

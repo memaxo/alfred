@@ -101,6 +101,7 @@
     "@alfred/logger": "workspace:*",
     "@alfred/metrics": "workspace:*",
     "@alfred/type": "workspace:*",
+    "ai": "catalog:",
     "chrono-node": "^2.9.0",
     "compromise": "^14.14.4",
     "drizzle-orm": "catalog:",

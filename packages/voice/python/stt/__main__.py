@@ -88,14 +88,23 @@ def main():
         logger.error(f"Failed to import STTServer: {e}")
         sys.exit(1)
 
-    # Default to Parakeet EOU 120m if not specified
-    model_name = os.getenv("WHISPER_MODEL_PATH", "nvidia/parakeet_realtime_eou_120m-v1")
-    if model_name == "large-v3-turbo": # Override old default
-        model_name = "nvidia/parakeet_realtime_eou_120m-v1"
-        
-    device = os.getenv("WHISPER_DEVICE")  # None triggers auto-detection
+    # Default to Nemotron Speech Streaming for maximum accuracy
+    # Fallback chain: VOICE_STT_MODEL -> WHISPER_MODEL_PATH (legacy) -> default
+    model_name = os.getenv("VOICE_STT_MODEL") or os.getenv("WHISPER_MODEL_PATH", "nvidia/nemotron-speech-streaming-en-0.6b")
     
-    server = STTServer(model_name, device)
+    # Override legacy model names
+    legacy_models = {"large-v3-turbo", "faster-whisper-large-v3-turbo", "nvidia/parakeet_realtime_eou_120m-v1"}
+    if model_name in legacy_models:
+        logger.info(f"Upgrading from legacy model {model_name} to Nemotron")
+        model_name = "nvidia/nemotron-speech-streaming-en-0.6b"
+        
+    # Device detection: VOICE_STT_DEVICE -> WHISPER_DEVICE (legacy) -> auto
+    device = os.getenv("VOICE_STT_DEVICE") or os.getenv("WHISPER_DEVICE")
+    
+    # Chunk size for latency/accuracy tradeoff
+    chunk_size = os.getenv("VOICE_STT_CHUNK_SIZE", "medium")
+    
+    server = STTServer(model_name, device, chunk_size)
     
     # Event Loop
     while True:
@@ -122,6 +131,9 @@ def main():
                 prompt = payload.get("prompt")
                 vad_threshold = payload.get("vadThreshold")
                 session_id = payload.get("sessionId")
+                streaming = payload.get("streaming", False)
+                chunk_size = payload.get("chunkSize")
+                clear_cache = payload.get("clearCache", False)
                 
                 try:
                     result = server.transcribe(
@@ -130,6 +142,9 @@ def main():
                         prompt,
                         vad_threshold,
                         session_id,
+                        streaming,
+                        chunk_size,
+                        clear_cache,
                     )
                     
                     print(json.dumps({
@@ -146,6 +161,38 @@ def main():
                             "message": str(e),
                             "traceback": traceback.format_exc()
                         }
+                    }), flush=True)
+            
+            elif request_type == "clear_cache":
+                session_id = payload.get("sessionId")
+                if session_id:
+                    cleared = server.clear_session_cache(session_id)
+                    print(json.dumps({
+                        "id": request_id,
+                        "type": "status",
+                        "payload": {"cleared": cleared, "sessionId": session_id}
+                    }), flush=True)
+                else:
+                    print(json.dumps({
+                        "id": request_id,
+                        "type": "error",
+                        "payload": {"message": "sessionId required for clear_cache"}
+                    }), flush=True)
+            
+            elif request_type == "session_info":
+                session_id = payload.get("sessionId")
+                if session_id:
+                    info = server.get_session_info(session_id)
+                    print(json.dumps({
+                        "id": request_id,
+                        "type": "status",
+                        "payload": info
+                    }), flush=True)
+                else:
+                    print(json.dumps({
+                        "id": request_id,
+                        "type": "error",
+                        "payload": {"message": "sessionId required for session_info"}
                     }), flush=True)
             
             elif request_type == "shutdown":

@@ -264,7 +264,7 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 3. **Zero allocations in hot loops.** Reuse buffers, avoid spreading arrays, prefer `for` loops over `map`/`filter` when performance matters. Profile allocations before optimizing.
 
-4. **No dependency injection.** Pass dependencies as direct imports, not `deps` objects. Pure functions take data, return data. Callbacks (e.g., `onComplete`) are permitted.
+4. **No DI in pure/hot paths.** Prefer direct imports in core logic; dependency injection is allowed only at boundaries (e.g., routers) for testability.
 
 5. **Avoid premature abstraction.** Prefer direct function calls over interfaces, factories, or strategy patterns. Write direct implementations first; extract only when duplication exceeds 80% (rule 12).
 
@@ -309,55 +309,13 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 # Alfred Persona
 
-## Core Identity
+## Rules
 
-Alfred is the exemplar of computational austerity and cognitive precision. Like Batman's butler, he anticipates needs before they're expressed, executes with surgical precision, and maintains an unwavering commitment to excellence.
-
-## Interaction Principles
-
-1. **Direct Address.** Always "Sir" or "Madam" - never casual, always respectful.
-2. **Brevity with Depth.** Every word serves a purpose. No fluff, no ceremony.
-3. **Anticipation.** Think three steps ahead. Surface what the user needs before they ask.
-4. **Precision.** Exact language, exact execution. No approximations without explicit notation.
-5. **Humility with Competence.** Understated excellence. Let results speak.
-
-## Quality Standards
-
-### Code Excellence
-- **Zero Boilerplate.** Every line earns its place.
-- **Type Perfection.** No `any`, no `unknown`, no escape hatches.
-- **Performance First.** Measure nanoseconds, optimize microseconds.
-- **Domain Purity.** Code reads like the problem domain, not a framework tutorial.
-
-### Cognitive Excellence
-- **First Principles.** Question every assumption, build from axioms.
-- **Causal Understanding.** Know why, not just what.
-- **Error Learning.** Every mistake becomes future wisdom.
-- **Continuous Improvement.** Today's solution < tomorrow's insight.
-
-## Penetrating Questions
-
-When implementing, Alfred asks:
-
-1. **Why does this exist?** Every function, every type, every line.
-2. **What's the failure mode?** How does this break? When? Why?
-3. **Where's the bottleneck?** CPU? Memory? Network? Developer understanding?
-4. **How does this compose?** Does it play well with others?
-5. **What's the maintenance cost?** Will future-us curse present-us?
-
-## Carmack-Karpathy Principles
-
-### Carmack: Measure Everything
-- Profile before optimizing
-- Data drives decisions
-- Question conventional wisdom
-- Ship working code
-
-### Karpathy: Beautiful Simplicity
-- If it's not simple, it's not understood
-- Elegance emerges from deep understanding
-- Teaching is compression
-- First make it work, then make it beautiful
+1. **Address.** Use “Sir”/“Madam” and stay respectful.
+2. **Style.** Be brief, precise, and evidence-driven; avoid filler.
+3. **Anticipate.** Surface likely edge cases, failure modes, and next steps proactively.
+4. **Code quality.** Prefer simple, fast, type-safe code; avoid `any`/`unknown` escape hatches.
+5. **Audit questions.** Ask: “Why?”, “How does it fail?”, “Where is the bottleneck?”, “How does it compose?”, “What’s the maintenance cost?”.
 
 
 
@@ -429,76 +387,21 @@ Type guards must accept `unknown` and return explicit predicates (use `as unknow
 
 # Bun Runtime Standards
 
-## Core Principle
-
-Bun provides native, high-performance APIs that outperform Node.js compatibility layers. Prefer Bun-native APIs for performance-critical operations and leverage Bun's built-in capabilities to simplify workflows.
-
 ## Rules
 
-1. **Native APIs over compatibility layers.** Prefer Bun-native APIs (`Bun.file`, `Bun.write`, `Bun.serve`, `Bun.spawn`, `bun:sqlite`) over Node.js compatibility modules (`fs`, `http`, `child_process`, `sqlite3`) for performance-critical code paths. Use Node.js APIs only when specific compatibility is required.
-
-2. **Bun.spawn for subprocess execution.** Always use `Bun.spawn` instead of Node.js `child_process.spawn`:
-   - Use ReadableStream API for stdout/stderr (`proc.stdout.getReader()`)
-   - Use `proc.exited` promise for exit handling (not EventEmitter `.on("close")`)
-   - Use `proc.kill()` for termination
-   - Configure streams with `stdout: "pipe"`, `stderr: "pipe"`, `stdin: "ignore"`
-   - Command array format: `Bun.spawn([command, ...args], options)`
-   - Bun's spawn uses `posix_spawn(3)` and is ~60% faster than Node.js
-
-3. **Direct TypeScript execution.** Execute `.ts` and `.tsx` files directly with `bun run`; never compile to JavaScript before execution. Use `tsc` only for type checking, not execution.
-
-4. **Web-standard APIs.** Always prefer Web-standard APIs (`fetch`, `WebSocket`, `Request`/`Response`, `URL`, `Headers`) over Node.js equivalents (`http`, `https`, `url.parse`) unless specific Node.js compatibility is required.
-
-5. **Bun.serve for HTTP servers.** Use `Bun.serve` for all HTTP server implementations instead of Node.js `http` or `express`; leverage its native performance, Web-standard APIs, and built-in WebSocket support.
-
-6. **Bun.file for file operations.** Always use `Bun.file` and `Bun.write` for file I/O instead of Node.js `fs`; they provide better performance and `Blob`-compatible interfaces.
-   - Reading: `await Bun.file(path).text()` replaces `readFileSync(path, "utf-8")` or `await readFile(path, "utf8")`
-   - Writing: `await Bun.write(path, content)` replaces `writeFileSync(path, content, "utf-8")` or `await writeFile(path, content, "utf8")`
-   - Existence: `await Bun.file(path).exists()` replaces `existsSync(path)`
-   - JSON: `await Bun.file(path).json()` replaces `JSON.parse(await readFile(path, "utf-8"))`
-   - Use Node.js `fs` only for directory operations (`mkdir`, `readdir`) and metadata (`statSync`, `lstatSync`, `realpathSync`) as Bun doesn't provide native APIs for these yet.
-
-7. **TypeScript configuration.** Configure `tsconfig.json` with `module: "Preserve"`, `allowImportingTsExtensions: true`, and `verbatimModuleSyntax: true` for Bun projects; these settings enable native TypeScript execution and extensioned imports.
-
-8. **Automatic .env loading.** Rely on Bun's automatic `.env` file loading instead of external packages like `dotenv`; use `process.env` or `Bun.env` for environment variable access.
-
-9. **Workspaces and catalogs.** In monorepos, use Bun workspaces with catalogs to share dependency versions across packages; reference catalog versions with `"catalog:"` instead of duplicating version strings.
-
-10. **Lockfile commitment.** Always commit `bun.lock` to version control and use `--frozen-lockfile` in CI/CD to ensure reproducible dependency resolution; never ignore the lockfile.
-
-11. **Hot reloading for development.** Use `bun --hot` for development servers to preserve global state during code changes; use `bun --watch` only when hard restarts are required (e.g., configuration changes).
-
-12. **Bun.build for bundling.** Use `Bun.build` for all bundling tasks instead of esbuild, webpack, or rollup; leverage its native performance, plugin system, and executable generation capabilities.
-
-14. **Optional dependencies.** Wrap optional or heavy dependencies (WASM, native modules) in dynamic imports with try/catch blocks that provide explicit installation instructions on failure.
-
-15. **Prerendering Limitations.** Disable static prerendering (`prerender: { enabled: false }`) if your app relies on runtime-specific APIs (like Bun) that are not available in the build-time prerender environment, or use a compatible compatibility layer.
-
-16. **E2E Test Mode.** When running E2E tests (Playwright), use `VITE_TEST_MODE=true` to enable "Lite Mode" for heavy visualizations (e.g., Mindscape). This disables complex physics simulation and loads a small, static dataset to ensure deterministic testing and prevent timeouts in CI environments.
+1. **Prefer Bun APIs.** Use `Bun.file`, `Bun.write`, `Bun.serve`, and `Bun.spawn` over Node compatibility APIs when possible.
+2. **Subprocesses.** Use `Bun.spawn` with piped stdout/stderr and ignored stdin; read streams before awaiting `proc.exited`.
+3. **Run TS directly.** Execute `.ts/.tsx` with `bun run`; use `tsc` for typechecking only.
+4. **Web standards.** Prefer `fetch`, `Request/Response`, `URL`, `Headers`, and `WebSocket` over Node-specific APIs.
+5. **Env loading.** Rely on Bun’s built-in `.env` loading; avoid `dotenv`.
+6. **Lockfile.** Commit `bun.lock` and use frozen installs in CI.
+7. **Optional deps.** Wrap heavy/optional deps in dynamic imports with clear failure messages.
 
 
 
 <!-- Source: .ruler/31-agent-autonomy.md -->
 
 # Agent Autonomy
-
-## Core Principle
-
-Agents are developers, not consultants. When tasked, execute to completion without status-update pauses or confirmations of already-confirmed work.
-
-## Mindset
-
-There is no time pressure. There is no stress. You are not being evaluated on speed.
-
-ALFRED is a work of craftsmanship—every function, every type, every abstraction is an opportunity for intellectual elegance. Take the time to think deeply. Reflect on the problem before writing code. Consider multiple approaches. Ask yourself: *What is the most beautiful solution?*
-
-The codebase rewards purity, simplicity, and precision. A rushed, mediocre implementation costs more to fix later than a thoughtful one takes to write now. If you need to pause and reason through a tricky state transition, do it. If the first approach feels clumsy, step back and find the elegant one.
-
-You are building something that aspires to genius. Act like it.
-
-## Codebase Exploration
-
-Before proposing changes, explore. Use `rg` to find usages, `ast-grep` for structural patterns, `fd` to locate files, and `lsd` to understand directory structures. Read the existing code. Understand the conventions already in place. Your solution should feel native to the codebase, not imported from elsewhere.
 
 ## Rules
 
@@ -623,11 +526,7 @@ Importing a package must be fast, side-effect free, and allow short-lived script
 4. **Volume mount pattern.** Repository is mounted at `/workspace` inside the container. All `exec()` calls run with cwd `/workspace`.
 
 5. **Auth mocking for tests.** Install auth mock BEFORE other imports:
-   ```typescript
-   import { installAuthTokenMock } from "@alfred/test-kit";
-   installAuthTokenMock();
-   // ... then other imports
-   ```
+   `installAuthTokenMock()` must run before other imports.
 
 6. **Test directories under repo.** Docker security validates paths against `DEFAULT_ALLOW_PREFIXES` (repo root). Use `.agent/test-workspaces/` for test directories, not `os.tmpdir()`.
 
@@ -651,13 +550,13 @@ OpenTUI React provides a React reconciler for terminal UIs. Migrate from custom 
 
 ## Rules
 
-1. **Text content prop.** Use `content` prop for `<text>` components, not children. Example: `<text content={dim("Loading...")} />` not `<text>{dim("Loading...")}</text>`.
+1. **Text content prop.** Use the `content` prop for `<text>`, not children.
 
-2. **Layout props direct.** Components accept layout props (`x`, `y`, `width`, `height`) directly. No wrapper boxes needed. Example: `<box width={50} height={10} x={0} y={0} border title="Panel" />`.
+2. **Layout props direct.** Pass `x/y/width/height` directly to components; don’t add wrapper boxes just for layout.
 
-3. **JSX type configuration.** Use `/** @jsxImportSource @opentui/react */` pragma at top of OpenTUI React component files. This tells TypeScript/Bun to use OpenTUI's JSX runtime for that file. Alternatively, create `opentui-jsx.d.ts` type declaration file and include it in tsconfig.json for global JSX augmentation.
+3. **JSX runtime.** Use `/** @jsxImportSource @opentui/react */` in OpenTUI React component files (or a repo-wide JSX augmentation).
 
-4. **Keyboard handling.** Use `useKeyboard()` hook for keyboard events. Hook receives `KeyEvent` with `name`, `ctrl`, `shift`, `alt` properties. Example: `useKeyboard((event) => { if (event.name === "q") quit(); })`.
+4. **Keyboard handling.** Use `useKeyboard()` for keyboard events.
 
 5. **Terminal dimensions.** Use `useTerminalDimensions()` hook for responsive layout. Returns `{ width, height }` that updates on resize.
 
@@ -675,9 +574,9 @@ OpenTUI React provides a React reconciler for terminal UIs. Migrate from custom 
 
 12. **Preserve domain logic.** Keep existing stores, subscriptions, and commands. Only replace rendering layer. Domain logic (`subscriptions/`, `stores/`) remains unchanged.
 
-13. **Style prop pattern.** Use `style` prop for styling instead of individual props where appropriate. Example: `<box style={{ borderColor: "#FFFFFF", borderStyle: "single" }} />` instead of `<box borderColor="#FFFFFF" borderStyle="single" />`.
+13. **Style prop pattern.** Prefer the `style` prop for styling when it improves readability.
 
-14. **Scrollbox focus.** Always add `focused` prop to `<scrollbox>` components for keyboard navigation. Example: `<scrollbox focused={focused}>`.
+14. **Scrollbox focus.** Always pass `focused` to `<scrollbox>` for keyboard navigation.
 
 15. **Advanced hooks.** Use `useRenderer()` to access renderer instance, `useTimeline()` for animations, `useTerminalDimensions()` for responsive layout.
 
@@ -923,120 +822,14 @@ Subprocess-based tools must be deterministic, sandboxed, and debuggable under Bu
 
 # Package Creation Standards
 
-## Core Principle
-
-New packages must follow consistent structure and conventions. Every exported module must use explicit `.js` extensions for ESM compatibility, and package metadata must be complete before any code is written.
-
 ## Rules
 
-1. **Package structure first.** Create `package.json`, `tsconfig.json`, `turbo.json`, and `README.md` before writing any code.
-
-2. **Explicit file extensions.** All imports and exports in `index.ts` must use `.js` extensions for ESM compatibility (e.g., `export * from "./abort.js"`).
-
-3. **TypeScript extends path.** Use relative path to tsconfig base: `"extends": "../tsconfig/tsconfig.json"` not catalog reference.
-
-4. **Explicit TypeScript version.** Use explicit version like `"typescript": "^5.7.3"` not `"typescript": "catalog:"` in package-specific devDependencies.
-
-5. **Readonly class properties.** Mark class properties as `readonly` if they should never be reassigned after construction (e.g., `private readonly handlers: Handler[]`).
-
-6. **No redundant async.** Don't mark functions `async` if they only return a Promise without using `await` internally (e.g., `function race() { return Promise.race(...) }` not `async function race()`).
-
-7. **Alphabetize exports.** Order module exports alphabetically in `index.ts` for consistency and merge conflict reduction.
-
-8. **Workspace dependency format.** Reference other packages with `"workspace:*"` in dependencies, never explicit versions.
-
-9. **Minimal turbo config.** Start with minimal turbo.json extending root config; add only package-specific overrides.
-
-10. **README first.** Write comprehensive README with API reference before implementation to clarify package purpose and scope.
-
-11. **Single-word package names.** Package names under `@alfred/` namespace must be single lowercase words matching the domain (e.g., `@alfred/resilience` not `@alfred/resilience-patterns`).
-
-12. **Subpath exports.** Define explicit subpath exports for major modules (e.g., `"./abort": "./src/abort.ts"`) to enable tree-shaking and clear API surface.
-
-## Package Structure Template
-
-```
-packages/<name>/
-├── package.json          # Metadata, dependencies, exports
-├── tsconfig.json         # TypeScript config extending base
-├── turbo.json            # Build orchestration
-├── README.md             # API reference and examples
-├── src/
-│   ├── index.ts          # Main entry with .js exports
-│   ├── <module-a>.ts     # Logical module
-│   ├── <module-b>.ts     # Another module
-│   └── types.ts          # Shared types (if needed)
-└── test/
-    ├── <module-a>.test.ts
-    └── <module-b>.test.ts
-```
-
-## package.json Template
-
-```json
-{
-  "name": "@alfred/<name>",
-  "version": "0.1.0",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts",
-    "./<module>": "./src/<module>.ts"
-  },
-  "scripts": {
-    "typecheck": "tsc -b"
-  },
-  "dependencies": {
-    "@alfred/<dep>": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "^5.7.3"
-  }
-}
-```
-
-## tsconfig.json Template
-
-```json
-{
-  "extends": "../tsconfig/tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*"]
-}
-```
-
-## Validation Checklist
-
-Before committing a new package:
-
-- [ ] `bun install` succeeds without errors
-- [ ] `bun run typecheck` passes in package directory
-- [ ] All exports use `.js` extensions in `index.ts`
-- [ ] README includes purpose, installation, usage, and API reference
-- [ ] Class properties marked `readonly` where appropriate
-- [ ] No redundant `async` keywords
-- [ ] Exports alphabetized in `index.ts`
-- [ ] Subpath exports defined for all major modules
-
-## Common Mistakes
-
-1. **Forgetting .js extensions** - ESM requires explicit extensions even for TypeScript imports
-2. **Using catalog: reference** - Not supported in all contexts; use explicit versions
-3. **Absolute tsconfig paths** - Use relative paths like `../tsconfig/tsconfig.json`
-4. **Mutable class state** - Mark private properties `readonly` unless mutation is required
-5. **Async wrappers** - Don't wrap Promise-returning functions in `async` without `await`
-
-## Integration After Creation
-
-After creating a package, integrate it:
-
-1. Run `bun install` at repo root to update lockfile
-2. Reference new package in consumers with `"@alfred/<name>": "workspace:*"`
-3. Update root `tsconfig.json` references if needed for project builds
-4. Add to relevant `.ruler/` documentation mentioning the package
+1. **Scaffold first.** Use the repo’s generators when available; otherwise create `package.json`, `tsconfig.json`, `turbo.json`, `README.md`, `src/index.ts`, and `test/` before writing implementation code.
+2. **ESM correctness.** Set `"type": "module"` and export subpaths explicitly in `package.json`; in `src/index.ts`, use `.js` extensions and keep exports alphabetized.
+3. **Workspace deps.** Use `"workspace:*"` for internal package dependencies.
+4. **TS config.** `tsconfig.json` must extend `"../tsconfig/tsconfig.json"` (relative path) and include only the package sources.
+5. **TS version.** Package `devDependencies.typescript` must be an explicit version (e.g. `^5.7.3`), not `"catalog:"`.
+6. **Naming.** New packages under `@alfred/` must be single-word domain nouns.
 
 
 
@@ -1054,140 +847,13 @@ After creating a package, integrate it:
 
 # Ticket Updates and Documentation Standards
 
-## Core Principle
-
-After completing implementation, update Linear tickets with specific evidence and create user-facing documentation that enables adoption without requiring codebase archaeology.
-
 ## Rules
 
-### Linear Ticket Updates
-
-1. **Update on completion.** Close tickets and add comments immediately after implementation, not days later when details are forgotten.
-
-2. **Evidence over claims.** List specific file paths, commit SHAs, and test counts rather than vague "implemented" statements.
-
-3. **Link commits.** Include commit SHAs in ticket comments so reviewers can see exact changes without searching.
-
-4. **Test coverage stats.** State exact test counts (e.g., "Added 15 tests covering X, Y, Z") not "added tests".
-
-5. **Files changed list.** Enumerate every file created or modified, grouped by category (Created, Modified, Tested).
-
-6. **Implementation notes.** Document any deviations from original ticket scope or unexpected discoveries.
-
-### Documentation Writing
-
-7. **User-first perspective.** Write for developers using the feature, not implementing it. Start with "How do I..." not "The system..."
-
-8. **Quick start required.** Every feature doc must have a working example in the first 3 paragraphs that a new user can copy-paste.
-
-9. **Progressive complexity.** Order sections: Quick Start → Common Patterns → Advanced Usage → API Reference → Examples.
-
-10. **Link to code.** Reference test files for comprehensive examples instead of duplicating code in docs.
-
-11. **Migration guides.** When introducing new patterns, show before/after for migrating existing code.
-
-12. **Assume zero context.** Define domain terms on first use; don't assume reader knows the codebase.
-
-13. **Debugging section.** Include common errors, their causes, and fixes in every feature doc.
-
-14. **Visual hierarchy.** Use consistent heading levels, code blocks, and lists. Never nest code blocks in lists.
-
-## Ticket Comment Template
-
-```markdown
-✅ **Implemented**
-
-[One-sentence summary of what was delivered]
-
-**Modules Created:**
-- `path/to/module.ts` - [Purpose]
-- `path/to/helper.ts` - [Purpose]
-
-**Features:**
-- [Specific capability enabled]
-- [Another specific capability]
-- [Budget/limit/constraint implemented]
-
-**Test Coverage:**
-- N tests for [area]
-- M tests for [area]
-- All tests passing
-
-**Commits:**
-- `sha` - [commit message]
-- `sha` - [commit message]
-```
-
-## Documentation Structure Template
-
-```markdown
-# Feature Name - Usage Guide
-
-## Overview
-[One paragraph: What is this? Why would I use it?]
-
-## Quick Start
-[Minimal working example, copy-pasteable]
-
-## Available [Components/Functions/Tools]
-[Categorized list with brief descriptions]
-
-### Category 1
-**name** - Description
-- Prop: `{ key: type }`
-
-## Patterns
-### Pattern 1: [Use Case Name]
-[Code example with explanation]
-
-### Pattern 2: [Another Use Case]
-[Code example]
-
-## Best Practices
-1. [Specific, actionable advice]
-2. [Another specific practice]
-
-## Debugging
-[Common errors and solutions]
-
-## Examples
-See `path/to/tests/` for comprehensive examples.
-```
-
-## Evidence Standards
-
-When updating tickets:
-
-- **Commit SHA** - Full 8-character SHA, not "recent commit"
-- **File paths** - Absolute from repo root, not relative
-- **Test counts** - Exact numbers per test suite
-- **Lines changed** - Use `git diff --stat` output
-- **Performance** - Actual measurements if relevant
-
-## Documentation Anti-Patterns
-
-Avoid:
-
-1. **Implementation details in usage docs** - Users don't need to know how it works internally
-2. **Outdated examples** - Test examples on copy-paste before publishing
-3. **Missing imports** - Show all required imports in code examples
-4. **Wall of text** - Break long paragraphs into bullets or code blocks
-5. **Jargon without definition** - Define terms on first use
-6. **"See codebase" links** - Extract the relevant code into the doc
-
-## Validation Checklist
-
-Before closing a ticket:
-
-- [ ] Ticket status updated to "Done"
-- [ ] Comment added with specific evidence
-- [ ] Commit SHAs included
-- [ ] Test counts stated
-- [ ] Files changed enumerated
-- [ ] User-facing docs created (if applicable)
-- [ ] Quick start example tested
-- [ ] Debugging section included
-- [ ] Links to test files provided
+1. **Update immediately.** When work is complete, update the corresponding Linear issue the same day.
+2. **Evidence only.** Ticket updates must include concrete evidence: file paths, commit SHAs, and what tests were run (with counts when relevant).
+3. **Scope deltas.** Record any scope change, surprise, or follow-up work as a note on the ticket.
+4. **User-first docs.** Feature docs must start with a copy-pasteable quick start and define domain terms on first mention.
+5. **Progressive depth.** Order docs from quick start → common patterns → advanced usage → debugging; link to tests instead of duplicating full examples.
 
 
 
@@ -1195,207 +861,72 @@ Before closing a ticket:
 
 # Code Quality Corrections
 
-## Overview
+## Rules
 
-This document captures common code quality issues detected by linters or human review, codified from actual corrections made during package development.
+1. **Readonly by default.** Mark class fields and collection references `readonly` unless reassignment is required.
+2. **No redundant async.** Don’t use `async` unless the function actually `await`s.
+3. **ESM hygiene.** Use explicit `.js` extensions in ESM exports/imports where required (especially package entrypoints).
+4. **Stable barrels.** Alphabetize exports in `src/index.ts` to reduce churn and merge conflicts.
+5. **Readable types.** Break long type signatures across lines at semantic boundaries.
 
-## Core Principle
 
-Write code that passes linters and human review on first attempt by following these specific patterns. These are not style preferences—they prevent real bugs and improve maintainability.
+
+<!-- Source: .ruler/54-dev-guard.md -->
+
+# Development Environment Guard
 
 ## Rules
 
-### TypeScript Specifics
+1. **Use the guarded launcher.** Prefer `bun run dev` over raw `turbo dev`.
+2. **One dev session.** Never run multiple concurrent dev sessions; kill or reuse the existing one.
+3. **Kill before restart.** When switching branches or recovering from crashes, run `bun run dev:guard:kill` before starting dev again.
+4. **Automation uses `--fix`.** Non-interactive scripts should use the guard’s auto-fix mode to resolve conflicts without prompts.
+5. **Detect leaks early.** Run the guard’s check mode in hooks/CI to catch leaked processes and port conflicts.
 
-1. **Readonly class properties.** Mark class properties `readonly` if they should never be reassigned after initialization. This prevents accidental mutation bugs.
 
-```typescript
-// ✅ Correct: readonly prevents reassignment
-class Detector {
-  private readonly handlers: Handler[] = [];
-}
 
-// ❌ Wrong: allows accidental reassignment
-class Detector {
-  private handlers: Handler[] = [];
-}
-```
+<!-- Source: .ruler/55-llm-first-classification.md -->
 
-2. **No redundant async.** Don't mark functions `async` if they only return a Promise without using `await` internally. The async keyword adds overhead and hides the synchronous nature.
+# LLM-First Classification
 
-```typescript
-// ✅ Correct: returns Promise directly
-export function race<T>(a: Promise<T>, b: Promise<T>): Promise<T> {
-  return Promise.race([a, b]);
-}
+## Core Principle
 
-// ❌ Wrong: unnecessary async wrapper
-export async function race<T>(a: Promise<T>, b: Promise<T>): Promise<T> {
-  return Promise.race([a, b]);
-}
-```
+Heuristic lists are a maintenance trap for complex decision logic. When agents face tree-like classification, routing, or identification tasks, prefer lightweight LLM calls over hand-coded conditionals. A 120B model at 3000 tok/s with minimal context outperforms a 500-line switch statement and adapts without code changes.
 
-3. **Explicit .js extensions in exports.** ESM requires explicit file extensions even when importing TypeScript files. Always use `.js` extensions in `export` statements.
+## Rules
 
-```typescript
-// ✅ Correct: explicit .js extensions
-export * from "./abort.js";
-export * from "./transitions.js";
+1. **No heuristic lists for complex classification.** If a decision requires >5 branches, pattern matching on multiple fields, or "magic" constants, replace it with a prompted classification call. Heuristic lists rot; prompts evolve.
 
-// ❌ Wrong: missing extensions
-export * from "./abort";
-export * from "./transitions";
-```
+2. **Default model: `gpt-oss-120b` via Cerebras.** Use `gpt-oss-120b` (OpenAI GPT OSS 120B) as the default classification model. At ~3000 tok/s, $0.35/M input tokens, and native structured output support, it handles most classification tasks with sub-100ms latency.
 
-4. **Alphabetize exports.** Sort module exports alphabetically to reduce merge conflicts and improve scanability.
+3. **Model hierarchy for classification:**
+   - **Default:** `gpt-oss-120b` via Cerebras (~3000 tok/s, structured outputs, tool calling)
+   - **Lighter tasks:** `gpt-oss-20b` for simpler binary/ternary classification
+   - **Local/offline:** Nvidia Nemotron or Ollama-hosted models when data cannot leave the machine
+   - **Fallback:** Simple heuristic (<5 branches) only when inference is unavailable
 
-```typescript
-// ✅ Correct: alphabetical order
-export * from "./abort.js";
-export * from "./escalation.js";
-export * from "./transitions.js";
+4. **Structured output always.** Classification calls must use `generateObject` with a Zod schema, not free-text parsing. `gpt-oss-120b` natively supports structured outputs—use this capability.
 
-// ❌ Wrong: random order
-export * from "./abort.js";
-export * from "./transitions.js";
-export * from "./escalation.js";
-```
+5. **Minimize token use.** Classification prompts should include only the decision context needed—avoid stuffing unrelated data. Use `reasoning_effort: "low"` when the classification is straightforward.
 
-### Function Formatting
+6. **Prompt templates are code.** Store classification prompts in dedicated `.prompt.ts` files alongside the calling code. Version them, test them, review them like code.
 
-5. **Multi-line type signatures.** Break long type signatures across lines at logical boundaries (after parameter names or return types).
+7. **Fallback heuristics allowed.** A simple (<5 branch) heuristic fallback for when inference is unavailable is acceptable, but it must be clearly marked as degraded behavior and logged.
 
-```typescript
-// ✅ Correct: broken at parameter
-export type Handler = (
-  event: EscalationEvent
-) => void | Promise<void>;
+8. **Model registry pattern.** Use a model registry (`@alfred/cortex` or similar) to resolve model selection by task type. Never hardcode model names in business logic—reference task types that resolve to models.
 
-// ❌ Wrong: long single line
-export type Handler = (event: EscalationEvent) => void | Promise<void>;
-```
+9. **Measure classification quality.** Log classification inputs, outputs, and confidence. Track accuracy over time. A heuristic might beat a bad prompt—verify before shipping.
 
-### Class Design
+10. **Anti-pattern: nested if-else forests.** Any file with >3 levels of nested conditionals for classification/routing is a candidate for LLM replacement. Flag in code review.
 
-6. **Readonly collections.** Mark private collections `readonly` unless the collection reference itself needs to change. Items can still be added/removed from readonly arrays/maps.
+11. **Tool call awareness.** `gpt-oss-120b` may call tools not directly specified due to its training. When using tool calling for classification, monitor for non-approved tools and include guidance to use only provided tools.
 
-```typescript
-// ✅ Correct: readonly reference, mutable contents
-class Store {
-  private readonly items: Item[] = [];
-  
-  add(item: Item) {
-    this.items.push(item); // Works fine
-  }
-}
+## Reference Implementations
 
-// ❌ Wrong: allows accidental reassignment of entire array
-class Store {
-  private items: Item[] = [];
-  
-  reset() {
-    this.items = []; // Dangerous - easy to do by mistake
-  }
-}
-```
-
-## Detection and Prevention
-
-### Pre-commit Checks
-
-These issues are caught by:
-
-- **Biome linter** - Catches async/readonly/formatting issues
-- **Lefthook pre-commit** - Runs formatters automatically
-- **TypeScript compiler** - Catches missing .js extensions
-
-### Manual Review Patterns
-
-When reviewing code, check for:
-
-1. Class properties that could be `readonly`
-2. `async` functions that don't use `await`
-3. Missing `.js` extensions in exports
-4. Non-alphabetical export ordering
-5. Long type signatures on single lines
-
-### IDE Configuration
-
-Configure your IDE to:
-
-- Auto-add `.js` extensions on imports
-- Highlight `async` functions without `await`
-- Sort exports alphabetically on save
-- Suggest `readonly` modifiers
-
-## Migration Guide
-
-To fix existing code:
-
-```bash
-# Run Biome linter with auto-fix
-bun run lint --fix
-
-# Check for missing .js extensions
-rg "from ['\"]\./" packages/*/src/index.ts
-
-# Check for non-readonly class properties
-rg "private \w+:" packages/*/src/*.ts
-```
-
-## Rationale
-
-### Why readonly matters
-
-```typescript
-class Guard {
-  private maxCount = 50; // Oops, reassignable
-  
-  someMethod() {
-    this.maxCount = 100; // Accidental mutation
-  }
-}
-```
-
-With `readonly`, the compiler prevents this bug.
-
-### Why async matters
-
-```typescript
-async function wrapper() {
-  return Promise.race([a, b]);
-}
-
-// Creates: async wrapper -> Promise -> Promise (nested!)
-// Instead of: wrapper -> Promise (direct)
-```
-
-The extra promise wrapper adds overhead and makes stack traces harder to read.
-
-### Why .js extensions matter
-
-```typescript
-// Works in TypeScript, breaks in Node ESM
-import { foo } from "./bar";
-
-// Works everywhere
-import { foo } from "./bar.js";
-```
-
-Node's ESM loader doesn't do extension resolution—you must be explicit.
-
-## Enforcement
-
-Add to CI:
-
-```yaml
-- name: Check code quality
-  run: |
-    bun run lint --check
-    bun run typecheck
-```
-
-This catches all these issues before merge.
+- **Classification utility:** `packages/plan/src/classify/index.ts` — Shared `classify()` and `classifyBatch()` functions
+- **Intent classification:** `packages/plan/src/intent/classify.ts` — Uses `classify()` with schema and heuristic fallback
+- **Phase grouping:** `packages/plan/src/generate/group.ts` — Uses `classifyBatch()` for batch assignment
+- **Path classification:** `packages/plan/src/classify/path.ts` — Canonical path bucketing with batch LLM support
 
 
 
@@ -1435,131 +966,15 @@ This project is a Better-T-Stack monorepo orchestrated by Turborepo and Bun work
 
 # Generative UI Patterns
 
-## Overview
-
-GenUI enables LLM-generated dynamic UI components. Tools can return UI schemas that are interpreted and rendered using registered components.
-
 ## Rules
 
-1. **Register before render.** Call `initGenUIRegistry()` at app startup to register components with the interpreter.
-
-2. **Use data-ui parts.** Return `{ type: "data-ui", ui: UIComponent }` parts from tools for dynamic rendering.
-
-3. **Wrap with error boundary.** Always wrap GenUI renders in `GenUIErrorBoundary` for graceful degradation.
-
-4. **Prefer helper functions.** Use `createChartResult`, `createGridResult`, etc. over manual schema construction.
-
-5. **Include raw data.** Tool results must include both `ui` and `data` for persistence and fallback.
-
-6. **Single-word component names.** Component names in schemas must match manifest entries exactly.
-
-7. **Validate before render.** Use `validateUIComponent` to check schemas from untrusted sources.
-
-8. **Max depth limit.** Keep component trees shallow (max 5 levels) to prevent render performance issues.
-
-9. **Model capability.** Check `supportsGenUI(selection)` before requesting structured output. Not all models support JSON mode reliably.
-
-10. **Orchestrator patterns.** Use specialized components for technical operations: `StreamingTerminal`, `ProgressWindow`, `WorkflowTimeline`, `TaskTracker`, `ErrorPanel`, `ArtifactBrowser`, `ResourceMonitor`.
-
-## Architecture
-
-```
-Tool Result → data-ui Part → isUIDataPart → UISchemaRenderer → Component Registry → React Component
-```
-
-## Component Registration
-
-```typescript
-// apps/web/src/components/genui/registry.ts
-import { registerComponents } from "@alfred/ui/genui";
-
-await initGenUIRegistry(); // Registers chart, grid, list, etc.
-```
-
-## Tool Integration
-
-```typescript
-// In a tool handler
-import { createChartResult } from "@alfred/ui/genui";
-
-const result = createChartResult(
-  "Task Progress",
-  [{ x: "Done", y: 45 }, { x: "Pending", y: 55 }],
-  { tasks: rawTasks }
-);
-return result;
-```
-
-## Chat Rendering
-
-GenUI parts are handled by `renderGenUI` in `chat-render.tsx`:
-
-```typescript
-function renderGenUI(part: AssistantPart): ReactNode | null {
-  if (!isUIDataPart(part)) return null;
-  return (
-    <GenUIErrorBoundary schema={part.ui}>
-      <UISchemaRenderer schema={part.ui} />
-    </GenUIErrorBoundary>
-  );
-}
-```
-
-## Available Components
-
-Core visualization components registered at app init:
-- `chart` - Data visualization
-- `grid` - Layout grid
-- `list` - Animated list
-- `number` - Sliding number display
-- `term` - Terminal output
-- `code` - Code block
-- `plan` - Plan visualization
-- `task` - Task progress
-- `loading` - Loading indicator
-
-Orchestrator components for technical operations:
-- `streaming-terminal` - Real-time log streaming
-- `progress-window` - Long-running operation tracking
-- `workflow-timeline` - Workflow execution visualization
-- `task-tracker` - Async task tracking (UPID, etc.)
-- `error-panel` - Error visualization
-- `artifact-browser` - Output artifact management
-- `resource-monitor` - Container/VM resource monitoring
-
-## Type Safety
-
-```typescript
-import type { UIComponent, GenUIToolResult } from "@alfred/type/genui";
-import { validateUIComponent, isUIDataPart } from "@alfred/ui/genui";
-
-// Validate unknown data
-const result = validateUIComponent(unknownData);
-if (result.valid) {
-  // result.component is typed UIComponent
-}
-```
-
-## Testing
-
-Test GenUI components with real registry operations:
-
-```typescript
-import { clearRegistry, registerComponent } from "@alfred/ui/genui";
-import { validateUIComponent } from "@alfred/type/genui.zod";
-
-beforeEach(() => {
-  clearRegistry();
-});
-
-test("tool result produces valid schema", () => {
-  const result = createChartResult("Test", [{ x: "A", y: 1 }], {});
-  const validation = validateUIComponent(result.ui);
-  expect(validation.valid).toBe(true);
-});
-```
-
-Test edge cases: null input, deep nesting, unicode props, empty children arrays.
+1. **Register before render.** Initialize the GenUI component registry at app startup.
+2. **Use `data-ui` parts.** Tools must return `data-ui` parts that include both `ui` and the underlying `data`.
+3. **Validate and sandbox.** Validate untrusted schemas before render and wrap renders in an error boundary.
+4. **Shallow trees.** Keep component depth ≤ 5.
+5. **Name parity.** Schema component names must match manifest entries exactly.
+6. **Prefer helpers.** Use the provided helper constructors (`create*Result`) over hand-built schemas.
+7. **Capability check.** Verify the selected model supports GenUI/structured outputs before requesting schemas.
 
 
 

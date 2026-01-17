@@ -6,6 +6,7 @@
 
 import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
+import { addPollingWithFallback, type DataMode } from "./mode";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ export type CognitiveSubscriptionOptions = {
   manager: SubscriptionManager;
   store: CognitiveStateStore;
   pollingInterval?: number;
-  useMockData?: boolean;
+  mode?: DataMode;
 };
 
 export function setupCognitiveSubscription(
@@ -158,66 +159,64 @@ export function setupCognitiveSubscription(
     manager,
     store,
     pollingInterval = 2000,
-    useMockData = true,
+    mode,
   } = options;
 
-  if (useMockData) {
-    // Use polling with mock data
-    manager.addPolling({
-      id: "cognitive",
-      fetch: () => Promise.resolve(mockCognitiveState()),
-      onData: (state) => store.update(state),
-      onError: (_error) => {},
-      interval: pollingInterval,
-      immediate: true,
-    });
-  } else {
-    manager.addPolling({
-      id: "cognitive",
-      fetch: async () => {
-        const client = getApiClient();
-        const result = await client.getCognitiveState("default");
-        if (result.error || !result.data) {
-          return mockCognitiveState();
+  addPollingWithFallback({
+    manager,
+    id: "cognitive",
+    mode,
+    interval: pollingInterval,
+    immediate: true,
+    maxFailures: 3,
+    fetchMock: async () => mockCognitiveState(),
+    fetchLive: async () => {
+      const client = getApiClient();
+      const result = await client.getCognitiveState("default");
+      if (result.error || !result.data) {
+        const code = result.error?.code;
+        const msg = result.error?.message ?? "";
+        const isAuth = code === "HTTP_ERROR" && /HTTP (401|403)\b/.test(msg);
+        if (code === "NETWORK_ERROR" || isAuth) {
+          throw new Error("tui_live_unavailable");
         }
+        throw new Error("tui_cognitive_fetch_failed");
+      }
 
-        const phaseRaw = result.data.phase;
-        const phase: CognitivePhase =
-          phaseRaw === "idle" ||
-          phaseRaw === "capturing" ||
-          phaseRaw === "thinking" ||
-          phaseRaw === "deciding" ||
-          phaseRaw === "executing" ||
-          phaseRaw === "reflecting"
-            ? phaseRaw
-            : "idle";
+      const phaseRaw = result.data.phase;
+      const phase: CognitivePhase =
+        phaseRaw === "idle" ||
+        phaseRaw === "capturing" ||
+        phaseRaw === "thinking" ||
+        phaseRaw === "deciding" ||
+        phaseRaw === "executing" ||
+        phaseRaw === "reflecting"
+          ? phaseRaw
+          : "idle";
 
-        const stateObj = result.data.state as unknown as {
-          physiology?: Partial<PhysiologyState>;
-        };
-        const physiology = stateObj.physiology;
+      const stateObj = result.data.state as unknown as {
+        physiology?: Partial<PhysiologyState>;
+      };
+      const physiology = stateObj.physiology;
 
-        return {
-          phase,
-          physiology: {
-            energy: physiology?.energy ?? 0.5,
-            boredom: physiology?.boredom ?? 0,
-            frustration: physiology?.frustration ?? 0,
-          },
-          autonomy: {
-            level: result.data.autonomy.level ?? 0.5,
-            confidence: result.data.autonomy.level ?? 0.5,
-            threshold: 0.5,
-          },
-          timestamp: result.data.ts ?? Date.now(),
-        };
-      },
-      onData: (state) => store.update(state),
-      onError: (_error) => {},
-      interval: pollingInterval,
-      immediate: true,
-    });
-  }
+      return {
+        phase,
+        physiology: {
+          energy: physiology?.energy ?? 0.5,
+          boredom: physiology?.boredom ?? 0,
+          frustration: physiology?.frustration ?? 0,
+        },
+        autonomy: {
+          level: result.data.autonomy.level ?? 0.5,
+          confidence: result.data.autonomy.level ?? 0.5,
+          threshold: 0.5,
+        },
+        timestamp: result.data.ts ?? Date.now(),
+      };
+    },
+    onData: (state) => store.update(state),
+    onError: (_error) => {},
+  });
 }
 
 // ─── Factory ─────────────────────────────────────────────────────────────────

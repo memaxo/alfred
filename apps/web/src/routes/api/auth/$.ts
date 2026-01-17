@@ -41,6 +41,41 @@ async function safeAuthHandler(request: Request): Promise<Response> {
   const h = await getAuthHelpers();
   try {
     const incomingOrigin = request.headers.get("origin");
+    const incomingExpoOrigin = request.headers.get("expo-origin");
+
+    const normalizedExpoOrigin = (() => {
+      if (!incomingExpoOrigin) {
+        return null;
+      }
+      const raw = incomingExpoOrigin.trim();
+      if (raw.length === 0) {
+        return null;
+      }
+
+      // Native deep-link origins may include paths (e.g. `alfred://--/`).
+      // Better Auth origin checks are strict; normalize to scheme origin.
+      if (raw.startsWith("alfred://")) {
+        return "alfred://";
+      }
+      if (raw.startsWith("exp://")) {
+        return "exp://";
+      }
+      if (raw.startsWith("expo://")) {
+        return "expo://";
+      }
+
+      // For http(s), normalize to URL.origin to strip path/query.
+      try {
+        const url = new URL(raw);
+        if (url.origin && url.origin !== "null") {
+          return url.origin;
+        }
+      } catch {
+        // ignore
+      }
+
+      return raw;
+    })();
 
     // Expo / React Native often sends a non-browser Origin (or a Metro URL) that
     // Better Auth will reject as "Invalid origin". For native clients, Origin is
@@ -54,41 +89,29 @@ async function safeAuthHandler(request: Request): Promise<Response> {
       incomingOrigin.length > 0;
 
     const effectiveRequest = (() => {
-      if (!shouldStripOrigin) {
+      if (!shouldStripOrigin && !normalizedExpoOrigin) {
         return request;
       }
       const cloned = request.clone();
       const headers = new Headers(cloned.headers);
       headers.delete("origin");
       headers.delete("referer");
+      if (normalizedExpoOrigin) {
+        headers.set("expo-origin", normalizedExpoOrigin);
+      }
       return new Request(cloned, { headers });
     })();
 
     const res = await h.auth.handler(effectiveRequest);
 
-    // Debug native auth failures: Better Auth rejects requests when Origin is
-    // missing/untrusted, but React Native / Expo often sets a non-browser Origin.
-    // Surface the received origin in the error payload so clients can be configured.
-    if (
-      process.env.NODE_ENV !== "production" &&
-      res.status >= 400 &&
-      res.status < 500
-    ) {
-      const origin = incomingOrigin;
-      try {
-        const cloned = res.clone();
-        const body = (await cloned.json()) as { message?: unknown } | null;
-        const msg = typeof body?.message === "string" ? body.message : null;
-
-        if (msg?.toLowerCase().includes("origin")) {
-          return Response.json(
-            { ...body, message: `${msg} (origin=${origin ?? "null"})` },
-            { status: res.status, headers: res.headers }
-          );
-        }
-      } catch (_error) {
-        // Ignore parse errors; return original response.
-      }
+    // Debug native auth failures: attach received origins as headers so mobile
+    // can display them in its error object without consuming the response body.
+    if (process.env.NODE_ENV !== "production" && res.status >= 400) {
+      const headers = new Headers(res.headers);
+      headers.set("x-alfred-origin", incomingOrigin ?? "null");
+      headers.set("x-alfred-expo-origin", incomingExpoOrigin ?? "null");
+      headers.set("x-alfred-expo-origin-normalized", normalizedExpoOrigin ?? "null");
+      return new Response(res.body, { status: res.status, headers });
     }
 
     return res;

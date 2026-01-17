@@ -42,6 +42,21 @@ const sttInput = z.object({
   prompt: z.string().max(400).optional(),
 });
 
+const sttStreamingInput = z.object({
+  audioBase64: z.string().min(1, "audio_base64_required"),
+  mimeType: z.string().min(1, "mime_type_required").default("audio/webm"),
+  model: z.string().min(1).default(DEFAULT_STT_MODEL),
+  language: z.string().min(2).max(10).optional(),
+  prompt: z.string().max(400).optional(),
+  sessionId: z.string().min(8).max(64),
+  chunkSize: z.enum(["fast", "low", "medium", "accurate"]).optional(),
+  clearCache: z.boolean().optional(),
+});
+
+const sttSessionInput = z.object({
+  sessionId: z.string().min(8).max(64),
+});
+
 const ttsInput = z.object({
   text: z.string().min(1, "text_required").max(600, "text_too_long"),
   voice: z.string().min(1).default(DEFAULT_TTS_VOICE),
@@ -147,6 +162,107 @@ export const voiceRouter = router({
         return await transcribeLocal(sttPool, { ...input, language });
       } catch (error) {
         throw toTRPCError(error, "voice_stt_failed");
+      }
+    }),
+
+  /**
+   * Streaming transcription with cache-aware session affinity.
+   *
+   * Use this for real-time voice input where you want:
+   * - Lower latency via incremental processing
+   * - Session state maintained across audio chunks
+   * - Partial results as audio streams in
+   *
+   * The sessionId ensures requests route to the same worker process,
+   * enabling Nemotron's cache-aware streaming mode.
+   */
+  sttTranscribeStreaming: authedProcedure
+    .use(requirePolicy("voice.stt", toSttResource))
+    .input(sttStreamingInput)
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      let language = input.language;
+
+      if (session) {
+        language = await resolveSttLanguagePreference(
+          session.user.id,
+          input.language
+        );
+      }
+
+      try {
+        const [{ transcribeStreaming }, { getVoicePools }] = await Promise.all([
+          import("@alfred/voice/services/stt"),
+          import("../voice/pools"),
+        ]);
+        const { sttPool } = getVoicePools();
+        return await transcribeStreaming(sttPool, {
+          ...input,
+          language,
+        });
+      } catch (error) {
+        throw toTRPCError(error, "voice_stt_streaming_failed");
+      }
+    }),
+
+  /**
+   * Clear the streaming cache for a session.
+   * Call this when starting a new utterance to reset decoder state.
+   */
+  sttClearCache: authedProcedure
+    .input(sttSessionInput)
+    .mutation(async ({ input }) => {
+      try {
+        const [{ clearStreamingCache }, { getVoicePools }] = await Promise.all([
+          import("@alfred/voice/services/stt"),
+          import("../voice/pools"),
+        ]);
+        const { sttPool } = getVoicePools();
+        const cleared = await clearStreamingCache(sttPool, input.sessionId);
+        return { cleared, sessionId: input.sessionId };
+      } catch (error) {
+        throw toTRPCError(error, "voice_stt_clear_cache_failed");
+      }
+    }),
+
+  /**
+   * Release session affinity for a streaming session.
+   * Call this when a voice session ends to free up resources.
+   */
+  sttReleaseSession: authedProcedure
+    .input(sttSessionInput)
+    .mutation(async ({ input }) => {
+      try {
+        const [{ releaseStreamingSession }, { getVoicePools }] =
+          await Promise.all([
+            import("@alfred/voice/services/stt"),
+            import("../voice/pools"),
+          ]);
+        const { sttPool } = getVoicePools();
+        releaseStreamingSession(sttPool, input.sessionId);
+        return { released: true, sessionId: input.sessionId };
+      } catch (error) {
+        throw toTRPCError(error, "voice_stt_release_session_failed");
+      }
+    }),
+
+  /**
+   * Get streaming session info for debugging/monitoring.
+   */
+  sttSessionInfo: authedProcedure
+    .input(sttSessionInput)
+    .query(async ({ input }) => {
+      try {
+        const [{ getStreamingSessionInfo }, { getVoicePools }] =
+          await Promise.all([
+            import("@alfred/voice/services/stt"),
+            import("../voice/pools"),
+          ]);
+        const { sttPool } = getVoicePools();
+        const info = getStreamingSessionInfo(sttPool, input.sessionId);
+        return { sessionId: input.sessionId, ...info };
+      } catch (error) {
+        throw toTRPCError(error, "voice_stt_session_info_failed");
       }
     }),
 
@@ -399,6 +515,165 @@ export const voiceRouter = router({
       const snapshot = await getVoiceSession(input.sessionId);
       if (snapshot && snapshot.userId === session.user.id) {
         await releaseVoiceSession(input.sessionId);
+      }
+    }),
+
+  /**
+   * Voice pipeline health check.
+   *
+   * Returns the health status of STT and TTS pools, and optionally
+   * runs a quick roundtrip test to verify the full pipeline works.
+   */
+  health: authedProcedure
+    .input(
+      z
+        .object({
+          runRoundtrip: z.boolean().default(false),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const startTime = performance.now();
+
+      try {
+        const { sttPool, ttsPool } = getVoicePools();
+
+        // Get pool health
+        const sttHealth = sttPool.getHealth();
+        const ttsHealth = ttsPool.getHealth();
+
+        const healthResult: {
+          stt: { ok: boolean; workers: number; activeCount: number };
+          tts: { ok: boolean; workers: number; activeCount: number };
+          roundtrip?: {
+            ok: boolean;
+            latencyMs: number;
+            originalText: string;
+            transcribedText: string;
+          };
+          totalLatencyMs: number;
+        } = {
+          stt: {
+            ok: Array.isArray(sttHealth) && sttHealth.length > 0,
+            workers: Array.isArray(sttHealth) ? sttHealth.length : 0,
+            activeCount: sttPool.activeCount,
+          },
+          tts: {
+            ok: Array.isArray(ttsHealth) && ttsHealth.length > 0,
+            workers: Array.isArray(ttsHealth) ? ttsHealth.length : 0,
+            activeCount: ttsPool.activeCount,
+          },
+          totalLatencyMs: 0,
+        };
+
+        // Optionally run a roundtrip test
+        if (input?.runRoundtrip) {
+          const roundtripStart = performance.now();
+          const testText = "Hello";
+
+          try {
+            // TTS: Synthesize test text
+            const ttsResult = await ttsPool.synthesize({
+              text: testText,
+              streaming: false,
+            });
+
+            if (!ttsResult.audioBase64) {
+              throw new Error("tts_no_audio");
+            }
+
+            // STT: Transcribe the audio back
+            // Note: We need to resample from TTS output (24kHz) to STT input (16kHz)
+            const ttsSampleRate = ttsResult.sampleRate ?? 24000;
+
+            // Import audio utilities for resampling
+            const { decodeToPCM16 } = await import("@alfred/voice/audio/codec");
+
+            // If TTS outputs PCM, use it directly; otherwise decode
+            let audioBase64 = ttsResult.audioBase64;
+            const mimeType = ttsResult.mimeType ?? "audio/pcm";
+
+            // For PCM output, we may need to resample
+            if (
+              mimeType.includes("pcm") ||
+              mimeType === "audio/raw" ||
+              !mimeType.includes("/")
+            ) {
+              // Resample if needed
+              if (ttsSampleRate !== 16000) {
+                const buffer = Buffer.from(audioBase64, "base64");
+                const pcm = new Int16Array(
+                  buffer.buffer,
+                  buffer.byteOffset,
+                  buffer.byteLength / 2
+                );
+
+                // Simple linear interpolation resampling
+                const ratio = ttsSampleRate / 16000;
+                const newLength = Math.floor(pcm.length / ratio);
+                const resampled = new Int16Array(newLength);
+
+                for (let i = 0; i < newLength; i++) {
+                  const srcIndex = i * ratio;
+                  const lower = Math.floor(srcIndex);
+                  const upper = Math.min(lower + 1, pcm.length - 1);
+                  const fraction = srcIndex - lower;
+                  const lowerVal = pcm[lower] ?? 0;
+                  const upperVal = pcm[upper] ?? 0;
+                  resampled[i] = Math.round(
+                    lowerVal * (1 - fraction) + upperVal * fraction
+                  );
+                }
+
+                audioBase64 = Buffer.from(
+                  resampled.buffer,
+                  resampled.byteOffset,
+                  resampled.byteLength
+                ).toString("base64");
+              }
+            } else {
+              // Decode to PCM if not already PCM
+              const decoded = await decodeToPCM16({
+                audioBase64,
+                mimeType,
+              });
+              audioBase64 = decoded.audioBase64;
+            }
+
+            const sttResult = await sttPool.transcribe({
+              audioBase64,
+              mimeType: "audio/pcm",
+              streaming: false,
+            });
+
+            const roundtripLatency = performance.now() - roundtripStart;
+
+            healthResult.roundtrip = {
+              ok: sttResult.text.length > 0,
+              latencyMs: Math.round(roundtripLatency),
+              originalText: testText,
+              transcribedText: sttResult.text,
+            };
+          } catch (error) {
+            healthResult.roundtrip = {
+              ok: false,
+              latencyMs: Math.round(performance.now() - roundtripStart),
+              originalText: testText,
+              transcribedText:
+                error instanceof Error ? error.message : "roundtrip_failed",
+            };
+          }
+        }
+
+        healthResult.totalLatencyMs = Math.round(performance.now() - startTime);
+
+        return healthResult;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "voice_health_check_failed",
+          cause: error,
+        });
       }
     }),
 

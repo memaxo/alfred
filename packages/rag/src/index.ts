@@ -6,8 +6,14 @@ export {
   type EmbeddingProvider,
   embed,
   embedMany,
+  embedManyMultimodal,
+  getCurrentModelId,
   ingest,
+  type IngestOptions,
+  ingestWithOptions,
   retrieve,
+  type RetrieveOptions,
+  retrieveWithOptions,
   setEmbeddingProvider,
 } from "./doc";
 export {

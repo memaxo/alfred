@@ -5,7 +5,7 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "default": "./src/index.ts"
     }
   },
@@ -20,6 +20,7 @@
     "@alfred/db": "workspace:*",
     "@alfred/embed": "workspace:*",
     "@alfred/knowledge": "workspace:*",
+    "@alfred/rerank": "workspace:*",
     "@ai-sdk/cohere": "^2.0.0",
     "zod": "catalog:"
   },

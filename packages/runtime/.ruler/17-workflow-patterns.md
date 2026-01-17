@@ -1,37 +1,9 @@
 # Workflow Patterns
 
-## Core Principle
-
-Workflows are durable, resumable, and observable. Follow existing patterns in `packages/api/src/routers/workflow.ts` and `packages/runtime/`.
-
 ## Rules
 
-1. **Suspend/resume for obligations.** Implement workflow suspension when PDP returns `requireBio` obligation. Register run with `resume` and `cancel` callbacks plus `abortController` via `runRegistry.register()`.
-
-2. **Timeout enforcement.** Enforce timeouts at workflow level (default: 30 minutes). Use `setTimeout` to abort controller and update run status to "failed" with timeout error message.
-
-3. **Cancellation support.** Always propagate AbortSignal through async chains and clean up in finally blocks.
-
-4. **Event replay.** Expose a `replay` procedure for event-sourced entities that allows clients to hydrate state deterministically by fetching raw events in chronological order.
-
-5. **Resilience & DLQ.** Persistent workflows must implement Dead Letter Queues (max retry limits) to prevent infinite resume loops.
-
-6. **Runtime tests via fixture.** Router or integration tests that exercise the workflow runtime must spin up the real engine through `@alfred/test-kit/workflow/runtime-fixture`, using its Linear stub, metrics hooks, and review-gate toggle to drive success/error/cancel flows; do not mock `@alfred/runtime`, workflow metrics, or Linear helpers inline.
-
-## Workflow Status Lifecycle
-
-```
-running → completed
-running → failed
-running → suspended → resumed → completed
-running → cancelled
-```
-
-## Performance Budgets
-
-- Run creation: <10ms
-- Event persistence: <5ms per event
-- Status update: <5ms
-- Resume dispatch: <50ms
-
-See `packages/api/src/routers/workflow.ts` for implementation reference.
+1. **Durable + observable.** Workflows must be resumable and event-sourced; UIs hydrate from ordered event streams.
+2. **Suspend on obligations.** If PDP returns a biometric obligation, suspend and register resumable callbacks with the run registry.
+3. **Timeout + cancel.** Enforce a workflow-level timeout, propagate `AbortSignal`, and always cleanup in `finally`.
+4. **Resilience.** Cap retries (DLQ) to prevent infinite resume loops.
+5. **Test via fixture.** Runtime tests must use `@alfred/test-kit/workflow/runtime-fixture` (don’t inline-mock runtime/metrics/Linear).

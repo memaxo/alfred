@@ -1,23 +1,64 @@
 /**
  * Embedding Pool Management
- * Manages pool of embedding worker processes with load balancing
+ * Manages pool of embedding worker processes with load balancing and queuing
  */
 
 import { join } from "node:path";
+import { getEmbedConfig } from "./config";
+import {
+  embedRequestsDropped,
+  embedRequestsProcessed,
+  embedRequestsQueued,
+  recordBatch,
+  updateQueueMetrics,
+  updateWorkerMetrics,
+} from "./metrics";
 import { EmbedProcess } from "./process";
+import { EmbedQueue, type QueueConfig, type QueueStats } from "./queue";
 import type { EmbedConfig } from "./types";
+
+export type PoolConfig = EmbedConfig & {
+  /** Enable request queuing and batching (default: true) */
+  enableQueue?: boolean;
+  /** Queue configuration options */
+  queueConfig?: QueueConfig;
+  /** Number of retry attempts (default: 3) */
+  retryCount?: number;
+  /** Initial retry delay in ms (default: 100) */
+  retryDelayMs?: number;
+};
 
 export class EmbedPool {
   private processes: EmbedProcess[] = [];
   private readonly poolSize: number;
   private currentIndex = 0;
-  private readonly config: EmbedConfig;
+  private readonly config: PoolConfig;
   private isInitialized = false;
+  private isShuttingDown = false;
+  private queue: EmbedQueue | null = null;
+  private readonly enableQueue: boolean;
+  private metricsInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(config: EmbedConfig = {}) {
+  constructor(config: PoolConfig = {}) {
     this.config = config;
     const isDev = process.env.NODE_ENV !== "production";
     this.poolSize = config.poolSize ?? (isDev ? 1 : 2);
+    this.enableQueue = config.enableQueue ?? true;
+  }
+
+  /**
+   * Create pool from environment variables
+   */
+  static fromEnv(): EmbedPool {
+    const envConfig = getEmbedConfig();
+    return new EmbedPool({
+      modelName: envConfig.modelName,
+      device: envConfig.device,
+      poolSize: envConfig.poolSize,
+      requestTimeout: envConfig.requestTimeout,
+      enableQueue: envConfig.enableQueue,
+      queueConfig: envConfig.queueConfig,
+    });
   }
 
   async initialize(): Promise<void> {
@@ -33,7 +74,44 @@ export class EmbedPool {
       this.processes.push(proc);
     }
 
+    // Initialize queue with load-balanced processing and metrics
+    if (this.enableQueue) {
+      this.queue = new EmbedQueue(
+        (texts) => this.embedDirectWithMetrics(texts),
+        this.config.queueConfig
+      );
+    }
+
+    // Start metrics collection interval
+    this.startMetricsCollection();
+
     this.isInitialized = true;
+  }
+
+  /**
+   * Start periodic metrics collection
+   */
+  private startMetricsCollection(): void {
+    // Update metrics every 5 seconds
+    this.metricsInterval = setInterval(() => {
+      this.updateMetrics();
+    }, 5000);
+    this.metricsInterval.unref(); // Don't prevent process exit
+  }
+
+  /**
+   * Update all metrics
+   */
+  private updateMetrics(): void {
+    // Update queue metrics
+    if (this.queue) {
+      const stats = this.queue.getStats();
+      updateQueueMetrics(stats, this.config.queueConfig?.maxQueueSize ?? 1000);
+    }
+
+    // Update worker metrics
+    const workerHealth = this.processes.map((p) => p.getHealth());
+    updateWorkerMetrics(workerHealth);
   }
 
   private async ensureDependencies(): Promise<void> {
@@ -126,26 +204,132 @@ export class EmbedPool {
     }
   }
 
-  async embed(texts: string[]): Promise<number[][]> {
+  /**
+   * Embed texts using queue (with batching) or direct
+   */
+  async embed(texts: string[], priority = 0): Promise<number[][]> {
     if (!this.isInitialized) {
       throw new Error("Pool not initialized - call initialize() first");
+    }
+
+    if (this.isShuttingDown) {
+      throw new Error("Pool is shutting down");
     }
 
     if (texts.length === 0) {
       return [];
     }
 
-    // Round-robin load balancing
-    const proc = this.processes[this.currentIndex];
+    // Track queued request
+    embedRequestsQueued.inc();
+
+    // Use queue if enabled for batching benefits
+    if (this.queue) {
+      try {
+        return await this.queue.enqueue(texts, priority);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("Queue full")) {
+          embedRequestsDropped.inc({ reason: "queue_full" });
+        }
+        throw error;
+      }
+    }
+
+    // Direct embedding without queue
+    return this.embedDirectWithMetrics(texts);
+  }
+
+  /**
+   * Direct embedding to workers (bypasses queue)
+   * Uses load-aware worker selection
+   */
+  private async embedDirect(texts: string[]): Promise<number[][]> {
+    if (texts.length === 0) {
+      return [];
+    }
+
+    // Select least busy worker
+    const proc = this.selectWorker();
     if (!proc) {
       throw new Error("No workers available");
     }
 
-    this.currentIndex = (this.currentIndex + 1) % this.poolSize;
-
-    return await proc.sendRequest(texts);
+    return proc.sendRequest(texts);
   }
 
+  /**
+   * Direct embedding with metrics tracking
+   */
+  private async embedDirectWithMetrics(texts: string[]): Promise<number[][]> {
+    const startTime = performance.now();
+
+    try {
+      const result = await this.embedDirect(texts);
+      const processingMs = performance.now() - startTime;
+
+      // Record batch metrics
+      recordBatch(1, texts.length, processingMs, 0);
+      embedRequestsProcessed.inc();
+
+      return result;
+    } catch (error) {
+      embedRequestsDropped.inc({ reason: "error" });
+      throw error;
+    }
+  }
+
+  /**
+   * Select best worker using load-aware strategy
+   */
+  private selectWorker(): EmbedProcess | null {
+    if (this.processes.length === 0) {
+      return null;
+    }
+
+    // Find worker with lowest pending requests
+    let bestWorker = this.processes[0];
+    let bestHealth = bestWorker?.getHealth();
+
+    for (let i = 1; i < this.processes.length; i++) {
+      const worker = this.processes[i];
+      if (!worker) continue;
+
+      const health = worker.getHealth();
+
+      // Prefer idle workers
+      if (health.status === "idle" && bestHealth?.status !== "idle") {
+        bestWorker = worker;
+        bestHealth = health;
+        continue;
+      }
+
+      // Skip workers in error state
+      if (health.status === "error") {
+        continue;
+      }
+
+      // Among non-idle workers, prefer lower error count
+      if (
+        bestHealth?.status !== "idle" &&
+        health.errorCount < (bestHealth?.errorCount ?? 0)
+      ) {
+        bestWorker = worker;
+        bestHealth = health;
+      }
+    }
+
+    // Fallback to round-robin if all workers seem equivalent
+    if (!bestWorker || bestHealth?.status === "error") {
+      this.currentIndex = (this.currentIndex + 1) % this.poolSize;
+      return this.processes[this.currentIndex] ?? null;
+    }
+
+    return bestWorker;
+  }
+
+  /**
+   * Get pool and queue health information
+   */
   getHealth(): {
     index: number;
     pid?: number;
@@ -159,10 +343,70 @@ export class EmbedPool {
     }));
   }
 
-  async shutdown(): Promise<void> {
+  /**
+   * Get queue statistics (if queue is enabled)
+   */
+  getQueueStats(): QueueStats | null {
+    return this.queue?.getStats() ?? null;
+  }
+
+  /**
+   * Check if queue has capacity for more requests
+   */
+  hasCapacity(): boolean {
+    if (!this.queue) {
+      return true; // No queue means always accept
+    }
+    return this.queue.hasCapacity();
+  }
+
+  /**
+   * Get current queue length
+   */
+  getQueueLength(): number {
+    return this.queue?.length ?? 0;
+  }
+
+  /**
+   * Shutdown the pool
+   * @param graceful If true, waits for in-flight requests to complete
+   * @param timeoutMs Maximum time to wait for graceful shutdown (default: 30000)
+   */
+  async shutdown(graceful = true, timeoutMs = 30_000): Promise<void> {
+    if (this.isShuttingDown) {
+      return;
+    }
+
+    this.isShuttingDown = true;
+
+    // Stop metrics collection
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+      this.metricsInterval = null;
+    }
+
+    // Graceful queue shutdown - wait for in-flight, reject pending
+    if (this.queue) {
+      if (graceful) {
+        await this.queue.shutdown(timeoutMs);
+      } else {
+        this.queue.clear();
+      }
+      this.queue = null;
+    }
+
+    // Shutdown all workers
     await Promise.all(this.processes.map((proc) => proc.shutdown()));
 
     this.processes = [];
     this.isInitialized = false;
+    this.isShuttingDown = false;
+  }
+
+  /**
+   * Check if pool is shutting down
+   */
+  get shuttingDown(): boolean {
+    return this.isShuttingDown;
   }
 }

@@ -9,7 +9,12 @@ import {
 } from "@alfred/type/model";
 import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { type LanguageModel, wrapLanguageModel } from "ai";
+import {
+  type LanguageModel,
+  simulateStreamingMiddleware,
+  wrapLanguageModel,
+} from "ai";
+import { MockLanguageModelV3 } from "ai/test";
 
 import * as prefLoader from "./preference/loader";
 import { getOpenAI } from "./v6";
@@ -55,9 +60,13 @@ const MODEL_CAPABILITY_MAP: Record<string, ModelCapability[]> = {
   "gemini-1.5-pro": ["genui", "tools", "vision", "streaming"],
   "gemini-1.5-flash": ["genui", "tools", "vision", "streaming"],
 
-  // Cerebras models (fast inference, limited structured output)
+  // Cerebras models (fast inference)
   "llama3.1-8b": ["tools", "streaming"],
   "llama3.1-70b": ["tools", "streaming"],
+
+  // Cerebras GPT-OSS models (fast inference, structured output support)
+  "gpt-oss-120b": ["genui", "tools", "streaming"],
+  "gpt-oss-20b": ["genui", "tools", "streaming"],
 
   // Default: assume basic capabilities
   default: ["streaming"],
@@ -112,6 +121,7 @@ const ENV_KEYS: Record<ModelRole, string> = {
   planner: "AI_MODEL_PLANNER",
   background: "AI_MODEL_BACKGROUND",
   voice: "AI_MODEL_VOICE",
+  classify: "AI_MODEL_CLASSIFY",
 };
 
 const ENV_KEYS_REF: Record<ModelRole, string> = {
@@ -120,6 +130,7 @@ const ENV_KEYS_REF: Record<ModelRole, string> = {
   planner: "AI_MODEL_REF_PLANNER",
   background: "AI_MODEL_REF_BACKGROUND",
   voice: "AI_MODEL_REF_VOICE",
+  classify: "AI_MODEL_REF_CLASSIFY",
 };
 
 const FALLBACK_REFS: Record<ModelRole, ModelRef> = {
@@ -128,6 +139,7 @@ const FALLBACK_REFS: Record<ModelRole, ModelRef> = {
   planner: parseModelRef("openai:gpt-4o").ref,
   background: parseModelRef("openai:gpt-4o-mini").ref,
   voice: parseModelRef("openai:gpt-4o-mini").ref,
+  classify: parseModelRef("cerebras:gpt-oss-120b").ref,
 };
 
 function firstEnv(...keys: string[]): string | null {
@@ -232,6 +244,58 @@ function resolveRefSync(role: ModelRole): ModelRef {
   return readEnvModelForRole(role) ?? FALLBACK_REFS[role];
 }
 
+function isDev(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
+
+function hasGatewayKey(): boolean {
+  const k1 = process.env.AI_GATEWAY_API_KEY;
+  if (k1 && k1.trim().length > 0) {
+    return true;
+  }
+  const k2 = process.env.OPENAI_API_KEY;
+  if (k2 && k2.trim().length > 0) {
+    return true;
+  }
+  return false;
+}
+
+function isMissingKeyError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const msg = error.message;
+  return (
+    msg.includes("ai_provider_api_key_missing") ||
+    msg.includes("AI_GATEWAY_API_KEY") ||
+    msg.includes("OPENAI_API_KEY")
+  );
+}
+
+function createDevFallbackModel(): LanguageModel {
+  const base = new MockLanguageModelV3({
+    doGenerate: async () => ({
+      finishReason: "stop",
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      content: [
+        {
+          type: "text",
+          text: "Mock Alfred (no API key). Set AI_GATEWAY_API_KEY or OPENAI_API_KEY to enable real responses.",
+        },
+      ],
+      warnings: [],
+    }),
+  });
+
+  // Ensure streamText gets a streaming-capable model surface.
+  return wrapLanguageModel({
+    model: base as unknown as Parameters<typeof wrapLanguageModel>[0]["model"],
+    middleware: simulateStreamingMiddleware() as unknown as Parameters<
+      typeof wrapLanguageModel
+    >[0]["middleware"],
+  }) as unknown as LanguageModel;
+}
+
 function buildSelection(ref: ModelRef): ModelSelection {
   const { provider, modelId } = parseModelRef(ref);
   const modelKey = toModelKey(ref);
@@ -264,7 +328,19 @@ function buildSelection(ref: ModelRef): ModelSelection {
     }
     default:
       // OpenAI, Anthropic, Google all use gateway/OpenAI provider
-      model = getOpenAI()(modelKey) as LanguageModel;
+      if (isDev() && !hasGatewayKey()) {
+        model = createDevFallbackModel();
+        break;
+      }
+      try {
+        model = getOpenAI()(modelKey) as LanguageModel;
+      } catch (error) {
+        if (isDev() && isMissingKeyError(error)) {
+          model = createDevFallbackModel();
+          break;
+        }
+        throw error;
+      }
       break;
   }
 
@@ -308,4 +384,22 @@ export function getModelForRole(
   }
 
   return buildSelection(resolveRefSync(role));
+}
+
+/**
+ * Get a model optimized for classification tasks.
+ * Uses Cerebras gpt-oss-120b by default for fast inference with structured output support.
+ * Falls back to environment configuration or user preferences if available.
+ */
+export function getClassificationModel(): ModelSelection;
+export function getClassificationModel(
+  opts: ModelSelectionOpts & { userId: string }
+): Promise<ModelSelection>;
+export function getClassificationModel(
+  opts?: ModelSelectionOpts
+): ModelSelection | Promise<ModelSelection>;
+export function getClassificationModel(
+  opts?: ModelSelectionOpts
+): ModelSelection | Promise<ModelSelection> {
+  return getModelForRole("classify", opts);
 }

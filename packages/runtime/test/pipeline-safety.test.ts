@@ -1,16 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { PipelineRunner } from "../src/pipeline/runner";
+import { PhaseRunner } from "../src/pipeline/runner";
 import type { Phase, PipelineState } from "../src/pipeline/types";
 
-describe("PipelineRunner", () => {
+describe("PhaseRunner", () => {
   it("detects infinite escalation loops", async () => {
     const mockState: PipelineState = {
       currentPhaseId: "start",
       context: new RuntimeContext(),
       history: [],
     };
-    const runner = new PipelineRunner(mockState);
+    const runner = new PhaseRunner(mockState);
 
     // Phase A escalates to Phase B
     const phaseA: Phase<any, any> = {

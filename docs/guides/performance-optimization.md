@@ -333,6 +333,9 @@ For API endpoints:
 # Load test concurrent workflows (dev)
 # (Run the web server with TEST_MODE=1 to use the test-session header bypass.)
 bun scripts/load-workflow.ts --base-url http://localhost:3000 --concurrency 25 --requests 200
+
+# Load test workflow streaming (dev)
+bun scripts/load-workflow-stream.ts --base-url http://localhost:3000 --concurrency 10 --requests 25
 ```
 
 ## Related Documentation

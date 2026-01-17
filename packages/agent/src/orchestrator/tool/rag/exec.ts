@@ -5,7 +5,7 @@
 
 import * as ragRepo from "@alfred/db/repo/rag";
 import { logger } from "@alfred/logger";
-import { ingest, retrieve } from "@alfred/rag";
+import { ingest, ingestWithOptions, retrieve } from "@alfred/rag";
 import type {
   RagDeleteInput,
   RagDeleteOutput,
@@ -23,11 +23,12 @@ const DEFAULT_LIMIT = 50;
 
 /**
  * Execute rag_ingest - Save documents to RAG for later retrieval
+ * Supports optional imageUrl for multimodal embedding via Qwen provider
  */
 export async function executeIngest(
   input: RagIngestInput
 ): Promise<RagIngestOutput> {
-  const { source, content, enrichGraph } = input;
+  const { source, content, imageUrl, enrichGraph } = input;
 
   // Set env var for graph enrichment if requested
   const originalEnrichGraph = process.env.RAG_ENRICH_GRAPH;
@@ -38,14 +39,38 @@ export async function executeIngest(
   try {
     // Track progress for large documents
     let chunksCreated = 0;
-    const documentId = await ingest(source, content, (processed, total) => {
-      chunksCreated = total;
-      logger.debug("rag_ingest_progress", {
+    let documentId: string;
+
+    // Use ingestWithOptions for multimodal support when imageUrl is provided
+    if (imageUrl) {
+      documentId = await ingestWithOptions({
         source,
-        processed,
-        total,
+        content,
+        imageUrl,
+        onProgress: (processed: number, total: number) => {
+          chunksCreated = total;
+          logger.debug("rag_ingest_progress", {
+            source,
+            processed,
+            total,
+            multimodal: true,
+          });
+        },
       });
-    });
+      logger.info("rag_ingest_multimodal", {
+        source,
+        imageUrl: imageUrl.slice(0, 100),
+      });
+    } else {
+      documentId = await ingest(source, content, (processed, total) => {
+        chunksCreated = total;
+        logger.debug("rag_ingest_progress", {
+          source,
+          processed,
+          total,
+        });
+      });
+    }
 
     // Get actual chunk count from the database
     const chunks = await ragRepo.getChunks(documentId);
@@ -55,6 +80,7 @@ export async function executeIngest(
       documentId,
       source,
       chunks: chunksCreated,
+      multimodal: Boolean(imageUrl),
     });
 
     return {

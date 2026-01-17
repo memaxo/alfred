@@ -6,6 +6,7 @@
 
 import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
+import { addPollingWithFallback, type DataMode } from "./mode";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -153,7 +154,7 @@ export type MetricsSubscriptionOptions = {
   manager: SubscriptionManager;
   store: MetricsStore;
   pollingInterval?: number;
-  useMockData?: boolean;
+  mode?: DataMode;
 };
 
 export function setupMetricsSubscription(
@@ -163,95 +164,91 @@ export function setupMetricsSubscription(
     manager,
     store,
     pollingInterval = 2000,
-    useMockData = true,
+    mode,
   } = options;
 
   let previousState: MetricsState | undefined;
 
-  if (useMockData) {
-    manager.addPolling({
-      id: "metrics",
-      fetch: () => {
-        const state = mockMetricsState(previousState);
-        previousState = state;
-        return Promise.resolve(state);
-      },
-      onData: (state) => store.update(state),
-      onError: (_error) => {},
-      interval: pollingInterval,
-      immediate: true,
-    });
-  } else {
-    manager.addPolling({
-      id: "metrics",
-      fetch: async () => {
-        const client = getApiClient();
-        const result = await client.getAdminStats();
-        if (result.error || !result.data) {
-          const state = mockMetricsState(previousState);
-          previousState = state;
-          return state;
+  addPollingWithFallback({
+    manager,
+    id: "metrics",
+    mode,
+    interval: pollingInterval,
+    immediate: true,
+    maxFailures: 3,
+    fetchMock: async () => {
+      const state = mockMetricsState(previousState);
+      previousState = state;
+      return state;
+    },
+    fetchLive: async () => {
+      const client = getApiClient();
+      const result = await client.getAdminStats();
+      if (result.error || !result.data) {
+        const code = result.error?.code;
+        const msg = result.error?.message ?? "";
+        const isAuth = code === "HTTP_ERROR" && /HTTP (401|403)\b/.test(msg);
+        if (code === "NETWORK_ERROR" || isAuth) {
+          throw new Error("tui_live_unavailable");
         }
+        throw new Error("tui_metrics_fetch_failed");
+      }
 
-        const systemRequests = result.data.workflows.active;
-        const baseLatency =
-          previousState?.latencyHistory.at(-1) ??
-          (systemRequests > 0 ? 120 : 40);
-        const nextLatency = baseLatency * (0.9 + Math.random() * 0.2);
+      const systemRequests = result.data.workflows.active;
+      const baseLatency =
+        previousState?.latencyHistory.at(-1) ?? (systemRequests > 0 ? 120 : 40);
+      const nextLatency = baseLatency * (0.9 + Math.random() * 0.2);
 
-        const nextRequests =
-          (previousState?.requestHistory.at(-1) ?? 0) *
-            (0.9 + Math.random() * 0.2) +
-          systemRequests;
+      const nextRequests =
+        (previousState?.requestHistory.at(-1) ?? 0) *
+          (0.9 + Math.random() * 0.2) +
+        systemRequests;
 
-        const state: MetricsState = {
-          system: {
-            requestsPerMinute: systemRequests,
-            errorsPerMinute: 0,
-            activeConnections: 0,
-            memoryUsageMb: 0,
-            cpuPercent: 0,
+      const state: MetricsState = {
+        system: {
+          requestsPerMinute: systemRequests,
+          errorsPerMinute: 0,
+          activeConnections: 0,
+          memoryUsageMb: 0,
+          cpuPercent: 0,
+        },
+        routers: [
+          {
+            name: "workflow",
+            requests: result.data.workflows.active,
+            errors: 0,
+            latency: { p50: 0, p99: 0, avg: 0 },
           },
-          routers: [
-            {
-              name: "workflow",
-              requests: result.data.workflows.active,
-              errors: 0,
-              latency: { p50: 0, p99: 0, avg: 0 },
-            },
-            {
-              name: "voice",
-              requests: result.data.voice.activeSessions,
-              errors: 0,
-              latency: { p50: 0, p99: 0, avg: 0 },
-            },
-            {
-              name: "cognitive",
-              requests: result.data.cognitive.phase === "idle" ? 0 : 1,
-              errors: 0,
-              latency: { p50: 0, p99: 0, avg: 0 },
-            },
-          ],
-          latencyHistory: [
-            ...(previousState?.latencyHistory ?? []).slice(-19),
-            nextLatency,
-          ],
-          requestHistory: [
-            ...(previousState?.requestHistory ?? []).slice(-19),
-            nextRequests,
-          ],
-          timestamp: Date.now(),
-        };
+          {
+            name: "voice",
+            requests: result.data.voice.activeSessions,
+            errors: 0,
+            latency: { p50: 0, p99: 0, avg: 0 },
+          },
+          {
+            name: "cognitive",
+            requests: result.data.cognitive.phase === "idle" ? 0 : 1,
+            errors: 0,
+            latency: { p50: 0, p99: 0, avg: 0 },
+          },
+        ],
+        latencyHistory: [
+          ...(previousState?.latencyHistory ?? []).slice(-19),
+          nextLatency,
+        ],
+        requestHistory: [
+          ...(previousState?.requestHistory ?? []).slice(-19),
+          nextRequests,
+        ],
+        timestamp: Date.now(),
+      };
 
-        previousState = state;
-        return state;
-      },
-      onData: (state) => store.update(state),
-      onError: (_error) => {},
-      interval: pollingInterval,
-      immediate: true,
-    });
-  }
+      previousState = state;
+      return state;
+    },
+    onData: (state) => store.update(state),
+    onError: (_error) => {},
+  });
 }
 
 // ─── Sparkline Helpers ───────────────────────────────────────────────────────

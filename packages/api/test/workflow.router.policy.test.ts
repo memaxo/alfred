@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import type { Obligation, WorkflowEvent } from "@alfred/type";
+import type { Obligation } from "@alfred/type";
+import type { PipelineEvent } from "@alfred/pipeline";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import "./utils/mock-metrics";
 import { toObservable } from "./utils/stream";
@@ -78,7 +79,7 @@ describe("workflow router policy obligations", () => {
     ).rejects.toThrow(/obligation_required/i);
   });
 
-  it("rejects stream when biometric obligation present (PRECONDITION_FAILED)", async () => {
+  it("suspends pipeline stream when biometric obligation present", async () => {
     evaluateMock.mockResolvedValue({
       allow: true,
       obligations: [bioObligation],
@@ -92,14 +93,13 @@ describe("workflow router policy obligations", () => {
     });
 
     const sub: any = toObservable(
-      caller.workflow.stream({ requirement: "do X", auto: "medium" })
+      caller.workflow.streamPipeline({ requirement: "do X", auto: "medium" })
     );
     await new Promise<void>((resolve, reject) => {
       const dispose = sub.subscribe({
-        next: (event: WorkflowEvent) => {
+        next: (event: PipelineEvent) => {
           try {
-            expect(event.type).toBe("obligation");
-            expect(event.obligations).toEqual([bioObligation]);
+            expect(event.type).toBe("pipeline:suspend");
             dispose();
             resolve();
           } catch (error) {

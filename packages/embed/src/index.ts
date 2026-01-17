@@ -3,10 +3,45 @@
  * Provides embed() and embedMany() functions matching @alfred/rag interface
  */
 
-import { EmbedPool } from "./pool";
+import { EmbedPool } from "./pool.js";
+import type { QueueStats } from "./queue.js";
 
-export { EmbedPool } from "./pool";
-export { EmbedProcess } from "./process";
+export { EmbedPool, type PoolConfig } from "./pool.js";
+export { EmbedProcess } from "./process.js";
+export {
+  EmbedQueue,
+  type QueueConfig,
+  type QueuedRequest,
+  type QueueStats,
+} from "./queue.js";
+
+// Configuration
+export {
+  type FullEmbedConfig,
+  getEmbedConfig,
+  validateConfig,
+} from "./config.js";
+
+// Metrics
+export {
+  embedBatchSize,
+  embedBatchesProcessed,
+  embedProcessingMs,
+  embedQueueCapacity,
+  embedQueueLength,
+  embedQueueWaitMs,
+  embedRequestsDropped,
+  embedRequestsProcessed,
+  embedRequestsQueued,
+  embedRetries,
+  embedWorkersActive,
+  embedWorkersBusy,
+  embedWorkersError,
+  getEmbedMetricsRegistry,
+  recordBatch,
+  updateQueueMetrics,
+  updateWorkerMetrics,
+} from "./metrics.js";
 // Int8 quantization for 4x storage reduction with 97%+ accuracy retention
 export {
   computeScale,
@@ -21,38 +56,68 @@ export {
   quantizeToInt8,
   serializeQuantized,
   storageRatio,
-} from "./quantize";
+} from "./quantize.js";
 export type {
   EmbedConfig,
   EmbedRequest,
   EmbedResponse,
   ProcessHealth,
-} from "./types";
+} from "./types.js";
 
-// Embedding dimension for KaLM-Embedding-Gemma3-12B-2511
-// Using 1024 dimensions via Matryoshka Representation Learning (MRL)
-// Retains 93-95% of full model quality while enabling HNSW indexing
-export const EMBEDDING_DIM = 1024;
+// Embedding registry for heterogeneous model support
+export {
+  type EmbeddingCapabilities,
+  type EmbeddingInput,
+  type EmbeddingModelConfig,
+  type EmbeddingProvider,
+  type EmbeddingResult,
+  EmbeddingRegistry,
+  getRegistry,
+  MODEL_CONFIGS,
+  MODEL_IDS,
+  type ModelId,
+  resetRegistry,
+} from "./registry.js";
+
+// Embedding providers
+export {
+  createKalmProvider,
+  createQwenProvider,
+  KalmProvider,
+  QwenProvider,
+} from "./providers/index.js";
+
+// Embedding system initialization
+export {
+  type EmbedInitOptions,
+  getDefaultModelId,
+  initEmbedding,
+  isEmbeddingInitialized,
+  shutdownEmbedding,
+} from "./init.js";
+
+export { EMBEDDING_DIM } from "./dim.js";
 
 // Singleton pool instance
 let pool: EmbedPool | null = null;
 
 /**
+ * Get or create the singleton pool instance
+ */
+async function getPool(): Promise<EmbedPool> {
+  if (!pool) {
+    pool = EmbedPool.fromEnv();
+    await pool.initialize();
+  }
+  return pool;
+}
+
+/**
  * Embed a single text and return 1024-dimensional vector (MRL truncated from 3840)
  */
 export async function embed(text: string): Promise<number[]> {
-  if (!pool) {
-    pool = new EmbedPool({
-      modelName:
-        process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
-      // biome-ignore lint/suspicious/noExplicitAny: Environment variable type casting
-      device: (process.env.EMBED_DEVICE as any) ?? "auto",
-      poolSize: Number(process.env.EMBED_POOL_SIZE ?? 2),
-    });
-    await pool.initialize();
-  }
-
-  const embeddings = await pool.embed([text]);
+  const p = await getPool();
+  const embeddings = await p.embed([text]);
   const embedding = embeddings[0];
 
   if (!embedding) {
@@ -66,26 +131,17 @@ export async function embed(text: string): Promise<number[]> {
  * Embed multiple texts and return array of 1024-dimensional vectors (MRL truncated from 3840)
  */
 export async function embedMany(texts: string[]): Promise<number[][]> {
-  if (!pool) {
-    pool = new EmbedPool({
-      modelName:
-        process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
-      // biome-ignore lint/suspicious/noExplicitAny: Environment variable type casting
-      device: (process.env.EMBED_DEVICE as any) ?? "auto",
-      poolSize: Number(process.env.EMBED_POOL_SIZE ?? 2),
-    });
-    await pool.initialize();
-  }
-
-  return pool.embed(texts);
+  const p = await getPool();
+  return p.embed(texts);
 }
 
 /**
  * Shutdown the embedding pool (cleanup)
+ * @param graceful If true, waits for in-flight requests (default: true)
  */
-export async function shutdown(): Promise<void> {
+export async function shutdown(graceful = true): Promise<void> {
   if (pool) {
-    await pool.shutdown();
+    await pool.shutdown(graceful);
     pool = null;
   }
 }
@@ -98,4 +154,24 @@ export function getHealth(): unknown[] {
     return [];
   }
   return pool.getHealth();
+}
+
+/**
+ * Get queue statistics
+ */
+export function getQueueStats(): QueueStats | null {
+  if (!pool) {
+    return null;
+  }
+  return pool.getQueueStats();
+}
+
+/**
+ * Check if pool has capacity for more requests
+ */
+export function hasCapacity(): boolean {
+  if (!pool) {
+    return true;
+  }
+  return pool.hasCapacity();
 }

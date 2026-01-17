@@ -5,7 +5,13 @@ import {
   type KnowledgeEntry,
   toKnowledge,
 } from "@alfred/knowledge/extractor";
-import { chunk, EMBEDDING_DIM, embed, embedMany } from "@alfred/rag";
+import {
+  chunk,
+  EMBEDDING_DIM,
+  embed,
+  embedMany,
+  getCurrentModelId,
+} from "@alfred/rag";
 
 /**
  * RAG Ingestion Utility
@@ -59,6 +65,9 @@ export async function ingest(
     }
   }
 
+  // Get current model ID to track which model generated these embeddings
+  const modelId = getCurrentModelId();
+
   const chunks = pieces.map((piece, index) => ({
     content: piece,
     order: index,
@@ -66,6 +75,7 @@ export async function ingest(
       allEmbeddings[index]?.length === EMBEDDING_DIM
         ? allEmbeddings[index]
         : undefined,
+    embeddingModelId: modelId,
     metadata: {
       source,
     },
@@ -116,10 +126,14 @@ export async function ingestCodeFiles(
     return null;
   }
 
+  // Get current model ID to track which model generated these embeddings
+  const modelId = getCurrentModelId();
+
   const chunks: Array<{
     content: string;
     order: number;
     embedding: number[];
+    embeddingModelId: string;
     metadata: Record<string, unknown>;
   }> = [];
 
@@ -153,6 +167,7 @@ export async function ingestCodeFiles(
       content: chunkContent,
       order: order++,
       embedding: vector,
+      embeddingModelId: modelId,
       metadata,
     });
   }

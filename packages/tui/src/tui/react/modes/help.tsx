@@ -109,6 +109,10 @@ export function HelpMode({ isOpen, onClose }: HelpModeProps) {
             content="  ALFRED_TUI_HEADLESS=true env alternative"
             style={{ fg: "#8A9199" }}
           />
+          <text
+            content="  ALFRED_TUI_MOCK=1 force mock data (offline)"
+            style={{ fg: "#8A9199" }}
+          />
         </scrollbox>
       </box>
 

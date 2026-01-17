@@ -62,6 +62,7 @@ export type PipelineInput = {
   requirement: string;
   workspace: string;
   userId: string;
+  authz?: string;
   linear?: {
     sessionId: string;
     space: string;

@@ -158,6 +158,10 @@ export function isSerializable(value: unknown): value is SerializableValue {
  * Convert complex types (Map, Set, Date) to JSON-safe plain objects.
  */
 export function toSerializable(value: unknown): SerializableValue {
+  // JSON cannot represent undefined; normalize to null
+  if (typeof value === "undefined") {
+    return null;
+  }
   if (value === null || typeof value !== "object") {
     return value as SerializableValue;
   }

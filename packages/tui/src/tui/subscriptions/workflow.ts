@@ -6,6 +6,7 @@
 
 import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
+import { addPollingWithFallback, type DataMode } from "./mode";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -161,101 +162,100 @@ export class WorkflowStore {
 export type WorkflowSubscriptionOptions = {
   manager: SubscriptionManager;
   store: WorkflowStore;
-  useMockData?: boolean;
+  mode?: DataMode;
 };
 
 export function setupWorkflowSubscription(
   options: WorkflowSubscriptionOptions
 ): void {
-  const { manager, store, useMockData = true } = options;
+  const { manager, store, mode } = options;
 
-  if (useMockData) {
-    // Use polling with mock data for demo
-    manager.addPolling({
-      id: "workflow",
-      fetch: async () => mockWorkflowEvent(),
-      onData: (event) => store.handleEvent(event),
-      onError: (_error) => {},
-      interval: 5000, // Less frequent for workflows
-      immediate: false, // Don't trigger immediately
-    });
-  } else {
-    const prevStatusByRun = new Map<string, WorkflowStatus>();
-    manager.addPolling({
-      id: "workflow",
-      fetch: async () => {
-        const client = getApiClient();
-        const result = await client.listWorkflows(25);
-        if (result.error || !result.data) {
-          return [mockWorkflowEvent()];
+  const prevStatusByRun = new Map<string, WorkflowStatus>();
+
+  addPollingWithFallback({
+    manager,
+    id: "workflow",
+    mode,
+    interval: 5000,
+    immediate: false,
+    maxFailures: 3,
+    fetchMock: async () => [mockWorkflowEvent()],
+    fetchLive: async () => {
+      const client = getApiClient();
+      const result = await client.listWorkflows(25);
+      if (result.error || !result.data) {
+        const code = result.error?.code;
+        const msg = result.error?.message ?? "";
+        const isAuth = code === "HTTP_ERROR" && /HTTP (401|403)\b/.test(msg);
+        if (code === "NETWORK_ERROR" || isAuth) {
+          throw new Error("tui_live_unavailable");
         }
+        throw new Error("tui_workflow_fetch_failed");
+      }
 
-        const now = Date.now();
-        const events: WorkflowEvent[] = [];
-        for (const run of result.data.runs) {
-          const statusRaw = run.status;
-          const status: WorkflowStatus =
-            statusRaw === "pending" ||
-            statusRaw === "planning" ||
-            statusRaw === "executing" ||
-            statusRaw === "completed" ||
-            statusRaw === "failed" ||
-            statusRaw === "cancelled"
-              ? statusRaw
-              : "pending";
+      const now = Date.now();
+      const events: WorkflowEvent[] = [];
+      for (const run of result.data.runs) {
+        const statusRaw = run.status;
+        const status: WorkflowStatus =
+          statusRaw === "pending" ||
+          statusRaw === "planning" ||
+          statusRaw === "executing" ||
+          statusRaw === "completed" ||
+          statusRaw === "failed" ||
+          statusRaw === "cancelled"
+            ? statusRaw
+            : "pending";
 
-          const prev = prevStatusByRun.get(run.id);
-          prevStatusByRun.set(run.id, status);
+        const prev = prevStatusByRun.get(run.id);
+        prevStatusByRun.set(run.id, status);
 
-          const eventType: WorkflowEvent["type"] =
-            status === "completed"
-              ? "completed"
-              : status === "failed"
-                ? "failed"
-                : status === "cancelled"
-                  ? "cancelled"
-                  : prev
-                    ? "progress"
-                    : "started";
+        const eventType: WorkflowEvent["type"] =
+          status === "completed"
+            ? "completed"
+            : status === "failed"
+              ? "failed"
+              : status === "cancelled"
+                ? "cancelled"
+                : prev
+                  ? "progress"
+                  : "started";
 
-          const startedAt = Number.isFinite(Date.parse(run.createdAt))
-            ? Date.parse(run.createdAt)
-            : undefined;
+        const startedAt = Number.isFinite(Date.parse(run.createdAt))
+          ? Date.parse(run.createdAt)
+          : undefined;
 
-          const progress =
-            status === "completed"
-              ? 1
-              : status === "executing"
-                ? 0.5
-                : status === "planning"
-                  ? 0.25
-                  : 0;
+        const progress =
+          status === "completed"
+            ? 1
+            : status === "executing"
+              ? 0.5
+              : status === "planning"
+                ? 0.25
+                : 0;
 
-          events.push({
-            type: eventType,
-            workflow: {
-              id: run.id,
-              name: run.requirement,
-              status,
-              progress,
-              startedAt,
-            },
-            timestamp: now,
-          });
-        }
+        events.push({
+          type: eventType,
+          workflow: {
+            id: run.id,
+            name: run.requirement,
+            status,
+            progress,
+            startedAt,
+          },
+          timestamp: now,
+        });
+      }
 
-        return events.length > 0 ? events : [mockWorkflowEvent()];
-      },
-      onData: (events) => {
-        for (const event of events) {
-          store.handleEvent(event);
-        }
-      },
-      onError: (_error) => {},
-      interval: 5000,
-      immediate: false,
-    });
-  }
+      return events.length > 0 ? events : [mockWorkflowEvent()];
+    },
+    onData: (events) => {
+      for (const event of events) {
+        store.handleEvent(event);
+      }
+    },
+    onError: (_error) => {},
+  });
 }
 
 // ─── Factory ─────────────────────────────────────────────────────────────────

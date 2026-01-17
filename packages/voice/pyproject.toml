@@ -1,7 +1,7 @@
 [project]
 name = "alfred-voice"
-version = "0.1.0"
-description = "Voice models dependencies for ALFRED (Faster-Whisper STT, Piper TTS)"
+version = "0.2.0"
+description = "Voice models dependencies for ALFRED (Nemotron Speech STT, Maya1 TTS)"
 requires-python = ">=3.10,<3.13"
 dependencies = [
     "nemo_toolkit[asr]>=1.23.0",

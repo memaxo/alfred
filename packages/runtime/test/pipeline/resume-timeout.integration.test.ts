@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { PhaseTimeoutError, PipelineRunner } from "../../src/pipeline/runner";
+import { PhaseRunner, PhaseTimeoutError } from "../../src/pipeline/runner";
 import type { Phase, PipelineState } from "../../src/pipeline/types";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -11,7 +11,7 @@ const createState = (phaseId: string): PipelineState => ({
   context: new RuntimeContext(),
 });
 
-describe("PipelineRunner resume integration", () => {
+describe("PhaseRunner resume integration", () => {
   it("enforces timeouts when resuming mid-pipeline", async () => {
     const state = createState("plan");
     state.history.push({
@@ -38,7 +38,7 @@ describe("PipelineRunner resume integration", () => {
       },
     };
 
-    const runner = new PipelineRunner(state, {
+    const runner = new PhaseRunner(state, {
       phaseTimeouts: { plan: 10 },
     })
       .register(scanPhase)
@@ -83,7 +83,7 @@ describe("PipelineRunner resume integration", () => {
       },
     };
 
-    const runner = new PipelineRunner(state, {
+    const runner = new PhaseRunner(state, {
       phaseTimeouts: { plan: 50, report: 50 },
     })
       .register(planPhase)

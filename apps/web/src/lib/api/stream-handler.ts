@@ -11,17 +11,121 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { classifyAiSdkError } from "@alfred/type/aierror";
-import { uiMessageSchema } from "@alfred/type/stream.zod";
+import { routerMessageSchema, uiMessageSchema } from "@alfred/type/stream.zod";
 import { isTextPart } from "@alfred/ui/chat/parts";
 import { consumeStream, generateId, streamText, type UIMessage } from "ai";
 import { z } from "zod";
 
 const requestSchema = z
   .object({
-    messages: z.array(uiMessageSchema).min(1),
+    // Accept unknown[] for compatibility with clients that haven't fully
+    // migrated to AI SDK v6 UIMessage yet (e.g. legacy {role, content} messages).
+    // We normalize to UIMessage below.
+    messages: z.array(z.unknown()).min(1),
     conversationId: z.string().min(1).optional(),
   })
   .passthrough();
+
+type NormalizedMessagesResult =
+  | { ok: true; messages: UIMessage[] }
+  | { ok: false; issues: z.ZodIssue[] };
+
+function normalizeUiRole(role: unknown): "assistant" | "system" | "user" | null {
+  if (role === "tool") {
+    // UIMessage roles do not include "tool"; represent legacy tool messages as assistant text.
+    return "assistant";
+  }
+  if (role === "user" || role === "assistant" || role === "system") {
+    return role;
+  }
+  return null;
+}
+
+function normalizeUiMessages(input: unknown[]): NormalizedMessagesResult {
+  const out: UIMessage[] = [];
+  const issues: z.ZodIssue[] = [];
+
+  for (const raw of input) {
+    const direct = uiMessageSchema.safeParse(raw);
+    if (direct.success) {
+      out.push(direct.data as UIMessage);
+      continue;
+    }
+
+    // Legacy router format: { role, content }
+    const legacy = routerMessageSchema.safeParse(raw);
+    if (legacy.success) {
+      const role = normalizeUiRole(legacy.data.role);
+      if (!role) {
+        issues.push(...direct.error.issues);
+        continue;
+      }
+      out.push({
+        id: generateId(),
+        role,
+        parts: [{ type: "text", text: legacy.data.content }],
+      });
+      continue;
+    }
+
+    // Common client shape: { role, parts?, content?, id? }
+    if (typeof raw === "object" && raw !== null) {
+      const msg = raw as Record<string, unknown>;
+      const role = msg.role;
+      const id = typeof msg.id === "string" ? msg.id : generateId();
+
+      // Allow { role, content: string } as fallback.
+      const content = msg.content;
+      if (typeof role === "string" && typeof content === "string") {
+        const normalizedRole = normalizeUiRole(role);
+        if (!normalizedRole) {
+          issues.push(...direct.error.issues);
+          continue;
+        }
+        const candidate = uiMessageSchema.safeParse({
+          id,
+          role: normalizedRole,
+          parts: [{ type: "text", text: content }],
+          metadata: msg.metadata,
+        });
+        if (candidate.success) {
+          out.push(candidate.data as UIMessage);
+          continue;
+        }
+        issues.push(...candidate.error.issues);
+        continue;
+      }
+
+      // Allow { role, parts } without id.
+      if (typeof role === "string" && Array.isArray(msg.parts)) {
+        const normalizedRole = normalizeUiRole(role);
+        if (!normalizedRole) {
+          issues.push(...direct.error.issues);
+          continue;
+        }
+        const candidate = uiMessageSchema.safeParse({
+          id,
+          role: normalizedRole,
+          parts: msg.parts,
+          metadata: msg.metadata,
+        });
+        if (candidate.success) {
+          out.push(candidate.data as UIMessage);
+          continue;
+        }
+        issues.push(...candidate.error.issues);
+        continue;
+      }
+    }
+
+    issues.push(...direct.error.issues);
+  }
+
+  if (issues.length > 0) {
+    return { ok: false, issues };
+  }
+  return { ok: true, messages: out };
+}
 
 type StreamArgs = Parameters<typeof streamText>[0];
 type AgentDefaults = Pick<
@@ -93,7 +197,24 @@ export async function handleStreamRequest(
       );
     }
 
-    const messages = parsed.data.messages as UIMessage[];
+    const normalized = normalizeUiMessages(parsed.data.messages);
+    if (!normalized.ok) {
+      return new Response(
+        JSON.stringify({
+          error: "invalid_request",
+          issues: normalized.issues,
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
+    const messages = normalized.messages;
     const persistedMessageIds = new Set<string>();
 
     const session = await auth.api.getSession({ headers: request.headers });
@@ -211,6 +332,8 @@ export async function handleStreamRequest(
 
     const defaults = getDefaults();
     const tools = defaults.tools ?? {};
+    const stopWhen = defaults.stopWhen;
+    const prepareStep = defaults.prepareStep;
     let mergedTools = tools;
 
     if (userId) {
@@ -313,13 +436,15 @@ export async function handleStreamRequest(
           }
         : {};
 
+    const abortSignal = request.signal.aborted ? undefined : request.signal;
     const result = streamText({
-      ...defaults,
       model: selection.model,
       tools: mergedTools,
+      stopWhen,
+      prepareStep,
       ...telemetry,
       messages: modelMessages,
-      abortSignal: request.signal,
+      abortSignal,
       system: combinedSystem,
       onFinish: async () => {
         await closeMcp?.();

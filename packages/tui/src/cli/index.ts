@@ -175,6 +175,9 @@ Keyboard Shortcuts:
   ?           Show help
   Tab         Next panel
   Shift+Tab   Previous panel
+
+Environment:
+  ALFRED_TUI_MOCK=1  Force mock data (offline)
 `.trim()}\n`
   );
 }

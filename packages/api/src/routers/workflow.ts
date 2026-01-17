@@ -1,4 +1,5 @@
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import type { PipelineEvent } from "@alfred/pipeline";
 import {
   codexLinearActivitiesDroppedTotal,
   codexLinearActivitiesEmittedTotal,
@@ -13,7 +14,7 @@ import type {
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
-import type { Obligation, WorkflowEvent } from "@alfred/type";
+import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { and, eq } from "drizzle-orm";
@@ -24,7 +25,6 @@ import { triggerPreferenceRefresh } from "../preference/refresh";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { enforceWorkflowPlanPolicy } from "../workflow/access";
-import { createWorkflowSuspension } from "../workflow/suspension";
 
 const requiresBiometric = (obligations: Obligation[]): boolean =>
   obligations.some(
@@ -127,6 +127,16 @@ const workflowInputSchema = z
     authzLinear: z.string().optional(),
   })
   .passthrough();
+
+const linearInputSchema = z.object({
+  space: z.string().min(1),
+  teamId: z.string().optional(),
+  sessionId: z.string().optional(),
+  issueId: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  issueUrl: z.string().optional(),
+});
 
 export const workflowRouter = router({
   start: authedProcedure
@@ -322,11 +332,11 @@ export const workflowRouter = router({
       }
     }),
 
-  stream: authedProcedure
+  streamPipeline: authedProcedure
     .use(rateLimit)
     .input(workflowInputSchema)
     .subscription(({ input, ctx }) =>
-      observable<WorkflowEvent>((emit) => {
+      observable<PipelineEvent>((emit) => {
         const session = ctx.session;
         if (!session?.user?.id) {
           emit.error(
@@ -337,91 +347,10 @@ export const workflowRouter = router({
 
         let cleanup: (() => void) | undefined;
 
-        const startWorkflow = async (options: {
-          obligations: Obligation[];
-          runId?: string;
-        }) => {
-          await initWorkflowMetrics();
-          const [
-            { orchestrateWorkflowStream },
-            { ensureObligations },
-            { workflowInput },
-          ] = await Promise.all([
-            import("@alfred/agent/workflow/orchestrator"),
-            import("@alfred/agent/workflow/services"),
-            import("@alfred/agent/workflow/schema"),
-          ]);
+        const startPipeline = async () => {
+          const abortController = new AbortController();
+          const runId = input.runId ?? crypto.randomUUID();
 
-          const callbacks = {
-            triggerPreferenceRefresh,
-            ensureObligations: (ctx: unknown) => {
-              ensureObligations(
-                ctx as { policy?: { obligations: Obligation[] } }
-              );
-            },
-            context: { ...ctx, policy: { obligations: options.obligations } },
-            emitError: (error: unknown) => {
-              emit.error(toTRPCError(error, "workflow_execution_error"));
-            },
-            emitNext: (event: WorkflowEvent) => emit.next(event),
-            emitComplete: () => emit.complete(),
-            // biome-ignore lint/suspicious/noExplicitAny: Internal callback compatibility
-          } as any;
-
-          const payload = options.runId
-            ? // biome-ignore lint/suspicious/noExplicitAny: Payload contains defaults from Zod
-              (workflowInput.parse({ ...input, runId: options.runId }) as any)
-            : // biome-ignore lint/suspicious/noExplicitAny: Payload contains defaults from Zod
-              (workflowInput.parse(input) as any);
-          cleanup = await orchestrateWorkflowStream(
-            payload,
-            session,
-            callbacks
-          );
-        };
-
-        const suspension = createWorkflowSuspension({
-          sessionUserId: session.user.id,
-          // biome-ignore lint/suspicious/noExplicitAny: Input schema compatibility
-          input: input as any,
-          transport: "trpc",
-          auditContext: {
-            auto: input.auto ?? "low",
-            mode: input.mode ?? "sequential",
-          },
-          // biome-ignore lint/suspicious/useAwait: Emit is called asynchronously but doesn't need await here
-          emitObligation: async ({ runId, obligations, resumeEvents }) => {
-            emit.next({
-              _: "obligation",
-              runId,
-              obligations,
-              resumeEvents,
-            } as WorkflowEvent);
-          },
-          policyCheck: async () => {
-            const { obligations } = await enforceWorkflowPlanPolicy({
-              session,
-              input: {
-                ...input,
-                auto: input.auto ?? "low",
-                mode:
-                  (input.mode as
-                    | "sequential"
-                    | "parallel"
-                    | null
-                    | undefined) ?? "sequential",
-              } as WorkflowInputPayload,
-            });
-            return obligations;
-          },
-          startWorkflow: ({ runId, obligations }) =>
-            startWorkflow({ runId, obligations }),
-          onError: (error, _info) => {
-            emit.error(toTRPCError(error, "workflow_suspension_error"));
-          },
-        });
-
-        const startStream = async () => {
           try {
             const { obligations } = await enforceWorkflowPlanPolicy({
               session,
@@ -438,21 +367,177 @@ export const workflowRouter = router({
             });
 
             if (obligations.length > 0) {
-              await suspension.suspend(obligations);
+              emit.next({
+                type: "pipeline:suspend",
+                reason: "policy_obligation",
+                timestamp: Date.now(),
+              });
+              emit.complete();
               return;
             }
 
-            await startWorkflow({ obligations });
+            const [
+              { PipelineRunner, registerDefaultStages },
+              {
+                CheckpointObserver,
+                CostCleanupObserver,
+                MetricsObserver,
+                PipelineEventQueueObserver,
+                LinearSyncObserver,
+              },
+              { registerRunHandle, unregisterRunHandle },
+              { ensureLinearTicket },
+              { bootstrapLinearSession },
+              { PostgresCheckpointStorage },
+            ] = await Promise.all([
+              import("@alfred/pipeline"),
+              import("@alfred/pipeline/observers"),
+              import("@alfred/agent/workflow/session-recovery"),
+              import("@alfred/agent/workflow/linear"),
+              import("@alfred/runtime/workflow/linear"),
+              import("@alfred/db/repo/workflow"),
+            ]);
+
+            const rawInput = input as Record<string, unknown>;
+            const parsedLinear = linearInputSchema.safeParse(input.linear);
+            let normalizedLinear = parsedLinear.success
+              ? parsedLinear.data
+              : undefined;
+
+            if (normalizedLinear && input.authzLinear) {
+              try {
+                const ensured = await ensureLinearTicket({
+                  linear: normalizedLinear,
+                  authzLinear: input.authzLinear,
+                  requirement: input.requirement,
+                });
+                normalizedLinear = ensured.linear;
+              } catch (error) {
+                logger.warn("pipeline_stream_linear_ticket_failed", {
+                  runId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            }
+
+            if (normalizedLinear && input.authzLinear) {
+              await bootstrapLinearSession({
+                runId,
+                requirement: input.requirement,
+                linear: normalizedLinear,
+                authz: input.authzLinear,
+              });
+            }
+
+            const toolgraph = rawInput.toolgraph;
+            const maxParallel =
+              typeof toolgraph === "object" &&
+              toolgraph !== null &&
+              typeof (toolgraph as { maxParallel?: unknown }).maxParallel ===
+                "number"
+                ? (toolgraph as { maxParallel: number }).maxParallel
+                : 4;
+
+            const runner = new PipelineRunner({
+              maxParallel: input.mode === "parallel" ? maxParallel : 1,
+              enableLearning: true,
+              enableLinearSync: Boolean(normalizedLinear?.sessionId),
+              linearSyncInterval: 30_000,
+            });
+            registerDefaultStages(runner);
+
+            const queueObserver = new PipelineEventQueueObserver();
+            runner.addObserver(queueObserver);
+            runner.addObserver(new MetricsObserver());
+            runner.addObserver(new CostCleanupObserver());
+            runner.addObserver(
+              new CheckpointObserver(new PostgresCheckpointStorage())
+            );
+
+            if (normalizedLinear?.sessionId && input.authzLinear) {
+              runner.addObserver(
+                new LinearSyncObserver({
+                  syncIntervalMs: 30_000,
+                  issueId:
+                    normalizedLinear.issueId ?? normalizedLinear.sessionId,
+                  authz: input.authzLinear,
+                })
+              );
+            }
+
+            await registerRunHandle(runId, {
+              resume: async () => {},
+              suspend: async () => {
+                abortController.abort();
+              },
+              cancel: async () => {
+                abortController.abort();
+              },
+              abortController,
+            });
+
+            cleanup = () => {
+              abortController.abort();
+              queueObserver.close();
+              void unregisterRunHandle(runId).catch(() => {});
+            };
+
+            const workspace =
+              typeof rawInput.workspace === "string" &&
+              rawInput.workspace.length > 0
+                ? rawInput.workspace
+                : typeof rawInput.cw === "string" && rawInput.cw.length > 0
+                  ? rawInput.cw
+                  : process.cwd();
+
+            const pipelineInput = {
+              runId,
+              requirement: input.requirement,
+              workspace,
+              userId: session.user.id,
+              authz: typeof rawInput.authz === "string" ? rawInput.authz : undefined,
+              linear: normalizedLinear
+                ? {
+                    sessionId: normalizedLinear.sessionId ?? "",
+                    space: normalizedLinear.space,
+                    issueId: normalizedLinear.issueId,
+                    authz: input.authzLinear ?? "",
+                  }
+                : undefined,
+            };
+
+            void (async () => {
+              try {
+                for await (const _event of runner.run(
+                  pipelineInput,
+                  abortController.signal
+                )) {
+                  void _event;
+                }
+              } catch (error) {
+                logger.warn("pipeline_stream_failed", {
+                  runId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              } finally {
+                queueObserver.close();
+                await unregisterRunHandle(runId).catch(() => {});
+              }
+            })();
+
+            for await (const event of queueObserver.stream()) {
+              emit.next(event);
+            }
+            emit.complete();
           } catch (error) {
-            emit.error(toTRPCError(error, "workflow_start_failed"));
+            emit.error(toTRPCError(error, "workflow_pipeline_stream_error"));
           }
         };
 
-        void startStream();
+        void startPipeline();
 
         return () => {
           cleanup?.();
-          void suspension.dispose();
         };
       })
     ),
@@ -868,7 +953,7 @@ export const workflowRouter = router({
   resumePipeline: authedProcedure
     .input(z.object({ runId: z.string().min(1) }))
     .subscription(({ input, ctx }) =>
-      observable<WorkflowEvent>((emit) => {
+      observable<PipelineEvent>((emit) => {
         const session = ctx.session;
         if (!session?.user?.id) {
           emit.error(
@@ -881,9 +966,24 @@ export const workflowRouter = router({
 
         const startResume = async () => {
           try {
-            const { PostgresCheckpointStorage } = await import(
-              "@alfred/db/repo/workflow"
-            );
+            const [
+              { PipelineRunner, registerDefaultStages },
+              {
+                CheckpointObserver,
+                CostCleanupObserver,
+                MetricsObserver,
+                PipelineEventQueueObserver,
+                LinearSyncObserver,
+              },
+              { PostgresCheckpointStorage },
+              { registerRunHandle, unregisterRunHandle },
+            ] = await Promise.all([
+              import("@alfred/pipeline"),
+              import("@alfred/pipeline/observers"),
+              import("@alfred/db/repo/workflow"),
+              import("@alfred/agent/workflow/session-recovery"),
+            ]);
+
             const storage = new PostgresCheckpointStorage();
             const snapshot = await storage.load(input.runId);
             if (!snapshot) {
@@ -896,16 +996,109 @@ export const workflowRouter = router({
               return;
             }
 
-            const { resumeWorkflowPipeline } = await import(
-              "@alfred/runtime/workflow/pipeline-bridge"
-            );
-            const generator = resumeWorkflowPipeline(
-              input.runId,
-              snapshot as any, // Cast to any to avoid importing PipelineSnapshot here
-              session
-            );
+            const ctxEntries = new Map(snapshot.contextEntries);
+            const workspace =
+              (ctxEntries.get("workspace") as string | undefined) ??
+              process.cwd();
+            const userId =
+              (ctxEntries.get("userId") as string | undefined) ??
+              session.user.id;
+            const linearSessionId = ctxEntries.get("linearSessionId");
+            const linearIssueId = ctxEntries.get("linearIssueId");
+            const linearSpace = ctxEntries.get("linearSpace");
+            const linearAuthz = ctxEntries.get("linearAuthz");
 
-            for await (const event of generator) {
+            const runner = new PipelineRunner({
+              enableLearning: true,
+              enableLinearSync: Boolean(linearSessionId),
+              linearSyncInterval: 30_000,
+            });
+            registerDefaultStages(runner);
+
+            const queueObserver = new PipelineEventQueueObserver();
+            runner.addObserver(queueObserver);
+            runner.addObserver(new MetricsObserver());
+            runner.addObserver(new CostCleanupObserver());
+            runner.addObserver(new CheckpointObserver(storage));
+
+            if (
+              typeof linearSessionId === "string" &&
+              typeof linearIssueId === "string" &&
+              typeof linearSpace === "string" &&
+              typeof linearAuthz === "string" &&
+              linearAuthz.length > 0
+            ) {
+              runner.addObserver(
+                new LinearSyncObserver({
+                  syncIntervalMs: 30_000,
+                  issueId: linearIssueId,
+                  authz: linearAuthz,
+                })
+              );
+            }
+
+            const abortController = new AbortController();
+            await registerRunHandle(input.runId, {
+              resume: async () => {},
+              suspend: async () => {
+                abortController.abort();
+              },
+              cancel: async () => {
+                abortController.abort();
+              },
+              abortController,
+            });
+
+            cleanup = () => {
+              abortController.abort();
+              queueObserver.close();
+              void unregisterRunHandle(input.runId).catch(() => {});
+            };
+
+            const pipelineInput = {
+              runId: input.runId,
+              requirement: snapshot.requirement,
+              workspace,
+              userId,
+              authz: undefined,
+              linear:
+                typeof linearSessionId === "string" &&
+                typeof linearSpace === "string" &&
+                typeof linearAuthz === "string" &&
+                linearAuthz.length > 0
+                  ? {
+                      sessionId: linearSessionId,
+                      space: linearSpace,
+                      issueId:
+                        typeof linearIssueId === "string"
+                          ? linearIssueId
+                          : undefined,
+                      authz: linearAuthz,
+                    }
+                  : undefined,
+            };
+
+            void (async () => {
+              try {
+                for await (const _event of runner.resume(
+                  snapshot,
+                  pipelineInput,
+                  abortController.signal
+                )) {
+                  void _event;
+                }
+              } catch (error) {
+                logger.warn("pipeline_resume_failed", {
+                  runId: input.runId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              } finally {
+                queueObserver.close();
+                await unregisterRunHandle(input.runId).catch(() => {});
+              }
+            })();
+
+            for await (const event of queueObserver.stream()) {
               emit.next(event);
             }
             emit.complete();

@@ -1,9 +1,11 @@
 /**
  * Cohere rerank integration for RAG
- * Optional reranking step to improve retrieval quality
+ * @deprecated Use @alfred/rerank instead. This module re-exports for backwards compatibility.
  *
  * Note: migrate to AI SDK v6 rerank() when @ai-sdk/cohere adds rerankingModel() support.
  */
+
+import { cohereRerank } from "@alfred/rerank/cohere";
 
 export type RerankTelemetry = {
   onError?: (ctx: {
@@ -37,10 +39,7 @@ export type RerankResult = {
 
 /**
  * Reranks documents using Cohere API.
- * Gated by COHERE_API_KEY env var - returns [] if not configured.
- *
- * Note: Currently uses manual API calls. Will migrate to AI SDK v6 rerank()
- * when @ai-sdk/cohere adds rerankingModel() support.
+ * @deprecated Use `import { rerank } from "@alfred/rerank"` instead.
  */
 export async function rerank({
   query,
@@ -49,91 +48,37 @@ export async function rerank({
   model = "rerank-v3.5",
   telemetry,
 }: RerankOptions): Promise<RerankResult[]> {
-  const apiKey = process.env.COHERE_API_KEY;
-  const docCount = documents.length;
+  const results = await cohereRerank({
+    query,
+    documents,
+    topN,
+    model,
+    telemetry: telemetry
+      ? {
+          onSuccess: (ctx) =>
+            telemetry.onSuccess?.({
+              query: ctx.query,
+              model: ctx.backend,
+              docCount: ctx.docCount,
+              durationMs: ctx.durationMs,
+            }),
+          onError: (ctx) =>
+            telemetry.onError?.({
+              query: ctx.query,
+              model: ctx.backend,
+              docCount: ctx.docCount,
+              error: ctx.error,
+            }),
+        }
+      : undefined,
+  });
 
-  if (!apiKey) {
-    telemetry?.onSuccess?.({
-      query,
-      model,
-      docCount,
-      durationMs: 0,
-    });
-    return [];
-  }
-
-  const baseUrl = process.env.COHERE_BASE_URL ?? "https://api.cohere.ai";
-  const started = Date.now();
-
-  try {
-    const response = await fetch(`${baseUrl}/v1/rerank`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        query,
-        documents: documents.map((doc) => doc.text),
-        top_n: topN,
-        return_documents: false,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody: unknown = await response
-        .json()
-        .catch(() => ({}) as unknown);
-      const errMsg =
-        typeof errorBody === "object" &&
-        errorBody !== null &&
-        "message" in errorBody
-          ? (errorBody as { message?: string }).message
-          : undefined;
-      throw new Error(
-        `cohere_rerank_failed:${response.status}:${errMsg ?? "unknown"}`
-      );
-    }
-
-    const body = (await response.json()) as {
-      results?: Array<{ index: number; relevance_score: number }>;
-      error?: { message?: string };
+  // Add text field back for backwards compatibility
+  return results.map((result) => {
+    const doc = documents[result.index];
+    return {
+      ...result,
+      text: doc?.text ?? "",
     };
-
-    if (body.error) {
-      throw new Error(`cohere_rerank_error:${body.error.message ?? "unknown"}`);
-    }
-
-    const results = body.results ?? [];
-    const mapped = results.map((result) => {
-      const doc = documents[result.index];
-      if (!doc) {
-        throw new Error(`cohere_rerank_invalid_index:${result.index}`);
-      }
-      return {
-        id: doc.id,
-        text: doc.text,
-        score: result.relevance_score,
-        index: result.index,
-      };
-    });
-
-    telemetry?.onSuccess?.({
-      query,
-      model,
-      docCount,
-      durationMs: Date.now() - started,
-    });
-
-    return mapped;
-  } catch (error) {
-    telemetry?.onError?.({
-      query,
-      model,
-      docCount,
-      error,
-    });
-    return [];
-  }
+  });
 }

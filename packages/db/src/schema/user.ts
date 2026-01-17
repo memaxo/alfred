@@ -68,6 +68,7 @@ export const facts = pgTable("user_facts", {
   }),
   content: text("content").notNull(),
   embedding: vector("embedding", { dimensions: VECTOR_DIM }),
+  embeddingModelId: text("embedding_model_id"), // FK to embedding_models.id
   category: text("category"), // "personal" | "work" | "technical" | etc.
   confidence: real("confidence").default(1.0),
   source: text("source").default("user"), // "user" | "conversation" | "tool"

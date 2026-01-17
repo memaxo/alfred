@@ -17,6 +17,8 @@ process.env.DISABLE_METRICS_HOOKS = "1";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import path from "node:path";
+import type { PipelineEvent } from "@alfred/pipeline";
+import { toObservable } from "../utils/stream";
 
 const cassettePath = path.join(
   import.meta.dir,
@@ -319,16 +321,29 @@ describe("Policy Full Integration", () => {
         ],
       });
 
-      // Should fail without biometric ticket
-      await expect(
-        caller.workflow.stream({
-          requirement: "Test",
-          auto: "medium" as const,
-          mode: "sequential" as const,
-        })
-      ).rejects.toMatchObject({
-        message: expect.stringContaining("obligation"),
+      const subscription = await caller.workflow.streamPipeline({
+        requirement: "Test",
+        auto: "medium" as const,
+        mode: "sequential" as const,
       });
+      const observable = toObservable<PipelineEvent>(subscription);
+      const events: PipelineEvent[] = [];
+
+      await new Promise<void>((resolve, reject) => {
+        const sub = observable.subscribe({
+          next: (event) => events.push(event),
+          error: (error) => {
+            sub.unsubscribe?.();
+            reject(error);
+          },
+          complete: () => {
+            sub.unsubscribe?.();
+            resolve();
+          },
+        });
+      });
+
+      expect(events[0]?.type).toBe("pipeline:suspend");
     });
   });
 

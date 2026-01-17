@@ -45,6 +45,7 @@ export const memoryNodes = pgTable("memory_nodes", {
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   labelTsvector: tsvector("label_tsvector"),
   embedding: vector("embedding", { dimensions: EMBEDDING_DIM }),
+  embeddingModelId: text("embedding_model_id"), // FK to embedding_models.id
   // Int8 quantized embedding for 4x storage reduction (97%+ accuracy retention)
   // Format: 8-byte float64 scale + int8 data
   embeddingQuantized: customType<{ data: Uint8Array; driverData: Buffer }>({

@@ -6,13 +6,13 @@ OpenTUI React provides a React reconciler for terminal UIs. Migrate from custom 
 
 ## Rules
 
-1. **Text content prop.** Use `content` prop for `<text>` components, not children. Example: `<text content={dim("Loading...")} />` not `<text>{dim("Loading...")}</text>`.
+1. **Text content prop.** Use the `content` prop for `<text>`, not children.
 
-2. **Layout props direct.** Components accept layout props (`x`, `y`, `width`, `height`) directly. No wrapper boxes needed. Example: `<box width={50} height={10} x={0} y={0} border title="Panel" />`.
+2. **Layout props direct.** Pass `x/y/width/height` directly to components; don’t add wrapper boxes just for layout.
 
-3. **JSX type configuration.** Use `/** @jsxImportSource @opentui/react */` pragma at top of OpenTUI React component files. This tells TypeScript/Bun to use OpenTUI's JSX runtime for that file. Alternatively, create `opentui-jsx.d.ts` type declaration file and include it in tsconfig.json for global JSX augmentation.
+3. **JSX runtime.** Use `/** @jsxImportSource @opentui/react */` in OpenTUI React component files (or a repo-wide JSX augmentation).
 
-4. **Keyboard handling.** Use `useKeyboard()` hook for keyboard events. Hook receives `KeyEvent` with `name`, `ctrl`, `shift`, `alt` properties. Example: `useKeyboard((event) => { if (event.name === "q") quit(); })`.
+4. **Keyboard handling.** Use `useKeyboard()` for keyboard events.
 
 5. **Terminal dimensions.** Use `useTerminalDimensions()` hook for responsive layout. Returns `{ width, height }` that updates on resize.
 
@@ -30,8 +30,8 @@ OpenTUI React provides a React reconciler for terminal UIs. Migrate from custom 
 
 12. **Preserve domain logic.** Keep existing stores, subscriptions, and commands. Only replace rendering layer. Domain logic (`subscriptions/`, `stores/`) remains unchanged.
 
-13. **Style prop pattern.** Use `style` prop for styling instead of individual props where appropriate. Example: `<box style={{ borderColor: "#FFFFFF", borderStyle: "single" }} />` instead of `<box borderColor="#FFFFFF" borderStyle="single" />`.
+13. **Style prop pattern.** Prefer the `style` prop for styling when it improves readability.
 
-14. **Scrollbox focus.** Always add `focused` prop to `<scrollbox>` components for keyboard navigation. Example: `<scrollbox focused={focused}>`.
+14. **Scrollbox focus.** Always pass `focused` to `<scrollbox>` for keyboard navigation.
 
 15. **Advanced hooks.** Use `useRenderer()` to access renderer instance, `useTimeline()` for animations, `useTerminalDimensions()` for responsive layout.

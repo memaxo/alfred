@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { PipelineRunner } from "../src/pipeline/runner";
+import { PhaseRunner } from "../src/pipeline/runner";
 import type { Phase, PhaseResult, PipelineState } from "../src/pipeline/types";
 
 class TestPhase implements Phase<string, string> {
@@ -26,14 +26,14 @@ class TestPhase implements Phase<string, string> {
   }
 }
 
-describe("PipelineRunner", () => {
+describe("PhaseRunner", () => {
   it("executes a single phase successfully", async () => {
     const state: PipelineState = {
       currentPhaseId: "phase1",
       history: [],
       context: new RuntimeContext(),
     };
-    const runner = new PipelineRunner(state);
+    const runner = new PhaseRunner(state);
     runner.register(new TestPhase("phase1"));
 
     const generator = runner.run("input");
@@ -60,7 +60,7 @@ describe("PipelineRunner", () => {
       history: [],
       context: new RuntimeContext(),
     };
-    const runner = new PipelineRunner(state);
+    const runner = new PhaseRunner(state);
     runner.register(new TestPhase("phase1", "phase2"));
     runner.register(new TestPhase("phase2"));
 
@@ -92,7 +92,7 @@ describe("PipelineRunner", () => {
       context: new RuntimeContext(),
     };
 
-    const runner = new PipelineRunner(state);
+    const runner = new PhaseRunner(state);
     runner.register(new TestPhase("phase1"));
     runner.register(new TestPhase("phase2"));
 
