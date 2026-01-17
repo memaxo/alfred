@@ -1,6 +1,9 @@
 import { useChat } from "@ai-sdk/react";
 import { logger } from "@alfred/logger";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
+import { fetch as expoFetch } from "expo/fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useVoiceSessionNative } from "@/lib/voice/session";
@@ -8,9 +11,24 @@ import { trpcClient } from "@/utils/trpc";
 
 export type AgentType = "assistant" | "orchestrator";
 
+function conversationStorageKey(
+  agent: AgentType,
+  serverUrl: string | undefined
+): string {
+  const url = typeof serverUrl === "string" ? serverUrl : "unknown";
+  return `alfred.ai.${agent}.conversationId.${url}`;
+}
+
 export function useChatLogic() {
   const [currentAgent, setCurrentAgent] = useState<AgentType>("assistant");
   const { data: session } = authClient.useSession();
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isHydrating, setIsHydrating] = useState(true);
+
+  const conversationIdRef = useRef<string | null>(null);
+  conversationIdRef.current = conversationId;
+
+  type FetchArgs = Parameters<typeof globalThis.fetch>;
 
   const apiEndpoint = useMemo(
     () => `${process.env.EXPO_PUBLIC_SERVER_URL}/api/${currentAgent}`,
@@ -26,22 +44,104 @@ export function useChatLogic() {
     return h;
   }, [session]);
 
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: apiEndpoint,
-        headers,
-      }),
-    [apiEndpoint, headers]
-  );
+  const transport = useMemo(() => {
+    const agentAtTime = currentAgent;
+    return new DefaultChatTransport({
+      api: apiEndpoint,
+      headers,
+      fetch: (async (input: FetchArgs[0], init?: FetchArgs[1]) => {
+        const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
+        const storageKey = conversationStorageKey(agentAtTime, serverUrl);
+
+        const updatedInit = (() => {
+          if (!init?.body || typeof init.body !== "string") {
+            return init;
+          }
+          try {
+            const parsed = JSON.parse(init.body) as Record<string, unknown>;
+            const cid = conversationIdRef.current;
+            if (cid && typeof parsed.conversationId !== "string") {
+              parsed.conversationId = cid;
+              return { ...init, body: JSON.stringify(parsed) };
+            }
+          } catch {
+            // ignore
+          }
+          return init;
+        })();
+
+        const response = (await (
+          expoFetch as unknown as typeof globalThis.fetch
+        )(input, updatedInit)) as Response;
+
+        const nextConversationId = response.headers.get("x-conversation-id");
+        if (
+          nextConversationId &&
+          nextConversationId.length > 0 &&
+          conversationIdRef.current !== nextConversationId
+        ) {
+          conversationIdRef.current = nextConversationId;
+          setConversationId(nextConversationId);
+          void AsyncStorage.setItem(storageKey, nextConversationId);
+        }
+
+        return response;
+      }) as unknown as typeof globalThis.fetch,
+    });
+  }, [apiEndpoint, headers]);
 
   const chat = useChat({
-    id: currentAgent,
+    id: `chat-${currentAgent}`, // Unique ID per agent type
     transport,
     onError: (err) => {
       logger.error("chat_error", { error: err });
     },
   });
+
+  // Hydration
+  useEffect(() => {
+    const hydrate = async () => {
+      const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
+      const storageKey = conversationStorageKey(currentAgent, serverUrl);
+
+      try {
+        const storedId = await AsyncStorage.getItem(storageKey);
+        if (!storedId) {
+          chat.setMessages([]);
+          setConversationId(null);
+          return;
+        }
+
+        setConversationId(storedId);
+        conversationIdRef.current = storedId;
+
+        const cookies = authClient.getCookie();
+        if (!(cookies && serverUrl)) {
+          return;
+        }
+
+        const res = await expoFetch(
+          `${serverUrl}/api/conversation/${storedId}`,
+          {
+            headers: { Cookie: cookies },
+          }
+        );
+        if (!res.ok) {
+          return;
+        }
+
+        const json = (await res.json()) as { messages?: unknown };
+        const loaded = json.messages;
+        if (Array.isArray(loaded)) {
+          chat.setMessages(loaded as UIMessage[]);
+        }
+      } finally {
+        setIsHydrating(false);
+      }
+    };
+
+    void hydrate();
+  }, [currentAgent, authClient.getCookie()]);
 
   const voice = useVoiceSessionNative(trpcClient, { surface: "native" });
 
@@ -79,8 +179,13 @@ export function useChatLogic() {
   }, [voice]);
 
   const clearMessages = useCallback(() => {
+    const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
+    const storageKey = conversationStorageKey(currentAgent, serverUrl);
+    void AsyncStorage.removeItem(storageKey);
+    setConversationId(null);
+    conversationIdRef.current = null;
     chat.setMessages([]);
-  }, [chat]);
+  }, [chat, currentAgent]);
 
   const handleSend = useCallback(
     (text: string) => {
@@ -95,7 +200,6 @@ export function useChatLogic() {
         return;
       }
       chat.stop();
-      chat.setMessages([]);
       setCurrentAgent(agent);
     },
     [chat, currentAgent]
@@ -106,6 +210,8 @@ export function useChatLogic() {
     isLoading: chat.status === "streaming" || chat.status === "submitted",
     error: chat.error,
     currentAgent,
+    conversationId,
+    isHydrating,
     setAgent,
     handleSend,
     toggleVoice,

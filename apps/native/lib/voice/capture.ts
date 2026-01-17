@@ -1,9 +1,9 @@
 import { Audio } from "expo-av";
 import { deleteAsync, EncodingType, readAsStringAsync } from "expo-file-system";
 import {
+  type AudioSessionMode,
   configureAudioSession,
   resetAudioSession,
-  type AudioSessionMode,
 } from "./config";
 
 const MIME_TYPE = "audio/m4a";

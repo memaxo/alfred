@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Stack } from "expo-router";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -27,6 +28,7 @@ export default function ChatScreen() {
     toggleVoice,
     isRecording,
     clearMessages,
+    isHydrating,
   } = useChatLogic();
 
   // Redirect to home if not authenticated
@@ -74,6 +76,14 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <View className="flex-1 bg-background">
+          {isHydrating && (
+            <View className="absolute inset-0 z-10 items-center justify-center bg-background/80">
+              <ActivityIndicator color="#3b82f6" size="large" />
+              <Text className="mt-2 text-muted-foreground text-sm">
+                Loading history...
+              </Text>
+            </View>
+          )}
           {error && (
             <View className="m-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
               <Text className="text-center text-destructive text-sm">

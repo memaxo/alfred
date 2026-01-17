@@ -1,13 +1,8 @@
-import { useChat } from "@ai-sdk/react";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { DefaultChatTransport } from "ai";
-import type { UIMessage } from "ai";
-import { fetch as expoFetch } from "expo/fetch";
 import { Redirect } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,19 +12,8 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
+import { useChatLogic } from "@/hooks/use-chat-logic";
 import { authClient } from "@/lib/auth-client";
-
-const generateAPIUrl = (relativePath: string) => {
-  const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
-  if (!serverUrl) {
-    throw new Error(
-      "EXPO_PUBLIC_SERVER_URL environment variable is not defined"
-    );
-  }
-
-  const path = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
-  return serverUrl.concat(path);
-};
 
 function friendlyChatError(message: string): string {
   if (message.includes("ai_api_key_missing")) {
@@ -41,125 +25,18 @@ function friendlyChatError(message: string): string {
   return message;
 }
 
-function conversationStorageKey(serverUrl: string | undefined): string {
-  const url = typeof serverUrl === "string" ? serverUrl : "unknown";
-  return `alfred.ai.conversationId.${url}`;
-}
-
 export default function AIScreen() {
   const { data: session } = authClient.useSession();
   const [input, setInput] = useState("");
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [isHydrating, setIsHydrating] = useState(true);
-
-  const conversationIdRef = useRef<string | null>(null);
-  conversationIdRef.current = conversationId;
-
-  type FetchArgs = Parameters<typeof globalThis.fetch>;
-
   const {
     messages,
     error: chatError,
-    sendMessage,
-    setMessages,
-  } = useChat({
-    transport: new DefaultChatTransport({
-      fetch: (async (input: FetchArgs[0], init?: FetchArgs[1]) => {
-        const storageKey = conversationStorageKey(
-          process.env.EXPO_PUBLIC_SERVER_URL
-        );
-
-        const updatedInit = (() => {
-          if (!init?.body || typeof init.body !== "string") {
-            return init;
-          }
-          try {
-            const parsed = JSON.parse(init.body) as Record<string, unknown>;
-            const cid = conversationIdRef.current;
-            if (cid && typeof parsed.conversationId !== "string") {
-              parsed.conversationId = cid;
-              return { ...init, body: JSON.stringify(parsed) };
-            }
-          } catch {
-            // ignore
-          }
-          return init;
-        })();
-
-        const response = (await (
-          expoFetch as unknown as typeof globalThis.fetch
-        )(input, updatedInit)) as Response;
-
-        const nextConversationId = response.headers.get("x-conversation-id");
-        if (nextConversationId && nextConversationId.length > 0) {
-          if (conversationIdRef.current !== nextConversationId) {
-            conversationIdRef.current = nextConversationId;
-            setConversationId(nextConversationId);
-            void AsyncStorage.setItem(storageKey, nextConversationId);
-          }
-        }
-
-        return response;
-      }) as unknown as typeof globalThis.fetch,
-      api: generateAPIUrl("/api/assistant"),
-      headers: () => {
-        const cookies = authClient.getCookie();
-        const headers: Record<string, string> = {};
-        if (cookies) {
-          headers.Cookie = cookies;
-        }
-        return headers;
-      },
-    }),
-    onError: (caughtError) => {
-      Alert.alert("AI Chat Error", friendlyChatError(caughtError.message));
-    },
-  });
+    handleSend,
+    isHydrating,
+    isLoading,
+  } = useChatLogic();
 
   const scrollViewRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const hydrate = async () => {
-      const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
-      const storageKey = conversationStorageKey(serverUrl);
-
-      try {
-        const storedId = await AsyncStorage.getItem(storageKey);
-        if (!storedId) {
-          return;
-        }
-
-        setConversationId(storedId);
-        conversationIdRef.current = storedId;
-
-        // Load messages from server to restore chat across app restarts.
-        const cookies = authClient.getCookie();
-        if (!cookies || !serverUrl) {
-          return;
-        }
-
-        const res = await expoFetch(
-          `${serverUrl}/api/conversation/${storedId}`,
-          {
-            headers: { Cookie: cookies },
-          }
-        );
-        if (!res.ok) {
-          return;
-        }
-
-        const json = (await res.json()) as { messages?: unknown };
-        const loaded = json.messages;
-        if (Array.isArray(loaded)) {
-          setMessages(loaded as UIMessage[]);
-        }
-      } finally {
-        setIsHydrating(false);
-      }
-    };
-
-    void hydrate();
-  }, [setMessages]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -175,17 +52,14 @@ export default function AIScreen() {
   const onSubmit = () => {
     const value = input.trim();
     if (value) {
-      sendMessage({ text: value });
+      handleSend(value);
       setInput("");
     }
   };
 
-  const subtitle = useMemo(() => {
-    if (isHydrating) {
-      return "Loading history...";
-    }
-    return "Chat with our AI assistant";
-  }, [isHydrating]);
+  const subtitle = isHydrating
+    ? "Loading history..."
+    : "Chat with our AI assistant";
 
   return (
     <Container>
@@ -198,9 +72,7 @@ export default function AIScreen() {
             <Text className="mb-2 font-bold text-2xl text-foreground">
               AI Chat
             </Text>
-            <Text className="text-muted-foreground">
-              {subtitle}
-            </Text>
+            <Text className="text-muted-foreground">{subtitle}</Text>
           </View>
 
           {chatError && (
@@ -219,7 +91,7 @@ export default function AIScreen() {
             ref={scrollViewRef}
             showsVerticalScrollIndicator={false}
           >
-            {messages.length === 0 ? (
+            {messages.length === 0 && !isHydrating ? (
               <View className="flex-1 items-center justify-center">
                 <Text className="text-center text-lg text-muted-foreground">
                   Ask me anything to get started!
@@ -275,6 +147,11 @@ export default function AIScreen() {
                     </View>
                   </View>
                 ))}
+                {isLoading && (
+                  <View className="mr-auto rounded-lg border border-border bg-card p-3">
+                    <ActivityIndicator color="#3b82f6" size="small" />
+                  </View>
+                )}
               </View>
             )}
           </ScrollView>
@@ -297,7 +174,7 @@ export default function AIScreen() {
                 className={`rounded-md p-2 ${
                   input.trim() ? "bg-primary" : "bg-muted"
                 }`}
-                disabled={!input.trim()}
+                disabled={!input.trim() || isLoading}
                 onPress={onSubmit}
               >
                 <Ionicons

@@ -3,16 +3,6 @@ import { Platform } from "react-native";
 type AudioModule = typeof import("expo-av").Audio;
 
 /**
- * iOS Audio Session Categories (from AVFoundation)
- * These map to AVAudioSession.Category values.
- */
-const IOS_CATEGORY = {
-  PLAY_AND_RECORD: "playAndRecord",
-  PLAYBACK: "playback",
-  RECORD: "record",
-} as const;
-
-/**
  * iOS Interruption Mode (from expo-av)
  * 0 = MixWithOthers
  * 1 = DoNotMix
@@ -24,7 +14,7 @@ const IOS_INTERRUPTION_MODE = {
   DUCK_OTHERS: 2,
 } as const;
 
-type AudioSessionMode = "voice" | "playback" | "carplay";
+export type AudioSessionMode = "voice" | "playback" | "carplay";
 
 type AudioSessionConfig = {
   mode: AudioSessionMode;
