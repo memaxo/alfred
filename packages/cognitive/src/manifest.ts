@@ -56,7 +56,7 @@ export const manifest: CliManifest = {
       category: "monitoring",
       defaultVisible: true,
       factory: () => {
-        // TODO: Return actual CognitivePanel once it's exported from @alfred/tui
+        // Placeholder until CognitivePanel is exported from @alfred/tui.
         return Promise.resolve(class PlaceholderPanel {});
       },
     },

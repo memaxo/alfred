@@ -9,7 +9,7 @@ import { deviceAuthorization, oidcProvider } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { autoGrantBiometricIfBypassed, setBiometricTicket } from "./biometric";
 
-const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3001";
 const origin = baseUrl.replace(/\/$/, "");
 const rpID = (() => {
   try {
@@ -21,9 +21,17 @@ const rpID = (() => {
 
 const trustedOrigins = [
   process.env.CORS_ORIGIN,
-  "mybettertapp://",
-  "exp://",
   origin,
+  "http://localhost:8081",
+  "http://127.0.0.1:8081",
+  "alfred://",
+  "alfred://*",
+  "mybettertapp://",
+  "mybettertapp://*",
+  "exp://",
+  "exp://*",
+  "expo://",
+  "expo://*",
 ].filter(Boolean) as string[];
 
 /**

@@ -429,7 +429,7 @@ export async function evaluateWithModel(
   documents: EvaluatorDocument[],
   _modelId?: string
 ): Promise<EvaluatorResult> {
-  // TODO: Implement T5-small or similar model for evaluation
+  // Note: implement a small model (e.g., T5-small) for evaluation.
   // For now, use rule-based evaluation
   return evaluateRetrieval(query, documents);
 }

@@ -33,6 +33,11 @@ export class TTSPool {
     active: boolean;
   }> = [];
   private supertonic: SupertonicTTS | null = null;
+  private readonly supertonicStats: {
+    startedAt: number | null;
+    requestCount: number;
+    errorCount: number;
+  } = { startedAt: null, requestCount: 0, errorCount: 0 };
   private readonly config: ProcessConfig;
   private readonly poolSize: number;
   private _activeCount = 0;
@@ -72,6 +77,7 @@ export class TTSPool {
           modelPath: modelsDir,
           defaultVoice: "M1.json", // Default to Male 1
         });
+        this.supertonicStats.startedAt ??= Date.now();
         await this.supertonic.initialize();
         this.initialized = true;
         return;
@@ -174,31 +180,38 @@ export class TTSPool {
 
     try {
       if (this.useSupertonic && this.supertonic) {
-        const result = await this.supertonic.synthesize(request.text, {
-          speed: 1.05,
-          voice: request.voice,
-          onChunk: onChunk
-            ? (rawChunk) => {
-                const float32 = rawChunk.audio;
-                const int16 = new Int16Array(float32.length);
-                for (let i = 0; i < float32.length; i++) {
-                  const val = float32[i];
-                  if (val !== undefined) {
-                    const s = Math.max(-1, Math.min(1, val));
-                    int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+        this.supertonicStats.requestCount += 1;
+        let result: Awaited<ReturnType<SupertonicTTS["synthesize"]>>;
+        try {
+          result = await this.supertonic.synthesize(request.text, {
+            speed: 1.05,
+            voice: request.voice,
+            onChunk: onChunk
+              ? (rawChunk) => {
+                  const float32 = rawChunk.audio;
+                  const int16 = new Int16Array(float32.length);
+                  for (let i = 0; i < float32.length; i++) {
+                    const val = float32[i];
+                    if (val !== undefined) {
+                      const s = Math.max(-1, Math.min(1, val));
+                      int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+                    }
                   }
+                  const audioBase64 = Buffer.from(int16.buffer).toString(
+                    "base64"
+                  );
+                  onChunk({
+                    audioBase64,
+                    mimeType: "audio/pcm",
+                    sampleRate: rawChunk.sampleRate,
+                  });
                 }
-                const audioBase64 = Buffer.from(int16.buffer).toString(
-                  "base64"
-                );
-                onChunk({
-                  audioBase64,
-                  mimeType: "audio/pcm",
-                  sampleRate: rawChunk.sampleRate,
-                });
-              }
-            : undefined,
-        });
+              : undefined,
+          });
+        } catch (error) {
+          this.supertonicStats.errorCount += 1;
+          throw error;
+        }
 
         // Convert Float32Array to Base64 (PCM 16-bit)
         // Supertonic output is Float32 [-1, 1]
@@ -240,13 +253,14 @@ export class TTSPool {
 
   getHealth(): ProcessHealth[] {
     if (this.useSupertonic) {
+      const startedAt = this.supertonicStats.startedAt;
       return [
         {
           isHealthy: this.initialized,
           lastPing: Date.now(),
-          requestCount: 0, // TODO: track stats
-          errorCount: 0,
-          uptime: 0,
+          requestCount: this.supertonicStats.requestCount,
+          errorCount: this.supertonicStats.errorCount,
+          uptime: startedAt ? Math.max(0, Date.now() - startedAt) : 0,
         },
       ];
     }

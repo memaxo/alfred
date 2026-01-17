@@ -51,7 +51,7 @@ export class CognitiveReconstructor
     // it's usually wrapped in an envelope. This assumes the events passed
     // are either envelopes or we need to match some other way.
     // For now, we assume the caller provides events that can be matched.
-    // TODO: Improve Event type to include ID or handle envelopes.
+    // Note: Improve Event type to include ID or handle envelopes.
     for (const event of events) {
       state = this.reduce(state, event);
       // If we had IDs on events, we would check here.

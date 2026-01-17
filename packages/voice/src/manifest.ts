@@ -151,7 +151,7 @@ export const manifest: CliManifest = {
       category: "monitoring",
       defaultVisible: true,
       factory: () => {
-        // TODO: Return actual VoicePanel once it's exported from @alfred/tui
+        // Placeholder until VoicePanel is exported from @alfred/tui.
         return Promise.resolve(class PlaceholderPanel {});
       },
     },

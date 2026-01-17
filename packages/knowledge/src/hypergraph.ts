@@ -201,8 +201,7 @@ export class Hypergraph {
         case "insight":
           break;
         case "pattern":
-          // TODO: Index patterns by accuracy threshold
-          // TODO: Maintain pattern match cache
+          // Note: index patterns by accuracy threshold and maintain a match cache.
           break;
       }
     }

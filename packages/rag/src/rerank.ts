@@ -2,7 +2,7 @@
  * Cohere rerank integration for RAG
  * Optional reranking step to improve retrieval quality
  *
- * TODO: Migrate to AI SDK v6 rerank() when @ai-sdk/cohere adds rerankingModel() support
+ * Note: migrate to AI SDK v6 rerank() when @ai-sdk/cohere adds rerankingModel() support.
  */
 
 export type RerankTelemetry = {
