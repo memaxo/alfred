@@ -25,15 +25,15 @@ async function getHelpers() {
     linearWebhooks,
     linearIntegration,
   ] = await Promise.all([
-    import(apiPkg),
-    import(metricsPkg),
-    import(tokenPkg),
-    import(dbPkg),
-    import(workflowRepoPkg),
-    import(loggerPkg),
-    import(runtimeContextPkg),
-    import(linearWebhooksPkgName),
-    import(linearIntegrationPkg),
+    import(/* @vite-ignore */ apiPkg),
+    import(/* @vite-ignore */ metricsPkg),
+    import(/* @vite-ignore */ tokenPkg),
+    import(/* @vite-ignore */ dbPkg),
+    import(/* @vite-ignore */ workflowRepoPkg),
+    import(/* @vite-ignore */ loggerPkg),
+    import(/* @vite-ignore */ runtimeContextPkg),
+    import(/* @vite-ignore */ linearWebhooksPkgName),
+    import(/* @vite-ignore */ linearIntegrationPkg),
   ]);
 
   return {
@@ -384,7 +384,7 @@ export const Route = createFileRoute("/api/linear/webhook")({
       POST: async ({ request }: { request: Request }) => {
         const h = await getHelpers();
         const cryptoPkg = "node:crypto";
-        const { randomUUID } = await import(cryptoPkg);
+        const { randomUUID } = await import(/* @vite-ignore */ cryptoPkg);
         let secret: string;
         try {
           secret = getWebhookSecret();

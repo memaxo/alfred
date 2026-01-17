@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/desktop/metrics")({
         const metricsPkg = "@alfred/api/metrics";
         // Use mindscapeRagCacheEventsTotal for backwards compatibility until renamed in @alfred/api
         const { mindscapeRagCacheEventsTotal: desktopRagCacheEventsTotal } =
-          await import(metricsPkg);
+          await import(/* @vite-ignore */ metricsPkg);
 
         if (hits > 0) {
           desktopRagCacheEventsTotal.labels("hit").inc(hits);

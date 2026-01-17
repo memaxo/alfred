@@ -53,6 +53,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+export function isMergeableRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return isRecord(value);
+}
+
+export function mergeCacheValue<TCurrent, TNext>(
+  current: TCurrent,
+  next: TNext
+): TCurrent | TNext | Record<string, unknown> {
+  if (!(isMergeableRecord(current) && isMergeableRecord(next))) {
+    return next;
+  }
+  return { ...current, ...next };
+}
+
 function toArgs(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }

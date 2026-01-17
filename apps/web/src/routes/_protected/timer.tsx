@@ -351,7 +351,7 @@ function TimerPane() {
   );
 }
 
-export function TimerRoute() {
+function TimerRoute() {
   return (
     <PaneLayout
       createForm={<TimerCreateForm />}

@@ -6,9 +6,9 @@ async function getAuthHelpers() {
   const loggerPkg = "@alfred/logger";
 
   const [availability, authMod, loggerMod] = await Promise.all([
-    import(availabilityPkg),
-    import(authPkg),
-    import(loggerPkg),
+    import(/* @vite-ignore */ availabilityPkg),
+    import(/* @vite-ignore */ authPkg),
+    import(/* @vite-ignore */ loggerPkg),
   ]);
 
   return {

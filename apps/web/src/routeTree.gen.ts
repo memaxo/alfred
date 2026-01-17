@@ -25,10 +25,11 @@ import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice
 import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
 import { Route as ProtectedDriveRouteImport } from './routes/_protected/drive'
-import { Route as ProtectedBookRouteImport } from './routes/_protected/book'
 import { Route as ProtectedComponentsRouteImport } from './routes/_protected/components'
-import { Route as ProtectedComponentsNameRouteImport } from './routes/_protected/components.$name'
+import { Route as ProtectedBookRouteImport } from './routes/_protected/book'
 import { Route as ProtectedAdminRouteImport } from './routes/_protected/admin'
+import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known/oauth-protected-resource'
+import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known/oauth-authorization-server'
 import { Route as ProtectedAdminIndexRouteImport } from './routes/_protected/admin/index'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
@@ -45,8 +46,9 @@ import { Route as ProtectedSettingsProfileRouteImport } from './routes/_protecte
 import { Route as ProtectedSettingsPrivacyRouteImport } from './routes/_protected/settings/privacy'
 import { Route as ProtectedSettingsMcpRouteImport } from './routes/_protected/settings/mcp'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
-import { Route as ProtectedAdminVoiceRouteImport } from './routes/_protected/admin/voice'
+import { Route as ProtectedComponentsNameRouteImport } from './routes/_protected/components.$name'
 import { Route as ProtectedAdminVoiceTableRouteImport } from './routes/_protected/admin/voice-table'
+import { Route as ProtectedAdminVoiceRouteImport } from './routes/_protected/admin/voice'
 import { Route as ProtectedAdminMetricsRouteImport } from './routes/_protected/admin/metrics'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -128,19 +130,14 @@ const ProtectedDriveRoute = ProtectedDriveRouteImport.update({
   path: '/drive',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedBookRoute = ProtectedBookRouteImport.update({
-  id: '/book',
-  path: '/book',
-  getParentRoute: () => ProtectedRoute,
-} as any)
 const ProtectedComponentsRoute = ProtectedComponentsRouteImport.update({
   id: '/components',
   path: '/components',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedComponentsNameRoute = ProtectedComponentsNameRouteImport.update({
-  id: '/components/$name',
-  path: '/components/$name',
+const ProtectedBookRoute = ProtectedBookRouteImport.update({
+  id: '/book',
+  path: '/book',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedAdminRoute = ProtectedAdminRouteImport.update({
@@ -148,6 +145,18 @@ const ProtectedAdminRoute = ProtectedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const DotwellKnownOauthProtectedResourceRoute =
+  DotwellKnownOauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOauthAuthorizationServerRoute =
+  DotwellKnownOauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProtectedAdminIndexRoute = ProtectedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -231,14 +240,20 @@ const ProtectedExperimentalTuneRoute =
     path: '/experimental/tune',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedComponentsNameRoute = ProtectedComponentsNameRouteImport.update({
+  id: '/$name',
+  path: '/$name',
+  getParentRoute: () => ProtectedComponentsRoute,
+} as any)
+const ProtectedAdminVoiceTableRoute =
+  ProtectedAdminVoiceTableRouteImport.update({
+    id: '/voice-table',
+    path: '/voice-table',
+    getParentRoute: () => ProtectedAdminRoute,
+  } as any)
 const ProtectedAdminVoiceRoute = ProtectedAdminVoiceRouteImport.update({
   id: '/voice',
   path: '/voice',
-  getParentRoute: () => ProtectedAdminRoute,
-} as any)
-const ProtectedAdminVoiceTableRoute = ProtectedAdminVoiceTableRouteImport.update({
-  id: '/voice-table',
-  path: '/voice-table',
   getParentRoute: () => ProtectedAdminRoute,
 } as any)
 const ProtectedAdminMetricsRoute = ProtectedAdminMetricsRouteImport.update({
@@ -254,10 +269,11 @@ export interface FileRoutesByFullPath {
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/admin': typeof ProtectedAdminRouteWithChildren
   '/book': typeof ProtectedBookRoute
-  '/components': typeof ProtectedComponentsRoute
-  '/components/$name': typeof ProtectedComponentsNameRoute
+  '/components': typeof ProtectedComponentsRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
@@ -270,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
+  '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/mcp': typeof ProtectedSettingsMcpRoute
   '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
@@ -294,9 +311,10 @@ export interface FileRoutesByTo {
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/book': typeof ProtectedBookRoute
-  '/components': typeof ProtectedComponentsRoute
-  '/components/$name': typeof ProtectedComponentsNameRoute
+  '/components': typeof ProtectedComponentsRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
@@ -309,6 +327,7 @@ export interface FileRoutesByTo {
   '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
+  '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/mcp': typeof ProtectedSettingsMcpRoute
   '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
@@ -335,10 +354,11 @@ export interface FileRoutesById {
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/_protected/admin': typeof ProtectedAdminRouteWithChildren
   '/_protected/book': typeof ProtectedBookRoute
-  '/_protected/components': typeof ProtectedComponentsRoute
-  '/_protected/components/$name': typeof ProtectedComponentsNameRoute
+  '/_protected/components': typeof ProtectedComponentsRouteWithChildren
   '/_protected/drive': typeof ProtectedDriveRoute
   '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
   '/_protected/timer': typeof ProtectedTimerRoute
@@ -351,6 +371,7 @@ export interface FileRoutesById {
   '/_protected/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
   '/_protected/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
+  '/_protected/components/$name': typeof ProtectedComponentsNameRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/_protected/settings/mcp': typeof ProtectedSettingsMcpRoute
   '/_protected/settings/privacy': typeof ProtectedSettingsPrivacyRoute
@@ -377,10 +398,11 @@ export interface FileRouteTypes {
     | '/healthz'
     | '/login'
     | '/onboarding'
+    | '/.well-known/oauth-authorization-server'
+    | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/book'
     | '/components'
-    | '/components/$name'
     | '/drive'
     | '/settings'
     | '/timer'
@@ -392,6 +414,8 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/metrics'
     | '/admin/voice'
+    | '/admin/voice-table'
+    | '/components/$name'
     | '/experimental/tune'
     | '/settings/mcp'
     | '/settings/privacy'
@@ -416,9 +440,10 @@ export interface FileRouteTypes {
     | '/healthz'
     | '/login'
     | '/onboarding'
+    | '/.well-known/oauth-authorization-server'
+    | '/.well-known/oauth-protected-resource'
     | '/book'
     | '/components'
-    | '/components/$name'
     | '/drive'
     | '/settings'
     | '/timer'
@@ -430,6 +455,8 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/metrics'
     | '/admin/voice'
+    | '/admin/voice-table'
+    | '/components/$name'
     | '/experimental/tune'
     | '/settings/mcp'
     | '/settings/privacy'
@@ -455,8 +482,11 @@ export interface FileRouteTypes {
     | '/healthz'
     | '/login'
     | '/onboarding'
+    | '/.well-known/oauth-authorization-server'
+    | '/.well-known/oauth-protected-resource'
     | '/_protected/admin'
     | '/_protected/book'
+    | '/_protected/components'
     | '/_protected/drive'
     | '/_protected/settings'
     | '/_protected/timer'
@@ -468,6 +498,8 @@ export interface FileRouteTypes {
     | '/_protected/'
     | '/_protected/admin/metrics'
     | '/_protected/admin/voice'
+    | '/_protected/admin/voice-table'
+    | '/_protected/components/$name'
     | '/_protected/experimental/tune'
     | '/_protected/settings/mcp'
     | '/_protected/settings/privacy'
@@ -494,6 +526,8 @@ export interface RootRouteChildren {
   HealthzRoute: typeof HealthzRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
+  DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiSearchRoute: typeof ApiSearchRoute
   DocsSplatRoute: typeof DocsSplatRoute
@@ -608,20 +642,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedTimerRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/components': {
-      id: '/_protected/components'
-      path: '/components'
-      fullPath: '/components'
-      preLoaderRoute: typeof ProtectedComponentsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/components/$name': {
-      id: '/_protected/components/$name'
-      path: '/components/$name'
-      fullPath: '/components/$name'
-      preLoaderRoute: typeof ProtectedComponentsNameRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
     '/_protected/settings': {
       id: '/_protected/settings'
       path: '/settings'
@@ -634,6 +654,13 @@ declare module '@tanstack/react-router' {
       path: '/drive'
       fullPath: '/drive'
       preLoaderRoute: typeof ProtectedDriveRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/components': {
+      id: '/_protected/components'
+      path: '/components'
+      fullPath: '/components'
+      preLoaderRoute: typeof ProtectedComponentsRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/book': {
@@ -649,6 +676,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof ProtectedAdminRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-authorization-server': {
+      id: '/.well-known/oauth-authorization-server'
+      path: '/.well-known/oauth-authorization-server'
+      fullPath: '/.well-known/oauth-authorization-server'
+      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_protected/admin/': {
       id: '/_protected/admin/'
@@ -762,25 +803,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedExperimentalTuneRouteImport
       parentRoute: typeof ProtectedRoute
     }
-	    '/_protected/admin/voice': {
-	      id: '/_protected/admin/voice'
-	      path: '/voice'
-	      fullPath: '/admin/voice'
-	      preLoaderRoute: typeof ProtectedAdminVoiceRouteImport
-	      parentRoute: typeof ProtectedAdminRoute
-	    }
-	    '/_protected/admin/voice-table': {
-	      id: '/_protected/admin/voice-table'
-	      path: '/voice-table'
-	      fullPath: '/admin/voice-table'
-	      preLoaderRoute: typeof ProtectedAdminVoiceTableRouteImport
-	      parentRoute: typeof ProtectedAdminRoute
-	    }
-	    '/_protected/admin/metrics': {
-	      id: '/_protected/admin/metrics'
-	      path: '/metrics'
-	      fullPath: '/admin/metrics'
-	      preLoaderRoute: typeof ProtectedAdminMetricsRouteImport
+    '/_protected/components/$name': {
+      id: '/_protected/components/$name'
+      path: '/$name'
+      fullPath: '/components/$name'
+      preLoaderRoute: typeof ProtectedComponentsNameRouteImport
+      parentRoute: typeof ProtectedComponentsRoute
+    }
+    '/_protected/admin/voice-table': {
+      id: '/_protected/admin/voice-table'
+      path: '/voice-table'
+      fullPath: '/admin/voice-table'
+      preLoaderRoute: typeof ProtectedAdminVoiceTableRouteImport
+      parentRoute: typeof ProtectedAdminRoute
+    }
+    '/_protected/admin/voice': {
+      id: '/_protected/admin/voice'
+      path: '/voice'
+      fullPath: '/admin/voice'
+      preLoaderRoute: typeof ProtectedAdminVoiceRouteImport
+      parentRoute: typeof ProtectedAdminRoute
+    }
+    '/_protected/admin/metrics': {
+      id: '/_protected/admin/metrics'
+      path: '/metrics'
+      fullPath: '/admin/metrics'
+      preLoaderRoute: typeof ProtectedAdminMetricsRouteImport
       parentRoute: typeof ProtectedAdminRoute
     }
   }
@@ -804,6 +852,17 @@ const ProtectedAdminRouteWithChildren = ProtectedAdminRoute._addFileChildren(
   ProtectedAdminRouteChildren,
 )
 
+interface ProtectedComponentsRouteChildren {
+  ProtectedComponentsNameRoute: typeof ProtectedComponentsNameRoute
+}
+
+const ProtectedComponentsRouteChildren: ProtectedComponentsRouteChildren = {
+  ProtectedComponentsNameRoute: ProtectedComponentsNameRoute,
+}
+
+const ProtectedComponentsRouteWithChildren =
+  ProtectedComponentsRoute._addFileChildren(ProtectedComponentsRouteChildren)
+
 interface ProtectedSettingsRouteChildren {
   ProtectedSettingsMcpRoute: typeof ProtectedSettingsMcpRoute
   ProtectedSettingsPrivacyRoute: typeof ProtectedSettingsPrivacyRoute
@@ -824,8 +883,7 @@ const ProtectedSettingsRouteWithChildren =
 interface ProtectedRouteChildren {
   ProtectedAdminRoute: typeof ProtectedAdminRouteWithChildren
   ProtectedBookRoute: typeof ProtectedBookRoute
-  ProtectedComponentsRoute: typeof ProtectedComponentsRoute
-  ProtectedComponentsNameRoute: typeof ProtectedComponentsNameRoute
+  ProtectedComponentsRoute: typeof ProtectedComponentsRouteWithChildren
   ProtectedDriveRoute: typeof ProtectedDriveRoute
   ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
   ProtectedTimerRoute: typeof ProtectedTimerRoute
@@ -838,8 +896,7 @@ interface ProtectedRouteChildren {
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedAdminRoute: ProtectedAdminRouteWithChildren,
   ProtectedBookRoute: ProtectedBookRoute,
-  ProtectedComponentsRoute: ProtectedComponentsRoute,
-  ProtectedComponentsNameRoute: ProtectedComponentsNameRoute,
+  ProtectedComponentsRoute: ProtectedComponentsRouteWithChildren,
   ProtectedDriveRoute: ProtectedDriveRoute,
   ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
   ProtectedTimerRoute: ProtectedTimerRoute,
@@ -872,6 +929,10 @@ const rootRouteChildren: RootRouteChildren = {
   HealthzRoute: HealthzRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  DotwellKnownOauthAuthorizationServerRoute:
+    DotwellKnownOauthAuthorizationServerRoute,
+  DotwellKnownOauthProtectedResourceRoute:
+    DotwellKnownOauthProtectedResourceRoute,
   ApiMetricsRoute: ApiMetricsRoute,
   ApiSearchRoute: ApiSearchRoute,
   DocsSplatRoute: DocsSplatRoute,

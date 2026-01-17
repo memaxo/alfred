@@ -5,8 +5,8 @@ async function handler({ request }: { request: Request }) {
   const contextPkg = "@alfred/api/context";
   const routersPkg = "@alfred/api/routers/index";
 
-  const { createContext } = await import(contextPkg);
-  const { appRouter } = await import(routersPkg);
+  const { createContext } = await import(/* @vite-ignore */ contextPkg);
+  const { appRouter } = await import(/* @vite-ignore */ routersPkg);
 
   return fetchRequestHandler({
     req: request,

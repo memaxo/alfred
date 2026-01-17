@@ -1,10 +1,14 @@
-import { healthChecksTotal } from "@alfred/api/metrics";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/healthz")({
   server: {
     handlers: {
-      GET: () => {
+      GET: async () => {
+        const metricsPkg = "@alfred/api/metrics";
+        const { healthChecksTotal } = await import(
+          /* @vite-ignore */ metricsPkg
+        );
+
         const body = JSON.stringify({
           ok: true,
           ts: Date.now(),
@@ -15,6 +19,7 @@ export const Route = createFileRoute("/healthz")({
         return new Response(body, {
           headers: {
             "content-type": "application/json",
+            "Cache-Control": "no-store",
           },
         });
       },

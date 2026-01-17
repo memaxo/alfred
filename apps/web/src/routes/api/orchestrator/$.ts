@@ -1,17 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 async function handleOrchestratorRequest(request: Request): Promise<Response> {
-  const agentPkg = "@alfred/agent";
-  const streamHandlerPkg = "@/lib/api/stream-handler";
+  try {
+    const agentPkg = "@alfred/agent";
 
-  const { getOrchestratorAgentDefaults } = await import(agentPkg);
-  const { handleStreamRequest } = await import(streamHandlerPkg);
+    const { getOrchestratorAgentDefaults } = await import(
+      /* @vite-ignore */ agentPkg
+    );
+    const { handleStreamRequest } = await import(
+      "../../../lib/api/stream-handler"
+    );
 
-  return handleStreamRequest(
-    request,
-    getOrchestratorAgentDefaults,
-    "orchestrator"
-  );
+    return await handleStreamRequest(
+      request,
+      getOrchestratorAgentDefaults,
+      "orchestrator"
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        error: "internal_error",
+        message: error instanceof Error ? error.message : String(error),
+      },
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  }
 }
 
 export const Route = createFileRoute("/api/orchestrator/$")({

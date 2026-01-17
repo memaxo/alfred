@@ -347,7 +347,7 @@ function BookPane() {
 /**
  * Main Book Route Component
  */
-export function BookRoute() {
+function BookRoute() {
   return (
     <PaneLayout
       createForm={<BookmarkCreateForm />}

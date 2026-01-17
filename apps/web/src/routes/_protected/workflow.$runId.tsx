@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { MindscapeWorkflowDrawer } from "@/components/shared/workflow-drawer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
+import { useTrajectory, useTrajectoryRefresh } from "@/hooks/trajectory";
 import { trpc } from "@/utils/trpc";
 
 const workflowSearchSchema = z.object({
@@ -21,10 +23,33 @@ function WorkflowRunRoute() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const runQuery = trpc.workflow.get.useQuery({ runId });
+  const trajectoryQuery = useTrajectory(runId);
+  const refreshTrajectory = useTrajectoryRefresh();
+  const suspendMutation = trpc.workflow.suspend.useMutation();
+  const [isResuming, setIsResuming] = useState(false);
+
   const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
     "overview"
   );
   const [drawerOpen, setDrawerOpen] = useState(search.drawer === "1");
+
+  trpc.workflow.resumePipeline.useSubscription(
+    { runId },
+    {
+      enabled: isResuming,
+      onData: (event) => {
+        if (event._ === "workflow-complete" || event._ === "error") {
+          setIsResuming(false);
+          runQuery.refetch();
+          eventsQuery.refetch();
+        }
+      },
+      onError: (err) => {
+        setIsResuming(false);
+        toast.error(`Resume failed: ${err.message}`);
+      },
+    }
+  );
 
   useEffect(() => {
     if (runQuery.data) {
@@ -45,6 +70,25 @@ function WorkflowRunRoute() {
     { enabled: runQuery.isSuccess }
   );
 
+  const handleSuspend = async () => {
+    try {
+      await suspendMutation.mutateAsync({ runId });
+      toast.success("Workflow suspension requested.");
+      runQuery.refetch();
+    } catch (error) {
+      toast.error(
+        `Failed to suspend: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  };
+
+  const handleResume = () => {
+    setIsResuming(true);
+    toast.info("Resuming workflow from checkpoint...");
+  };
+
   const setDrawer = (open: boolean) => {
     setDrawerOpen(open);
     navigate({
@@ -57,7 +101,7 @@ function WorkflowRunRoute() {
 
   if (runQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[oklch(0.05_0_0)] text-biolum">
+      <div className="flex min-h-screen items-center justify-center bg-void text-biolum">
         <p className="text-biolum-dim text-sm">Loading workflow…</p>
       </div>
     );
@@ -65,7 +109,7 @@ function WorkflowRunRoute() {
 
   if (runQuery.isError || !runQuery.data) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[oklch(0.05_0_0)] text-biolum">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-void text-biolum">
         <p className="font-semibold text-lg">Unable to load workflow run.</p>
         <p className="text-biolum-dim text-sm">
           {runQuery.error?.message ?? "Unknown error"}
@@ -87,8 +131,27 @@ function WorkflowRunRoute() {
     });
   };
 
+  const trajectory = trajectoryQuery.data?.trajectory;
+  const canDownload = Boolean(trajectory && typeof trajectory === "object");
+  const downloadTrajectory = () => {
+    if (!trajectory) {
+      return;
+    }
+    const payload = JSON.stringify(trajectory, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `trajectory-${workflow.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const isRunning = workflow.status === "running";
+  const isSuspended = workflow.status === "suspended";
+
   return (
-    <div className="min-h-screen bg-[oklch(0.05_0_0)] px-4 py-6 text-biolum md:px-8">
+    <div className="min-h-screen bg-void px-4 py-6 text-biolum md:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
         <Dialog
           onOpenChange={(isOpen) => {
@@ -107,6 +170,50 @@ function WorkflowRunRoute() {
               >
                 ← Back to Mindscape
               </Button>
+              <div className="flex items-center gap-2">
+                {isRunning && (
+                  <Button
+                    className="text-amber-400 hover:text-amber-300"
+                    disabled={suspendMutation.isPending}
+                    onClick={handleSuspend}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Suspend
+                  </Button>
+                )}
+                {isSuspended && (
+                  <Button
+                    className="text-emerald-400 hover:text-emerald-300"
+                    disabled={isResuming}
+                    onClick={handleResume}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    {isResuming ? "Resuming..." : "Resume"}
+                  </Button>
+                )}
+                <Button
+                  className="text-biolum-dim hover:text-biolum"
+                  disabled={refreshTrajectory.isPending}
+                  onClick={() =>
+                    refreshTrajectory.mutate({ runId, format: "atif" })
+                  }
+                  size="sm"
+                  variant="ghost"
+                >
+                  Refresh Trajectory
+                </Button>
+                <Button
+                  className="text-biolum-dim hover:text-biolum"
+                  disabled={!canDownload}
+                  onClick={downloadTrajectory}
+                  size="sm"
+                  variant="ghost"
+                >
+                  Download ATIF
+                </Button>
+              </div>
               <Button
                 className="text-biolum-dim hover:text-biolum"
                 onClick={() => setDrawer(true)}

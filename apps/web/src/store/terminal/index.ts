@@ -28,7 +28,8 @@ const DEFAULT_PROFILES: TerminalProfile[] = [
     id: "local-default",
     name: "Local",
     type: "local",
-    shell: process.env.SHELL || "zsh",
+    // Browser-safe default. Users can override per-profile.
+    shell: "zsh",
     isDefault: true,
   },
 ];

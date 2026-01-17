@@ -12,10 +12,10 @@ async function getSearchServer(): Promise<SearchServer> {
   }
 
   const fumadocsPkg = "fumadocs-core/search/server";
-  const sourcePkg = "@/lib/source";
+  const sourcePkg = "../../lib/source";
 
   const [{ createFromSource }, { source }] = await Promise.all([
-    import(fumadocsPkg),
+    import(/* @vite-ignore */ fumadocsPkg),
     import(sourcePkg),
   ]);
 

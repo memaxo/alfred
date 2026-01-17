@@ -144,7 +144,7 @@ function ScanLineOverlay({ reduceMotion }: { reduceMotion: boolean }) {
       {reduceMotion ? null : (
         <motion.div
           animate={{ y: ["0%", "100%", "0%"] }}
-          className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent"
+          className="absolute inset-x-0 h-px bg-linear-to-r from-transparent via-cyan-400/30 to-transparent"
           transition={{
             duration: 4,
             repeat: Number.POSITIVE_INFINITY,
@@ -196,6 +196,22 @@ export function StatusPanel({
   transparency = 0.85,
 }: StatusPanelProps) {
   const reduceMotion = useReducedMotion() ?? false;
+  const [lastUpdate, setLastUpdate] = React.useState<string>("--:--:--");
+
+  React.useEffect(() => {
+    const fmt = () =>
+      new Date().toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+
+    setLastUpdate(fmt());
+    const interval = setInterval(() => setLastUpdate(fmt()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const overallStatus = React.useMemo(() => {
     if (items.some((i) => i.status === "critical")) {
       return "critical";
@@ -293,13 +309,7 @@ export function StatusPanel({
         {/* Footer timestamp */}
         <div className="border-white/5 border-t px-4 py-1.5">
           <span className="font-mono text-[10px] text-white/30">
-            LAST UPDATE:{" "}
-            {new Date().toLocaleTimeString("en-US", {
-              hour12: false,
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}
+            LAST UPDATE: {lastUpdate}
           </span>
         </div>
       </div>

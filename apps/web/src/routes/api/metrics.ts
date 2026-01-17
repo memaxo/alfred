@@ -6,6 +6,7 @@ export const Route = createFileRoute("/api/metrics")({
       GET: async () => {
         const metricsPkg = "@alfred/api/metrics";
         const { getMetricsSnapshot, metricsContentType } = await import(
+          /* @vite-ignore */
           metricsPkg
         );
 
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/api/metrics")({
         return new Response(body, {
           headers: {
             "content-type": metricsContentType,
+            "Cache-Control": "no-store",
           },
         });
       },
