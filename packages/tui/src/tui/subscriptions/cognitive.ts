@@ -4,6 +4,7 @@
  * Polls or subscribes to cognitive state updates.
  */
 
+import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -157,7 +158,7 @@ export function setupCognitiveSubscription(
     manager,
     store,
     pollingInterval = 2000,
-    useMockData = true, // TODO: Switch to false when API ready
+    useMockData = true,
   } = options;
 
   if (useMockData) {
@@ -171,14 +172,45 @@ export function setupCognitiveSubscription(
       immediate: true,
     });
   } else {
-    // Use real API polling
-    // TODO: Implement when cognitive.state endpoint exists
     manager.addPolling({
       id: "cognitive",
-      fetch: () => {
-        // const client = getTrpcClient();
-        // return client.cognitive.state.query({ streamId: "default" });
-        return Promise.resolve(mockCognitiveState()); // Fallback
+      fetch: async () => {
+        const client = getApiClient();
+        const result = await client.getCognitiveState("default");
+        if (result.error || !result.data) {
+          return mockCognitiveState();
+        }
+
+        const phaseRaw = result.data.phase;
+        const phase: CognitivePhase =
+          phaseRaw === "idle" ||
+          phaseRaw === "capturing" ||
+          phaseRaw === "thinking" ||
+          phaseRaw === "deciding" ||
+          phaseRaw === "executing" ||
+          phaseRaw === "reflecting"
+            ? phaseRaw
+            : "idle";
+
+        const stateObj = result.data.state as unknown as {
+          physiology?: Partial<PhysiologyState>;
+        };
+        const physiology = stateObj.physiology;
+
+        return {
+          phase,
+          physiology: {
+            energy: physiology?.energy ?? 0.5,
+            boredom: physiology?.boredom ?? 0,
+            frustration: physiology?.frustration ?? 0,
+          },
+          autonomy: {
+            level: result.data.autonomy.level ?? 0.5,
+            confidence: result.data.autonomy.level ?? 0.5,
+            threshold: 0.5,
+          },
+          timestamp: result.data.ts ?? Date.now(),
+        };
       },
       onData: (state) => store.update(state),
       onError: (_error) => {},

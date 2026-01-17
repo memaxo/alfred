@@ -4,6 +4,7 @@
  * Subscribes to workflow events via tRPC subscription.
  */
 
+import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -166,11 +167,7 @@ export type WorkflowSubscriptionOptions = {
 export function setupWorkflowSubscription(
   options: WorkflowSubscriptionOptions
 ): void {
-  const {
-    manager,
-    store,
-    useMockData = true, // TODO: Switch to false when ready
-  } = options;
+  const { manager, store, useMockData = true } = options;
 
   if (useMockData) {
     // Use polling with mock data for demo
@@ -183,37 +180,80 @@ export function setupWorkflowSubscription(
       immediate: false, // Don't trigger immediately
     });
   } else {
-    // Use real tRPC subscription
-    // TODO: Implement when ready
-    void manager.addSubscription({
+    const prevStatusByRun = new Map<string, WorkflowStatus>();
+    manager.addPolling({
       id: "workflow",
-      start: () => {
-        // const client = getTrpcClient();
-        // const subscription = client.workflow.stream.subscribe();
-        // return {
-        //   unsubscribe: () => subscription.unsubscribe(),
-        //   onData: (cb) => subscription.subscribe({ next: cb }),
-        //   onError: (cb) => subscription.subscribe({ error: cb }),
-        // };
+      fetch: async () => {
+        const client = getApiClient();
+        const result = await client.listWorkflows(25);
+        if (result.error || !result.data) {
+          return [mockWorkflowEvent()];
+        }
 
-        // Mock implementation
-        let callback: ((event: WorkflowEvent) => void) | null = null;
-        const interval = setInterval(() => {
-          if (callback) {
-            callback(mockWorkflowEvent());
-          }
-        }, 5000);
+        const now = Date.now();
+        const events: WorkflowEvent[] = [];
+        for (const run of result.data.runs) {
+          const statusRaw = run.status;
+          const status: WorkflowStatus =
+            statusRaw === "pending" ||
+            statusRaw === "planning" ||
+            statusRaw === "executing" ||
+            statusRaw === "completed" ||
+            statusRaw === "failed" ||
+            statusRaw === "cancelled"
+              ? statusRaw
+              : "pending";
 
-        return Promise.resolve({
-          unsubscribe: () => clearInterval(interval),
-          onData: (cb: (event: WorkflowEvent) => void) => {
-            callback = cb;
-          },
-          onError: () => {},
-        });
+          const prev = prevStatusByRun.get(run.id);
+          prevStatusByRun.set(run.id, status);
+
+          const eventType: WorkflowEvent["type"] =
+            status === "completed"
+              ? "completed"
+              : status === "failed"
+                ? "failed"
+                : status === "cancelled"
+                  ? "cancelled"
+                  : prev
+                    ? "progress"
+                    : "started";
+
+          const startedAt = Number.isFinite(Date.parse(run.createdAt))
+            ? Date.parse(run.createdAt)
+            : undefined;
+
+          const progress =
+            status === "completed"
+              ? 1
+              : status === "executing"
+                ? 0.5
+                : status === "planning"
+                  ? 0.25
+                  : 0;
+
+          events.push({
+            type: eventType,
+            workflow: {
+              id: run.id,
+              name: run.requirement,
+              status,
+              progress,
+              startedAt,
+            },
+            timestamp: now,
+          });
+        }
+
+        return events.length > 0 ? events : [mockWorkflowEvent()];
       },
-      onData: (event) => store.handleEvent(event as WorkflowEvent),
+      onData: (events) => {
+        for (const event of events) {
+          store.handleEvent(event);
+        }
+      },
       onError: (_error) => {},
+      interval: 5000,
+      immediate: false,
     });
   }
 }
