@@ -878,6 +878,36 @@ The pipeline is a stage orchestrator, not a workflow system. It sequences stages
 
 
 
+<!-- Source: .ruler/49-subprocess-tools.md -->
+
+# Subprocess Tool Patterns
+
+## Core Principle
+
+Subprocess-based tools must be deterministic, sandboxed, and debuggable under Bun and CI.
+
+## Rules
+
+1. **Policy first.** Enforce `requireToolScopesAndPolicy()` before spawning any external process.
+2. **Bun.spawn only.** Use `Bun.spawn` for subprocess tools with piped stdout/stderr and ignored stdin.
+3. **Avoid fd-based cwd for wrappers.** Do not use fd-based cwd wrappers when the command is a script wrapper or when the CLI spawns/execs other binaries; use a validated path `cwd` string instead.
+4. **Read streams immediately.** Begin reading stdout/stderr before awaiting `proc.exited` so output is not lost.
+5. **Minimal env.** Pass a minimal `env` map, always including `PATH` and `HOME`, and only the tool-prefixed env vars needed for configuration.
+6. **Opt-in integration tests.** Gate external-CLI integration tests behind an explicit env var and set a generous per-test timeout; always cleanup sessions/processes in `finally`.
+
+
+
+<!-- Source: .ruler/50-change-hygiene.md -->
+
+# Change Hygiene
+
+1. Before committing, ensure there are **no unstaged changes** in files that auto-formatters may rewrite; stash or commit unrelated work first.
+2. Prefer **single-purpose commits** (feature vs docs vs formatting) to avoid hook conflicts and review ambiguity.
+3. When adding a new window type, update both the `WindowType` union and `WINDOW_DEFAULTS` so typecheck remains exhaustive.
+4. Do not assume `Date` survives JSON boundaries; treat timestamps as strings/numbers and parse explicitly at the edge.
+
+
+
 <!-- Source: .ruler/bts.md -->
 
 # ALFRED Monorepo Overview
