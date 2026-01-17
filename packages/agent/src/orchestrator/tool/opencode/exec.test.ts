@@ -3,6 +3,7 @@ import {
   __internals as serverRegistry,
   stopAllServers,
 } from "../shared/server.js";
+import { __internals } from "./exec";
 import {
   executeWithOpenCode,
   __internals as opencodeInternals,
@@ -354,5 +355,11 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
     }
     expect(threw).toBe(true);
     expect(cancelCalls).toBeGreaterThan(0);
+  });
+});
+
+describe("opencode AgentFS env passthrough", () => {
+  it("allows Cerebras API key into the container", () => {
+    expect(__internals.dockerEnvAllowlist).toContain("CEREBRAS_API_KEY");
   });
 });

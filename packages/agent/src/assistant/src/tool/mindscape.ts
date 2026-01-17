@@ -69,4 +69,4 @@ export const toolMindscapeConnect = {
   },
 };
 
-// TODO: Implement mindscape_arrange when we have a way to push layout updates to the client
+// Note: implement mindscape_arrange once layout updates can be pushed to the client.

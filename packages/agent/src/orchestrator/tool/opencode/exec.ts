@@ -976,6 +976,7 @@ function pathResolveSafe(cw: string): string {
 }
 
 export const __internals = {
+  dockerEnvAllowlist: OPENCODE_DOCKER_ENV_ALLOWLIST,
   setSpawn: (fn: SpawnProc) => {
     spawnProc = fn;
   },

@@ -15,7 +15,7 @@ const sessionRegistryPkg = "@alfred/api/voice/session-registry";
  *
  * Type duplicated locally to avoid bundling @alfred/api in client builds.
  * Must match VoiceSessionSnapshot from @alfred/api/voice/session-registry.
- * TODO: Consider extracting to @alfred/type if this becomes shared across packages.
+ * Note: consider extracting to @alfred/type if this becomes shared across packages.
  */
 type VoiceSessionSnapshot = {
   id: string;
