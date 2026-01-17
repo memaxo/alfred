@@ -5,34 +5,12 @@
  * Enforces single-word naming rules across the codebase
  *
  * Rules:
- * - Files: single-word names only (e.g., user.ts, not user-profile.ts)
- * - Classes: single-word names only (e.g., class User, not class UserProfile)
- * - Params: single-word names only (e.g., user, run, token)
- * - No adjectives: "enhanced", "improved", "better", "optimized", etc.
+ * - Files: avoid `-` and `_` in basenames (framework exceptions allowed)
+ * - Identifiers: avoid `_` in param names (underscore prefix allowed)
+ * - No adjectives: avoid "enhanced", "improved", "better", "optimized", etc.
  */
 
-// TODO: [Phase 15] Implement file name checking
-// - Scan packages/**/*.ts files
-// - Check for hyphens, underscores in file names (except test files)
-// - Allow: tool/, flow/, pane/, rpc/ subdirectories
-
-// TODO: [Phase 15] Implement class name checking
-// - Parse TypeScript AST
-// - Check class declarations for multi-word names
-// - Check interface declarations
-
-// TODO: [Phase 15] Implement param name checking
-// - Parse function signatures
-// - Check for multi-word parameter names
-// - Allow: exceptions for external APIs
-
-// TODO: [Phase 15] Implement forbidden adjective checking
-// - Scan for: enhanced, improved, better, optimized, advanced, etc.
-// - Report violations with file:line
-
-// TODO: [Phase 15] Add CI integration
-// - Exit with code 1 if violations found
-// - Pretty print violations
+import { basename, extname } from "node:path";
 
 type Violation = {
   file: string;
@@ -41,17 +19,173 @@ type Violation = {
   message: string;
 };
 
+const FORBIDDEN_ADJECTIVES = [
+  "enhanced",
+  "improved",
+  "better",
+  "optimized",
+  "advanced",
+  "smart",
+  "faster",
+  "quick",
+  "robust",
+  "stable",
+] as const;
+
+const adjectiveRe = new RegExp(
+  `\\b(${FORBIDDEN_ADJECTIVES.join("|")})\\b`,
+  "i"
+);
+
+function isTextFile(path: string): boolean {
+  return (
+    path.endsWith(".ts") ||
+    path.endsWith(".tsx") ||
+    path.endsWith(".js") ||
+    path.endsWith(".jsx")
+  );
+}
+
+function stripKnownSuffixes(stem: string): string {
+  const suffixes = [".test", ".spec", ".types", ".hot"] as const;
+  for (const s of suffixes) {
+    if (stem.endsWith(s)) {
+      return stem.slice(0, -s.length);
+    }
+  }
+  return stem;
+}
+
+function baseStem(file: string): string {
+  const name = basename(file);
+  if (name.endsWith(".d.ts")) {
+    return stripKnownSuffixes(name.slice(0, -".d.ts".length));
+  }
+  const ext = extname(name);
+  return stripKnownSuffixes(ext ? name.slice(0, -ext.length) : name);
+}
+
+function allowFrameworkFileStem(stem: string): boolean {
+  // TanStack Start / routing and framework-mandated files.
+  if (stem === "_layout" || stem === "+not-found") {
+    return true;
+  }
+  if (stem.startsWith("+") || stem.startsWith("_")) {
+    return true;
+  }
+  if (stem.includes("$")) {
+    return true;
+  }
+  return false;
+}
+
+function addViolation(
+  violations: Violation[],
+  v: Omit<Violation, "line"> & { line?: number }
+): void {
+  violations.push({ ...v, line: v.line ?? 1 });
+}
+
 function checkNames(): Violation[] {
   const violations: Violation[] = [];
 
-  // TODO: Implement scanning logic
+  const glob = new Bun.Glob(
+    "{apps,packages,scripts,tests}/**/*.{ts,tsx,js,jsx}"
+  );
+  for (const file of glob.scanSync({ dot: false })) {
+    if (
+      file.includes("/vendor/") ||
+      file.includes("/node_modules/") ||
+      file.includes("/.turbo/") ||
+      file.includes("/.source/")
+    ) {
+      continue;
+    }
+
+    const stem = baseStem(file);
+    if (
+      !allowFrameworkFileStem(stem) &&
+      (stem.includes("-") || stem.includes("_"))
+    ) {
+      addViolation(violations, {
+        file,
+        type: "file",
+        message: `Disallowed filename characters in "${stem}" (avoid '-' and '_')`,
+      });
+    }
+
+    if (!isTextFile(file)) {
+      continue;
+    }
+
+    const text = Bun.file(file).text();
+    const lines = text.split("\n");
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) {
+        continue;
+      }
+
+      // Adjectives (anywhere in code/comments).
+      if (adjectiveRe.test(line)) {
+        addViolation(violations, {
+          file,
+          line: i + 1,
+          type: "adjective",
+          message: "Forbidden adjective found",
+        });
+      }
+
+      // Param names: flag underscores (except leading `_` for intentionally-unused).
+      // This is a heuristic (not full AST parsing) but catches most cases cheaply.
+      const paramMatches = line.matchAll(/\(\s*([^)]*)\)/g);
+      for (const match of paramMatches) {
+        const params = match[1];
+        if (!params) {
+          continue;
+        }
+        for (const rawParam of params.split(",")) {
+          const p = rawParam.trim().split(/[:=]/)[0]?.trim();
+          if (!p) {
+            continue;
+          }
+          if (p.startsWith("...")) {
+            continue;
+          }
+          if (p.startsWith("_")) {
+            continue;
+          }
+          if (p.includes("_")) {
+            addViolation(violations, {
+              file,
+              line: i + 1,
+              type: "param",
+              message: `Disallowed '_' in param name "${p}"`,
+            });
+          }
+        }
+      }
+
+      // Class/interface names: forbid adjective terms in identifiers.
+      const decl = line.match(/\b(class|interface)\s+([A-Za-z0-9_]+)/);
+      const name = decl?.[2];
+      if (name && adjectiveRe.test(name)) {
+        addViolation(violations, {
+          file,
+          line: i + 1,
+          type: "class",
+          message: `Forbidden adjective in ${decl?.[1] ?? "type"} name "${name}"`,
+        });
+      }
+    }
+  }
 
   return violations;
 }
 
 function main() {
   console.log("ALFRED Naming Convention Checker");
-  console.log("TODO: [Phase 15] Implement name checking logic");
 
   const violations = checkNames();
 

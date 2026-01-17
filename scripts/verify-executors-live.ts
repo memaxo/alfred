@@ -199,6 +199,21 @@ function formatSnippet(label: string, text: string): string {
   return `${label}: ${snippet}`;
 }
 
+function assertExactReply(args: {
+  label: string;
+  expected: string;
+  actual: string;
+}) {
+  const got = args.actual.trim();
+  if (got === args.expected) {
+    return;
+  }
+  const snippet = formatSnippet("got", args.actual);
+  throw new Error(
+    `executor_live_verify_mismatch: ${args.label} expected=${args.expected} ${snippet}`
+  );
+}
+
 async function runCodexOnce(args: {
   authz: string;
   containerName: string;
@@ -397,6 +412,11 @@ async function main() {
       prompt: "Reply with exactly: codex_ok_1",
     });
     console.log(formatSnippet("codex_1", codex1));
+    assertExactReply({
+      label: "codex_1",
+      expected: "codex_ok_1",
+      actual: codex1,
+    });
 
     const codex2 = await runCodexOnce({
       authz,
@@ -406,6 +426,11 @@ async function main() {
       prompt: "Reply with exactly: codex_ok_2",
     });
     console.log(formatSnippet("codex_2", codex2));
+    assertExactReply({
+      label: "codex_2",
+      expected: "codex_ok_2",
+      actual: codex2,
+    });
 
     console.log("\n--- Codex (explicit default profile baseline) ---");
     const codexDefault = await runCodexOnce({
@@ -417,6 +442,11 @@ async function main() {
       prompt: "Reply with exactly: codex_default_ok",
     });
     console.log(formatSnippet("codex_default", codexDefault));
+    assertExactReply({
+      label: "codex_default",
+      expected: "codex_default_ok",
+      actual: codexDefault,
+    });
 
     console.log("\n--- OpenCode (server default inside AgentFS, Cerebras) ---");
     const open1 = await runOpenCodeOnce({
@@ -427,6 +457,11 @@ async function main() {
       prompt: "Reply with exactly: opencode_ok_1",
     });
     console.log(formatSnippet("opencode_1", open1));
+    assertExactReply({
+      label: "opencode_1",
+      expected: "opencode_ok_1",
+      actual: open1,
+    });
 
     const open2 = await runOpenCodeOnce({
       authz,
@@ -436,6 +471,11 @@ async function main() {
       prompt: "Reply with exactly: opencode_ok_2",
     });
     console.log(formatSnippet("opencode_2", open2));
+    assertExactReply({
+      label: "opencode_2",
+      expected: "opencode_ok_2",
+      actual: open2,
+    });
 
     console.log(
       "\n--- OpenCode (explicit default profile baseline, Cerebras) ---"
@@ -449,6 +489,11 @@ async function main() {
       prompt: "Reply with exactly: opencode_default_ok",
     });
     console.log(formatSnippet("opencode_default", openDefault));
+    assertExactReply({
+      label: "opencode_default",
+      expected: "opencode_default_ok",
+      actual: openDefault,
+    });
 
     console.log("\n--- Best-effort crash recovery (Codex server) ---");
     try {
@@ -465,6 +510,11 @@ async function main() {
           prompt: "Reply with exactly: codex_recovered_ok",
         });
         console.log(formatSnippet("codex_recovered", recovered));
+        assertExactReply({
+          label: "codex_recovered",
+          expected: "codex_recovered_ok",
+          actual: recovered,
+        });
       }
     } catch (error) {
       console.log(
@@ -489,6 +539,11 @@ async function main() {
           prompt: "Reply with exactly: opencode_recovered_ok",
         });
         console.log(formatSnippet("opencode_recovered", recovered));
+        assertExactReply({
+          label: "opencode_recovered",
+          expected: "opencode_recovered_ok",
+          actual: recovered,
+        });
       } else {
         console.log(
           "NOTE: Unable to locate opencode acp PID via docker top; skipping."

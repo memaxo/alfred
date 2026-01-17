@@ -7,7 +7,6 @@
 import { spawn } from "bun";
 
 const scripts = [
-  // "verify-graph-runtime.ts", // TODO: Implement
   "verify-orchestrator.ts",
   "verify-resilience.ts",
   "verify-voice-runtime.ts",
