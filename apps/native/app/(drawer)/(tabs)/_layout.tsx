@@ -49,6 +49,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="capture"
+        options={{
+          title: "Capture",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon color={color} name="plus-circle" />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="drive"
         options={{
           title: "Drive",

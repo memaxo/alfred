@@ -260,6 +260,48 @@ const statements = [
     completed_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  `CREATE TABLE IF NOT EXISTS sense_captures (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    source_device TEXT,
+    evidence TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
+  `CREATE TABLE IF NOT EXISTS sense_bundles (
+    id TEXT PRIMARY KEY,
+    capture_id TEXT NOT NULL,
+    text TEXT NOT NULL,
+    entities TEXT,
+    route_candidates TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (capture_id)
+  );`,
+  `CREATE TABLE IF NOT EXISTS sense_receipts (
+    id TEXT PRIMARY KEY,
+    capture_id TEXT NOT NULL,
+    decision TEXT NOT NULL DEFAULT 'route',
+    summary TEXT NOT NULL,
+    evidence TEXT,
+    outcome TEXT,
+    alternatives TEXT,
+    confidence REAL DEFAULT 0.5,
+    corrections TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (capture_id)
+  );`,
+  `CREATE TABLE IF NOT EXISTS sense_workingsets (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    items TEXT,
+    focus TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id)
+  );`,
   `CREATE TABLE IF NOT EXISTS audit_logs (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

@@ -41,6 +41,7 @@
     "@alfred/plan": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/runtime": "workspace:*",
+    "@alfred/sense": "workspace:*",
     "@alfred/tune": "workspace:*",
     "@alfred/voice": "workspace:*",
     "@trpc/client": "catalog:",

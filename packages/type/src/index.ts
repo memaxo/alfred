@@ -46,6 +46,9 @@ export * from "./ref.zod";
 export { RuntimeContext } from "./runtime-context";
 // OAuth Scopes for MCP integration
 export * from "./scopes";
+// Sense (capture inbox + working set)
+export * from "./sense";
+export * from "./sense.zod";
 export * from "./serialize";
 export * from "./source";
 // Streaming and UI message types

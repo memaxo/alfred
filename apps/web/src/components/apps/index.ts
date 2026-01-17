@@ -21,6 +21,7 @@ export { CortexApp, CortexAppWindow } from "./cortex";
 export { DockerApp, DockerAppWindow } from "./docker";
 // Knowledge & Integration Apps
 export { FilesApp, FilesAppWindow } from "./files";
+export { InboxApp, InboxAppWindow } from "./inbox";
 export { KnowledgeApp, KnowledgeAppWindow } from "./knowledge";
 export { LearningApp, LearningAppWindow } from "./learning";
 export { LinearApp, LinearAppWindow } from "./linear";
@@ -36,3 +37,4 @@ export { TerminalApp, TerminalAppWindow } from "./terminal";
 export { TimersApp, TimersAppWindow } from "./timers";
 export { TuneApp, TuneAppWindow } from "./tune";
 export { WorkflowApp, WorkflowAppWindow } from "./workflow";
+export { WorkingSetApp, WorkingSetAppWindow } from "./workingset";

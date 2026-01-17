@@ -1,15 +1,4 @@
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
-import {
-  historyContextSelectionDurationSeconds,
-  historyContextTierDropsTotal,
-  historyContextTokensTotal,
-  preferenceHistoryPrunedTotal,
-  preferencePromptFailuresTotal,
-  preferencePromptInjectionsTotal,
-  sseConnectionRateLimitHitsTotal,
-  sseConnectionsCurrent,
-  sseFirstChunkLatencySeconds,
-} from "@alfred/api/metrics";
 import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import {
   createConnection,
@@ -63,8 +52,29 @@ export async function handleStreamRequest(
   let userId: string | null = null;
   let firstChunkSent = false;
   let closeMcp: (() => Promise<void>) | null = null;
+  let sseConnectionsCurrentRef:
+    | typeof import("@alfred/api/metrics")["sseConnectionsCurrent"]
+    | null = null;
 
   try {
+    const metricsPkg = "@alfred/api/metrics";
+    const {
+      historyContextSelectionDurationSeconds,
+      historyContextTierDropsTotal,
+      historyContextTokensTotal,
+      preferenceHistoryPrunedTotal,
+      preferencePromptFailuresTotal,
+      preferencePromptInjectionsTotal,
+      sseConnectionRateLimitHitsTotal,
+      sseConnectionsCurrent: sseConnectionsCurrentMetric,
+      sseFirstChunkLatencySeconds,
+    } = (await import(
+      /* @vite-ignore */
+      metricsPkg
+    )) as typeof import("@alfred/api/metrics");
+    sseConnectionsCurrentRef = sseConnectionsCurrentMetric;
+    const sseConnectionsCurrent = sseConnectionsCurrentMetric;
+
     const rawBody = await request.json();
     const parsed = requestSchema.safeParse(rawBody);
     if (!parsed.success) {
@@ -75,7 +85,10 @@ export async function handleStreamRequest(
         }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
         }
       );
     }
@@ -88,7 +101,10 @@ export async function handleStreamRequest(
     if (!userId) {
       return new Response(JSON.stringify({ error: "session_required" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
       });
     }
 
@@ -107,6 +123,7 @@ export async function handleStreamRequest(
           status: 429,
           headers: {
             "Content-Type": "application/json",
+            "Cache-Control": "no-store",
             "Retry-After": "60",
           },
         }
@@ -413,6 +430,7 @@ export async function handleStreamRequest(
       response.headers.set("x-conversation-id", conversationId);
     }
     response.headers.set("x-model", modelId);
+    response.headers.set("Cache-Control", "no-store");
     if (activationData) {
       response.headers.set(
         "x-mindscape-activation",
@@ -428,14 +446,17 @@ export async function handleStreamRequest(
       connectionId = null;
       // Update connection count metric (global count)
       const globalConnectionCount = getConnectionCount();
-      sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
+      sseConnectionsCurrentRef?.labels(errorPrefix).set(globalConnectionCount);
     }
     void closeMcp?.();
 
     if (error instanceof SyntaxError) {
       return new Response(JSON.stringify({ error: "invalid_json" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
       });
     }
 
@@ -458,7 +479,10 @@ export async function handleStreamRequest(
       }),
       {
         status: classified.httpStatus,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
       }
     );
   }

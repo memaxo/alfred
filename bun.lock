@@ -16,6 +16,7 @@
         "@testing-library/user-event": "^14.6.1",
         "@types/bun": "^1.3.4",
         "@types/node": "^22.13.11",
+        "agent-browser": "^0.5.0",
         "bun-types": "^1.3.4",
         "lefthook": "^1.11.1",
         "node-gyp": "12.1.0",
@@ -262,6 +263,7 @@
         "@alfred/plan": "workspace:*",
         "@alfred/policy": "workspace:*",
         "@alfred/runtime": "workspace:*",
+        "@alfred/sense": "workspace:*",
         "@alfred/tune": "workspace:*",
         "@alfred/voice": "workspace:*",
         "@trpc/client": "catalog:",
@@ -446,6 +448,23 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/pipeline": {
+      "name": "@alfred/pipeline",
+      "version": "0.0.1",
+      "dependencies": {
+        "@alfred/agent": "workspace:*",
+        "@alfred/db": "workspace:*",
+        "@alfred/logger": "workspace:*",
+        "@alfred/metrics": "workspace:*",
+        "@alfred/plan": "workspace:*",
+        "@alfred/runtime": "workspace:*",
+        "@alfred/type": "workspace:*",
+        "prom-client": "^15.1.3",
+      },
+      "devDependencies": {
+        "@alfred/test-kit": "workspace:*",
+      },
+    },
     "packages/plan": {
       "name": "@alfred/plan",
       "version": "0.0.0",
@@ -523,6 +542,18 @@
         "ai": "catalog:",
         "drizzle-orm": "catalog:",
         "prom-client": "^15.1.3",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/node": "*",
+        "typescript": "*",
+      },
+    },
+    "packages/sense": {
+      "name": "@alfred/sense",
+      "version": "0.1.0",
+      "dependencies": {
+        "@alfred/type": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -707,6 +738,8 @@
 
     "@alfred/metrics": ["@alfred/metrics@workspace:packages/metrics"],
 
+    "@alfred/pipeline": ["@alfred/pipeline@workspace:packages/pipeline"],
+
     "@alfred/plan": ["@alfred/plan@workspace:packages/plan"],
 
     "@alfred/policy": ["@alfred/policy@workspace:packages/policy"],
@@ -716,6 +749,8 @@
     "@alfred/rag": ["@alfred/rag@workspace:packages/rag"],
 
     "@alfred/runtime": ["@alfred/runtime@workspace:packages/runtime"],
+
+    "@alfred/sense": ["@alfred/sense@workspace:packages/sense"],
 
     "@alfred/test-kit": ["@alfred/test-kit@workspace:packages/test-kit"],
 
@@ -2326,6 +2361,8 @@
     "adm-zip": ["adm-zip@0.5.16", "", {}, "sha512-TGw5yVi4saajsSEgz25grObGHEUaDrniwvA2qwSC060KfqGPdglhvPMA2lPIoxs3PQIItj2iag35fONcQqgUaQ=="],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
+
+    "agent-browser": ["agent-browser@0.5.0", "", { "dependencies": { "playwright-core": "^1.57.0", "ws": "^8.19.0", "zod": "^3.22.4" }, "bin": { "agent-browser": "bin/agent-browser" } }, "sha512-i0NGFBMwLMk7Q47vkyI8/DNxBmf3t5O+meq25rCJgxl4UbphwbnGamMmB/ZZBLLifXGYcU/joUnFEOxmV691zw=="],
 
     "agentfs-sdk": ["agentfs-sdk@0.3.1", "", { "dependencies": { "@tursodatabase/database": "^0.4.0-pre.17", "@tursodatabase/database-common": "^0.4.0-pre.17", "buffer": "^6.0.3" } }, "sha512-l/2WA7m4WHqXr2AWD+ae3N7g2ffneLHSRLOK2NfOMQTSLubXRMog0LhdyqqYyC4WTPG8s1v4pc1OA8/MYilUhw=="],
 
@@ -4915,7 +4952,7 @@
 
     "@alfred/cortex/@types/bun": ["@types/bun@1.3.5", "", { "dependencies": { "bun-types": "1.3.5" } }, "sha512-RnygCqNrd3srIPEWBd5LFeUYG7plCoH2Yw9WaZGyNmdTEei+gWaHqydbaIRkIkcbXwhBT94q78QljxN0Sk838w=="],
 
-    "@alfred/logger/@types/bun": ["@types/bun@1.3.5", "", { "dependencies": { "bun-types": "1.3.5" } }, "sha512-RnygCqNrd3srIPEWBd5LFeUYG7plCoH2Yw9WaZGyNmdTEei+gWaHqydbaIRkIkcbXwhBT94q78QljxN0Sk838w=="],
+    "@alfred/logger/@types/bun": ["@types/bun@1.3.6", "", { "dependencies": { "bun-types": "1.3.6" } }, "sha512-uWCv6FO/8LcpREhenN1d1b6fcspAB+cefwD7uti8C8VffIv0Um08TKMn98FynpTiU38+y2dUO55T11NgDt8VAA=="],
 
     "@alfred/test-kit/jose": ["jose@6.1.3", "", {}, "sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ=="],
 
@@ -5272,6 +5309,10 @@
     "@xyflow/react/zustand": ["zustand@4.5.7", "", { "dependencies": { "use-sync-external-store": "^1.2.2" }, "peerDependencies": { "@types/react": ">=16.8", "immer": ">=9.0.6", "react": ">=16.8" }, "optionalPeers": ["@types/react", "immer", "react"] }, "sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw=="],
 
     "accepts/negotiator": ["negotiator@0.6.3", "", {}, "sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg=="],
+
+    "agent-browser/ws": ["ws@8.19.0", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg=="],
+
+    "agent-browser/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "ai/@ai-sdk/provider": ["@ai-sdk/provider@3.0.0-beta.24", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-lYBjT2+8+2auq1mUs5oMrQs4O9COzHty/QukjrjBLRjkmeb9WeTQVVi0oeEGXf3yTdeY2eSwYOdz+H4zRHsacg=="],
 
@@ -5727,7 +5768,7 @@
 
     "@alfred/cortex/@types/bun/bun-types": ["bun-types@1.3.5", "", { "dependencies": { "@types/node": "*" } }, "sha512-inmAYe2PFLs0SUbFOWSVD24sg1jFlMPxOjOSSCYqUgn4Hsc3rDc7dFvfVYjFPNHtov6kgUeulV4SxbuIV/stPw=="],
 
-    "@alfred/logger/@types/bun/bun-types": ["bun-types@1.3.5", "", { "dependencies": { "@types/node": "*" } }, "sha512-inmAYe2PFLs0SUbFOWSVD24sg1jFlMPxOjOSSCYqUgn4Hsc3rDc7dFvfVYjFPNHtov6kgUeulV4SxbuIV/stPw=="],
+    "@alfred/logger/@types/bun/bun-types": ["bun-types@1.3.6", "", { "dependencies": { "@types/node": "*" } }, "sha512-OlFwHcnNV99r//9v5IIOgQ9Uk37gZqrNMCcqEaExdkVq3Avwqok1bJFmvGMCkCE0FqzdY8VMOZpfpR3lwI+CsQ=="],
 
     "@alfred/type/tsdown/rolldown": ["rolldown@1.0.0-beta.13-commit.024b632", "", { "dependencies": { "@oxc-project/runtime": "=0.72.3", "@oxc-project/types": "=0.72.3", "@rolldown/pluginutils": "1.0.0-beta.13-commit.024b632", "ansis": "^4.0.0" }, "optionalDependencies": { "@rolldown/binding-darwin-arm64": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-darwin-x64": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-freebsd-x64": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-linux-arm-gnueabihf": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-linux-arm64-gnu": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-linux-arm64-musl": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-linux-x64-gnu": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-linux-x64-musl": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-wasm32-wasi": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-win32-arm64-msvc": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-win32-ia32-msvc": "1.0.0-beta.13-commit.024b632", "@rolldown/binding-win32-x64-msvc": "1.0.0-beta.13-commit.024b632" }, "bin": { "rolldown": "bin/cli.mjs" } }, "sha512-sntAHxNJ22WdcXVHQDoRst4eOJZjuT3S1aqsNWsvK2aaFVPgpVPY3WGwvJ91SvH/oTdRCyJw5PwpzbaMdKdYqQ=="],
 

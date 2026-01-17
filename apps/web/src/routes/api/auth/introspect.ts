@@ -13,17 +13,26 @@ import { logger } from "@alfred/logger";
 import { createFileRoute } from "@tanstack/react-router";
 
 async function getDbHelpers() {
+  const availabilityPkg = "@alfred/api/utils/service-availability";
   const dbPkg = "@alfred/db";
   const schemaPkg = "@alfred/db/schema/auth";
   const drizzlePkg = "drizzle-orm";
 
-  const [dbMod, schemaMod, drizzleMod] = await Promise.all([
-    import(dbPkg),
-    import(schemaPkg),
-    import(drizzlePkg),
-  ]);
+  const availability = (await import(
+    /* @vite-ignore */ availabilityPkg
+  )) as typeof import("@alfred/api/utils/service-availability");
+  const dbMod = (await import(
+    /* @vite-ignore */ dbPkg
+  )) as typeof import("@alfred/db");
+  const schemaMod = (await import(
+    /* @vite-ignore */ schemaPkg
+  )) as typeof import("@alfred/db/schema/auth");
+  const drizzleMod = (await import(
+    /* @vite-ignore */ drizzlePkg
+  )) as typeof import("drizzle-orm");
 
   return {
+    isDbConnectionError: availability.isDbConnectionError,
     db: dbMod.db,
     oauthAccessToken: schemaMod.oauthAccessToken,
     eq: drizzleMod.eq,
@@ -52,8 +61,11 @@ export const Route = createFileRoute("/api/auth/introspect")({
           return Response.json({ error: "invalid_request" }, { status: 400 });
         }
 
+        let isDbConnectionError: ((error: unknown) => boolean) | null = null;
         try {
-          const { db, oauthAccessToken, eq } = await getDbHelpers();
+          const helpers = await getDbHelpers();
+          isDbConnectionError = helpers.isDbConnectionError;
+          const { db, oauthAccessToken, eq } = helpers;
 
           // Look up token in database
           const [tokenRecord] = await db
@@ -122,7 +134,15 @@ export const Route = createFileRoute("/api/auth/introspect")({
             },
           });
         } catch (error) {
-          logger.error("auth_token_introspection_failed", { error });
+          if (isDbConnectionError?.(error)) {
+            logger.warn("auth_token_introspection_db_unavailable", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          } else {
+            logger.error("auth_token_introspection_failed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
 
           // Don't expose internal errors - return inactive
           return Response.json(

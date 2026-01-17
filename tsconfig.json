@@ -17,6 +17,7 @@
     { "path": "packages/voice" },
     { "path": "packages/embed" },
     { "path": "packages/metrics" },
+    { "path": "packages/sense" },
     { "path": "packages/tune" },
     { "path": "packages/plan" },
     { "path": "packages/pipeline" },

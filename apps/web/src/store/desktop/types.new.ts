@@ -14,6 +14,7 @@
 export type WindowType =
   // Tier 0: Core Experience
   | "chat"
+  | "inbox"
   | "terminal"
   | "code"
   | "codex"
@@ -34,6 +35,8 @@ export type WindowType =
   | "visual-builder"
   | "metrics"
   | "rag"
+  | "bookmarks"
+  | "timers"
   // Tier 3: Knowledge & Exploration
   | "knowledge"
   | "workflow"
@@ -43,6 +46,7 @@ export type WindowType =
   // Tier 4: Productivity & Settings
   | "settings"
   | "components"
+  | "workingset"
   | "notes"
   | "reminders"
   | "todos"
@@ -456,6 +460,10 @@ export const WINDOW_DEFAULTS: Record<
     minSize: { width: 400, height: 400 },
     defaultBounds: { x: 100, y: 100, width: 500, height: 600 },
   },
+  inbox: {
+    minSize: { width: 450, height: 350 },
+    defaultBounds: { x: 120, y: 90, width: 650, height: 550 },
+  },
   terminal: {
     minSize: { width: 400, height: 300 },
     defaultBounds: { x: 150, y: 150, width: 600, height: 400 },
@@ -528,6 +536,14 @@ export const WINDOW_DEFAULTS: Record<
     minSize: { width: 500, height: 400 },
     defaultBounds: { x: 100, y: 100, width: 700, height: 500 },
   },
+  bookmarks: {
+    minSize: { width: 300, height: 300 },
+    defaultBounds: { x: 200, y: 150, width: 400, height: 500 },
+  },
+  timers: {
+    minSize: { width: 300, height: 400 },
+    defaultBounds: { x: 150, y: 150, width: 300, height: 400 },
+  },
   knowledge: {
     minSize: { width: 400, height: 300 },
     defaultBounds: { x: 150, y: 100, width: 500, height: 400 },
@@ -555,6 +571,10 @@ export const WINDOW_DEFAULTS: Record<
   components: {
     minSize: { width: 500, height: 400 },
     defaultBounds: { x: 140, y: 90, width: 900, height: 650 },
+  },
+  workingset: {
+    minSize: { width: 450, height: 350 },
+    defaultBounds: { x: 140, y: 110, width: 650, height: 550 },
   },
   notes: {
     minSize: { width: 300, height: 300 },

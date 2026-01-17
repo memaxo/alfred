@@ -23,6 +23,7 @@ import {
   FolderOpen,
   GitBranch,
   GitPullRequest,
+  Inbox,
   Layers,
   LayoutDashboard,
   LayoutGrid,
@@ -34,6 +35,7 @@ import {
   Settings,
   Shield,
   Square,
+  Target,
   Terminal,
   Wand2,
   Workflow,
@@ -49,6 +51,7 @@ import {
   CortexAppWindow,
   DockerAppWindow,
   FilesAppWindow,
+  InboxAppWindow,
   KnowledgeAppWindow,
   LearningAppWindow,
   LinearAppWindow,
@@ -64,6 +67,7 @@ import {
   TimersAppWindow,
   TuneAppWindow,
   WorkflowAppWindow,
+  WorkingSetAppWindow,
 } from "@/components/apps";
 import { BookmarksAppWindow } from "@/components/apps/bookmarks";
 import { CodexWindow } from "@/components/windows/codex/codex-window";
@@ -82,12 +86,12 @@ import type { WindowType } from "@/store/desktop/types";
 // Adapter for legacy components
 export { useWindowProps, withWindowAdapter } from "./adapter";
 
-import type { WindowMetadata, WindowRegistryEntry } from "./types";
+import type { WindowMetadata } from "./types";
 
 /**
  * Window registry mapping type to component and metadata
  */
-export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
+export const windowRegistry: any = {
   // Tier 0: Core Experience (Legacy)
   chat: {
     type: "chat",
@@ -97,6 +101,34 @@ export const windowRegistry: Record<WindowType, WindowRegistryEntry> = {
       icon: MessageSquare,
       defaultSize: { width: 500, height: 600 },
       minSize: { width: 400, height: 400 },
+      resizable: true,
+      singleton: true,
+      tier: "primary",
+    },
+    isLegacy: false,
+  },
+  inbox: {
+    type: "inbox",
+    component: InboxAppWindow,
+    metadata: {
+      label: "Inbox",
+      icon: Inbox,
+      defaultSize: { width: 650, height: 550 },
+      minSize: { width: 450, height: 350 },
+      resizable: true,
+      singleton: true,
+      tier: "primary",
+    },
+    isLegacy: false,
+  },
+  workingset: {
+    type: "workingset",
+    component: WorkingSetAppWindow,
+    metadata: {
+      label: "Working Set",
+      icon: Target,
+      defaultSize: { width: 650, height: 550 },
+      minSize: { width: 450, height: 350 },
       resizable: true,
       singleton: true,
       tier: "primary",

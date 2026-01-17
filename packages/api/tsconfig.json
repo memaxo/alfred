@@ -18,6 +18,7 @@
     { "path": "../metrics" },
     { "path": "../plan" },
     { "path": "../runtime" },
+    { "path": "../sense" },
     { "path": "../voice" }
   ]
 }
