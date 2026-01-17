@@ -1,4 +1,10 @@
 export {
+  getBudgetUsd,
+  getTotalCost,
+  recordPipelineCost,
+  setBudgetUsd,
+} from "./budget";
+export {
   type ContextOptions,
   createPipelineContext,
   exportContextStorage,

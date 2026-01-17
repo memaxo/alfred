@@ -72,9 +72,11 @@
     }
   },
   "dependencies": {
+    "@ai-sdk/cerebras": "^1.0.8",
     "@ai-sdk/openai": "^2.0.49",
     "@ai-sdk/mcp": "^1.0.5",
     "@ai-sdk/devtools": "^0.0.4",
+    "@openrouter/ai-sdk-provider": "^0.0.5",
     "@alfred/auth": "workspace:*",
     "@alfred/codex": "workspace:*",
     "@alfred/protocol": "workspace:*",

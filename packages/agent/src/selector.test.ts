@@ -9,6 +9,8 @@ const ENV_KEYS = [
   "NODE_ENV",
   "OPENAI_API_KEY",
   "AI_GATEWAY_API_KEY",
+  "OPENROUTER_API_KEY",
+  "CEREBRAS_API_KEY",
   "AI_MODEL_REF",
   "AI_MODEL_REF_CHAT",
   "AI_MODEL_REF_ORCHESTRATOR",
@@ -64,6 +66,8 @@ function makePrefs(
 beforeEach(() => {
   resetGatewayForTests();
   setEnv("OPENAI_API_KEY", "test-key");
+  setEnv("OPENROUTER_API_KEY", "test-openrouter-key");
+  setEnv("CEREBRAS_API_KEY", "test-cerebras-key");
   vi.restoreAllMocks();
 });
 
@@ -150,6 +154,8 @@ describe("getModelForRole", () => {
     setEnv("AI_GATEWAY_API_KEY", undefined);
     setEnv("AI_MODEL_CHAT", "openai:gpt-4o-mini");
 
-    expect(() => getModelForRole("chat")).toThrow("ai_gateway_api_key_missing");
+    expect(() => getModelForRole("chat")).toThrow(
+      "ai_provider_api_key_missing"
+    );
   });
 });

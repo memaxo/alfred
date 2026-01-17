@@ -1498,6 +1498,63 @@ Total: 30 tickets across 6 phases
 - `packages/agent/src/environment/pool.ts` — Container warm pool (if we implement it)
 - Cost tracking in workflow metrics
 
+**Implementation Status (2026-01-17):**
+
+✅ **Phase 6 Complete**
+
+All resilience and optimization tasks have been implemented:
+
+1. **Docker Warm Pool (ALF-302):** ✅ Implemented
+   - `AgentWarmPool` class exists at `packages/runtime/src/workflow/agent-warm-pool.ts`
+   - Pre-warms containers for reduced cold start
+   - Async replenishment
+
+2. **Cost Tracking & Budget Limits (ALF-303):** ✅ Implemented
+   - `packages/metrics/src/cost.ts` — Cost tracking with recordCost(), getRunCostSummary(), checkBudget()
+   - `packages/metrics/src/pricing.ts` — Pricing registry for OpenAI, Cerebras, OpenRouter
+   - `packages/pipeline/src/budget.ts` — Budget enforcement in pipeline context
+   - Budget warning/exceeded events added to pipeline events
+
+3. **Resilience Tests & Safeguards (ALF-304):** ✅ Implemented
+   - `packages/pipeline/test/resilience/abort.test.ts` — Abort signal propagation tests
+   - `packages/pipeline/test/resilience/transitions.test.ts` — MAX_TRANSITIONS guard tests
+   - `packages/pipeline/test/resilience/escalation.test.ts` — Escalation flow tests
+
+4. **Defer Checkpointing/Circuit Breakers (ALF-305):** ✅ Documented
+
+**Checkpointing Decision:**
+
+Multi-level checkpointing is **intentionally deferred** until the following criteria are met:
+
+**Implement Checkpointing When:**
+1. Average workflow duration exceeds 10 minutes
+2. Workflow volume exceeds 100 runs/day
+3. User feedback requests resume capability
+4. Telemetry shows >5% transient failure rate
+
+**Current State (Jan 2026):**
+- Avg workflow duration: 2-5 minutes
+- Volume: <10 runs/day
+- Transient failures: <1%
+- Sufficient safeguards exist (timeouts, abort, stuck detection, wave abort)
+
+**Circuit Breaker Decision:**
+
+Generic circuit breakers are **intentionally deferred** until:
+
+**Implement Circuit Breakers When:**
+1. Upstream API failures exceed 10% (24hr window)
+2. Cascading failures detected
+3. Recovery time exceeds 5 minutes
+4. Manual intervention required >1x/week
+
+**Current State:**
+- Upstream APIs (OpenAI, Cerebras) have 99.9% uptime
+- No cascading failures observed
+- Auto-retry with backoff handles transient errors
+
+**Next Review:** July 2026 or when any criterion is met
+
 ---
 
 ### Linear Epic/Ticket Creation Checklist

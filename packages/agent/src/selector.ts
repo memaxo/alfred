@@ -1,3 +1,4 @@
+import { createCerebras } from "@ai-sdk/cerebras";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import {
   type ModelRef,
@@ -6,6 +7,7 @@ import {
   toModelKey,
 } from "@alfred/type/model";
 import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { type LanguageModel, wrapLanguageModel } from "ai";
 
 import * as prefLoader from "./preference/loader";
@@ -148,8 +150,37 @@ function resolveRefSync(role: ModelRole): ModelRef {
 }
 
 function buildSelection(ref: ModelRef): ModelSelection {
+  const { provider, modelId } = parseModelRef(ref);
   const modelKey = toModelKey(ref);
-  let model = getOpenAI()(modelKey) as LanguageModel;
+
+  let model: LanguageModel;
+
+  switch (provider) {
+    case "cerebras": {
+      const apiKey = process.env.CEREBRAS_API_KEY;
+      if (!apiKey) {
+        throw new Error(
+          "cerebras_api_key_missing: Set CEREBRAS_API_KEY environment variable"
+        );
+      }
+      model = createCerebras({ apiKey })(modelId) as LanguageModel;
+      break;
+    }
+    case "openrouter": {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        throw new Error(
+          "openrouter_api_key_missing: Set OPENROUTER_API_KEY environment variable"
+        );
+      }
+      model = createOpenRouter({ apiKey }).chat(modelId) as LanguageModel;
+      break;
+    }
+    default:
+      // OpenAI, Anthropic, Google all use gateway/OpenAI provider
+      model = getOpenAI()(modelKey) as LanguageModel;
+      break;
+  }
 
   if (
     process.env.AI_DEVTOOLS === "1" &&

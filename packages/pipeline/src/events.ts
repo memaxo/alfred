@@ -116,6 +116,20 @@ export type PipelineEvent =
       timestamp: number;
     }
   | { type: "context:cache-hit"; cacheKey: string; timestamp: number }
+  // Budget events
+  | {
+      type: "budget:warning";
+      costUsd: number;
+      budgetUsd: number;
+      percentUsed: number;
+      timestamp: number;
+    }
+  | {
+      type: "budget:exceeded";
+      costUsd: number;
+      budgetUsd: number;
+      timestamp: number;
+    }
   // Pipeline lifecycle events
   | {
       type: "pipeline:start";
