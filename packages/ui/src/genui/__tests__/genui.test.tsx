@@ -173,6 +173,9 @@ describe("genui/interpreter", () => {
     };
     const result = renderUISchema(schema);
     expect(result).not.toBeNull();
+    // Verify it's a React element with correct type
+    expect(result).toHaveProperty("type", TestButton);
+    expect(result).toHaveProperty("props.label", "Click me");
   });
 
   test("renderUISchema renders nested components", () => {
@@ -186,6 +189,9 @@ describe("genui/interpreter", () => {
     };
     const result = renderUISchema(schema);
     expect(result).not.toBeNull();
+    // Verify container type and children count
+    expect(result).toHaveProperty("type", TestContainer);
+    expect(result.props.children).toHaveLength(2);
   });
 
   test("renderUISchema handles unknown component with placeholder", () => {
@@ -195,6 +201,9 @@ describe("genui/interpreter", () => {
     };
     const result = renderUISchema(schema);
     expect(result).not.toBeNull();
+    // Unknown components render as UnknownComponent wrapper
+    expect(typeof result.type).toBe("function");
+    expect(result.props.name).toBe("unknown");
   });
 
   test("renderUISchema respects maxDepth option", () => {
@@ -225,6 +234,8 @@ describe("genui/interpreter", () => {
     // With maxDepth=2, the innermost should be truncated
     const result = renderUISchema(deepSchema, { maxDepth: 2 });
     expect(result).not.toBeNull();
+    // Should still be a container at root
+    expect(result).toHaveProperty("type", TestContainer);
   });
 });
 
@@ -289,6 +300,83 @@ describe("genui/validation", () => {
   });
 });
 
+describe("genui/schema edge cases", () => {
+  test("validateUIComponent handles null input gracefully", () => {
+    const result = validateUIComponent(null);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toBeDefined();
+  });
+
+  test("validateUIComponent handles undefined input gracefully", () => {
+    const result = validateUIComponent(undefined);
+    expect(result.valid).toBe(false);
+  });
+
+  test("validateUIComponent accepts special characters in component name", () => {
+    const schema = {
+      component: "my-custom-component_v2",
+      props: {},
+    };
+    const result = validateUIComponent(schema);
+    expect(result.valid).toBe(true);
+  });
+
+  test("validateUIComponent accepts unicode in props", () => {
+    const schema = {
+      component: "text",
+      props: { content: "Hello 世界 🌍" },
+    };
+    const result = validateUIComponent(schema);
+    expect(result.valid).toBe(true);
+    expect(result.component?.props.content).toBe("Hello 世界 🌍");
+  });
+
+  test("validateUIComponent handles deeply nested schemas", () => {
+    // Create 50-level deep nesting
+    let schema: UIComponent = { component: "leaf", props: {} };
+    for (let i = 0; i < 50; i++) {
+      schema = { component: "container", props: {}, children: [schema] };
+    }
+    const result = validateUIComponent(schema);
+    expect(result.valid).toBe(true);
+  });
+
+  test("validateUIComponent handles empty children array", () => {
+    const schema = {
+      component: "container",
+      props: {},
+      children: [],
+    };
+    const result = validateUIComponent(schema);
+    expect(result.valid).toBe(true);
+    expect(result.component?.children).toEqual([]);
+  });
+
+  test("validateUIComponent handles props with various types", () => {
+    const schema = {
+      component: "complex",
+      props: {
+        stringProp: "hello",
+        numberProp: 42,
+        boolProp: true,
+        nullProp: null,
+        arrayProp: [1, 2, 3],
+        objectProp: { nested: "value" },
+      },
+    };
+    const result = validateUIComponent(schema);
+    expect(result.valid).toBe(true);
+    expect(result.component?.props.numberProp).toBe(42);
+    expect(result.component?.props.boolProp).toBe(true);
+  });
+
+  test("validateUIComponent rejects non-object input", () => {
+    expect(validateUIComponent("string").valid).toBe(false);
+    expect(validateUIComponent(123).valid).toBe(false);
+    expect(validateUIComponent([]).valid).toBe(false);
+  });
+});
+
 describe("genui/type guards", () => {
   test("isUIDataPart returns true for valid part", () => {
     const part = {
@@ -339,6 +427,10 @@ describe("genui/type guards", () => {
 });
 
 describe("genui/error boundary", () => {
+  beforeEach(() => {
+    clearRegistry();
+  });
+
   test("GenUIErrorBoundary is exported", () => {
     expect(GenUIErrorBoundary).toBeDefined();
     expect(typeof GenUIErrorBoundary).toBe("function");
@@ -355,6 +447,29 @@ describe("genui/error boundary", () => {
     }
     const Wrapped = withGenUIErrorBoundary(TestComponent);
     expect(Wrapped.displayName).toBe("withGenUIErrorBoundary(TestComponent)");
+  });
+
+  test("GenUIErrorBoundary renders children when no error", () => {
+    registerComponent("button", TestButton);
+    const schema: UIComponent = { component: "button", props: { label: "OK" } };
+    const child = renderUISchema(schema);
+
+    const element = createElement(GenUIErrorBoundary, { schema }, child);
+    expect(element).not.toBeNull();
+    expect(element.props.children).toBe(child);
+  });
+
+  test("GenUIErrorBoundary provides schema context for error recovery", () => {
+    const schema: UIComponent = {
+      component: "failing",
+      props: { dangerous: true },
+    };
+    const element = createElement(
+      GenUIErrorBoundary,
+      { schema },
+      createElement("div", null, "content")
+    );
+    expect(element.props.schema).toBe(schema);
   });
 });
 
@@ -444,25 +559,135 @@ describe("genui/tool integration", () => {
   });
 });
 
+describe("genui/tool result validation", () => {
+  test("createGenUIResult produces valid UIComponent", () => {
+    const result = createGenUIResult(
+      { component: "test", props: { value: 42 } },
+      { raw: "data" }
+    );
+    const validation = validateUIComponent(result.ui);
+    expect(validation.valid).toBe(true);
+    expect(validation.component?.component).toBe("test");
+  });
+
+  test("createChartResult produces valid UIComponent", () => {
+    const result = createChartResult("Sales", [{ x: "Q1", y: 100 }], {});
+    const validation = validateUIComponent(result.ui);
+    expect(validation.valid).toBe(true);
+    expect(validation.component?.props.title).toBe("Sales");
+    expect(validation.component?.props.data).toHaveLength(1);
+  });
+
+  test("createGridResult produces valid nested structure", () => {
+    const children: UIComponent[] = [
+      { component: "a", props: {} },
+      { component: "b", props: {} },
+    ];
+    const result = createGridResult(children, {}, 3);
+    const validation = validateUIComponent(result.ui);
+    expect(validation.valid).toBe(true);
+    expect(validation.component?.children).toHaveLength(2);
+    expect(validation.component?.props.cols).toBe(3);
+  });
+
+  test("createListResult produces valid UIComponent with items", () => {
+    const items = [
+      { id: "1", content: "A" },
+      { id: "2", content: "B" },
+    ];
+    const result = createListResult(items, { total: 2 });
+    const validation = validateUIComponent(result.ui);
+    expect(validation.valid).toBe(true);
+    expect(validation.component?.props.items).toHaveLength(2);
+  });
+
+  test("createTerminalResult produces valid orchestrator schema", () => {
+    const result = createTerminalResult(
+      "Build",
+      [{ type: "stdout", content: "OK" }],
+      "completed",
+      10,
+      {}
+    );
+    const validation = validateUIComponent(result.ui);
+    expect(validation.valid).toBe(true);
+    expect(validation.component?.component).toBe("streaming-terminal");
+  });
+
+  test("createWorkflowResult produces valid phases structure", () => {
+    const result = createWorkflowResult(
+      "wf-1",
+      "Deploy",
+      [
+        {
+          id: "p1",
+          name: "Build",
+          status: "completed",
+          progress: 100,
+          tasks: [{ id: "t1", name: "Compile", status: "completed" }],
+        },
+      ],
+      60,
+      {}
+    );
+    const validation = validateUIComponent(result.ui);
+    expect(validation.valid).toBe(true);
+    expect(validation.component?.props.phases).toHaveLength(1);
+    expect(validation.component?.props.phases[0].tasks).toHaveLength(1);
+  });
+
+  test("isGenUIToolResult validates tool helper outputs", () => {
+    const chartResult = createChartResult("Test", [], {});
+    const listResult = createListResult([], {});
+    const termResult = createTerminalResult("T", [], "running", 0, {});
+
+    expect(isGenUIToolResult(chartResult)).toBe(true);
+    expect(isGenUIToolResult(listResult)).toBe(true);
+    expect(isGenUIToolResult(termResult)).toBe(true);
+  });
+});
+
 describe("genui/streaming", () => {
+  beforeEach(() => {
+    clearRegistry();
+    registerComponents({
+      button: TestButton,
+      container: TestContainer,
+      text: TestText,
+    });
+  });
+
   test("GenUISkeleton renders default variant", () => {
     const result = GenUISkeleton({ variant: "default" });
     expect(result).not.toBeNull();
+    expect(result).toHaveProperty("type", "div");
+    expect(result.props.style).toHaveProperty("animation");
   });
 
   test("GenUISkeleton renders chart variant", () => {
     const result = GenUISkeleton({ variant: "chart" });
     expect(result).not.toBeNull();
+    expect(result).toHaveProperty("type", "div");
+    expect(result.props.style.height).toBe("200px");
   });
 
   test("GenUISkeleton renders list variant", () => {
     const result = GenUISkeleton({ variant: "list" });
     expect(result).not.toBeNull();
+    expect(result).toHaveProperty("type", "div");
+    // List variant has flexDirection column
+    expect(result.props.style.flexDirection).toBe("column");
+    // List variant renders 3 child skeletons
+    expect(result.props.children).toHaveLength(3);
   });
 
   test("GenUISkeleton renders card variant", () => {
     const result = GenUISkeleton({ variant: "card" });
     expect(result).not.toBeNull();
+    expect(result).toHaveProperty("type", "div");
+    // Card variant has padding and column layout
+    expect(result.props.style.padding).toBe("16px");
+    expect(result.props.style.flexDirection).toBe("column");
   });
 
   test("isPartialSchemaRenderable returns false for undefined", () => {
@@ -511,15 +736,6 @@ describe("genui/streaming", () => {
       isStreaming: true,
     });
     expect(result).not.toBeNull();
-  });
-
-  beforeEach(() => {
-    clearRegistry();
-    registerComponents({
-      button: TestButton,
-      container: TestContainer,
-      text: TestText,
-    });
   });
 
   test("StreamingUIRenderer renders complete schema", () => {
