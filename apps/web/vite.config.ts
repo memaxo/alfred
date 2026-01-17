@@ -243,6 +243,16 @@ export default defineConfig({
     resolve: {
       // @ts-expect-error - Vite resolve alias types
       alias: {
+        "@alfred/db/repo": resolve(__dirname, "../../packages/db/src/repo"),
+        "@alfred/db/schema": resolve(__dirname, "../../packages/db/src/schema"),
+        "@alfred/db/client": resolve(
+          __dirname,
+          "../../packages/db/src/client.ts"
+        ),
+        "@alfred/db/testing": resolve(
+          __dirname,
+          "../../packages/db/src/testing.ts"
+        ),
         "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
       },
     },
@@ -282,6 +292,16 @@ export default defineConfig({
   resolve: {
     conditions: ["bun", "module", "import", "default"],
     alias: {
+      "@alfred/db/repo": resolve(__dirname, "../../packages/db/src/repo"),
+      "@alfred/db/schema": resolve(__dirname, "../../packages/db/src/schema"),
+      "@alfred/db/client": resolve(
+        __dirname,
+        "../../packages/db/src/client.ts"
+      ),
+      "@alfred/db/testing": resolve(
+        __dirname,
+        "../../packages/db/src/testing.ts"
+      ),
       "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
     },
   },

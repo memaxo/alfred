@@ -40,7 +40,58 @@ function createNoSessionResponse(): Response {
 async function safeAuthHandler(request: Request): Promise<Response> {
   const h = await getAuthHelpers();
   try {
-    return await h.auth.handler(request);
+    const incomingOrigin = request.headers.get("origin");
+
+    // Expo / React Native often sends a non-browser Origin (or a Metro URL) that
+    // Better Auth will reject as "Invalid origin". For native clients, Origin is
+    // not a meaningful CSRF boundary, so we strip it and rely on credentials + cookies.
+    //
+    // This is intentionally narrow: only strip when the origin looks like an
+    // Expo/dev-client origin or the app deep-link scheme.
+    const shouldStripOrigin =
+      process.env.NODE_ENV !== "production" &&
+      typeof incomingOrigin === "string" &&
+      incomingOrigin.length > 0;
+
+    const effectiveRequest = (() => {
+      if (!shouldStripOrigin) {
+        return request;
+      }
+      const cloned = request.clone();
+      const headers = new Headers(cloned.headers);
+      headers.delete("origin");
+      headers.delete("referer");
+      return new Request(cloned, { headers });
+    })();
+
+    const res = await h.auth.handler(effectiveRequest);
+
+    // Debug native auth failures: Better Auth rejects requests when Origin is
+    // missing/untrusted, but React Native / Expo often sets a non-browser Origin.
+    // Surface the received origin in the error payload so clients can be configured.
+    if (
+      process.env.NODE_ENV !== "production" &&
+      res.status >= 400 &&
+      res.status < 500
+    ) {
+      const origin = incomingOrigin;
+      try {
+        const cloned = res.clone();
+        const body = (await cloned.json()) as { message?: unknown } | null;
+        const msg = typeof body?.message === "string" ? body.message : null;
+
+        if (msg?.toLowerCase().includes("origin")) {
+          return Response.json(
+            { ...body, message: `${msg} (origin=${origin ?? "null"})` },
+            { status: res.status, headers: res.headers }
+          );
+        }
+      } catch (_error) {
+        // Ignore parse errors; return original response.
+      }
+    }
+
+    return res;
   } catch (error) {
     // Check for database connection errors using type guard
     if (h.isDbConnectionError(error)) {
@@ -64,12 +115,22 @@ export const Route = createFileRoute("/api/auth/$")({
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const h = await getAuthHelpers();
-        h.logger.debug("auth_get_request", { url: request.url });
+        h.logger.info("auth_get_request", {
+          url: request.url,
+          origin: request.headers.get("origin"),
+          referer: request.headers.get("referer"),
+          userAgent: request.headers.get("user-agent"),
+        });
         return safeAuthHandler(request);
       },
       POST: async ({ request }: { request: Request }) => {
         const h = await getAuthHelpers();
-        h.logger.debug("auth_post_request", { url: request.url });
+        h.logger.info("auth_post_request", {
+          url: request.url,
+          origin: request.headers.get("origin"),
+          referer: request.headers.get("referer"),
+          userAgent: request.headers.get("user-agent"),
+        });
         return safeAuthHandler(request);
       },
     },

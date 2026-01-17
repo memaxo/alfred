@@ -5,9 +5,11 @@
  */
 
 import { Check, Fingerprint, GitMerge, Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
 
 type MergeControlsProps = {
   prId: string;
@@ -15,24 +17,66 @@ type MergeControlsProps = {
 };
 
 export function MergeControls({ prId: _prId, className }: MergeControlsProps) {
-  const [merging, setMerging] = useState(false);
-  const [biometricPending, setBiometricPending] = useState(false);
+  const prNumber = useMemo(() => Number.parseInt(_prId, 10), [_prId]);
+  const isValidPrNumber = Number.isFinite(prNumber) && prNumber > 0;
 
-  // Mock status
-  const canMerge = true;
-  const ciPassed = true;
-  const reviewApproved = true;
+  const [merging, setMerging] = useState(false);
+  const [verifyArmed, setVerifyArmed] = useState(false);
+
+  const prQuery = trpc.github.pullRequestGet.useQuery(
+    { number: prNumber },
+    { enabled: isValidPrNumber, refetchInterval: 30_000 }
+  );
+  const mergeMutation = trpc.github.pullRequestMerge.useMutation();
+
+  useEffect(() => {
+    if (!verifyArmed) {
+      return;
+    }
+    const t = setTimeout(() => setVerifyArmed(false), 10_000);
+    return () => clearTimeout(t);
+  }, [verifyArmed]);
+
+  const ciPassed = prQuery.data?.ciStatus === "success";
+  const reviewApproved = prQuery.data?.reviewStatus === "approved";
   const policyPassed = true;
+  const mergeable = prQuery.data?.mergeable;
+  const canMerge =
+    isValidPrNumber &&
+    prQuery.isSuccess &&
+    prQuery.data.status === "open" &&
+    !prQuery.data.isDraft &&
+    mergeable === "MERGEABLE" &&
+    ciPassed &&
+    reviewApproved &&
+    policyPassed;
 
   const handleMerge = async () => {
-    setBiometricPending(true);
-    // TODO: Trigger biometric verification
-    await new Promise((r) => setTimeout(r, 2000));
-    setBiometricPending(false);
+    if (!isValidPrNumber) {
+      toast.error("Invalid pull request number");
+      return;
+    }
+    if (!verifyArmed) {
+      setVerifyArmed(true);
+      toast.message("Verification required", {
+        description: "Click Merge again within 10s to confirm.",
+      });
+      return;
+    }
+
+    setVerifyArmed(false);
     setMerging(true);
-    // TODO: Call merge endpoint
-    await new Promise((r) => setTimeout(r, 1500));
-    setMerging(false);
+    try {
+      await mergeMutation.mutateAsync({ number: prNumber, method: "squash" });
+      toast.success(`Merge queued for #${prNumber}`);
+      await prQuery.refetch();
+    } catch (error) {
+      toast.error("Failed to merge PR", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setMerging(false);
+    }
   };
 
   return (
@@ -47,10 +91,10 @@ export function MergeControls({ prId: _prId, className }: MergeControlsProps) {
 
         {/* Merge button */}
         <div className="flex items-center gap-2">
-          {biometricPending && (
+          {verifyArmed && (
             <div className="flex items-center gap-2 rounded-lg bg-purple-500/10 px-3 py-1.5 text-purple-400 text-sm">
               <Fingerprint className="h-4 w-4 animate-pulse" />
-              <span>Verify with Touch ID</span>
+              <span>Click Merge again to confirm</span>
             </div>
           )}
 
@@ -61,13 +105,14 @@ export function MergeControls({ prId: _prId, className }: MergeControlsProps) {
                 ? "bg-purple-600 hover:bg-purple-700"
                 : "cursor-not-allowed opacity-50"
             )}
-            disabled={!canMerge || merging || biometricPending}
+            disabled={!canMerge || merging || mergeMutation.isPending}
             onClick={handleMerge}
+            type="button"
           >
             {merging ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Merging...
+                Submitting...
               </>
             ) : (
               <>

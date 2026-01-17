@@ -1,6 +1,5 @@
 /**
- * Docs placeholder route - fumadocs not fully configured
- * TODO: Complete fumadocs setup with source.config.ts
+ * Docs placeholder route
  */
 import { createFileRoute } from "@tanstack/react-router";
 

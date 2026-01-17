@@ -147,6 +147,34 @@ function extractIssueIdFromComment(payload: unknown): string | null {
   return comment?.issue?.id ?? null;
 }
 
+function extractCommentContext(payload: unknown): {
+  id: string | null;
+  body: string | null;
+  createdAt: string | null;
+  userId: string | null;
+  userName: string | null;
+} {
+  const data = (payload as { data?: Record<string, unknown> })?.data ?? null;
+  if (!data) {
+    return {
+      id: null,
+      body: null,
+      createdAt: null,
+      userId: null,
+      userName: null,
+    };
+  }
+
+  const id = typeof data.id === "string" ? data.id : null;
+  const body = typeof data.body === "string" ? data.body : null;
+  const createdAt = typeof data.createdAt === "string" ? data.createdAt : null;
+  const user = (data.user as Record<string, unknown> | undefined) ?? undefined;
+  const userId = typeof user?.id === "string" ? user.id : null;
+  const userName = typeof user?.name === "string" ? user.name : null;
+
+  return { id, body, createdAt, userId, userName };
+}
+
 function isIssueStateCompletedOrCanceled(payload: unknown): boolean {
   const issue = (payload as { data?: { state?: { type?: string } } })?.data;
   const stateType = issue?.state?.type;
@@ -291,7 +319,25 @@ async function handleLinearWebhookEvent(args: {
           runId: workflow.id,
           issueId,
         });
-        // TODO: Persist comment for contextual enrichment in future iterations
+        const ctx = extractCommentContext(payload);
+        const createdAt =
+          ctx.createdAt && Number.isFinite(Date.parse(ctx.createdAt))
+            ? new Date(ctx.createdAt)
+            : new Date();
+        await h.workflowRepo.appendEvent({
+          runId: workflow.id,
+          eventType: "context",
+          timestamp: createdAt,
+          eventData: {
+            kind: "linear.comment",
+            issueId,
+            commentId: ctx.id,
+            body: ctx.body,
+            userId: ctx.userId,
+            userName: ctx.userName,
+            createdAt: ctx.createdAt,
+          },
+        });
       }
     }
   }
