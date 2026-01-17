@@ -1,6 +1,6 @@
 // SKIP: This test relies on fixtures that have side effects which cause test pollution
 // when run alongside other tests. The test passes in isolation.
-// TODO: Investigate fixture isolation or refactor to use dependency injection.
+// NOTE: Investigate fixture isolation or refactor to use dependency injection.
 // Import Redis mocks BEFORE any other imports (via workflow fixture)
 
 import {

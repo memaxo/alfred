@@ -1,7 +1,7 @@
 // SKIP: This test uses mock.module() at the top level which causes Bun's module
 // mocking to pollute other test files in the same run. The mocks for @alfred/runtime
 // and @alfred/policy don't properly intercept imports when run alongside other tests.
-// TODO: Refactor to use dependency injection instead of mock.module()
+// NOTE: Refactor to use dependency injection instead of mock.module().
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
 import { metricsStub } from "./utils/mock-metrics";

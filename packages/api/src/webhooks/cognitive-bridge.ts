@@ -1,8 +1,11 @@
+import type { Event } from "@alfred/cognitive/state";
+import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
 import {
   cognitiveBridgeProcessingMs,
   cognitiveBridgeTriggerTotal,
 } from "@alfred/metrics/shared";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 
 export type BridgeReminderPayload = {
   type: "reminder";
@@ -33,8 +36,31 @@ export async function bridgeReminder(
       action: "trigger",
     });
 
-    // TODO: Implement actual cognitive bridge logic
-    // This would integrate with the cognitive system to process reminders
+    const contentParts = [
+      `Reminder: ${payload.title}`,
+      `When: ${payload.when}`,
+      payload.description ? `Notes: ${payload.description}` : null,
+      payload.intentType ? `Intent: ${payload.intentType}` : null,
+    ].filter((p): p is string => typeof p === "string" && p.length > 0);
+
+    const event: Event = {
+      _: "input",
+      content: contentParts.join("\n"),
+      source: "system",
+      ts: timestamp(Date.now()),
+    };
+
+    // Bridge into the cognitive event stream (best-effort).
+    // This intentionally avoids executing effects here; the reminder scheduler is a
+    // persistence boundary, not an agent runtime.
+    const { runCognitiveLoop } = await import("@alfred/runtime/cognitive");
+    const runtimeCtx = new RuntimeContext([
+      ["userId", userId],
+      ["source", "reminder"],
+      ["reminderId", payload.id],
+    ]);
+    await runCognitiveLoop(runtimeCtx, "default", event);
+
     logger.info("cognitive_bridge_reminder", {
       userId,
       reminderId: payload.id,
@@ -46,7 +72,11 @@ export async function bridgeReminder(
       Date.now() - startTime
     );
 
-    return { success: true };
+    return {
+      success: true,
+      action: "cognitive.append",
+      taskId: payload.id,
+    };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error("cognitive_bridge_reminder_failed", {

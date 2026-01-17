@@ -1,7 +1,7 @@
 // SKIP: This test uses mock.module() extensively which causes pollution issues
 // when run alongside other tests. The mocks for @alfred/runtime, @alfred/db/repo/policy,
 // and other modules don't properly isolate when combined with other test files.
-// TODO: Refactor to use dependency injection instead of mock.module()
+// NOTE: Refactor to use dependency injection instead of mock.module().
 
 // Import Redis mocks BEFORE any other imports
 import "@alfred/test-kit/redis";

@@ -1,7 +1,7 @@
 // SKIP: This test uses mock.module() and dbModuleStub which has pollution issues
 // when run alongside other tests. The mock functions (listDeployments, getDeploymentById)
 // are not properly stubbed due to module evaluation order issues.
-// TODO: Refactor to use dependency injection instead of mock.module()
+// NOTE: Refactor to use dependency injection instead of mock.module().
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { dbModuleStub } from "./utils/mock-db-client";
 import {

@@ -1,6 +1,6 @@
 // SKIP: This test uses mock.module() at the top level which causes Bun's module
 // cache pollution when run with other tests. The test passes in isolation.
-// TODO: Refactor to use dependency injection instead of mock.module()
+// NOTE: Refactor to use dependency injection instead of mock.module().
 import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 
 const SHOULD_RUN = process.env.RUN_VOICE_STREAMING_TESTS === "1";
