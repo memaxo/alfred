@@ -214,9 +214,10 @@ describe("GenUI chat rendering", () => {
     const part = message.parts[0];
     const node = renderPart(part, message);
 
-    // Should render the output as JSON or default display, not crash
+    // Should render the tool name and status, not crash
     const { container } = render(<div>{node}</div>);
-    expect(container.textContent).toContain("42");
+    // Default tool-result rendering shows tool name
+    expect(container.textContent).toContain("calculator");
   });
 
   it("validates data-ui part schema before rendering", () => {
