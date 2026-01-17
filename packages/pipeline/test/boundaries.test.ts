@@ -141,8 +141,8 @@ describe("Context Serializability", () => {
     // Verify assertSerializable is imported/used
     expect(content).toContain("assertSerializable");
 
-    // Verify set() calls assertSerializable
-    expect(content).toContain("assertSerializable(key, value)");
+    // Verify set() calls assertSerializable with key parameter
+    expect(content).toMatch(/assertSerializable\(key,\s*\w+\)/);
   });
 
   it("snapshot.ts exports SerializableValue type", () => {

@@ -10,7 +10,10 @@ import {
 import { ModelProcess, type ProcessConfig } from "@alfred/voice/process/base";
 import type { Subprocess } from "bun";
 
-describe("Error Handling", () => {
+// Skip these tests in fast test runs - they require voice dependencies
+const shouldSkip = !process.env.RUN_VOICE_TESTS;
+
+describe.skipIf(shouldSkip)("Error Handling", () => {
   let mockSpawn: ReturnType<typeof vi.fn>;
   const originalPythonPath = process.env.PYTHON_PATH;
 

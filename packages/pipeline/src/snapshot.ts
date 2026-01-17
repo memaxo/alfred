@@ -114,7 +114,25 @@ export function isSerializable(value: unknown): value is SerializableValue {
   if (typeof value === "function" || typeof value === "undefined") {
     return false;
   }
+  // Check for Map, Set, Date using multiple methods for transpiled code
   if (value instanceof Date || value instanceof Map || value instanceof Set) {
+    return false;
+  }
+  // Additional check for Map and Set using constructor name
+  const constructorName = value?.constructor?.name;
+  if (
+    constructorName === "Map" ||
+    constructorName === "Set" ||
+    constructorName === "Date"
+  ) {
+    return false;
+  }
+  // Check for Map-like objects with get/set methods
+  if (
+    typeof (value as any)?.get === "function" &&
+    typeof (value as any)?.set === "function" &&
+    typeof (value as any)?.size === "number"
+  ) {
     return false;
   }
   if (Array.isArray(value)) {

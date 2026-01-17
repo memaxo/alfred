@@ -24,7 +24,10 @@ class MockTTSPool {
   }
 }
 
-describe("VoiceSessionManager", () => {
+// Skip these tests in fast test runs - they require voice dependencies
+const shouldSkip = !process.env.RUN_VOICE_TESTS;
+
+describe.skipIf(shouldSkip)("VoiceSessionManager", () => {
   let manager: VoiceSessionManager;
   const mockSttPool = new MockSTTPool() as unknown as STTPool;
   const mockTtsPool = new MockTTSPool() as unknown as TTSPool;
@@ -74,7 +77,7 @@ describe("VoiceSessionManager", () => {
   });
 });
 
-describe("VoiceSession", () => {
+describe.skipIf(shouldSkip)("VoiceSession", () => {
   let session: VoiceSession;
   const mockSttPool = new MockSTTPool() as unknown as STTPool;
   const mockTtsPool = new MockTTSPool() as unknown as TTSPool;

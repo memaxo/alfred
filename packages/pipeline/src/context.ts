@@ -53,9 +53,11 @@ export function createPipelineContext(
       return fromSerializable(value as SerializableValue) as T;
     },
     set: (key, value) => {
-      // Validate serializability for resume capability
-      assertSerializable(key, value);
+      // Convert to serializable format first (handles Map, Set, Date)
       const serializable = toSerializable(value);
+
+      // Validate serializability after conversion
+      assertSerializable(key, serializable);
 
       storage.set(key, serializable);
 

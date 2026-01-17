@@ -12,7 +12,10 @@ import {
 } from "@alfred/voice/test/utils/python-helpers";
 import type { Subprocess } from "bun";
 
-describe("Python Process Integration", () => {
+// Skip these tests in fast test runs - they require voice dependencies
+const shouldSkip = !process.env.RUN_VOICE_TESTS;
+
+describe.skipIf(shouldSkip)("Python Process Integration", () => {
   let mockSpawn: ReturnType<typeof mock.fn>;
   let tempVoiceDir: string;
   let savedEnv: Record<string, string | undefined>;

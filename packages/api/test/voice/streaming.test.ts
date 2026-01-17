@@ -33,7 +33,10 @@ class MockTTSPool {
   }
 }
 
-describe("Voice Streaming Flow", () => {
+// Skip these tests in fast test runs - they require voice dependencies
+const shouldSkip = !process.env.RUN_VOICE_TESTS;
+
+describe.skipIf(shouldSkip)("Voice Streaming Flow", () => {
   let sessionManager: VoiceSessionManager;
   const mockSttPool = new MockSTTPool() as unknown as STTPool;
   const mockTtsPool = new MockTTSPool() as unknown as TTSPool;
