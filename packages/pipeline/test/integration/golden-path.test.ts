@@ -188,15 +188,12 @@ describe("Golden Path Pipeline", () => {
     }).toThrow("Stage not registered: init");
   });
 
-  // biome-ignore lint/suspicious/noSkippedTests: Test is flaky and needs more reliable timeout mechanism
-  it.skip("handles stage timeout gracefully", async () => {
-    // TODO: This test is flaky because the init stage can complete faster than 1ms
-    // Need to implement a more reliable timeout testing mechanism
+  it("handles stage timeout gracefully", async () => {
     const events: PipelineEvent[] = [];
     const runner = new PipelineRunner({
       maxParallel: 1,
       phaseTimeouts: {
-        init: 1, // 1ms timeout to force failure
+        init: 5,
         context: 120_000,
         plan: 120_000,
         schedule: 10_000,
@@ -206,7 +203,13 @@ describe("Golden Path Pipeline", () => {
         summarize: 30_000,
       },
     });
-    registerDefaultStages(runner);
+    runner.registerStage({
+      name: "init",
+      execute: async () => {
+        await Bun.sleep(50);
+        return { ok: true };
+      },
+    });
     runner.addObserver({
       onEvent: (e) => events.push(e),
     });
@@ -225,11 +228,9 @@ describe("Golden Path Pipeline", () => {
       }
     }).toThrow(/timed out/);
 
-    // Verify error event was emitted
     const errorEvents = events.filter((e) => e.type === "stage:error");
     expect(errorEvents.length).toBeGreaterThan(0);
 
-    // Verify pipeline:failed event was emitted
     const failedEvent = events.find((e) => e.type === "pipeline:failed");
     expect(failedEvent).toBeDefined();
   }, 10_000);

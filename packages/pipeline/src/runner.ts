@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+import { clearRunCosts } from "@alfred/metrics";
 import { createPipelineContext } from "./context";
 import type { ExecutionSummary, PipelineEvent } from "./events";
 import { createEvent } from "./events";
@@ -156,6 +157,7 @@ export class PipelineRunner {
     }> = [],
     signal?: AbortSignal
   ): AsyncGenerator<PipelineEvent, PipelineResult, void> {
+    const runId = input.runId;
     const stageResults = [...previousStageResults];
     const startTime = performance.now();
     const metrics: ExecutionMetrics = {
@@ -163,16 +165,40 @@ export class PipelineRunner {
       filesChanged: 0,
       learningInsights: 0,
     };
+    let transitionCount = 0;
+    let transitionsExhausted = false;
+    let pipelineFailedEmitted = false;
+    let currentStage: StageName | null = null;
+    const maxTransitions = this.config.maxTransitions;
+    const abortError = new Error("pipeline_aborted");
+    abortError.name = "AbortError";
+
+    const assertWithinTransitionLimit = (
+      eventType: PipelineEvent["type"],
+      options: { allowAfterExhausted?: boolean } = {}
+    ) => {
+      if (transitionsExhausted && options.allowAfterExhausted) {
+        return;
+      }
+      transitionCount += 1;
+      if (transitionCount > maxTransitions) {
+        transitionsExhausted = true;
+        throw new Error(
+          `pipeline_max_transitions_exceeded runId=${runId} count=${transitionCount} max=${maxTransitions} last=${eventType}`
+        );
+      }
+    };
 
     // Create context with initial values
     const ctx = createPipelineContext({
-      runId: input.runId,
+      runId,
       requirement: input.requirement,
       workspace: input.workspace,
       userId: input.userId,
       config: this.config,
       signal,
       emit: (event) => {
+        assertWithinTransitionLimit(event.type);
         this.emit(event);
         this.trackMetrics(event, metrics);
       },
@@ -180,120 +206,173 @@ export class PipelineRunner {
       emitContextEvents: true,
     });
 
-    // Emit start event only if starting from beginning
-    if (startStageIndex === 0) {
-      const startEvent = createEvent("pipeline:start", {
-        runId: input.runId,
-        requirement: input.requirement,
-      });
-      yield startEvent;
-      this.emit(startEvent);
-    }
-
-    // Get last stage output if resuming (need to reconstruct from context)
-    let stageInput: unknown =
-      startStageIndex === 0 ? input : this.getResumeInput(ctx, startStageIndex);
-
-    // Execute stages from startStageIndex
-    for (let i = startStageIndex; i < STAGE_ORDER.length; i++) {
-      const stageName = STAGE_ORDER[i] as StageName;
-      const stage = this.stages.get(stageName);
-
-      if (!stage) {
-        throw new Error(`Stage not registered: ${stageName}`);
+    try {
+      if (ctx.signal.aborted) {
+        throw abortError;
       }
 
-      const enterEvent = createEvent("stage:enter", { stage: stageName });
-      yield enterEvent;
-      this.emit(enterEvent);
-
-      const stageStart = performance.now();
-
-      try {
-        const timeout = this.config.phaseTimeouts[stageName];
-        const result = await this.executeWithTimeout(
-          stage.execute(stageInput, ctx),
-          timeout,
-          stageName
-        );
-
-        const durationMs = Math.round(performance.now() - stageStart);
-        stageResults.push({ name: stageName, durationMs, status: "success" });
-
-        const exitEvent = createEvent("stage:exit", {
-          stage: stageName,
-          durationMs,
+      // Emit start event only if starting from beginning
+      if (startStageIndex === 0) {
+        const startEvent = createEvent("pipeline:start", {
+          runId,
+          requirement: input.requirement,
         });
-        yield exitEvent;
-        this.emit(exitEvent);
+        assertWithinTransitionLimit(startEvent.type);
+        yield startEvent;
+        this.emit(startEvent);
+      }
 
-        // Update metrics from execute stage
-        if (stageName === "execute" && result) {
-          const execResult = result as { fileChanges?: unknown[] };
-          metrics.filesChanged = execResult.fileChanges?.length ?? 0;
+      // Get last stage output if resuming (need to reconstruct from context)
+      let stageInput: unknown =
+        startStageIndex === 0
+          ? input
+          : this.getResumeInput(ctx, startStageIndex);
+
+      // Execute stages from startStageIndex
+      for (let i = startStageIndex; i < STAGE_ORDER.length; i++) {
+        currentStage = STAGE_ORDER[i] as StageName;
+        const stage = this.stages.get(currentStage);
+
+        if (!stage) {
+          throw new Error(`Stage not registered: ${currentStage}`);
         }
 
-        // Pass output as next stage input
-        stageInput = result;
+        if (ctx.signal.aborted) {
+          throw abortError;
+        }
 
-        logger.info("pipeline_stage_complete", {
-          runId: input.runId,
-          stage: stageName,
-          durationMs,
-        });
-      } catch (error) {
-        const durationMs = Math.round(performance.now() - stageStart);
-        stageResults.push({ name: stageName, durationMs, status: "failure" });
+        const enterEvent = createEvent("stage:enter", { stage: currentStage });
+        assertWithinTransitionLimit(enterEvent.type);
+        yield enterEvent;
+        this.emit(enterEvent);
 
+        const stageStart = performance.now();
+        const timeout = this.config.phaseTimeouts[currentStage];
+        const timeoutGuard = this.createTimeoutGuard(timeout, currentStage);
+        const abortGuard = this.createAbortGuard(ctx.signal, abortError);
+
+        try {
+          const result = await Promise.race([
+            stage.execute(stageInput, ctx),
+            timeoutGuard.promise,
+            abortGuard.promise,
+          ]);
+
+          const durationMs = Math.round(performance.now() - stageStart);
+          stageResults.push({
+            name: currentStage,
+            durationMs,
+            status: "success",
+          });
+
+          const exitEvent = createEvent("stage:exit", {
+            stage: currentStage,
+            durationMs,
+          });
+          assertWithinTransitionLimit(exitEvent.type);
+          yield exitEvent;
+          this.emit(exitEvent);
+
+          // Update metrics from execute stage
+          if (currentStage === "execute" && result) {
+            const execResult = result as { fileChanges?: unknown[] };
+            metrics.filesChanged = execResult.fileChanges?.length ?? 0;
+          }
+
+          // Pass output as next stage input
+          stageInput = result;
+
+          logger.info("pipeline_stage_complete", {
+            runId,
+            stage: currentStage,
+            durationMs,
+          });
+        } catch (error) {
+          const durationMs = Math.round(performance.now() - stageStart);
+          stageResults.push({
+            name: currentStage,
+            durationMs,
+            status: "failure",
+          });
+
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          const errorEvent = createEvent("stage:error", {
+            stage: currentStage,
+            error: errorMessage,
+          });
+          assertWithinTransitionLimit(errorEvent.type, {
+            allowAfterExhausted: true,
+          });
+          yield errorEvent;
+          this.emit(errorEvent);
+
+          const failedEvent = createEvent("pipeline:failed", {
+            error: errorMessage,
+            lastStage: currentStage,
+          });
+          assertWithinTransitionLimit(failedEvent.type, {
+            allowAfterExhausted: true,
+          });
+          yield failedEvent;
+          this.emit(failedEvent);
+          pipelineFailedEmitted = true;
+
+          logger.error("pipeline_stage_failed", {
+            runId,
+            stage: currentStage,
+            error: errorMessage,
+          });
+
+          throw error;
+        } finally {
+          timeoutGuard.cancel();
+          abortGuard.cancel();
+        }
+      }
+
+      // Build final summary
+      const totalDurationMs = Math.round(performance.now() - startTime);
+      const summary: ExecutionSummary = {
+        runId,
+        requirement: input.requirement,
+        stages: stageResults,
+        totalDurationMs,
+        agentsSpawned: metrics.agentsSpawned,
+        filesChanged: metrics.filesChanged,
+        learningInsights: metrics.learningInsights,
+      };
+
+      const completeEvent = createEvent("pipeline:complete", { summary });
+      assertWithinTransitionLimit(completeEvent.type);
+      yield completeEvent;
+      this.emit(completeEvent);
+
+      // Return final stage output (SummarizeOutput)
+      return stageInput as PipelineResult;
+    } catch (error) {
+      if (!pipelineFailedEmitted) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        const errorEvent = createEvent("stage:error", {
-          stage: stageName,
-          error: errorMessage,
-        });
-        yield errorEvent;
-        this.emit(errorEvent);
-
+        const lastStage =
+          currentStage ?? STAGE_ORDER[startStageIndex] ?? "init";
         const failedEvent = createEvent("pipeline:failed", {
           error: errorMessage,
-          lastStage: stageName,
+          lastStage,
+        });
+        assertWithinTransitionLimit(failedEvent.type, {
+          allowAfterExhausted: true,
         });
         yield failedEvent;
         this.emit(failedEvent);
-
-        logger.error("pipeline_stage_failed", {
-          runId: input.runId,
-          stage: stageName,
-          error: errorMessage,
-        });
-
-        throw error;
       }
+      throw error;
+    } finally {
+      for (const observer of this.observers) {
+        observer.onComplete?.();
+      }
+      clearRunCosts(runId);
     }
-
-    // Build final summary
-    const totalDurationMs = Math.round(performance.now() - startTime);
-    const summary: ExecutionSummary = {
-      runId: input.runId,
-      requirement: input.requirement,
-      stages: stageResults,
-      totalDurationMs,
-      agentsSpawned: metrics.agentsSpawned,
-      filesChanged: metrics.filesChanged,
-      learningInsights: metrics.learningInsights,
-    };
-
-    const completeEvent = createEvent("pipeline:complete", { summary });
-    yield completeEvent;
-    this.emit(completeEvent);
-
-    // Notify observers of completion
-    for (const observer of this.observers) {
-      observer.onComplete?.();
-    }
-
-    // Return final stage output (SummarizeOutput)
-    return stageInput as PipelineResult;
   }
 
   /**
@@ -343,20 +422,65 @@ export class PipelineRunner {
     }
   }
 
-  private executeWithTimeout<T>(
-    promise: Promise<T>,
+  private createTimeoutGuard(
     timeoutMs: number,
     stageName: StageName
-  ): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(
-            new Error(`Stage ${stageName} timed out after ${timeoutMs}ms`)
-          );
-        }, timeoutMs);
-      }),
-    ]);
+  ): {
+    promise: Promise<never>;
+    cancel: () => void;
+  } {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const timeoutError = new Error(
+      `Stage ${stageName} timed out after ${timeoutMs}ms`
+    );
+
+    const promise = new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(timeoutError), timeoutMs);
+      timeout?.unref?.();
+    });
+
+    const cancel = () => {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+    };
+
+    return { promise, cancel };
+  }
+
+  private createAbortGuard(
+    signal: AbortSignal,
+    abortError: Error
+  ): {
+    promise: Promise<never>;
+    cancel: () => void;
+  } {
+    let active = true;
+    let listener: (() => void) | null = null;
+
+    const promise = new Promise<never>((_, reject) => {
+      if (signal.aborted) {
+        reject(abortError);
+        return;
+      }
+      listener = () => {
+        if (!active) {
+          return;
+        }
+        reject(abortError);
+      };
+      signal.addEventListener("abort", listener);
+    });
+
+    const cancel = () => {
+      active = false;
+      if (listener) {
+        signal.removeEventListener("abort", listener);
+        listener = null;
+      }
+    };
+
+    return { promise, cancel };
   }
 }

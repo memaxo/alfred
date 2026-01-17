@@ -103,6 +103,8 @@ export type PipelineConfig = {
   maxAgentAttempts: number;
   /** Max review attempts (deprecated, use reviewFixer.maxAttempts) */
   maxReviewAttempts: number;
+  /** Maximum total pipeline events before abort */
+  maxTransitions: number;
   /** Enable learning stage */
   enableLearning: boolean;
   /** Enable Linear synchronization */
@@ -128,6 +130,7 @@ export const DEFAULT_CONFIG: PipelineConfig = {
   maxParallel: 1,
   maxAgentAttempts: 3,
   maxReviewAttempts: 3,
+  maxTransitions: 50_000,
   enableLearning: true,
   enableLinearSync: false,
   linearSyncInterval: 30_000,

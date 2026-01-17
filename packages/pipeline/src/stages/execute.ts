@@ -205,7 +205,7 @@ export class ExecuteStage
             }
 
             // Check for escalation file
-            const escalationReason = await this.detectEscalation(
+            const escalationReason = await readEscalationFile(
               agentSpec.workingDirectory,
               agentSpec.agentId
             );
@@ -427,16 +427,17 @@ export class ExecuteStage
   /**
    * Detect escalation file written by agent.
    */
-  private async detectEscalation(
-    workDir: string,
-    agentId: string
-  ): Promise<string | null> {
-    const escalationPath = path.join(workDir, `ESCALATION-${agentId}.md`);
-    const file = Bun.file(escalationPath);
-    if (await file.exists()) {
-      const content = await file.text();
-      return content.trim() || null;
-    }
-    return null;
+}
+
+export async function readEscalationFile(
+  workDir: string,
+  agentId: string
+): Promise<string | null> {
+  const escalationPath = path.join(workDir, `ESCALATION-${agentId}.md`);
+  const file = Bun.file(escalationPath);
+  if (await file.exists()) {
+    const content = await file.text();
+    return content.trim() || null;
   }
+  return null;
 }

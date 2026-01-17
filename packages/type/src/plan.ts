@@ -6,7 +6,7 @@
 import { z } from "zod";
 import type { Obligation, ObligationResumeEvent } from "./policy";
 
-// TODO: [Phase 4] Refine schemas based on actual Orchestrator workflow requirements
+// Phase 4: refine schemas based on orchestrator workflow requirements.
 
 /**
  * Task represents a single unit of work
@@ -68,15 +68,11 @@ export const implementationPlanSchema = z.object({
 
 export type ImplementationPlan = z.infer<typeof implementationPlanSchema>;
 
-// TODO: [Phase 4] Add validation helpers
-// export function validatePlan(plan: unknown): ImplementationPlan {
-//   return implementationPlanSchema.parse(plan);
-// }
+export function validatePlan(plan: unknown): ImplementationPlan {
+  return implementationPlanSchema.parse(plan);
+}
 
-// TODO: [Phase 4] Add plan transformation utilities
-// export function mergePlans(plans: ImplementationPlan[]): ImplementationPlan {
-//   // Merge multiple plans into one
-// }
+// Phase 4: add plan transformation utilities (e.g., mergePlans()) when needed.
 
 export const droidArtifactSchema = z.object({
   path: z.string(),
