@@ -119,7 +119,7 @@ export const knowledgeCorrections = pgTable("knowledge_corrections", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
-// TODO: [Phase 4] Add graph traversal helpers in repo layer
+// Phase 4: add graph traversal helpers in repo layer.
 // - getNeighbors(nodeId, direction, kind)
 // - findPath(fromId, toId, maxDepth)
 // - getSubgraph(nodeIds)

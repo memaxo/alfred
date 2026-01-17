@@ -63,7 +63,7 @@ export const notes = pgTable("assistant_notes", {
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
-// TODO: [Phase 8] Optionally embed notes for semantic search
+// Phase 8: optionally embed notes for semantic search.
 
 /**
  * Events (calendar-like events)
@@ -106,7 +106,7 @@ export const reminders = pgTable("assistant_reminders", {
 });
 
 // Index coverage: assistant_reminders_user_due_fired_idx (0039)
-// TODO: [Phase 6] Add recurring reminder logic in scheduler
+// Phase 6: add recurring reminder logic in scheduler.
 
 /**
  * Bookmarks (saved URLs and resources)

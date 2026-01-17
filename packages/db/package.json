@@ -68,6 +68,24 @@
       "import": "./dist/repo/graph/scoring.js",
       "types": "./dist/repo/graph/scoring.d.ts"
     },
+    "./repo/*": {
+      "bun": "./src/repo/*.ts",
+      "default": "./dist/repo/*.js",
+      "import": "./dist/repo/*.js",
+      "types": "./dist/repo/*.d.ts"
+    },
+    "./repo/*/*": {
+      "bun": "./src/repo/*/*.ts",
+      "default": "./dist/repo/*/*.js",
+      "import": "./dist/repo/*/*.js",
+      "types": "./dist/repo/*/*.d.ts"
+    },
+    "./schema/*": {
+      "bun": "./src/schema/*.ts",
+      "default": "./dist/schema/*.js",
+      "import": "./dist/schema/*.js",
+      "types": "./dist/schema/*.d.ts"
+    },
     "./testing": {
       "bun": "./src/testing.ts",
       "default": "./dist/testing.js",

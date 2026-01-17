@@ -49,7 +49,7 @@ export const deployments = pgTable("deployments", {
 
 // Index coverage: see deployments_* indexes in migration 0042 for these patterns.
 
-// TODO: [Phase 10] Add deploymentLogs table for build/runtime logs
+// Phase 10: add deploymentLogs table for build/runtime logs.
 // export const deploymentLogs = pgTable("deployment_logs", {
 //   id: uuid("id").defaultRandom().primaryKey(),
 //   deploymentId: uuid("deployment_id").references(() => deployments.id, { onDelete: "cascade" }),
