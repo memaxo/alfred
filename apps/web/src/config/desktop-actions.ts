@@ -91,19 +91,23 @@ function generateSpawnActions(): DesktopAction[] {
     .filter((type) => windowRegistry[type as WindowType]?.component !== null)
     .map((type) => {
       const windowType = type as WindowType;
-      const metadata = windowRegistry[windowType].metadata;
+      const metadata = windowRegistry[windowType]?.metadata;
+      if (!metadata) {
+        return null;
+      }
       const config = spawnActionConfig[windowType] || {};
 
       return {
         id: `spawn-${windowType}` as DesktopActionId,
         label: `New ${metadata.label}`,
         icon: (metadata.icon as unknown as LucideIcon) || MessageSquare,
-        validWindowTypes: "none",
+        validWindowTypes: "none" as const,
         shortcut: config.shortcut,
-        category: "spawn",
+        category: "spawn" as const,
         aliases: config.aliases,
       };
-    });
+    })
+    .filter((action): action is NonNullable<typeof action> => action !== null);
 }
 
 // Window Actions (context-dependent)

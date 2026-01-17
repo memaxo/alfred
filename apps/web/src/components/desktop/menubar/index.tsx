@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Info,
   LogOut,
+  type LucideIcon,
   Settings,
   Wifi,
 } from "lucide-react";

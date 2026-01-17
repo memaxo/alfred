@@ -86,12 +86,12 @@ import type { WindowType } from "@/store/desktop/types";
 // Adapter for legacy components
 export { useWindowProps, withWindowAdapter } from "./adapter";
 
-import type { WindowMetadata } from "./types";
+import type { WindowMetadata, WindowRegistryEntry } from "./types";
 
 /**
  * Window registry mapping type to component and metadata
  */
-export const windowRegistry: any = {
+export const windowRegistry: Record<string, WindowRegistryEntry> = {
   // Tier 0: Core Experience (Legacy)
   chat: {
     type: "chat",

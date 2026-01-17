@@ -65,17 +65,23 @@ export function RunList() {
   );
 }
 
-function RunRow({
-  run,
-}: {
-  run: {
-    id: string;
-    status: string;
-    requirement: string;
-    created: string | Date;
-    projectId?: string | null;
-  };
-}) {
+type RunStatus =
+  | "running"
+  | "completed"
+  | "failed"
+  | "suspended"
+  | "cancelled"
+  | "pending";
+
+type Run = {
+  id: string;
+  status: RunStatus;
+  requirement?: string | null;
+  created: string | null;
+  projectId?: string | null;
+};
+
+function RunRow({ run }: { run: Run }) {
   const statusConfig = {
     running: { icon: PlayCircle, color: "text-emerald-400", label: "Running" },
     completed: { icon: CheckCircle2, color: "text-blue-400", label: "Done" },
@@ -115,7 +121,7 @@ function RunRow({
         </div>
       </div>
       <div className="w-24 text-right text-[10px] text-biolum-dim">
-        {formatRelativeTime(new Date(run.created))}
+        {run.created ? formatRelativeTime(new Date(run.created)) : "—"}
       </div>
       <div className="flex w-16 justify-end opacity-0 transition-opacity group-hover:opacity-100">
         <Button

@@ -111,13 +111,13 @@ function TimerItem({
   timer,
   onCancel,
 }: {
-  timer: { id: string; label?: string | null; expiresAt: string | Date };
+  timer: { id: string; label?: string | null; end: string };
   onCancel: () => void;
 }) {
   const [remaining, setRemaining] = useState(0);
 
   useEffect(() => {
-    const end = new Date(timer.expiresAt).getTime();
+    const end = new Date(timer.end).getTime();
 
     const update = () => {
       const now = Date.now();
@@ -127,7 +127,7 @@ function TimerItem({
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [timer.expiresAt]);
+  }, [timer.end]);
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
