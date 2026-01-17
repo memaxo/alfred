@@ -56,3 +56,10 @@ This document outlines the security and authorization patterns for ALFRED tools 
 ## Current Status
 *   **Orchestrator:** ✅ Policy Enforced
 *   **Assistant:** ⚠️ Trusted Input (Acceptable for Single-User)
+
+## Subprocess tools
+
+When a tool shells out to an external CLI, treat it as a high-risk boundary:
+
+- Follow the canonical subprocess patterns in `docs/architecture/subprocess-tools.md`.
+- Enforce policy before spawning, keep env minimal, and make integration tests opt-in.

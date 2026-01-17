@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
+import { getTestMode } from "@/lib/env/isomorphic";
 import { trpc } from "@/utils/trpc";
 
 type ObligationDialogState = {
@@ -27,20 +28,6 @@ export type ObligationChallengeDialogProps = {
   mode?: "auto" | "external";
   state: ObligationDialogState | null;
 };
-
-function isTestRuntime() {
-  if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") {
-    return true;
-  }
-  if (typeof import.meta !== "undefined") {
-    const env = (import.meta as ImportMeta & { env?: Record<string, string> })
-      .env;
-    if (env?.VITE_TEST_MODE === "true") {
-      return true;
-    }
-  }
-  return false;
-}
 
 const resumePreference: ObligationResumeEvent[] = [
   "bio-authz",
@@ -138,7 +125,8 @@ export function ObligationChallengeDialog({
           setIsAuthenticating(false);
           return;
         }
-        if (!isTestRuntime()) {
+        const testMode = await getTestMode();
+        if (!testMode) {
           const result = await authClient.signIn.passkey({
             email,
             autoFill: false,

@@ -79,6 +79,7 @@ function getBuildConstants(): Record<string, string> {
 
 const serverOnlyRegex = [
   /^@alfred\/agent(?:\/.*)?$/,
+  /^@alfred\/api(?:\/.*)?$/,
   /^@alfred\/cognitive(?:\/.*)?$/,
   /^@alfred\/metrics(?:\/.*)?$/,
   /^@alfred\/policy(?:\/.*)?$/,
@@ -88,6 +89,7 @@ const serverOnlyRegex = [
 ];
 const serverOnlyPackages = [
   "@alfred/agent",
+  "@alfred/api",
   "@alfred/auth",
   "@alfred/cognitive",
   "@alfred/metrics",
@@ -103,6 +105,7 @@ const browserOnlyPackages = ["@alfred/cortex"];
 const serverOnlyDeps = [
   "bun",
   "bun:sqlite",
+  "prom-client",
   "node:stream",
   "node:fs",
   "node:path",
@@ -118,6 +121,7 @@ const serverOnlyDeps = [
   "node:os",
   "node:process",
   "node:child_process",
+  "node:module",
   "stream",
   "fs",
   // better-auth subpath exports don't resolve correctly on Linux runners
@@ -216,6 +220,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: [
       "@alfred/agent",
+      "@alfred/api",
       "@alfred/agent/preference/prompt",
       "@alfred/policy",
       "@alfred/db",
@@ -248,6 +253,13 @@ export default defineConfig({
     target: "esnext",
     rollupOptions: {
       external: [...serverOnlyDeps, ...serverOnlyRegex],
+      onwarn: (warning, warn) => {
+        // Unused external imports are harmless but noisy in build logs.
+        if (warning.code === "UNUSED_EXTERNAL_IMPORT") {
+          return;
+        }
+        warn(warning);
+      },
       output: {
         // Enable tree shaking for better dead code elimination
         // Conservative manualChunks to avoid circular dependencies that break CSS manifest plugin
@@ -265,7 +277,7 @@ export default defineConfig({
       },
     },
     // Optimize chunk size warnings
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 20_000,
   },
   resolve: {
     conditions: ["bun", "module", "import", "default"],
@@ -276,7 +288,14 @@ export default defineConfig({
   plugins: [
     fumadocsVirtualPlugin,
     useEffectEventShimPlugin,
-    tsconfigPaths(),
+    tsconfigPaths({
+      // `turbo -F web dev` runs with cwd at repo root. Without an explicit root,
+      // vite-tsconfig-paths may traverse unrelated tsconfig files in the monorepo
+      // (e.g. under `vendor/`), producing noisy tsconfck parse errors.
+      root: __dirname,
+      projects: [resolve(__dirname, "tsconfig.json")],
+      ignoreConfigErrors: true,
+    }),
     tailwindcss(),
     mdx(fumadocsConfig),
     tanstackStart({

@@ -30,9 +30,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsd \
     ripgrep \
     tar \
+    fuse3 \
+    xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
 RUN ln -s /usr/bin/fdfind /usr/local/bin/fd || true
+
+# Install AgentFS CLI
+RUN curl -fsSL https://github.com/tursodatabase/agentfs/releases/latest/download/agentfs-installer.sh | sh
+ENV PATH="/root/.agentfs/bin:/root/.cargo/bin:${PATH}"
 
 COPY --from=codex /src/codex-rs/target/release/codex /usr/local/bin/codex
 COPY --from=codex /opt/ast-grep/bin/sg /usr/local/bin/sg
@@ -55,6 +61,15 @@ RUN set -eux; \
     chmod 755 /usr/local/bin/opencode; \
     rm -rf "$tmp_dir"
 
+# Ensure executor working directories exist even before CoW overlay wiring.
+RUN mkdir -p /workspace /workspace.base /agentfs
+
+COPY docker/agentfs/setup-workspace.sh /usr/local/bin/setup-workspace.sh
+RUN chmod +x /usr/local/bin/setup-workspace.sh
+
 ENV CODEX_UNSAFE_ALLOW_NO_SANDBOX=1
 
-CMD ["sleep", "infinity"]
+# Entrypoint that sets up the CoW workspace.
+# Foreground mount keeps the container alive.
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["setup-workspace.sh"]

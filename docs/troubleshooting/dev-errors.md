@@ -73,17 +73,21 @@ See https://github.com/rollup/plugins/tree/master/packages/dynamic-import-vars#l
 Variable-based dynamic imports (e.g., `await import(\`${dbPkg}/repo/workflow\`)`) are intentionally used to prevent server-only code from leaking into client bundles. Vite cannot statically analyze these, but they work correctly at runtime.
 
 ### Solution
-These warnings are **informational only** and can be safely ignored. The dynamic imports are working as intended. To suppress warnings, add `/* @vite-ignore */` comments:
+These warnings are expected **only** when a code path contains an intentionally opaque import and is missing a suppression comment.
+
+ALFRED’s current baseline is **quiet by default**: the dev server should produce **zero** Vite “dynamic import cannot be analyzed” warnings while preserving SSR isolation.
+
+To keep the variable-based pattern (SSR hardening) and suppress Vite’s analyzer warning, add `/* @vite-ignore */` inside the `import()` call:
 
 ```typescript
-// Example: packages/runtime/src/orchestrator/review.js
+// Example: variable-based SSR-safe import with analyzer suppression
 const { workflowRepo } = await import(
   /* @vite-ignore */
   `${dbPkg}/repo/workflow`
 );
 ```
 
-**Note:** Suppressing warnings is optional. The code functions correctly without suppression.
+This suppression is safe: it does not make the import “more static”; it only tells Vite not to try to analyze it.
 
 ## Issue 3: Voice Pools Initialization Failure
 
@@ -95,9 +99,7 @@ const { workflowRepo } = await import(
 ```
 
 ### Root Cause
-UV (Python package manager) is not installed or not in PATH. This is expected when:
-- Local voice models are not being used (`VOICE_PROVIDER=openai` by default)
-- UV is not installed for local voice processing
+The local voice pools use `uv` (Python package manager) to launch and manage the Python processes. This error occurs when `uv` is not runnable.
 
 ### Solution
 
@@ -110,8 +112,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 cd packages/voice && ./scripts/install-deps.sh
 ```
 
-**If using OpenAI voice (default):**
-This error can be safely ignored. The voice system will fall back to OpenAI APIs.
+**If not using local voice models:**
+Set `VOICE_PROVIDER=openai` (or another cloud provider) so the pools are never initialized.
+
+**Baseline expectation (quiet by default):**
+- If `VOICE_PROVIDER` selects a local provider but `uv` is missing/unrunnable, ALFRED should log a single WARN about skipping voice pools.
+- ERROR-level `voice_pools_init_failed` should only happen when local voice is explicitly enabled and `uv` is runnable, but pool initialization still fails (a true defect).
 
 ## Additional Notes
 
@@ -119,21 +125,31 @@ This error can be safely ignored. The voice system will fall back to OpenAI APIs
 ```
 Route file ".../__tests__/graceful.test.ts" does not contain any route piece.
 ```
-These are expected. Test files in `__tests__` directories are not route files and can be ignored.
+These are treated as a defect. Test files must not live under `apps/web/src/routes/**` because the route scanner will try to interpret them as routes.
+
+If you see this warning:
+- Move the offending `*.test.*` / `*.spec.*` file out of `apps/web/src/routes/**` (for example into `apps/web/src/tests/**`).
+- Run the guard test: `cd apps/web && bun test src/tests/routes/hygiene.test.ts`.
 
 ### Database Unavailable Warning
 ```
 [WARN] db_unavailable_skipping_services
 ```
-This is expected when the database is not running. Start it with `bun run db:start`.
+This is expected when the database is not running (or migrations are not applied). Start it with `bun run db:start`.
+
+**Quiet-by-default policy:**
+- DB-dependent recovery loops (codex cleanup, plan resume, workflow rehydration) are **opt-in in dev** via `ENABLE_DB_RECOVERY=1`.
+- In production, those recovery loops are enabled by default; if the DB is missing/misconfigured you should see **WARN**-level `resume_interrupted_plans_db_unavailable` instead of an ERROR crash.
 
 ## Quick Fix Checklist
 
 - [x] **Database user created** - The `alfred` user has been created in the database
 - [ ] Verify connection works (restart dev server)
 - [ ] Run migrations: `bun run db:migrate` (if not already done)
-- [ ] (Optional) Install UV if using local voice models
-- [ ] (Optional) Suppress Vite warnings with `/* @vite-ignore */` comments
+- [ ] Install UV if using local voice models
+- [ ] Add `/* @vite-ignore */` to any intentional variable-based `import()` callsites still producing Vite warnings
+- [ ] Ensure no `*.test.*` / `*.spec.*` files exist under `apps/web/src/routes/**` (guarded by `apps/web/src/tests/routes/hygiene.test.ts`)
+- [ ] Run the dev-noise guard: `cd apps/web && bun test src/tests/dev/noise.test.ts`
 
 ## Applied Fixes
 

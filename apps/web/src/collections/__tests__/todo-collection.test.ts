@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
+import type { inferRouterClient } from "@trpc/client";
+import type { TRPCAppRouter } from "@/utils/trpc";
 import { createTodoCollection } from "../todo";
 
-// Mock tRPC client
-const mockTrpcClient = {
+// Mock tRPC client - typed to match the expected interface
+const mockTrpcClient: Partial<inferRouterClient<TRPCAppRouter>> = {
   todo: {
     getAll: {
       query: mock(() =>
@@ -44,7 +46,7 @@ const mockTrpcClient = {
       mutate: mock(() => Promise.resolve({ success: true })),
     },
   },
-} as any;
+} as inferRouterClient<TRPCAppRouter>;
 
 describe("Todo Collection", () => {
   let queryClient: QueryClient;

@@ -133,6 +133,7 @@ scopes:
   - assistant.generate
   - assistant.stream
   - web.read
+  - web.write
   - note.read
   - note.write
   - remind.read

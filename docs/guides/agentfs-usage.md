@@ -19,23 +19,20 @@ AgentFS replaces the deprecated poof system with a portable, queryable solution:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Docker Container                                   │
+│  Docker Container (RO Isolation + CoW)              │
 │  ┌───────────────────────────────────────────────┐  │
 │  │  Agent Process (Codex CLI)                    │  │
-│  │  └── AgentFS SDK                              │  │
-│  │      ├── SQLite database (.agentfs/*.db)      │  │
-│  │      ├── Virtual filesystem (overlay)         │  │
-│  │      ├── Tool call audit trail                │  │
-│  │      └── Key-value store                      │  │
+│  │  └── /workspace (CoW view of host repo)       │  │
+│  │      └── backed by AgentFS session DB         │  │
 │  └───────────────────────────────────────────────┘  │
 │  Volumes:                                           │
-│    - /workspace ← repo mounted (read-write)         │
-│    - .agentfs/{runId}/{agentId}.db ← persisted     │
+│    - /workspace.base ← host repo (READ-ONLY)        │
+│    - /agentfs/agentfs.db ← session DB (READ-WRITE)  │
 └─────────────────────────────────────────────────────┘
 ```
 
-- **Docker** provides: process isolation, resource limits, network policy
-- **AgentFS** provides: audit trail, queryable state, checkpoint/restore, learning data
+- **Docker** provides: process isolation, read-only host protection, FUSE mount capability.
+- **AgentFS** provides: copy-on-write filesystem, audit trail, queryable state, diff/timeline APIs.
 
 ## Quick Start
 
@@ -134,6 +131,9 @@ Record a tool invocation to the audit trail.
 
 ##### `getToolCalls(since?, limit?): Promise<ToolCall[]>`
 Retrieve recent tool calls.
+
+##### `diff(): Promise<Change[]>`
+Get filesystem changes for this session.
 
 ##### `getToolStats(): Promise<ToolStats[]>`
 Get aggregated tool usage statistics.

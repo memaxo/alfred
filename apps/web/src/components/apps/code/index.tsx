@@ -300,7 +300,7 @@ export function CodeApp({
       }
       const lines = activeTab.content.split("\n");
       // Split the code if it contains multiple lines
-      const codeLines = code.split("\\n");
+      const codeLines = code.split("\n");
       lines.splice(cursorPosition.line, 0, ...codeLines);
       handleContentChange(lines.join("\n"));
     },

@@ -1,6 +1,6 @@
 import "../../test/reset-mocks";
 import { describe, expect, it } from "bun:test";
-import { TimerRoute } from "@/routes/_protected/timer";
+import { Route as TimerRoute } from "@/routes/_protected/timer";
 import {
   createTestQueryClient,
   createTestTrpcClient,
@@ -10,6 +10,9 @@ import {
 import { fireEvent, waitFor } from "../../test/testing-library";
 
 describe("TimerRoute", () => {
+  const TimerView = TimerRoute.options
+    .component as unknown as () => JSX.Element;
+
   describe("TimerCreateForm", () => {
     it("renders duration and label inputs", () => {
       const handlers: TestTrpcHandlers = {
@@ -18,7 +21,7 @@ describe("TimerRoute", () => {
         },
       };
 
-      const view = renderRoute(<TimerRoute />, {
+      const view = renderRoute(<TimerView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -48,7 +51,7 @@ describe("TimerRoute", () => {
         },
       };
 
-      const view = renderRoute(<TimerRoute />, {
+      const view = renderRoute(<TimerView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -74,7 +77,7 @@ describe("TimerRoute", () => {
         },
       };
 
-      const view = renderRoute(<TimerRoute />, {
+      const view = renderRoute(<TimerView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -102,7 +105,7 @@ describe("TimerRoute", () => {
         },
       };
 
-      const view = renderRoute(<TimerRoute />, {
+      const view = renderRoute(<TimerView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -137,7 +140,7 @@ describe("TimerRoute", () => {
         },
       };
 
-      const view = renderRoute(<TimerRoute />, {
+      const view = renderRoute(<TimerView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -179,7 +182,7 @@ describe("TimerRoute", () => {
         },
       };
 
-      const view = renderRoute(<TimerRoute />, {
+      const view = renderRoute(<TimerView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -215,7 +218,7 @@ describe("TimerRoute", () => {
         },
       };
 
-      const view = renderRoute(<TimerRoute />, {
+      const view = renderRoute(<TimerView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });

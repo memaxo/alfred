@@ -59,11 +59,15 @@
 
 7. **Middleware.** Compose middleware via `.middleware([...])`. Use `requireAuthMiddleware` for authenticated server functions. Global middleware (request/function) is configured in `src/start.ts`. Always validate client-sent context in middleware.
 
-8. **Security and Imports.** Use variable-based dynamic imports for server packages in API routes (e.g., `const pkg = "@alfred/db"; await import(pkg)`). Browser-only libraries must be imported dynamically inside `useEffect`.
+8. **Security and Imports.** API routes must never import server-only packages at module scope; use variable-based dynamic imports and include `/* @vite-ignore */` in the `import()` call.
 
-9. **Server Routes and Prerendering.** Use `server.handlers` for raw HTTP endpoints. Enable static prerendering via vite config, excluding dynamic and layout routes.
+9. **Route module exports.** Route modules must not export helpers/components (TanStack Router will warn and bloat bundles). Export only `Route` (and `getRouter()` where required).
 
-10. **Request Access.** Use `getRequest()` from `@tanstack/react-start/server` to access the request object in server functions.
+10. **Metrics imports.** Never import `@alfred/api/metrics` (or `prom-client`) at module scope in any code that might be included in the client bundle; load metrics lazily inside server-only handlers using a variable-based dynamic import.
+
+11. **Server Routes and Prerendering.** Use `server.handlers` for raw HTTP endpoints. Enable static prerendering via vite config, excluding dynamic and layout routes.
+
+12. **Request Access.** Use `getRequest()` from `@tanstack/react-start/server` to access the request object in server functions.
 
 
 
@@ -273,6 +277,12 @@ Never call async functions without error handling. Unhandled rejections crash th
 ### ✅ Lazy Initialization
 
 Check availability before use. Use `isDbAvailable()` or similar checks inside async functions before performing DB operations.
+
+## Quiet-by-Default Policy
+
+1. **Optional deps are WARN/INFO.** Missing DB/UV must not emit `ERROR` logs in the default dev path; errors are reserved for explicitly enabled subsystems that still fail.
+2. **SSR-safe imports.** If the graceful path requires importing server-only packages, use variable-based dynamic imports with `/* @vite-ignore */`.
+3. **Guard with tests.** Any change that touches SSR entrypoints, API routes, or optional subsystem init must keep `apps/web/src/tests/dev/noise.test.ts` passing.
 
 ## Testing
 

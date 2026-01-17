@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { SpeechToSpeechResponse } from "@alfred/voice/types";
-import { VoiceS2SRouteView } from "@/routes/_protected/voice-s2s";
+import { Route as VoiceS2SRoute } from "@/routes/_protected/voice-s2s";
 import { fireEvent, render, waitFor, within } from "../../test/testing-library";
 
 const toastSuccess = vi.fn();
@@ -47,6 +47,9 @@ const buildStreamMock = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("VoiceS2SRouteView", () => {
+  const VoiceS2SRouteView = VoiceS2SRoute.options
+    .component as unknown as () => JSX.Element;
+
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();

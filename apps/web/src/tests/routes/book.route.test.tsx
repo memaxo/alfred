@@ -1,6 +1,6 @@
 import "../../test/reset-mocks";
 import { describe, expect, it } from "bun:test";
-import { BookRoute } from "@/routes/_protected/book";
+import { Route as BookRoute } from "@/routes/_protected/book";
 import {
   createTestQueryClient,
   createTestTrpcClient,
@@ -10,6 +10,8 @@ import {
 import { fireEvent, waitFor } from "../../test/testing-library";
 
 describe("BookRoute", () => {
+  const BookView = BookRoute.options.component as unknown as () => JSX.Element;
+
   describe("BookmarkCreateForm", () => {
     it("renders URL, title, tags and description inputs", () => {
       const handlers: TestTrpcHandlers = {
@@ -18,7 +20,7 @@ describe("BookRoute", () => {
         },
       };
 
-      const view = renderRoute(<BookRoute />, {
+      const view = renderRoute(<BookView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -60,7 +62,7 @@ describe("BookRoute", () => {
         },
       };
 
-      const view = renderRoute(<BookRoute />, {
+      const view = renderRoute(<BookView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -96,7 +98,7 @@ describe("BookRoute", () => {
         },
       };
 
-      const view = renderRoute(<BookRoute />, {
+      const view = renderRoute(<BookView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -131,7 +133,7 @@ describe("BookRoute", () => {
         },
       };
 
-      const view = renderRoute(<BookRoute />, {
+      const view = renderRoute(<BookView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -158,7 +160,7 @@ describe("BookRoute", () => {
         },
       };
 
-      const view = renderRoute(<BookRoute />, {
+      const view = renderRoute(<BookView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -195,7 +197,7 @@ describe("BookRoute", () => {
         },
       };
 
-      const view = renderRoute(<BookRoute />, {
+      const view = renderRoute(<BookView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });
@@ -250,7 +252,7 @@ describe("BookRoute", () => {
         },
       };
 
-      const view = renderRoute(<BookRoute />, {
+      const view = renderRoute(<BookView />, {
         queryClient: createTestQueryClient(),
         trpcClient: createTestTrpcClient(handlers),
       });

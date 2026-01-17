@@ -60,6 +60,12 @@ Never call async functions without error handling. Unhandled rejections crash th
 
 Check availability before use. Use `isDbAvailable()` or similar checks inside async functions before performing DB operations.
 
+## Quiet-by-Default Policy
+
+1. **Optional deps are WARN/INFO.** Missing DB/UV must not emit `ERROR` logs in the default dev path; errors are reserved for explicitly enabled subsystems that still fail.
+2. **SSR-safe imports.** If the graceful path requires importing server-only packages, use variable-based dynamic imports with `/* @vite-ignore */`.
+3. **Guard with tests.** Any change that touches SSR entrypoints, API routes, or optional subsystem init must keep `apps/web/src/tests/dev/noise.test.ts` passing.
+
 ## Testing
 
 ### Unit Tests

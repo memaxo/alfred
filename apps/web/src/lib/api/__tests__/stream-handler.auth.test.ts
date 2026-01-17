@@ -38,6 +38,22 @@ mock.module("@alfred/agent/preference/prompt", () => ({
   buildPreferenceSystemPrompt: vi.fn().mockResolvedValue(""),
 }));
 
+mock.module("@alfred/api/preference/refresh", () => ({
+  triggerPreferenceRefresh: vi.fn(),
+}));
+
+mock.module("@alfred/api/metrics", () => ({
+  historyContextSelectionDurationSeconds: { startTimer: vi.fn(() => vi.fn()) },
+  historyContextTierDropsTotal: { inc: vi.fn() },
+  historyContextTokensTotal: { inc: vi.fn() },
+  preferenceHistoryPrunedTotal: { inc: vi.fn() },
+  preferencePromptFailuresTotal: { inc: vi.fn() },
+  preferencePromptInjectionsTotal: { inc: vi.fn() },
+  sseConnectionRateLimitHitsTotal: { labels: () => ({ inc: vi.fn() }) },
+  sseConnectionsCurrent: { labels: () => ({ set: vi.fn() }) },
+  sseFirstChunkLatencySeconds: { labels: () => ({ observe: vi.fn() }) },
+}));
+
 mock.module("@alfred/history", () => ({
   buildHistoryContext: vi.fn(),
   getHistoryBudgetDefaults: () => ({}),
@@ -96,6 +112,7 @@ describe("handleStreamRequest auth", () => {
     expect(createConversationMock).not.toHaveBeenCalled();
     expect(createMessageMock).not.toHaveBeenCalled();
     expect(streamTextMock).not.toHaveBeenCalled();
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 
