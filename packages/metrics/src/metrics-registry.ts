@@ -48,18 +48,21 @@ export const costTrackerMetrics = {
   costUsd: new Counter({
     name: "cost_tracker_cost_usd_total",
     help: "Total USD cost tracked",
+    labelNames: ["provider"],
     registers: [register],
   }),
 
-  tokensUsed: new Counter({
+  tokens: new Counter({
     name: "cost_tracker_tokens_total",
     help: "Total tokens used",
+    labelNames: ["provider", "token_type"],
     registers: [register],
   }),
 
   budgetAlerts: new Counter({
     name: "cost_tracker_budget_alerts_total",
     help: "Total budget alerts triggered",
+    labelNames: ["alert_type"],
     registers: [register],
   }),
 };

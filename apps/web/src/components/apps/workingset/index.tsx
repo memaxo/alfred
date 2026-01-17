@@ -25,7 +25,37 @@ type Item = {
   label?: string;
 };
 
-export function WorkingSetApp({ className }: { className?: string }) {
+type WorkingSetAppProps = {
+  className?: string;
+  window?: WindowComponentProps["window"];
+  onClose?: WindowComponentProps["onClose"];
+  onMinimize?: WindowComponentProps["onMinimize"];
+  onFocus?: WindowComponentProps["onFocus"];
+  onBlur?: WindowComponentProps["onBlur"];
+  onDragStart?: WindowComponentProps["onDragStart"];
+  onDragEnd?: WindowComponentProps["onDragEnd"];
+  onMaximize?: WindowComponentProps["onMaximize"];
+  onRestore?: WindowComponentProps["onRestore"];
+  onResizeStart?: WindowComponentProps["onResizeStart"];
+  onResizeEnd?: WindowComponentProps["onResizeEnd"];
+  onDataChange?: WindowComponentProps["onDataChange"];
+};
+
+export function WorkingSetApp({
+  className,
+  window,
+  onClose,
+  onMinimize,
+  onFocus,
+  onBlur,
+  onDragStart,
+  onDragEnd,
+  onMaximize,
+  onRestore,
+  onResizeStart: _onResizeStart,
+  onResizeEnd: _onResizeEnd,
+  onDataChange: _onDataChange,
+}: WorkingSetAppProps) {
   const utils = trpc.useUtils();
   const query = trpc.workingset.get.useQuery();
   const setMutation = trpc.workingset.set.useMutation({
@@ -106,8 +136,71 @@ export function WorkingSetApp({ className }: { className?: string }) {
   }, [items, focusKey, setMutation]);
 
   return (
-    <div className={cn("flex h-full w-full flex-col bg-void", className)}>
-      <div className="flex h-10 items-center justify-between border-white/5 border-b bg-void-surface px-3">
+    <div
+      className={cn("flex h-full w-full flex-col bg-void", className)}
+      onBlurCapture={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(next)) {
+          onBlur?.();
+        }
+      }}
+      onFocusCapture={(e) => {
+        const prev = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(prev)) {
+          onFocus?.();
+        }
+      }}
+      onKeyDownCapture={(e) => {
+        if (e.key === "Escape") {
+          onClose?.();
+          return;
+        }
+
+        if ((e.metaKey || e.ctrlKey) && (e.key === "m" || e.key === "M")) {
+          e.preventDefault();
+          onMinimize?.();
+          return;
+        }
+
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          if (!window) {
+            return;
+          }
+          if (window.state === "maximized") {
+            onRestore?.();
+            return;
+          }
+          onMaximize?.();
+        }
+      }}
+      onMouseDownCapture={() => onFocus?.()}
+    >
+      <div
+        className="flex h-10 cursor-grab items-center justify-between border-white/5 border-b bg-void-surface px-3"
+        onDoubleClick={() => {
+          if (!window) {
+            return;
+          }
+          if (window.state === "maximized") {
+            onRestore?.();
+            return;
+          }
+          onMaximize?.();
+        }}
+        onMouseDown={(e) => {
+          onFocus?.();
+          if (e.target !== e.currentTarget) {
+            return;
+          }
+          onDragStart?.(e);
+        }}
+        onMouseUp={(e) => {
+          if (e.target !== e.currentTarget) {
+            return;
+          }
+          onDragEnd?.(e);
+        }}
+      >
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-biolum" />
           <span className="font-medium text-sm">Working Set</span>
@@ -225,6 +318,6 @@ export function WorkingSetApp({ className }: { className?: string }) {
   );
 }
 
-export function WorkingSetAppWindow(_props: WindowComponentProps) {
-  return <WorkingSetApp className="h-full" />;
+export function WorkingSetAppWindow(props: WindowComponentProps) {
+  return <WorkingSetApp {...props} className="h-full" />;
 }

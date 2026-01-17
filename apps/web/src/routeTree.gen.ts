@@ -44,6 +44,7 @@ import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/
 import { Route as ProtectedSettingsVisualRouteImport } from './routes/_protected/settings/visual'
 import { Route as ProtectedSettingsProfileRouteImport } from './routes/_protected/settings/profile'
 import { Route as ProtectedSettingsPrivacyRouteImport } from './routes/_protected/settings/privacy'
+import { Route as ProtectedSettingsModelsRouteImport } from './routes/_protected/settings/models'
 import { Route as ProtectedSettingsMcpRouteImport } from './routes/_protected/settings/mcp'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
 import { Route as ProtectedComponentsNameRouteImport } from './routes/_protected/components.$name'
@@ -229,6 +230,11 @@ const ProtectedSettingsPrivacyRoute =
     path: '/privacy',
     getParentRoute: () => ProtectedSettingsRoute,
   } as any)
+const ProtectedSettingsModelsRoute = ProtectedSettingsModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => ProtectedSettingsRoute,
+} as any)
 const ProtectedSettingsMcpRoute = ProtectedSettingsMcpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/mcp': typeof ProtectedSettingsMcpRoute
+  '/settings/models': typeof ProtectedSettingsModelsRoute
   '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
   '/settings/profile': typeof ProtectedSettingsProfileRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
@@ -330,6 +337,7 @@ export interface FileRoutesByTo {
   '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/mcp': typeof ProtectedSettingsMcpRoute
+  '/settings/models': typeof ProtectedSettingsModelsRoute
   '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
   '/settings/profile': typeof ProtectedSettingsProfileRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
@@ -374,6 +382,7 @@ export interface FileRoutesById {
   '/_protected/components/$name': typeof ProtectedComponentsNameRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/_protected/settings/mcp': typeof ProtectedSettingsMcpRoute
+  '/_protected/settings/models': typeof ProtectedSettingsModelsRoute
   '/_protected/settings/privacy': typeof ProtectedSettingsPrivacyRoute
   '/_protected/settings/profile': typeof ProtectedSettingsProfileRoute
   '/_protected/settings/visual': typeof ProtectedSettingsVisualRoute
@@ -418,6 +427,7 @@ export interface FileRouteTypes {
     | '/components/$name'
     | '/experimental/tune'
     | '/settings/mcp'
+    | '/settings/models'
     | '/settings/privacy'
     | '/settings/profile'
     | '/settings/visual'
@@ -459,6 +469,7 @@ export interface FileRouteTypes {
     | '/components/$name'
     | '/experimental/tune'
     | '/settings/mcp'
+    | '/settings/models'
     | '/settings/privacy'
     | '/settings/profile'
     | '/settings/visual'
@@ -502,6 +513,7 @@ export interface FileRouteTypes {
     | '/_protected/components/$name'
     | '/_protected/experimental/tune'
     | '/_protected/settings/mcp'
+    | '/_protected/settings/models'
     | '/_protected/settings/privacy'
     | '/_protected/settings/profile'
     | '/_protected/settings/visual'
@@ -789,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedSettingsPrivacyRouteImport
       parentRoute: typeof ProtectedSettingsRoute
     }
+    '/_protected/settings/models': {
+      id: '/_protected/settings/models'
+      path: '/models'
+      fullPath: '/settings/models'
+      preLoaderRoute: typeof ProtectedSettingsModelsRouteImport
+      parentRoute: typeof ProtectedSettingsRoute
+    }
     '/_protected/settings/mcp': {
       id: '/_protected/settings/mcp'
       path: '/mcp'
@@ -865,6 +884,7 @@ const ProtectedComponentsRouteWithChildren =
 
 interface ProtectedSettingsRouteChildren {
   ProtectedSettingsMcpRoute: typeof ProtectedSettingsMcpRoute
+  ProtectedSettingsModelsRoute: typeof ProtectedSettingsModelsRoute
   ProtectedSettingsPrivacyRoute: typeof ProtectedSettingsPrivacyRoute
   ProtectedSettingsProfileRoute: typeof ProtectedSettingsProfileRoute
   ProtectedSettingsVisualRoute: typeof ProtectedSettingsVisualRoute
@@ -872,6 +892,7 @@ interface ProtectedSettingsRouteChildren {
 
 const ProtectedSettingsRouteChildren: ProtectedSettingsRouteChildren = {
   ProtectedSettingsMcpRoute: ProtectedSettingsMcpRoute,
+  ProtectedSettingsModelsRoute: ProtectedSettingsModelsRoute,
   ProtectedSettingsPrivacyRoute: ProtectedSettingsPrivacyRoute,
   ProtectedSettingsProfileRoute: ProtectedSettingsProfileRoute,
   ProtectedSettingsVisualRoute: ProtectedSettingsVisualRoute,

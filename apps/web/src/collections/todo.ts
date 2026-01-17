@@ -14,6 +14,28 @@ type TodoToggleInput = {
   completed: boolean;
 };
 
+function parseServerTodoId(id: number | string): number | null {
+  if (typeof id === "number") {
+    if (!Number.isFinite(id)) {
+      throw new Error("Invalid todo id: non-finite number");
+    }
+    return id;
+  }
+
+  // Optimistic local-only IDs are never persisted server-side.
+  if (id.startsWith("temp-")) {
+    return null;
+  }
+
+  // Allow numeric IDs serialized as strings.
+  const parsed = Number(id);
+  if (Number.isInteger(parsed) && parsed >= 0) {
+    return parsed;
+  }
+
+  throw new Error(`Invalid todo id: ${id}`);
+}
+
 export function createTodoCollection(
   queryClient: QueryClient,
   trpcClient: inferRouterClient<TRPCAppRouter>
@@ -58,7 +80,10 @@ export function createTodoCollection(
       onDelete: async ({ transaction }) => {
         const ids = transaction.mutations.map((m) => m.key);
         for (const id of ids) {
-          await trpcClient.todo.delete.mutate({ id: Number(id) });
+          const serverId = parseServerTodoId(id);
+          if (serverId !== null) {
+            await trpcClient.todo.delete.mutate({ id: serverId });
+          }
         }
         return { refetch: true };
       },
@@ -105,8 +130,9 @@ export function createTodoCollection(
       return id;
     },
     mutationFn: async (id) => {
-      if (typeof id === "number") {
-        await trpcClient.todo.delete.mutate({ id });
+      const serverId = parseServerTodoId(id);
+      if (serverId !== null) {
+        await trpcClient.todo.delete.mutate({ id: serverId });
       }
       await collection.utils.refetch();
     },

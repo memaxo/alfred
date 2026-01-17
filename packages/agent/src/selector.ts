@@ -173,7 +173,9 @@ function buildSelection(ref: ModelRef): ModelSelection {
           "openrouter_api_key_missing: Set OPENROUTER_API_KEY environment variable"
         );
       }
-      model = createOpenRouter({ apiKey }).chat(modelId) as LanguageModel;
+      model = createOpenRouter({ apiKey }).chat(
+        modelId
+      ) as unknown as LanguageModel;
       break;
     }
     default:

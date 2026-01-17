@@ -1,12 +1,31 @@
 "use client";
 
 import { Activity, Battery, Flame, type LucideIcon, Zap } from "lucide-react";
+import { useId, useMemo } from "react";
 import { Number as SlidingNumber } from "@/components/number";
 import { useCognitivePhysiology } from "@/hooks/use-cognitive-physiology";
 import { cn } from "@/lib/utils";
 
 export function PhysiologyMonitor() {
   const { energy, boredom, frustration, entropy } = useCognitivePhysiology();
+  const waveformSeed = useId();
+  const waveformBars = useMemo(() => {
+    // Deterministic pseudo-random bars seeded by useId() so SSR/CSR match.
+    const seed = hash32(waveformSeed);
+    const next = mulberry32(seed);
+    const count = 40;
+
+    return Array.from({ length: count }, (_v, i) => {
+      const height = next(); // 0..1
+      const opacity = next(); // 0..1
+
+      return {
+        key: `${waveformSeed}-${i}`,
+        heightPct: Math.round(height * 100),
+        opacity: 0.2 + opacity * 0.8,
+      };
+    });
+  }, [waveformSeed]);
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -48,13 +67,13 @@ export function PhysiologyMonitor() {
         <div className="flex h-48 items-center justify-center border-white/5 border-t border-b py-10">
           {/* Waveform placeholder */}
           <div className="flex h-20 items-end gap-1">
-            {new Array(40).fill(0).map((_, i) => (
+            {waveformBars.map((bar) => (
               <div
                 className="w-1 rounded-full bg-biolum/20 transition-all duration-500"
-                key={i}
+                key={bar.key}
                 style={{
-                  height: `${Math.random() * 100}%`,
-                  opacity: 0.2 + Math.random() * 0.8,
+                  height: `${bar.heightPct}%`,
+                  opacity: bar.opacity,
                 }}
               />
             ))}
@@ -66,6 +85,27 @@ export function PhysiologyMonitor() {
       </div>
     </div>
   );
+}
+
+function hash32(input: string): number {
+  // FNV-1a 32-bit
+  let h = 2_166_136_261;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16_777_619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d_2b_79_f5;
+    let x = t;
+    x = Math.imul(x ^ (x >>> 15), x | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4_294_967_296;
+  };
 }
 
 function MetricGauge({

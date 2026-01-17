@@ -16,6 +16,9 @@ export * from "./events";
 export * from "./events.zod";
 // Exa API types
 export * from "./exa";
+// Generative UI types
+export * from "./genui";
+export * from "./genui.zod";
 export * from "./guards";
 export * from "./history";
 // Identity and ID generation

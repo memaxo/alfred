@@ -13,6 +13,7 @@
 import { type ComponentType, useCallback } from "react";
 import { useDesktopStore } from "@/store/desktop";
 import type { WindowData, WindowInstance } from "@/store/desktop/types.new";
+import { detectZoneFromPosition } from "../tiling/utils";
 import type {
   LegacyNodeProps,
   ResizeDirection,
@@ -220,50 +221,268 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
     s.windows.find((w) => w.id === windowId)
   );
   const removeWindow = useDesktopStore((s) => s.removeWindow);
-  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const focusWindow = useDesktopStore((s) => s.focusWindow);
+  const blurWindow = useDesktopStore((s) => s.blurWindow);
+  const minimizeWindow = useDesktopStore((s) => s.minimizeWindow);
+  const maximizeWindow = useDesktopStore((s) => s.maximizeWindow);
+  const restoreWindow = useDesktopStore((s) => s.restoreWindow);
+  const moveWindow = useDesktopStore((s) => s.moveWindow);
+  const setBounds = useDesktopStore((s) => s.setBounds);
+  const desktopArea = useDesktopStore((s) => s.desktopArea);
+  const showTilePreview = useDesktopStore((s) => s.showTilePreview);
+  const hideTilePreview = useDesktopStore((s) => s.hideTilePreview);
+  const tileWindow = useDesktopStore((s) => s.tileWindow);
+  const updateWindowData = useDesktopStore((s) => s.updateWindowData);
 
   const handleClose = useCallback(() => {
     removeWindow(windowId);
   }, [windowId, removeWindow]);
 
   const handleMinimize = useCallback(() => {
-    // Will be implemented in Phase 1
-  }, []);
+    minimizeWindow(windowId);
+  }, [minimizeWindow, windowId]);
 
   const handleMaximize = useCallback(() => {
-    updateWindowData(windowId, { viewMode: "maximized" });
-  }, [windowId, updateWindowData]);
+    maximizeWindow(windowId);
+  }, [maximizeWindow, windowId]);
 
   const handleRestore = useCallback(() => {
-    updateWindowData(windowId, { viewMode: "full" });
-  }, [windowId, updateWindowData]);
+    restoreWindow(windowId);
+  }, [restoreWindow, windowId]);
 
   const handleFocus = useCallback(() => {
     focusWindow(windowId);
   }, [windowId, focusWindow]);
 
   const handleBlur = useCallback(() => {
-    // Will be implemented when focus management is complete
-  }, []);
+    blurWindow(windowId);
+  }, [blurWindow, windowId]);
 
-  const handleDragStart = useCallback((_e: React.MouseEvent) => {
-    // Will be implemented in Phase 1
-  }, []);
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target !== e.currentTarget) {
+        return;
+      }
+      e.preventDefault();
+      handleFocus();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const currentBounds = window?.bounds ?? {
+        x: 100,
+        y: 100,
+        width: 400,
+        height: 300,
+      };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const newX = currentBounds.x + (moveEvent.clientX - startX);
+        const newY = currentBounds.y + (moveEvent.clientY - startY);
+
+        const { x: minX, y: minY, width: maxX, height: maxY } = desktopArea;
+
+        moveWindow(windowId, {
+          x: Math.max(minX, Math.min(newX, minX + maxX - currentBounds.width)),
+          y: Math.max(minY, Math.min(newY, minY + maxY - currentBounds.height)),
+        });
+
+        const zone = detectZoneFromPosition(
+          moveEvent.clientX,
+          moveEvent.clientY,
+          desktopArea
+        );
+        if (zone) {
+          showTilePreview(zone);
+        } else {
+          hideTilePreview();
+        }
+      };
+
+      const handleMouseUp = (upEvent: MouseEvent) => {
+        hideTilePreview();
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+
+        const zone = detectZoneFromPosition(
+          upEvent.clientX,
+          upEvent.clientY,
+          desktopArea
+        );
+        if (zone) {
+          tileWindow(windowId, zone);
+        }
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [
+      desktopArea,
+      handleFocus,
+      hideTilePreview,
+      moveWindow,
+      showTilePreview,
+      tileWindow,
+      window,
+      windowId,
+    ]
+  );
 
   const handleDragEnd = useCallback((_e: React.MouseEvent) => {
-    // Will be implemented in Phase 1
+    // Drag teardown is handled by the document mouseup listener.
   }, []);
 
   const handleResizeStart = useCallback(
-    (_e: React.MouseEvent, _direction: ResizeDirection) => {
-      // Will be implemented in Phase 1
+    (e: React.MouseEvent, direction: ResizeDirection) => {
+      e.preventDefault();
+      handleFocus();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const currentBounds = window?.bounds ?? {
+        x: 100,
+        y: 100,
+        width: 400,
+        height: 300,
+      };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const deltaX = moveEvent.clientX - startX;
+        const deltaY = moveEvent.clientY - startY;
+
+        const { x: minX, y: minY, width: maxX, height: maxY } = desktopArea;
+        const minW = window?.minSize.width ?? 200;
+        const minH = window?.minSize.height ?? 150;
+        const maxW = window?.maxSize?.width ?? Number.POSITIVE_INFINITY;
+        const maxH = window?.maxSize?.height ?? Number.POSITIVE_INFINITY;
+
+        const newBounds = { ...currentBounds };
+
+        switch (direction) {
+          case "n":
+            newBounds.y = currentBounds.y + deltaY;
+            newBounds.height = currentBounds.height - deltaY;
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.y =
+              currentBounds.y + currentBounds.height - newBounds.height;
+            newBounds.y = Math.max(
+              minY,
+              Math.min(newBounds.y, minY + maxY - newBounds.height)
+            );
+            break;
+          case "s":
+            newBounds.height = currentBounds.height + deltaY;
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.height = Math.min(
+              newBounds.height,
+              minY + maxY - currentBounds.y
+            );
+            break;
+          case "e":
+            newBounds.width = currentBounds.width + deltaX;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.width = Math.min(
+              newBounds.width,
+              minX + maxX - currentBounds.x
+            );
+            break;
+          case "w":
+            newBounds.x = currentBounds.x + deltaX;
+            newBounds.width = currentBounds.width - deltaX;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.x =
+              currentBounds.x + currentBounds.width - newBounds.width;
+            newBounds.x = Math.max(
+              minX,
+              Math.min(newBounds.x, minX + maxX - newBounds.width)
+            );
+            break;
+          case "ne":
+            newBounds.y = currentBounds.y + deltaY;
+            newBounds.height = currentBounds.height - deltaY;
+            newBounds.width = currentBounds.width + deltaX;
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.y =
+              currentBounds.y + currentBounds.height - newBounds.height;
+            newBounds.y = Math.max(
+              minY,
+              Math.min(newBounds.y, minY + maxY - newBounds.height)
+            );
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.width = Math.min(
+              newBounds.width,
+              minX + maxX - currentBounds.x
+            );
+            break;
+          case "nw":
+            newBounds.x = currentBounds.x + deltaX;
+            newBounds.y = currentBounds.y + deltaY;
+            newBounds.width = currentBounds.width - deltaX;
+            newBounds.height = currentBounds.height - deltaY;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.x =
+              currentBounds.x + currentBounds.width - newBounds.width;
+            newBounds.x = Math.max(
+              minX,
+              Math.min(newBounds.x, minX + maxX - newBounds.width)
+            );
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.y =
+              currentBounds.y + currentBounds.height - newBounds.height;
+            newBounds.y = Math.max(
+              minY,
+              Math.min(newBounds.y, minY + maxY - newBounds.height)
+            );
+            break;
+          case "se":
+            newBounds.width = currentBounds.width + deltaX;
+            newBounds.height = currentBounds.height + deltaY;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.width = Math.min(
+              newBounds.width,
+              minX + maxX - currentBounds.x
+            );
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.height = Math.min(
+              newBounds.height,
+              minY + maxY - currentBounds.y
+            );
+            break;
+          case "sw":
+            newBounds.x = currentBounds.x + deltaX;
+            newBounds.width = currentBounds.width - deltaX;
+            newBounds.height = currentBounds.height + deltaY;
+            newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
+            newBounds.x =
+              currentBounds.x + currentBounds.width - newBounds.width;
+            newBounds.x = Math.max(
+              minX,
+              Math.min(newBounds.x, minX + maxX - newBounds.width)
+            );
+            newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
+            newBounds.height = Math.min(
+              newBounds.height,
+              minY + maxY - currentBounds.y
+            );
+            break;
+        }
+
+        setBounds(windowId, newBounds);
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
     },
-    []
+    [desktopArea, handleFocus, setBounds, window, windowId]
   );
 
   const handleResizeEnd = useCallback((_e: React.MouseEvent) => {
-    // Will be implemented in Phase 1
+    // Resize teardown is handled by the document mouseup listener.
   }, []);
 
   const handleDataChange = useCallback(

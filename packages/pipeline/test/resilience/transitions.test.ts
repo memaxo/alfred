@@ -26,7 +26,9 @@ describe("MAX_TRANSITIONS Guard", () => {
     const runner = new PipelineRunner({
       maxParallel: 1,
       enableLearning: false,
-      maxTransitions: 3, // Very low limit to trigger guard
+      stuckDetection: {
+        maxTransitions: 3, // Very low limit to trigger guard
+      },
     });
     registerDefaultStages(runner);
     runner.addObserver({
@@ -67,7 +69,9 @@ describe("MAX_TRANSITIONS Guard", () => {
     const runner = new PipelineRunner({
       maxParallel: 1,
       enableLearning: false,
-      maxTransitions: 1000, // High enough to not trigger
+      stuckDetection: {
+        maxTransitions: 1000, // High enough to not trigger
+      },
     });
     registerDefaultStages(runner);
     runner.addObserver({

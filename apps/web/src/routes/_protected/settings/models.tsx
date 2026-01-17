@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { trpc } from "../../utils/trpc";
+import { trpc } from "../../../utils/trpc";
 
 export const Route = createFileRoute("/_protected/settings/models")({
   component: ModelSettings,
@@ -47,7 +47,6 @@ function ModelSettings() {
       await setPreferenceMutation.mutateAsync({
         key: `domain.ai.model.${config.role}`,
         value: modelRef,
-        scope: "user",
       });
     }
   };

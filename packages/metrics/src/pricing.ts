@@ -89,8 +89,9 @@ export function getModelPricing(
   }
 
   // Try exact match
-  if (registry[modelId]) {
-    return registry[modelId];
+  const exactMatch = registry[modelId];
+  if (exactMatch) {
+    return exactMatch;
   }
 
   // Try prefix match (e.g., "gpt-4o-2024-08-06" matches "gpt-4o")
@@ -98,7 +99,10 @@ export function getModelPricing(
     modelId.startsWith(key)
   );
   if (prefixMatch) {
-    return registry[prefixMatch];
+    const match = registry[prefixMatch];
+    if (match) {
+      return match;
+    }
   }
 
   return defaultPricing;

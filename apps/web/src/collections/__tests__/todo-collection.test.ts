@@ -122,4 +122,31 @@ describe("Todo Collection", () => {
 
     expect(mockTrpcClient.todo.delete.mutate).toHaveBeenCalledWith({ id: 1 });
   });
+
+  it("deletes numeric string ids via the API", async () => {
+    const { collection, deleteTodo } = createTodoCollection(
+      queryClient,
+      mockTrpcClient
+    );
+
+    collection.insert({ id: "1", text: "Task 1", completed: false });
+
+    await deleteTodo("1");
+
+    expect(mockTrpcClient.todo.delete.mutate).toHaveBeenCalledWith({ id: 1 });
+  });
+
+  it("does not call the API for temp ids", async () => {
+    const { collection, deleteTodo } = createTodoCollection(
+      queryClient,
+      mockTrpcClient
+    );
+
+    const tempId = `temp-${crypto.randomUUID()}`;
+    collection.insert({ id: tempId, text: "Local Task", completed: false });
+
+    await deleteTodo(tempId);
+
+    expect(mockTrpcClient.todo.delete.mutate).not.toHaveBeenCalled();
+  });
 });
