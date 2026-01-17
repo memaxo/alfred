@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
 
 const loader = await import("./preference/loader");
-const { getModelForRole } = await import("./selector");
+const { getModelForRole, hasCapability, supportsGenUI } = await import(
+  "./selector"
+);
 const { resetGatewayForTests } = await import("./v6");
 
 const ENV_KEYS = [
@@ -163,7 +165,17 @@ describe("getModelForRole", () => {
     setEnv("CEREBRAS_API_KEY", undefined);
     setEnv("AI_MODEL_CHAT", "cerebras:llama3.1-8b");
 
-    expect(() => getModelForRole("chat")).toThrow("cerebras_api_key_missing");
+    try {
+      getModelForRole("chat");
+      throw new Error("expected_cerebras_missing_key_error");
+    } catch (error) {
+      if (!(error instanceof Error)) {
+        throw error;
+      }
+      expect(error.message).toBe(
+        "cerebras_api_key_missing: Set CEREBRAS_API_KEY environment variable"
+      );
+    }
   });
 
   it("throws clear error for missing OpenRouter key", () => {
@@ -180,6 +192,22 @@ describe("getModelForRole", () => {
     expect(modelKey).toBe("cerebras/llama3.1-70b");
   });
 
+  it("prefers AI_MODEL_REF_CHAT for Cerebras over AI_MODEL_CHAT", () => {
+    setEnv("AI_MODEL_CHAT", "openai:gpt-4o-mini");
+    setEnv("AI_MODEL_REF_CHAT", "cerebras:llama3.1-8b");
+
+    const { modelKey } = getModelForRole("chat");
+    expect(modelKey).toBe("cerebras/llama3.1-8b");
+  });
+
+  it("coerces legacy cerebras/modelId env into cerebras:modelId", () => {
+    setEnv("AI_MODEL_CHAT", "cerebras/llama3.1-8b");
+
+    const { modelKey } = getModelForRole("chat");
+    expect(modelKey).toBe("cerebras/llama3.1-8b");
+    expect(modelKey.includes(":")).toBe(false);
+  });
+
   it("routes openrouter provider correctly", () => {
     setEnv("AI_MODEL_CHAT", "openrouter:anthropic/claude-3-haiku");
 
@@ -192,5 +220,66 @@ describe("getModelForRole", () => {
 
     const { modelKey } = getModelForRole("chat");
     expect(modelKey).toBe("openai/gpt-4o");
+  });
+
+  it("includes capabilities in selection", () => {
+    setEnv("AI_MODEL_CHAT", "openai:gpt-4o");
+
+    const selection = getModelForRole("chat");
+    expect(selection.capabilities).toBeDefined();
+    expect(Array.isArray(selection.capabilities)).toBe(true);
+  });
+});
+
+describe("model capabilities", () => {
+  it("gpt-4o supports genui", () => {
+    setEnv("AI_MODEL_CHAT", "openai:gpt-4o");
+
+    const selection = getModelForRole("chat");
+    expect(supportsGenUI(selection)).toBe(true);
+    expect(hasCapability(selection, "genui")).toBe(true);
+  });
+
+  it("gpt-4o supports vision", () => {
+    setEnv("AI_MODEL_CHAT", "openai:gpt-4o");
+
+    const selection = getModelForRole("chat");
+    expect(hasCapability(selection, "vision")).toBe(true);
+  });
+
+  it("gpt-4o-mini supports genui", () => {
+    setEnv("AI_MODEL_CHAT", "openai:gpt-4o-mini");
+
+    const selection = getModelForRole("chat");
+    expect(supportsGenUI(selection)).toBe(true);
+  });
+
+  it("cerebras llama does not support genui", () => {
+    setEnv("AI_MODEL_CHAT", "cerebras:llama3.1-8b");
+
+    const selection = getModelForRole("chat");
+    expect(supportsGenUI(selection)).toBe(false);
+  });
+
+  it("cerebras llama supports tools", () => {
+    setEnv("AI_MODEL_CHAT", "cerebras:llama3.1-8b");
+
+    const selection = getModelForRole("chat");
+    expect(hasCapability(selection, "tools")).toBe(true);
+  });
+
+  it("claude supports genui via openrouter", () => {
+    setEnv("AI_MODEL_CHAT", "openrouter:anthropic/claude-3.5-sonnet");
+
+    const selection = getModelForRole("chat");
+    expect(supportsGenUI(selection)).toBe(true);
+  });
+
+  it("versioned model matches base capabilities", () => {
+    setEnv("AI_MODEL_CHAT", "openai:gpt-4o-2024-08-06");
+
+    const selection = getModelForRole("chat");
+    expect(supportsGenUI(selection)).toBe(true);
+    expect(hasCapability(selection, "vision")).toBe(true);
   });
 });

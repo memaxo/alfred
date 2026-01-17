@@ -1,6 +1,7 @@
 import { createCerebras } from "@ai-sdk/cerebras";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import {
+  type ModelCapability,
   type ModelRef,
   type ModelRole,
   parseModelRef,
@@ -16,12 +17,94 @@ import { getOpenAI } from "./v6";
 export type ModelSelection = {
   model: LanguageModel;
   modelKey: string;
+  capabilities: ModelCapability[];
 };
 
 export type ModelSelectionOpts = {
   userId?: string;
   projectId?: string;
 };
+
+/**
+ * Known model capabilities by model ID pattern.
+ *
+ * Models support GenUI if they can produce reliable structured JSON output
+ * via JSON mode or tool calling. Most modern models support this.
+ */
+const MODEL_CAPABILITY_MAP: Record<string, ModelCapability[]> = {
+  // OpenAI models
+  "gpt-4o": ["genui", "tools", "vision", "streaming"],
+  "gpt-4o-mini": ["genui", "tools", "vision", "streaming"],
+  "gpt-4-turbo": ["genui", "tools", "vision", "streaming"],
+  "gpt-4": ["genui", "tools", "streaming"],
+  "gpt-3.5-turbo": ["genui", "tools", "streaming"],
+  o1: ["genui", "tools", "reasoning", "streaming"],
+  "o1-mini": ["genui", "tools", "reasoning", "streaming"],
+  "o1-preview": ["genui", "tools", "reasoning", "streaming"],
+  "o3-mini": ["genui", "tools", "reasoning", "streaming"],
+
+  // Anthropic models (via OpenRouter or gateway)
+  "claude-3.5-sonnet": ["genui", "tools", "vision", "streaming"],
+  "claude-3-5-sonnet": ["genui", "tools", "vision", "streaming"],
+  "claude-3-opus": ["genui", "tools", "vision", "streaming"],
+  "claude-3-sonnet": ["genui", "tools", "vision", "streaming"],
+  "claude-3-haiku": ["genui", "tools", "vision", "streaming"],
+
+  // Google models
+  "gemini-2.0-flash": ["genui", "tools", "vision", "streaming"],
+  "gemini-1.5-pro": ["genui", "tools", "vision", "streaming"],
+  "gemini-1.5-flash": ["genui", "tools", "vision", "streaming"],
+
+  // Cerebras models (fast inference, limited structured output)
+  "llama3.1-8b": ["tools", "streaming"],
+  "llama3.1-70b": ["tools", "streaming"],
+
+  // Default: assume basic capabilities
+  default: ["streaming"],
+};
+
+/**
+ * Get capabilities for a model by checking model ID patterns.
+ */
+function getModelCapabilities(modelId: string): ModelCapability[] {
+  // Check for exact match first
+  if (MODEL_CAPABILITY_MAP[modelId]) {
+    return MODEL_CAPABILITY_MAP[modelId];
+  }
+
+  // Check for partial matches (e.g., "gpt-4o-2024-08-06" should match "gpt-4o")
+  for (const [pattern, capabilities] of Object.entries(MODEL_CAPABILITY_MAP)) {
+    if (pattern !== "default" && modelId.includes(pattern)) {
+      return capabilities;
+    }
+  }
+
+  // Check OpenRouter model IDs (format: provider/model)
+  const slashIndex = modelId.indexOf("/");
+  if (slashIndex !== -1) {
+    const modelPart = modelId.slice(slashIndex + 1);
+    return getModelCapabilities(modelPart);
+  }
+
+  return MODEL_CAPABILITY_MAP.default ?? [];
+}
+
+/**
+ * Check if a model selection supports a specific capability.
+ */
+export function hasCapability(
+  selection: ModelSelection,
+  capability: ModelCapability
+): boolean {
+  return selection.capabilities.includes(capability);
+}
+
+/**
+ * Check if a model selection supports GenUI (structured output).
+ */
+export function supportsGenUI(selection: ModelSelection): boolean {
+  return hasCapability(selection, "genui");
+}
 
 const ENV_KEYS: Record<ModelRole, string> = {
   chat: "AI_MODEL_CHAT",
@@ -152,6 +235,7 @@ function resolveRefSync(role: ModelRole): ModelRef {
 function buildSelection(ref: ModelRef): ModelSelection {
   const { provider, modelId } = parseModelRef(ref);
   const modelKey = toModelKey(ref);
+  const capabilities = getModelCapabilities(modelId);
 
   let model: LanguageModel;
 
@@ -197,7 +281,7 @@ function buildSelection(ref: ModelRef): ModelSelection {
       >[0]["middleware"],
     }) as unknown as LanguageModel;
   }
-  return { model, modelKey };
+  return { model, modelKey, capabilities };
 }
 
 export function getModelForRole(role: ModelRole): ModelSelection;

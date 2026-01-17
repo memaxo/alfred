@@ -23,7 +23,7 @@ describe("MAX_TRANSITIONS Guard", () => {
   function createMockStage(name: StageName, emitCount = 0) {
     return {
       name,
-      execute: (_input: unknown, ctx: PipelineContext) => {
+      execute: async (_input: unknown, ctx: PipelineContext) => {
         for (let i = 0; i < emitCount; i++) {
           ctx.emit({
             type: "stage:progress",
