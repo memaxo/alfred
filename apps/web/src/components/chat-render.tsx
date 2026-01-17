@@ -22,6 +22,12 @@ import {
   type ToolResultPart,
 } from "@alfred/ui/chat/parts";
 import type { ReactNode } from "react";
+import {
+  GenUIErrorBoundary,
+  isGenUIToolResult,
+  isUIDataPart,
+  UISchemaRenderer,
+} from "@/components/genui";
 import { Artifact } from "./artifact";
 import { Branch } from "./branch";
 import { Canvas } from "./canvas";
@@ -331,7 +337,37 @@ type PartHandlers = {
   }) => void;
 };
 
+/**
+ * Render dynamic GenUI components from data-ui parts.
+ *
+ * This allows the LLM to return arbitrary UI schemas that
+ * are interpreted and rendered using the component registry.
+ */
+function renderGenUI(part: AssistantPart): ReactNode | null {
+  if (!isUIDataPart(part)) {
+    return null;
+  }
+  return (
+    <GenUIErrorBoundary schema={part.ui}>
+      <UISchemaRenderer schema={part.ui} />
+    </GenUIErrorBoundary>
+  );
+}
+
+function renderGenUIOutput(output: unknown): ReactNode | null {
+  if (!isGenUIToolResult(output)) {
+    return null;
+  }
+  return (
+    <GenUIErrorBoundary schema={output.ui}>
+      <UISchemaRenderer schema={output.ui} />
+    </GenUIErrorBoundary>
+  );
+}
+
 const dataPartRenderers: PartRenderer[] = [
+  // GenUI dynamic component renderer (must come first)
+  renderGenUI,
   (part) =>
     renderStructuredPart(part, "plan", (data) => {
       if (isPlanData(data)) {
@@ -622,6 +658,11 @@ function renderToolResult(
   // (it was rendered inside the tool-call block)
   if (callPart) {
     return null;
+  }
+
+  const genui = renderGenUIOutput(output);
+  if (genui) {
+    return genui;
   }
 
   // Fallback handling for structured data in output

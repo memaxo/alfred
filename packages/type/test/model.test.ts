@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseModelRef, toModelKey } from "../src/model";
+import { parseModelKey, parseModelRef, toModelKey } from "../src/model";
 import { modelRefSchema } from "../src/model.zod";
 
 describe("parseModelRef", () => {
@@ -72,6 +72,48 @@ describe("toModelKey", () => {
     const openrouter = parseModelRef("openrouter:anthropic/claude-3.5-sonnet");
     expect(toModelKey(openrouter.ref)).toBe(
       "openrouter/anthropic/claude-3.5-sonnet"
+    );
+  });
+});
+
+describe("parseModelKey", () => {
+  it("parses openai keys", () => {
+    const parsed = parseModelKey("openai/gpt-4o-mini");
+    expect(parsed).toEqual({
+      provider: "openai",
+      modelId: "gpt-4o-mini",
+      key: "openai/gpt-4o-mini",
+    });
+  });
+
+  it("parses openrouter keys with slashes in modelId", () => {
+    const parsed = parseModelKey("openrouter/anthropic/claude-3.5-sonnet");
+    expect(parsed.provider).toBe("openrouter");
+    expect(parsed.modelId).toBe("anthropic/claude-3.5-sonnet");
+    expect(parsed.key).toBe("openrouter/anthropic/claude-3.5-sonnet");
+  });
+
+  it("parses cerebras keys", () => {
+    const parsed = parseModelKey("cerebras/llama3.1-8b");
+    expect(parsed.provider).toBe("cerebras");
+    expect(parsed.modelId).toBe("llama3.1-8b");
+    expect(parsed.key).toBe("cerebras/llama3.1-8b");
+  });
+
+  it("rejects empty strings", () => {
+    expect(() => parseModelKey("")).toThrow("model_key_empty");
+    expect(() => parseModelKey("   ")).toThrow("model_key_empty");
+  });
+
+  it("rejects missing slash", () => {
+    expect(() => parseModelKey("openai:gpt-4o-mini")).toThrow(
+      "model_key_missing_slash"
+    );
+  });
+
+  it("rejects unknown providers", () => {
+    expect(() => parseModelKey("gateway/gpt-4o-mini")).toThrow(
+      "model_key_provider_unknown"
     );
   });
 });

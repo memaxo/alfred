@@ -6,6 +6,14 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
+    "./chat/parts": {
+      "types": "./dist/chat/parts.d.ts",
+      "default": "./src/chat/parts.ts"
+    },
+    "./genui": {
+      "types": "./dist/genui/index.d.ts",
+      "default": "./src/genui/index.ts"
+    },
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./src/*.ts"

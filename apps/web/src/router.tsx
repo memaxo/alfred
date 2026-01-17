@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CollectionsProvider } from "@/collections";
+import { initGenUIRegistry } from "@/components/genui";
 import { handleAuthError } from "@/lib/auth-error-handler";
 import {
   createBrowserTrpcClient,
@@ -17,6 +18,16 @@ import {
 } from "@/lib/trpc-client";
 import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
+
+// Initialize GenUI component registry (async, non-blocking)
+initGenUIRegistry().catch((err) => {
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    const message = err instanceof Error ? err.message : String(err);
+    toast.error("GenUI registry initialization failed", {
+      description: message,
+    });
+  }
+});
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({

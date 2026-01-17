@@ -1,3 +1,8 @@
+import {
+  isGenUIToolResult,
+  isUIDataPart,
+  type UIComponent,
+} from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
 
 type UIPart = UIMessage["parts"][number];
@@ -271,6 +276,26 @@ export function extractStructuredData(part: UIPart): unknown {
   }
   if (isToolResultPart(part)) {
     return (part as { output?: unknown }).output;
+  }
+  return null;
+}
+
+/**
+ * Extract a GenUI schema from a message part.
+ *
+ * Supports:
+ * - `data-ui` parts: `{ type: "data-ui", ui: UIComponent }`
+ * - tool-result outputs: `{ output: { ui: UIComponent, data: unknown } }`
+ */
+export function extractGenUISchema(part: UIPart): UIComponent | null {
+  if (isUIDataPart(part)) {
+    return part.ui;
+  }
+  if (isToolResultPart(part)) {
+    const output = (part as { output?: unknown }).output;
+    if (isGenUIToolResult(output)) {
+      return output.ui;
+    }
   }
   return null;
 }

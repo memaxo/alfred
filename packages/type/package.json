@@ -146,6 +146,14 @@
     "./voice.zod": {
       "types": "./dist/voice.zod.d.ts",
       "default": "./src/voice.zod.ts"
+    },
+    "./genui": {
+      "types": "./dist/genui.d.ts",
+      "default": "./src/genui.ts"
+    },
+    "./genui.zod": {
+      "types": "./dist/genui.zod.d.ts",
+      "default": "./src/genui.zod.ts"
     }
   },
   "scripts": {

@@ -4,6 +4,7 @@
  * Subscribes to voice pipeline status updates.
  */
 
+import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -179,7 +180,7 @@ export function setupVoiceSubscription(
     manager,
     store,
     pollingInterval = 3000,
-    useMockData = true, // TODO: Switch to false when ready
+    useMockData = false,
   } = options;
 
   if (useMockData) {
@@ -192,31 +193,43 @@ export function setupVoiceSubscription(
       immediate: true,
     });
   } else {
-    // Use real tRPC subscription
-    void manager.addSubscription({
+    manager.addPolling({
       id: "voice",
-      start: () => {
-        // const client = getTrpcClient();
-        // const subscription = client.voice.stream.subscribe();
+      fetch: async () => {
+        const client = getApiClient();
+        const result = await client.getAdminStats();
+        if (result.error || !result.data) {
+          return mockVoiceState();
+        }
 
-        // Mock implementation
-        let callback: ((state: VoiceState) => void) | null = null;
-        const interval = setInterval(() => {
-          if (callback) {
-            callback(mockVoiceState());
-          }
-        }, pollingInterval);
-
-        return Promise.resolve({
-          unsubscribe: () => clearInterval(interval),
-          onData: (cb) => {
-            callback = cb as (state: VoiceState) => void;
+        const activeSessions = result.data.voice.activeSessions;
+        const status: VoicePipelineStatus =
+          activeSessions > 0 ? "processing" : "standby";
+        return {
+          status,
+          sttPool: {
+            name: "stt",
+            workers: 0,
+            maxWorkers: 0,
+            queueDepth: 0,
+            processing: 0,
           },
-          onError: () => {},
-        });
+          ttsPool: {
+            name: "tts",
+            workers: 0,
+            maxWorkers: 0,
+            queueDepth: 0,
+            processing: 0,
+          },
+          latency: { sttP50: 0, sttP99: 0, ttsP50: 0, ttsP99: 0 },
+          activeSessions,
+          timestamp: Date.now(),
+        };
       },
-      onData: (state) => store.update(state as VoiceState),
+      onData: (state) => store.update(state),
       onError: (_error) => {},
+      interval: pollingInterval,
+      immediate: true,
     });
   }
 }
