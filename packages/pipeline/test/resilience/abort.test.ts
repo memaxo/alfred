@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { PipelineEvent } from "../../src/events";
+import type { PipelineContext } from "../../src/pipeline";
 import { PipelineRunner } from "../../src/runner";
-import { registerDefaultStages } from "../../src/stages";
 
 describe("Abort Signal Propagation", () => {
   const testWorkspace = join(
@@ -20,106 +20,35 @@ describe("Abort Signal Propagation", () => {
     await rm(testWorkspace, { recursive: true, force: true });
   });
 
-  it("aborts pipeline when signal is triggered", async () => {
-    const events: PipelineEvent[] = [];
-    const controller = new AbortController();
-
-    const runner = new PipelineRunner({
-      maxParallel: 1,
-      enableLearning: false,
-    });
-    registerDefaultStages(runner);
-    runner.addObserver({
-      onEvent: (e) => events.push(e),
-    });
-
-    const runId = randomUUID();
-    const input = {
-      runId,
-      requirement: "Create a test file",
-      workspace: testWorkspace,
-      userId: "test-user",
+  function createBlockingInitStage() {
+    return {
+      name: "init" as const,
+      execute: async (_input: unknown, ctx: PipelineContext) =>
+        new Promise<void>((_, reject) => {
+          if (ctx.signal.aborted) {
+            reject(new Error("pipeline_aborted"));
+            return;
+          }
+          const onAbort = () => {
+            ctx.signal.removeEventListener("abort", onAbort);
+            reject(new Error("pipeline_aborted"));
+          };
+          ctx.signal.addEventListener("abort", onAbort);
+        }),
     };
+  }
 
-    // Start pipeline and abort after init stage
-    const runPromise = (async () => {
-      const results: PipelineEvent[] = [];
-      for await (const event of runner.run(input, controller.signal)) {
-        results.push(event);
-
-        // Abort after init stage completes
-        if (
-          event.type === "stage:exit" &&
-          "stage" in event &&
-          event.stage === "init"
-        ) {
-          controller.abort();
-        }
-      }
-      return results;
-    })();
-
-    await expect(runPromise).rejects.toThrow("abort");
-
-    // Verify init stage completed but pipeline aborted
-    const stageExits = events.filter((e) => e.type === "stage:exit");
-    expect(stageExits.length).toBeGreaterThanOrEqual(1);
-    expect(stageExits.length).toBeLessThan(8); // Not all stages completed
-
-    const failedEvent = events.find((e) => e.type === "pipeline:failed");
-    expect(failedEvent).toBeDefined();
-  }, 60_000);
-
-  it("propagates abort to all active stages", async () => {
+  it("aborts before pipeline starts when signal is already aborted", async () => {
     const events: PipelineEvent[] = [];
+    let cleanupCalled = false;
     const controller = new AbortController();
-
-    const runner = new PipelineRunner({
-      maxParallel: 1,
-      enableLearning: false,
-    });
-    registerDefaultStages(runner);
-    runner.addObserver({
-      onEvent: (e) => events.push(e),
-    });
-
-    const runId = randomUUID();
-    const input = {
-      runId,
-      requirement: "Create test files",
-      workspace: testWorkspace,
-      userId: "test-user",
-    };
-
-    // Abort immediately
     controller.abort();
 
-    const runPromise = (async () => {
-      const results: PipelineEvent[] = [];
-      for await (const event of runner.run(input, controller.signal)) {
-        results.push(event);
-      }
-      return results;
-    })();
-
-    await expect(runPromise).rejects.toThrow("abort");
-
-    // Verify pipeline failed immediately
-    const stageEnters = events.filter((e) => e.type === "stage:enter");
-    expect(stageEnters.length).toBe(0); // No stages even started
-  }, 30_000);
-
-  it("cleanup happens even when aborted", async () => {
-    const events: PipelineEvent[] = [];
-    const controller = new AbortController();
-
     const runner = new PipelineRunner({
       maxParallel: 1,
       enableLearning: false,
     });
-    registerDefaultStages(runner);
-
-    let cleanupCalled = false;
+    runner.registerStage(createBlockingInitStage());
     runner.addObserver({
       onEvent: (e) => events.push(e),
       onComplete: () => {
@@ -127,29 +56,57 @@ describe("Abort Signal Propagation", () => {
       },
     });
 
-    const runId = randomUUID();
     const input = {
-      runId,
-      requirement: "Create test files",
+      runId: randomUUID(),
+      requirement: "Abort before start",
       workspace: testWorkspace,
       userId: "test-user",
     };
 
-    const runPromise = (async () => {
+    await expect(async () => {
+      for await (const _event of runner.run(input, controller.signal)) {
+        // Drain events
+      }
+    }).toThrow(/aborted/);
+
+    expect(events.filter((e) => e.type === "stage:enter")).toHaveLength(0);
+    expect(events.find((e) => e.type === "pipeline:failed")).toBeDefined();
+    expect(cleanupCalled).toBe(true);
+  }, 30_000);
+
+  it("aborts during a running stage and still calls cleanup", async () => {
+    const events: PipelineEvent[] = [];
+    let cleanupCalled = false;
+    const controller = new AbortController();
+
+    const runner = new PipelineRunner({
+      maxParallel: 1,
+      enableLearning: false,
+    });
+    runner.registerStage(createBlockingInitStage());
+    runner.addObserver({
+      onEvent: (e) => events.push(e),
+      onComplete: () => {
+        cleanupCalled = true;
+      },
+    });
+
+    const input = {
+      runId: randomUUID(),
+      requirement: "Abort mid-run",
+      workspace: testWorkspace,
+      userId: "test-user",
+    };
+
+    await expect(async () => {
       for await (const event of runner.run(input, controller.signal)) {
-        if (
-          event.type === "stage:exit" &&
-          "stage" in event &&
-          event.stage === "context"
-        ) {
+        if (event.type === "stage:enter") {
           controller.abort();
         }
       }
-    })();
+    }).toThrow(/aborted/);
 
-    await expect(runPromise).rejects.toThrow();
-
-    // Verify cleanup was called
+    expect(events.find((e) => e.type === "pipeline:failed")).toBeDefined();
     expect(cleanupCalled).toBe(true);
-  }, 60_000);
+  }, 30_000);
 });

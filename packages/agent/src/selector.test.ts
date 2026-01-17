@@ -158,4 +158,39 @@ describe("getModelForRole", () => {
       "ai_provider_api_key_missing"
     );
   });
+
+  it("throws clear error for missing Cerebras key", () => {
+    setEnv("CEREBRAS_API_KEY", undefined);
+    setEnv("AI_MODEL_CHAT", "cerebras:llama3.1-8b");
+
+    expect(() => getModelForRole("chat")).toThrow("cerebras_api_key_missing");
+  });
+
+  it("throws clear error for missing OpenRouter key", () => {
+    setEnv("OPENROUTER_API_KEY", undefined);
+    setEnv("AI_MODEL_CHAT", "openrouter:anthropic/claude-3.5-sonnet");
+
+    expect(() => getModelForRole("chat")).toThrow("openrouter_api_key_missing");
+  });
+
+  it("routes cerebras provider correctly", () => {
+    setEnv("AI_MODEL_CHAT", "cerebras:llama3.1-70b");
+
+    const { modelKey } = getModelForRole("chat");
+    expect(modelKey).toBe("cerebras/llama3.1-70b");
+  });
+
+  it("routes openrouter provider correctly", () => {
+    setEnv("AI_MODEL_CHAT", "openrouter:anthropic/claude-3-haiku");
+
+    const { modelKey } = getModelForRole("chat");
+    expect(modelKey).toBe("openrouter/anthropic/claude-3-haiku");
+  });
+
+  it("routes openai provider to gateway", () => {
+    setEnv("AI_MODEL_CHAT", "openai:gpt-4o");
+
+    const { modelKey } = getModelForRole("chat");
+    expect(modelKey).toBe("openai/gpt-4o");
+  });
 });

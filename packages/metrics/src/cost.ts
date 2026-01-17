@@ -33,11 +33,11 @@ const runCosts = new Map<string, CostEntry[]>();
  * Record cost for a model call.
  */
 export function recordCost(
-  runId: string,
   provider: ModelProvider,
   modelId: string,
   promptTokens: number,
-  completionTokens: number
+  completionTokens: number,
+  runId: string
 ): number {
   const costUsd = calculateCostUsd(
     provider,

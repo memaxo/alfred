@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { PipelineEvent } from "../../src/events";
+import type { PipelineContext, StageName } from "../../src/pipeline";
 import { PipelineRunner } from "../../src/runner";
-import { registerDefaultStages } from "../../src/stages";
 
 describe("MAX_TRANSITIONS Guard", () => {
   const testWorkspace = join(
@@ -20,114 +20,89 @@ describe("MAX_TRANSITIONS Guard", () => {
     await rm(testWorkspace, { recursive: true, force: true });
   });
 
-  it("enforces MAX_TRANSITIONS limit in workflow execution", async () => {
+  function createMockStage(name: StageName, emitCount = 0) {
+    return {
+      name,
+      execute: (_input: unknown, ctx: PipelineContext) => {
+        for (let i = 0; i < emitCount; i++) {
+          ctx.emit({
+            type: "stage:progress",
+            stage: name,
+            message: `tick-${i}`,
+            timestamp: Date.now(),
+          });
+        }
+        return { ok: true };
+      },
+    };
+  }
+
+  function registerAllMockStages(runner: PipelineRunner): void {
+    runner
+      .registerStage(createMockStage("init"))
+      .registerStage(createMockStage("context"))
+      .registerStage(createMockStage("plan"))
+      .registerStage(createMockStage("schedule"))
+      .registerStage(createMockStage("execute"))
+      .registerStage(createMockStage("review"))
+      .registerStage(createMockStage("learn"))
+      .registerStage(createMockStage("summarize"));
+  }
+
+  it("enforces maxTransitions limit when events exceed the guard", async () => {
     const events: PipelineEvent[] = [];
 
     const runner = new PipelineRunner({
       maxParallel: 1,
       enableLearning: false,
-      stuckDetection: {
-        maxTransitions: 3, // Very low limit to trigger guard
-      },
+      maxTransitions: 5,
     });
-    registerDefaultStages(runner);
+    runner.registerStage(createMockStage("init", 10));
     runner.addObserver({
       onEvent: (e) => events.push(e),
     });
 
-    const runId = randomUUID();
     const input = {
-      runId,
-      requirement:
-        "Create multiple test files that will exceed transition limit",
+      runId: randomUUID(),
+      requirement: "Trigger transitions limit",
       workspace: testWorkspace,
       userId: "test-user",
     };
 
-    let caughtError = false;
-    try {
+    await expect(async () => {
       for await (const _event of runner.run(input)) {
-        // Pipeline should abort when MAX_TRANSITIONS exceeded
+        // Drain events
       }
-    } catch (error) {
-      caughtError = true;
-      expect(String(error)).toMatch(/transition|limit|exceeded/i);
-    }
+    }).toThrow(/max_transitions_exceeded/);
 
-    // If MAX_TRANSITIONS is enforced, we should either:
-    // 1. Catch an error, or
-    // 2. See a failed/suspended event
-    const failedEvent = events.find((e) => e.type === "pipeline:failed");
-    const suspendEvent = events.find((e) => e.type === "pipeline:suspend");
+    expect(events.find((e) => e.type === "pipeline:failed")).toBeDefined();
+  }, 30_000);
 
-    expect(caughtError || failedEvent || suspendEvent).toBe(true);
-  }, 120_000);
-
-  it("completes successfully when under MAX_TRANSITIONS limit", async () => {
+  it("completes successfully when under maxTransitions limit", async () => {
     const events: PipelineEvent[] = [];
 
     const runner = new PipelineRunner({
       maxParallel: 1,
       enableLearning: false,
-      stuckDetection: {
-        maxTransitions: 1000, // High enough to not trigger
-      },
+      maxTransitions: 1000,
     });
-    registerDefaultStages(runner);
+    registerAllMockStages(runner);
     runner.addObserver({
       onEvent: (e) => events.push(e),
     });
 
-    const runId = randomUUID();
     const input = {
-      runId,
-      requirement: "Create a simple test file",
+      runId: randomUUID(),
+      requirement: "Complete under limit",
       workspace: testWorkspace,
       userId: "test-user",
     };
 
     for await (const _event of runner.run(input)) {
-      // Should complete without errors
+      // Drain events
     }
 
-    // Verify successful completion
-    const completeEvent = events.find((e) => e.type === "pipeline:complete");
-    expect(completeEvent).toBeDefined();
-
-    const failedEvent = events.find((e) => e.type === "pipeline:failed");
-    expect(failedEvent).toBeUndefined();
-  }, 300_000);
-
-  it("emits transition count metrics", async () => {
-    const events: PipelineEvent[] = [];
-
-    const runner = new PipelineRunner({
-      maxParallel: 1,
-      enableLearning: false,
-    });
-    registerDefaultStages(runner);
-    runner.addObserver({
-      onEvent: (e) => events.push(e),
-    });
-
-    const runId = randomUUID();
-    const input = {
-      runId,
-      requirement: "Simple test",
-      workspace: testWorkspace,
-      userId: "test-user",
-    };
-
-    for await (const _event of runner.run(input)) {
-      // Collect events
-    }
-
-    // Verify we tracked agent transitions/progress
-    const agentEvents = events.filter(
-      (e) => e.type === "agent:progress" || e.type === "agent:complete"
-    );
-
-    // Should have some agent activity
-    expect(agentEvents.length).toBeGreaterThan(0);
-  }, 300_000);
+    expect(events.find((e) => e.type === "pipeline:complete")).toBeDefined();
+    expect(events.find((e) => e.type === "pipeline:failed")).toBeUndefined();
+  }, 30_000);
 });

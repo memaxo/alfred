@@ -28,11 +28,11 @@ export function recordPipelineCost(
   completionTokens: number
 ): void {
   const costUsd = recordCost(
-    ctx.runId,
     provider,
     modelId,
     promptTokens,
-    completionTokens
+    completionTokens,
+    ctx.runId
   );
 
   // Track cumulative cost in context
