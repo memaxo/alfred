@@ -21,9 +21,10 @@ export type ResumePayload = {
 
 export type RunHandle = {
   resume(args: {
-    resumeData: ResumePayload;
+    resumeData: any;
     runtimeContext?: RuntimeContext;
   }): Promise<unknown>;
+  suspend?(): Promise<unknown>;
   cancel(): Promise<unknown>;
   abortController: AbortController;
 };
@@ -31,7 +32,8 @@ export type RunHandle = {
 export type RunRegistry = {
   register(runId: string, handle: RunHandle): Promise<void> | void;
   unregister(runId: string): Promise<void> | void;
-  dispatchResume(runId: string, payload: ResumePayload): Promise<boolean>;
+  dispatchResume(runId: string, payload: any): Promise<boolean>;
+  dispatchSuspend(runId: string): Promise<boolean>;
 };
 
 type RegistryEvent = "register" | "unregister" | "dispatch" | "deliver";
@@ -134,10 +136,7 @@ export class MemoryRunRegistry implements RunRegistry {
     recordEvent("unregister", this.backend, existed ? "ok" : "miss");
   }
 
-  async dispatchResume(
-    runId: string,
-    payload: ResumePayload
-  ): Promise<boolean> {
+  async dispatchResume(runId: string, payload: any): Promise<boolean> {
     const endTimer = createDispatchTimer(this.backend);
     const handle = this.runs.get(runId);
     if (!handle) {
@@ -157,6 +156,15 @@ export class MemoryRunRegistry implements RunRegistry {
       recordEvent("deliver", this.backend, "error");
       throw error;
     }
+  }
+
+  async dispatchSuspend(runId: string): Promise<boolean> {
+    const handle = this.runs.get(runId);
+    if (handle?.suspend) {
+      await handle.suspend();
+      return true;
+    }
+    return false;
   }
 }
 
@@ -228,10 +236,7 @@ export class RedisRunRegistry implements RunRegistry {
     }
   }
 
-  async dispatchResume(
-    runId: string,
-    payload: ResumePayload
-  ): Promise<boolean> {
+  async dispatchResume(runId: string, payload: any): Promise<boolean> {
     await this.ensureReady();
     const endTimer = createDispatchTimer(this.backend);
     const localHandle = this.runs.get(runId);
@@ -261,7 +266,7 @@ export class RedisRunRegistry implements RunRegistry {
     }
 
     const corrId = randomUUID();
-    const message = JSON.stringify({ runId, payload, corrId });
+    const message = JSON.stringify({ type: "resume", runId, payload, corrId });
     try {
       await this.cmd.publish(CH_INST(owner), message);
     } catch (error) {
@@ -291,6 +296,27 @@ export class RedisRunRegistry implements RunRegistry {
     recordEvent("dispatch", this.backend, "error");
     endTimer("error");
     return false;
+  }
+
+  async dispatchSuspend(runId: string): Promise<boolean> {
+    await this.ensureReady();
+    const localHandle = this.runs.get(runId);
+    if (localHandle?.suspend) {
+      await localHandle.suspend();
+      return true;
+    }
+
+    const owner = await this.cmd.get(KEY_OWNER(runId));
+    if (!owner || owner === this.instanceId) {
+      return false;
+    }
+
+    const corrId = randomUUID();
+    const message = JSON.stringify({ type: "suspend", runId, corrId });
+    await this.cmd.publish(CH_INST(owner), message);
+
+    const ack = await this.awaitAck(corrId);
+    return ack === "ok";
   }
 
   private async initialize(): Promise<void> {
@@ -404,8 +430,9 @@ export class RedisRunRegistry implements RunRegistry {
 
   private async handleMessage(raw: string) {
     let parsed: {
+      type?: "resume" | "suspend";
       runId?: string;
-      payload?: ResumePayload;
+      payload?: any;
       corrId?: string;
     } | null = null;
     try {
@@ -419,7 +446,9 @@ export class RedisRunRegistry implements RunRegistry {
     const runId = typeof parsed?.runId === "string" ? parsed.runId : null;
     const payload = parsed?.payload ?? null;
     const corrId = typeof parsed?.corrId === "string" ? parsed.corrId : null;
-    if (!(runId && payload && corrId)) {
+    const type = parsed?.type ?? "resume";
+
+    if (!(runId && corrId)) {
       return;
     }
 
@@ -438,19 +467,27 @@ export class RedisRunRegistry implements RunRegistry {
 
     let ackValue: AckStatus = "ok";
     try {
-      const resumePromise = handle.resume({ resumeData: payload });
-      recordEvent("deliver", this.backend, "ok");
-      resumePromise.catch((error) => {
-        recordEvent("deliver", this.backend, "error");
-        logger.warn("redis_resume_async_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
+      if (type === "suspend") {
+        if (handle.suspend) {
+          await handle.suspend();
+        } else {
+          ackValue = "error";
+        }
+      } else {
+        const resumePromise = handle.resume({ resumeData: payload });
+        recordEvent("deliver", this.backend, "ok");
+        resumePromise.catch((error) => {
+          recordEvent("deliver", this.backend, "error");
+          logger.warn("redis_resume_async_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
-      });
+      }
     } catch (error) {
       ackValue = "error";
       recordEvent("deliver", this.backend, "error");
-      logger.warn("redis_resume_sync_failed", {
+      logger.warn(`redis_${type}_sync_failed`, {
         runId,
         error: error instanceof Error ? error.message : String(error),
       });

@@ -2,6 +2,9 @@
 import "@alfred/test-kit/redis";
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { logger } from "@alfred/logger";
 import { initApiServices, shutdownApiServices } from "../src/init";
 import {
@@ -89,9 +92,33 @@ describe("service availability utilities", () => {
     expect(typeof result).toBe("boolean");
   });
 
-  it("isUvAvailable should return boolean", () => {
-    const result = isUvAvailable();
-    expect(typeof result).toBe("boolean");
+  it("isUvAvailable should not return false positives for non-executable PATH entries", () => {
+    if (process.platform === "win32") {
+      expect(true).toBe(true);
+      return;
+    }
+
+    const base = mkdtempSync(join(tmpdir(), "alfred-uv-"));
+    const uvPath = join(base, "uv");
+
+    // Create a non-executable file named `uv` in PATH.
+    writeFileSync(uvPath, "#!/usr/bin/env bash\necho uv\n", "utf8");
+    chmodSync(uvPath, 0o644);
+
+    const prevPath = process.env.PATH;
+    process.env.PATH = base;
+
+    try {
+      // Non-executable `uv` must not be treated as available.
+      expect(isUvAvailable()).toBe(false);
+
+      // Make it executable and assert availability flips to true.
+      chmodSync(uvPath, 0o755);
+      expect(isUvAvailable()).toBe(true);
+    } finally {
+      process.env.PATH = prevPath;
+      rmSync(base, { recursive: true, force: true });
+    }
   });
 
   it("resetDbAvailability should clear cache", async () => {

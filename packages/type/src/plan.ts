@@ -379,13 +379,23 @@ type WorkflowEventBase = {
 };
 
 export type WorkflowEvent =
-  | (WorkflowEventBase & { _: "run" })
-  | (WorkflowEventBase & { _: "progress"; pct?: number; message?: string })
+  | (WorkflowEventBase & { _: "run"; id?: string })
+  | (WorkflowEventBase & {
+      _: "progress";
+      pct?: number;
+      message?: string;
+      phase?: string;
+    })
   | (WorkflowEventBase & { _: "stdout"; text: string })
   | (WorkflowEventBase & { _: "stderr"; text: string })
   | (WorkflowEventBase & { _: "droid"; chunk?: unknown })
   | (WorkflowEventBase & { _: "notice"; message: string })
-  | (WorkflowEventBase & { _: "error"; message: string; chunk?: unknown })
+  | (WorkflowEventBase & {
+      _: "error";
+      message: string;
+      chunk?: unknown;
+      phase?: string;
+    })
   | (WorkflowEventBase & {
       _: "ui-message";
       messages: import("./stream").UIMessage[];
@@ -439,6 +449,11 @@ export type WorkflowEvent =
   | (WorkflowEventBase & { _: "suspend" })
   | (WorkflowEventBase & { _: "resume" })
   | (WorkflowEventBase & {
+      _: "workflow-complete";
+      runId?: string;
+      summary?: unknown;
+    })
+  | (WorkflowEventBase & {
       _: "obligation";
       runId: string;
       obligations: Obligation[];
@@ -475,12 +490,15 @@ export type WorkflowEvent =
       _: "agent-start";
       agentId: string;
       phaseId: string;
+      taskId?: string;
     })
   | (WorkflowEventBase & {
       _: "agent-complete";
       agentId: string;
       phaseId: string;
-      result: unknown;
+      result?: unknown;
+      status?: string;
+      durationMs?: number;
     })
   | (WorkflowEventBase & { _: "wave-start"; waveId: string })
   | (WorkflowEventBase & { _: "wave-complete"; waveId: string })

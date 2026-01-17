@@ -1,8 +1,27 @@
+import * as crypto from "node:crypto";
 import { logger } from "@alfred/logger";
 import { createEvent } from "../events";
 import type { PipelineContext, PipelineStage } from "../pipeline";
+import type { SerializableValue } from "../snapshot";
 import type { ContextOutput, InitOutput } from "./types";
 
+/**
+ * Hash a string to create a cache key.
+ */
+function hashRequirement(requirement: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(requirement)
+    .digest("hex")
+    .slice(0, 16);
+}
+
+/**
+ * Context Stage
+ *
+ * Gathers code and web context for the pipeline.
+ * Supports caching to avoid redundant context gathering.
+ */
 export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
   readonly name = "context" as const;
 
@@ -17,6 +36,105 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
       })
     );
 
+    // Check cache if enabled
+    if (ctx.config.contextCaching?.enabled) {
+      const cached = await this.checkCache(ctx);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    // Build context
+    const output = await this.buildContext(ctx);
+
+    // Cache result if enabled
+    if (ctx.config.contextCaching?.enabled) {
+      await this.cacheResult(ctx, output);
+    }
+
+    // Store context for later stages
+    ctx.set("contextBundle", output.bundle as unknown as SerializableValue);
+    ctx.set("contextOutput", output as unknown as SerializableValue);
+
+    return output;
+  }
+
+  /**
+   * Check if cached context exists and is valid.
+   */
+  private async checkCache(
+    ctx: PipelineContext
+  ): Promise<ContextOutput | null> {
+    const cacheKey = `context:${ctx.workspace}:${hashRequirement(ctx.requirement)}`;
+    const cached = ctx.get<{
+      output: ContextOutput;
+      cachedAt: number;
+    }>(cacheKey);
+
+    if (!cached) {
+      return null;
+    }
+
+    const ttl = ctx.config.contextCaching?.ttlMs ?? 300_000;
+    const age = Date.now() - cached.cachedAt;
+
+    if (age > ttl) {
+      logger.info("context_cache_expired", {
+        runId: ctx.runId,
+        cacheKey,
+        ageMs: age,
+        ttlMs: ttl,
+      });
+      return null;
+    }
+
+    logger.info("context_cache_hit", {
+      runId: ctx.runId,
+      cacheKey,
+      ageMs: age,
+    });
+
+    ctx.emit(
+      createEvent("context:cache-hit", {
+        cacheKey,
+      })
+    );
+
+    ctx.emit(
+      createEvent("stage:progress", {
+        stage: "context",
+        message: `Using cached context (${cached.output.totalTokens} tokens)`,
+      })
+    );
+
+    return cached.output;
+  }
+
+  /**
+   * Cache the context result.
+   */
+  private async cacheResult(
+    ctx: PipelineContext,
+    output: ContextOutput
+  ): Promise<void> {
+    const cacheKey = `context:${ctx.workspace}:${hashRequirement(ctx.requirement)}`;
+
+    ctx.set(cacheKey, {
+      output,
+      cachedAt: Date.now(),
+    } as unknown as SerializableValue);
+
+    logger.info("context_cached", {
+      runId: ctx.runId,
+      cacheKey,
+      totalTokens: output.totalTokens,
+    });
+  }
+
+  /**
+   * Build context using ContextBuilder.
+   */
+  private async buildContext(ctx: PipelineContext): Promise<ContextOutput> {
     try {
       // Import dynamically to avoid circular dependencies
       const { ContextBuilder } = await import("@alfred/runtime/context");
@@ -38,11 +156,12 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
         })
       );
 
-      // Store context for later stages
-      ctx.set("contextBundle", result.bundle);
-
       return {
-        bundle: result.bundle ?? { files: [], maxTokens: 0, estimatedTokens: 0 },
+        bundle: result.bundle ?? {
+          files: [],
+          maxTokens: 0,
+          estimatedTokens: 0,
+        },
         receipts: {
           sources: result.receipts.code.map((r) => r.path ?? "unknown"),
           totalResults: result.receipts.code.length,

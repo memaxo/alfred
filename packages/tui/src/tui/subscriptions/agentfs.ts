@@ -181,8 +181,8 @@ class AgentFSSubscription {
         isConnected: true,
         isLoading: false,
         error: null,
-        entries: snapshot.entries,
-        toolCalls: snapshot.toolCalls.map((c) => ({
+        entries: snapshot.entries as DirEntry[],
+        toolCalls: (snapshot.toolCalls as any[]).map((c) => ({
           id: c.id,
           name: c.name,
           started_at: c.startedAt,
@@ -192,7 +192,7 @@ class AgentFSSubscription {
           parameters: c.parameters,
           result: c.result,
         })),
-        kvStore: snapshot.kvStore.map((e) => ({
+        kvStore: (snapshot.kvStore as any[]).map((e) => ({
           key: e.key,
           value: e.value,
           created_at: e.createdAt,

@@ -51,7 +51,6 @@ export {
   droidPendingCleanupTotal,
   droidPendingRunsGauge,
 } from "@alfred/agent/orchestrator/tool/droid/metrics";
-
 export * from "@alfred/agent/workflow/metrics";
 export * from "@alfred/db";
 export {
@@ -88,7 +87,19 @@ export {
   redisReconnectionAttemptsTotal,
 } from "@alfred/metrics/shared";
 export * from "@alfred/policy";
+// Policy metrics are used by API request paths and must not be resolved via
+// star-export ambiguity during SSR bundling.
+export {
+  pdpCacheHitsTotal,
+  policyCheckFailuresTotal,
+  policyDecisionsTotal,
+  policyObligationsTotal,
+  recordCacheHit,
+} from "@alfred/policy";
 export * from "@alfred/runtime/metrics";
+// Runtime metrics used by API/adapter code must be explicitly re-exported to
+// avoid ambiguous star-export resolution during SSR bundling.
+export { runtimeHistorySelectionDurationSeconds } from "@alfred/runtime/metrics";
 // Re-export from domain packages
 export {
   fineTuneRunDurationSeconds,
@@ -97,6 +108,20 @@ export {
   fineTuneTokensTotal,
 } from "@alfred/tune";
 export * from "@alfred/voice/metrics";
+// Voice WebSocket metrics are consumed by @alfred/api/voice/streaming and must be
+// exported deterministically (avoid star-export ambiguity across multiple domains).
+export {
+  voiceWebSocketBackpressureEventsTotal,
+  voiceWebSocketBinaryChunkSizeBytes,
+  voiceWebSocketConnectionRejectedTotal,
+  voiceWebSocketConnectionsCurrent,
+  voiceWebSocketMessageLatencySeconds,
+  voiceWebSocketPayloadTooLargeTotal,
+  voiceWebSocketPingTimeoutTotal,
+  voiceWebSocketSendFailuresTotal,
+  voiceWebSocketUpgradeDurationSeconds,
+  voiceWebSocketUpgradeRateLimitHitsTotal,
+} from "@alfred/voice/metrics";
 // API-local metrics
 export * from "./metrics/index";
 

@@ -137,6 +137,19 @@ export type AgentFSInterface = {
 
   /** Close the AgentFS connection */
   close(): Promise<void>;
+
+  /** Diff operations */
+  diff(): Promise<AgentFSChange[]>;
+};
+
+/**
+ * Filesystem change record from AgentFS.
+ */
+export type AgentFSChange = {
+  path: string;
+  type: "created" | "modified" | "deleted";
+  size?: number;
+  mtime?: number;
 };
 
 /**

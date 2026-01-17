@@ -32,6 +32,7 @@ import {
   agentfsExecutionsTotal,
 } from "../agentfs/metrics.js";
 import type {
+  AgentFSChange,
   AgentFSInterface,
   AgentFSToolCall,
   AgentFSToolCallStats,
@@ -184,12 +185,13 @@ export class AgentFSWorkspace implements Workspace {
       return;
     }
 
-    // Step 1: Create/reuse Docker container
-    await this.initializeContainer();
-
-    // Create parent directory for database
+    // Create parent directory for database (host), and ensure the run dir exists
+    // before container initialization so we can mount it into the container.
     const dbDir = path.dirname(path.resolve(this._dbPath));
     await mkdir(dbDir, { recursive: true });
+
+    // Step 1: Create/reuse Docker container
+    await this.initializeContainer();
 
     // Step 2: Initialize AgentFS (lazy-load SDK via wrapper)
     this.agent = await AlfredAgentFS.open(
@@ -199,6 +201,11 @@ export class AgentFSWorkspace implements Workspace {
       },
       this.runId
     );
+
+    // Record base directory in KV store for audit and diff surfaces
+    if (this.agent) {
+      await this.agent.kv.set("baseDir", this.repoBase);
+    }
 
     this._initialized = true;
 
@@ -216,13 +223,14 @@ export class AgentFSWorkspace implements Workspace {
    */
   private async initializeContainer(): Promise<void> {
     // Check if container already exists (shared by agents in this run)
+    const absRepoBase = path.resolve(this.repoBase);
     try {
       const inspectResult = await toolDocker.execute({
         input: {
           action: "inspect",
           name: this._containerName,
           authz: this._authz,
-          cw: this.repoBase,
+          cw: absRepoBase,
         },
       });
 
@@ -236,7 +244,7 @@ export class AgentFSWorkspace implements Workspace {
               action: "start",
               name: this._containerName,
               authz: this._authz,
-              cw: this.repoBase,
+              cw: absRepoBase,
             },
           });
         }
@@ -249,28 +257,57 @@ export class AgentFSWorkspace implements Workspace {
         await this.recordProjectContainer();
         return;
       }
-    } catch {
+    } catch (error) {
       // Container doesn't exist, create it
+      logger.debug("agentfs_container_inspect_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
-    // Create new container with repository mounted at /workspace
+    // Create new container with:
+    // - Host repo mounted read-only at /workspace.base (prevents host mutations)
+    // - Per-run AgentFS directory mounted at /agentfs (durable session DB)
+    // - /workspace reserved for the AgentFS CoW view (wired in later step)
     try {
+      const runDir = this.runId.replace(/[^a-zA-Z0-9-]/g, "-");
+      const agentfsHostDir = path.resolve(absRepoBase, ".agentfs", runDir);
+      await mkdir(agentfsHostDir, { recursive: true });
+
       const runResult = await toolDocker.execute({
         input: {
           action: "run",
           tag: this._image,
           name: this._containerName,
-          volumes: [`${this.repoBase}:/workspace`],
+          volumes: [
+            `${absRepoBase}:/workspace.base:ro`,
+            `${agentfsHostDir}:/agentfs`,
+          ],
+          devices: ["/dev/fuse"],
+          capAdd: ["SYS_ADMIN"],
           resources: {
             cpus: 1.0,
             memory: "1g",
           },
           authz: this._authz,
-          cw: this.repoBase,
+          cw: absRepoBase,
         },
       });
 
-      if (runResult.ok && runResult.details?.containerId) {
+      logger.debug("agentfs_container_run_result", {
+        ok: runResult.ok,
+        containerId: runResult.details?.containerId,
+        name: runResult.details?.name,
+      });
+
+      if (!runResult.ok) {
+        logger.error("agentfs_container_run_failed", {
+          containerName: this._containerName,
+          image: this._image,
+        });
+        throw new Error("agentfs_container_run_failed");
+      }
+
+      if (runResult.details?.containerId) {
         this._containerId = runResult.details.containerId;
         logger.debug("agentfs_container_created", {
           containerId: this._containerId,
@@ -281,11 +318,27 @@ export class AgentFSWorkspace implements Workspace {
         await this.recordProjectContainer();
         return;
       }
+      logger.warn("agentfs_container_run_no_id", {
+        containerName: this._containerName,
+        details: runResult.details,
+      });
     } catch (error) {
       // Possible race condition - another agent created the container
-      logger.debug("agentfs_container_create_race", {
-        error: error instanceof Error ? error.message : String(error),
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.debug("agentfs_container_create_error", {
+        error: errorMsg,
+        containerName: this._containerName,
       });
+      // Re-throw if it's not a race condition (e.g., actual failure)
+      if (
+        !(
+          errorMsg.includes("already exists") ||
+          errorMsg.includes("already in use") ||
+          errorMsg.includes("agentfs_container_run_failed")
+        )
+      ) {
+        throw error;
+      }
     }
 
     // Retry inspect after potential race condition
@@ -294,7 +347,7 @@ export class AgentFSWorkspace implements Workspace {
         action: "inspect",
         name: this._containerName,
         authz: this._authz,
-        cw: this.repoBase,
+        cw: absRepoBase,
       },
     });
 
@@ -307,7 +360,7 @@ export class AgentFSWorkspace implements Workspace {
             action: "start",
             name: this._containerName,
             authz: this._authz,
-            cw: this.repoBase,
+            cw: absRepoBase,
           },
         });
       }
@@ -731,6 +784,8 @@ export class AgentFSWorkspace implements Workspace {
           workingDirectory,
           env: {
             ...options?.env,
+            HOME: "/root",
+            PATH: "/root/.agentfs/bin:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             AGENTFS_DB_PATH: this._dbPath,
             AGENTFS_RUN_ID: this.runId,
             AGENTFS_AGENT_ID: this.id,
@@ -862,6 +917,18 @@ export class AgentFSWorkspace implements Workspace {
   readdir(fsPath: string): Promise<string[]> {
     const agent = this.requireAgent();
     return agent.fs.readdir(fsPath);
+  }
+
+  /**
+   * Get filesystem changes (diff) for this workspace.
+   */
+  async diff(): Promise<AgentFSChange[]> {
+    const agent = this.requireAgent();
+    // AlfredAgentFS (our wrapper) has diff()
+    if (agent instanceof AlfredAgentFS) {
+      return agent.diff();
+    }
+    return (agent as any).diff();
   }
 
   /**

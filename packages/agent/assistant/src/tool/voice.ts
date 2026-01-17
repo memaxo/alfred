@@ -86,7 +86,7 @@ async function enforceVoiceStatusPolicy(
 async function executeVoiceStatus(
   input: VoiceStatusInput
 ): Promise<VoiceStatusOutput> {
-  const sessionRegistry = await import(sessionRegistryPkg);
+  const sessionRegistry = await import(/* @vite-ignore */ sessionRegistryPkg);
   const { getVoiceSession, listVoiceSessions } = sessionRegistry;
 
   let sessions: Awaited<ReturnType<typeof listVoiceSessions>>;
@@ -226,7 +226,7 @@ async function handleStopAction(
 async function executeVoiceControl(
   input: VoiceControlInput
 ): Promise<VoiceControlOutput> {
-  const sessionRegistry = await import(sessionRegistryPkg);
+  const sessionRegistry = await import(/* @vite-ignore */ sessionRegistryPkg);
   const { getVoiceSession, updateVoiceSession } = sessionRegistry;
 
   const session = await getVoiceSession(input.sessionId);

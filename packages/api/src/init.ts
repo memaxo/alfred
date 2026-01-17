@@ -1,7 +1,11 @@
 import { logger } from "@alfred/logger";
 import { startDefaultMetrics } from "@alfred/metrics/default";
 import { initMetricsHooks } from "./metrics";
-import { isDbAvailable, isUvAvailable } from "./utils/service-availability";
+import {
+  isDbAvailable,
+  isDbConnectionError,
+  isUvAvailable,
+} from "./utils/service-availability";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
 import {
   startVoiceStreamingPrototype,
@@ -10,6 +14,24 @@ import {
 
 let initialized = false;
 let worktreeCleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+let stopCompressionWorkerFn: (() => void) | null = null;
+let stopLearningWorkerFn: (() => void) | null = null;
+let stopCodexSessionCleanupWorkerFn: (() => void) | null = null;
+
+function isViteModuleRunnerClosed(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes("Vite module runner has been closed")
+  );
+}
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
 
 /**
  * Initialize all API services
@@ -36,9 +58,10 @@ export function initApiServices(): void {
     const { compressionWorkerOverrides } = await import(
       "@alfred/agent/orchestrator/config"
     );
-    const { startCompressionWorker } = await import(
+    const { startCompressionWorker, stopCompressionWorker } = await import(
       "@alfred/agent/orchestrator/compression-worker"
     );
+    stopCompressionWorkerFn = stopCompressionWorker;
     const compressionConfig = compressionWorkerOverrides();
     if (compressionConfig.enabled) {
       startCompressionWorker(compressionConfig);
@@ -51,19 +74,34 @@ export function initApiServices(): void {
         message: "Compression worker disabled",
       });
     }
-  })();
+  })().catch((error) => {
+    if (isViteModuleRunnerClosed(error)) {
+      return;
+    }
+    logger.error("compression_worker_init_failed", {
+      error: toErrorMessage(error),
+    });
+  });
 
   // Initialize learning worker (if enabled via env)
   if (process.env.ENABLE_LEARNING_WORKER === "1") {
     void (async () => {
-      const { startLearningWorker } = await import(
+      const { startLearningWorker, stopLearningWorker } = await import(
         "@alfred/agent/orchestrator/learning-worker"
       );
+      stopLearningWorkerFn = stopLearningWorker;
       startLearningWorker();
       logger.info("learning_worker_init", {
         message: "Learning worker started",
       });
-    })();
+    })().catch((error) => {
+      if (isViteModuleRunnerClosed(error)) {
+        return;
+      }
+      logger.error("learning_worker_init_failed", {
+        error: toErrorMessage(error),
+      });
+    });
   }
 
   // FIX: Only start DB-dependent workers if DB is available
@@ -78,11 +116,24 @@ export function initApiServices(): void {
         return;
       }
 
+      const enableDbRecovery =
+        process.env.ENABLE_DB_RECOVERY === "1" ||
+        process.env.NODE_ENV === "production";
+      if (!enableDbRecovery) {
+        logger.info("db_recovery_disabled", {
+          message:
+            "DB recovery workers disabled by default in dev. Set ENABLE_DB_RECOVERY=1 to enable codex cleanup, plan resume, and workflow rehydration.",
+        });
+        return;
+      }
+
       // Start codex session cleanup worker
       void (async () => {
-        const { startCodexSessionCleanupWorker } = await import(
-          "@alfred/agent/orchestrator/codex-session"
-        );
+        const {
+          startCodexSessionCleanupWorker,
+          stopCodexSessionCleanupWorker,
+        } = await import("@alfred/agent/orchestrator/codex-session");
+        stopCodexSessionCleanupWorkerFn = stopCodexSessionCleanupWorker;
         startCodexSessionCleanupWorker();
         logger.info("codex_session_cleanup_worker_started", {
           intervalMs:
@@ -91,7 +142,14 @@ export function initApiServices(): void {
               10
             ) || undefined,
         });
-      })();
+      })().catch((error) => {
+        if (isViteModuleRunnerClosed(error)) {
+          return;
+        }
+        logger.error("codex_session_cleanup_worker_failed", {
+          error: toErrorMessage(error),
+        });
+      });
       void (async () => {
         const [{ getAssistantAgentDefaults }, { resumeInterruptedPlans }] =
           await Promise.all([
@@ -100,26 +158,62 @@ export function initApiServices(): void {
           ]);
         const tools = getAssistantAgentDefaults().tools ?? {};
         resumeInterruptedPlans(tools).catch((error) => {
-          logger.error("resume_interrupted_plans_error", {
-            error: error instanceof Error ? error.message : String(error),
-          });
+          if (isViteModuleRunnerClosed(error)) {
+            return;
+          }
+          const msg = error instanceof Error ? error.message : String(error);
+          if (isDbConnectionError(error)) {
+            logger.warn("resume_interrupted_plans_db_unavailable", {
+              error: msg,
+            });
+          } else {
+            logger.error("resume_interrupted_plans_error", { error: msg });
+          }
         });
-      })();
+      })().catch((error) => {
+        if (isViteModuleRunnerClosed(error)) {
+          return;
+        }
+        logger.error("resume_interrupted_plans_init_failed", {
+          error: toErrorMessage(error),
+        });
+      });
 
       void (async () => {
         const { failOrphanedRunningRuns, rehydrateSuspendedRuns } =
           await import("@alfred/agent/workflow/session-recovery");
         rehydrateSuspendedRuns().catch((error) => {
-          logger.error("workflow_rehydrate_failed", {
-            error: error instanceof Error ? error.message : String(error),
-          });
+          if (isViteModuleRunnerClosed(error)) {
+            return;
+          }
+          const msg = error instanceof Error ? error.message : String(error);
+          if (isDbConnectionError(error)) {
+            logger.warn("workflow_rehydrate_db_unavailable", { error: msg });
+          } else {
+            logger.error("workflow_rehydrate_failed", { error: msg });
+          }
         });
         failOrphanedRunningRuns().catch((error) => {
-          logger.error("workflow_running_recovery_failed", {
-            error: error instanceof Error ? error.message : String(error),
-          });
+          if (isViteModuleRunnerClosed(error)) {
+            return;
+          }
+          const msg = error instanceof Error ? error.message : String(error);
+          if (isDbConnectionError(error)) {
+            logger.warn("workflow_running_recovery_db_unavailable", {
+              error: msg,
+            });
+          } else {
+            logger.error("workflow_running_recovery_failed", { error: msg });
+          }
         });
-      })();
+      })().catch((error) => {
+        if (isViteModuleRunnerClosed(error)) {
+          return;
+        }
+        logger.error("workflow_recovery_init_failed", {
+          error: toErrorMessage(error),
+        });
+      });
     })
     .catch((error) => {
       logger.warn("db_availability_check_error", {
@@ -150,7 +244,14 @@ export function initApiServices(): void {
           error: error instanceof Error ? error.message : String(error),
         });
       });
-  })();
+  })().catch((error) => {
+    if (isViteModuleRunnerClosed(error)) {
+      return;
+    }
+    logger.warn("worktree_preview_cleanup_startup_import_failed", {
+      error: toErrorMessage(error),
+    });
+  });
 
   worktreeCleanupInterval = setInterval(() => {
     void (async () => {
@@ -170,7 +271,14 @@ export function initApiServices(): void {
             error: error instanceof Error ? error.message : String(error),
           });
         });
-    })();
+    })().catch((error) => {
+      if (isViteModuleRunnerClosed(error)) {
+        return;
+      }
+      logger.warn("worktree_preview_cleanup_interval_import_failed", {
+        error: toErrorMessage(error),
+      });
+    });
   }, cleanupIntervalMs).unref();
   logger.info("worktree_preview_cleanup_interval_started", {
     cleanupIntervalMs,
@@ -179,7 +287,7 @@ export function initApiServices(): void {
 
   // FIX: Check UV availability before initializing voice pools
   // Initialize voice pools (Maya1 or Supertonic)
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
+  const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
   if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
     // Check if UV is available before trying to initialize voice pools
     if (isUvAvailable()) {
@@ -209,30 +317,40 @@ export function initApiServices(): void {
 export function shutdownApiServices(): void {
   logger.info("api_services_shutdown_initiated");
 
-  // Stop compression worker
   try {
-    void (async () => {
-      const [
-        { stopCompressionWorker },
-        { stopLearningWorker },
-        { stopCodexSessionCleanupWorker },
-      ] = await Promise.all([
-        import("@alfred/agent/orchestrator/compression-worker"),
-        import("@alfred/agent/orchestrator/learning-worker"),
-        import("@alfred/agent/orchestrator/codex-session"),
-      ]);
-      stopCompressionWorker();
-      stopLearningWorker();
-      stopCodexSessionCleanupWorker();
-    })();
-    logger.info("compression_worker_stopped");
+    stopCompressionWorkerFn?.();
+    if (stopCompressionWorkerFn) {
+      logger.info("compression_worker_stopped");
+    }
   } catch (error) {
-    logger.error("compression_worker_stop_failed", {
+    logger.warn("compression_worker_stop_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }
 
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
+  try {
+    stopLearningWorkerFn?.();
+    if (stopLearningWorkerFn) {
+      logger.info("learning_worker_stopped");
+    }
+  } catch (error) {
+    logger.warn("learning_worker_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    stopCodexSessionCleanupWorkerFn?.();
+    if (stopCodexSessionCleanupWorkerFn) {
+      logger.info("codex_session_cleanup_worker_stopped");
+    }
+  } catch (error) {
+    logger.warn("codex_session_cleanup_worker_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
   // Shutdown voice pools
   if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
     shutdownVoicePools().catch((error) => {
@@ -248,6 +366,10 @@ export function shutdownApiServices(): void {
     worktreeCleanupInterval = null;
     logger.info("worktree_preview_cleanup_interval_stopped");
   }
+
+  stopCompressionWorkerFn = null;
+  stopLearningWorkerFn = null;
+  stopCodexSessionCleanupWorkerFn = null;
 
   initialized = false;
   logger.info("api_services_shutdown_complete");

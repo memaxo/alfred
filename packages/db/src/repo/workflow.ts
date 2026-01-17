@@ -4,6 +4,7 @@ import {
   type WorkflowEventType,
   workflowEvents,
   workflowRuns,
+  workflowSnapshots,
 } from "../schema/workflow";
 
 export type WorkflowStatus =
@@ -471,4 +472,44 @@ export async function listRunsByStatuses(
     .limit(limit);
 
   return rows;
+}
+
+/**
+ * Checkpoint storage implementation using Postgres.
+ * Follows the CheckpointStorage interface from @alfred/pipeline.
+ */
+export class PostgresCheckpointStorage {
+  async save(runId: string, snapshot: any): Promise<void> {
+    await db
+      .insert(workflowSnapshots)
+      .values({
+        runId,
+        state: snapshot,
+        lastEventId: (snapshot as any).lastEventId ?? null,
+      })
+      .onConflictDoUpdate({
+        target: workflowSnapshots.runId,
+        set: {
+          state: snapshot,
+          lastEventId: (snapshot as any).lastEventId ?? null,
+          createdAt: new Date(),
+        },
+      });
+  }
+
+  async load(runId: string): Promise<any | null> {
+    const [row] = await db
+      .select()
+      .from(workflowSnapshots)
+      .where(eq(workflowSnapshots.runId, runId))
+      .limit(1);
+
+    return (row?.state ?? null) as any;
+  }
+
+  async delete(runId: string): Promise<void> {
+    await db
+      .delete(workflowSnapshots)
+      .where(eq(workflowSnapshots.runId, runId));
+  }
 }

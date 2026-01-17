@@ -1,4 +1,5 @@
 import { createGatewayProvider } from "@ai-sdk/gateway";
+import { createOpenAI } from "@ai-sdk/openai";
 import { type Tool, tool } from "ai";
 import type { ZodTypeAny, z } from "zod";
 
@@ -21,6 +22,7 @@ import { toolTimer } from "../assistant/src/tool/timer";
 import { toolVoiceControl, toolVoiceStatus } from "../assistant/src/tool/voice";
 import { toolWebAssistant } from "../assistant/src/tool/web";
 import { toolRalph } from "./orchestrator/loops/ralph";
+import { toolBrowser } from "./orchestrator/tool/browser";
 import { toolCodex } from "./orchestrator/tool/codex/index";
 import { toolCodexlog } from "./orchestrator/tool/codexlog";
 import { toolCognitiveState } from "./orchestrator/tool/cognitive";
@@ -70,7 +72,11 @@ type ToolMap = Record<string, Tool>;
 
 const DEFAULT_MODEL_ID = "openai/gpt-4o-mini";
 
-let cachedGateway: ReturnType<typeof createGatewayProvider> | null = null;
+type Provider =
+  | ReturnType<typeof createGatewayProvider>
+  | ReturnType<typeof createOpenAI>;
+
+let cachedProvider: Provider | null = null;
 
 function firstEnv(...keys: string[]) {
   for (const key of keys) {
@@ -83,7 +89,7 @@ function firstEnv(...keys: string[]) {
 }
 
 export function resetGatewayForTests(): void {
-  cachedGateway = null;
+  cachedProvider = null;
 }
 
 export function getModelId(): string {
@@ -93,15 +99,16 @@ export function getModelId(): string {
 }
 
 export function getOpenAI() {
-  if (cachedGateway) {
-    return cachedGateway;
+  if (cachedProvider) {
+    return cachedProvider;
   }
 
   // Test override: allow empty client in tests if key is missing
-  if (process.env.NODE_ENV === "test" && !firstEnv("OPENAI_API_KEY")) {
-    const stub = ((_: string) => ({})) as unknown as ReturnType<
-      typeof createGatewayProvider
-    >;
+  if (
+    process.env.NODE_ENV === "test" &&
+    !firstEnv("OPENAI_API_KEY", "AI_GATEWAY_API_KEY")
+  ) {
+    const stub = ((_: string) => ({})) as unknown as Provider;
     // Back-compat for call sites that still expect `.languageModel(modelKey)`.
     (
       stub as unknown as { languageModel?: (modelKey: string) => unknown }
@@ -109,19 +116,31 @@ export function getOpenAI() {
     return stub;
   }
 
-  const apiKey = firstEnv("AI_GATEWAY_API_KEY", "OPENAI_API_KEY");
-  if (!apiKey) {
-    throw new Error("ai_gateway_api_key_missing");
+  // Provider selection: prefer gateway if configured, otherwise use direct OpenAI
+  const gatewayKey = firstEnv("AI_GATEWAY_API_KEY");
+  const openaiKey = firstEnv("OPENAI_API_KEY");
+
+  if (gatewayKey) {
+    // Use Vercel AI Gateway provider (default for production)
+    const baseURL = firstEnv("AI_GATEWAY_BASE_URL", "OPENAI_BASE_URL");
+    cachedProvider = createGatewayProvider({
+      apiKey: gatewayKey,
+      ...(baseURL ? { baseURL } : {}),
+    });
+  } else if (openaiKey) {
+    // Use direct OpenAI provider (for Harbor and environments without gateway)
+    const baseURL = firstEnv("OPENAI_BASE_URL");
+    cachedProvider = createOpenAI({
+      apiKey: openaiKey,
+      ...(baseURL ? { baseURL } : {}),
+    });
+  } else {
+    throw new Error(
+      "ai_provider_api_key_missing: Set AI_GATEWAY_API_KEY or OPENAI_API_KEY"
+    );
   }
 
-  const baseURL = firstEnv("AI_GATEWAY_BASE_URL", "OPENAI_BASE_URL");
-
-  cachedGateway = createGatewayProvider({
-    apiKey,
-    ...(baseURL ? { baseURL } : {}),
-  });
-
-  return cachedGateway;
+  return cachedProvider;
 }
 
 export function wrapLegacyToolToAISDK(legacy: LegacyTool): WrappedTool {
@@ -170,6 +189,7 @@ const orchestratorToolSources: LegacyTool[] = [
   toolCodex,
   toolCodexlog,
   toolCognitiveState,
+  toolBrowser,
   toolDocker,
   toolDroid,
   toolOpenCode,

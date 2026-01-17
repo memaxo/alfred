@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { Process, type ProcessConfig } from "./base";
+import { Process, type ProcessConfig, resolveVoiceDir } from "./base";
 import { Maya } from "./maya";
 import type { SupertonicTTS } from "./supertonic";
 
@@ -64,13 +64,8 @@ export class TTSPool {
     try {
       if (this.useSupertonic) {
         // Initialize Supertonic (in-process)
-        // Try packages/voice/models/supertonic first (monorepo root)
-        // Then models/supertonic (package root)
-        let modelsDir = join(process.cwd(), "packages/voice/models/supertonic");
-
-        if (process.cwd().endsWith("packages/voice")) {
-          modelsDir = join(process.cwd(), "models/supertonic");
-        }
+        const voiceDir = resolveVoiceDir();
+        const modelsDir = join(voiceDir, "models/supertonic");
 
         const { SupertonicTTS } = await import("./supertonic");
         this.supertonic = new SupertonicTTS({

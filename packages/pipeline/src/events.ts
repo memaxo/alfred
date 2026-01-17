@@ -1,8 +1,9 @@
 import type { StageName } from "./pipeline";
+import type { SerializableValue } from "./snapshot";
 
 // Agent execution outcome
 export type AgentOutcome = {
-  status: "success" | "failure" | "escalated" | "timeout";
+  status: "success" | "failure" | "escalated" | "timeout" | "stuck";
   durationMs: number;
   handoff?: string;
   error?: string;
@@ -35,6 +36,7 @@ export type ExecutionSummary = {
 
 // Union of all pipeline events
 export type PipelineEvent =
+  // Stage lifecycle events
   | { type: "stage:enter"; stage: StageName; timestamp: number }
   | {
       type: "stage:exit";
@@ -49,6 +51,7 @@ export type PipelineEvent =
       message: string;
       timestamp: number;
     }
+  // Agent lifecycle events
   | { type: "agent:spawn"; agentId: string; taskId: string; timestamp: number }
   | {
       type: "agent:progress";
@@ -62,8 +65,66 @@ export type PipelineEvent =
       outcome: AgentOutcome;
       timestamp: number;
     }
+  | {
+      type: "agent:stuck";
+      agentId: string;
+      reason: "no_progress" | "loop_detected";
+      timestamp: number;
+    }
+  | {
+      type: "agent:escalated";
+      agentId: string;
+      reason: string;
+      timestamp: number;
+    }
+  | {
+      type: "agent:retry";
+      agentId: string;
+      attempt: number;
+      maxAttempts: number;
+      timestamp: number;
+    }
+  // Review events
   | { type: "review:check"; check: ReviewCheck; timestamp: number }
+  | {
+      type: "review:fix-start";
+      attempt: number;
+      maxAttempts: number;
+      timestamp: number;
+    }
+  | {
+      type: "review:fix-complete";
+      attempt: number;
+      success: boolean;
+      timestamp: number;
+    }
+  // Learning events
   | { type: "learn:insight"; insight: KnowledgeInsight; timestamp: number }
+  // Wave events
+  | {
+      type: "wave:aborted";
+      waveId: string;
+      waveFailRate: number;
+      overallFailRate: number;
+      timestamp: number;
+    }
+  // Context events (for reconstruction)
+  | {
+      type: "context:set";
+      key: string;
+      value: SerializableValue;
+      timestamp: number;
+    }
+  | { type: "context:cache-hit"; cacheKey: string; timestamp: number }
+  // Pipeline lifecycle events
+  | {
+      type: "pipeline:start";
+      runId: string;
+      requirement: string;
+      timestamp: number;
+    }
+  | { type: "pipeline:suspend"; reason: string; timestamp: number }
+  | { type: "pipeline:resume"; fromStage: StageName; timestamp: number }
   | { type: "pipeline:complete"; summary: ExecutionSummary; timestamp: number }
   | {
       type: "pipeline:failed";

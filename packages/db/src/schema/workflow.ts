@@ -187,14 +187,13 @@ export const workflowSnapshots = pgTable(
       .references(() => workflowRuns.id, { onDelete: "cascade" }),
     // JSONB handling. Use as any for Drizzle limitation.
     state: jsonb("state").notNull(),
-    lastEventId: uuid("last_event_id")
-      .notNull()
-      .references(() => _workflowEventsTable.eventId),
+    lastEventId: text("last_event_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (t) => ({
+    runUniqueIdx: uniqueIndex("workflow_snapshots_run_unique_idx").on(t.runId),
     runIdx: index("workflow_snapshots_run_idx").on(t.runId),
     createdIdx: index("workflow_snapshots_created_idx").on(t.createdAt),
     runCreatedIdx: index("workflow_snapshots_run_created_idx").on(

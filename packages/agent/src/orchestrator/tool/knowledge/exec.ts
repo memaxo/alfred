@@ -80,7 +80,7 @@ export async function executeQuery(
 ): Promise<KnowledgeQueryOutput> {
   // Dynamic imports to avoid bundling issues
   const graphPkg = "@alfred/db/repo/graph";
-  const graphRepo = await import(graphPkg);
+  const graphRepo = await import(/* @vite-ignore */ graphPkg);
 
   const limit = input.limit ?? 10;
 
@@ -184,8 +184,8 @@ export async function executeExtract(
   const knowledgePkg = "@alfred/knowledge";
   const graphPkg = "@alfred/db/repo/graph";
 
-  const knowledge = await import(knowledgePkg);
-  const graphRepo = await import(graphPkg);
+  const knowledge = await import(/* @vite-ignore */ knowledgePkg);
+  const graphRepo = await import(/* @vite-ignore */ graphPkg);
 
   const { extract, toKnowledge } = knowledge;
   const { upsertNodes } = graphRepo;
@@ -318,7 +318,7 @@ export async function executeConnect(
   input: KnowledgeConnectInput
 ): Promise<KnowledgeConnectOutput> {
   const graphPkg = "@alfred/db/repo/graph";
-  const graphRepo = await import(graphPkg);
+  const graphRepo = await import(/* @vite-ignore */ graphPkg);
 
   const { getNode, upsertEdges } = graphRepo;
 
@@ -398,7 +398,7 @@ export async function executeCorrect(
   userId: string
 ): Promise<KnowledgeCorrectOutput> {
   const graphPkg = "@alfred/db/repo/graph";
-  const graphRepo = await import(graphPkg);
+  const graphRepo = await import(/* @vite-ignore */ graphPkg);
 
   const resource = input.resource ?? "user";
   const operation = input.correction.type;

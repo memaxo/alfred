@@ -3,8 +3,7 @@
  * Used to gracefully degrade when external services (DB, UV, etc.) are unavailable.
  */
 
-import { existsSync } from "node:fs";
-import { homedir } from "node:os";
+import { accessSync, constants, statSync } from "node:fs";
 import { join } from "node:path";
 import { db } from "@alfred/db";
 import { logger } from "@alfred/logger";
@@ -24,10 +23,17 @@ export async function isDbAvailable(forceCheck = false): Promise<boolean> {
     return dbAvailableCache;
   }
 
+  if (!process.env.DATABASE_URL) {
+    dbAvailableCache = false;
+    return false;
+  }
+
   try {
     // Simple query to check DB connectivity using Drizzle's sql template
     const { sql } = await import("drizzle-orm");
-    await db.execute(sql`SELECT 1`);
+    // Use a real table probe to avoid "DB reachable but schema not ready" false positives.
+    // This keeps optional DB-dependent startup tasks quiet unless migrations are applied.
+    await db.execute(sql`SELECT 1 FROM cognitive_snapshots LIMIT 1`);
     dbAvailableCache = true;
     return true;
   } catch (error) {
@@ -64,28 +70,53 @@ export function assertDbAvailable(
  * Checks common installation paths and PATH environment variable.
  */
 export function isUvAvailable(): boolean {
-  // Check common UV installation paths
-  const uvPaths = [
-    join(homedir(), ".local/bin/uv"),
-    join(homedir(), ".cargo/bin/uv"),
-    "/usr/local/bin/uv",
-    "/usr/bin/uv",
-  ];
-
-  // Also check if UV is in PATH
-  const envPath = process.env.PATH ?? "";
-  const pathDirs = envPath.split(":");
-
-  for (const path of uvPaths) {
-    if (existsSync(path)) {
+  const isExec = (path: string): boolean => {
+    try {
+      const stat = statSync(path);
+      if (!stat.isFile()) {
+        return false;
+      }
+      accessSync(path, constants.X_OK);
       return true;
+    } catch {
+      return false;
     }
+  };
+
+  const canRun = (path: string): boolean => {
+    try {
+      const proc = Bun.spawnSync([path, "--version"], {
+        stdin: "ignore",
+        stdout: "ignore",
+        stderr: "ignore",
+      });
+      return proc.exitCode === 0;
+    } catch {
+      return false;
+    }
+  };
+
+  // Match the same UV resolution semantics used by the voice subprocess launcher:
+  // it selects the first `uv` found on PATH. If that entry is present but not
+  // runnable (broken shim / missing interpreter), voice init will fail.
+  const envPath = process.env.PATH ?? "";
+  if (!envPath) {
+    return false;
   }
 
-  // Check PATH directories for uv binary
+  const pathDirs = envPath.split(":").filter(Boolean);
+  const candidates =
+    process.platform === "win32"
+      ? ["uv.exe", "uv.cmd", "uv.bat", "uv"]
+      : ["uv"];
+
   for (const dir of pathDirs) {
-    if (existsSync(join(dir, "uv"))) {
-      return true;
+    for (const name of candidates) {
+      const candidate = join(dir, name);
+      if (!isExec(candidate)) {
+        continue;
+      }
+      return canRun(candidate);
     }
   }
 

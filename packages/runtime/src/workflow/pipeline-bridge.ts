@@ -8,20 +8,104 @@
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { logger } from "@alfred/logger";
 import {
+  CheckpointObserver,
   ConsoleObserver,
   MetricsObserver,
-  PipelineRunner,
-  WorkflowEventObserver,
-  registerDefaultStages,
   type PipelineEvent,
+  PipelineRunner,
+  type PipelineSnapshot,
+  registerDefaultStages,
+  WorkflowEventObserver,
 } from "@alfred/pipeline";
-import type { WorkflowEvent } from "@alfred/type";
+import type { WorkflowEvent } from "@alfred/type/plan";
 
 /**
  * Check if the new pipeline is enabled via environment variable
  */
 export function isPipelineEnabled(): boolean {
   return process.env.ALFRED_USE_PIPELINE === "1";
+}
+
+/**
+ * Resume workflow using the new pipeline architecture from a snapshot
+ */
+export async function* resumeWorkflowPipeline(
+  runId: string,
+  snapshot: PipelineSnapshot,
+  session: { user: { id: string } }
+): AsyncGenerator<WorkflowEvent, void, void> {
+  logger.info("pipeline_workflow_resume", {
+    runId,
+    requirement: snapshot.requirement,
+    lastStage: snapshot.lastCompletedStage,
+  });
+
+  // Re-create input from snapshot
+  // In a real app, you might want to fetch the original input from DB
+  const pipelineInput = {
+    runId,
+    requirement: snapshot.requirement,
+    workspace: process.cwd(), // Should ideally be restored from context if stored
+    userId: session.user.id,
+    linear: undefined,
+  };
+
+  const runner = new PipelineRunner();
+  registerDefaultStages(runner);
+
+  const { PostgresCheckpointStorage } = await import(
+    "@alfred/db/repo/workflow"
+  );
+  const checkpointStorage = new PostgresCheckpointStorage();
+  runner.addObserver(new CheckpointObserver(checkpointStorage));
+  runner.addObserver(new MetricsObserver());
+
+  const workflowEvents: WorkflowEvent[] = [];
+  runner.addObserver(
+    new WorkflowEventObserver((event) => {
+      workflowEvents.push(event);
+    })
+  );
+
+  const abortController = new AbortController();
+  const { registerRunHandle } = await import(
+    "@alfred/agent/workflow/session-recovery"
+  );
+  await registerRunHandle(runId, {
+    resume: async () => {},
+    suspend: async () => {
+      abortController.abort();
+    },
+    cancel: async () => {
+      abortController.abort();
+    },
+    abortController,
+  });
+
+  try {
+    for await (const event of runner.resume(
+      snapshot,
+      pipelineInput,
+      abortController.signal
+    )) {
+      const workflowEvent = pipelineEventToWorkflowEvent(event);
+      if (workflowEvent) {
+        yield workflowEvent;
+      }
+      while (workflowEvents.length > 0) {
+        const buffered = workflowEvents.shift();
+        if (buffered) {
+          yield buffered;
+        }
+      }
+    }
+
+    yield { _: "workflow-complete", runId };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    yield { _: "error", message: errorMessage } as WorkflowEvent;
+    throw error;
+  }
 }
 
 /**
@@ -46,7 +130,8 @@ export async function* runWorkflowPipeline(
 
   // Create pipeline runner with configuration
   const runner = new PipelineRunner({
-    maxParallel: input.mode === "parallel" ? (input.toolgraph?.maxParallel ?? 4) : 1,
+    maxParallel:
+      input.mode === "parallel" ? (input.toolgraph?.maxParallel ?? 4) : 1,
     enableLearning: true,
     enableLinearSync: Boolean(input.linear?.sessionId),
     linearSyncInterval: 30_000, // 30 seconds
@@ -62,6 +147,13 @@ export async function* runWorkflowPipeline(
 
   // Add metrics observer
   runner.addObserver(new MetricsObserver());
+
+  // Add checkpoint observer for resume capability
+  const { PostgresCheckpointStorage } = await import(
+    "@alfred/db/repo/workflow"
+  );
+  const checkpointStorage = new PostgresCheckpointStorage();
+  runner.addObserver(new CheckpointObserver(checkpointStorage));
 
   // Add Linear sync observer if configured
   if (input.linear?.sessionId && input.authzLinear) {
@@ -83,6 +175,27 @@ export async function* runWorkflowPipeline(
     })
   );
 
+  const abortController = new AbortController();
+  const { registerRunHandle } = await import(
+    "@alfred/agent/workflow/session-recovery"
+  );
+  await registerRunHandle(runId, {
+    resume: async () => {
+      // General resume not implemented here as it's a generator,
+      // but the registry supports dispatching to the active handle if needed.
+    },
+    suspend: async () => {
+      abortController.abort();
+      // We don't have easy access to emit to the generator from here,
+      // but the CheckpointObserver will catch it if we emit to runner.
+      // Wait, runner.emit is private.
+    },
+    cancel: async () => {
+      abortController.abort();
+    },
+    abortController,
+  });
+
   try {
     // Convert input to pipeline format
     const pipelineInput = {
@@ -92,7 +205,7 @@ export async function* runWorkflowPipeline(
       userId: session.user.id,
       linear: input.linear
         ? {
-            sessionId: input.linear.sessionId,
+            sessionId: input.linear.sessionId ?? "",
             space: input.linear.space,
             issueId: input.linear.issueId,
             authz: input.authzLinear ?? "",
@@ -101,7 +214,10 @@ export async function* runWorkflowPipeline(
     };
 
     // Run pipeline and emit events
-    for await (const event of runner.run(pipelineInput)) {
+    for await (const event of runner.run(
+      pipelineInput,
+      abortController.signal
+    )) {
       // Convert and yield workflow event
       const workflowEvent = pipelineEventToWorkflowEvent(event);
       if (workflowEvent) {
@@ -118,7 +234,7 @@ export async function* runWorkflowPipeline(
     }
 
     // Final completion event
-    yield { _: "workflow-complete", runId } as WorkflowEvent;
+    yield { _: "workflow-complete", runId };
 
     logger.info("pipeline_workflow_complete", { runId });
   } catch (error) {
@@ -162,6 +278,7 @@ function pipelineEventToWorkflowEvent(
       return {
         _: "agent-start",
         agentId: event.agentId,
+        phaseId: "execute",
         taskId: event.taskId,
       };
 
@@ -169,6 +286,7 @@ function pipelineEventToWorkflowEvent(
       return {
         _: "agent-complete",
         agentId: event.agentId,
+        phaseId: "execute",
         status: event.outcome.status,
         durationMs: event.outcome.durationMs,
       };

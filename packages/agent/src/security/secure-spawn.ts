@@ -60,6 +60,33 @@ export function spawnWithSecureCwd(options: SecureSpawnOptions): Subprocess {
     process.env.ORCH_SKIP_SECURE_SPAWN === "1" ||
     (inBunTest && process.env.ORCH_SKIP_SECURE_SPAWN !== "0");
 
+  // #region agent log
+  fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      location: "secure-spawn.ts:spawnWithSecureCwd",
+      message: "spawnWithSecureCwd called",
+      data: {
+        cmd,
+        argsCount: args.length,
+        firstArg: args[0],
+        cwd: cwdHandle.path,
+        inBunTest,
+        skipSecureSpawn,
+        BUN_TEST: process.env.BUN_TEST,
+        NODE_ENV: process.env.NODE_ENV,
+        BUN_ENVIRONMENT: process.env.BUN_ENVIRONMENT,
+        ORCH_SKIP_SECURE_SPAWN: process.env.ORCH_SKIP_SECURE_SPAWN,
+      },
+      timestamp: Date.now(),
+      sessionId: "debug-session",
+      runId: "pre-fix",
+      hypothesisId: "C",
+    }),
+  }).catch(() => {});
+  // #endregion
+
   if (skipSecureSpawn) {
     // Fallback: Use path-based cwd directly (less secure but works everywhere)
     const childEnv: Record<string, string> = {};

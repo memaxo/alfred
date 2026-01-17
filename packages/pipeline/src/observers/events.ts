@@ -1,10 +1,6 @@
+import type { WorkflowEvent } from "@alfred/type/plan";
 import type { PipelineEvent } from "../events";
 import type { PipelineObserver } from "../runner";
-
-type WorkflowEvent = {
-  _: string;
-  [key: string]: unknown;
-};
 
 type EventCallback = (event: WorkflowEvent) => void;
 
@@ -42,6 +38,7 @@ export class WorkflowEventObserver implements PipelineObserver {
         return {
           _: "agent-start",
           agentId: event.agentId,
+          phaseId: "execute",
           taskId: event.taskId,
         };
 
@@ -49,6 +46,7 @@ export class WorkflowEventObserver implements PipelineObserver {
         return {
           _: "agent-complete",
           agentId: event.agentId,
+          phaseId: "execute",
           status: event.outcome.status,
           durationMs: event.outcome.durationMs,
         };

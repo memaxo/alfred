@@ -111,6 +111,14 @@
       "types": "./dist/serialize.d.ts",
       "default": "./src/serialize.ts"
     },
+    "./sense": {
+      "types": "./dist/sense.d.ts",
+      "default": "./src/sense.ts"
+    },
+    "./sense.zod": {
+      "types": "./dist/sense.zod.d.ts",
+      "default": "./src/sense.zod.ts"
+    },
     "./source": {
       "types": "./dist/source.d.ts",
       "default": "./src/source.ts"

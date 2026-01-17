@@ -40,15 +40,87 @@ export type PipelineContext = {
   set(key: string, value: unknown): void;
 };
 
+/**
+ * Stuck detection configuration.
+ * Imported from @alfred/agent/orchestrator/multi/tracker.
+ */
+export type StuckDetectionConfig = {
+  /** Time in milliseconds without events before agent is considered stuck (default: 60000) */
+  noProgressMs?: number;
+  /** Maximum transitions before agent is considered stuck (default: 200) */
+  maxTransitions?: number;
+  /** Similarity threshold for semantic loop detection (default: 0.92) */
+  similarityThreshold?: number;
+};
+
+/**
+ * Agent retry configuration.
+ */
+export type RetryConfig = {
+  /** Maximum attempts per agent (default: 1 = no retries) */
+  maxAgentAttempts?: number;
+  /** Statuses that trigger retry */
+  retryableStatuses?: Array<"failure" | "stuck" | "timeout">;
+  /** Base backoff in milliseconds (default: 1000) */
+  backoffMs?: number;
+};
+
+/**
+ * Wave abort configuration.
+ */
+export type WaveAbortConfig = {
+  /** Failure rate threshold per wave (default: 0.5) */
+  waveFailureThreshold?: number;
+  /** Overall failure rate threshold (default: 0.3) */
+  overallFailureThreshold?: number;
+};
+
+/**
+ * Context caching configuration.
+ */
+export type ContextCachingConfig = {
+  /** Enable context caching */
+  enabled?: boolean;
+  /** Cache TTL in milliseconds (default: 300000 = 5 min) */
+  ttlMs?: number;
+};
+
+/**
+ * Review fixer configuration.
+ */
+export type ReviewFixerConfig = {
+  /** Enable automatic fix attempts on review failure */
+  enabled?: boolean;
+  /** Maximum fix attempts (default: 3) */
+  maxAttempts?: number;
+};
+
 // Configuration for pipeline execution
 export type PipelineConfig = {
-  maxParallel: number; // 1 for sequential POC
-  maxAgentAttempts: number; // Default: 3
-  maxReviewAttempts: number; // Default: 3
+  /** Max parallel agents per wave (1 for sequential) */
+  maxParallel: number;
+  /** Max agent attempts (deprecated, use retries.maxAgentAttempts) */
+  maxAgentAttempts: number;
+  /** Max review attempts (deprecated, use reviewFixer.maxAttempts) */
+  maxReviewAttempts: number;
+  /** Enable learning stage */
   enableLearning: boolean;
+  /** Enable Linear synchronization */
   enableLinearSync: boolean;
-  linearSyncInterval: number; // ms, for batching
+  /** Linear sync interval in ms */
+  linearSyncInterval: number;
+  /** Per-stage timeouts */
   phaseTimeouts: Record<StageName, number>;
+  /** Stuck detection configuration */
+  stuckDetection?: StuckDetectionConfig;
+  /** Agent retry configuration */
+  retries?: RetryConfig;
+  /** Wave abort configuration */
+  waveAbort?: WaveAbortConfig;
+  /** Context caching configuration */
+  contextCaching?: ContextCachingConfig;
+  /** Review fixer configuration */
+  reviewFixer?: ReviewFixerConfig;
 };
 
 // Default configuration
@@ -68,6 +140,28 @@ export const DEFAULT_CONFIG: PipelineConfig = {
     review: 300_000,
     learn: 60_000,
     summarize: 30_000,
+  },
+  stuckDetection: {
+    noProgressMs: 60_000,
+    maxTransitions: 200,
+    similarityThreshold: 0.92,
+  },
+  retries: {
+    maxAgentAttempts: 1,
+    retryableStatuses: [],
+    backoffMs: 1000,
+  },
+  waveAbort: {
+    waveFailureThreshold: 0.4,
+    overallFailureThreshold: 0.25,
+  },
+  contextCaching: {
+    enabled: false,
+    ttlMs: 300_000,
+  },
+  reviewFixer: {
+    enabled: false,
+    maxAttempts: 3,
   },
 };
 

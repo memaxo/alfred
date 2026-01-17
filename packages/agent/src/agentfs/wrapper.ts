@@ -17,6 +17,7 @@ import {
 } from "./metrics.js";
 import type { AgentFSSDK } from "./sdk.js";
 import type {
+  AgentFSChange,
   AgentFSInitOptions,
   AgentFSInterface,
   AgentFSKVEntry,
@@ -103,7 +104,9 @@ export class AlfredAgentFS implements AgentFSInterface {
 
     const startTime = Date.now();
     try {
-      const inner = (await AgentFS.open(options)) as AgentFSInterface;
+      const inner = (await AgentFS.open(
+        options
+      )) as unknown as AgentFSInterface;
       const duration = Date.now() - startTime;
 
       logger.debug("agentfs_opened", {
@@ -327,6 +330,49 @@ export class AlfredAgentFS implements AgentFSInterface {
       }
     },
   };
+
+  /**
+   * Get filesystem changes (diff) for this session.
+   */
+  async diff(): Promise<AgentFSChange[]> {
+    const startTime = Date.now();
+    try {
+      // If the SDK has a native diff method, use it
+      if ((this.inner as any).diff) {
+        return await (this.inner as any).diff();
+      }
+
+      // Fallback: Query the fs_nodes table for changed/deleted/created files
+      // This requires the underlying database handle
+      const db = this.getDatabase() as any;
+      if (db && typeof db.all === "function") {
+        const rows = await db.all(`
+          SELECT path, 
+                 CASE 
+                   WHEN deleted = 1 THEN 'deleted'
+                   WHEN created_at = updated_at THEN 'created'
+                   ELSE 'modified'
+                 END as type,
+                 size,
+                 updated_at as mtime
+          FROM fs_nodes
+          WHERE deleted = 1 OR created_at IS NOT NULL
+        `);
+        return rows as AgentFSChange[];
+      }
+
+      return [];
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error("agentfs_diff_failed", { err: msg });
+      throw new AgentFSError("DIFF_FAILED", `Failed to get diff: ${msg}`);
+    } finally {
+      agentfsOperationLatencyMs.observe(
+        { operation_type: "diff" },
+        Date.now() - startTime
+      );
+    }
+  }
 
   // --- Tool Call Tracking ---
 

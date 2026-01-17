@@ -2,6 +2,7 @@ import { readdirSync, statSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import type {
+  AgentFSChange,
   AgentFSKVEntry,
   AgentFSToolCall,
 } from "@alfred/agent/agentfs/types";
@@ -75,7 +76,24 @@ const agentfsStreamInputSchema = z.object({
 async function loadAgentfs(args: { runId: string; dbPath: string }) {
   const { AlfredAgentFS } = await import("@alfred/agent/agentfs/index");
   const id = `tui-${sanitizeRunId(args.runId)}`.slice(0, 64);
-  return await AlfredAgentFS.open({ id, path: args.dbPath }, args.runId);
+
+  // First open without base to read KV
+  const fsdb = await AlfredAgentFS.open({ id, path: args.dbPath }, args.runId);
+
+  try {
+    const baseDir = await fsdb.kv.get<string>("baseDir");
+    if (baseDir) {
+      // Re-open with baseDir for proper overlay semantics if supported by SDK
+      await fsdb.close();
+      return await AlfredAgentFS.open(
+        { id, path: args.dbPath, base: baseDir },
+        args.runId
+      );
+    }
+    return fsdb;
+  } catch {
+    return fsdb;
+  }
 }
 
 type StatShape = {
@@ -360,6 +378,7 @@ export const agentfsRouter = router({
         runId: input.runId,
         dbPath: input.dbPath,
       });
+
       try {
         const names = await fsdb.fs.readdir(input.dir);
         const entries = await Promise.all(
@@ -391,32 +410,184 @@ export const agentfsRouter = router({
         }));
 
         const maxToolCallId =
-          toolCalls.length > 0
-            ? Math.max(...toolCalls.map((t: { id: number }) => t.id))
+          toolCallsRaw.length > 0
+            ? Math.max(...toolCallsRaw.map((t: AgentFSToolCall) => t.id))
             : 0;
         const maxToolCallSince =
-          toolCalls.length > 0
+          toolCallsRaw.length > 0
             ? Math.max(
-                ...toolCalls.map((t: { completedAt: number }) => t.completedAt)
+                ...toolCallsRaw.map((t: AgentFSToolCall) => t.completed_at)
               )
             : 0;
         const maxKvUpdatedAt = kvStore
           .map((e: { updatedAt?: number }) => e.updatedAt ?? 0)
           .reduce((a: number, b: number) => Math.max(a, b), 0);
 
+        const cursor: AgentFSStreamCursor = {
+          toolCallId: maxToolCallId,
+          toolCallSince: maxToolCallSince,
+          kvUpdatedAt: maxKvUpdatedAt,
+        };
+
         return {
           runId: input.runId,
           dbPath: input.dbPath,
-          ts: Math.floor(Date.now() / 1000),
           entries,
           toolCalls,
           kvStore,
-          cursor: {
-            toolCallId: maxToolCallId,
-            toolCallSince: maxToolCallSince,
-            kvUpdatedAt: maxKvUpdatedAt,
-          },
+          cursor,
         };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  diff: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+      })
+    )
+    .query(async ({ input }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const fsdb = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        const changes = await fsdb.diff();
+        return { changes };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  timeline: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        limit: z.number().int().min(1).max(1000).default(500),
+      })
+    )
+    .query(async ({ input }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const fsdb = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        const toolCallsRaw = await fsdb.tools.getRecent(0, input.limit);
+        const events = toolCallsRaw.map((c: AgentFSToolCall) => ({
+          id: String(c.id),
+          type: "tool" as const,
+          name: c.name,
+          timestamp: new Date(c.started_at * 1000).toISOString(),
+          duration: c.duration_ms,
+          data: {
+            parameters: c.parameters,
+            result: c.result,
+            error: c.error,
+          },
+        }));
+
+        return { events };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  applyChanges: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] })) // Explicit scope for applying to host
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        paths: z.array(z.string()).optional(), // Optional: apply only specific files
+      })
+    )
+    .mutation(async ({ input }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const fsdb = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        const baseDir = await fsdb.kv.get<string>("baseDir");
+        if (!baseDir) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "agentfs_base_dir_missing",
+          });
+        }
+
+        const changes = await fsdb.diff();
+        const filtered = input.paths
+          ? changes.filter((c: AgentFSChange) => input.paths?.includes(c.path))
+          : changes;
+
+        const { writeFile, unlink, mkdir } = await import("node:fs/promises");
+        const results = [];
+
+        for (const change of filtered) {
+          const hostPath = path.resolve(
+            baseDir,
+            change.path.replace(/^\//, "")
+          );
+
+          // Safety check: ensure hostPath is within baseDir
+          if (!hostPath.startsWith(path.resolve(baseDir))) {
+            results.push({
+              path: change.path,
+              status: "error",
+              message: "outside_base",
+            });
+            continue;
+          }
+
+          try {
+            if (change.type === "deleted") {
+              await unlink(hostPath);
+            } else {
+              const content = await fsdb.fs.readFile(change.path);
+              await mkdir(path.dirname(hostPath), { recursive: true });
+              await writeFile(hostPath, content);
+            }
+            results.push({ path: change.path, status: "success" });
+          } catch (error) {
+            results.push({
+              path: change.path,
+              status: "error",
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        return { results };
       } finally {
         await fsdb.close();
       }

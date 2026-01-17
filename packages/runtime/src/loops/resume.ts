@@ -2,6 +2,24 @@ import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { PlanRunner } from "./plan-runner";
 
+function isDbConnectionError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("econnrefused") ||
+    message.includes("password authentication failed") ||
+    message.includes("connection refused") ||
+    message.includes("failed query") ||
+    message.includes("connection terminated") ||
+    message.includes("does not exist") ||
+    message.includes("relation") ||
+    message.includes("database")
+  );
+}
+
 /**
  * Resume interrupted plans from database snapshots
  *
@@ -76,8 +94,11 @@ export async function resumeInterruptedPlans(tools: Record<string, any>) {
       }
     }
   } catch (error) {
-    logger.error("resume_interrupted_plans_error", {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    const msg = error instanceof Error ? error.message : String(error);
+    if (isDbConnectionError(error)) {
+      logger.warn("resume_interrupted_plans_db_unavailable", { error: msg });
+    } else {
+      logger.error("resume_interrupted_plans_error", { error: msg });
+    }
   }
 }

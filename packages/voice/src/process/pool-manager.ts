@@ -1,8 +1,11 @@
 import { join } from "node:path";
 import { logger } from "@alfred/logger";
 import { VoiceRegistry } from "../server/registry";
+import { resolveVoiceDir } from "./base";
 import { type ProcessConfig as STTConfig, STTPool } from "./stt";
 import { type ProcessConfig as TTSConfig, TTSPool } from "./tts";
+
+const voiceDir = resolveVoiceDir();
 
 let sttPool: STTPool | null = null;
 let ttsPool: TTSPool | null = null;
@@ -47,7 +50,7 @@ export async function initializeVoicePools() {
       );
 
       const sttConfig: STTConfig = {
-        scriptPath: join(process.cwd(), "packages/voice/python/stt"),
+        scriptPath: join(voiceDir, "python/stt"),
         modelPath:
           process.env.WHISPER_MODEL_PATH ??
           "nvidia/parakeet_realtime_eou_120m-v1",
@@ -58,9 +61,9 @@ export async function initializeVoicePools() {
       };
 
       const ttsConfig: TTSConfig = {
-        scriptPath: join(process.cwd(), "packages/voice/python/tts"),
+        scriptPath: join(voiceDir, "python/tts"),
         modelPath:
-          process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper",
+          process.env.PIPER_MODEL_PATH ?? join(voiceDir, "models/piper"),
         voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium",
       };
 

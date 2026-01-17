@@ -850,4 +850,75 @@ export const workflowRouter = router({
       }
       return { items: transformed, page, pageSize, total, hasMore };
     }),
+
+  suspend: authedProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const { runRegistry } = await import("@alfred/agent/workflow/registry");
+      const delivered = await runRegistry.dispatchSuspend(input.runId);
+      if (delivered) {
+        return { ok: true };
+      }
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "run_not_found_or_not_suspendable",
+      });
+    }),
+
+  resumePipeline: authedProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .subscription(({ input, ctx }) =>
+      observable<WorkflowEvent>((emit) => {
+        const session = ctx.session;
+        if (!session?.user?.id) {
+          emit.error(
+            new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
+          );
+          return () => {};
+        }
+
+        let cleanup: (() => void) | undefined;
+
+        const startResume = async () => {
+          try {
+            const { PostgresCheckpointStorage } = await import(
+              "@alfred/db/repo/workflow"
+            );
+            const storage = new PostgresCheckpointStorage();
+            const snapshot = await storage.load(input.runId);
+            if (!snapshot) {
+              emit.error(
+                new TRPCError({
+                  code: "NOT_FOUND",
+                  message: "no_checkpoint_found",
+                })
+              );
+              return;
+            }
+
+            const { resumeWorkflowPipeline } = await import(
+              "@alfred/runtime/workflow/pipeline-bridge"
+            );
+            const generator = resumeWorkflowPipeline(
+              input.runId,
+              snapshot as any, // Cast to any to avoid importing PipelineSnapshot here
+              session
+            );
+
+            for await (const event of generator) {
+              emit.next(event);
+            }
+            emit.complete();
+          } catch (error) {
+            emit.error(toTRPCError(error, "workflow_resume_failed"));
+          }
+        };
+
+        void startResume();
+
+        return () => {
+          cleanup?.();
+        };
+      })
+    ),
 });

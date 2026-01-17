@@ -112,7 +112,9 @@ async function loadRepo(): Promise<CodexRunRepo | null> {
   }
   try {
     const pkg = "@alfred/db/repo/codex-run";
-    const mod = (await import(pkg)) as unknown as CodexRunRepo;
+    const mod = (await import(
+      /* @vite-ignore */ pkg
+    )) as unknown as CodexRunRepo;
     return mod;
   } catch (error) {
     logger.warn("codex_run_repo_unavailable", {

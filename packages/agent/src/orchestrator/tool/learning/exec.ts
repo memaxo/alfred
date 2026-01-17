@@ -153,7 +153,7 @@ export async function executeLearnRecord(args: {
   userId: string;
 }): Promise<LearnRecordOutput> {
   const graphPkg = "@alfred/db/repo/graph";
-  const graphRepo = await import(graphPkg);
+  const graphRepo = await import(/* @vite-ignore */ graphPkg);
 
   const resource = `runtime:${args.input.workflowId}`;
   const error = await computePredictionError(args.input);
@@ -289,7 +289,7 @@ export async function executeLearnPattern(args: {
   userId: string;
 }): Promise<LearnPatternOutput> {
   const graphPkg = "@alfred/db/repo/graph";
-  const graphRepo = await import(graphPkg);
+  const graphRepo = await import(/* @vite-ignore */ graphPkg);
 
   const resource = "user";
   const heuristicRule = buildHeuristicRule(args.input);
@@ -370,7 +370,7 @@ export async function executeLearnMistake(args: {
   userId: string;
 }): Promise<LearnMistakeOutput> {
   const graphPkg = "@alfred/db/repo/graph";
-  const graphRepo = await import(graphPkg);
+  const graphRepo = await import(/* @vite-ignore */ graphPkg);
 
   const resource = "user";
   const safeMistake = redactSecrets(args.input.mistake);

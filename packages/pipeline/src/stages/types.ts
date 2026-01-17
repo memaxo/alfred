@@ -1,9 +1,8 @@
-import type { KnowledgeInsight, ReviewCheck } from "../events";
-
+import type { WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
+import type { AgentOutcome } from "@alfred/runtime/orchestrator/agent";
 // Import actual types from dependencies to avoid type mismatches
 import type { SubTask } from "@alfred/type/plan";
-import type { AgentOutcome } from "@alfred/runtime/orchestrator/agent";
-import type { WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
+import type { KnowledgeInsight, ReviewCheck } from "../events";
 
 // Re-export for convenience
 export type { SubTask, AgentOutcome, WavePlan, ReviewCheck };

@@ -103,39 +103,35 @@ describe("Golden Path Pipeline", () => {
     expect(stagesWithProgress.size).toBeGreaterThan(0);
   }, 300_000);
 
-  it(
-    "creates ExecPlan files in correct location",
-    async () => {
-      const runner = new PipelineRunner({
-        maxParallel: 1,
-        enableLearning: false,
-      });
-      registerDefaultStages(runner);
+  it("creates ExecPlan files in correct location", async () => {
+    const runner = new PipelineRunner({
+      maxParallel: 1,
+      enableLearning: false,
+    });
+    registerDefaultStages(runner);
 
-      const runId = randomUUID();
-      const input = {
-        runId,
-        requirement: "Create a test file with validation",
-        workspace: testWorkspace,
-        userId: "test-user",
-      };
+    const runId = randomUUID();
+    const input = {
+      runId,
+      requirement: "Create a test file with validation",
+      workspace: testWorkspace,
+      userId: "test-user",
+    };
 
-      for await (const _event of runner.run(input)) {
-        // Execute pipeline
-      }
+    for await (const _event of runner.run(input)) {
+      // Execute pipeline
+    }
 
-      // Verify root plan was created
-      const plansDir = join(testWorkspace, ".agent", "plans", runId);
-      const rootPlanPath = join(plansDir, "root.md");
+    // Verify root plan was created
+    const plansDir = join(testWorkspace, ".agent", "plans", runId);
+    const rootPlanPath = join(plansDir, "root.md");
 
-      const rootPlanContent = await readFile(rootPlanPath, "utf-8");
-      expect(rootPlanContent).toContain("# Root ExecPlan:");
-      expect(rootPlanContent).toContain(input.requirement);
-      expect(rootPlanContent).toContain("## Subtasks");
-      expect(rootPlanContent).toContain("## Progress");
-    },
-    300_000
-  );
+    const rootPlanContent = await readFile(rootPlanPath, "utf-8");
+    expect(rootPlanContent).toContain("# Root ExecPlan:");
+    expect(rootPlanContent).toContain(input.requirement);
+    expect(rootPlanContent).toContain("## Subtasks");
+    expect(rootPlanContent).toContain("## Progress");
+  }, 300_000);
 
   it("records stage durations", async () => {
     const events: PipelineEvent[] = [];

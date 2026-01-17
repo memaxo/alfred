@@ -2,10 +2,6 @@ import type { PipelineEvent } from "../events";
 import type { PipelineObserver } from "../runner";
 
 export class ConsoleObserver implements PipelineObserver {
-  constructor(_prefix = "[pipeline]") {
-    // Prefix stored but not used (console logging disabled per linting rules)
-  }
-
   onEvent(_event: PipelineEvent): void {
     // Console logging removed to comply with linting rules
     // Use logger from @alfred/logger for production logging

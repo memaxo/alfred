@@ -32,10 +32,7 @@ import {
 } from "./linear";
 import { observeEvent } from "./observe";
 import { persistStreamEvent } from "./persist";
-import {
-  isPipelineEnabled,
-  runWorkflowPipeline,
-} from "./pipeline-bridge";
+import { isPipelineEnabled, runWorkflowPipeline } from "./pipeline-bridge";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
 import { startTimeout } from "./timeout";
 
@@ -92,7 +89,7 @@ export async function orchestrateWorkflowStream(
     const abortController = new AbortController();
     let completed = false;
 
-    const asyncTask = (async () => {
+    void (async () => {
       try {
         for await (const event of runWorkflowPipeline(input, session)) {
           if (abortController.signal.aborted) {

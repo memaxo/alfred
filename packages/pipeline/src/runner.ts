@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+import { createPipelineContext } from "./context";
 import type { ExecutionSummary, PipelineEvent } from "./events";
 import { createEvent } from "./events";
 import type {
@@ -8,6 +9,7 @@ import type {
   StageName,
 } from "./pipeline";
 import { DEFAULT_CONFIG, STAGE_ORDER } from "./pipeline";
+import type { PipelineSnapshot, SerializableValue } from "./snapshot";
 import type { PipelineInput, PipelineResult } from "./stages/types";
 
 export type PipelineObserver = {
@@ -17,6 +19,24 @@ export type PipelineObserver = {
 
 type StageMap = Map<StageName, PipelineStage<unknown, unknown>>;
 
+/**
+ * Metrics tracked during pipeline execution.
+ */
+type ExecutionMetrics = {
+  agentsSpawned: number;
+  filesChanged: number;
+  learningInsights: number;
+};
+
+/**
+ * Pipeline runner with support for resume from snapshot.
+ *
+ * Key features:
+ * - Stage registration and ordering
+ * - Observer pattern for extensibility
+ * - Resume from any stage boundary
+ * - Timeout handling per stage
+ */
 export class PipelineRunner {
   private readonly stages: StageMap = new Map();
   private readonly observers: Set<PipelineObserver> = new Set();
@@ -54,46 +74,131 @@ export class PipelineRunner {
     }
   }
 
+  /**
+   * Run pipeline from the beginning.
+   */
   async *run(
-    input: PipelineInput
+    input: PipelineInput,
+    signal?: AbortSignal
   ): AsyncGenerator<PipelineEvent, PipelineResult, void> {
-    const storage = new Map<string, unknown>();
-    const stageResults: Array<{
+    return yield* this.executeFromStage(input, 0, [], [], signal);
+  }
+
+  /**
+   * Resume pipeline from a snapshot.
+   * Skips stages that were already completed.
+   *
+   * @param snapshot - Pipeline snapshot from previous execution
+   * @param input - Pipeline input (must match snapshot.runId)
+   * @param signal - Optional abort signal for cancellation/suspension
+   */
+  async *resume(
+    snapshot: PipelineSnapshot,
+    input: PipelineInput,
+    signal?: AbortSignal
+  ): AsyncGenerator<PipelineEvent, PipelineResult, void> {
+    // Validate snapshot matches input
+    if (snapshot.runId !== input.runId) {
+      throw new Error(
+        `Snapshot runId "${snapshot.runId}" does not match input runId "${input.runId}"`
+      );
+    }
+
+    // Cannot resume completed or failed pipelines
+    if (snapshot.status === "completed") {
+      throw new Error("Cannot resume completed pipeline");
+    }
+
+    // Determine starting stage index
+    const startStageIndex = snapshot.lastCompletedStageIndex + 1;
+
+    if (startStageIndex >= STAGE_ORDER.length) {
+      throw new Error("No stages remaining to execute");
+    }
+
+    const startStage = STAGE_ORDER[startStageIndex] as StageName;
+
+    logger.info("pipeline_resume", {
+      runId: input.runId,
+      fromStage: startStage,
+      skippedStages: STAGE_ORDER.slice(0, startStageIndex),
+    });
+
+    // Emit resume event
+    const resumeEvent = createEvent("pipeline:resume", {
+      fromStage: startStage,
+    });
+    yield resumeEvent;
+    this.emit(resumeEvent);
+
+    // Execute from the starting stage with restored context
+    return yield* this.executeFromStage(
+      input,
+      startStageIndex,
+      snapshot.contextEntries,
+      snapshot.stageResults,
+      signal
+    );
+  }
+
+  /**
+   * Core execution logic starting from a specific stage index.
+   * Used by both run() and resume().
+   */
+  private async *executeFromStage(
+    input: PipelineInput,
+    startStageIndex: number,
+    initialContext: [string, SerializableValue][],
+    previousStageResults: Array<{
       name: StageName;
       durationMs: number;
       status: string;
-    }> = [];
+    }> = [],
+    signal?: AbortSignal
+  ): AsyncGenerator<PipelineEvent, PipelineResult, void> {
+    const stageResults = [...previousStageResults];
     const startTime = performance.now();
-    let agentsSpawned = 0;
-    let filesChanged = 0;
-    let learningInsights = 0;
+    const metrics: ExecutionMetrics = {
+      agentsSpawned: 0,
+      filesChanged: 0,
+      learningInsights: 0,
+    };
 
-    const ctx: PipelineContext = {
+    // Create context with initial values
+    const ctx = createPipelineContext({
       runId: input.runId,
       requirement: input.requirement,
       workspace: input.workspace,
       userId: input.userId,
-      signal: new AbortController().signal, // TODO: Pass from input
       config: this.config,
+      signal,
       emit: (event) => {
         this.emit(event);
-        // Track metrics from events
-        if (event.type === "agent:spawn") {
-          agentsSpawned++;
-        }
-        if (event.type === "learn:insight") {
-          learningInsights++;
-        }
+        this.trackMetrics(event, metrics);
       },
-      get: <T>(key: string) => storage.get(key) as T | undefined,
-      set: (key, value) => storage.set(key, value),
-    };
+      initialContext,
+      emitContextEvents: true,
+    });
 
-    // Store input for first stage
-    let stageInput: unknown = input;
+    // Emit start event only if starting from beginning
+    if (startStageIndex === 0) {
+      const startEvent = createEvent("pipeline:start", {
+        runId: input.runId,
+        requirement: input.requirement,
+      });
+      yield startEvent;
+      this.emit(startEvent);
+    }
 
-    for (const stageName of STAGE_ORDER) {
+    // Get last stage output if resuming (need to reconstruct from context)
+    let stageInput: unknown =
+      startStageIndex === 0 ? input : this.getResumeInput(ctx, startStageIndex);
+
+    // Execute stages from startStageIndex
+    for (let i = startStageIndex; i < STAGE_ORDER.length; i++) {
+      const stageName = STAGE_ORDER[i] as StageName;
       const stage = this.stages.get(stageName);
+
       if (!stage) {
         throw new Error(`Stage not registered: ${stageName}`);
       }
@@ -125,9 +230,7 @@ export class PipelineRunner {
         // Update metrics from execute stage
         if (stageName === "execute" && result) {
           const execResult = result as { fileChanges?: unknown[] };
-          filesChanged = execResult.fileChanges?.length ?? 0;
-          // Store execute output for summarize stage
-          ctx.set("executeOutput", result);
+          metrics.filesChanged = execResult.fileChanges?.length ?? 0;
         }
 
         // Pass output as next stage input
@@ -175,9 +278,9 @@ export class PipelineRunner {
       requirement: input.requirement,
       stages: stageResults,
       totalDurationMs,
-      agentsSpawned,
-      filesChanged,
-      learningInsights,
+      agentsSpawned: metrics.agentsSpawned,
+      filesChanged: metrics.filesChanged,
+      learningInsights: metrics.learningInsights,
     };
 
     const completeEvent = createEvent("pipeline:complete", { summary });
@@ -191,6 +294,53 @@ export class PipelineRunner {
 
     // Return final stage output (SummarizeOutput)
     return stageInput as PipelineResult;
+  }
+
+  /**
+   * Track metrics from events.
+   */
+  private trackMetrics(event: PipelineEvent, metrics: ExecutionMetrics): void {
+    if (event.type === "agent:spawn") {
+      metrics.agentsSpawned++;
+    }
+    if (event.type === "learn:insight") {
+      metrics.learningInsights++;
+    }
+  }
+
+  /**
+   * Get the input for a stage when resuming.
+   * Reconstructs from context based on stage index.
+   */
+  private getResumeInput(ctx: PipelineContext, stageIndex: number): unknown {
+    if (stageIndex === 0) {
+      return;
+    }
+
+    // Each stage stores its output in context
+    // We need to get the output of the previous stage
+    const previousStage = STAGE_ORDER[stageIndex - 1] as StageName;
+
+    switch (previousStage) {
+      case "init":
+        return ctx.get("initOutput");
+      case "context":
+        return ctx.get("contextOutput");
+      case "plan":
+        return ctx.get("planOutput");
+      case "schedule":
+        return ctx.get("scheduleOutput");
+      case "execute":
+        return ctx.get("executeOutput");
+      case "review":
+        return ctx.get("reviewOutput");
+      case "learn":
+        return ctx.get("learnOutput");
+      case "summarize":
+        return ctx.get("summarizeOutput");
+      default:
+        return;
+    }
   }
 
   private executeWithTimeout<T>(

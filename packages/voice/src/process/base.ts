@@ -1,7 +1,31 @@
 import { accessSync, constants as fsConstants, statSync } from "node:fs";
-import { join, delimiter as pathDelimiter } from "node:path";
+import { dirname, join, delimiter as pathDelimiter } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Subprocess } from "bun";
 import { Bridge, type IPCRequest, type IPCResponse } from "./ipc";
+
+export function resolveVoiceDir(): string {
+  const cwd = process.cwd();
+  const candidates = [
+    cwd,
+    join(cwd, "packages/voice"),
+    join(cwd, "..", "packages/voice"),
+    join(cwd, "..", "..", "packages/voice"),
+    join(cwd, "..", "..", "..", "packages/voice"),
+  ];
+
+  for (const dir of candidates) {
+    try {
+      accessSync(join(dir, "pyproject.toml"), fsConstants.F_OK);
+      return dir;
+    } catch {
+      // continue
+    }
+  }
+
+  // Fallback: resolve relative to this module (works in Node and Bun).
+  return join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+}
 
 export type ProcessConfig = {
   scriptPath: string;
@@ -90,7 +114,7 @@ export class Process {
     cmd: string[];
     cwd: string;
   }> {
-    const voiceDir = join(process.cwd(), "packages/voice");
+    const voiceDir = resolveVoiceDir();
     const scriptPath = this.config.scriptPath;
 
     const isVoiceScript = scriptPath.startsWith(voiceDir);
