@@ -187,15 +187,12 @@ describe("DockerSelector", () => {
       refetch: mockRefetch,
     });
 
-    const { container } = render(
+    const { getByTitle } = render(
       <DockerSelector onClose={mockOnClose} onSelect={mockOnSelect} />,
       { wrapper: createWrapper() }
     );
 
-    const closeButton = container.querySelector('button[class*="h-6 w-6"]');
-    if (closeButton) {
-      fireEvent.click(closeButton);
-    }
+    fireEvent.click(getByTitle("Close"));
 
     expect(mockOnClose).toHaveBeenCalled();
   });

@@ -8,7 +8,7 @@
 import "@/test/dom";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { VisualConfig } from "@alfred/type";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 
 // Test presets
 const PRESET_BALANCED: VisualConfig = {
@@ -87,25 +87,15 @@ const getPresetMock = vi.fn((name: string): VisualConfig => {
   return PRESET_BALANCED;
 });
 
-// Mock @alfred/cortex - must export all functions that the hook imports
-mock.module("@alfred/cortex", () => ({
-  applyVisualConfig: applyVisualConfigMock,
+// Hook reads presets from @alfred/cortex/presets
+mock.module("@alfred/cortex/presets", () => ({
   getDefaultPreset: getDefaultPresetMock,
   getPreset: getPresetMock,
-  CortexEngine: class {},
-  // Add other exports that might be needed
-  applyPreset: vi.fn(),
-  getVisualConfig: vi.fn(() => PRESET_BALANCED),
-  updateVisualConfig: vi.fn(),
-  interpolateConfig: vi.fn(),
-  animateConfig: vi.fn(),
-  parseOklch: vi.fn(() => ({ r: 0, g: 0, b: 0 })),
-  rgbToOklch: vi.fn(() => "oklch(0 0 0)"),
-  PRESET_BALANCED,
-  PRESET_MINIMAL,
-  PRESET_METADATA: [],
-  VISUAL_PRESETS: {},
-  mergeWithPreset: vi.fn(),
+}));
+
+// Hook applies config via dynamic import("@alfred/cortex/config")
+mock.module("@alfred/cortex/config", () => ({
+  applyVisualConfig: applyVisualConfigMock,
 }));
 
 // Create mock tRPC functions
@@ -195,7 +185,7 @@ describe("useVisualPreferences", () => {
       expect(result.current.isDirty).toBe(true);
     });
 
-    it("applies to engine when autoApply is true", () => {
+    it("applies to engine when autoApply is true", async () => {
       const mockEngine = {
         getCamera: vi.fn(() => ({ center: { x: 0, y: 0 } })),
       };
@@ -210,7 +200,9 @@ describe("useVisualPreferences", () => {
         result.current.setConfig(PRESET_MINIMAL);
       });
 
-      expect(applyVisualConfigMock).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(applyVisualConfigMock).toHaveBeenCalled();
+      });
     });
   });
 
@@ -432,7 +424,7 @@ describe("useVisualPreferences", () => {
   });
 
   describe("engine integration", () => {
-    it("applies config to engine on mount", () => {
+    it("applies config to engine on mount", async () => {
       const mockEngine = {
         getCamera: vi.fn(() => ({ center: { x: 0, y: 0 } })),
       };
@@ -444,7 +436,9 @@ describe("useVisualPreferences", () => {
         })
       );
 
-      expect(applyVisualConfigMock).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(applyVisualConfigMock).toHaveBeenCalled();
+      });
     });
 
     it("does not apply when autoApply is false", () => {

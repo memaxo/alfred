@@ -1,37 +1,78 @@
-import { describe, expect, it } from "bun:test";
+import "@/test/dom";
+import { describe, expect, it, vi } from "bun:test";
 import { render, screen } from "@testing-library/react";
-import { ReactFlowProvider } from "@xyflow/react";
+
+vi.mock("@/utils/trpc", () => ({
+  trpc: {
+    knowledge: {
+      stats: {
+        useQuery: () => ({
+          data: { totalNodes: 0, relations: 0 },
+        }),
+      },
+      entitiesList: {
+        useQuery: () => ({
+          data: { entities: [] },
+          isLoading: false,
+        }),
+      },
+      insightsList: {
+        useQuery: () => ({
+          data: { insights: [] },
+        }),
+      },
+    },
+  },
+}));
+
+const desktopState = {
+  spawnWindow: vi.fn(),
+  setMode: vi.fn(),
+  setFocusedWindow: vi.fn(),
+  restoreWindow: vi.fn(),
+  focusWindow: vi.fn(),
+};
+
+vi.mock("@/store/desktop", () => ({
+  useDesktopStore: (selector: (s: typeof desktopState) => unknown) =>
+    selector(desktopState),
+}));
+
+const mindscapeState = {
+  nodes: [],
+  edges: [],
+  onNodesChange: vi.fn(),
+  onEdgesChange: vi.fn(),
+  selectNode: vi.fn(),
+  addNode: vi.fn(),
+  deactivate: vi.fn(),
+  removeNode: vi.fn(),
+};
+
+vi.mock("@/store/mindscape", () => ({
+  useMindscapeStore: (selector: (s: typeof mindscapeState) => unknown) =>
+    selector(mindscapeState),
+}));
+
 import { MindscapeCanvas } from "./canvas";
 
 describe("MindscapeCanvas", () => {
   it("should render canvas with ReactFlowProvider", () => {
-    render(
-      <ReactFlowProvider>
-        <MindscapeCanvas />
-      </ReactFlowProvider>
-    );
+    render(<MindscapeCanvas />);
 
-    expect(screen.getByText(/knowledge graph/i)).toBeInTheDocument();
+    expect(screen.getByText(/knowledge graph/i)).toBeTruthy();
   });
 
   it("should render search input", () => {
-    render(
-      <ReactFlowProvider>
-        <MindscapeCanvas />
-      </ReactFlowProvider>
-    );
+    render(<MindscapeCanvas />);
 
-    expect(screen.getByPlaceholderText(/search entities/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search entities/i)).toBeTruthy();
   });
 
   it("should render stats panel", () => {
-    render(
-      <ReactFlowProvider>
-        <MindscapeCanvas />
-      </ReactFlowProvider>
-    );
+    render(<MindscapeCanvas />);
 
-    expect(screen.getByText(/entities/i)).toBeInTheDocument();
-    expect(screen.getByText(/relations/i)).toBeInTheDocument();
+    expect(screen.getByText(/entities/i)).toBeTruthy();
+    expect(screen.getByText(/relations/i)).toBeTruthy();
   });
 });

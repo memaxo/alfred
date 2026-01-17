@@ -93,6 +93,8 @@ describe("WindowChrome", () => {
   it("closes window when close button is clicked", () => {
     const window = createWindow();
     useDesktopStore.setState({ windows: [window] });
+    const store = useDesktopStore.getState();
+    const removeSpy = vi.spyOn(store, "removeWindow");
 
     const { container } = render(
       <WindowChrome isFocused={false} windowId="test-window" />
@@ -103,12 +105,7 @@ describe("WindowChrome", () => {
       fireEvent.click(closeButton);
     }
 
-    // Close triggers animation - verify close button exists and was clickable
-    // The animation will eventually call removeWindow but that's async
-    // We verify the button interaction worked by checking the component still exists
-    expect(
-      container.querySelector('[data-window-id="test-window"]')
-    ).toBeTruthy();
+    expect(removeSpy).toHaveBeenCalledWith("test-window");
   });
 
   it("minimizes window when minimize button is clicked", async () => {

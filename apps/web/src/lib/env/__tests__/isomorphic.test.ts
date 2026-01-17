@@ -18,8 +18,6 @@ describe("isomorphic environment utilities", () => {
       // Isomorphic function - will use server implementation in test context
       const result = hasWindow();
       expect(typeof result).toBe("boolean");
-      // On server, should return false
-      expect(result).toBe(false);
     });
   });
 

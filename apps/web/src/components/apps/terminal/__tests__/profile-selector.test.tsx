@@ -107,20 +107,12 @@ describe("ProfileSelector", () => {
   });
 
   it("calls onClose when close button is clicked", () => {
-    const { container } = render(
+    const { getByTitle } = render(
       <ProfileSelector onClose={mockOnClose} onSelect={mockOnSelect} />,
       { wrapper: createWrapper() }
     );
 
-    const closeButtons = container.querySelectorAll("button[title]");
-    const closeButton = Array.from(closeButtons).find(
-      (btn) =>
-        btn.getAttribute("aria-label") === "Close" || btn.querySelector("svg")
-    );
-
-    if (closeButton) {
-      fireEvent.click(closeButton);
-    }
+    fireEvent.click(getByTitle("Close"));
 
     expect(mockOnClose).toHaveBeenCalled();
   });

@@ -235,7 +235,7 @@ describe("RetrievalDebugger", () => {
       expect(queryByText("Top-K:")).toBeNull();
 
       const buttons = container.querySelectorAll("button");
-      const settingsButton = buttons.at(-1);
+      const settingsButton = buttons.item(Math.max(0, buttons.length - 1));
       if (settingsButton) {
         fireEvent.click(settingsButton);
       }
@@ -247,7 +247,7 @@ describe("RetrievalDebugger", () => {
       const { container } = render(<RetrievalDebugger />, { wrapper: Wrapper });
 
       const buttons = container.querySelectorAll("button");
-      const settingsButton = buttons.at(-1);
+      const settingsButton = buttons.item(Math.max(0, buttons.length - 1));
       if (settingsButton) {
         fireEvent.click(settingsButton);
       }

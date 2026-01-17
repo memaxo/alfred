@@ -4,7 +4,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { renderAssistantPart } from "@/components/chat-render";
 
 describe("chat-render tool approval UI", () => {
-  it("renders Approve/Deny only for approval-requested tool invocations", () => {
+  it("renders approval confirmation only for approval-requested tool invocations", () => {
     const onAddToolApprovalResponse = vi.fn();
 
     const part = {
@@ -27,16 +27,17 @@ describe("chat-render tool approval UI", () => {
 
     const view = render(<div>{node}</div>);
 
-    expect(view.getByText("Approve")).toBeTruthy();
-    expect(view.getByText("Deny")).toBeTruthy();
+    expect(view.getByText("Approve: test")).toBeTruthy();
+    expect(view.getByText("Cancel")).toBeTruthy();
+    expect(view.getByText("Confirm with Passkey")).toBeTruthy();
 
-    fireEvent.click(view.getByText("Approve"));
+    fireEvent.click(view.getByText("Confirm with Passkey"));
     expect(onAddToolApprovalResponse).toHaveBeenCalledWith({
       id: "approval-1",
       approved: true,
     });
 
-    fireEvent.click(view.getByText("Deny"));
+    fireEvent.click(view.getByText("Cancel"));
     expect(onAddToolApprovalResponse).toHaveBeenCalledWith({
       id: "approval-1",
       approved: false,
@@ -65,7 +66,8 @@ describe("chat-render tool approval UI", () => {
 
     const view = render(<div>{node}</div>);
 
-    expect(view.queryByText("Approve")).toBeNull();
-    expect(view.queryByText("Deny")).toBeNull();
+    expect(view.queryByText("Approve: test")).toBeNull();
+    expect(view.queryByText("Cancel")).toBeNull();
+    expect(view.queryByText("Confirm with Passkey")).toBeNull();
   });
 });

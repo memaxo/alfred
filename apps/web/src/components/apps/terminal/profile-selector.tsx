@@ -103,6 +103,7 @@ export function ProfileSelector({
                 className="h-6 w-6"
                 onClick={onClose}
                 size="icon"
+                title="Close"
                 variant="ghost"
               >
                 <X className="h-4 w-4" />

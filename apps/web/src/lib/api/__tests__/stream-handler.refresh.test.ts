@@ -167,6 +167,7 @@ describe("handleStreamRequest preference refresh integration", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     await finishPromiseRef.current;
 
     expect(triggerPreferenceRefreshMock).toHaveBeenCalledWith("user-1", {
