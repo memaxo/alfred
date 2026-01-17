@@ -1,6 +1,6 @@
 # PRD Implementation Status Verification
 
-**Date**: 2025-01-27  
+**Date**: 2026-01-17  
 **Method**: Codebase search and verification  
 **Purpose**: Update PRD checkboxes based on actual codebase state
 
@@ -39,9 +39,13 @@
 - ✅ **Resume with elevated token verification** (`packages/api/src/routers/workflow.ts` line 336-339)
 - ⚠️ **Test end-to-end suspend/resume flow** - Infrastructure exists, needs manual validation
 
-### 5.3 Tool Chaining & Dependencies ❌ NOT IMPLEMENTED
-- ❌ **Tool output passing to subsequent tools** - No implementation found
-- ❌ **Tool dependency resolution** - No implementation found
+### 5.3 Tool Chaining & Dependencies ✅ IMPLEMENTED
+- ✅ **Tool output passing to subsequent tools** (`packages/runtime/src/chain.ts` - `$ref` resolution)
+- ✅ **Tool dependency resolution** (`packages/runtime/src/chain.ts` - inferred deps from `$ref` + `dependsOn`)
+- ✅ **Parallel execution for independent tools** (`packages/runtime/src/chain.ts` - `maxParallel` batching)
+- ✅ **Fallback and retry logic** (`packages/runtime/src/chain.ts` - `retries` + `fallback`)
+- ✅ **Tool result validation** (`packages/runtime/src/chain.ts` - schema validation via `safeValidateTypes`)
+- ✅ **Integrated into runtime act phase** (`packages/runtime/src/phases/act.ts` - plans + executes tool graphs)
 
 ## Phase 6 — User Interface
 
@@ -89,8 +93,8 @@
 - ✅ E2E tests (`apps/web/tests/`, Playwright)
 - ✅ CI/CD workflows (`.github/workflows/ci.yml`)
 
-### 8.2 Load Testing ❌ NOT IMPLEMENTED
-- ❌ **Load testing scripts** - No scripts found in `scripts/` directory
+### 8.2 Load Testing ✅ IMPLEMENTED
+- ✅ **Load testing script** (`scripts/load-workflow.ts`) for concurrent `workflow.start` calls with latency/RPS reporting
 
 ### 8.3 Observability ✅ COMPLETE
 - ✅ Prometheus metrics (`packages/api/src/metrics.ts`)
@@ -105,11 +109,13 @@
 - Focus tool with drive mode (Phase 4.3)
 - Linear Integration (Phase 5.1)
 - Suspend/Resume for Biometric Obligations (Phase 5.2)
+- Tool Chaining & Dependencies (Phase 5.3)
 - Core Chat UI (Phase 6.1 - mostly)
 - Settings & Preferences (Phase 6.3)
 - Workflow Visualization (Phase 6.4)
 - Voice Integration (Phase 7.1)
 - Testing Infrastructure (Phase 8.1)
+- Load Testing Scripts (Phase 8.2)
 - Observability (Phase 8.3)
 
 ### Partially Implemented ⚠️
@@ -120,8 +126,7 @@
 - Mobile App (Phase 7.2) - Only Drive Mode, no chat interface
 
 ### Not Implemented ❌
-- Tool Chaining & Dependencies (Phase 5.3)
-- Load Testing Scripts (Phase 8.2)
+- (none identified beyond the partial items above)
 
 ## Recommendations
 
@@ -133,8 +138,6 @@
    - Timer and Bookmark pane UI routes
    - Performance metrics dashboard
    - Mobile chat interface
-   - Tool chaining infrastructure
-   - Load testing scripts
 3. **Mark as "Needs Validation"**:
    - End-to-end suspend/resume flow testing
    - Infinite scroll implementation verification

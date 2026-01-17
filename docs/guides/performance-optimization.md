@@ -330,8 +330,9 @@ test("transition meets budget", async () => {
 For API endpoints:
 
 ```bash
-# Use k6 or similar
-k6 run load-test.js
+# Load test concurrent workflows (dev)
+# (Run the web server with TEST_MODE=1 to use the test-session header bypass.)
+bun scripts/load-workflow.ts --base-url http://localhost:3000 --concurrency 25 --requests 200
 ```
 
 ## Related Documentation
