@@ -104,3 +104,24 @@ if (result.valid) {
   // result.component is typed UIComponent
 }
 ```
+
+## Testing
+
+Test GenUI components with real registry operations:
+
+```typescript
+import { clearRegistry, registerComponent } from "@alfred/ui/genui";
+import { validateUIComponent } from "@alfred/type/genui.zod";
+
+beforeEach(() => {
+  clearRegistry();
+});
+
+test("tool result produces valid schema", () => {
+  const result = createChartResult("Test", [{ x: "A", y: 1 }], {});
+  const validation = validateUIComponent(result.ui);
+  expect(validation.valid).toBe(true);
+});
+```
+
+Test edge cases: null input, deep nesting, unicode props, empty children arrays.
