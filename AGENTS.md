@@ -908,6 +908,17 @@ Subprocess-based tools must be deterministic, sandboxed, and debuggable under Bu
 
 
 
+<!-- Source: .ruler/51-lefthook.md -->
+
+# Lefthook Hygiene
+
+1. Run commits with a **clean working tree** (or stash unrelated changes) so lefthook never has to restore unstaged patches.
+2. Avoid **partially staged** files that formatters touch; stage whole files or run formatting before staging.
+3. Never add `biome-ignore` suppressions unless they silence a real diagnostic; delete suppressions that don’t match.
+4. Prefer repo-native discovery tools (`fd`, `rg`, `ast-grep`) over shell-specific commands.
+
+
+
 <!-- Source: .ruler/51-package-creation.md -->
 
 # Package Creation Standards
@@ -1026,6 +1037,16 @@ After creating a package, integrate it:
 2. Reference new package in consumers with `"@alfred/<name>": "workspace:*"`
 3. Update root `tsconfig.json` references if needed for project builds
 4. Add to relevant `.ruler/` documentation mentioning the package
+
+
+
+<!-- Source: .ruler/52-origins.md -->
+
+# Origin Normalization
+
+1. Treat `Origin`/`Referer` as **browser-only**; non-browser clients must use an explicit header (e.g. `expo-origin`) for origin-like metadata.
+2. Normalize custom origin headers to a scheme origin (`alfred://`, `exp://`, `https://host`) before passing requests to strict origin validators.
+3. In non-production, surface origin diagnostics via **response headers**, not by rewriting response bodies.
 
 
 

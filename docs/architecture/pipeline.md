@@ -103,11 +103,40 @@ const config: PipelineConfig = {
   maxParallel: 1,           // Sequential by default
   maxAgentAttempts: 3,      // Retries per agent
   maxReviewAttempts: 3,     // Review fix attempts
+  maxTransitions: 50_000,   // Safety cap on total emitted events
   enableLearning: true,     // Enable learning stage
   enableLinearSync: false,  // Linear integration
   linearSyncInterval: 30_000, // Batch interval
 };
 ```
+
+## Reliability & Safeguards
+
+### Abort propagation
+- The pipeline respects `AbortSignal` end-to-end.
+- If the provided signal is already aborted, the run fails before any `stage:enter` events are emitted.
+- If the signal aborts mid-stage, the stage is interrupted (stages should check `ctx.signal` for cooperative cancellation) and the pipeline emits `stage:error` then `pipeline:failed`.
+
+### Timeouts
+- Each stage is guarded by a per-stage timeout (`phaseTimeouts[stage]`).
+- Timeout guards are cancellable to avoid timer leaks.
+
+### MAX_TRANSITIONS (`maxTransitions`)
+- `maxTransitions` is a safety limit on the **total number of pipeline events emitted**.
+- It counts both:
+  - runner-generated stage lifecycle events (`pipeline:start`, `stage:enter`, `stage:exit`, `pipeline:complete`, etc.)
+  - stage-emitted events via `ctx.emit(...)` (e.g. `stage:progress`, agent lifecycle events)
+- When exceeded, the pipeline fails deterministically with a `pipeline_max_transitions_exceeded` error and emits `pipeline:failed`.
+
+### Observer lifecycle
+- Observers are best-effort and must not crash the runner (observer exceptions are caught and logged).
+- `PipelineObserver.onComplete()` is treated as a **finally-style cleanup hook** and is called on success, failure, and abort.
+
+### Budget events + cleanup
+- The pipeline can emit:
+  - `budget:warning` when approaching budget (≥ 90%)
+  - `budget:exceeded` when budget is reached
+- Per-run in-memory cost tracking is cleared when the pipeline terminates.
 
 ## Event Flow
 
@@ -216,6 +245,22 @@ const runner = new PipelineRunner({
   },
 });
 ```
+
+### MAX_TRANSITIONS exceeded
+
+**Symptom:** `pipeline_max_transitions_exceeded ...`
+
+**Solution:** Increase `maxTransitions` for unusually chatty runs or fix runaway emit loops:
+
+```typescript
+const runner = new PipelineRunner({ maxTransitions: 200_000 });
+```
+
+### Aborts
+
+**Symptom:** failures containing `pipeline_aborted` or `AbortError`
+
+**Solution:** Ensure callers pass a stable `AbortSignal` and stages cooperate by checking `ctx.signal.aborted` during long operations.
 
 ### Missing Events
 

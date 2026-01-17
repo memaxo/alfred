@@ -59,6 +59,11 @@ Observable outcome: After completing this work, a user can ask ALFRED a question
   - Created `.ruler/genui-patterns.md` with usage rules and code examples
   - Ran `ruler:apply` to regenerate AI instructions
   - Documented architecture, registration, tool integration, and available components
+- (2026-01-17) Milestone 8: Web chat “happy path” proof (tool-result + tests).
+  - Added tool-result rendering for `GenUIToolResult` outputs in `apps/web/src/components/chat-render.tsx`
+  - Added `extractGenUISchema()` helper in `packages/ui/src/chat/parts.ts`
+  - Added explicit `@alfred/ui` subpath exports for `@alfred/ui/genui` and `@alfred/ui/chat/parts`
+  - Added web integration tests in `apps/web/src/components/__tests__/genui.test.tsx`
 
 ## Surprises & Discoveries
 
@@ -90,13 +95,16 @@ Date/Author: 2026-01-17 / Codex
 - Schema interpreter with recursive rendering support
 - Error boundary for graceful degradation
 - Chat rendering integration via `data-ui` parts
+- Chat rendering integration via tool-result outputs shaped like `GenUIToolResult`
 - Tool helper functions for common patterns
 - Streaming UI support with skeleton states
 - Documentation in `.ruler/genui-patterns.md`
+- Web integration tests for GenUI chat rendering
 
 **Test Coverage:**
 - 49 passing tests across 6 test suites
 - Registry, interpreter, validation, type guards, boundary, tool integration, streaming
+- Web integration tests cover: data-ui rendering, unknown component placeholder, malformed data-ui handling, error boundary fallback, tool-result GenUI output rendering
 
 **Files Created:**
 - `packages/type/src/genui.ts` - Core types

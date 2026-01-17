@@ -73,6 +73,36 @@ afterAll(() => {
 });
 ```
 
+## Opt-in Live Provider Tests
+
+### ALFRED_LIVE_PROVIDER_TESTS
+
+Enables live, real-network provider smoke tests (disabled by default to keep the suite offline and cost-free):
+
+```bash
+ALFRED_LIVE_PROVIDER_TESTS="1"
+```
+
+**Impact:**
+- Tests may incur real provider cost.
+- Tests must not print secrets; avoid logging outputs beyond small, redacted snippets.
+
+**Cerebras smoke test prerequisites:**
+- `ALFRED_LIVE_PROVIDER_TESTS="1"`
+- `CEREBRAS_API_KEY="..."`
+
+**Run:**
+
+```bash
+ALFRED_LIVE_PROVIDER_TESTS=1 CEREBRAS_API_KEY=... bun test packages/agent/src/cerebras.test.ts
+```
+
+**AgentFS + OpenCode full end-to-end (also live):**
+
+```bash
+CEREBRAS_API_KEY=... OPENAI_API_KEY=... AGENT_ED25519_PRIVATE=... AGENT_ED25519_PUBLIC_PEM=... bun run scripts/verify-executors-live.ts
+```
+
 ## Metrics Variables
 
 ### DISABLE_TRPC_METRICS
@@ -215,6 +245,7 @@ ALFRED_TEST_RUNNER_TIMEOUT_MS=600000
 | `DATABASE_URL` | Database backend | `sqlite::memory:` |
 | `RUN_DB_TESTS` | Enable Postgres tests | (unset) |
 | `BIO_AUTH_BYPASS` | Bypass biometric auth | `true` |
+| `ALFRED_LIVE_PROVIDER_TESTS` | Enable live provider smoke tests | `0` |
 | `DISABLE_TRPC_METRICS` | Disable metrics | `1` |
 | `DISABLE_METRICS_HOOKS` | Disable hooks | `1` |
 | `MEMORY_DECAY_ENABLED` | Enable decay | (unset) |

@@ -4,11 +4,13 @@
 
 The Generative UI (GenUI) framework enables ALFRED to dynamically generate and render UI components based on LLM tool outputs. Instead of returning static text, tools can return rich, interactive visualizations that the model selects based on conversation context.
 
+This guide applies to **ALFRED itself** (the web chat UI under `apps/web/` and shared packages under `packages/`), not to applications ALFRED generates.
+
 ## Quick Start
 
-### 1. Creating a Tool with GenUI
+### 1. Returning GenUI from a tool
 
-Use the helper functions to create tool results with UI:
+Tools can return a **GenUIToolResult** (a `{ ui, data }` object). The UI is rendered; the raw data is preserved for persistence and fallback rendering.
 
 ```typescript
 import { createChartResult } from "@alfred/ui/genui";
@@ -30,23 +32,44 @@ export const myTool = tool({
 });
 ```
 
+### 2. Message formats supported by the web chat renderer
+
+The web chat renderer supports two canonical GenUI shapes:
+
+- **`data-ui` message part** (inline part on a message)
+
+```json
+{
+  "type": "data-ui",
+  "ui": { "component": "task", "props": { "title": "Ship GenUI" } }
+}
+```
+
+- **Tool output** (a tool-result `output` shaped like `GenUIToolResult`)
+
+```json
+{
+  "ui": { "component": "task", "props": { "title": "Ship GenUI" } },
+  "data": { "any": "json-serializable payload" }
+}
+```
+
 ### 2. Available Helper Functions
 
 ```typescript
 // Visualization helpers
 createChartResult(title, data, rawData);
-createGridResult(columns, items, rawData);
+createGridResult(children, rawData, cols?);
 createListResult(items, rawData);
-createNumberResult(value, label, rawData);
 
 // Terminal and code helpers
-createTermResult(output, rawData);
+createTermResult(title, lines, rawData);
 createCodeResult(code, language, rawData);
 
 // State helpers
 createLoadingResult(message);
-createPlanResult(plan, rawData);
-createTaskResult(task, rawData);
+createPlanResult(requirement, tasks, rawData);
+createTaskResult(id, title, status, progress, rawData);
 ```
 
 ### 3. Manual Schema Construction
@@ -79,27 +102,18 @@ return {
 
 ## Available Components
 
-### Core Visualization Components
+Component names must match what’s registered in the GenUI registry. In ALFRED web, default registration happens in `apps/web/src/components/genui/registry.ts`.
 
-**chart** - Data visualization
-- Props: `{ type, data, title, height?, width? }`
-- Types: `"line"`, `"bar"`, `"pie"`, `"area"`
-
-**grid** - Layout grid
-- Props: `{ columns, gap?, className? }`
-- Children: Any other components
-
-**list** - Animated list
-- Props: `{ items, animated? }`
-
-**number** - Sliding number display
-- Props: `{ value, label?, format?, duration? }`
-
-**term** - Terminal output
-- Props: `{ output, theme?, readOnly? }`
-
-**code** - Code block
-- Props: `{ code, language, fileName?, showLineNumbers? }`
+Core components registered at app init:
+- `chart`
+- `grid`
+- `list`
+- `number`
+- `term`
+- `code`
+- `plan`
+- `task`
+- `loading`
 
 ### Orchestrator Components
 
@@ -176,7 +190,8 @@ return {
 For long-running operations, use the streaming pattern:
 
 ```typescript
-import { createGenUIObjectConfig } from "@alfred/ui/genui/streaming";
+import { createGenUIObjectConfig, StreamingUIRenderer } from "@alfred/ui/genui";
+import { uiComponentSchema } from "@alfred/type/genui.zod";
 
 // In a component
 const { object, submit } = useObject({
@@ -188,7 +203,7 @@ const { object, submit } = useObject({
 });
 
 // Shows skeleton while streaming
-{object?.partial && <StreamingUIRenderer schema={object.partial} />}
+<StreamingUIRenderer schema={object?.partial} isStreaming={isLoading} />
 ```
 
 ## Error Handling
@@ -231,7 +246,21 @@ if (supportsGenUI(selection)) {
 
 ## Testing
 
-Test GenUI components with the test utilities:
+GenUI web chat rendering tests live in `apps/web/src/components/__tests__/genui.test.tsx`.
+
+Because the GenUI registry is process-global, prefer isolating the test file when running locally:
+
+```bash
+ALFRED_TEST_ISOLATE_FILES=1 bun ./scripts/test-bun.ts apps/web/src/components/__tests__/genui.test.tsx
+```
+
+To test `@alfred/ui` GenUI helpers:
+
+```bash
+ALFRED_TEST_ISOLATE_FILES=1 bun ./scripts/test-bun.ts packages/ui/src/genui/__tests__/genui.test.tsx
+```
+
+Example (schema renderer):
 
 ```typescript
 import { render } from "@testing-library/react";
@@ -244,24 +273,13 @@ test("renders chart component", () => {
   };
   
   const { getByText } = render(<UISchemaRenderer schema={schema} />);
-  expect(getByText("Test")).toBeInTheDocument();
+  expect(getByText("Test")).toBeTruthy();
 });
 ```
 
 ## Debugging
 
-Enable debug mode to see schema validation and rendering details:
-
-```typescript
-// In .env.local
-VITE_GENUI_DEBUG=1
-```
-
-This will log:
-- Schema validation results
-- Component resolution attempts
-- Render failures with stack traces
-- Performance metrics
+If you need deeper visibility, add targeted logging around component registration (`apps/web/src/components/genui/registry.ts`) or message rendering (`apps/web/src/components/chat-render.tsx`). There is no dedicated `VITE_GENUI_DEBUG` flag wired at the moment.
 
 ## Migration from Static Renderers
 

@@ -119,12 +119,16 @@ const config: PipelineConfig = {
   maxParallel: 1,           // Sequential by default
   maxAgentAttempts: 3,      // Retries per agent
   maxReviewAttempts: 3,     // Review fix attempts
+  maxTransitions: 50_000,   // Safety cap on total emitted events
   enableLearning: true,     // Enable learning stage
   enableLinearSync: false,  // Linear integration
   linearSyncInterval: 30_000, // Batch interval
 };
 ```
 
+## Reliability Notes
+
+- **Abort propagation**: `PipelineRunner.run(input, signal)` respects `AbortSignal`. If already aborted, no stages start; if aborted mid-run, the pipeline emits `stage:error` then `pipeline:failed`.\n+- **Timeouts**: Stage execution is guarded by cancellable per-stage timeouts (`phaseTimeouts`).\n+- **MAX_TRANSITIONS**: `maxTransitions` limits total emitted pipeline events (runner lifecycle + `ctx.emit(...)`). Exceeding it fails the run with `pipeline_max_transitions_exceeded`.\n+- **Observer cleanup**: `PipelineObserver.onComplete()` is a finally-style cleanup hook (called on success, failure, and abort).\n+- **Budget events**: the runner may emit `budget:warning` / `budget:exceeded` and clears per-run cost tracking on termination.\n+
 ## Testing
 
 ```bash
@@ -136,4 +140,4 @@ bun test packages/pipeline/test/integration  # Integration tests
 
 ✅ Core implementation complete (Milestones 0-4)
 ⏳ Integration with existing orchestrator (Milestone 5) - pending
-⏳ Full golden path test (Milestone 6) - pending
+✅ Full golden path test (Milestone 6) - present (may require Docker/auth for real agent execution)
