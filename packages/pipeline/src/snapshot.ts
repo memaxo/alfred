@@ -129,9 +129,14 @@ export function isSerializable(value: unknown): value is SerializableValue {
   }
   // Check for Map-like objects with get/set methods
   if (
-    typeof (value as any)?.get === "function" &&
-    typeof (value as any)?.set === "function" &&
-    typeof (value as any)?.size === "number"
+    typeof value === "object" &&
+    value !== null &&
+    "get" in value &&
+    "set" in value &&
+    "size" in value &&
+    typeof (value as { get?: unknown }).get === "function" &&
+    typeof (value as { set?: unknown }).set === "function" &&
+    typeof (value as { size?: unknown }).size === "number"
   ) {
     return false;
   }
