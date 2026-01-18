@@ -100,7 +100,7 @@ function dockerfile(args: GenArgs): string {
     `ARG ALFRED_GIT_REF=${args.alfredGitRef}`,
     "",
     "WORKDIR /alfred",
-    'RUN git clone --depth 1 --branch "${ALFRED_GIT_REF}" "${ALFRED_GIT_URL}" .',
+    `RUN git clone --depth 1 --branch "\${ALFRED_GIT_REF}" "\${ALFRED_GIT_URL}" .`,
     "RUN bun install --frozen-lockfile",
     "",
     "WORKDIR /task",

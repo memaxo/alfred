@@ -1,4 +1,5 @@
 import { useLiveQuery } from "@tanstack/react-db";
+import { useStore } from "@tanstack/react-form";
 import type { NodeProps } from "@xyflow/react";
 import { FileText, Loader2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,6 +18,7 @@ import {
   useLOD,
   WindowFrame,
 } from "@/components/windows/shared";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { useDesktopStore } from "@/store/desktop";
 
 const noteWindowDataSchema = z.object({
@@ -56,58 +58,50 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
   const isNew = !resourceId;
 
   const [mode, setMode] = useState<"view" | "edit">(isNew ? "edit" : "view");
-  const [draftTitle, setDraftTitle] = useState("");
-  const [draftContent, setDraftContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const removeWindow = useDesktopStore((s) => s.removeWindow);
 
-  useEffect(() => {
-    if (note && mode === "view") {
-      setDraftTitle(note.title ?? "");
-      setDraftContent(note.content ?? "");
-    }
-  }, [note, mode]);
-
-  useEffect(() => {
-    if (isNew) {
-      setMode("edit");
-    }
-  }, [isNew]);
-
-  const handleSave = useCallback(
-    (event?: React.FormEvent) => {
-      event?.preventDefault();
-
-      if (!draftContent.trim()) {
-        toast.error("Note content cannot be empty");
-        return;
-      }
-
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const form = useAppForm({
+    defaultValues: {
+      title: note?.title ?? "",
+      content: note?.content ?? "",
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: z.object({
+        title: z.string(),
+        content: z.string().refine((value) => value.trim().length > 0, {
+          message: "Note content cannot be empty",
+        }),
+      }),
+    },
+    onSubmit: ({ value }) => {
       setIsSaving(true);
       try {
         if (isNew) {
           const newId = crypto.randomUUID();
           insertNote({
-            title: draftTitle.trim() || null,
-            content: draftContent,
+            title: value.title.trim() || null,
+            content: value.content,
             tags: [],
           });
           updateWindowData(id, {
             resourceRef: { type: "note", id: newId },
-            label: draftTitle.trim() || "Untitled Note",
+            label: value.title.trim() || "Untitled Note",
           });
           toast.success("Note created");
         } else if (resourceId) {
           updateNote({
             id: resourceId,
-            title: draftTitle.trim() || null,
-            content: draftContent,
+            title: value.title.trim() || null,
+            content: value.content,
           });
           updateWindowData(id, {
-            label: draftTitle.trim() || "Untitled Note",
+            label: value.title.trim() || "Untitled Note",
           });
           toast.success("Note updated");
         }
@@ -118,17 +112,24 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
         setIsSaving(false);
       }
     },
-    [
-      draftContent,
-      draftTitle,
-      id,
-      insertNote,
-      isNew,
-      resourceId,
-      updateNote,
-      updateWindowData,
-    ]
-  );
+  });
+
+  const values = useStore(form.store, (state) => state.values);
+
+  useEffect(() => {
+    if (note && mode === "view") {
+      form.reset({
+        title: note.title ?? "",
+        content: note.content ?? "",
+      });
+    }
+  }, [form, note, mode]);
+
+  useEffect(() => {
+    if (isNew) {
+      setMode("edit");
+    }
+  }, [isNew]);
 
   const handleDelete = useCallback(() => {
     if (isNew) {
@@ -161,17 +162,23 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
       removeWindow(id);
       return;
     }
-    setDraftTitle(note?.title ?? "");
-    setDraftContent(note?.content ?? "");
+    form.reset({
+      title: note?.title ?? "",
+      content: note?.content ?? "",
+    });
     setMode("view");
-  }, [id, isNew, note, removeWindow]);
+  }, [form, id, isNew, note, removeWindow]);
 
   const enterEditMode = useCallback(() => {
+    form.reset({
+      title: note?.title ?? "",
+      content: note?.content ?? "",
+    });
     setMode("edit");
-  }, []);
+  }, [form, note?.content, note?.title]);
 
   const displayTitle =
-    note?.title?.trim() || draftTitle.trim() || "Untitled Note";
+    note?.title?.trim() || values.title.trim() || "Untitled Note";
 
   const updatedLabel = useMemo(() => {
     if (!note?.updated) {
@@ -216,51 +223,81 @@ export function NoteWindow({ id, data, selected }: NodeProps) {
             <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
           </div>
         ) : mode === "edit" ? (
-          <form className="flex flex-col gap-3" onSubmit={handleSave}>
-            <Input
-              autoFocus
-              onChange={(e) => setDraftTitle(e.target.value)}
-              placeholder="Title (optional)"
-              value={draftTitle}
-            />
-            <Textarea
-              className="min-h-[140px]"
-              onChange={(e) => setDraftContent(e.target.value)}
-              placeholder="Write your note..."
-              value={draftContent}
-            />
-            <div className="flex items-center justify-between">
-              <Button
-                className="text-red-500"
-                disabled={isDeleting}
-                onClick={handleDelete}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                {isNew ? "Discard" : "Delete"}
-              </Button>
-              <div className="flex gap-2">
+          <form.AppForm>
+            <form
+              className="flex flex-col gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void form.handleSubmit();
+              }}
+              ref={ref}
+            >
+              <form.AppField name="title">
+                {(field) => (
+                  <Input
+                    autoFocus
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Title (optional)"
+                    value={field.state.value}
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="content">
+                {(field) => (
+                  <Textarea
+                    aria-invalid={field.state.meta.errors.length > 0}
+                    className="min-h-[140px]"
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Write your note..."
+                    value={field.state.value}
+                  />
+                )}
+              </form.AppField>
+              <form.Subscribe selector={(state) => state.errorMap}>
+                {(errorMap) =>
+                  errorMap.onSubmit?.content ? (
+                    <p className="text-destructive text-sm">
+                      {String(errorMap.onSubmit.content)}
+                    </p>
+                  ) : null
+                }
+              </form.Subscribe>
+              <div className="flex items-center justify-between">
                 <Button
-                  onClick={handleCancel}
+                  className="text-red-500"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
                   size="sm"
                   type="button"
                   variant="ghost"
                 >
-                  Cancel
+                  {isNew ? "Discard" : "Delete"}
                 </Button>
-                <Button disabled={isSaving} size="sm" type="submit">
-                  {isSaving ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving
-                    </span>
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCancel}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    Cancel
+                  </Button>
+                  <Button disabled={isSaving} size="sm" type="submit">
+                    {isSaving ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving
+                      </span>
+                    ) : (
+                      "Save"
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </form.AppForm>
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between text-biolum-faint text-xs">

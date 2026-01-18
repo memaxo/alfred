@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { signUpSchema } from "@alfred/type/forms";
+import { useForm } from "@tanstack/react-form";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Text,
@@ -9,59 +11,65 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 
+function errorText(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "object" && value !== null && "message" in value) {
+    const msg = (value as { message?: unknown }).message;
+    if (typeof msg === "string") {
+      return msg;
+    }
+  }
+  return String(value);
+}
+
 export function SignUp() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSignUp = async () => {
-    if (!name.trim()) {
-      setError("Name is required");
-      return;
-    }
-    if (!email.trim()) {
-      setError("Email is required");
-      return;
-    }
-    if (!password.trim()) {
-      setError("Password is required");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+    },
+    validators: {
+      onSubmit: signUpSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setIsLoading(true);
+      setError(null);
 
-    setIsLoading(true);
-    setError(null);
+      await authClient.signUp.email(
+        {
+          name: value.name.trim(),
+          email: value.email.trim(),
+          password: value.password,
+        },
+        {
+          onError: (error) => {
+            setError(error.error?.message || "Failed to create account");
+            setIsLoading(false);
+          },
+          onSuccess: () => {
+            form.reset();
+            queryClient.refetchQueries();
+          },
+          onFinished: () => {
+            setIsLoading(false);
+          },
+        }
+      );
+    },
+  });
 
-    await authClient.signUp.email(
-      {
-        name: name.trim(),
-        email: email.trim(),
-        password,
-      },
-      {
-        onError: (error) => {
-          setError(error.error?.message || "Failed to create account");
-          setIsLoading(false);
-        },
-        onSuccess: () => {
-          setName("");
-          setEmail("");
-          setPassword("");
-          queryClient.refetchQueries();
-        },
-        onFinished: () => {
-          setIsLoading(false);
-        },
-      }
-    );
-  };
+  const handleSignUp = useCallback(() => {
+    void form.handleSubmit();
+  }, [form]);
 
-  const isFormValid = name.trim() && email.trim() && password.length >= 8;
+  const canSubmit = form.state.canSubmit;
+  const { name, email, password } = form.state.values;
 
   return (
     <View className="mt-6 rounded-lg border border-border bg-card p-4">
@@ -78,42 +86,90 @@ export function SignUp() {
         </View>
       )}
 
-      <TextInput
-        autoComplete="name"
-        className="mb-3 rounded-md border border-input bg-input p-4 text-foreground"
-        editable={!isLoading}
-        onChangeText={setName}
-        placeholder="Name"
-        placeholderTextColor="#9CA3AF"
-        value={name}
-      />
+      <form.Field name="name">
+        {(field) => (
+          <View>
+            <TextInput
+              autoComplete="name"
+              className="mb-1 rounded-md border border-input bg-input p-4 text-foreground"
+              editable={!isLoading}
+              onBlur={field.handleBlur}
+              onChangeText={field.handleChange}
+              placeholder="Name"
+              placeholderTextColor="#9CA3AF"
+              value={field.state.value}
+            />
+            {field.state.meta.errors.length > 0 ? (
+              <Text className="mb-3 text-destructive text-xs">
+                {errorText(field.state.meta.errors[0])}
+              </Text>
+            ) : (
+              <View className="mb-3" />
+            )}
+          </View>
+        )}
+      </form.Field>
 
-      <TextInput
-        autoCapitalize="none"
-        autoComplete="email"
-        className="mb-3 rounded-md border border-input bg-input p-4 text-foreground"
-        editable={!isLoading}
-        keyboardType="email-address"
-        onChangeText={setEmail}
-        placeholder="Email"
-        placeholderTextColor="#9CA3AF"
-        value={email}
-      />
+      <form.Field name="email">
+        {(field) => (
+          <View>
+            <TextInput
+              autoCapitalize="none"
+              autoComplete="email"
+              className="mb-1 rounded-md border border-input bg-input p-4 text-foreground"
+              editable={!isLoading}
+              keyboardType="email-address"
+              onBlur={field.handleBlur}
+              onChangeText={field.handleChange}
+              placeholder="Email"
+              placeholderTextColor="#9CA3AF"
+              value={field.state.value}
+            />
+            {field.state.meta.errors.length > 0 ? (
+              <Text className="mb-3 text-destructive text-xs">
+                {errorText(field.state.meta.errors[0])}
+              </Text>
+            ) : (
+              <View className="mb-3" />
+            )}
+          </View>
+        )}
+      </form.Field>
 
-      <TextInput
-        autoComplete="password-new"
-        className="mb-4 rounded-md border border-input bg-input p-4 text-foreground"
-        editable={!isLoading}
-        onChangeText={setPassword}
-        placeholder="Password (min. 8 characters)"
-        placeholderTextColor="#9CA3AF"
-        secureTextEntry
-        value={password}
-      />
+      <form.Field name="password">
+        {(field) => (
+          <View>
+            <TextInput
+              autoComplete="password-new"
+              className="mb-1 rounded-md border border-input bg-input p-4 text-foreground"
+              editable={!isLoading}
+              onBlur={field.handleBlur}
+              onChangeText={field.handleChange}
+              placeholder="Password (min. 8 characters)"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry
+              value={field.state.value}
+            />
+            {field.state.meta.errors.length > 0 ? (
+              <Text className="mb-4 text-destructive text-xs">
+                {errorText(field.state.meta.errors[0])}
+              </Text>
+            ) : (
+              <View className="mb-4" />
+            )}
+          </View>
+        )}
+      </form.Field>
 
       <TouchableOpacity
         className="flex-row items-center justify-center rounded-md bg-primary p-4"
-        disabled={isLoading || !isFormValid}
+        disabled={
+          isLoading ||
+          !canSubmit ||
+          !name.trim() ||
+          !email.trim() ||
+          password.length < 8
+        }
         onPress={handleSignUp}
       >
         {isLoading ? (

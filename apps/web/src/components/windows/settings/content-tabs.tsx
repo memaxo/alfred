@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { cn } from "@/lib/utils";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
@@ -178,9 +179,6 @@ function AutonomySection({ mode }: { mode: SettingsMode }) {
 }
 
 function PreferencesSection({ mode }: { mode: SettingsMode }) {
-  const [customKey, setCustomKey] = useState("");
-  const [customValue, setCustomValue] = useState("");
-
   const utils = trpc.useUtils();
   const preferenceQuery = trpc.preference.list.useQuery(listInput);
   const preferences = preferenceQuery.data ?? [];
@@ -205,38 +203,46 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
     },
   });
 
-  const handleCustomSave = (event: React.FormEvent) => {
-    event.preventDefault();
-    const trimmedKey = customKey.trim();
-    if (!trimmedKey) {
-      toast.error("Preference key required");
-      return;
-    }
-    if (!customValue.trim()) {
-      toast.error("Preference value required");
-      return;
-    }
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const form = useAppForm({
+    defaultValues: {
+      prefKey: "",
+      prefValue: "",
+    },
+    onSubmit: ({ value }) => {
+      const trimmedKey = value.prefKey.trim();
+      const trimmedValue = value.prefValue.trim();
+      if (!trimmedKey) {
+        onSubmitInvalid();
+        toast.error("Preference key required");
+        return;
+      }
+      if (!trimmedValue) {
+        onSubmitInvalid();
+        toast.error("Preference value required");
+        return;
+      }
 
-    let parsedValue: unknown = customValue.trim();
-    try {
-      parsedValue = JSON.parse(customValue);
-    } catch {
-      // keep string
-    }
+      let parsedValue: unknown = trimmedValue;
+      try {
+        parsedValue = JSON.parse(trimmedValue);
+      } catch {
+        // keep string
+      }
 
-    const input: PreferenceSetInput = {
-      key: trimmedKey,
-      value: parsedValue,
-      confidence: 1,
-    };
+      const input: PreferenceSetInput = {
+        key: trimmedKey,
+        value: parsedValue,
+        confidence: 1,
+      };
 
-    setPreference.mutate(input, {
-      onSuccess: () => {
-        setCustomKey("");
-        setCustomValue("");
-      },
-    });
-  };
+      setPreference.mutate(input, {
+        onSuccess: () => {
+          form.reset();
+        },
+      });
+    },
+  });
 
   const handleDelete = (key: string) => {
     const input: PreferenceDeleteInput = { key };
@@ -254,31 +260,60 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
 
   return (
     <div className={cn("space-y-4 py-4", isCompact ? "px-4" : "px-6")}>
-      <form className="flex flex-col gap-2" onSubmit={handleCustomSave}>
-        <Input
-          className="bg-void-surface/50"
-          onChange={(e) => setCustomKey(e.target.value)}
-          placeholder="key (e.g. theme)"
-          value={customKey}
-        />
-        <Textarea
-          className={cn(
-            "bg-void-surface/50",
-            isCompact ? "min-h-[40px]" : "min-h-[60px]"
-          )}
-          onChange={(e) => setCustomValue(e.target.value)}
-          placeholder="value (string or JSON)"
-          value={customValue}
-        />
-        <Button
-          className="self-end"
-          disabled={setPreference.isPending}
-          size="sm"
-          type="submit"
+      <form.AppForm>
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void form.handleSubmit();
+          }}
+          ref={ref}
         >
-          Save
-        </Button>
-      </form>
+          <form.AppField name="prefKey">
+            {(field) => (
+              <Input
+                aria-invalid={field.state.meta.errors.length > 0}
+                className="bg-void-surface/50"
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="key (e.g. theme)"
+                value={field.state.value}
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="prefValue">
+            {(field) => (
+              <Textarea
+                aria-invalid={field.state.meta.errors.length > 0}
+                className={cn(
+                  "bg-void-surface/50",
+                  isCompact ? "min-h-[40px]" : "min-h-[60px]"
+                )}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="value (string or JSON)"
+                value={field.state.value}
+              />
+            )}
+          </form.AppField>
+          <form.Subscribe
+            selector={(state) => ({
+              isSubmitting: state.isSubmitting,
+            })}
+          >
+            {({ isSubmitting }) => (
+              <Button
+                className="self-end"
+                disabled={setPreference.isPending || isSubmitting}
+                size="sm"
+                type="submit"
+              >
+                Save
+              </Button>
+            )}
+          </form.Subscribe>
+        </form>
+      </form.AppForm>
 
       <div className="space-y-1">
         <h4 className="text-biolum-dim text-xs">

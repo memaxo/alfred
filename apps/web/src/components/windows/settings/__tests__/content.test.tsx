@@ -298,6 +298,21 @@ describe("SettingsContent", () => {
       expect(mockState.toastErrorMessage).toBe("Preference key required");
     });
 
+    it("shows error when saving with empty value", () => {
+      resetMockState();
+      const { getByPlaceholderText, getByText } = render(
+        <SettingsContent mode="full" />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.change(getByPlaceholderText("key (e.g. theme)"), {
+        target: { value: "testKey" },
+      });
+      fireEvent.click(getByText("Save"));
+
+      expect(mockState.toastErrorMessage).toBe("Preference value required");
+    });
+
     it("input fields accept text", () => {
       const { getByPlaceholderText } = render(<SettingsContent mode="full" />, {
         wrapper: createWrapper(),

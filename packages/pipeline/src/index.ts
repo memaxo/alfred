@@ -17,6 +17,16 @@ export type {
   ReviewCheck,
 } from "./events";
 export { createEvent } from "./events";
+// Phase API metrics
+export {
+  phaseCacheHitsTotal,
+  phaseExecuteDurationSeconds,
+  phaseExecuteRequestsTotal,
+  phasePlanDurationSeconds,
+  phasePlanPreviewsTotal,
+  phasePlanRequestsTotal,
+  phaseUpdatePlanDurationSeconds,
+} from "./metrics";
 export {
   CheckpointObserver,
   type CheckpointStorage,

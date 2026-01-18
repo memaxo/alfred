@@ -27,15 +27,6 @@ import {
   TypeValidationError,
   UnsupportedFunctionalityError,
 } from "ai";
-import { z } from "zod";
-
-mock.module("@alfred/type/stream.zod", () => ({
-  uiMessageSchema: z.object({
-    id: z.string(),
-    role: z.enum(["user", "assistant", "system"]),
-    parts: z.array(z.object({ type: z.literal("text"), text: z.string() })),
-  }),
-}));
 
 mock.module("@alfred/api/utils/sse-connections", () => ({
   createConnection: () => ({ allowed: true, connectionId: "conn-1" }),

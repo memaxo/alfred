@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import type { CognitiveFeedbackStatus } from "@/hooks/use-cognitive-feedback";
 
 export type CognitiveFeedbackDraft = {
@@ -42,28 +43,34 @@ export function CognitiveFeedbackDialog({
   onOpenChange,
   onSubmit,
 }: CognitiveFeedbackDialogProps) {
-  const [expected, setExpected] = useState(draft?.expected ?? "");
-  const [actual, setActual] = useState(draft?.actual ?? "");
-
-  useEffect(() => {
-    if (draft) {
-      setExpected(draft.expected);
-      setActual(draft.actual ?? "");
-    }
-  }, [draft]);
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const form = useAppForm({
+    defaultValues: {
+      expected: draft?.expected ?? "",
+      actual: draft?.actual ?? "",
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: z.object({
+        expected: z
+          .string()
+          .refine((value) => value.trim().length > 0, { message: "Required" }),
+        actual: z.string(),
+      }),
+    },
+    onSubmit: async ({ value }) => {
+      if (!draft || status === "pending") {
+        return;
+      }
+      await onSubmit({
+        expected: value.expected.trim() || draft.expected,
+        actual: value.actual.trim(),
+        surface: draft.surface,
+      });
+    },
+  });
 
   const open = Boolean(draft);
-
-  const handleSubmit = async () => {
-    if (!draft || status === "pending") {
-      return;
-    }
-    await onSubmit({
-      expected: expected.trim() || draft.expected,
-      actual: actual.trim(),
-      surface: draft.surface,
-    });
-  };
 
   const intentLabel =
     draft?.intent === "positive" ? "Positive signal" : "Needs revision";
@@ -78,48 +85,90 @@ export function CognitiveFeedbackDialog({
           </DialogDescription>
         </DialogHeader>
         {draft ? (
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleSubmit();
-            }}
-          >
-            <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-biolum-dim text-xs uppercase tracking-[0.2em]">
-              {intentLabel}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="expected-feedback">Expected Result</Label>
-              <Textarea
-                id="expected-feedback"
-                onChange={(event) => setExpected(event.target.value)}
-                value={expected}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="actual-feedback">What actually happened?</Label>
-              <Textarea
-                id="actual-feedback"
-                onChange={(event) => setActual(event.target.value)}
-                placeholder="Optional detail to help Alfred learn."
-                value={actual}
-              />
-            </div>
-            {error ? (
-              <p className="text-destructive text-sm">
-                {error.message ?? "Failed to submit feedback"}
-              </p>
-            ) : null}
-            <DialogFooter className="pt-2">
-              <Button
-                className="w-full"
-                disabled={status === "pending"}
-                type="submit"
-              >
-                {status === "pending" ? "Submitting…" : "Submit Feedback"}
-              </Button>
-            </DialogFooter>
-          </form>
+          <form.AppForm>
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void form.handleSubmit();
+              }}
+              ref={ref}
+            >
+              <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-biolum-dim text-xs uppercase tracking-[0.2em]">
+                {intentLabel}
+              </div>
+              <form.AppField name="expected">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="expected-feedback">Expected Result</Label>
+                    <Textarea
+                      aria-invalid={field.state.meta.errors.length > 0}
+                      id="expected-feedback"
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      value={field.state.value}
+                    />
+                    {field.state.meta.errors.map((e) => (
+                      <p className="text-destructive text-sm" key={String(e)}>
+                        {String(
+                          (e as { message?: string } | null)?.message ?? e
+                        )}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </form.AppField>
+              <form.AppField name="actual">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="actual-feedback">
+                      What actually happened?
+                    </Label>
+                    <Textarea
+                      aria-invalid={field.state.meta.errors.length > 0}
+                      id="actual-feedback"
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="Optional detail to help Alfred learn."
+                      value={field.state.value}
+                    />
+                  </div>
+                )}
+              </form.AppField>
+              {error ? (
+                <p className="text-destructive text-sm">
+                  {error.message ?? "Failed to submit feedback"}
+                </p>
+              ) : null}
+              <DialogFooter className="pt-2">
+                <form.Subscribe
+                  selector={(state) => ({
+                    canSubmit: state.canSubmit,
+                    isSubmitting: state.isSubmitting,
+                  })}
+                >
+                  {({ canSubmit, isSubmitting }) => (
+                    <Button
+                      className="w-full"
+                      disabled={
+                        status === "pending" || isSubmitting || !canSubmit
+                      }
+                      type="submit"
+                    >
+                      {status === "pending" || isSubmitting
+                        ? "Submitting…"
+                        : "Submit Feedback"}
+                    </Button>
+                  )}
+                </form.Subscribe>
+              </DialogFooter>
+            </form>
+          </form.AppForm>
         ) : null}
       </DialogContent>
     </Dialog>

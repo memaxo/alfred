@@ -167,16 +167,23 @@ const workflowPhaseRouter = router({
       }
 
       const runId = input.runId ?? crypto.randomUUID();
+      const startTime = performance.now();
 
       try {
         const [
           { PipelineRunner, registerDefaultStages },
           { CheckpointObserver, MetricsObserver, PipelineEventQueueObserver },
           { PostgresCheckpointStorage },
+          {
+            phasePlanRequestsTotal,
+            phasePlanDurationSeconds,
+            phasePlanPreviewsTotal,
+          },
         ] = await Promise.all([
           import("@alfred/pipeline"),
           import("@alfred/pipeline/observers"),
           import("@alfred/db/repo/workflow"),
+          import("@alfred/pipeline/metrics"),
         ]);
 
         const runner = new PipelineRunner({
@@ -294,8 +301,21 @@ const workflowPhaseRouter = router({
             : undefined,
         };
 
+        // Record metrics
+        const durationSec = (performance.now() - startTime) / 1000;
+        phasePlanRequestsTotal.inc({ status: "success" });
+        phasePlanDurationSeconds.observe({ status: "success" }, durationSec);
+        phasePlanPreviewsTotal.inc();
+
         return planPhaseOutputSchema.parse(result);
       } catch (error) {
+        // Record error metrics
+        const durationSec = (performance.now() - startTime) / 1000;
+        const { phasePlanRequestsTotal, phasePlanDurationSeconds } =
+          await import("@alfred/pipeline/metrics");
+        phasePlanRequestsTotal.inc({ status: "error" });
+        phasePlanDurationSeconds.observe({ status: "error" }, durationSec);
+
         throw toTRPCError(error, "workflow_phase_plan_failed");
       }
     }),
@@ -321,6 +341,8 @@ const workflowPhaseRouter = router({
         });
       }
 
+      const startTime = performance.now();
+
       try {
         const [
           { PipelineRunner, registerDefaultStages },
@@ -331,10 +353,12 @@ const workflowPhaseRouter = router({
             LinearSyncObserver,
           },
           { PostgresCheckpointStorage },
+          { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds },
         ] = await Promise.all([
           import("@alfred/pipeline"),
           import("@alfred/pipeline/observers"),
           import("@alfred/db/repo/workflow"),
+          import("@alfred/pipeline/metrics"),
         ]);
 
         const storage = new PostgresCheckpointStorage();
@@ -399,12 +423,29 @@ const workflowPhaseRouter = router({
         const status =
           (finalSnapshot as PipelineSnapshot | null)?.status ?? "failed";
 
+        // Record metrics
+        const durationSec = (performance.now() - startTime) / 1000;
+        phaseExecuteRequestsTotal.inc({
+          status: status === "completed" ? "success" : "error",
+        });
+        phaseExecuteDurationSeconds.observe(
+          { status: status === "completed" ? "success" : "error" },
+          durationSec
+        );
+
         return {
           runId: input.runId,
           status,
           completed: status === "completed",
         };
       } catch (error) {
+        // Record error metrics
+        const durationSec = (performance.now() - startTime) / 1000;
+        const { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds } =
+          await import("@alfred/pipeline/metrics");
+        phaseExecuteRequestsTotal.inc({ status: "error" });
+        phaseExecuteDurationSeconds.observe({ status: "error" }, durationSec);
+
         throw toTRPCError(error, "workflow_phase_execute_failed");
       }
     }),
@@ -1264,7 +1305,10 @@ export const workflowRouter = router({
             ): row is { label: string; documentId: string } =>
               typeof row.documentId === "string" && row.documentId.length > 0
           )
-          .map((row) => ({ documentId: row.documentId, label: row.label }));
+          .map((row: { label: string; documentId: string }) => ({
+            documentId: row.documentId,
+            label: row.label,
+          }));
       }
 
       return {

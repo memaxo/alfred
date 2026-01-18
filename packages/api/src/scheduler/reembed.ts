@@ -10,7 +10,12 @@ import {
   getStaleChunks,
   updateChunkEmbedding,
 } from "@alfred/db/repo/rag";
-import { type EmbeddingInput, getRegistry, MODEL_IDS } from "@alfred/embed";
+import {
+  type EmbeddingInput,
+  type EmbeddingProvider,
+  getRegistry,
+  MODEL_IDS,
+} from "@alfred/embed";
 import { getCurrentModelId } from "@alfred/rag";
 
 export type ReembedProgress = {

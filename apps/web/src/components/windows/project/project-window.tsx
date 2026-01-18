@@ -19,6 +19,7 @@ import {
   useLOD,
   WindowFrame,
 } from "@/components/windows/shared";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
@@ -50,7 +51,6 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     windowData.selectedProjectId ?? null
   );
-  const [workspacePath, setWorkspacePath] = useState("");
   const [linkingProjectId, setLinkingProjectId] = useState<string | null>(null);
   const [linearProjectId, setLinearProjectId] = useState("");
 
@@ -62,7 +62,6 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
   const detectProject = trpc.project.detect.useMutation({
     onSuccess: async (project) => {
       toast.success(`Project "${project.name}" detected`);
-      setWorkspacePath("");
       await utils.project.list.invalidate();
     },
     onError: (error) =>
@@ -82,16 +81,34 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
   const linearStatus = trpc.linear.getStatus.useQuery();
   const isLinearConnected = linearStatus.data?.connected ?? false;
 
-  const handleDetect = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!workspacePath.trim()) {
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const detectForm = useAppForm({
+    defaultValues: {
+      workspacePath: "",
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: z.object({
+        workspacePath: z.string().refine((value) => value.trim().length > 0, {
+          message: "Workspace path required",
+        }),
+      }),
+    },
+    onSubmit: ({ value }) => {
+      const trimmed = value.workspacePath.trim();
+      if (!trimmed) {
         return;
       }
-      detectProject.mutate({ workspace: workspacePath.trim() });
+      detectProject.mutate(
+        { workspace: trimmed },
+        {
+          onSuccess: () => {
+            detectForm.reset();
+          },
+        }
+      );
     },
-    [workspacePath, detectProject]
-  );
+  });
 
   const handleLinkLinear = useCallback(
     (projectId: string) => {
@@ -147,31 +164,59 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
       windowType="project"
     >
       <div className="flex h-[400px] flex-col">
-        <form
-          className="flex gap-2 border-white/5 border-b p-3"
-          onSubmit={handleDetect}
-        >
-          <Input
-            className="flex-1"
-            onChange={(e) => setWorkspacePath(e.target.value)}
-            placeholder="/path/to/project"
-            value={workspacePath}
-          />
-          <Button
-            disabled={detectProject.isPending || !workspacePath.trim()}
-            size="sm"
-            type="submit"
+        <detectForm.AppForm>
+          <form
+            className="flex gap-2 border-white/5 border-b p-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void detectForm.handleSubmit();
+            }}
+            ref={ref}
           >
-            {detectProject.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Plus className="mr-1 h-4 w-4" />
-                Detect
-              </>
-            )}
-          </Button>
-        </form>
+            <detectForm.AppField name="workspacePath">
+              {(field) => (
+                <Input
+                  aria-invalid={field.state.meta.errors.length > 0}
+                  className="flex-1"
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="/path/to/project"
+                  value={field.state.value}
+                />
+              )}
+            </detectForm.AppField>
+            <detectForm.Subscribe
+              selector={(state) => ({
+                canSubmit: state.canSubmit,
+                isSubmitting: state.isSubmitting,
+                workspacePath: state.values.workspacePath,
+              })}
+            >
+              {({ canSubmit, isSubmitting, workspacePath }) => (
+                <Button
+                  disabled={
+                    detectProject.isPending ||
+                    isSubmitting ||
+                    !canSubmit ||
+                    workspacePath.trim().length === 0
+                  }
+                  size="sm"
+                  type="submit"
+                >
+                  {detectProject.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="mr-1 h-4 w-4" />
+                      Detect
+                    </>
+                  )}
+                </Button>
+              )}
+            </detectForm.Subscribe>
+          </form>
+        </detectForm.AppForm>
 
         <div className="flex flex-1 overflow-hidden">
           <ScrollArea className="w-1/2 border-white/5 border-r">
@@ -198,7 +243,7 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
                         onClick={() => setSelectedProjectId(project.id)}
                         type="button"
                       >
-                        <FolderKanban className="h-4 w-4 flex-shrink-0" />
+                        <FolderKanban className="h-4 w-4 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-medium text-sm">
                             {project.name}
@@ -208,7 +253,7 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
                           </div>
                         </div>
                         {project.linearProjectId && (
-                          <Link className="h-3 w-3 flex-shrink-0 text-biolum-dim" />
+                          <Link className="h-3 w-3 shrink-0 text-biolum-dim" />
                         )}
                       </button>
                     </li>

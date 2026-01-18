@@ -45,6 +45,7 @@ export class LinearSyncObserver implements PipelineObserver {
         "@alfred/agent/orchestrator/linear-rate-limiter"
       );
       this.rateLimiter = new LinearRateLimiter();
+      void this.flush();
     } catch (error) {
       logger.warn("linear_rate_limiter_init_failed", {
         error: error instanceof Error ? error.message : String(error),

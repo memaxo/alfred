@@ -15,6 +15,7 @@ import {
   useLOD,
   WindowFrame,
 } from "@/components/windows/shared";
+import { useAppForm } from "@/form";
 import { useDesktopStore } from "@/store/desktop";
 
 const FILTERS = [
@@ -40,7 +41,6 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
     ? parsed.data
     : { type: "todo" as const, viewMode: "full" as const };
 
-  const [text, setText] = useState("");
   const [filter, setFilter] = useState<FilterValue>(windowData.filter ?? "all");
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
 
@@ -64,14 +64,19 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
     }
   }, [todos, filter]);
 
-  const handleAdd = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!text.trim()) {
-      return;
-    }
-    insertTodo({ text });
-    setText("");
-  };
+  const form = useAppForm({
+    defaultValues: {
+      text: "",
+    },
+    onSubmit: ({ value }) => {
+      const trimmed = value.text.trim();
+      if (!trimmed) {
+        return;
+      }
+      insertTodo({ text: trimmed });
+      form.reset();
+    },
+  });
 
   const handleFilterChange = (value: FilterValue) => {
     setFilter(value);
@@ -104,16 +109,43 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
       windowType="todo"
     >
       <div className="flex flex-col gap-3 p-4">
-        <form className="flex gap-2" onSubmit={handleAdd}>
-          <Input
-            onChange={(event) => setText(event.target.value)}
-            placeholder="Add a task"
-            value={text}
-          />
-          <Button disabled={!text.trim()} type="submit">
-            Add
-          </Button>
-        </form>
+        <form.AppForm>
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void form.handleSubmit();
+            }}
+          >
+            <form.AppField name="text">
+              {(field) => (
+                <Input
+                  aria-invalid={field.state.meta.errors.length > 0}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder="Add a task"
+                  value={field.state.value}
+                />
+              )}
+            </form.AppField>
+            <form.Subscribe
+              selector={(state) => ({
+                text: state.values.text,
+                isSubmitting: state.isSubmitting,
+              })}
+            >
+              {({ text, isSubmitting }) => (
+                <Button
+                  disabled={isSubmitting || text.trim().length === 0}
+                  type="submit"
+                >
+                  Add
+                </Button>
+              )}
+            </form.Subscribe>
+          </form>
+        </form.AppForm>
 
         <div className="flex gap-2">
           {FILTERS.map((item) => (

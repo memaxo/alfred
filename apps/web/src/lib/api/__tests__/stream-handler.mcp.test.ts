@@ -1,15 +1,6 @@
 import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import { createRequire } from "node:module";
 import type { UIMessage } from "@alfred/type/stream";
-import { z } from "zod";
-
-mock.module("@alfred/type/stream.zod", () => ({
-  uiMessageSchema: z.object({
-    id: z.string(),
-    role: z.enum(["user", "assistant"]),
-    parts: z.array(z.object({ type: z.literal("text"), text: z.string() })),
-  }),
-}));
 
 mock.module("@alfred/api/utils/sse-connections", () => ({
   createConnection: () => ({ allowed: true, connectionId: "conn-1" }),

@@ -4,16 +4,19 @@
  * Manage user profile information (name, email, avatar, timezone).
  */
 
+import { useStore } from "@tanstack/react-form";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Save, User } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Autocomplete, type AutocompleteItem } from "@/components/autocomplete";
 import { Input } from "@/components/text";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Breadcrumb, type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { trpc } from "@/utils/trpc";
 
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -25,8 +28,262 @@ export const Route = createFileRoute("/_protected/settings/profile")({
   component: ProfileSettingsPage,
 });
 
-export function ProfileSettingsPage() {
+type ProfileData = {
+  name: string | null;
+  email: string | null;
+  avatar: string | null;
+  timezone: string | null;
+};
+
+const profileSchema = z.object({
+  name: z.string(),
+  email: z.union([z.literal(""), z.email("Invalid email address")]),
+  avatar: z.string().refine(
+    (value) => {
+      const trimmed = value.trim();
+      if (trimmed.length === 0) {
+        return true;
+      }
+      try {
+        new URL(trimmed);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    {
+      message: "Enter a valid URL",
+    }
+  ),
+  timezone: z
+    .string()
+    .refine((value) => value.trim().length > 0, { message: "Required" }),
+});
+
+function ProfileForm({
+  profile,
+  timezoneItems,
+}: {
+  profile: ProfileData;
+  timezoneItems: AutocompleteItem[];
+}) {
   const utils = trpc.useUtils();
+  const updateProfile = trpc.profile.update.useMutation({
+    onSuccess: () => {
+      toast.success("Profile updated");
+      utils.profile.get.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update profile");
+    },
+  });
+
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+
+  const form = useAppForm({
+    defaultValues: {
+      name: profile.name ?? "",
+      email: profile.email ?? "",
+      avatar: profile.avatar ?? "",
+      timezone:
+        profile.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: profileSchema,
+    },
+    onSubmit: ({ value }) => {
+      updateProfile.mutate({
+        name: value.name.trim() || null,
+        email: value.email.trim() || null,
+        avatar: value.avatar.trim() || null,
+        timezone: value.timezone.trim(),
+      });
+    },
+  });
+
+  const values = useStore(form.store, (state) => state.values);
+  const isDirty =
+    values.name !== (profile.name ?? "") ||
+    values.email !== (profile.email ?? "") ||
+    values.avatar !== (profile.avatar ?? "") ||
+    values.timezone !== (profile.timezone ?? "");
+
+  return (
+    <form.AppForm>
+      <form
+        className="space-y-6"
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          void form.handleSubmit();
+        }}
+        ref={ref}
+      >
+        {/* Profile Avatar Section */}
+        <div className="flex items-center gap-6 rounded-2xl border border-white/10 bg-void-surface/40 p-6">
+          <Avatar className="h-20 w-20 border-2 border-biolum/20">
+            <AvatarImage src={values.avatar.trim() || undefined} />
+            <AvatarFallback className="bg-biolum/10 text-2xl text-biolum">
+              <User size={32} />
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 space-y-2">
+            <form.AppField name="avatar">
+              {(field) => (
+                <>
+                  <Label htmlFor={field.name}>Avatar URL</Label>
+                  <Input
+                    id={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="https://example.com/avatar.png"
+                    value={field.state.value}
+                  />
+                  {field.state.meta.errors.map((error) => (
+                    <p className="text-destructive text-sm" key={String(error)}>
+                      {String(error?.message ?? error)}
+                    </p>
+                  ))}
+                </>
+              )}
+            </form.AppField>
+            <p className="text-biolum-faint text-xs">
+              Direct link to an image (JPEG, PNG, or WebP).
+            </p>
+          </div>
+        </div>
+
+        {/* Basic Info */}
+        <div className="grid gap-6 rounded-2xl border border-white/10 bg-void-surface/40 p-6 sm:grid-cols-2">
+          <form.AppField name="name">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Full Name</Label>
+                <Input
+                  id={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Your name"
+                  value={field.state.value}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p className="text-destructive text-sm" key={String(error)}>
+                    {String(error?.message ?? error)}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.AppField>
+          <form.AppField name="email">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Email Address</Label>
+                <Input
+                  id={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="name@example.com"
+                  type="email"
+                  value={field.state.value}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p className="text-destructive text-sm" key={String(error)}>
+                    {String(error?.message ?? error)}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.AppField>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="profile-timezone">Timezone</Label>
+            {timezoneItems.length > 0 ? (
+              <form.AppField name="timezone">
+                {(field) => (
+                  <>
+                    <Autocomplete
+                      items={timezoneItems}
+                      onValueChange={(timezone) => field.handleChange(timezone)}
+                      placeholder="Select a timezone…"
+                      searchPlaceholder="Search timezones…"
+                      value={field.state.value}
+                    />
+                    {field.state.meta.errors.map((error) => (
+                      <p
+                        className="text-destructive text-sm"
+                        key={String(error)}
+                      >
+                        {String(error?.message ?? error)}
+                      </p>
+                    ))}
+                  </>
+                )}
+              </form.AppField>
+            ) : (
+              <form.AppField name="timezone">
+                {(field) => (
+                  <>
+                    <Input
+                      id="profile-timezone"
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="UTC, America/New_York, etc."
+                      value={field.state.value}
+                    />
+                    {field.state.meta.errors.map((error) => (
+                      <p
+                        className="text-destructive text-sm"
+                        key={String(error)}
+                      >
+                        {String(error?.message ?? error)}
+                      </p>
+                    ))}
+                  </>
+                )}
+              </form.AppField>
+            )}
+            <p className="text-biolum-faint text-xs">
+              Used for scheduling and contextual reminders.
+            </p>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-end gap-3">
+          <form.Subscribe
+            selector={(state) => ({
+              canSubmit: state.canSubmit,
+              isSubmitting: state.isSubmitting,
+            })}
+          >
+            {({ canSubmit, isSubmitting }) => (
+              <Button
+                className="rounded-full"
+                disabled={!(isDirty && canSubmit) || isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            )}
+          </form.Subscribe>
+        </div>
+      </form>
+    </form.AppForm>
+  );
+}
+
+export function ProfileSettingsPage() {
   const { data: profile, isLoading } = trpc.profile.get.useQuery();
 
   const timezoneItems: AutocompleteItem[] = useMemo(() => {
@@ -39,55 +296,6 @@ export function ProfileSettingsPage() {
         : [];
     return tz.map((value) => ({ value, label: value, keywords: [value] }));
   }, []);
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    avatar: "",
-    timezone: "",
-  });
-
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        name: profile.name ?? "",
-        email: profile.email ?? "",
-        avatar: profile.avatar ?? "",
-        timezone:
-          profile.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
-    }
-  }, [profile]);
-
-  const updateProfile = trpc.profile.update.useMutation({
-    onSuccess: () => {
-      toast.success("Profile updated");
-      utils.profile.get.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to update profile");
-    },
-  });
-
-  const handleSave = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      updateProfile.mutate({
-        name: formData.name || null,
-        email: formData.email || null,
-        avatar: formData.avatar || null,
-        timezone: formData.timezone,
-      });
-    },
-    [formData, updateProfile]
-  );
-
-  const isDirty =
-    profile &&
-    (formData.name !== (profile.name ?? "") ||
-      formData.email !== (profile.email ?? "") ||
-      formData.avatar !== (profile.avatar ?? "") ||
-      formData.timezone !== (profile.timezone ?? ""));
 
   if (isLoading) {
     return (
@@ -113,105 +321,13 @@ export function ProfileSettingsPage() {
         </div>
       </div>
 
-      <form className="space-y-6" onSubmit={handleSave}>
-        {/* Profile Avatar Section */}
-        <div className="flex items-center gap-6 rounded-2xl border border-white/10 bg-void-surface/40 p-6">
-          <Avatar className="h-20 w-20 border-2 border-biolum/20">
-            <AvatarImage src={formData.avatar} />
-            <AvatarFallback className="bg-biolum/10 text-2xl text-biolum">
-              <User size={32} />
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="avatar-url">Avatar URL</Label>
-            <Input
-              id="avatar-url"
-              onChange={(e) =>
-                setFormData({ ...formData, avatar: e.target.value })
-              }
-              placeholder="https://example.com/avatar.png"
-              value={formData.avatar}
-            />
-            <p className="text-biolum-faint text-xs">
-              Direct link to an image (JPEG, PNG, or WebP).
-            </p>
-          </div>
-        </div>
-
-        {/* Basic Info */}
-        <div className="grid gap-6 rounded-2xl border border-white/10 bg-void-surface/40 p-6 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="profile-name">Full Name</Label>
-            <Input
-              id="profile-name"
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              placeholder="Your name"
-              value={formData.name}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="profile-email">Email Address</Label>
-            <Input
-              id="profile-email"
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              placeholder="name@example.com"
-              type="email"
-              value={formData.email}
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="profile-timezone">Timezone</Label>
-            {timezoneItems.length > 0 ? (
-              <Autocomplete
-                items={timezoneItems}
-                onValueChange={(timezone) =>
-                  setFormData({ ...formData, timezone })
-                }
-                placeholder="Select a timezone…"
-                searchPlaceholder="Search timezones…"
-                value={formData.timezone}
-              />
-            ) : (
-              <Input
-                id="profile-timezone"
-                onChange={(e) =>
-                  setFormData({ ...formData, timezone: e.target.value })
-                }
-                placeholder="UTC, America/New_York, etc."
-                value={formData.timezone}
-              />
-            )}
-            <p className="text-biolum-faint text-xs">
-              Used for scheduling and contextual reminders.
-            </p>
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <div className="flex justify-end gap-3">
-          <Button
-            className="rounded-full"
-            disabled={!isDirty || updateProfile.isPending}
-            type="submit"
-          >
-            {updateProfile.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
+      {profile ? (
+        <ProfileForm
+          key={`${profile.name ?? ""}:${profile.email ?? ""}:${profile.avatar ?? ""}:${profile.timezone ?? ""}`}
+          profile={profile as ProfileData}
+          timezoneItems={timezoneItems}
+        />
+      ) : null}
     </div>
   );
 }

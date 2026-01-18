@@ -1,4 +1,5 @@
 import { type StructuredPlan, structuredPlanSchema } from "@alfred/plan";
+import { useStore } from "@tanstack/react-form";
 import type { NodeProps } from "@xyflow/react";
 import {
   Check,
@@ -27,6 +28,7 @@ import {
   useLOD,
   WindowFrame,
 } from "@/components/windows/shared";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { useFocusedContext } from "@/hooks/use-focused-context";
 import {
   useWorkflowSubscription,
@@ -78,9 +80,6 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   const plan = windowData.plan as StructuredPlan | undefined;
   const activeView = windowData.activeView ?? "list";
 
-  const [requirementDraft, setRequirementDraft] = useState(
-    windowData.requirement ?? ""
-  );
   const [autoLevel, setAutoLevel] = useState<AutoLevel>(
     windowData.auto ?? "low"
   );
@@ -91,6 +90,41 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   const { content, nodeType } = useFocusedContext();
   const { data: session } = authClient.useSession();
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
+
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const startForm = useAppForm({
+    defaultValues: {
+      requirement: windowData.requirement ?? "",
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: z.object({
+        requirement: z.string().refine((value) => value.trim().length > 0, {
+          message: "Requirement is required",
+        }),
+      }),
+    },
+    onSubmit: ({ value }) => {
+      const trimmed = value.requirement.trim();
+      if (!trimmed) {
+        toast.error("Requirement is required");
+        return;
+      }
+      updateWindowData(id, {
+        draft: {
+          requirement: trimmed,
+          auto: autoLevel,
+          mode,
+          status: "pending",
+          title: trimmed.slice(0, 64),
+          description: trimmed,
+          messages: [],
+        },
+      });
+    },
+  });
+
+  const requirement = useStore(startForm.store, (s) => s.values.requirement);
 
   const {
     run,
@@ -122,7 +156,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
 
   const handleGenerate = (event?: React.FormEvent) => {
     event?.preventDefault();
-    if (!requirementDraft.trim()) {
+    if (!requirement.trim()) {
       toast.error("Requirement is required");
       return;
     }
@@ -135,7 +169,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     generatePlan.mutate({
       intent: {
         id: crypto.randomUUID(),
-        description: requirementDraft.trim(),
+        description: requirement.trim(),
         source: "chat",
         userId: session.user.id,
         timestamp: new Date(),
@@ -176,7 +210,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
 
       // Start execution subscription
       run({
-        requirement: requirementDraft.trim(),
+        requirement: requirement.trim(),
         runId: result.runId,
         auto: autoLevel,
         mode,
@@ -236,32 +270,13 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   };
 
   useEffect(() => {
-    if (windowData.requirement && windowData.requirement !== requirementDraft) {
-      setRequirementDraft(windowData.requirement);
-    } else if (!requirementDraft && content) {
+    if (windowData.requirement && windowData.requirement !== requirement) {
+      startForm.setFieldValue("requirement", windowData.requirement);
+    } else if (!requirement && content) {
       // Pre-populate from focused context if empty
-      setRequirementDraft(content.slice(0, 500));
+      startForm.setFieldValue("requirement", content.slice(0, 500));
     }
-  }, [windowData.requirement, requirementDraft, content]);
-
-  const handleStart = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!requirementDraft.trim()) {
-      toast.error("Requirement is required");
-      return;
-    }
-    updateWindowData(id, {
-      draft: {
-        requirement: requirementDraft.trim(),
-        auto: autoLevel,
-        mode,
-        status: "pending",
-        title: requirementDraft.trim().slice(0, 64),
-        description: requirementDraft.trim(),
-        messages: [],
-      },
-    });
-  };
+  }, [windowData.requirement, requirement, content, startForm]);
 
   if (lod === "tiny") {
     return (
@@ -391,65 +406,81 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                 }
               />
             ) : (
-              <form className="flex flex-col gap-3" onSubmit={handleStart}>
-                <Textarea
-                  className="min-h-[100px] resize-none"
-                  onChange={(e) => setRequirementDraft(e.target.value)}
-                  placeholder="What should the workflow accomplish?"
-                  value={requirementDraft}
-                />
-                <div className="flex items-center gap-2">
-                  <Select
-                    onValueChange={(v) => setAutoLevel(v as AutoLevel)}
-                    value={autoLevel}
-                  >
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue placeholder="Auto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {autoOptions.map((opt) => (
-                        <SelectItem key={opt} value={opt}>
-                          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    onValueChange={(v) =>
-                      setMode(v as "sequential" | "parallel")
-                    }
-                    value={mode}
-                  >
-                    <SelectTrigger className="w-[110px]">
-                      <SelectValue placeholder="Mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sequential">Sequential</SelectItem>
-                      <SelectItem value="parallel">Parallel</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex-1" />
-                  <div className="flex gap-2">
-                    <Button
-                      disabled={generatePlan.isPending}
-                      onClick={handleGenerate}
-                      size="sm"
-                      type="button"
-                      variant="outline"
+              <startForm.AppForm>
+                <form
+                  className="flex flex-col gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void startForm.handleSubmit();
+                  }}
+                  ref={ref}
+                >
+                  <startForm.AppField name="requirement">
+                    {(field) => (
+                      <Textarea
+                        aria-invalid={field.state.meta.errors.length > 0}
+                        className="min-h-[100px] resize-none"
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="What should the workflow accomplish?"
+                        value={field.state.value}
+                      />
+                    )}
+                  </startForm.AppField>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      onValueChange={(v) => setAutoLevel(v as AutoLevel)}
+                      value={autoLevel}
                     >
-                      {generatePlan.isPending ? (
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                      ) : (
-                        <LayoutGrid className="mr-2 h-3 w-3" />
-                      )}
-                      Generate Plan
-                    </Button>
-                    <Button size="sm" type="submit">
-                      Start
-                    </Button>
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue placeholder="Auto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {autoOptions.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      onValueChange={(v) =>
+                        setMode(v as "sequential" | "parallel")
+                      }
+                      value={mode}
+                    >
+                      <SelectTrigger className="w-[110px]">
+                        <SelectValue placeholder="Mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sequential">Sequential</SelectItem>
+                        <SelectItem value="parallel">Parallel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex-1" />
+                    <div className="flex gap-2">
+                      <Button
+                        disabled={generatePlan.isPending}
+                        onClick={handleGenerate}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        {generatePlan.isPending ? (
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        ) : (
+                          <LayoutGrid className="mr-2 h-3 w-3" />
+                        )}
+                        Generate Plan
+                      </Button>
+                      <Button size="sm" type="submit">
+                        Start
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </form>
+                </form>
+              </startForm.AppForm>
             )}
           </div>
         )}

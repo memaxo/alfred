@@ -53,6 +53,13 @@ export function mockWorkflowRepo() {
   const listEventsByTypeMock = vi.fn().mockResolvedValue([]);
   const listEventsByTypePagedMock = vi.fn().mockResolvedValue([]);
   const countEventsByTypeMock = vi.fn();
+  class PostgresCheckpointStorage {
+    save() {}
+    load() {
+      return null;
+    }
+    delete() {}
+  }
 
   mock.module("@alfred/db/repo/workflow", () => ({
     createRun: createRunMock,
@@ -63,6 +70,7 @@ export function mockWorkflowRepo() {
     listEventsByType: listEventsByTypeMock,
     listEventsByTypePaged: listEventsByTypePagedMock,
     countEventsByType: countEventsByTypeMock,
+    PostgresCheckpointStorage,
   }));
 
   return {

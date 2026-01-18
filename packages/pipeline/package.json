@@ -9,6 +9,7 @@
     "./stages": "./src/stages/index.ts",
     "./observers": "./src/observers/index.ts",
     "./events": "./src/events.ts",
+    "./metrics": "./src/metrics.ts",
     "./schemas": "./src/schemas.ts",
     "./snapshot": "./src/snapshot.ts"
   },

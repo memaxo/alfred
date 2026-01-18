@@ -1,4 +1,5 @@
 import { useLiveQuery } from "@tanstack/react-db";
+import { useStore } from "@tanstack/react-form";
 import type { NodeProps } from "@xyflow/react";
 import { formatDistanceToNow } from "date-fns";
 import { Bell, CalendarClock, Loader2, Trash2 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   useLOD,
   WindowFrame,
 } from "@/components/windows/shared";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { useDesktopStore } from "@/store/desktop";
 
 const reminderWindowDataSchema = z.object({
@@ -85,43 +87,38 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
   const currentStatus = reminder?.status ?? "scheduled";
 
   const [mode, setMode] = useState<"view" | "edit">(isNew ? "edit" : "view");
-  const [draftTitle, setDraftTitle] = useState("");
-  const [draftDescription, setDraftDescription] = useState("");
-  const [draftDue, setDraftDue] = useState(defaultDueInput());
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
   const removeWindow = useDesktopStore((s) => s.removeWindow);
 
-  useEffect(() => {
-    if (reminder && mode === "view") {
-      setDraftTitle(reminder.title ?? "");
-      setDraftDescription(reminder.description ?? "");
-      setDraftDue(toLocalInput(reminder.due) || defaultDueInput());
-    }
-  }, [reminder, mode]);
-
-  useEffect(() => {
-    if (isNew) {
-      setMode("edit");
-    }
-  }, [isNew]);
-
-  const handleSave = useCallback(
-    (event?: React.FormEvent) => {
-      event?.preventDefault();
-
-      if (!draftTitle.trim()) {
-        toast.error("Title is required");
-        return;
-      }
-      if (!draftDue) {
-        toast.error("Due date is required");
-        return;
-      }
-
-      const dueDate = new Date(draftDue);
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const form = useAppForm({
+    defaultValues: {
+      title: reminder?.title ?? "",
+      description: reminder?.description ?? "",
+      due: toLocalInput(reminder?.due) || defaultDueInput(),
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: z.object({
+        title: z.string().refine((value) => value.trim().length > 0, {
+          message: "Title is required",
+        }),
+        description: z.string(),
+        due: z
+          .string()
+          .refine((value) => value.trim().length > 0, {
+            message: "Due date is required",
+          })
+          .refine((value) => !Number.isNaN(new Date(value).getTime()), {
+            message: "Invalid due date",
+          }),
+      }),
+    },
+    onSubmit: ({ value }) => {
+      const dueDate = new Date(value.due);
       if (Number.isNaN(dueDate.getTime())) {
         toast.error("Invalid due date");
         return;
@@ -132,24 +129,24 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
         if (isNew) {
           const newId = crypto.randomUUID();
           insertReminder({
-            title: draftTitle.trim(),
-            description: draftDescription.trim() || undefined,
+            title: value.title.trim(),
+            description: value.description.trim() || undefined,
             due: dueDate.toISOString(),
           });
           updateWindowData(id, {
             resourceRef: { type: "reminder", id: newId },
-            label: draftTitle.trim(),
+            label: value.title.trim(),
           });
           toast.success("Reminder created");
         } else if (resourceId) {
           deleteReminder(resourceId);
           insertReminder({
-            title: draftTitle.trim(),
-            description: draftDescription.trim() || undefined,
+            title: value.title.trim(),
+            description: value.description.trim() || undefined,
             due: dueDate.toISOString(),
           });
           updateWindowData(id, {
-            label: draftTitle.trim(),
+            label: value.title.trim(),
           });
           toast.success("Reminder updated");
         }
@@ -160,18 +157,25 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
         setIsSaving(false);
       }
     },
-    [
-      draftDescription,
-      draftDue,
-      draftTitle,
-      id,
-      insertReminder,
-      deleteReminder,
-      isNew,
-      resourceId,
-      updateWindowData,
-    ]
-  );
+  });
+
+  const values = useStore(form.store, (state) => state.values);
+
+  useEffect(() => {
+    if (reminder && mode === "view") {
+      form.reset({
+        title: reminder.title ?? "",
+        description: reminder.description ?? "",
+        due: toLocalInput(reminder.due) || defaultDueInput(),
+      });
+    }
+  }, [form, reminder, mode]);
+
+  useEffect(() => {
+    if (isNew) {
+      setMode("edit");
+    }
+  }, [isNew]);
 
   const handleDelete = useCallback(() => {
     if (isNew) {
@@ -211,18 +215,25 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
       removeWindow(id);
       return;
     }
-    setDraftTitle(reminder?.title ?? "");
-    setDraftDescription(reminder?.description ?? "");
-    setDraftDue(toLocalInput(reminder?.due) || defaultDueInput());
+    form.reset({
+      title: reminder?.title ?? "",
+      description: reminder?.description ?? "",
+      due: toLocalInput(reminder?.due) || defaultDueInput(),
+    });
     setMode("view");
-  }, [id, isNew, reminder, removeWindow]);
+  }, [form, id, isNew, reminder, removeWindow]);
 
   const enterEditMode = useCallback(() => {
+    form.reset({
+      title: reminder?.title ?? "",
+      description: reminder?.description ?? "",
+      due: toLocalInput(reminder?.due) || defaultDueInput(),
+    });
     setMode("edit");
-  }, []);
+  }, [form, reminder?.description, reminder?.due, reminder?.title]);
 
   const displayTitle =
-    reminder?.title?.trim() || draftTitle.trim() || "Reminder";
+    reminder?.title?.trim() || values.title.trim() || "Reminder";
 
   const dueLabel = useMemo(() => {
     const dueStr = reminder?.due;
@@ -268,60 +279,96 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
             <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
           </div>
         ) : mode === "edit" ? (
-          <form className="flex flex-col gap-3" onSubmit={handleSave}>
-            <Input
-              autoFocus
-              onChange={(e) => setDraftTitle(e.target.value)}
-              placeholder="Reminder title"
-              value={draftTitle}
-            />
-            <Textarea
-              className="min-h-[80px]"
-              onChange={(e) => setDraftDescription(e.target.value)}
-              placeholder="Description (optional)"
-              value={draftDescription}
-            />
-            <div className="flex items-center gap-2">
-              <CalendarClock className="h-4 w-4 text-biolum-dim" />
-              <Input
-                className="flex-1"
-                onChange={(e) => setDraftDue(e.target.value)}
-                type="datetime-local"
-                value={draftDue}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Button
-                className="text-red-500"
-                disabled={isDeleting}
-                onClick={handleDelete}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                {isNew ? "Discard" : "Delete"}
-              </Button>
-              <div className="flex gap-2">
+          <form.AppForm>
+            <form
+              className="flex flex-col gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void form.handleSubmit();
+              }}
+              ref={ref}
+            >
+              <form.AppField name="title">
+                {(field) => (
+                  <Input
+                    aria-invalid={field.state.meta.errors.length > 0}
+                    autoFocus
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Reminder title"
+                    value={field.state.value}
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="description">
+                {(field) => (
+                  <Textarea
+                    className="min-h-[80px]"
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Description (optional)"
+                    value={field.state.value}
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="due">
+                {(field) => (
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4 text-biolum-dim" />
+                    <Input
+                      aria-invalid={field.state.meta.errors.length > 0}
+                      className="flex-1"
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      type="datetime-local"
+                      value={field.state.value}
+                    />
+                  </div>
+                )}
+              </form.AppField>
+              <form.Subscribe selector={(state) => state.errorMap}>
+                {(errorMap) =>
+                  errorMap.onSubmit?.title || errorMap.onSubmit?.due ? (
+                    <p className="text-destructive text-sm">
+                      {String(errorMap.onSubmit.title ?? errorMap.onSubmit.due)}
+                    </p>
+                  ) : null
+                }
+              </form.Subscribe>
+              <div className="flex items-center justify-between">
                 <Button
-                  onClick={handleCancel}
+                  className="text-red-500"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
                   size="sm"
                   type="button"
                   variant="ghost"
                 >
-                  Cancel
+                  {isNew ? "Discard" : "Delete"}
                 </Button>
-                <Button disabled={isSaving} size="sm" type="submit">
-                  {isSaving ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving
-                    </span>
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCancel}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    Cancel
+                  </Button>
+                  <Button disabled={isSaving} size="sm" type="submit">
+                    {isSaving ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving
+                      </span>
+                    ) : (
+                      "Save"
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </form.AppForm>
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">

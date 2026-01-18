@@ -10,12 +10,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Globe, Loader2, Plus, Search, Tag } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { PaneLayout } from "@/components/pane-layout";
 import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_protected/book")({
@@ -84,126 +86,203 @@ function toIsoString(value: Date | string | null | undefined): string | null {
  * Form for creating new bookmarks
  */
 function BookmarkCreateForm() {
-  const [url, setUrl] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
-
   const utils = trpc.useUtils();
   const createBookmark = trpc.book.create.useMutation({
     onSuccess: async () => {
       toast.success("Bookmark saved");
       await utils.book.list.invalidate();
-      setUrl("");
-      setTitle("");
-      setDescription("");
-      setTags("");
     },
     onError: (error) => {
       toast.error(error.message ?? "Failed to save bookmark");
     },
   });
 
-  const handleSubmit = useCallback(
-    (event: React.FormEvent) => {
-      event.preventDefault();
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const schema = z.object({
+    url: z
+      .string()
+      .refine((value) => value.trim().length > 0, {
+        message: "URL is required",
+      })
+      .refine((value) => normalizeUrl(value) !== null, {
+        message: "Please enter a valid URL",
+      }),
+    title: z.string(),
+    tags: z.string(),
+    description: z.string(),
+  });
 
-      const trimmedUrl = url.trim();
-      if (!trimmedUrl) {
-        toast.error("URL is required");
-        return;
-      }
-
-      const normalizedUrl = normalizeUrl(trimmedUrl);
+  const form = useAppForm({
+    defaultValues: {
+      url: "",
+      title: "",
+      tags: "",
+      description: "",
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: schema,
+    },
+    onSubmit: ({ value }) => {
+      const normalizedUrl = normalizeUrl(value.url);
       if (!normalizedUrl) {
         toast.error("Please enter a valid URL");
         return;
       }
-
-      const tagList = parseTags(tags);
-
-      createBookmark.mutate({
-        url: normalizedUrl,
-        title: title.trim() || undefined,
-        description: description.trim() || undefined,
-        ...(tagList ? { tags: tagList } : {}),
-      });
+      const tagList = parseTags(value.tags);
+      createBookmark.mutate(
+        {
+          url: normalizedUrl,
+          title: value.title.trim() || undefined,
+          description: value.description.trim() || undefined,
+          ...(tagList ? { tags: tagList } : {}),
+        },
+        {
+          onSuccess: () => {
+            form.reset();
+          },
+        }
+      );
     },
-    [createBookmark, url, title, description, tags]
-  );
+  });
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="space-y-2">
-        <Label htmlFor="url">URL</Label>
-        <div className="relative">
-          <Globe className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
-          <Input
-            className="pl-9"
-            id="url"
-            onInput={(event) => setUrl(event.currentTarget.value)}
-            placeholder="example.com"
-            required
-            type="text"
-            value={url}
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="title">Title (optional)</Label>
-          <Input
-            id="title"
-            onInput={(event) => setTitle(event.currentTarget.value)}
-            placeholder="Resource Title"
-            value={title}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="tags">Tags (optional, comma-separated)</Label>
-          <div className="relative">
-            <Tag className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
-            <Input
-              className="pl-9"
-              id="tags"
-              onInput={(event) => setTags(event.currentTarget.value)}
-              placeholder="research, ai, tech"
-              value={tags}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description (optional)</Label>
-        <Textarea
-          className="min-h-[80px]"
-          id="description"
-          onInput={(event) => setDescription(event.currentTarget.value)}
-          placeholder="What is this bookmark for?"
-          value={description}
-        />
-      </div>
-
-      <Button
-        className="w-full rounded-full"
-        disabled={createBookmark.isPending}
-        type="submit"
+    <form.AppForm>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void form.handleSubmit();
+        }}
+        ref={ref}
       >
-        {createBookmark.isPending ? (
-          <span className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Saving…
-          </span>
-        ) : (
-          <>
-            <Plus className="mr-1 h-4 w-4" />
-            Add Bookmark
-          </>
-        )}
-      </Button>
-    </form>
+        <form.AppField name="url">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor={field.name}>URL</Label>
+              <div className="relative">
+                <Globe className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
+                <Input
+                  aria-invalid={field.state.meta.errors.length > 0}
+                  className="pl-9"
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="example.com"
+                  type="text"
+                  value={field.state.value}
+                />
+              </div>
+              {field.state.meta.errors.map((error) => (
+                <p className="text-destructive text-sm" key={String(error)}>
+                  {String(error?.message ?? error)}
+                </p>
+              ))}
+            </div>
+          )}
+        </form.AppField>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <form.AppField name="title">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Title (optional)</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Resource Title"
+                  value={field.state.value}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p className="text-destructive text-sm" key={String(error)}>
+                    {String(error?.message ?? error)}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.AppField>
+          <form.AppField name="tags">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>
+                  Tags (optional, comma-separated)
+                </Label>
+                <div className="relative">
+                  <Tag className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
+                  <Input
+                    className="pl-9"
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="research, ai, tech"
+                    value={field.state.value}
+                  />
+                </div>
+                {field.state.meta.errors.map((error) => (
+                  <p className="text-destructive text-sm" key={String(error)}>
+                    {String(error?.message ?? error)}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.AppField>
+        </div>
+
+        <form.AppField name="description">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor={field.name}>Description (optional)</Label>
+              <Textarea
+                className="min-h-[80px]"
+                id={field.name}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="What is this bookmark for?"
+                value={field.state.value}
+              />
+              {field.state.meta.errors.map((error) => (
+                <p className="text-destructive text-sm" key={String(error)}>
+                  {String(error?.message ?? error)}
+                </p>
+              ))}
+            </div>
+          )}
+        </form.AppField>
+
+        <form.Subscribe
+          selector={(state) => ({
+            canSubmit: state.canSubmit,
+            isSubmitting: state.isSubmitting,
+          })}
+        >
+          {({ canSubmit, isSubmitting }) => (
+            <Button
+              className="w-full rounded-full"
+              disabled={!canSubmit || isSubmitting || createBookmark.isPending}
+              type="submit"
+            >
+              {createBookmark.isPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving…
+                </span>
+              ) : (
+                <>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Bookmark
+                </>
+              )}
+            </Button>
+          )}
+        </form.Subscribe>
+      </form>
+    </form.AppForm>
   );
 }
 

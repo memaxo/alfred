@@ -16,12 +16,14 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { PaneLayout } from "@/components/pane-layout";
 import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
@@ -61,26 +63,50 @@ function formatRemaining(seconds: number): string {
 }
 
 function TimerCreateForm() {
-  const [minutes, setMinutes] = useState("25");
-  const [label, setLabel] = useState("");
-
   const utils = trpc.useUtils();
   const createTimer = trpc.timer.create.useMutation({
     onSuccess: async () => {
       toast.success("Timer started");
       await utils.timer.active.invalidate();
-      setMinutes("25");
-      setLabel("");
     },
     onError: (error) => {
       toast.error(error.message ?? "Failed to start timer");
     },
   });
 
-  const handleSubmit = useCallback(
-    (event: React.FormEvent) => {
-      event.preventDefault();
-      const minutesValue = Number(minutes);
+  const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
+  const schema = z.object({
+    minutes: z
+      .string()
+      .refine((value) => value.trim().length > 0, {
+        message: "Enter a duration in minutes",
+      })
+      .refine(
+        (value) => {
+          const n = Number(value);
+          return Number.isFinite(n) && n > 0;
+        },
+        {
+          message: "Enter a positive duration in minutes",
+        }
+      )
+      .refine((value) => Number(value) <= 1440, {
+        message: "Maximum duration is 24 hours (1440 minutes)",
+      }),
+    label: z.string(),
+  });
+
+  const form = useAppForm({
+    defaultValues: {
+      minutes: "25",
+      label: "",
+    },
+    onSubmitInvalid,
+    validators: {
+      onSubmit: schema,
+    },
+    onSubmit: ({ value }) => {
+      const minutesValue = Number(value.minutes);
       if (!Number.isFinite(minutesValue) || minutesValue <= 0) {
         toast.error("Enter a positive duration in minutes");
         return;
@@ -89,58 +115,107 @@ function TimerCreateForm() {
         toast.error("Maximum duration is 24 hours (1440 minutes)");
         return;
       }
-      createTimer.mutate({
-        duration: Math.round(minutesValue * 60),
-        label: label.trim() || undefined,
-      });
+      createTimer.mutate(
+        {
+          duration: Math.round(minutesValue * 60),
+          label: value.label.trim() || undefined,
+        },
+        {
+          onSuccess: () => {
+            form.reset();
+          },
+        }
+      );
     },
-    [createTimer, label, minutes]
-  );
+  });
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="flex gap-3">
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="duration">Duration (minutes)</Label>
-          <Input
-            id="duration"
-            max={1440}
-            min={1}
-            onChange={(event) => setMinutes(event.target.value)}
-            placeholder="25"
-            type="number"
-            value={minutes}
-          />
-        </div>
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="label">Label (optional)</Label>
-          <Input
-            id="label"
-            maxLength={128}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder="Focus session"
-            value={label}
-          />
-        </div>
-      </div>
-      <Button
-        className="w-full rounded-full"
-        disabled={createTimer.isPending}
-        type="submit"
+    <form.AppForm>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void form.handleSubmit();
+        }}
+        ref={ref}
       >
-        {createTimer.isPending ? (
-          <span className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Starting…
-          </span>
-        ) : (
-          <>
-            <Play className="mr-1 h-4 w-4" />
-            Start Timer
-          </>
-        )}
-      </Button>
-    </form>
+        <div className="flex gap-3">
+          <form.AppField name="minutes">
+            {(field) => (
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="duration">Duration (minutes)</Label>
+                <Input
+                  aria-invalid={field.state.meta.errors.length > 0}
+                  id="duration"
+                  max={1440}
+                  min={1}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder="25"
+                  type="number"
+                  value={field.state.value}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p className="text-destructive text-sm" key={String(error)}>
+                    {String(error?.message ?? error)}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.AppField>
+          <form.AppField name="label">
+            {(field) => (
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="label">Label (optional)</Label>
+                <Input
+                  aria-invalid={field.state.meta.errors.length > 0}
+                  id="label"
+                  maxLength={128}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder="Focus session"
+                  value={field.state.value}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p className="text-destructive text-sm" key={String(error)}>
+                    {String(error?.message ?? error)}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.AppField>
+        </div>
+        <form.Subscribe
+          selector={(state) => ({
+            canSubmit: state.canSubmit,
+            isSubmitting: state.isSubmitting,
+          })}
+        >
+          {({ canSubmit, isSubmitting }) => (
+            <Button
+              className="w-full rounded-full"
+              disabled={!canSubmit || isSubmitting || createTimer.isPending}
+              type="submit"
+            >
+              {createTimer.isPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Starting…
+                </span>
+              ) : (
+                <>
+                  <Play className="mr-1 h-4 w-4" />
+                  Start Timer
+                </>
+              )}
+            </Button>
+          )}
+        </form.Subscribe>
+      </form>
+    </form.AppForm>
   );
 }
 
