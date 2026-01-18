@@ -292,7 +292,9 @@ export class EmbedPool {
 
     for (let i = 1; i < this.processes.length; i++) {
       const worker = this.processes[i];
-      if (!worker) continue;
+      if (!worker) {
+        continue;
+      }
 
       const health = worker.getHealth();
 

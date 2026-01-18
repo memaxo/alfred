@@ -89,7 +89,7 @@ async function safeAuthHandler(request: Request): Promise<Response> {
       incomingOrigin.length > 0;
 
     const effectiveRequest = (() => {
-      if (!shouldStripOrigin && !normalizedExpoOrigin) {
+      if (!(shouldStripOrigin || normalizedExpoOrigin)) {
         return request;
       }
       const cloned = request.clone();
@@ -110,7 +110,10 @@ async function safeAuthHandler(request: Request): Promise<Response> {
       const headers = new Headers(res.headers);
       headers.set("x-alfred-origin", incomingOrigin ?? "null");
       headers.set("x-alfred-expo-origin", incomingExpoOrigin ?? "null");
-      headers.set("x-alfred-expo-origin-normalized", normalizedExpoOrigin ?? "null");
+      headers.set(
+        "x-alfred-expo-origin-normalized",
+        normalizedExpoOrigin ?? "null"
+      );
       return new Response(res.body, { status: res.status, headers });
     }
 

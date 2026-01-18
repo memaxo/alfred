@@ -591,6 +591,18 @@
         "typescript": "*",
       },
     },
+    "packages/summarize": {
+      "name": "@alfred/summarize",
+      "version": "0.0.0",
+      "dependencies": {
+        "@alfred/logger": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@alfred/tsconfig": "workspace:*",
+        "typescript": "^5.7.2",
+      },
+    },
     "packages/test-kit": {
       "name": "@alfred/test-kit",
       "version": "0.0.0",
@@ -789,6 +801,8 @@
     "@alfred/runtime": ["@alfred/runtime@workspace:packages/runtime"],
 
     "@alfred/sense": ["@alfred/sense@workspace:packages/sense"],
+
+    "@alfred/summarize": ["@alfred/summarize@workspace:packages/summarize"],
 
     "@alfred/test-kit": ["@alfred/test-kit@workspace:packages/test-kit"],
 

@@ -177,12 +177,7 @@ export type VoiceSubscriptionOptions = {
 export function setupVoiceSubscription(
   options: VoiceSubscriptionOptions
 ): void {
-  const {
-    manager,
-    store,
-    pollingInterval = 3000,
-    mode,
-  } = options;
+  const { manager, store, pollingInterval = 3000, mode } = options;
 
   addPollingWithFallback({
     manager,

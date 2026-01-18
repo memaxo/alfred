@@ -38,7 +38,10 @@ function WorkflowRunRoute() {
     {
       enabled: isResuming,
       onData: (event) => {
-        if (event.type === "pipeline:complete" || event.type === "pipeline:failed") {
+        if (
+          event.type === "pipeline:complete" ||
+          event.type === "pipeline:failed"
+        ) {
           setIsResuming(false);
           runQuery.refetch();
           eventsQuery.refetch();

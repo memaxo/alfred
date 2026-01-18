@@ -397,7 +397,9 @@ describe("Pipeline Resume Integration", () => {
 
       const stageEnters = resumedEvents
         .filter((e) => e.type === "stage:enter")
-        .map((e) => (e as Extract<PipelineEvent, { type: "stage:enter" }>).stage);
+        .map(
+          (e) => (e as Extract<PipelineEvent, { type: "stage:enter" }>).stage
+        );
 
       expect(stageEnters[0]).toBe("schedule");
       expect(stageEnters).not.toContain("init");

@@ -1,0 +1,22 @@
+{
+  "name": "@alfred/rerank",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cohere": "./src/cohere.ts",
+    "./qwen3vl": "./src/client.ts",
+    "./resolve": "./src/resolve.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@alfred/logger": "workspace:*",
+    "@alfred/type": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.3"
+  }
+}

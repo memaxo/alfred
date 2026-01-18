@@ -467,3 +467,141 @@ export function createSnapshot(
     createdAt: new Date(state.lastEventAt),
   };
 }
+
+/**
+ * Get the previous stage in the pipeline order.
+ */
+export function getPreviousStage(stage: StageName): StageName | null {
+  const index = STAGE_ORDER.indexOf(stage);
+  if (index <= 0) {
+    return null;
+  }
+  return STAGE_ORDER[index - 1] as StageName;
+}
+
+/**
+ * Get the next stage in the pipeline order.
+ */
+export function getNextStage(stage: StageName): StageName | null {
+  const index = STAGE_ORDER.indexOf(stage);
+  if (index === -1 || index >= STAGE_ORDER.length - 1) {
+    return null;
+  }
+  return STAGE_ORDER[index + 1] as StageName;
+}
+
+/**
+ * Extract the output of a specific stage from a snapshot.
+ * Returns the stage output if it exists, null otherwise.
+ *
+ * @param snapshot - Pipeline snapshot
+ * @param stage - Stage whose output to extract
+ * @returns Stage output or null if not available
+ */
+export function extractStageOutput<T = unknown>(
+  snapshot: PipelineSnapshot,
+  stage: StageName
+): T | null {
+  const ctxMap = new Map(snapshot.contextEntries);
+  const output = ctxMap.get(`${stage}Output`);
+  if (output === undefined) {
+    return null;
+  }
+  return fromSerializable(output as SerializableValue) as T;
+}
+
+/**
+ * Extract typed stage input from a snapshot.
+ * The input for a stage is the output of the previous stage.
+ *
+ * @param snapshot - Pipeline snapshot
+ * @param stage - Stage whose input to extract
+ * @returns Input for the stage (previous stage's output) or null
+ */
+export function extractStageInput<T = unknown>(
+  snapshot: PipelineSnapshot,
+  stage: StageName
+): T | null {
+  const previousStage = getPreviousStage(stage);
+  if (!previousStage) {
+    // First stage (init) - input is the PipelineInput, not stored in context
+    return null;
+  }
+  return extractStageOutput<T>(snapshot, previousStage);
+}
+
+/**
+ * Options for creating a PipelineContext from a snapshot.
+ */
+export type CreateContextFromSnapshotOptions = {
+  /** Function to emit pipeline events */
+  emit: (event: PipelineEvent) => void;
+  /** Optional abort signal for cancellation */
+  signal?: AbortSignal;
+  /** Pipeline configuration override */
+  config?: Partial<import("./pipeline").PipelineConfig>;
+};
+
+/**
+ * Create a minimal PipelineContext from a snapshot for single-stage execution.
+ * Useful for resuming execution or running individual stages.
+ *
+ * @param snapshot - Pipeline snapshot to reconstruct context from
+ * @param options - Context creation options
+ * @returns Reconstructed PipelineContext
+ */
+export function createContextFromSnapshot(
+  snapshot: PipelineSnapshot,
+  options: CreateContextFromSnapshotOptions
+): import("./pipeline").PipelineContext {
+  const ctxMap = new Map(snapshot.contextEntries);
+
+  // Extract core context values
+  const workspace =
+    (ctxMap.get("workspace") as string | undefined) ?? process.cwd();
+  const userId = (ctxMap.get("userId") as string | undefined) ?? "";
+
+  // Import createPipelineContext dynamically to avoid circular deps
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createPipelineContext } = require("./context") as {
+    createPipelineContext: typeof import("./context").createPipelineContext;
+  };
+  const { DEFAULT_CONFIG } = require("./pipeline") as {
+    DEFAULT_CONFIG: import("./pipeline").PipelineConfig;
+  };
+
+  const config = { ...DEFAULT_CONFIG, ...options.config };
+
+  return createPipelineContext({
+    runId: snapshot.runId,
+    requirement: snapshot.requirement,
+    workspace,
+    userId,
+    config,
+    signal: options.signal,
+    emit: options.emit,
+    initialContext: snapshot.contextEntries,
+    emitContextEvents: true,
+  });
+}
+
+/**
+ * Check if a snapshot has completed a specific stage.
+ */
+export function hasCompletedStage(
+  snapshot: PipelineSnapshot,
+  stage: StageName
+): boolean {
+  const stageIndex = STAGE_ORDER.indexOf(stage);
+  return snapshot.lastCompletedStageIndex >= stageIndex;
+}
+
+/**
+ * Get the stage to resume from (the next uncompleted stage).
+ */
+export function getResumeStage(snapshot: PipelineSnapshot): StageName | null {
+  if (snapshot.lastCompletedStageIndex >= STAGE_ORDER.length - 1) {
+    return null; // All stages completed
+  }
+  return STAGE_ORDER[snapshot.lastCompletedStageIndex + 1] as StageName;
+}

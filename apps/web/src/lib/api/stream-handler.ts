@@ -30,7 +30,9 @@ type NormalizedMessagesResult =
   | { ok: true; messages: UIMessage[] }
   | { ok: false; issues: z.ZodIssue[] };
 
-function normalizeUiRole(role: unknown): "assistant" | "system" | "user" | null {
+function normalizeUiRole(
+  role: unknown
+): "assistant" | "system" | "user" | null {
   if (role === "tool") {
     // UIMessage roles do not include "tool"; represent legacy tool messages as assistant text.
     return "assistant";
@@ -634,6 +636,7 @@ async function persistMessages({
     try {
       await conversationRepo.createMessage(userId, conversationId, message);
       persisted += 1;
+      existingMessageIds.add(message.id);
     } catch (error) {
       logger.warn("conversation_message_persist_failed", {
         conversationId,
@@ -641,7 +644,6 @@ async function persistMessages({
         error: error instanceof Error ? error.message : String(error),
       });
     }
-    existingMessageIds.add(message.id);
   }
   return persisted;
 }

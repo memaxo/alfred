@@ -3,10 +3,10 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { workflowInput } from "@alfred/agent/workflow/schema";
 import type { PipelineEvent } from "@alfred/pipeline";
 import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
 import { PipelineEventQueueObserver } from "@alfred/pipeline/observers";
-import { workflowInput } from "@alfred/agent/workflow/schema";
 
 type RunArgs = {
   requirement: string;

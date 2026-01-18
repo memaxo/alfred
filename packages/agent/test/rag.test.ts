@@ -152,7 +152,9 @@ describe("RAG Tools", () => {
 
     it("ingests with imageUrl for multimodal embedding", async () => {
       const documentId = "doc-multimodal";
-      const chunks = [{ id: "chunk-1", content: "image description", order: 0 }];
+      const chunks = [
+        { id: "chunk-1", content: "image description", order: 0 },
+      ];
 
       mockIngestWithOptions.mockResolvedValue(documentId);
       mockGetChunks.mockResolvedValue(chunks);

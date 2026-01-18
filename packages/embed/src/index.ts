@@ -6,26 +6,25 @@
 import { EmbedPool } from "./pool.js";
 import type { QueueStats } from "./queue.js";
 
-export { EmbedPool, type PoolConfig } from "./pool.js";
-export { EmbedProcess } from "./process.js";
-export {
-  EmbedQueue,
-  type QueueConfig,
-  type QueuedRequest,
-  type QueueStats,
-} from "./queue.js";
-
 // Configuration
 export {
   type FullEmbedConfig,
   getEmbedConfig,
   validateConfig,
 } from "./config.js";
-
+export { EMBEDDING_DIM } from "./dim.js";
+// Embedding system initialization
+export {
+  type EmbedInitOptions,
+  getDefaultModelId,
+  initEmbedding,
+  isEmbeddingInitialized,
+  shutdownEmbedding,
+} from "./init.js";
 // Metrics
 export {
-  embedBatchSize,
   embedBatchesProcessed,
+  embedBatchSize,
   embedProcessingMs,
   embedQueueCapacity,
   embedQueueLength,
@@ -42,6 +41,15 @@ export {
   updateQueueMetrics,
   updateWorkerMetrics,
 } from "./metrics.js";
+export { EmbedPool, type PoolConfig } from "./pool.js";
+export { EmbedProcess } from "./process.js";
+// Embedding providers
+export {
+  createKalmProvider,
+  createQwenProvider,
+  KalmProvider,
+  QwenProvider,
+} from "./providers/index.js";
 // Int8 quantization for 4x storage reduction with 97%+ accuracy retention
 export {
   computeScale,
@@ -57,46 +65,32 @@ export {
   serializeQuantized,
   storageRatio,
 } from "./quantize.js";
-export type {
-  EmbedConfig,
-  EmbedRequest,
-  EmbedResponse,
-  ProcessHealth,
-} from "./types.js";
-
+export {
+  EmbedQueue,
+  type QueueConfig,
+  type QueuedRequest,
+  type QueueStats,
+} from "./queue.js";
 // Embedding registry for heterogeneous model support
 export {
   type EmbeddingCapabilities,
   type EmbeddingInput,
   type EmbeddingModelConfig,
   type EmbeddingProvider,
-  type EmbeddingResult,
   EmbeddingRegistry,
+  type EmbeddingResult,
   getRegistry,
   MODEL_CONFIGS,
   MODEL_IDS,
   type ModelId,
   resetRegistry,
 } from "./registry.js";
-
-// Embedding providers
-export {
-  createKalmProvider,
-  createQwenProvider,
-  KalmProvider,
-  QwenProvider,
-} from "./providers/index.js";
-
-// Embedding system initialization
-export {
-  type EmbedInitOptions,
-  getDefaultModelId,
-  initEmbedding,
-  isEmbeddingInitialized,
-  shutdownEmbedding,
-} from "./init.js";
-
-export { EMBEDDING_DIM } from "./dim.js";
+export type {
+  EmbedConfig,
+  EmbedRequest,
+  EmbedResponse,
+  ProcessHealth,
+} from "./types.js";
 
 // Singleton pool instance
 let pool: EmbedPool | null = null;

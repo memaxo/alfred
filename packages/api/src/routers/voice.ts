@@ -584,7 +584,7 @@ export const voiceRouter = router({
 
             // STT: Transcribe the audio back
             // Note: We need to resample from TTS output (24kHz) to STT input (16kHz)
-            const ttsSampleRate = ttsResult.sampleRate ?? 24000;
+            const ttsSampleRate = ttsResult.sampleRate ?? 24_000;
 
             // Import audio utilities for resampling
             const { decodeToPCM16 } = await import("@alfred/voice/audio/codec");
@@ -600,7 +600,7 @@ export const voiceRouter = router({
               !mimeType.includes("/")
             ) {
               // Resample if needed
-              if (ttsSampleRate !== 16000) {
+              if (ttsSampleRate !== 16_000) {
                 const buffer = Buffer.from(audioBase64, "base64");
                 const pcm = new Int16Array(
                   buffer.buffer,
@@ -609,7 +609,7 @@ export const voiceRouter = router({
                 );
 
                 // Simple linear interpolation resampling
-                const ratio = ttsSampleRate / 16000;
+                const ratio = ttsSampleRate / 16_000;
                 const newLength = Math.floor(pcm.length / ratio);
                 const resampled = new Int16Array(newLength);
 

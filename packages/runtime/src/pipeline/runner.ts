@@ -148,7 +148,10 @@ export class PhaseRunner {
           logger.info("pipeline_phase_success", { ...ids, phaseId });
           runtimePhasesTotal.inc({ phase: phaseId, status: "success" });
           yield { _: "step-complete", phase: phaseId } as any;
-          currentInput = result.data;
+          // Treat undefined phase outputs as "no change" to the carried input.
+          // Many phases are side-effecting and return `void` while still expecting
+          // subsequent phases to receive the original RuntimeInput.
+          currentInput = result.data === undefined ? currentInput : result.data;
           const nextId = this.nextPhaseId(phaseId);
           if (!nextId) {
             return;

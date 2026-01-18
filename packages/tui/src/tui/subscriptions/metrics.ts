@@ -160,12 +160,7 @@ export type MetricsSubscriptionOptions = {
 export function setupMetricsSubscription(
   options: MetricsSubscriptionOptions
 ): void {
-  const {
-    manager,
-    store,
-    pollingInterval = 2000,
-    mode,
-  } = options;
+  const { manager, store, pollingInterval = 2000, mode } = options;
 
   let previousState: MetricsState | undefined;
 

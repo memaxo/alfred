@@ -43,7 +43,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b --clean && tsc -b",
     "dev": "tsc -b -w",
     "lint": "biome check .",
     "check-types": "tsc --noEmit",

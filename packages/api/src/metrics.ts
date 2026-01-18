@@ -60,6 +60,23 @@ export {
   graphRagEmptyTotal,
   graphRagHitsTotal,
 } from "@alfred/db/metrics";
+// Embedding metrics (queue, pool, batch processing)
+export {
+  embedBatchesProcessed,
+  embedBatchSize,
+  embedProcessingMs,
+  embedQueueCapacity,
+  embedQueueLength,
+  embedQueueWaitMs,
+  embedRequestsDropped,
+  embedRequestsProcessed,
+  embedRequestsQueued,
+  embedRetries,
+  embedWorkersActive,
+  embedWorkersBusy,
+  embedWorkersError,
+  getEmbedMetricsRegistry,
+} from "@alfred/embed";
 export * from "@alfred/history";
 export {
   historyContextTierDropsTotal,
@@ -122,23 +139,6 @@ export {
   voiceWebSocketUpgradeDurationSeconds,
   voiceWebSocketUpgradeRateLimitHitsTotal,
 } from "@alfred/voice/metrics";
-// Embedding metrics (queue, pool, batch processing)
-export {
-  embedBatchesProcessed,
-  embedBatchSize,
-  embedProcessingMs,
-  embedQueueCapacity,
-  embedQueueLength,
-  embedQueueWaitMs,
-  embedRequestsDropped,
-  embedRequestsProcessed,
-  embedRequestsQueued,
-  embedRetries,
-  embedWorkersActive,
-  embedWorkersBusy,
-  embedWorkersError,
-  getEmbedMetricsRegistry,
-} from "@alfred/embed";
 // API-local metrics
 export * from "./metrics/index";
 

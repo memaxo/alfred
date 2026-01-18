@@ -153,7 +153,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
                       checked={todo.completed}
                       onCheckedChange={() =>
                         toggleTodo({
-                          id: todo.id as number,
+                          id: todo.id,
                           completed: !todo.completed,
                         })
                       }

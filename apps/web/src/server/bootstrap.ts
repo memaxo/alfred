@@ -23,10 +23,7 @@ import {
   startReminderScheduler,
   stopReminderScheduler,
 } from "@alfred/api/scheduler/remind";
-import {
-  initEmbedding,
-  shutdownEmbedding,
-} from "@alfred/embed";
+import { initEmbedding, shutdownEmbedding } from "@alfred/embed";
 import { logger } from "@alfred/logger";
 import {
   getEmbedDefaultModel,

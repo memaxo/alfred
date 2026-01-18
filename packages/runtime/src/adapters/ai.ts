@@ -269,7 +269,7 @@ export class AISDKAdapter {
         ? model
         : typeof model === "object" && model !== null
           ? ((model as { id?: unknown }).id ??
-              (model as { modelId?: unknown }).modelId)
+            (model as { modelId?: unknown }).modelId)
           : undefined;
 
     if (typeof raw !== "string" || raw.trim().length === 0) {

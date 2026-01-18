@@ -51,3 +51,8 @@
 16. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
 
 17. **Autonomy and Logic.** Assert monotonic reactions, zero-effect on zero-reliability, and `[0,1]` clamps in cognitive suites.
+
+18. **Environment variable isolation.** Setting `process.env` at test file top-level persists across all test files in the same Bun process. For tests requiring specific env vars:
+    - Use `beforeAll`/`afterAll` to set and restore env vars within the test file
+    - Or use file isolation (`ALFRED_TEST_ISOLATE_FILES=1`) when env changes must not leak
+    - For hybrid packages with offline modes, create separate test files for each mode rather than toggling env vars

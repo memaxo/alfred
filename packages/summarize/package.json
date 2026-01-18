@@ -1,0 +1,34 @@
+{
+  "name": "@alfred/summarize",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./process": {
+      "types": "./dist/process.d.ts",
+      "default": "./src/process.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "lint": "biome check .",
+    "check-types": "tsc --noEmit",
+    "typecheck": "tsc -b --pretty false",
+    "python:install": "uv sync",
+    "python:check": "uv run python -c \"from python.compressor import LongCodeZip; print('OK')\""
+  },
+  "dependencies": {
+    "@alfred/logger": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

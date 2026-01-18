@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import type { Obligation } from "@alfred/type";
 import type { PipelineEvent } from "@alfred/pipeline";
+import type { Obligation } from "@alfred/type";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import "./utils/mock-metrics";
 import { toObservable } from "./utils/stream";

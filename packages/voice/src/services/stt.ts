@@ -216,7 +216,10 @@ export async function clearStreamingCache(
  * Release session affinity.
  * Call this when a voice session ends to free up resources.
  */
-export function releaseStreamingSession(pool: STTPool, sessionId: string): void {
+export function releaseStreamingSession(
+  pool: STTPool,
+  sessionId: string
+): void {
   pool.releaseSession(sessionId);
 }
 

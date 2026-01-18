@@ -40,6 +40,30 @@ export type {
 export { DEFAULT_CONFIG, STAGE_ORDER } from "./pipeline";
 export { type PipelineObserver, PipelineRunner } from "./runner";
 export type {
+  ContextBundle,
+  ExecutePhaseInput,
+  LinearInput,
+  PhaseStatus,
+  PipelineSnapshotInfo,
+  PlanPhaseInput,
+  PlanPhaseOutput,
+  SubTask,
+  WavePlan,
+} from "./schemas";
+// Phase API schemas
+export {
+  contextBundleSchema,
+  executePhaseInputSchema,
+  linearInputSchema,
+  phaseStatusSchema,
+  pipelineSnapshotSchema,
+  planPhaseInputSchema,
+  planPhaseOutputSchema,
+  subTaskSchema,
+  wavePlanSchema,
+} from "./schemas";
+export type {
+  CreateContextFromSnapshotOptions,
   PipelineSnapshot,
   PipelineStatus,
   SerializableValue,
@@ -47,9 +71,16 @@ export type {
 export {
   assertSerializable,
   contextEntriesToMap,
+  createContextFromSnapshot,
   createInitialSnapshot,
   createSnapshot,
+  extractStageInput,
+  extractStageOutput,
   fromSerializable,
+  getNextStage,
+  getPreviousStage,
+  getResumeStage,
+  hasCompletedStage,
   isSerializable,
   mapToContextEntries,
   PipelineReconstructor,

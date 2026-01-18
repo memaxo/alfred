@@ -34,9 +34,13 @@ export class InitStage implements PipelineStage<PipelineInput, InitOutput> {
 
     // Initialize Linear integration if configured
     const linearProjectId =
-      input.linear && ctx.config.enableLinearSync ? input.linear.space : undefined;
+      input.linear && ctx.config.enableLinearSync
+        ? input.linear.space
+        : undefined;
     const linearIssueId =
-      input.linear && ctx.config.enableLinearSync ? input.linear.issueId : undefined;
+      input.linear && ctx.config.enableLinearSync
+        ? input.linear.issueId
+        : undefined;
 
     if (input.linear && ctx.config.enableLinearSync) {
       ctx.set("linearIssueId", linearIssueId ?? null);

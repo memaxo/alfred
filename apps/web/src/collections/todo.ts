@@ -10,7 +10,7 @@ type TodoInput = {
 };
 
 type TodoToggleInput = {
-  id: number;
+  id: number | string;
   completed: boolean;
 };
 
@@ -69,10 +69,13 @@ export function createTodoCollection(
       onUpdate: async ({ transaction }) => {
         const items = transaction.mutations.map((m) => m.modified);
         for (const item of items) {
-          await trpcClient.todo.toggle.mutate({
-            id: Number(item.id),
-            completed: item.completed,
-          });
+          const serverId = parseServerTodoId(item.id);
+          if (serverId !== null) {
+            await trpcClient.todo.toggle.mutate({
+              id: serverId,
+              completed: item.completed,
+            });
+          }
         }
         return { refetch: true };
       },
@@ -115,10 +118,13 @@ export function createTodoCollection(
       return input;
     },
     mutationFn: async (input) => {
-      await trpcClient.todo.toggle.mutate({
-        id: input.id,
-        completed: input.completed,
-      });
+      const serverId = parseServerTodoId(input.id);
+      if (serverId !== null) {
+        await trpcClient.todo.toggle.mutate({
+          id: serverId,
+          completed: input.completed,
+        });
+      }
       await collection.utils.refetch();
     },
   });

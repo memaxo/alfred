@@ -155,12 +155,7 @@ export type CognitiveSubscriptionOptions = {
 export function setupCognitiveSubscription(
   options: CognitiveSubscriptionOptions
 ): void {
-  const {
-    manager,
-    store,
-    pollingInterval = 2000,
-    mode,
-  } = options;
+  const { manager, store, pollingInterval = 2000, mode } = options;
 
   addPollingWithFallback({
     manager,

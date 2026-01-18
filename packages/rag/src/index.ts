@@ -8,11 +8,11 @@ export {
   embedMany,
   embedManyMultimodal,
   getCurrentModelId,
-  ingest,
   type IngestOptions,
+  ingest,
   ingestWithOptions,
-  retrieve,
   type RetrieveOptions,
+  retrieve,
   retrieveWithOptions,
   setEmbeddingProvider,
 } from "./doc";

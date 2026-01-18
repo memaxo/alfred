@@ -88,7 +88,7 @@ describe("CLI Basic", () => {
       },
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
+    const [_stdout, stderr, exitCode] = await Promise.all([
       readText(proc.stdout),
       readText(proc.stderr),
       proc.exited,

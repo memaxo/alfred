@@ -1,5 +1,4 @@
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
-import type { PipelineEvent } from "@alfred/pipeline";
 import {
   codexLinearActivitiesDroppedTotal,
   codexLinearActivitiesEmittedTotal,
@@ -14,10 +13,17 @@ import type {
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
+import type { PipelineEvent, PipelineSnapshot } from "@alfred/pipeline";
+import {
+  executePhaseInputSchema,
+  phaseStatusSchema,
+  planPhaseInputSchema,
+  planPhaseOutputSchema,
+} from "@alfred/pipeline/schemas";
 import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
@@ -138,7 +144,431 @@ const linearInputSchema = z.object({
   issueUrl: z.string().optional(),
 });
 
+/**
+ * Phase-level workflow APIs for staged execution control.
+ * Enables plan preview, human-in-the-loop review, and staged execution.
+ */
+const workflowPhaseRouter = router({
+  /**
+   * Run init → context → plan → schedule stages only.
+   * Returns WavePlan[] and snapshot for later execution.
+   */
+  plan: authedProcedure
+    .use(rateLimit)
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
+    .input(planPhaseInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const runId = input.runId ?? crypto.randomUUID();
+
+      try {
+        const [
+          { PipelineRunner, registerDefaultStages },
+          { CheckpointObserver, MetricsObserver, PipelineEventQueueObserver },
+          { PostgresCheckpointStorage },
+        ] = await Promise.all([
+          import("@alfred/pipeline"),
+          import("@alfred/pipeline/observers"),
+          import("@alfred/db/repo/workflow"),
+        ]);
+
+        const runner = new PipelineRunner({
+          maxParallel: 1,
+          enableLearning: false,
+          enableLinearSync: false,
+        });
+        registerDefaultStages(runner);
+
+        const storage = new PostgresCheckpointStorage();
+        const queueObserver = new PipelineEventQueueObserver();
+        runner.addObserver(queueObserver);
+        runner.addObserver(new MetricsObserver());
+        runner.addObserver(new CheckpointObserver(storage));
+
+        const pipelineInput = {
+          runId,
+          requirement: input.requirement,
+          workspace: input.workspace,
+          userId: input.userId ?? session.user.id,
+          authz: input.authz,
+          linear: input.linear
+            ? {
+                sessionId: input.linear.sessionId ?? "",
+                space: input.linear.space,
+                issueId: input.linear.issueId,
+                authz: input.authzLinear ?? "",
+              }
+            : undefined,
+        };
+
+        // Run pipeline up to and including 'schedule' stage
+        for await (const _event of runner.runUntilStage(
+          pipelineInput,
+          "schedule"
+        )) {
+          // Events are consumed; outputs stored in context by checkpoint observer
+        }
+
+        // Load the snapshot to get all outputs
+        const snapshot = await storage.load(runId);
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "snapshot_not_found_after_plan",
+          });
+        }
+
+        const ctxMap = new Map(
+          (snapshot as PipelineSnapshot).contextEntries ?? []
+        );
+        const scheduleOutput = ctxMap.get("scheduleOutput") as {
+          waves: Array<{
+            id: string;
+            agents: string[];
+            dependsOn: string[];
+            agentType?: string;
+            phaseId?: string;
+          }>;
+          executionMode: "sequential" | "parallel";
+          estimatedDuration: number;
+        };
+        const planOutput = ctxMap.get("planOutput") as {
+          subtasks: Array<{
+            id: string;
+            title: string;
+            requirement: string;
+            deps: string[];
+            priority: number;
+            acceptance: string[];
+            filesHint: string[];
+          }>;
+          execPlans: Map<string, string> | Record<string, string>;
+          rootPlanPath: string;
+        };
+        const contextOutput = ctxMap.get("contextOutput") as {
+          totalTokens?: number;
+          ragChunks?: unknown[];
+        };
+
+        // Convert Map to record if needed
+        const execPlansRecord: Record<string, string> =
+          planOutput.execPlans instanceof Map
+            ? Object.fromEntries(planOutput.execPlans)
+            : planOutput.execPlans;
+
+        const result = {
+          runId,
+          waves: scheduleOutput.waves,
+          waveCount: scheduleOutput.waves.length,
+          subtasks: planOutput.subtasks,
+          execPlans: execPlansRecord,
+          rootPlanPath: planOutput.rootPlanPath,
+          executionMode: scheduleOutput.executionMode,
+          estimatedDuration: scheduleOutput.estimatedDuration,
+          snapshot: {
+            runId: (snapshot as PipelineSnapshot).runId,
+            status: (snapshot as PipelineSnapshot).status,
+            requirement: (snapshot as PipelineSnapshot).requirement,
+            lastCompletedStage: (snapshot as PipelineSnapshot)
+              .lastCompletedStage,
+            lastCompletedStageIndex: (snapshot as PipelineSnapshot)
+              .lastCompletedStageIndex,
+            startedAt: (snapshot as PipelineSnapshot).startedAt,
+            lastEventAt: (snapshot as PipelineSnapshot).lastEventAt,
+            error: (snapshot as PipelineSnapshot).error,
+          },
+          context: contextOutput
+            ? {
+                totalTokens: contextOutput.totalTokens ?? 0,
+                ragChunkCount: Array.isArray(contextOutput.ragChunks)
+                  ? contextOutput.ragChunks.length
+                  : 0,
+              }
+            : undefined,
+        };
+
+        return planPhaseOutputSchema.parse(result);
+      } catch (error) {
+        throw toTRPCError(error, "workflow_phase_plan_failed");
+      }
+    }),
+
+  /**
+   * Execute a previously planned workflow.
+   * Takes WavePlan[] and runs execute → review → learn → summarize.
+   */
+  execute: authedProcedure
+    .use(rateLimit)
+    .use(
+      requirePolicy("workflow.execute", (raw) =>
+        mapWorkflowRunResourceLocal(raw)
+      )
+    )
+    .input(executePhaseInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const [
+          { PipelineRunner, registerDefaultStages },
+          {
+            CheckpointObserver,
+            CostCleanupObserver,
+            MetricsObserver,
+            LinearSyncObserver,
+          },
+          { PostgresCheckpointStorage },
+        ] = await Promise.all([
+          import("@alfred/pipeline"),
+          import("@alfred/pipeline/observers"),
+          import("@alfred/db/repo/workflow"),
+        ]);
+
+        const storage = new PostgresCheckpointStorage();
+
+        // Load existing snapshot
+        const snapshot = await storage.load(input.runId);
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
+
+        const runner = new PipelineRunner({
+          enableLearning: true,
+          enableLinearSync: Boolean(input.linear?.sessionId),
+          linearSyncInterval: 30_000,
+        });
+        registerDefaultStages(runner);
+
+        runner.addObserver(new MetricsObserver());
+        runner.addObserver(new CostCleanupObserver());
+        runner.addObserver(new CheckpointObserver(storage));
+
+        if (input.linear?.sessionId && input.authzLinear) {
+          runner.addObserver(
+            new LinearSyncObserver({
+              syncIntervalMs: 30_000,
+              issueId: input.linear.issueId ?? input.linear.sessionId,
+              authz: input.authzLinear,
+            })
+          );
+        }
+
+        const pipelineInput = {
+          runId: input.runId,
+          requirement: (snapshot as PipelineSnapshot).requirement,
+          workspace: input.workspace,
+          userId: input.userId ?? session.user.id,
+          authz: input.authz,
+          linear: input.linear
+            ? {
+                sessionId: input.linear.sessionId ?? "",
+                space: input.linear.space,
+                issueId: input.linear.issueId,
+                authz: input.authzLinear ?? "",
+              }
+            : undefined,
+        };
+
+        // Resume from the snapshot (will continue from execute stage)
+        for await (const _event of runner.resume(
+          snapshot as PipelineSnapshot,
+          pipelineInput
+        )) {
+          // Events are emitted to observers
+        }
+
+        // Load final snapshot
+        const finalSnapshot = await storage.load(input.runId);
+
+        const status =
+          (finalSnapshot as PipelineSnapshot | null)?.status ?? "failed";
+
+        return {
+          runId: input.runId,
+          status,
+          completed: status === "completed",
+        };
+      } catch (error) {
+        throw toTRPCError(error, "workflow_phase_execute_failed");
+      }
+    }),
+
+  /**
+   * Stream plan-only pipeline events.
+   */
+  streamPlan: authedProcedure
+    .use(rateLimit)
+    .input(planPhaseInputSchema)
+    .subscription(({ input, ctx }) =>
+      observable<PipelineEvent>((emit) => {
+        const session = ctx.session;
+        if (!session?.user?.id) {
+          emit.error(
+            new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
+          );
+          return () => {};
+        }
+
+        let cleanup: (() => void) | undefined;
+        const runId = input.runId ?? crypto.randomUUID();
+
+        const startPlanStream = async () => {
+          const abortController = new AbortController();
+
+          try {
+            const [
+              { PipelineRunner, registerDefaultStages },
+              {
+                CheckpointObserver,
+                MetricsObserver,
+                PipelineEventQueueObserver,
+              },
+              { PostgresCheckpointStorage },
+            ] = await Promise.all([
+              import("@alfred/pipeline"),
+              import("@alfred/pipeline/observers"),
+              import("@alfred/db/repo/workflow"),
+            ]);
+
+            const runner = new PipelineRunner({
+              maxParallel: 1,
+              enableLearning: false,
+              enableLinearSync: false,
+            });
+            registerDefaultStages(runner);
+
+            const storage = new PostgresCheckpointStorage();
+            const queueObserver = new PipelineEventQueueObserver();
+            runner.addObserver(queueObserver);
+            runner.addObserver(new MetricsObserver());
+            runner.addObserver(new CheckpointObserver(storage));
+
+            cleanup = () => {
+              abortController.abort();
+              queueObserver.close();
+            };
+
+            const pipelineInput = {
+              runId,
+              requirement: input.requirement,
+              workspace: input.workspace,
+              userId: input.userId ?? session.user.id,
+              authz: input.authz,
+              linear: input.linear
+                ? {
+                    sessionId: input.linear.sessionId ?? "",
+                    space: input.linear.space,
+                    issueId: input.linear.issueId,
+                    authz: input.authzLinear ?? "",
+                  }
+                : undefined,
+            };
+
+            // Run in background, stream events
+            void (async () => {
+              try {
+                for await (const _event of runner.runUntilStage(
+                  pipelineInput,
+                  "schedule",
+                  abortController.signal
+                )) {
+                  // Events go to queueObserver
+                }
+              } catch (error) {
+                logger.warn("phase_stream_plan_failed", {
+                  runId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              } finally {
+                queueObserver.close();
+              }
+            })();
+
+            for await (const event of queueObserver.stream()) {
+              emit.next(event);
+            }
+            emit.complete();
+          } catch (error) {
+            emit.error(toTRPCError(error, "workflow_phase_stream_plan_error"));
+          }
+        };
+
+        void startPlanStream();
+
+        return () => {
+          cleanup?.();
+        };
+      })
+    ),
+
+  /**
+   * Get current phase status for a run.
+   */
+  status: authedProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      try {
+        const { PostgresCheckpointStorage } = await import(
+          "@alfred/db/repo/workflow"
+        );
+        const { getResumeStage } = await import("@alfred/pipeline/snapshot");
+
+        const storage = new PostgresCheckpointStorage();
+        const snapshot = await storage.load(input.runId);
+
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
+
+        const typedSnapshot = snapshot as PipelineSnapshot;
+        const nextStage = getResumeStage(typedSnapshot);
+        const canResume =
+          typedSnapshot.status !== "completed" &&
+          typedSnapshot.status !== "failed" &&
+          nextStage !== null;
+
+        return phaseStatusSchema.parse({
+          runId: typedSnapshot.runId,
+          status: typedSnapshot.status,
+          lastCompletedStage: typedSnapshot.lastCompletedStage,
+          lastCompletedStageIndex: typedSnapshot.lastCompletedStageIndex,
+          stageResults: typedSnapshot.stageResults ?? [],
+          error: typedSnapshot.error,
+          canResume,
+          nextStage,
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw toTRPCError(error, "workflow_phase_status_failed");
+      }
+    }),
+});
+
 export const workflowRouter = router({
+  // Phase-level APIs for staged execution
+  phase: workflowPhaseRouter,
+
   start: authedProcedure
     .use(rateLimit)
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
@@ -495,7 +925,8 @@ export const workflowRouter = router({
               requirement: input.requirement,
               workspace,
               userId: session.user.id,
-              authz: typeof rawInput.authz === "string" ? rawInput.authz : undefined,
+              authz:
+                typeof rawInput.authz === "string" ? rawInput.authz : undefined,
               linear: normalizedLinear
                 ? {
                     sessionId: normalizedLinear.sessionId ?? "",
@@ -807,39 +1238,31 @@ export const workflowRouter = router({
 
       let documents: Array<{ documentId: string; label: string }> = [];
       if (docIds.size > 0) {
+        const wanted = Array.from(docIds);
+        const documentIdExpr = sql<string>`${memoryNodes.properties} ->> 'documentId'`;
+
         const rows = await db
           .select({
             label: memoryNodes.label,
-            properties: memoryNodes.properties,
+            documentId: documentIdExpr,
           })
           .from(memoryNodes)
           .where(
             and(
               eq(memoryNodes.kind, "rag_document"),
-              eq(memoryNodes.resource, "user")
+              eq(memoryNodes.resource, "user"),
+              inArray(documentIdExpr, wanted)
             )
           );
 
         documents = rows
-          .map(
-            (
-              row: (typeof rows)[number]
-            ): { documentId: string; label: string } | null => {
-              const props = (row.properties ?? null) as Record<
-                string,
-                unknown
-              > | null;
-              const documentId = props?.documentId;
-              return typeof documentId === "string" && docIds.has(documentId)
-                ? { documentId, label: row.label }
-                : null;
-            }
-          )
           .filter(
             (
-              entry: { documentId: string; label: string } | null
-            ): entry is { documentId: string; label: string } => entry !== null
-          );
+              row: (typeof rows)[number]
+            ): row is { label: string; documentId: string } =>
+              typeof row.documentId === "string" && row.documentId.length > 0
+          )
+          .map((row) => ({ documentId: row.documentId, label: row.label }));
       }
 
       return {

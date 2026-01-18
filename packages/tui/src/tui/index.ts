@@ -18,7 +18,6 @@ import {
   createCognitiveStore,
   setupCognitiveSubscription,
 } from "./subscriptions/cognitive";
-import { resolveMode } from "./subscriptions/mode";
 import {
   getSubscriptionManager,
   resetSubscriptionManager,
@@ -27,6 +26,7 @@ import {
   createMetricsStore,
   setupMetricsSubscription,
 } from "./subscriptions/metrics";
+import { resolveMode } from "./subscriptions/mode";
 import {
   createVoiceStore,
   setupVoiceSubscription,
@@ -185,8 +185,7 @@ export class TuiApp {
 
     const maxRaw = process.env.ALFRED_TUI_MAX_TRANSITIONS;
     const max = maxRaw ? Number.parseInt(maxRaw, 10) : null;
-    const maxTransitions =
-      max && Number.isFinite(max) && max > 0 ? max : null;
+    const maxTransitions = max && Number.isFinite(max) && max > 0 ? max : null;
 
     // Count the dashboard as the first transition for test parity.
     this.transitions = 1;

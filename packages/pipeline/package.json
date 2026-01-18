@@ -8,7 +8,9 @@
     ".": "./src/index.ts",
     "./stages": "./src/stages/index.ts",
     "./observers": "./src/observers/index.ts",
-    "./events": "./src/events.ts"
+    "./events": "./src/events.ts",
+    "./schemas": "./src/schemas.ts",
+    "./snapshot": "./src/snapshot.ts"
   },
   "scripts": {
     "typecheck": "tsc -b",
@@ -23,7 +25,8 @@
     "@alfred/plan": "workspace:*",
     "@alfred/runtime": "workspace:*",
     "@alfred/type": "workspace:*",
-    "prom-client": "^15.1.3"
+    "prom-client": "^15.1.3",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@alfred/test-kit": "workspace:*"

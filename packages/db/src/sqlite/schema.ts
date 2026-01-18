@@ -13,6 +13,7 @@ const statements = [
     label_tsvector TEXT,
     embedding BLOB,
     embedding_quantized BLOB,
+    embedding_model_id TEXT,
     access_count INTEGER NOT NULL DEFAULT 0,
     last_accessed_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -22,6 +23,7 @@ const statements = [
   "ALTER TABLE memory_nodes ADD COLUMN label_tsvector TEXT;",
   "ALTER TABLE memory_nodes ADD COLUMN embedding BLOB;",
   "ALTER TABLE memory_nodes ADD COLUMN embedding_quantized BLOB;",
+  "ALTER TABLE memory_nodes ADD COLUMN embedding_model_id TEXT;",
   "ALTER TABLE memory_nodes ADD COLUMN sanitized INTEGER DEFAULT 0;",
   "ALTER TABLE memory_nodes ADD COLUMN project_id TEXT;",
   "ALTER TABLE memory_nodes ADD COLUMN access_count INTEGER DEFAULT 0;",
@@ -98,6 +100,24 @@ const statements = [
   "ALTER TABLE workflow_events ADD COLUMN parent_id TEXT;",
   "ALTER TABLE workflow_events ADD COLUMN seq INTEGER;",
   "ALTER TABLE workflow_events ADD COLUMN lamport INTEGER;",
+  `CREATE TABLE IF NOT EXISTS workflow_snapshots (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    state TEXT NOT NULL,
+    last_event_id TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (run_id) REFERENCES workflow_runs(id) ON DELETE CASCADE
+  );`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS workflow_snapshots_run_unique_idx
+    ON workflow_snapshots(run_id);`,
+  `CREATE INDEX IF NOT EXISTS workflow_snapshots_run_idx
+    ON workflow_snapshots(run_id);`,
+  `CREATE INDEX IF NOT EXISTS workflow_snapshots_created_idx
+    ON workflow_snapshots(created_at);`,
+  `CREATE INDEX IF NOT EXISTS workflow_snapshots_run_created_idx
+    ON workflow_snapshots(run_id, created_at);`,
+  `CREATE INDEX IF NOT EXISTS workflow_snapshots_last_event_id_idx
+    ON workflow_snapshots(last_event_id);`,
   `CREATE TABLE IF NOT EXISTS rag_documents (
     id TEXT PRIMARY KEY,
     source TEXT NOT NULL,
@@ -113,11 +133,13 @@ const statements = [
     content TEXT NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
     embedding BLOB,
+    embedding_model_id TEXT,
     content_tsvector TEXT,
     metadata TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES rag_documents(id) ON DELETE CASCADE
   );`,
+  "ALTER TABLE rag_chunks ADD COLUMN embedding_model_id TEXT;",
   `CREATE INDEX IF NOT EXISTS rag_chunks_document_id_idx
     ON rag_chunks(document_id);`,
   `CREATE TABLE IF NOT EXISTS conversations (
@@ -365,12 +387,14 @@ const statements = [
     project_id TEXT,
     content TEXT NOT NULL,
     embedding BLOB,
+    embedding_model_id TEXT,
     category TEXT,
     confidence REAL DEFAULT 1.0,
     source TEXT DEFAULT 'user',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  "ALTER TABLE user_facts ADD COLUMN embedding_model_id TEXT;",
   `CREATE TABLE IF NOT EXISTS user_events (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

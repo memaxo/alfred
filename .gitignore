@@ -105,6 +105,8 @@ tmp-policy-test/
 .agent/test-workspaces/
 .agent/tmp-*/
 .agent/plans/
+**/.agent/plans/
+.agent/profiles/**/*.pstats
 .agentfs/
 
 # Build profiling artifacts (heap snapshots, diagnostic reports)

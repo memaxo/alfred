@@ -1,0 +1,15 @@
+{
+  "extends": "@alfred/tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/summarize.tsbuildinfo",
+    "declaration": true,
+    "declarationMap": false,
+    "composite": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test/**/*", "python/**/*"],
+  "references": []
+}

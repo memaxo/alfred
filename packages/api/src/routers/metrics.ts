@@ -52,8 +52,18 @@ export const metricsRouter = router({
 
       const inputUsd = calculateCostUsd(provider, modelId, inputTokens, 0);
       const outputUsd = calculateCostUsd(provider, modelId, 0, outputTokens);
-      const reasoningUsd = calculateCostUsd(provider, modelId, 0, reasoningTokens);
-      const cacheUsd = calculateCostUsd(provider, modelId, cachedInputTokens, 0);
+      const reasoningUsd = calculateCostUsd(
+        provider,
+        modelId,
+        0,
+        reasoningTokens
+      );
+      const cacheUsd = calculateCostUsd(
+        provider,
+        modelId,
+        cachedInputTokens,
+        0
+      );
       const totalUsd = inputUsd + outputUsd + reasoningUsd + cacheUsd;
 
       return {

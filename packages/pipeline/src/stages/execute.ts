@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Workspace } from "@alfred/agent/environment/types";
 import { logger } from "@alfred/logger";
+import type { WorkflowEvent } from "@alfred/type";
 import { createEvent } from "../events";
 import type { PipelineContext, PipelineStage } from "../pipeline";
 import type {
@@ -11,7 +12,6 @@ import type {
   PlanOutput,
   ScheduleOutput,
 } from "./types";
-import type { WorkflowEvent } from "@alfred/type";
 
 /**
  * Execute Stage
@@ -124,321 +124,321 @@ export class ExecuteStage
           continue;
         }
 
-      // Check if wave should be aborted
-      if (abortedWave) {
-        logger.info("wave_skipped_after_abort", {
-          runId: ctx.runId,
-          waveId: wave.id,
-          abortedWaveId: abortedWave.waveId,
-        });
-        continue;
-      }
-
-      ctx.emit(
-        createEvent("stage:progress", {
-          stage: "execute",
-          message: `Starting wave ${waveIndex + 1}/${input.waves.length}`,
-        })
-      );
-
-      let waveFailed = 0;
-      const waveSize = wave.agents.length;
-
-      for (const subTaskId of wave.agents) {
-        const subtask = subTaskById.get(subTaskId);
-        if (!subtask) {
-          logger.warn("subtask_not_found", { subTaskId, runId: ctx.runId });
+        // Check if wave should be aborted
+        if (abortedWave) {
+          logger.info("wave_skipped_after_abort", {
+            runId: ctx.runId,
+            waveId: wave.id,
+            abortedWaveId: abortedWave.waveId,
+          });
           continue;
         }
 
-        // Build agent spec using actual function
-        const agentSpec = buildAgentSpec(subtask, ctx.runId, ctx.workspace, {
-          auto: "medium",
-        });
-        agentSpec.execPlanPath = execPlans.get(subtask.id) ?? "";
-
         ctx.emit(
-          createEvent("agent:spawn", {
-            agentId: agentSpec.agentId,
-            taskId: agentSpec.subTaskId,
+          createEvent("stage:progress", {
+            stage: "execute",
+            message: `Starting wave ${waveIndex + 1}/${input.waves.length}`,
           })
         );
 
-        totalAgents++;
+        let waveFailed = 0;
+        const waveSize = wave.agents.length;
 
-        // Execute with retry logic
-        let lastResult: Awaited<ReturnType<typeof runAgent>> | null = null;
-        let lastError: Error | null = null;
+        for (const subTaskId of wave.agents) {
+          const subtask = subTaskById.get(subTaskId);
+          if (!subtask) {
+            logger.warn("subtask_not_found", { subTaskId, runId: ctx.runId });
+            continue;
+          }
 
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          try {
-            const trackerContextRef = { current: trackerContext };
-            const queue = new AsyncQueue<WorkflowEvent>();
-            const drainQueue = (async () => {
-              for await (const event of queue) {
+          // Build agent spec using actual function
+          const agentSpec = buildAgentSpec(subtask, ctx.runId, ctx.workspace, {
+            auto: "medium",
+          });
+          agentSpec.execPlanPath = execPlans.get(subtask.id) ?? "";
+
+          ctx.emit(
+            createEvent("agent:spawn", {
+              agentId: agentSpec.agentId,
+              taskId: agentSpec.subTaskId,
+            })
+          );
+
+          totalAgents++;
+
+          // Execute with retry logic
+          let lastResult: Awaited<ReturnType<typeof runAgent>> | null = null;
+          let lastError: Error | null = null;
+
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+              const trackerContextRef = { current: trackerContext };
+              const queue = new AsyncQueue<WorkflowEvent>();
+              const drainQueue = (async () => {
+                for await (const event of queue) {
+                  ctx.emit(
+                    createEvent("agent:progress", {
+                      agentId: agentSpec.agentId,
+                      message: this.formatQueueEvent(event),
+                    })
+                  );
+                }
+              })();
+
+              let result: Awaited<ReturnType<typeof runAgent>> | null = null;
+              try {
+                result = await runAgent({
+                  spec: agentSpec,
+                  phaseId: "execute",
+                  runId: ctx.runId,
+                  workspace: ctx.workspace,
+                  workspaceRoot: ctx.workspace,
+                  subTaskById,
+                  projectConfig: ctx.get("projectConfig") ?? null,
+                  activeWorkspaces,
+                  agentFileHints: new Map(),
+                  rootExecPlanPath,
+                  signal: ctx.signal,
+                  authz: ctx.get("authz"),
+                  userId: ctx.userId,
+                  trackerContextRef,
+                  queue,
+                });
+              } finally {
+                queue.close();
+                await drainQueue;
+              }
+              if (!result) {
+                throw new Error("agent_run_missing_result");
+              }
+
+              // Update tracker context after agent completion
+              trackerContext = updateTrackerWithContext(trackerContext, {
+                type: "agent/command",
+                agentId: agentSpec.agentId,
+                command: "complete",
+                status: result.status === "success" ? "completed" : "failed",
+                ts: Date.now(),
+              });
+
+              // Check for stuck detection
+              const isStuck = detectStuckWithContext(
+                trackerContext,
+                agentSpec.agentId,
+                Date.now()
+              );
+
+              if (isStuck && !result.stuck) {
+                result.stuck = true;
+                result.status = "stuck";
                 ctx.emit(
-                  createEvent("agent:progress", {
+                  createEvent("agent:stuck", {
                     agentId: agentSpec.agentId,
-                    message: this.formatQueueEvent(event),
+                    reason: "no_progress",
                   })
                 );
               }
-            })();
 
-            let result: Awaited<ReturnType<typeof runAgent>> | null = null;
-            try {
-              result = await runAgent({
-                spec: agentSpec,
-                phaseId: "execute",
-                runId: ctx.runId,
-                workspace: ctx.workspace,
-                workspaceRoot: ctx.workspace,
-                subTaskById,
-                projectConfig: ctx.get("projectConfig") ?? null,
-                activeWorkspaces,
-                agentFileHints: new Map(),
-                rootExecPlanPath,
-                signal: ctx.signal,
-                authz: ctx.get("authz"),
-                userId: ctx.userId,
-                trackerContextRef,
-                queue,
-              });
-            } finally {
-              queue.close();
-              await drainQueue;
-            }
-            if (!result) {
-              throw new Error("agent_run_missing_result");
-            }
-
-            // Update tracker context after agent completion
-            trackerContext = updateTrackerWithContext(trackerContext, {
-              type: "agent/command",
-              agentId: agentSpec.agentId,
-              command: "complete",
-              status: result.status === "success" ? "completed" : "failed",
-              ts: Date.now(),
-            });
-
-            // Check for stuck detection
-            const isStuck = detectStuckWithContext(
-              trackerContext,
-              agentSpec.agentId,
-              Date.now()
-            );
-
-            if (isStuck && !result.stuck) {
-              result.stuck = true;
-              result.status = "stuck";
-              ctx.emit(
-                createEvent("agent:stuck", {
-                  agentId: agentSpec.agentId,
-                  reason: "no_progress",
-                })
+              // Check for escalation file
+              const escalationReason = await readEscalationFile(
+                agentSpec.workingDirectory,
+                agentSpec.agentId
               );
-            }
+              if (escalationReason && !result.escalation) {
+                result.escalation = escalationReason;
+                result.status = "escalated";
+                ctx.emit(
+                  createEvent("agent:escalated", {
+                    agentId: agentSpec.agentId,
+                    reason: escalationReason,
+                  })
+                );
+              }
 
-            // Check for escalation file
-            const escalationReason = await readEscalationFile(
-              agentSpec.workingDirectory,
-              agentSpec.agentId
-            );
-            if (escalationReason && !result.escalation) {
-              result.escalation = escalationReason;
-              result.status = "escalated";
-              ctx.emit(
-                createEvent("agent:escalated", {
-                  agentId: agentSpec.agentId,
-                  reason: escalationReason,
-                })
-              );
-            }
+              lastResult = result;
+              lastError = null;
 
-            lastResult = result;
-            lastError = null;
+              // Check if we should retry
+              const shouldRetry =
+                attempt < maxAttempts &&
+                retryableStatuses.has(
+                  result.status as "failure" | "stuck" | "timeout"
+                );
 
-            // Check if we should retry
-            const shouldRetry =
-              attempt < maxAttempts &&
-              retryableStatuses.has(
-                result.status as "failure" | "stuck" | "timeout"
-              );
-
-            if (shouldRetry) {
-              ctx.emit(
-                createEvent("agent:retry", {
+              if (shouldRetry) {
+                ctx.emit(
+                  createEvent("agent:retry", {
+                    agentId: agentSpec.agentId,
+                    attempt,
+                    maxAttempts,
+                  })
+                );
+                logger.info("agent_retry", {
+                  runId: ctx.runId,
                   agentId: agentSpec.agentId,
                   attempt,
                   maxAttempts,
-                })
-              );
-              logger.info("agent_retry", {
-                runId: ctx.runId,
-                agentId: agentSpec.agentId,
-                attempt,
-                maxAttempts,
-                status: result.status,
-              });
-              // Exponential backoff
-              await Bun.sleep(backoffMs * attempt);
-              continue;
-            }
+                  status: result.status,
+                });
+                // Exponential backoff
+                await Bun.sleep(backoffMs * attempt);
+                continue;
+              }
 
-            // Success or non-retryable status
-            break;
-          } catch (error) {
-            lastError =
-              error instanceof Error ? error : new Error(String(error));
+              // Success or non-retryable status
+              break;
+            } catch (error) {
+              lastError =
+                error instanceof Error ? error : new Error(String(error));
 
-            // Check if we should retry on exception
-            const shouldRetry =
-              attempt < maxAttempts && retryableStatuses.has("failure");
+              // Check if we should retry on exception
+              const shouldRetry =
+                attempt < maxAttempts && retryableStatuses.has("failure");
 
-            if (shouldRetry) {
-              ctx.emit(
-                createEvent("agent:retry", {
+              if (shouldRetry) {
+                ctx.emit(
+                  createEvent("agent:retry", {
+                    agentId: agentSpec.agentId,
+                    attempt,
+                    maxAttempts,
+                  })
+                );
+                logger.warn("agent_retry_on_error", {
+                  runId: ctx.runId,
                   agentId: agentSpec.agentId,
                   attempt,
                   maxAttempts,
-                })
-              );
-              logger.warn("agent_retry_on_error", {
-                runId: ctx.runId,
-                agentId: agentSpec.agentId,
-                attempt,
-                maxAttempts,
-                error: lastError.message,
-              });
-              await Bun.sleep(backoffMs * attempt);
+                  error: lastError.message,
+                });
+                await Bun.sleep(backoffMs * attempt);
+              }
             }
           }
-        }
 
-        // Process final result
-        if (lastResult) {
-          const outcome: AgentOutcome = {
-            agentId: lastResult.agentId,
-            phaseId: lastResult.phaseId,
-            stuck: lastResult.stuck,
-            status: lastResult.status,
-            durationSeconds: lastResult.durationSeconds,
-            role: lastResult.role,
-            escalation: lastResult.escalation,
-            result: lastResult.result,
-          };
+          // Process final result
+          if (lastResult) {
+            const outcome: AgentOutcome = {
+              agentId: lastResult.agentId,
+              phaseId: lastResult.phaseId,
+              stuck: lastResult.stuck,
+              status: lastResult.status,
+              durationSeconds: lastResult.durationSeconds,
+              role: lastResult.role,
+              escalation: lastResult.escalation,
+              result: lastResult.result,
+            };
 
-          outcomes.set(agentSpec.subTaskId, outcome);
+            outcomes.set(agentSpec.subTaskId, outcome);
 
-          ctx.emit(
-            createEvent("agent:complete", {
+            ctx.emit(
+              createEvent("agent:complete", {
+                agentId: agentSpec.agentId,
+                outcome: {
+                  status: lastResult.status as
+                    | "success"
+                    | "failure"
+                    | "escalated"
+                    | "timeout"
+                    | "stuck",
+                  durationMs: lastResult.durationSeconds * 1000,
+                  handoff: lastResult.result?.summary,
+                  error: lastResult.escalation,
+                },
+              })
+            );
+
+            // Track failures for wave abort
+            if (
+              lastResult.status === "failure" ||
+              lastResult.status === "stuck" ||
+              lastResult.escalation
+            ) {
+              totalFailed++;
+              waveFailed++;
+            }
+
+            // Collect handoff for next agent
+            if (lastResult.result?.summary) {
+              handoffs.push(lastResult.result.summary);
+            }
+
+            // Collect file changes
+            if (lastResult.result?.changes) {
+              for (const change of lastResult.result.changes) {
+                fileChanges.push({
+                  path: change,
+                  action: "modify",
+                });
+              }
+            }
+
+            logger.info("agent_complete", {
+              runId: ctx.runId,
               agentId: agentSpec.agentId,
-              outcome: {
-                status: lastResult.status as
-                  | "success"
-                  | "failure"
-                  | "escalated"
-                  | "timeout"
-                  | "stuck",
-                durationMs: lastResult.durationSeconds * 1000,
-                handoff: lastResult.result?.summary,
-                error: lastResult.escalation,
-              },
-            })
-          );
+              status: lastResult.status,
+              durationSeconds: lastResult.durationSeconds,
+            });
+          } else if (lastError) {
+            // All retries failed
+            const outcome: AgentOutcome = {
+              agentId: agentSpec.agentId,
+              phaseId: "execute",
+              stuck: false,
+              status: "failure",
+              durationSeconds: 0,
+              role: "agent",
+              escalation: lastError.message,
+            };
 
-          // Track failures for wave abort
-          if (
-            lastResult.status === "failure" ||
-            lastResult.status === "stuck" ||
-            lastResult.escalation
-          ) {
+            outcomes.set(agentSpec.subTaskId, outcome);
             totalFailed++;
             waveFailed++;
-          }
 
-          // Collect handoff for next agent
-          if (lastResult.result?.summary) {
-            handoffs.push(lastResult.result.summary);
-          }
+            ctx.emit(
+              createEvent("agent:complete", {
+                agentId: agentSpec.agentId,
+                outcome: {
+                  status: "failure",
+                  durationMs: 0,
+                  error: lastError.message,
+                },
+              })
+            );
 
-          // Collect file changes
-          if (lastResult.result?.changes) {
-            for (const change of lastResult.result.changes) {
-              fileChanges.push({
-                path: change,
-                action: "modify",
-              });
-            }
-          }
-
-          logger.info("agent_complete", {
-            runId: ctx.runId,
-            agentId: agentSpec.agentId,
-            status: lastResult.status,
-            durationSeconds: lastResult.durationSeconds,
-          });
-        } else if (lastError) {
-          // All retries failed
-          const outcome: AgentOutcome = {
-            agentId: agentSpec.agentId,
-            phaseId: "execute",
-            stuck: false,
-            status: "failure",
-            durationSeconds: 0,
-            role: "agent",
-            escalation: lastError.message,
-          };
-
-          outcomes.set(agentSpec.subTaskId, outcome);
-          totalFailed++;
-          waveFailed++;
-
-          ctx.emit(
-            createEvent("agent:complete", {
+            logger.error("agent_failed", {
+              runId: ctx.runId,
               agentId: agentSpec.agentId,
-              outcome: {
-                status: "failure",
-                durationMs: 0,
-                error: lastError.message,
-              },
+              error: lastError.message,
+            });
+          }
+        }
+
+        // Check wave abort thresholds
+        const waveFailRate = waveSize > 0 ? waveFailed / waveSize : 0;
+        const overallFailRate = totalAgents > 0 ? totalFailed / totalAgents : 0;
+
+        if (
+          waveFailRate > waveFailureThreshold ||
+          overallFailRate > overallFailureThreshold
+        ) {
+          abortedWave = { waveId: wave.id, reason: "threshold_exceeded" };
+          ctx.emit(
+            createEvent("wave:aborted", {
+              waveId: wave.id,
+              waveFailRate,
+              overallFailRate,
             })
           );
-
-          logger.error("agent_failed", {
+          logger.warn("wave_aborted", {
             runId: ctx.runId,
-            agentId: agentSpec.agentId,
-            error: lastError.message,
-          });
-        }
-      }
-
-      // Check wave abort thresholds
-      const waveFailRate = waveSize > 0 ? waveFailed / waveSize : 0;
-      const overallFailRate = totalAgents > 0 ? totalFailed / totalAgents : 0;
-
-      if (
-        waveFailRate > waveFailureThreshold ||
-        overallFailRate > overallFailureThreshold
-      ) {
-        abortedWave = { waveId: wave.id, reason: "threshold_exceeded" };
-        ctx.emit(
-          createEvent("wave:aborted", {
             waveId: wave.id,
             waveFailRate,
             overallFailRate,
-          })
-        );
-        logger.warn("wave_aborted", {
-          runId: ctx.runId,
-          waveId: wave.id,
-          waveFailRate,
-          overallFailRate,
-          waveThreshold: waveFailureThreshold,
-          overallThreshold: overallFailureThreshold,
-        });
+            waveThreshold: waveFailureThreshold,
+            overallThreshold: overallFailureThreshold,
+          });
+        }
       }
-    }
 
       // Store tracker state for resume (only serializable metadata)
       ctx.set("trackerState", {

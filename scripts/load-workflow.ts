@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
 import { Buffer } from "node:buffer";
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@alfred/api/routers/index";
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 
 type Args = {
   baseUrl: string;
@@ -90,7 +90,7 @@ function parseArgs(argv: string[]): Args {
     baseUrl,
     concurrency: Math.max(1, concurrency),
     requests: Math.max(1, requests),
-    timeoutMs: Math.max(1_000, timeoutMs),
+    timeoutMs: Math.max(1000, timeoutMs),
     auto: parseAuto(get("--auto") ?? process.env.ALFRED_LOADTEST_AUTO),
     projectId: get("--project-id") ?? process.env.ALFRED_LOADTEST_PROJECT_ID,
     requirePrefix:
@@ -249,7 +249,9 @@ async function runLoadTest(args: Args): Promise<RunResult> {
       } catch (error) {
         failed += 1;
         const msg =
-          error instanceof Error ? error.message : `unknown_error:${String(error)}`;
+          error instanceof Error
+            ? error.message
+            : `unknown_error:${String(error)}`;
         if (runErrors.length < 25) {
           runErrors.push(msg);
         }
@@ -329,4 +331,3 @@ async function main() {
 if (import.meta.main) {
   void main();
 }
-

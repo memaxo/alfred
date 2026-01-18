@@ -4,11 +4,11 @@ import { touchNodes } from "@alfred/db/repo/graph/write";
 import * as ragRepo from "@alfred/db/repo/rag";
 import {
   EMBEDDING_DIM,
+  type EmbeddingInput,
   embed as embedLocal,
   embedMany as embedManyLocal,
   getRegistry,
   MODEL_IDS,
-  type EmbeddingInput,
 } from "@alfred/embed";
 import {
   extract,
@@ -111,7 +111,9 @@ export async function ingest(
 /**
  * Ingest a document with optional multimodal support
  */
-export async function ingestWithOptions(options: IngestOptions): Promise<string> {
+export async function ingestWithOptions(
+  options: IngestOptions
+): Promise<string> {
   const { source, content, imageUrl, onProgress } = options;
 
   if (!content || content.trim().length === 0) {
@@ -217,7 +219,9 @@ export async function retrieve(
 /**
  * Retrieve chunks with model-aware filtering
  */
-export async function retrieveWithOptions(options: RetrieveOptions): Promise<Chunk[]> {
+export async function retrieveWithOptions(
+  options: RetrieveOptions
+): Promise<Chunk[]> {
   const { query, k = 10, threshold = 0.7, documentId, modelId } = options;
 
   if (!query || query.trim().length === 0) {
@@ -647,10 +651,5 @@ export async function embedManyMultimodal(
   } catch {
     // Registry not initialized or no multimodal provider
   }
-
-  // Fall back to text-only embedding
-  console.warn(
-    "No multimodal embedding provider available, falling back to text-only"
-  );
   return embedMany(texts);
 }

@@ -198,9 +198,10 @@ describe("groupIntoPhases", () => {
     it("should handle missing assignments gracefully", async () => {
       // Override mock to return incomplete assignments
       mock.module("ai", () => ({
-        generateObject: () => Promise.resolve({
-          object: { assignments: [{ index: 0, phase: "setup" }] }, // Missing indices 1, 2
-        }),
+        generateObject: () =>
+          Promise.resolve({
+            object: { assignments: [{ index: 0, phase: "setup" }] }, // Missing indices 1, 2
+          }),
       }));
 
       const subtasks = [

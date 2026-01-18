@@ -63,7 +63,9 @@ describe("workflowRouter.streamPipeline integration", () => {
     });
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.some((event) => event.type === "pipeline:start")).toBeTruthy();
+    expect(
+      events.some((event) => event.type === "pipeline:start")
+    ).toBeTruthy();
   });
 
   it("rejects unauthenticated callers", async () => {

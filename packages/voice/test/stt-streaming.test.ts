@@ -1,5 +1,5 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { STTPool, type STTRequest, type ChunkSize } from "../src/process/stt";
+import { describe, expect, it, mock } from "bun:test";
+import { type ChunkSize, STTPool, type STTRequest } from "../src/process/stt";
 
 // Mock the entire Process module
 mock.module("../src/process/base", () => {
@@ -246,7 +246,7 @@ describe("STT Cache Management", () => {
     expect(pool.getSessionInfo("session-to-clear").hasAffinity).toBe(true);
 
     // Clear cache
-    const cleared = await pool.clearSessionCache("session-to-clear");
+    const _cleared = await pool.clearSessionCache("session-to-clear");
     // Note: In real implementation, this would communicate with Python process
     // Our mock doesn't verify the IPC call, just the local state cleanup
 

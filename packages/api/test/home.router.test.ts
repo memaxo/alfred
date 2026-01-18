@@ -51,11 +51,14 @@ describe("home router", () => {
         authz: "token",
       });
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         ok: true,
         entity: "light-1",
         state: { on: true },
       });
+      expect(typeof (result as { updatedAt?: unknown }).updatedAt).toBe(
+        "number"
+      );
     });
   });
 });
