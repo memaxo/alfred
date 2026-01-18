@@ -1,7 +1,7 @@
 import "@/test/dom";
 
 import { describe, expect, it, vi } from "bun:test";
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { DialogProvider } from "@/components/ui/dialog";
 import { CognitiveFeedbackDialog } from "../dialog";
 
@@ -19,9 +19,9 @@ describe("CognitiveFeedbackDialog", () => {
     expect(queryByText("Share Feedback")).toBeNull();
   });
 
-  it("validates expected is required", () => {
+  it("validates expected is required", async () => {
     const onSubmit = vi.fn();
-    const { getByText, getByLabelText } = render(
+    const { container, findByText, getByLabelText } = render(
       <DialogProvider inline>
         <CognitiveFeedbackDialog
           draft={{
@@ -37,19 +37,30 @@ describe("CognitiveFeedbackDialog", () => {
         />
       </DialogProvider>
     );
+    await findByText("Submit Feedback");
 
-    fireEvent.change(getByLabelText("Expected Result"), {
-      target: { value: "" },
+    const expected = getByLabelText("Expected Result") as HTMLTextAreaElement;
+    act(() => {
+      fireEvent.change(expected, {
+        target: { value: "" },
+      });
     });
-    fireEvent.click(getByText("Submit Feedback"));
+    expect(expected.value).toBe("");
+
+    act(() => {
+      const formEl = container.querySelector("form");
+      expect(formEl).toBeTruthy();
+      fireEvent.submit(formEl as HTMLFormElement);
+    });
+    await Promise.resolve();
 
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(getByText("Required")).toBeTruthy();
+    expect(await findByText("Required")).toBeTruthy();
   });
 
-  it("submits trimmed values and includes surface", () => {
+  it("submits trimmed values and includes surface", async () => {
     const onSubmit = vi.fn();
-    const { getByText, getByLabelText } = render(
+    const { container, findByText, getByLabelText } = render(
       <DialogProvider inline>
         <CognitiveFeedbackDialog
           draft={{
@@ -65,14 +76,31 @@ describe("CognitiveFeedbackDialog", () => {
         />
       </DialogProvider>
     );
+    await findByText("Submit Feedback");
 
-    fireEvent.change(getByLabelText("Expected Result"), {
-      target: { value: "  New expected  " },
+    const expected = getByLabelText("Expected Result") as HTMLTextAreaElement;
+    const actual = getByLabelText(
+      "What actually happened?"
+    ) as HTMLTextAreaElement;
+
+    await act(async () => {
+      fireEvent.change(expected, {
+        target: { value: "  New expected  " },
+      });
+      fireEvent.change(actual, {
+        target: { value: "  actual text  " },
+      });
+      await Promise.resolve();
     });
-    fireEvent.change(getByLabelText("What actually happened?"), {
-      target: { value: "  actual text  " },
+    expect(expected.value).toBe("  New expected  ");
+    expect(actual.value).toBe("  actual text  ");
+
+    await act(async () => {
+      const formEl = container.querySelector("form");
+      expect(formEl).toBeTruthy();
+      fireEvent.submit(formEl as HTMLFormElement);
+      await Promise.resolve();
     });
-    fireEvent.click(getByText("Submit Feedback"));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith({

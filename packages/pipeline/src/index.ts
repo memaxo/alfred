@@ -4,6 +4,14 @@ export {
   recordPipelineCost,
   setBudgetUsd,
 } from "./budget";
+// Plan caching
+export {
+  cachePlan,
+  computeFileTreeHash,
+  getCachedPlan,
+  getPlanCacheKey,
+  invalidatePlanCache,
+} from "./cache";
 export {
   type ContextOptions,
   createPipelineContext,

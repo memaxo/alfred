@@ -179,12 +179,35 @@ const workflowPhaseRouter = router({
             phasePlanDurationSeconds,
             phasePlanPreviewsTotal,
           },
+          { getPlanCacheKey, getCachedPlan, cachePlan, computeFileTreeHash },
+          { phaseCacheHitsTotal },
         ] = await Promise.all([
           import("@alfred/pipeline"),
           import("@alfred/pipeline/observers"),
           import("@alfred/db/repo/workflow"),
           import("@alfred/pipeline/metrics"),
+          import("@alfred/pipeline/cache"),
+          import("@alfred/pipeline/metrics"),
         ]);
+
+        // Check cache
+        const fileTreeHash = await computeFileTreeHash(input.workspace);
+        const cacheKey = getPlanCacheKey({
+          requirement: input.requirement,
+          workspace: input.workspace,
+          fileTreeHash,
+        });
+
+        const cached = await getCachedPlan(cacheKey);
+        if (cached) {
+          phaseCacheHitsTotal.inc({ result: "hit" });
+          phasePlanRequestsTotal.inc({ status: "cached" });
+          const durationSec = (performance.now() - startTime) / 1000;
+          phasePlanDurationSeconds.observe({ status: "cached" }, durationSec);
+          return cached;
+        }
+
+        phaseCacheHitsTotal.inc({ result: "miss" });
 
         const runner = new PipelineRunner({
           maxParallel: 1,
@@ -307,7 +330,12 @@ const workflowPhaseRouter = router({
         phasePlanDurationSeconds.observe({ status: "success" }, durationSec);
         phasePlanPreviewsTotal.inc();
 
-        return planPhaseOutputSchema.parse(result);
+        const planResult = planPhaseOutputSchema.parse(result);
+
+        // Cache the plan
+        void cachePlan(cacheKey, planResult);
+
+        return planResult;
       } catch (error) {
         // Record error metrics
         const durationSec = (performance.now() - startTime) / 1000;
@@ -602,6 +630,273 @@ const workflowPhaseRouter = router({
           throw error;
         }
         throw toTRPCError(error, "workflow_phase_status_failed");
+      }
+    }),
+
+  /**
+   * Update an existing plan with modified subtasks.
+   * Optionally regenerate waves based on new dependencies.
+   */
+  updatePlan: authedProcedure
+    .use(rateLimit)
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        subtasks: z.array(
+          z.object({
+            id: z.string(),
+            title: z.string(),
+            requirement: z.string(),
+            deps: z.array(z.string()),
+            priority: z.number(),
+            acceptance: z.array(z.string()),
+            filesHint: z.array(z.string()),
+          })
+        ),
+        regenerateWaves: z.boolean().default(true),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const startTime = performance.now();
+
+      try {
+        const [
+          { PostgresCheckpointStorage },
+          { phaseUpdatePlanDurationSeconds },
+        ] = await Promise.all([
+          import("@alfred/db/repo/workflow"),
+          import("@alfred/pipeline/metrics"),
+        ]);
+
+        const storage = new PostgresCheckpointStorage();
+        const snapshot = await storage.load(input.runId);
+
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
+
+        // Validate dependencies
+        const taskIds = new Set(input.subtasks.map((t) => t.id));
+        for (const task of input.subtasks) {
+          for (const depId of task.deps) {
+            if (!taskIds.has(depId)) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `invalid_dependency: ${task.id} depends on non-existent task ${depId}`,
+              });
+            }
+          }
+        }
+
+        type WaveValue = { id: string; agents: string[]; dependsOn: string[] };
+
+        // Regenerate waves if requested
+        const existingScheduleOutput = (snapshot as PipelineSnapshot)
+          .contextEntries
+          ? (new Map((snapshot as PipelineSnapshot).contextEntries).get(
+              "scheduleOutput"
+            ) as { waves?: WaveValue[] } | undefined)
+          : undefined;
+
+        let waves: WaveValue[] = existingScheduleOutput?.waves ?? [];
+
+        if (input.regenerateWaves) {
+          // Generate waves using topological sort
+          waves = generateWavesFromDeps(input.subtasks);
+        }
+
+        // Update snapshot context
+        const ctxMap = new Map(
+          (snapshot as PipelineSnapshot).contextEntries ?? []
+        );
+        const planOutput = ctxMap.get("planOutput") as {
+          subtasks: unknown[];
+          rootPlanPath: string;
+        } | null;
+
+        if (planOutput) {
+          ctxMap.set("planOutput", {
+            ...planOutput,
+            subtasks: input.subtasks,
+          });
+        }
+
+        const scheduleOutputEntry = ctxMap.get("scheduleOutput") as {
+          waves: WaveValue[];
+          executionMode: string;
+          estimatedDuration?: number;
+        } | null;
+
+        if (scheduleOutputEntry) {
+          ctxMap.set("scheduleOutput", {
+            ...scheduleOutputEntry,
+            waves,
+          });
+        }
+
+        // Update snapshot
+        const updatedSnapshot: PipelineSnapshot = {
+          ...(snapshot as PipelineSnapshot),
+          contextEntries: Array.from(ctxMap.entries()),
+        };
+
+        await storage.save(input.runId, updatedSnapshot);
+
+        // Record metrics
+        const durationSec = (performance.now() - startTime) / 1000;
+        phaseUpdatePlanDurationSeconds.observe(durationSec);
+
+        return {
+          runId: input.runId,
+          waves,
+          waveCount: waves.length,
+          subtasks: input.subtasks,
+        };
+      } catch (error) {
+        const durationSec = (performance.now() - startTime) / 1000;
+        const { phaseUpdatePlanDurationSeconds } = await import(
+          "@alfred/pipeline/metrics"
+        );
+        phaseUpdatePlanDurationSeconds.observe(durationSec);
+
+        throw toTRPCError(error, "workflow_phase_update_plan_failed");
+      }
+    }),
+
+  /**
+   * Save current plan as a reusable template.
+   */
+  saveAsTemplate: authedProcedure
+    .use(rateLimit)
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        name: z.string().min(1),
+        description: z.string().optional(),
+        triggerPattern: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const [{ PostgresCheckpointStorage }, { templateRepo }] =
+          await Promise.all([
+            import("@alfred/db/repo/workflow"),
+            import("@alfred/db"),
+          ]);
+
+        const storage = new PostgresCheckpointStorage();
+        const snapshot = await storage.load(input.runId);
+
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
+
+        const ctxMap = new Map(
+          (snapshot as PipelineSnapshot).contextEntries ?? []
+        );
+        const planOutput = ctxMap.get("planOutput");
+
+        if (!planOutput) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "plan_not_found_in_snapshot",
+          });
+        }
+
+        const templateId = await templateRepo.saveTemplate(
+          session.user.id,
+          input.name,
+          planOutput,
+          {
+            description: input.description,
+            triggerPattern: input.triggerPattern,
+          }
+        );
+
+        return { templateId };
+      } catch (error) {
+        throw toTRPCError(error, "workflow_save_template_failed");
+      }
+    }),
+
+  /**
+   * List user's plan templates.
+   */
+  listTemplates: authedProcedure
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
+    .query(async ({ ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const { templateRepo } = await import("@alfred/db");
+        const templates = await templateRepo.listTemplates(session.user.id);
+
+        return templates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          triggerPattern: t.triggerPattern,
+          successRate: t.successRate ? Number.parseFloat(t.successRate) : null,
+          usageCount: Number.parseInt(t.usageCount || "0", 10),
+          lastUsedAt: t.lastUsedAt?.toISOString() ?? null,
+          createdAt: t.createdAt?.toISOString() ?? new Date().toISOString(),
+        }));
+      } catch (error) {
+        throw toTRPCError(error, "workflow_list_templates_failed");
+      }
+    }),
+
+  /**
+   * Apply template to a new requirement.
+   */
+  applyTemplate: authedProcedure
+    .use(rateLimit)
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
+    .input(
+      z.object({
+        templateId: z.string().min(1),
+        requirement: z.string().min(1),
+        workspace: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const { templateRepo } = await import("@alfred/db");
+
+        const planData = await templateRepo.applyTemplate(
+          input.templateId,
+          input.requirement
+        );
+
+        // Return as a structured plan that can be used for execution
+        return {
+          templateId: input.templateId,
+          planData,
+        };
+      } catch (error) {
+        throw toTRPCError(error, "workflow_apply_template_failed");
       }
     }),
 });
@@ -1586,3 +1881,55 @@ export const workflowRouter = router({
       })
     ),
 });
+
+// ─── Helper Functions ──────────────────────────────────────────────────────────
+
+/**
+ * Generate waves from task dependencies using topological sort.
+ */
+function generateWavesFromDeps(
+  subtasks: Array<{
+    id: string;
+    deps: string[];
+  }>
+): Array<{ id: string; agents: string[]; dependsOn: string[] }> {
+  const waves: Array<{ id: string; agents: string[]; dependsOn: string[] }> =
+    [];
+  const completed = new Set<string>();
+  let waveIndex = 0;
+
+  while (completed.size < subtasks.length) {
+    const ready = subtasks.filter((task) => {
+      if (completed.has(task.id)) {
+        return false;
+      }
+      return task.deps.every((depId) => completed.has(depId));
+    });
+
+    if (ready.length === 0) {
+      const remaining = subtasks.filter((t) => !completed.has(t.id));
+      if (remaining.length > 0) {
+        waves.push({
+          id: `wave-${waveIndex}`,
+          agents: remaining.map((t) => t.id),
+          dependsOn: waveIndex > 0 ? [`wave-${waveIndex - 1}`] : [],
+        });
+      }
+      break;
+    }
+
+    waves.push({
+      id: `wave-${waveIndex}`,
+      agents: ready.map((t) => t.id),
+      dependsOn: waveIndex > 0 ? [`wave-${waveIndex - 1}`] : [],
+    });
+
+    for (const task of ready) {
+      completed.add(task.id);
+    }
+
+    waveIndex++;
+  }
+
+  return waves;
+}

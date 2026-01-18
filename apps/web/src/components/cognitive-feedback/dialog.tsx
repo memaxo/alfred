@@ -91,6 +91,22 @@ export function CognitiveFeedbackDialog({
               onSubmit={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                const expectedEl =
+                  event.currentTarget.elements.namedItem("expected");
+                const actualEl =
+                  event.currentTarget.elements.namedItem("actual");
+                const expectedValue =
+                  expectedEl &&
+                  typeof (expectedEl as { value?: unknown }).value === "string"
+                    ? (expectedEl as { value: string }).value
+                    : "";
+                const actualValue =
+                  actualEl &&
+                  typeof (actualEl as { value?: unknown }).value === "string"
+                    ? (actualEl as { value: string }).value
+                    : "";
+                form.setFieldValue("expected", expectedValue);
+                form.setFieldValue("actual", actualValue);
                 void form.handleSubmit();
               }}
               ref={ref}
@@ -105,6 +121,7 @@ export function CognitiveFeedbackDialog({
                     <Textarea
                       aria-invalid={field.state.meta.errors.length > 0}
                       id="expected-feedback"
+                      name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(event) =>
                         field.handleChange(event.target.value)
@@ -130,6 +147,7 @@ export function CognitiveFeedbackDialog({
                     <Textarea
                       aria-invalid={field.state.meta.errors.length > 0}
                       id="actual-feedback"
+                      name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(event) =>
                         field.handleChange(event.target.value)
@@ -148,16 +166,13 @@ export function CognitiveFeedbackDialog({
               <DialogFooter className="pt-2">
                 <form.Subscribe
                   selector={(state) => ({
-                    canSubmit: state.canSubmit,
                     isSubmitting: state.isSubmitting,
                   })}
                 >
-                  {({ canSubmit, isSubmitting }) => (
+                  {({ isSubmitting }) => (
                     <Button
                       className="w-full"
-                      disabled={
-                        status === "pending" || isSubmitting || !canSubmit
-                      }
+                      disabled={status === "pending" || isSubmitting}
                       type="submit"
                     >
                       {status === "pending" || isSubmitting

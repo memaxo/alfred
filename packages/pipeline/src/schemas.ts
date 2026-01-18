@@ -48,6 +48,15 @@ export const wavePlanSchema = z.object({
 });
 
 /**
+ * Update Plan Input - for modifying an existing plan
+ */
+export const updatePlanInputSchema = z.object({
+  runId: z.string().min(1),
+  subtasks: z.array(subTaskSchema),
+  regenerateWaves: z.boolean().default(true),
+});
+
+/**
  * Pipeline snapshot schema (simplified for API responses)
  */
 export const pipelineSnapshotSchema = z.object({
@@ -235,6 +244,7 @@ export const phaseStatusSchema = z.object({
 export type LinearInput = z.infer<typeof linearInputSchema>;
 export type SubTask = z.infer<typeof subTaskSchema>;
 export type WavePlan = z.infer<typeof wavePlanSchema>;
+export type UpdatePlanInput = z.infer<typeof updatePlanInputSchema>;
 export type PipelineSnapshotInfo = z.infer<typeof pipelineSnapshotSchema>;
 export type PlanPhaseInput = z.infer<typeof planPhaseInputSchema>;
 export type ExecutePhaseInput = z.infer<typeof executePhaseInputSchema>;

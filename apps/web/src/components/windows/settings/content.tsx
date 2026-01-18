@@ -304,39 +304,6 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
       prefKey: "",
       prefValue: "",
     },
-    onSubmit: ({ value }) => {
-      const trimmedKey = value.prefKey.trim();
-      const trimmedValue = value.prefValue.trim();
-      if (!trimmedKey) {
-        onSubmitInvalid();
-        toast.error("Preference key required");
-        return;
-      }
-      if (!trimmedValue) {
-        onSubmitInvalid();
-        toast.error("Preference value required");
-        return;
-      }
-
-      let parsedValue: unknown = trimmedValue;
-      try {
-        parsedValue = JSON.parse(trimmedValue);
-      } catch {
-        // keep string
-      }
-
-      const input: PreferenceSetInput = {
-        key: trimmedKey,
-        value: parsedValue,
-        confidence: 1,
-      };
-
-      setPreference.mutate(input, {
-        onSuccess: () => {
-          form.reset();
-        },
-      });
-    },
   });
 
   const handleDelete = (key: string) => {
@@ -374,7 +341,50 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
           className="mb-4 flex flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
-            void form.handleSubmit();
+            const keyEl = event.currentTarget.elements.namedItem("prefKey");
+            const valueEl = event.currentTarget.elements.namedItem("prefValue");
+            const rawKey =
+              keyEl && typeof (keyEl as { value?: unknown }).value === "string"
+                ? (keyEl as { value: string }).value
+                : "";
+            const rawValue =
+              valueEl &&
+              typeof (valueEl as { value?: unknown }).value === "string"
+                ? (valueEl as { value: string }).value
+                : "";
+
+            const trimmedKey = rawKey.trim();
+            const trimmedValue = rawValue.trim();
+
+            if (!trimmedKey) {
+              onSubmitInvalid();
+              toast.error("Preference key required");
+              return;
+            }
+            if (!trimmedValue) {
+              onSubmitInvalid();
+              toast.error("Preference value required");
+              return;
+            }
+
+            let parsedValue: unknown = trimmedValue;
+            try {
+              parsedValue = JSON.parse(trimmedValue);
+            } catch {
+              // keep string
+            }
+
+            const input: PreferenceSetInput = {
+              key: trimmedKey,
+              value: parsedValue,
+              confidence: 1,
+            };
+
+            setPreference.mutate(input, {
+              onSuccess: () => {
+                form.reset();
+              },
+            });
           }}
           ref={ref}
         >
@@ -383,6 +393,8 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
               <Input
                 aria-invalid={field.state.meta.errors.length > 0}
                 className="bg-void-surface/50"
+                id={field.name}
+                name={field.name}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="key (e.g. theme)"
@@ -398,6 +410,8 @@ function PreferencesSection({ mode }: { mode: SettingsMode }) {
                   "bg-void-surface/50",
                   isCompact ? "min-h-[40px]" : "min-h-[60px]"
                 )}
+                id={field.name}
+                name={field.name}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="value (string or JSON)"

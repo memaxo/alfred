@@ -9,6 +9,13 @@ const { window } = dom;
 (globalThis as { window: unknown }).window = window;
 globalThis.document = window.document;
 (globalThis as { self: unknown }).self = window;
+
+// React 18+ test environment hint to suppress "not wrapped in act(...)" warnings
+// and ensure consistent flushing semantics in tests.
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
+
 globalThis.HTMLElement = window.HTMLElement;
 globalThis.Element = window.Element;
 globalThis.Node = window.Node;
