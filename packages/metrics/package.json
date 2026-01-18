@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
+    "./classification": {
+      "types": "./dist/classification.d.ts",
+      "default": "./src/classification.ts"
+    },
     "./performance": {
       "types": "./dist/performance.d.ts",
       "default": "./src/performance.ts"

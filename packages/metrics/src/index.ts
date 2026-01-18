@@ -1,3 +1,4 @@
+export * from "./classification";
 export * from "./cognitive";
 export * from "./cost";
 export * from "./logger";

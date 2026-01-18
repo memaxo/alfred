@@ -6,6 +6,13 @@
  */
 
 import { logger } from "@alfred/logger";
+import {
+  classificationBatchSize,
+  classificationConfidence,
+  classificationFallbackTotal,
+  classificationLatencySeconds,
+  classificationTotal,
+} from "@alfred/metrics/classification";
 import { generateObject, type LanguageModel } from "ai";
 import type { z } from "zod";
 
@@ -81,6 +88,12 @@ export async function classify<T extends z.ZodType>(
         "classify_offline_no_fallback: ALFRED_CLASSIFY_OFFLINE=1 but no fallback provided"
       );
     }
+    const classifyType = modelKey
+      ? modelKey.split("/")[1] || "unknown"
+      : "unknown";
+    classificationFallbackTotal.inc({ type: classifyType, reason: "offline" });
+    classificationTotal.inc({ type: classifyType, outcome: "fallback" });
+
     const result = fallback();
     return {
       result,
@@ -91,6 +104,11 @@ export async function classify<T extends z.ZodType>(
 
   // Require model to be passed explicitly (avoid circular dependency with @alfred/agent)
   if (!model) {
+    const classifyType = modelKey
+      ? modelKey.split("/")[1] || "unknown"
+      : "unknown";
+    classificationFallbackTotal.inc({ type: classifyType, reason: "no_model" });
+
     throw new Error(
       "classify_model_required: Must provide model option. Use getClassificationModel() from @alfred/agent/selector"
     );
@@ -107,6 +125,29 @@ export async function classify<T extends z.ZodType>(
       });
 
       const latencyMs = performance.now() - start;
+      const classifyType = modelKey
+        ? modelKey.split("/")[1] || "unknown"
+        : "unknown";
+
+      // Track metrics
+      classificationLatencySeconds.observe(
+        { type: classifyType, model: modelKey || "unknown" },
+        latencyMs / 1000
+      );
+      classificationTotal.inc({ type: classifyType, outcome: "success" });
+
+      // Track confidence if present in result
+      const result = response.object as z.infer<T>;
+      if (
+        typeof result === "object" &&
+        result !== null &&
+        "confidence" in result
+      ) {
+        const confidence = (result as { confidence?: unknown }).confidence;
+        if (typeof confidence === "number") {
+          classificationConfidence.observe({ type: classifyType }, confidence);
+        }
+      }
 
       logger.debug("classify_success", {
         latencyMs: Math.round(latencyMs),
@@ -115,7 +156,7 @@ export async function classify<T extends z.ZodType>(
       });
 
       return {
-        result: response.object as z.infer<T>,
+        result,
         source: "llm",
         latencyMs,
         model: modelKey,
@@ -174,6 +215,18 @@ export async function classifyBatch<T extends z.ZodType>(
   options: ClassifyOptions<T> & { model: LanguageModel }
 ): Promise<ClassifyResult<z.infer<T>>> {
   const prompt = `${systemPrompt}\n\n${itemsDescription}`;
+
+  // Track batch size if we can parse it from the items description
+  const classifyType = options.modelKey
+    ? options.modelKey.split("/")[1] || "unknown"
+    : "unknown";
+  const itemCount = itemsDescription
+    .split("\n")
+    .filter((line) => line.trim().match(/^\d+:/)).length;
+  if (itemCount > 0) {
+    classificationBatchSize.observe({ type: classifyType }, itemCount);
+  }
+
   return await classify(schema, prompt, options);
 }
 
