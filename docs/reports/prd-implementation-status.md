@@ -19,10 +19,10 @@
 - ✅ **Wired preferences into AI SDK system prompts** (`apps/web/src/lib/api/stream-handler.ts` line 121-138, `buildPreferenceSystemPrompt`)
 - ✅ **Preference update API based on feedback** (`packages/api/src/routers/preference.ts` - `inferFromCorrection`)
 
-### 4.3 Complete Personal Assistant Tools ⚠️ PARTIAL
+### 4.3 Complete Personal Assistant Tools ✅ COMPLETE
 - ✅ **`focus.ts` tool with drive mode integration** (`packages/agent/assistant/src/tool/focus.ts`, `apps/web/src/routes/drive.tsx`, `apps/native/app/(drawer)/(tabs)/drive.tsx`)
-- ⚠️ **`web.ts` tool for research** - NOT FOUND (file doesn't exist)
-- ⚠️ **`home.ts` tool for Home Assistant** - SKELETON ONLY (`packages/agent/assistant/src/tool/home.ts` throws `"home_tool_not_implemented"`)
+- ✅ **`web.ts` tool for research** (`packages/agent/assistant/src/tool/web.ts`)
+- ✅ **`home.ts` tool for Home Assistant** (`packages/agent/assistant/src/tool/home.ts`)
 - ✅ **Focus mode wired to response templates** (`packages/api/src/voice/assistant.ts` line 118-124)
 - ✅ **Tool usage tracking to learning system** (`packages/runtime/src/engines/learning.ts`, `packages/agent/src/orchestrator/learning-worker.ts`)
 
@@ -53,14 +53,14 @@
 - ✅ AI SDK v6 integration (`apps/web/src/components/chat-container.tsx`)
 - ✅ Streaming support (`apps/web/src/hooks/use-assistant-stream.ts`)
 - ✅ Tool execution visualization (`apps/web/src/components/chat-render.tsx`, `apps/web/src/components/mindscape/nodes/workflow-node.tsx`)
+- ✅ **Message editing/regeneration** (`apps/web/src/components/windows/chat/chat-window.tsx`)
 - ⚠️ **Message history with infinite scroll** - Uses Virtuoso but no infinite scroll pagination found
-- ❌ **Message editing/regeneration** - No implementation found
 
-### 6.2 Pane Layouts ⚠️ PARTIAL
+### 6.2 Pane Layouts ✅ COMPLETE
 - ✅ Note pane (`apps/web/src/routes/note.tsx`, `packages/ui/src/pane/note.tsx`)
 - ✅ Reminder pane (`apps/web/src/routes/remind.tsx`, `packages/ui/src/pane/remind.tsx`)
-- ⚠️ **Timer pane** - Router exists (`packages/api/src/routers/timer.ts`) but no UI route found
-- ⚠️ **Bookmark pane** - Router exists (`packages/api/src/routers/book.tsx`) but no UI route found
+- ✅ **Timer pane** (`apps/web/src/routes/_protected/timer.tsx`)
+- ✅ **Bookmark pane** (`apps/web/src/routes/_protected/book.tsx`)
 
 ### 6.3 Settings & Preferences ✅ COMPLETE
 - ✅ Autonomy slider (`apps/web/src/components/autonomy-slider.tsx`)
@@ -72,19 +72,19 @@
 - ✅ Tool execution visualization (`apps/web/src/components/mindscape/nodes/workflow-node.tsx`)
 - ✅ Error analysis UI (`apps/web/src/components/mindscape/workflow-drawer.tsx` - error tab)
 
-### 6.5 Performance Metrics ⚠️ PARTIAL
+### 6.5 Performance Metrics ✅ COMPLETE
 - ✅ Metrics collection (`packages/api/src/metrics.ts`, `packages/runtime/src/metrics.ts`)
 - ✅ Prometheus endpoint (`apps/web/src/routes/api/metrics.ts`)
-- ❌ **Performance metrics dashboard UI** - No dashboard component found (only raw metrics endpoint)
+- ✅ **Performance metrics dashboard UI** (`apps/web/src/routes/_protected/admin/metrics.tsx`)
 
 ## Phase 7 — Voice & Mobile
 
 ### 7.1 Voice Integration ✅ COMPLETE
 - ✅ All items marked complete in PRD
 
-### 7.2 Mobile App ⚠️ PARTIAL
+### 7.2 Mobile App ✅ COMPLETE
 - ✅ Drive Mode (`apps/native/app/(drawer)/(tabs)/drive.tsx`)
-- ❌ **Chat interface** - Only placeholder exists (`apps/native/app/(drawer)/(tabs)/index.tsx` shows "Tab One")
+- ✅ **Chat interface** (`apps/native/app/(drawer)/(tabs)/index.tsx`)
 
 ## Phase 8 — Hardening & Observability
 
@@ -107,23 +107,23 @@
 - RAG Integration (Phase 4.1)
 - Preference-Driven Adaptation (Phase 4.2)
 - Focus tool with drive mode (Phase 4.3)
+- Personal Assistant Tools (Phase 4.3) - `web.ts` and `home.ts` fully functional
 - Linear Integration (Phase 5.1)
 - Suspend/Resume for Biometric Obligations (Phase 5.2)
 - Tool Chaining & Dependencies (Phase 5.3)
-- Core Chat UI (Phase 6.1 - mostly)
+- Core Chat UI (Phase 6.1 - including editing/regeneration)
+- Pane Layouts (Phase 6.2) - Notes, Reminders, Timers, and Bookmarks
 - Settings & Preferences (Phase 6.3)
 - Workflow Visualization (Phase 6.4)
+- Performance Metrics Dashboard (Phase 6.5)
 - Voice Integration (Phase 7.1)
+- Mobile App (Phase 7.2) - Drive Mode and Chat interface
 - Testing Infrastructure (Phase 8.1)
 - Load Testing Scripts (Phase 8.2)
 - Observability (Phase 8.3)
 
 ### Partially Implemented ⚠️
-- Personal Assistant Tools (Phase 4.3) - `web.ts` missing, `home.ts` skeleton only
-- Core Chat UI (Phase 6.1) - Missing message editing/regeneration, infinite scroll
-- Pane Layouts (Phase 6.2) - Timer and Bookmark routers exist but no UI routes
-- Performance Metrics (Phase 6.5) - Metrics exist but no dashboard UI
-- Mobile App (Phase 7.2) - Only Drive Mode, no chat interface
+- Core Chat UI (Phase 6.1) - Missing infinite scroll pagination
 
 ### Not Implemented ❌
 - (none identified beyond the partial items above)
@@ -131,14 +131,8 @@
 ## Recommendations
 
 1. **Update PRD checkboxes** based on this verification
-2. **Create issues** for missing features:
-   - `web.ts` tool implementation
-   - `home.ts` tool completion (Home Assistant integration)
-   - Message editing/regeneration UI
-   - Timer and Bookmark pane UI routes
-   - Performance metrics dashboard
-   - Mobile chat interface
+2. **Address missing features**:
+   - Infinite scroll implementation in chat
 3. **Mark as "Needs Validation"**:
    - End-to-end suspend/resume flow testing
    - Infinite scroll implementation verification
-
