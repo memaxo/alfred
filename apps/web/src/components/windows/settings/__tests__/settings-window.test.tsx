@@ -1,7 +1,7 @@
 /**
  * Tests for SettingsWindow component
  *
- * Tests the window wrapper for settings content.
+ * Tests the window wrapper for consolidated settings desktop app.
  */
 
 import "@/test/dom";
@@ -115,7 +115,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("440");
+      expect(frame.getAttribute("data-width")).toBe("800");
     });
 
     it("uses compact width when viewMode is compact", () => {
@@ -129,7 +129,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("380");
+      expect(frame.getAttribute("data-width")).toBe("600");
     });
 
     it("defaults to full viewMode when data is invalid", () => {
@@ -141,7 +141,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("440");
+      expect(frame.getAttribute("data-width")).toBe("800");
     });
 
     it("sets correct window type", () => {
@@ -156,41 +156,16 @@ describe("SettingsWindow", () => {
   });
 
   describe("Content Integration", () => {
-    it("renders SettingsContent inside window", () => {
-      const { getByText, getByRole } = render(
+    it("renders SettingsApp inside window", () => {
+      const { getByTestId } = render(
         <SettingsWindow {...(createNodeProps() as any)} />,
         { wrapper: createWrapper() }
       );
 
-      expect(getByRole("slider")).toBeTruthy();
-      expect(getByText("Voice")).toBeTruthy();
-      expect(getByText("Custom Preferences")).toBeTruthy();
-    });
-
-    it("passes compact mode to SettingsContent when viewMode is compact", () => {
-      const { queryByPlaceholderText } = render(
-        <SettingsWindow
-          {...(createNodeProps({
-            data: { type: "settings", viewMode: "compact" },
-          }) as any)}
-        />,
-        { wrapper: createWrapper() }
-      );
-
-      expect(queryByPlaceholderText("Type something to preview...")).toBeNull();
-    });
-
-    it("passes full mode to SettingsContent when viewMode is full", () => {
-      const { getByPlaceholderText } = render(
-        <SettingsWindow
-          {...(createNodeProps({
-            data: { type: "settings", viewMode: "full" },
-          }) as any)}
-        />,
-        { wrapper: createWrapper() }
-      );
-
-      expect(getByPlaceholderText("Type something to preview...")).toBeTruthy();
+      const content = getByTestId("window-content");
+      expect(content).toBeTruthy();
+      // SettingsApp renders with sidebar and sections
+      expect(content.innerHTML).toContain("Settings");
     });
   });
 
@@ -204,7 +179,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("440");
+      expect(frame.getAttribute("data-width")).toBe("800");
     });
 
     it("handles optional label field", () => {
@@ -231,7 +206,8 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("440");
+      // Maximized uses full width
+      expect(frame.getAttribute("data-width")).toBe("800");
     });
   });
 });

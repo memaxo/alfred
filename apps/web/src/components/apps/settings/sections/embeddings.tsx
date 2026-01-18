@@ -92,7 +92,7 @@ export function EmbeddingsSection() {
             className="w-full accent-biolum"
             max="10"
             min="1"
-            onChange={(e) => setPoolSize(Number.parseInt(e.target.value))}
+            onChange={(e) => setPoolSize(Number.parseInt(e.target.value, 10))}
             type="range"
             value={poolSize}
           />

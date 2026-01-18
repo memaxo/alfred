@@ -1,19 +1,20 @@
 /**
  * Settings Window Component
  *
- * DOM-based window wrapper for unified settings content.
+ * DOM-based window wrapper for unified settings app.
+ * Now uses the consolidated desktop settings app instead of legacy content components.
  */
 
 import type { NodeProps } from "@xyflow/react";
 import { Settings2 } from "lucide-react";
 import { z } from "zod";
+import { SettingsApp } from "@/components/apps/settings";
 import {
   SmallCard,
   TinyDot,
   useLOD,
   WindowFrame,
 } from "@/components/windows/shared";
-import { SettingsContent } from "./content";
 
 const settingsWindowDataSchema = z.object({
   type: z.literal("settings"),
@@ -47,18 +48,32 @@ export function SettingsWindow({ id, data, selected }: NodeProps) {
 
   const isCompact = windowData.viewMode === "compact";
 
+  // Mock WindowComponentProps for SettingsApp
+  const mockProps = {
+    window: {} as any,
+    onClose: () => {},
+    onMinimize: () => {},
+    onMaximize: () => {},
+    onRestore: () => {},
+    onFocus: () => {},
+    onBlur: () => {},
+    onDragStart: () => {},
+    onDragEnd: () => {},
+    onResizeStart: () => {},
+    onResizeEnd: () => {},
+    onDataChange: () => {},
+  };
+
   return (
     <WindowFrame
       actions={<Settings2 className="h-4 w-4 text-slate-300" />}
       id={id}
       selected={selected}
       title="Settings"
-      width={isCompact ? 380 : 440}
+      width={isCompact ? 600 : 800}
       windowType="settings"
     >
-      <div className="p-4">
-        <SettingsContent mode={isCompact ? "compact" : "full"} />
-      </div>
+      <SettingsApp {...mockProps} />
     </WindowFrame>
   );
 }
