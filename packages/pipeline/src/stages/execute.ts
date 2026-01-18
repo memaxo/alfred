@@ -51,10 +51,78 @@ export class ExecuteStage
     const handoffs: string[] = [];
     const activeWorkspaces: Workspace[] = [];
 
+    // Check for partial execution options
+    const waveIds = ctx.get<string[]>("waveIds");
+    const skipTaskIds = ctx.get<string[]>("skipTaskIds");
+    const dryRun = ctx.get<boolean>("dryRun") ?? false;
+
+    // Filter waves if waveIds specified
+    let wavesToExecute = input.waves;
+    if (waveIds && waveIds.length > 0) {
+      wavesToExecute = input.waves.filter((w) => waveIds.includes(w.id));
+      ctx.emit(
+        createEvent("stage:progress", {
+          stage: "execute",
+          message: `Partial execution: ${wavesToExecute.length}/${input.waves.length} waves selected`,
+        })
+      );
+    }
+
+    // Filter tasks if skipTaskIds specified
+    if (skipTaskIds && skipTaskIds.length > 0) {
+      wavesToExecute = wavesToExecute.map((wave) => ({
+        ...wave,
+        agents: wave.agents.filter((id) => !skipTaskIds.includes(id)),
+      }));
+      ctx.emit(
+        createEvent("stage:progress", {
+          stage: "execute",
+          message: `Skipping ${skipTaskIds.length} tasks`,
+        })
+      );
+    }
+
+    // Dry run mode - validate only, no agent spawning
+    if (dryRun) {
+      ctx.emit(
+        createEvent("stage:progress", {
+          stage: "execute",
+          message: `[DRY RUN] Would execute ${wavesToExecute.length} waves with ${wavesToExecute.reduce((sum, w) => sum + w.agents.length, 0)} total agents`,
+        })
+      );
+
+      // Return mock outcomes for dry run
+      for (const wave of wavesToExecute) {
+        for (const agentId of wave.agents) {
+          outcomes.set(agentId, {
+            agentId,
+            phaseId: "execute",
+            stuck: false,
+            status: "success",
+            durationSeconds: 0,
+            role: "agent",
+            result: {
+              summary: "[DRY RUN] Agent not spawned",
+              artifacts: [],
+              changes: [],
+              notes: ["Dry run - no actual execution"],
+            },
+          });
+        }
+      }
+
+      return {
+        outcomes,
+        fileChanges: [],
+        handoffs: [],
+        dryRun: true,
+      };
+    }
+
     ctx.emit(
       createEvent("stage:progress", {
         stage: "execute",
-        message: `Executing ${input.waves.length} waves with ${input.executionMode} mode`,
+        message: `Executing ${wavesToExecute.length} waves with ${input.executionMode} mode`,
       })
     );
 
@@ -118,8 +186,8 @@ export class ExecuteStage
 
     try {
       // Sequential execution for POC
-      for (let waveIndex = 0; waveIndex < input.waves.length; waveIndex++) {
-        const wave = input.waves[waveIndex];
+      for (let waveIndex = 0; waveIndex < wavesToExecute.length; waveIndex++) {
+        const wave = wavesToExecute[waveIndex];
         if (!wave) {
           continue;
         }
@@ -137,7 +205,7 @@ export class ExecuteStage
         ctx.emit(
           createEvent("stage:progress", {
             stage: "execute",
-            message: `Starting wave ${waveIndex + 1}/${input.waves.length}`,
+            message: `Starting wave ${waveIndex + 1}/${wavesToExecute.length}`,
           })
         );
 

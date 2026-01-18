@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import {
   codexLinearActivitiesDroppedTotal,
@@ -437,9 +438,31 @@ const workflowPhaseRouter = router({
             : undefined,
         };
 
+        // Set partial execution params in snapshot context if provided
+        if (input.waveIds || input.skipTaskIds || input.dryRun) {
+          const updatedSnapshot = { ...(snapshot as PipelineSnapshot) };
+          const contextMap = new Map(updatedSnapshot.contextEntries ?? []);
+
+          if (input.waveIds) {
+            contextMap.set("waveIds", input.waveIds);
+          }
+          if (input.skipTaskIds) {
+            contextMap.set("skipTaskIds", input.skipTaskIds);
+          }
+          if (input.dryRun) {
+            contextMap.set("dryRun", input.dryRun);
+          }
+
+          updatedSnapshot.contextEntries = Array.from(contextMap.entries());
+          await storage.save(input.runId, updatedSnapshot);
+        }
+
+        // Reload snapshot with partial execution params
+        const executionSnapshot = await storage.load(input.runId);
+
         // Resume from the snapshot (will continue from execute stage)
         for await (const _event of runner.resume(
-          snapshot as PipelineSnapshot,
+          executionSnapshot as PipelineSnapshot,
           pipelineInput
         )) {
           // Events are emitted to observers

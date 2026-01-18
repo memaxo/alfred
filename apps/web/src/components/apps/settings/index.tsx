@@ -1,33 +1,51 @@
 "use client";
 
 /**
- * Settings App - System configuration and preferences
+ * Settings App - Unified system configuration and preferences
  *
- * Manages user preferences, sessions, tokens, and policy settings.
+ * Consolidated settings UI with 10 categories:
+ * - Profile: User account information
+ * - Devices: Session and device management
+ * - Security: API tokens, passkeys, policy permissions
+ * - Models: AI model configuration per role
+ * - Voice: Speech-to-text and text-to-speech
+ * - Embeddings: Embedding model configuration
+ * - Visual: Desktop appearance and effects
+ * - MCP: Model Context Protocol servers
+ * - Integrations: External service connections
+ * - Notifications: Alert preferences
+ * - Keyboard: Shortcut customization
  *
  * @see docs/execplans/desktop-evolution-prd.md Section 8.8
  */
 
 import {
   Bell,
-  Key,
+  Cpu,
   Keyboard,
+  Mic,
   Palette,
+  Plug,
   Settings,
   Shield,
+  Sparkles,
   User,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { Checkbox } from "@/components/checkbox";
-import { Choice } from "@/components/choice";
-import { DateField } from "@/components/date";
-import { DateRangeField, type DateRangeValue } from "@/components/daterange";
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
-import { List } from "@/components/list";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { PolicySection } from "./policy-section";
+import { EmbeddingsSection } from "./sections/embeddings";
+import { IntegrationsSection } from "./sections/integrations";
+import { KeyboardSection } from "./sections/keyboard";
+import { McpSection } from "./sections/mcp";
+import { ModelsSection } from "./sections/models";
+import { NotificationsSection } from "./sections/notifications";
+import { ProfileSection } from "./sections/profile";
+import { VisualSection } from "./sections/visual";
+import { VoiceSection } from "./sections/voice";
 import { SessionsSection } from "./sessions-section";
 import { TokensSection } from "./tokens-section";
 
@@ -36,35 +54,43 @@ import { TokensSection } from "./tokens-section";
 // ─────────────────────────────────────────────────────────────────────────────
 
 type SettingsSection =
-  | "account"
-  | "sessions"
-  | "tokens"
-  | "policy"
-  | "appearance"
-  | "keyboard"
-  | "notifications";
+  | "profile"
+  | "devices"
+  | "security"
+  | "models"
+  | "voice"
+  | "embeddings"
+  | "visual"
+  | "mcp"
+  | "integrations"
+  | "notifications"
+  | "keyboard";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function SettingsApp({ window: _window }: WindowComponentProps) {
-  const [section, setSection] = useState<SettingsSection>("sessions");
+  const [section, setSection] = useState<SettingsSection>("profile");
 
   const sections = [
-    { id: "account", icon: User, label: "Account" },
-    { id: "sessions", icon: Key, label: "Sessions" },
-    { id: "tokens", icon: Key, label: "API Tokens" },
-    { id: "policy", icon: Shield, label: "Policy" },
-    { id: "appearance", icon: Palette, label: "Appearance" },
-    { id: "keyboard", icon: Keyboard, label: "Keyboard" },
+    { id: "profile", icon: User, label: "Profile" },
+    { id: "devices", icon: Zap, label: "Devices & Sessions" },
+    { id: "security", icon: Shield, label: "Security" },
+    { id: "models", icon: Sparkles, label: "AI Models" },
+    { id: "voice", icon: Mic, label: "Voice & Speech" },
+    { id: "embeddings", icon: Cpu, label: "Embeddings" },
+    { id: "visual", icon: Palette, label: "Visual & Desktop" },
+    { id: "mcp", icon: Plug, label: "MCP Servers" },
+    { id: "integrations", icon: Zap, label: "Integrations" },
     { id: "notifications", icon: Bell, label: "Notifications" },
+    { id: "keyboard", icon: Keyboard, label: "Keyboard" },
   ] as const;
 
   return (
     <div className="flex h-full bg-void">
       {/* Sidebar */}
-      <div className="w-48 border-white/5 border-r">
+      <div className="w-56 border-white/5 border-r">
         <div className="flex h-10 items-center gap-2 border-white/5 border-b px-3">
           <Settings className="h-4 w-4 text-biolum" />
           <span className="font-medium text-sm">Settings</span>
@@ -81,7 +107,7 @@ export function SettingsApp({ window: _window }: WindowComponentProps) {
                     : "text-biolum-dim hover:bg-white/5 hover:text-biolum"
                 )}
                 key={s.id}
-                onClick={() => setSection(s.id)}
+                onClick={() => setSection(s.id as SettingsSection)}
                 type="button"
               >
                 <s.icon className="h-4 w-4" />
@@ -94,188 +120,87 @@ export function SettingsApp({ window: _window }: WindowComponentProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {section === "account" && <AccountSection />}
-        {section === "sessions" && <SessionsSection />}
-        {section === "tokens" && <TokensSection />}
-        {section === "policy" && <PolicySection />}
-        {section === "appearance" && <AppearanceSection />}
-        {section === "keyboard" && <KeyboardSection />}
+        {section === "profile" && <ProfileSection />}
+        {section === "devices" && <DevicesSection />}
+        {section === "security" && <SecuritySection />}
+        {section === "models" && <ModelsSection />}
+        {section === "voice" && <VoiceSection />}
+        {section === "embeddings" && <EmbeddingsSection />}
+        {section === "visual" && <VisualSection />}
+        {section === "mcp" && <McpSection />}
+        {section === "integrations" && <IntegrationsSection />}
         {section === "notifications" && <NotificationsSection />}
+        {section === "keyboard" && <KeyboardSection />}
       </div>
     </div>
   );
 }
 
-// Placeholder sections
-function AccountSection() {
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION COMPONENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function DevicesSection() {
   return (
     <div className="p-6">
-      <h2 className="mb-4 font-semibold text-lg">Account</h2>
-      <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-biolum/20">
-            <User className="h-8 w-8 text-biolum" />
-          </div>
-          <div>
-            <div className="font-medium">Jack Mazac</div>
-            <div className="text-biolum-dim text-sm">jack@example.com</div>
-          </div>
-        </div>
+      <div className="mb-4">
+        <h2 className="font-semibold text-lg">Devices & Sessions</h2>
+        <p className="mt-1 text-biolum-dim text-sm">
+          Manage active sessions and authorized devices.
+        </p>
       </div>
+      <SessionsSection />
     </div>
   );
 }
 
-function AppearanceSection() {
-  const [theme, setTheme] = useState("dark");
+function SecuritySection() {
+  const [tab, setTab] = useState<"tokens" | "policy">("tokens");
 
   return (
     <div className="p-6">
-      <h2 className="mb-4 font-semibold text-lg">Appearance</h2>
-      <div className="space-y-4">
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <div className="mb-2 font-medium">Theme</div>
-          <Choice
-            onValueChange={setTheme}
-            options={[
-              {
-                value: "dark",
-                label: "Dark",
-                description: "Void-first, high contrast.",
-              },
-              { value: "light", label: "Light", description: "Bright UI." },
-              {
-                value: "system",
-                label: "System",
-                description: "Follow OS preference.",
-              },
-            ]}
-            value={theme}
-          />
-        </div>
+      <div className="mb-4">
+        <h2 className="font-semibold text-lg">Security</h2>
+        <p className="mt-1 text-biolum-dim text-sm">
+          API tokens, passkeys, and permission policies.
+        </p>
       </div>
-    </div>
-  );
-}
 
-function KeyboardSection() {
-  const shortcuts = [
-    { key: "⌘K", description: "Open Command Palette" },
-    { key: "⌘M", description: "Toggle Mindscape Canvas" },
-    { key: "⌘W", description: "Close Focused Window" },
-    { key: "⌘H", description: "Hide (Minimize) Window" },
-    { key: "⌘Q", description: "Quit Focused Application" },
-    { key: "⌘Tab", description: "Cycle Through Windows" },
-    { key: "⌃Arrows", description: "Focus Tiled Window" },
-    { key: "⌘Arrows", description: "Tile Window" },
-  ];
-
-  return (
-    <div className="p-6">
-      <h2 className="mb-4 font-semibold text-lg">Keyboard Shortcuts</h2>
-      <List
-        items={shortcuts.map((s) => ({
-          id: s.key,
-          content: (
-            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 px-4">
-              <span className="text-biolum-dim text-sm">{s.description}</span>
-              <kbd className="rounded bg-void px-2 py-1 font-mono text-biolum text-xs shadow-inner">
-                {s.key}
-              </kbd>
-            </div>
-          ),
-        }))}
-      />
-    </div>
-  );
-}
-
-function NotificationsSection() {
-  const [snoozeUntil, setSnoozeUntil] = useState<Date | undefined>(undefined);
-  const [vacation, setVacation] = useState<DateRangeValue>({});
-
-  const [settings, setSettings] = useState(() => ({
-    completions: true,
-    workflow: true,
-    alerts: true,
-  }));
-
-  return (
-    <div className="p-6">
-      <h2 className="mb-4 font-semibold text-lg">Notifications</h2>
-      <div className="space-y-4">
-        {[
-          {
-            id: "completions",
-            label: "Agent completions",
-            description: "Notify when agents finish tasks",
-          },
-          {
-            id: "workflow",
-            label: "Workflow events",
-            description: "Notify on workflow state changes",
-          },
-          {
-            id: "alerts",
-            label: "System alerts",
-            description: "Critical system notifications",
-          },
-        ].map((setting) => {
-          const key = setting.id as keyof typeof settings;
-          const checked = settings[key];
-
-          return (
-            <div
-              className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-4"
-              key={setting.label}
-            >
-              <div>
-                <div className="font-medium">{setting.label}</div>
-                <div className="text-biolum-dim text-sm">
-                  {setting.description}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="sr-only" htmlFor={`notify-${setting.id}`}>
-                  {setting.label}
-                </Label>
-                <Checkbox
-                  checked={checked}
-                  id={`notify-${setting.id}`}
-                  onCheckedChange={(next) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      [key]: Boolean(next),
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          );
-        })}
-
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <div className="mb-2 font-medium">Quiet Time</div>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <div className="text-biolum-dim text-sm">Snooze until</div>
-              <DateField
-                onChange={setSnoozeUntil}
-                placeholder="Pick a date"
-                value={snoozeUntil}
-              />
-            </div>
-            <div className="space-y-1">
-              <div className="text-biolum-dim text-sm">Vacation range</div>
-              <DateRangeField onChange={setVacation} value={vacation} />
-            </div>
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="mb-4 flex gap-2 border-white/10 border-b">
+        <button
+          className={cn(
+            "border-b-2 px-4 py-2 font-medium text-sm transition-colors",
+            tab === "tokens"
+              ? "border-biolum text-biolum"
+              : "border-transparent text-biolum-dim hover:text-biolum"
+          )}
+          onClick={() => setTab("tokens")}
+          type="button"
+        >
+          API Tokens
+        </button>
+        <button
+          className={cn(
+            "border-b-2 px-4 py-2 font-medium text-sm transition-colors",
+            tab === "policy"
+              ? "border-biolum text-biolum"
+              : "border-transparent text-biolum-dim hover:text-biolum"
+          )}
+          onClick={() => setTab("policy")}
+          type="button"
+        >
+          Policy
+        </button>
       </div>
+
+      {tab === "tokens" && <TokensSection />}
+      {tab === "policy" && <PolicySection />}
     </div>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 export function SettingsAppWindow(props: WindowComponentProps) {
   return <SettingsApp {...props} />;
 }

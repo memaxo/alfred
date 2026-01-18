@@ -127,6 +127,13 @@ export const executePhaseInputSchema = z.object({
   linear: linearInputSchema.optional(),
   /** Optional Linear authorization token */
   authzLinear: z.string().optional(),
+  // Partial execution options
+  /** Only execute specific waves */
+  waveIds: z.array(z.string()).optional(),
+  /** Skip specific tasks */
+  skipTaskIds: z.array(z.string()).optional(),
+  /** Validate only, no agent spawning */
+  dryRun: z.boolean().default(false),
 });
 
 // --- Phase Output Schemas ---

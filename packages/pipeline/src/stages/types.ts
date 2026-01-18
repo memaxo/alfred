@@ -100,6 +100,7 @@ export type ExecuteOutput = {
   outcomes: Map<string, AgentOutcome>;
   fileChanges: FileChange[];
   handoffs: string[];
+  dryRun?: boolean;
 };
 
 export type ReviewOutput = {

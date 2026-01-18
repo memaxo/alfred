@@ -9,18 +9,21 @@ import { codexIntentRouter } from "./codex-intent";
 import { cognitiveRouter } from "./cognitive";
 import { deployRouter } from "./deploy";
 import { droidsRouter } from "./droids";
+import { embedRouter } from "./embed";
 import { evalRouter } from "./eval";
 import { fsRouter } from "./fs";
 import { githubRouter } from "./github";
 import { graphRouter } from "./graph";
 import { homeRouter } from "./home";
 import { inboxRouter } from "./inbox";
+import { integrationRouter } from "./integration";
 import { jwksRouter } from "./jwks";
 import { knowledgeRouter } from "./knowledge";
 import { linearRouter } from "./linear";
 import { mcpRouter } from "./mcp";
 import { metricsRouter } from "./metrics";
 import { noteRouter } from "./note";
+import { notificationRouter } from "./notification";
 import { orchestratorRouter } from "./orchestrator";
 import { planRouter } from "./plan";
 import { preferenceRouter } from "./preference";
@@ -30,6 +33,7 @@ import { projectRouter } from "./project";
 import { receiptRouter } from "./receipt";
 import { remindRouter } from "./remind";
 import { runtimeRouter } from "./runtime";
+import { shortcutsRouter } from "./shortcuts";
 import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
 import { todoRouter } from "./todo";
@@ -65,7 +69,11 @@ export const appRouter = router({
   codexIntent: codexIntentRouter,
   cognitive: cognitiveRouter,
   droid: droidsRouter,
+  embed: embedRouter,
+  integration: integrationRouter,
   jwks: jwksRouter,
+  notification: notificationRouter,
+  shortcuts: shortcutsRouter,
   token: tokenRouter,
   workflow: workflowRouter,
   eval: evalRouter,
