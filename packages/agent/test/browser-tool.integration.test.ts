@@ -58,7 +58,7 @@ describe("browser tool integration (agent-browser)", () => {
   let server: ReturnType<typeof Bun.serve> | null = null;
   let url = "";
 
-  beforeAll(async () => {
+  beforeAll(() => {
     if (!agentBrowserOk) {
       return;
     }

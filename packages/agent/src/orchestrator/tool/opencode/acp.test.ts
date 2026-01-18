@@ -46,8 +46,9 @@ function makeFakeProc(args?: {
     write: (chunk) => {
       stdinSeen.value += new TextDecoder().decode(chunk);
     },
-    end: async () => {
+    end: () => {
       args?.onStdinText?.(stdinSeen.value);
+      return Promise.resolve();
     },
   };
 
@@ -76,7 +77,7 @@ describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () =
     await fs.mkdir(baseDir, { recursive: true });
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     opencodeInternals.resetSpawn();
     opencodeInternals.resetConnection();
   });

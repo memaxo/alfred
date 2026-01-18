@@ -5,7 +5,7 @@ let generateObjectCalls: Array<{ prompt: string }> = [];
 
 // Mock AI SDK generateObject for batch phase assignment
 mock.module("ai", () => ({
-  generateObject: async (args: { prompt: string; schema: unknown }) => {
+  generateObject: (args: { prompt: string; schema: unknown }) => {
     generateObjectCalls.push({ prompt: args.prompt });
 
     // Parse the prompt to extract task indices and assign phases based on content

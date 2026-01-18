@@ -338,15 +338,21 @@ export class AlfredAgentFS implements AgentFSInterface {
     const startTime = Date.now();
     try {
       // If the SDK has a native diff method, use it
-      if ((this.inner as any).diff) {
-        return await (this.inner as any).diff();
+      const innerWithDiff = this.inner as unknown as {
+        diff?: () => Promise<AgentFSChange[]>;
+      };
+      if (typeof innerWithDiff.diff === "function") {
+        return await innerWithDiff.diff();
       }
 
       // Fallback: Query the fs_nodes table for changed/deleted/created files
       // This requires the underlying database handle
-      const db = this.getDatabase() as any;
-      if (db && typeof db.all === "function") {
-        const rows = await db.all(`
+      const db = this.getDatabase() as unknown;
+      const dbWithAll = db as { all?: unknown };
+      if (db && typeof dbWithAll.all === "function") {
+        const rows = await (
+          dbWithAll as { all: (query: string) => Promise<unknown[]> }
+        ).all(`
           SELECT path, 
                  CASE 
                    WHEN deleted = 1 THEN 'deleted'

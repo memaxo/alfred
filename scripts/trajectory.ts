@@ -7,7 +7,10 @@ import * as trajectoryRepo from "@alfred/db/repo/trajectory";
 import type { WorkflowStatus } from "@alfred/db/repo/workflow";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type { WorkflowTrajectoryFormat } from "@alfred/db/schema/workflow";
-import { buildAtifTrajectory } from "@alfred/runtime/trajectory/atif";
+import {
+  type AtifTrajectory,
+  buildAtifTrajectory,
+} from "@alfred/runtime/trajectory/atif";
 import { validateAtifTrajectory } from "@alfred/runtime/trajectory/validate";
 import { sql } from "drizzle-orm";
 
@@ -144,7 +147,7 @@ async function exportOne(
     (existing.lastEventId ?? null) === marker.lastEventId &&
     (existing.lastSeq ?? null) === marker.lastSeq;
 
-  let trajectory: unknown;
+  let trajectory: AtifTrajectory;
   if (isFresh) {
     trajectory = existing!.data as unknown;
   } else {
@@ -168,12 +171,12 @@ async function exportOne(
         ok: Boolean(existing!.valid),
         errors: [] as Array<{ path: string; message: string }>,
       }
-    : validateAtifTrajectory(trajectory as any);
+    : validateAtifTrajectory(trajectory);
 
   const stored = await trajectoryRepo.upsertTrajectory({
     runId,
     format,
-    schemaVersion: (trajectory as any).schema_version ?? "ATIF-v1.4",
+    schemaVersion: trajectory.schema_version,
     data: trajectory,
     lastEventId: marker.lastEventId,
     lastSeq: marker.lastSeq,
@@ -191,7 +194,7 @@ async function exportOne(
     runId,
     status: "exported" as const,
     ok: validation.ok,
-    steps: (stored.data as any)?.steps?.length ?? null,
+    steps: trajectory.steps.length,
   };
 }
 

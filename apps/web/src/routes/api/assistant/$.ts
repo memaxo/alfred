@@ -60,7 +60,7 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
 export const Route = createFileRoute("/api/assistant/$")({
   server: {
     handlers: {
-      GET: async ({ request }: { request: Request }) => {
+      GET: ({ request }: { request: Request }) => {
         // AI SDK v6 DefaultChatTransport may attempt to reconnect using:
         // GET `${api}/${chatId}/stream`. We don't currently support resuming
         // partial streams in dev, but we must avoid returning the HTML app shell.

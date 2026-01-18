@@ -21,7 +21,7 @@ export type ResumePayload = {
 
 export type RunHandle = {
   resume(args: {
-    resumeData: any;
+    resumeData: unknown;
     runtimeContext?: RuntimeContext;
   }): Promise<unknown>;
   suspend?(): Promise<unknown>;
@@ -32,7 +32,7 @@ export type RunHandle = {
 export type RunRegistry = {
   register(runId: string, handle: RunHandle): Promise<void> | void;
   unregister(runId: string): Promise<void> | void;
-  dispatchResume(runId: string, payload: any): Promise<boolean>;
+  dispatchResume(runId: string, payload: unknown): Promise<boolean>;
   dispatchSuspend(runId: string): Promise<boolean>;
 };
 
@@ -136,7 +136,7 @@ export class MemoryRunRegistry implements RunRegistry {
     recordEvent("unregister", this.backend, existed ? "ok" : "miss");
   }
 
-  async dispatchResume(runId: string, payload: any): Promise<boolean> {
+  async dispatchResume(runId: string, payload: unknown): Promise<boolean> {
     const endTimer = createDispatchTimer(this.backend);
     const handle = this.runs.get(runId);
     if (!handle) {
@@ -236,7 +236,7 @@ export class RedisRunRegistry implements RunRegistry {
     }
   }
 
-  async dispatchResume(runId: string, payload: any): Promise<boolean> {
+  async dispatchResume(runId: string, payload: unknown): Promise<boolean> {
     await this.ensureReady();
     const endTimer = createDispatchTimer(this.backend);
     const localHandle = this.runs.get(runId);
@@ -432,7 +432,7 @@ export class RedisRunRegistry implements RunRegistry {
     let parsed: {
       type?: "resume" | "suspend";
       runId?: string;
-      payload?: any;
+      payload?: unknown;
       corrId?: string;
     } | null = null;
     try {

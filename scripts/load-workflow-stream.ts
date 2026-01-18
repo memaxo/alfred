@@ -259,7 +259,7 @@ function createClient(baseUrl: string, headers: () => Record<string, string>) {
   });
 }
 
-async function runStream(
+function runStream(
   client: ReturnType<typeof createClient>,
   input: {
     requirement: string;

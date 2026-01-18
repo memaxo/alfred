@@ -21,6 +21,7 @@
     { "path": "packages/tune" },
     { "path": "packages/plan" },
     { "path": "packages/pipeline" },
+    { "path": "packages/pacer" },
     { "path": "packages/summarize" },
     { "path": "packages/cognitive" },
     { "path": "packages/cortex" },

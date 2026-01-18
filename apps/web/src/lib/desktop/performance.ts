@@ -8,6 +8,7 @@
  */
 
 import { logger } from "@alfred/logger";
+import { liteDebounce, liteThrottle } from "@alfred/pacer";
 import { DESKTOP_STORAGE_ID } from "@/store/desktop/persist";
 
 /** Max bytes for layout storage (50KB) */
@@ -153,13 +154,14 @@ export function debounce<T extends (...args: Parameters<T>) => void>(
   fn: T,
   ms: number
 ): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const debounced = liteDebounce(fn, {
+    wait: ms,
+    leading: false,
+    trailing: true,
+  });
 
   return (...args: Parameters<T>) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => fn(...args), ms);
+    debounced(...args);
   };
 }
 
@@ -170,22 +172,13 @@ export function throttle<T extends (...args: Parameters<T>) => void>(
   fn: T,
   ms: number
 ): (...args: Parameters<T>) => void {
-  let lastCall = 0;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const throttled = liteThrottle(fn, {
+    wait: ms,
+    leading: true,
+    trailing: true,
+  });
 
   return (...args: Parameters<T>) => {
-    const now = Date.now();
-    const remaining = ms - (now - lastCall);
-
-    if (remaining <= 0) {
-      lastCall = now;
-      fn(...args);
-    } else if (!timeoutId) {
-      timeoutId = setTimeout(() => {
-        lastCall = Date.now();
-        timeoutId = null;
-        fn(...args);
-      }, remaining);
-    }
+    throttled(...args);
   };
 }

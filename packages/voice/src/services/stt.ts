@@ -205,7 +205,7 @@ export async function transcribeStreaming(
  * Clear the streaming cache for a session.
  * Call this when starting a new utterance within the same session.
  */
-export async function clearStreamingCache(
+export function clearStreamingCache(
   pool: STTPool,
   sessionId: string
 ): Promise<boolean> {

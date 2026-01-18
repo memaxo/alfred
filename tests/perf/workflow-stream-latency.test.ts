@@ -26,10 +26,7 @@ if (pipelineRunnerMock) {
         return this;
       }
 
-      async *run(input: {
-        runId: string;
-        requirement: string;
-      }): AsyncGenerator<PipelineEvent, void, void> {
+      *run(input: { runId: string; requirement: string }) {
         const start: PipelineEvent = {
           type: "pipeline:start",
           runId: input.runId,
@@ -39,6 +36,7 @@ if (pipelineRunnerMock) {
         for (const observer of this.observers) {
           observer.onEvent(start);
         }
+        yield start;
         for (const observer of this.observers) {
           observer.onComplete?.();
         }
@@ -66,8 +64,8 @@ if (!useRealLatencyMode) {
     triggerPreferenceRefresh: vi.fn(),
   }));
   mock.module("@alfred/agent/workflow/session-recovery", () => ({
-    registerRunHandle: async () => {},
-    unregisterRunHandle: async () => {},
+    registerRunHandle: () => Promise.resolve(),
+    unregisterRunHandle: () => Promise.resolve(),
   }));
   mock.module("@alfred/agent/workflow/linear", () => ({
     ensureLinearTicket: async (params: { linear?: unknown }) => ({
@@ -80,11 +78,11 @@ if (!useRealLatencyMode) {
   }));
   mock.module("@alfred/db/repo/workflow", () => ({
     PostgresCheckpointStorage: class {
-      async save() {}
-      async load() {
+      save() {}
+      load() {
         return null;
       }
-      async delete() {}
+      delete() {}
     },
   }));
 }

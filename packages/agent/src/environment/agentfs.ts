@@ -922,13 +922,19 @@ export class AgentFSWorkspace implements Workspace {
   /**
    * Get filesystem changes (diff) for this workspace.
    */
-  async diff(): Promise<AgentFSChange[]> {
+  diff(): Promise<AgentFSChange[]> {
     const agent = this.requireAgent();
     // AlfredAgentFS (our wrapper) has diff()
     if (agent instanceof AlfredAgentFS) {
       return agent.diff();
     }
-    return (agent as any).diff();
+    const agentWithDiff = agent as unknown as {
+      diff?: () => Promise<AgentFSChange[]>;
+    };
+    if (typeof agentWithDiff.diff === "function") {
+      return agentWithDiff.diff();
+    }
+    return Promise.resolve([]);
   }
 
   /**

@@ -35,7 +35,7 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
 export const Route = createFileRoute("/api/orchestrator/$")({
   server: {
     handlers: {
-      GET: async ({ request }: { request: Request }) => {
+      GET: ({ request }: { request: Request }) => {
         const url = new URL(request.url);
         if (url.pathname.endsWith("/stream")) {
           return new Response(null, {
