@@ -26,7 +26,7 @@ const correctInput = z.object({
 });
 
 export const receiptRouter = router({
-  get: authedProcedure.input(getInput).query(async ({ ctx, input }) => {
+  get: authedProcedure.input(getInput).query(({ ctx, input }) => {
     const session = ctx.session;
     if (!session) {
       throw new TRPCError({

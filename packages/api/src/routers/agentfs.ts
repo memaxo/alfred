@@ -551,7 +551,11 @@ export const agentfsRouter = router({
           : changes;
 
         const { writeFile, unlink, mkdir } = await import("node:fs/promises");
-        const results = [];
+        const results: Array<{
+          path: string;
+          status: "success" | "error";
+          message?: string;
+        }> = [];
 
         for (const change of filtered) {
           const hostPath = path.resolve(

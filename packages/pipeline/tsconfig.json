@@ -10,6 +10,7 @@
     { "path": "../db" },
     { "path": "../logger" },
     { "path": "../metrics" },
+    { "path": "../pacer" },
     { "path": "../plan" },
     { "path": "../runtime" },
     { "path": "../type" },

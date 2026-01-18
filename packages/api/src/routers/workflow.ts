@@ -896,12 +896,14 @@ export const workflowRouter = router({
             }
 
             await registerRunHandle(runId, {
-              resume: async () => {},
-              suspend: async () => {
+              resume: () => Promise.resolve(),
+              suspend: () => {
                 abortController.abort();
+                return Promise.resolve();
               },
-              cancel: async () => {
+              cancel: () => {
                 abortController.abort();
+                return Promise.resolve();
               },
               abortController,
             });
@@ -1462,12 +1464,14 @@ export const workflowRouter = router({
 
             const abortController = new AbortController();
             await registerRunHandle(input.runId, {
-              resume: async () => {},
-              suspend: async () => {
+              resume: () => Promise.resolve(),
+              suspend: () => {
                 abortController.abort();
+                return Promise.resolve();
               },
-              cancel: async () => {
+              cancel: () => {
                 abortController.abort();
+                return Promise.resolve();
               },
               abortController,
             });

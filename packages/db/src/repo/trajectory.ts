@@ -57,15 +57,16 @@ export async function upsertTrajectory(args: {
   valid: boolean;
   errors: unknown | null;
 }): Promise<WorkflowTrajectoryRow> {
-  const payload = {
+  type TrajectoryInsert = typeof workflowTrajectories.$inferInsert;
+  const payload: TrajectoryInsert = {
     runId: args.runId,
     format: args.format,
     schemaVersion: args.schemaVersion,
-    data: args.data as any,
+    data: args.data,
     lastEventId: args.lastEventId,
     lastSeq: args.lastSeq,
     valid: args.valid,
-    errors: (args.errors ?? null) as any,
+    errors: args.errors ?? null,
   };
 
   const [row] = await db

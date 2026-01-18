@@ -22,6 +22,7 @@
     "@alfred/db": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/metrics": "workspace:*",
+    "@alfred/pacer": "workspace:*",
     "@alfred/plan": "workspace:*",
     "@alfred/runtime": "workspace:*",
     "@alfred/type": "workspace:*",

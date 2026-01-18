@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+import { LiteBatcher } from "@alfred/pacer";
 import type { PipelineEvent } from "../events";
 import type { PipelineObserver } from "../runner";
 
@@ -14,7 +15,13 @@ export type LinearObserverConfig = {
 };
 
 export class LinearSyncObserver implements PipelineObserver {
-  private pendingUpdates: LinearUpdate[] = [];
+  private readonly pendingUpdates = new LiteBatcher<LinearUpdate>(() => {}, {
+    // We use the batcher as a shared, typed buffer and trigger flushing explicitly
+    // via the observer interval / completion hooks to preserve process-liveness behavior.
+    maxSize: Number.POSITIVE_INFINITY,
+    wait: Number.POSITIVE_INFINITY,
+    started: false,
+  });
   private rateLimiter: InstanceType<
     typeof import("@alfred/agent/orchestrator/linear-rate-limiter").LinearRateLimiter
   > | null = null;
@@ -49,35 +56,35 @@ export class LinearSyncObserver implements PipelineObserver {
     switch (event.type) {
       case "stage:enter":
         if (event.stage === "execute") {
-          this.pendingUpdates.push({ type: "status", value: "In Progress" });
+          this.pendingUpdates.addItem({ type: "status", value: "In Progress" });
         }
         break;
 
       case "stage:progress":
-        this.pendingUpdates.push({
+        this.pendingUpdates.addItem({
           type: "progress",
           value: `${event.stage}: ${event.message}`,
         });
         break;
 
       case "agent:complete":
-        this.pendingUpdates.push({
+        this.pendingUpdates.addItem({
           type: "comment",
           value: `Agent completed with status: ${event.outcome.status}`,
         });
         break;
 
       case "pipeline:complete":
-        this.pendingUpdates.push({ type: "status", value: "Done" });
+        this.pendingUpdates.addItem({ type: "status", value: "Done" });
         void this.flush(); // Immediate flush on completion
         break;
 
       case "pipeline:failed":
-        this.pendingUpdates.push({
+        this.pendingUpdates.addItem({
           type: "comment",
           value: `Pipeline failed at ${event.lastStage}: ${event.error}`,
         });
-        this.pendingUpdates.push({ type: "status", value: "Cancelled" });
+        this.pendingUpdates.addItem({ type: "status", value: "Cancelled" });
         void this.flush(); // Immediate flush on failure
         break;
     }
@@ -92,12 +99,12 @@ export class LinearSyncObserver implements PipelineObserver {
   }
 
   private async flush(): Promise<void> {
-    if (this.pendingUpdates.length === 0 || !this.rateLimiter) {
+    if (this.pendingUpdates.isEmpty || !this.rateLimiter) {
       return;
     }
 
-    const updates = [...this.pendingUpdates];
-    this.pendingUpdates = [];
+    const updates = this.pendingUpdates.peekAllItems();
+    this.pendingUpdates.clear();
 
     for (const update of updates) {
       try {

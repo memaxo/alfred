@@ -15,7 +15,7 @@ const setInput = z.object({
 });
 
 export const workingsetRouter = router({
-  get: authedProcedure.query(async ({ ctx }) => {
+  get: authedProcedure.query(({ ctx }) => {
     const session = ctx.session;
     if (!session) {
       throw new TRPCError({
@@ -26,7 +26,7 @@ export const workingsetRouter = router({
     return getWorkingSet(session.user.id);
   }),
 
-  set: authedProcedure.input(setInput).mutation(async ({ ctx, input }) => {
+  set: authedProcedure.input(setInput).mutation(({ ctx, input }) => {
     const session = ctx.session;
     if (!session) {
       throw new TRPCError({

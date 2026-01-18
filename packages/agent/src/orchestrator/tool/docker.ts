@@ -361,13 +361,22 @@ async function runDocker({
           const hasTextMethod =
             typeof (proc.stdout as { text?: () => Promise<string> }).text ===
             "function";
+          const stdoutDebug = proc.stdout as unknown as {
+            locked?: unknown;
+            state?: unknown;
+            getReader?: unknown;
+            constructor?: { name?: unknown };
+          };
           const streamInfo = {
             hasTextMethod,
-            streamLocked: (proc.stdout as any).locked,
-            streamState: (proc.stdout as any).state,
+            streamLocked: stdoutDebug.locked,
+            streamState: stdoutDebug.state,
             isReadableStream: proc.stdout instanceof ReadableStream,
-            constructorName: (proc.stdout as any).constructor.name,
-            hasGetReader: typeof (proc.stdout as any).getReader === "function",
+            constructorName:
+              typeof stdoutDebug.constructor?.name === "string"
+                ? stdoutDebug.constructor.name
+                : String(stdoutDebug.constructor?.name ?? ""),
+            hasGetReader: typeof stdoutDebug.getReader === "function",
             exitCode,
           };
           fetch(
@@ -416,8 +425,8 @@ async function runDocker({
             } else if (proc.stdout instanceof ReadableStream) {
               // Check stream state before reading
               const streamState = {
-                locked: (proc.stdout as any).locked,
-                state: (proc.stdout as any).state,
+                locked: stdoutDebug.locked,
+                state: stdoutDebug.state,
               };
               // #region agent log
               fetch(
@@ -526,7 +535,10 @@ async function runDocker({
                     message: "stdout is unknown type",
                     data: {
                       type: typeof proc.stdout,
-                      constructorName: (proc.stdout as any)?.constructor?.name,
+                      constructorName:
+                        typeof stdoutDebug.constructor?.name === "string"
+                          ? stdoutDebug.constructor.name
+                          : null,
                     },
                     timestamp: Date.now(),
                     sessionId: "debug-session",
@@ -743,7 +755,13 @@ async function runDocker({
                     message: "stderr is unknown type",
                     data: {
                       type: typeof proc.stderr,
-                      constructorName: (proc.stderr as any)?.constructor?.name,
+                      constructorName:
+                        typeof (
+                          proc.stderr as { constructor?: { name?: unknown } }
+                        ).constructor?.name === "string"
+                          ? (proc.stderr as { constructor: { name: string } })
+                              .constructor.name
+                          : null,
                     },
                     timestamp: Date.now(),
                     sessionId: "debug-session",

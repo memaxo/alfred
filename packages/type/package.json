@@ -51,6 +51,10 @@
       "types": "./dist/exa.d.ts",
       "default": "./src/exa.ts"
     },
+    "./forms": {
+      "types": "./dist/forms/index.d.ts",
+      "default": "./src/forms/index.ts"
+    },
     "./guards": {
       "types": "./dist/guards.d.ts",
       "default": "./src/guards.ts"

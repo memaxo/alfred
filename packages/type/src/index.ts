@@ -16,6 +16,8 @@ export * from "./events";
 export * from "./events.zod";
 // Exa API types
 export * from "./exa";
+// Forms
+export * from "./forms";
 // Generative UI types
 export * from "./genui";
 export * from "./genui.zod";

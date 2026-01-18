@@ -27,7 +27,7 @@ const inboxListInput = z.object({
 });
 
 export const inboxRouter = router({
-  list: authedProcedure.input(inboxListInput).query(async ({ ctx, input }) => {
+  list: authedProcedure.input(inboxListInput).query(({ ctx, input }) => {
     const session = ctx.session;
     if (!session) {
       throw new TRPCError({
