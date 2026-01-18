@@ -264,7 +264,9 @@ export async function listVoiceSessions(
     }
 
     const snapshots: VoiceSessionSnapshot[] = [];
-    const jsons = await Promise.all(ids.map((id) => redis.get(keySession(id))));
+    const jsons = await Promise.all(
+      ids.map((id: string) => redis.get(keySession(id)))
+    );
 
     for (const json of jsons) {
       if (json) {
