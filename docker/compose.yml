@@ -42,8 +42,19 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://alfred:alfred@pg:5432/alfred}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # RAG reranking toggle (default off)
+      RAG_RERANK: ${RAG_RERANK:-0}
+      # Reranking backend configuration (pass-through from host env)
+      RERANK_BACKEND: ${RERANK_BACKEND:-}
+      COHERE_API_KEY: ${COHERE_API_KEY:-}
+      QWEN3VL_RERANK_URL: ${QWEN3VL_RERANK_URL:-}
+      # Keep KnowledgeEngine clamp aligned with rerank service defaults
+      RERANK_MAX_DOCS: ${RERANK_MAX_DOCS:-200}
     ports:
       - "${ALFRED_PORT:-3000}:3000"
+      # Optional: expose voice streaming WS server directly for local dev.
+      # Production should proxy /voice/stream through Caddy instead.
+      - "${VOICE_STREAMING_PORT:-8788}:8788"
 
   embed:
     build:
@@ -71,6 +82,21 @@ services:
     volumes:
       - voice_models:/app/packages/voice/models
 
+  turn:
+    image: coturn/coturn:4.6.2
+    restart: unless-stopped
+    profiles: ["turn"]
+    volumes:
+      - ./turn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["turnserver", "-c", "/etc/coturn/turnserver.conf"]
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "5349:5349/tcp"
+      - "5349:5349/udp"
+      # TURN relay ports (must be UDP)
+      - "49160-49200:49160-49200/udp"
+
   rerank:
     build:
       context: ..
@@ -79,9 +105,16 @@ services:
         DEVICE: ${RERANK_DEVICE:-cpu}
     restart: unless-stopped
     profiles: ["rerank"]
+    # Tip: to enable reranking in ALFRED when running in Compose:
+    # - set RAG_RERANK=1
+    # - set QWEN3VL_RERANK_URL=http://rerank:8000 (inside the compose network)
     environment:
       RERANK_DEVICE: ${RERANK_DEVICE:-cpu}
       RERANK_MODEL: ${RERANK_MODEL:-Qwen/Qwen3-VL-Reranker-2B}
+      RERANK_BATCH_SIZE: ${RERANK_BATCH_SIZE:-8}
+      RERANK_MAX_DOCS: ${RERANK_MAX_DOCS:-200}
+      RERANK_MAX_CONCURRENCY: ${RERANK_MAX_CONCURRENCY:-1}
+      RERANK_ALLOW_FILE_URLS: ${RERANK_ALLOW_FILE_URLS:-0}
     ports:
       - "${RERANK_PORT:-8200}:8000"
     volumes:
