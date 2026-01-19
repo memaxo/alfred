@@ -19,8 +19,8 @@ export type MockRequest = {
 };
 
 export type MockServer = {
-  start(): Promise<{ linearUrl: string; githubCliStub: string }>;
-  stop(): Promise<void>;
+  start(): { linearUrl: string; githubCliStub: string };
+  stop(): void;
   getRequests(): MockRequest[];
   clearRequests(): void;
 };
@@ -36,7 +36,7 @@ export function createMockServer(config: MockConfig): MockServer {
   const githubHandler = createGithubHandler(config.github);
 
   return {
-    async start() {
+    start() {
       server = Bun.serve({
         port: config.port ?? 0,
         async fetch(req) {
@@ -72,7 +72,7 @@ export function createMockServer(config: MockConfig): MockServer {
       };
     },
 
-    async stop() {
+    stop() {
       if (server) {
         server.stop();
         server = null;

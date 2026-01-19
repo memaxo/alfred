@@ -34,10 +34,7 @@ export function createLinearHandler(config?: LinearConfig) {
     (config?.teams ?? []).map((t) => [t.id, t])
   );
 
-  return async (
-    _req: Request,
-    body: Record<string, unknown>
-  ): Promise<Response> => {
+  return (_req: Request, body: Record<string, unknown>): Promise<Response> => {
     const action = body.action as string | undefined;
 
     // Handle different action types

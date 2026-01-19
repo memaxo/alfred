@@ -41,10 +41,7 @@ export function createGithubHandler(config?: GithubConfig) {
   );
   const cliResponses = config?.cliResponses ?? new Map();
 
-  return async (
-    _req: Request,
-    body: Record<string, unknown>
-  ): Promise<Response> => {
+  return (_req: Request, body: Record<string, unknown>): Promise<Response> => {
     const action = body.action as string | undefined;
 
     // Check for pre-configured CLI response
