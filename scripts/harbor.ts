@@ -44,7 +44,7 @@ function parseArgs(argv: string[]): { cmd: string | null; args: GenArgs } {
     auto: "",
     timeoutSec: 3600,
     alfredGitUrl: process.env.ALFRED_GIT_URL ?? "",
-    alfredGitRef: process.env.ALFRED_GIT_REF ?? "main",
+    alfredGitRef: process.env.ALFRED_GIT_REF ?? "dev",
   };
 
   for (let i = 1; i < argv.length; i += 1) {
@@ -110,20 +110,18 @@ async function writeFile(filePath: string, content: string): Promise<void> {
   await Bun.write(filePath, content);
 }
 
-function dockerfile(args: GenArgs): string {
+function dockerfile(_args: GenArgs): string {
+  // Simplified Dockerfile for Harbor tasks.
+  // Does NOT clone full ALFRED repo (which has native deps that fail to build).
+  // The oracle agent just runs solve.sh; ALFRED agent would need separate setup.
+  // WORKDIR is /workspace - Harbor runs agents and verifiers from this directory.
+  // Workspace files are copied from environment/workspace/ to /workspace.
   return [
     "FROM oven/bun:1.3.5",
-    "RUN apt-get update && apt-get install -y git ca-certificates && rm -rf /var/lib/apt/lists/*",
+    "RUN apt-get update && apt-get install -y git ca-certificates python3 perl && rm -rf /var/lib/apt/lists/*",
     "",
-    `ARG ALFRED_GIT_URL=${args.alfredGitUrl}`,
-    `ARG ALFRED_GIT_REF=${args.alfredGitRef}`,
-    "",
-    "WORKDIR /alfred",
-    `RUN git clone --depth 1 --branch "\${ALFRED_GIT_REF}" "\${ALFRED_GIT_URL}" .`,
-    "RUN bun install --frozen-lockfile",
-    "",
-    "WORKDIR /task",
-    "COPY . /task",
+    "WORKDIR /workspace",
+    "COPY workspace/ /workspace/",
   ].join("\n");
 }
 
@@ -149,18 +147,18 @@ function taskToml(args: GenArgs): string {
 }
 
 function solveSh(args: GenArgs): string {
+  // Use unique heredoc delimiter to avoid conflicts with nested heredocs in commands
   return [
     "#!/bin/bash",
     "set -euo pipefail",
     "",
     "# Oracle solution: deterministic implementation that should satisfy the verifier.",
     "# This script must NOT write reward files; the verifier owns reward output.",
+    "# Runs from WORKDIR (/workspace) set by Dockerfile.",
     "",
-    "cd /task/workspace",
-    "",
-    "ORACLE_CMD=$(cat <<'EOF'",
+    "ORACLE_CMD=$(cat <<'__HARBOR_ORACLE_END__'",
     `${args.oracleCmd}`.trimEnd(),
-    "EOF",
+    "__HARBOR_ORACLE_END__",
     ")",
     "",
     'if [ -z "$ORACLE_CMD" ]; then',
@@ -174,18 +172,22 @@ function solveSh(args: GenArgs): string {
 }
 
 function agentSh(args: GenArgs): string {
+  // Note: ALFRED agent requires full ALFRED repo with native deps.
+  // This script is for reference; actual ALFRED agent execution needs
+  // a Dockerfile that builds ALFRED or uses a pre-built image.
   return [
     "#!/bin/bash",
     "set -euo pipefail",
     "",
     "# Harbor agent adapter: invokes ALFRED workflow runner.",
     "# Harbor calls this script with -a alfred to run ALFRED as the agent under test.",
+    "# NOTE: Requires ALFRED to be installed in /alfred (see full Dockerfile variant).",
     "",
     "# Harbor convention: the verifier mount is at /logs/verifier",
     "mkdir -p /logs/verifier",
     "",
-    "REQ_FILE=/task/instruction.md",
-    "WORKDIR=/task/workspace",
+    "REQ_FILE=/instruction.md",
+    "WORKSPACE_DIR=/workspace",
     "TRAJ=/logs/verifier/trajectory.json",
     "DB=/logs/verifier/alfred.db",
     "",
@@ -202,12 +204,12 @@ function agentSh(args: GenArgs): string {
     "",
     ...(args.auto
       ? [
-          'bun workflow:run --requirement "$REQ" --workspace "$WORKDIR" --outTrajectory "$TRAJ" --auto "' +
+          'bun workflow:run --requirement "$REQ" --workspace "$WORKSPACE_DIR" --outTrajectory "$TRAJ" --auto "' +
             args.auto +
             '"',
         ]
       : [
-          'bun workflow:run --requirement "$REQ" --workspace "$WORKDIR" --outTrajectory "$TRAJ"',
+          'bun workflow:run --requirement "$REQ" --workspace "$WORKSPACE_DIR" --outTrajectory "$TRAJ"',
         ]),
     "",
   ].join("\n");
@@ -219,7 +221,7 @@ function testSh(args: GenArgs): string {
     "set -euo pipefail",
     "",
     "mkdir -p /logs/verifier",
-    "cd /task/workspace",
+    "# Runs from WORKDIR (/workspace) set by Dockerfile.",
     "",
     "# Run verifier command.",
     `if ${args.verifyCmd}; then`,
@@ -249,13 +251,14 @@ async function genTask(args: GenArgs): Promise<void> {
   await writeFile(path.join(root, "tests/test.sh"), testSh(args));
   await writeFile(path.join(root, "agents/alfred.sh"), agentSh(args));
 
-  // Minimal workspace placeholder (users can replace this folder with a real repo snapshot).
+  // Workspace files go into environment/workspace/ so they're included in Docker build context.
+  // The Dockerfile COPYs them to /workspace in the container.
   await writeFile(
-    path.join(root, "workspace/README.md"),
+    path.join(root, "environment/workspace/README.md"),
     [
       "# Harbor Task Workspace",
       "",
-      "This folder is the task workspace mounted inside the task container at `/task/workspace`.",
+      "This folder is the task workspace copied into the container at `/workspace`.",
       "Replace it with the repo/project you want ALFRED to operate on.",
       "",
     ].join("\n")

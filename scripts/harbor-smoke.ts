@@ -72,7 +72,7 @@ async function main() {
   const tmpDir = path.join(process.cwd(), ".tmp", "harbor-smoke");
   const taskDir = path.join(tmpDir, TEST_TASK_ID);
   const alfredGitUrl = process.env.ALFRED_GIT_URL ?? `file://${process.cwd()}`;
-  const alfredGitRef = process.env.ALFRED_GIT_REF ?? "main";
+  const alfredGitRef = process.env.ALFRED_GIT_REF ?? "dev";
 
   console.log("Harbor Integration Smoke Test");
   console.log("============================\n");

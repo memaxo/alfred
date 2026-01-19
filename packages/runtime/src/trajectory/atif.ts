@@ -423,6 +423,299 @@ export function buildAtifTrajectory(args: {
           event: evt,
         },
       });
+      continue;
+    }
+
+    // Wave lifecycle events
+    if (e.eventType === "wave-start") {
+      const r = coerceRecord(data);
+      const waveId = coerceString(r.waveId) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `wave:start:${waveId}`,
+        extra: {
+          ...extra,
+          waveId,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "wave-complete") {
+      const r = coerceRecord(data);
+      const waveId = coerceString(r.waveId) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `wave:complete:${waveId}`,
+        extra: {
+          ...extra,
+          waveId,
+        },
+      });
+      continue;
+    }
+
+    // Phase lifecycle events
+    if (e.eventType === "phase-start") {
+      const r = coerceRecord(data);
+      const phaseId = coerceString(r.phaseId) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `phase:start:${phaseId}`,
+        extra: {
+          ...extra,
+          phaseId,
+          phase: r.phase,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "phase-complete") {
+      const r = coerceRecord(data);
+      const phaseId = coerceString(r.phaseId) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `phase:complete:${phaseId}`,
+        extra: {
+          ...extra,
+          phaseId,
+          result: r.result,
+        },
+      });
+      continue;
+    }
+
+    // Agent lifecycle events
+    if (e.eventType === "agent-start") {
+      const r = coerceRecord(data);
+      const agentId = coerceString(r.agentId) ?? "unknown";
+      const phaseId = coerceString(r.phaseId);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `agent:start:${agentId}`,
+        extra: {
+          ...extra,
+          agentId,
+          phaseId,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "agent-complete") {
+      const r = coerceRecord(data);
+      const agentId = coerceString(r.agentId) ?? "unknown";
+      const phaseId = coerceString(r.phaseId);
+      const status = coerceString(r.status);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `agent:complete:${agentId}`,
+        extra: {
+          ...extra,
+          agentId,
+          phaseId,
+          status,
+          result: r.result,
+          durationMs: r.durationMs,
+        },
+      });
+      continue;
+    }
+
+    // Plan selection event
+    if (e.eventType === "plan-selected") {
+      const r = coerceRecord(data);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: "plan:selected",
+        extra: {
+          ...extra,
+          plan: r.plan,
+        },
+      });
+      continue;
+    }
+
+    // Agent handoff event
+    if (e.eventType === "agent-handoff") {
+      const r = coerceRecord(data);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: "agent:handoff",
+        extra: {
+          ...extra,
+          handoff: r.data ?? r,
+        },
+      });
+      continue;
+    }
+
+    // Pipeline lifecycle events
+    if (e.eventType === "pipeline:start") {
+      const r = coerceRecord(data);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: "pipeline:start",
+        extra: {
+          ...extra,
+          runId: r.runId,
+          requirement: r.requirement,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "pipeline:complete") {
+      const r = coerceRecord(data);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: "pipeline:complete",
+        extra: {
+          ...extra,
+          summary: r.summary,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "pipeline:failed") {
+      const r = coerceRecord(data);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `pipeline:failed:${coerceString(r.error) ?? "unknown"}`,
+        extra: {
+          ...extra,
+          error: r.error,
+          lastStage: r.lastStage,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "pipeline:suspend") {
+      const r = coerceRecord(data);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: "pipeline:suspend",
+        extra: {
+          ...extra,
+          reason: r.reason,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "pipeline:resume") {
+      const r = coerceRecord(data);
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: "pipeline:resume",
+        extra: {
+          ...extra,
+          fromStage: r.fromStage,
+        },
+      });
+      continue;
+    }
+
+    // Agent stuck/escalated/retry events
+    if (e.eventType === "agent:stuck") {
+      const r = coerceRecord(data);
+      const agentId = coerceString(r.agentId) ?? "unknown";
+      const reason = coerceString(r.reason) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `agent:stuck:${agentId}:${reason}`,
+        extra: {
+          ...extra,
+          agentId,
+          reason,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "agent:escalated") {
+      const r = coerceRecord(data);
+      const agentId = coerceString(r.agentId) ?? "unknown";
+      const reason = coerceString(r.reason) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `agent:escalated:${agentId}`,
+        extra: {
+          ...extra,
+          agentId,
+          reason,
+        },
+      });
+      continue;
+    }
+
+    if (e.eventType === "agent:retry") {
+      const r = coerceRecord(data);
+      const agentId = coerceString(r.agentId) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `agent:retry:${agentId}`,
+        extra: {
+          ...extra,
+          agentId,
+          attempt: r.attempt,
+          maxAttempts: r.maxAttempts,
+        },
+      });
+      continue;
+    }
+
+    // Wave aborted event
+    if (e.eventType === "wave:aborted") {
+      const r = coerceRecord(data);
+      const waveId = coerceString(r.waveId) ?? "unknown";
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: `wave:aborted:${waveId}`,
+        extra: {
+          ...extra,
+          waveId,
+          waveFailRate: r.waveFailRate,
+          overallFailRate: r.overallFailRate,
+        },
+      });
     }
   }
 
