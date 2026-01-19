@@ -319,7 +319,7 @@ Key migrations by area:
 | `/onboarding` | User onboarding |
 | `/_protected/mindscape` | Mindscape visualization |
 | `/_protected/drive` | Drive mode |
-| `/_protected/settings` | Settings pages |
+| (Desktop) Settings window | Unified settings “desktop app” window |
 | `/_protected/voice-s2s` | Voice interface |
 | `/_protected/workflow.$runId` | Workflow viewer |
 | `/api/trpc/` | tRPC endpoint |

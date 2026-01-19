@@ -4,6 +4,11 @@
 
 Successfully implemented a comprehensive Phase API system for ALFRED's workflow pipeline, enabling fine-grained control over workflow execution with plan preview, human-in-the-loop review, and partial execution capabilities.
 
+**Update (2026-01):**
+- Phase plan payloads now include **`planId`** and **`structuredPlan`** in `PlanPhaseOutput`.
+- `@alfred/pipeline` ships a **local `structuredPlanSchema`** (Zod v3) to avoid cross-package Zod version mismatches at runtime.
+- CLI phase commands are present under `packages/tui/src/cli/phase.ts` and integrated via `packages/tui/src/cli/index.ts`.
+
 ## Implementation Summary
 
 ### ✅ Phase 1: Foundation (Client Hooks + Metrics)
@@ -26,19 +31,14 @@ Successfully implemented a comprehensive Phase API system for ALFRED's workflow 
 
 ### ✅ Phase 2: CLI Commands
 
-**Files Created:**
+**Files Created/Modified:**
+- `packages/tui/src/cli/phase.ts` - CLI wrappers for `workflow.phase.*`
+- `packages/tui/src/cli/index.ts` - CLI command registration
 - `packages/tui/src/tui/react/modes/plan.tsx` - Interactive TUI plan viewer
 
-**Files Modified:**
-- `packages/tui/src/cli/index.ts` - Register plan/execute/status commands (REMOVED per user request)
-
 **Features:**
-- Interactive plan review with OpenTUI
-- Wave/task navigation (j/k, Enter to expand)
-- Keyboard controls (a=expand all, c=collapse all, e/x=execute, Esc/q=exit)
-- Real-time wave and dependency visualization
-
-**Note:** CLI commands (`alfred plan`, `alfred execute`, `alfred status`) were removed per user's code changes. The TUI mode remains functional.
+- CLI entry points for plan load/generate and execution by `runId`
+- TUI plan review (wave/task navigation, expand/collapse, execute)
 
 ### ✅ Phase 3: Plan Preview UI (Full Editing)
 
@@ -113,7 +113,7 @@ Successfully implemented a comprehensive Phase API system for ALFRED's workflow 
 
 1. **`plan`** - Generate plan without executing
    - Input: requirement, workspace, userId
-   - Output: waves, subtasks, execPlans, snapshot
+   - Output: `planId`, `structuredPlan`, waves, subtasks, execPlans, snapshot
    - Cached with Redis (file tree hash)
 
 2. **`execute`** - Execute prepared plan
@@ -133,6 +133,19 @@ Successfully implemented a comprehensive Phase API system for ALFRED's workflow 
    - Input: runId, subtasks, regenerateWaves
    - Output: updated waves, waveCount
    - Auto-regenerates waves from dependencies
+
+6. **`getPlan`** - Load persisted plan by `runId`
+   - Output: same shape as `plan`
+
+7. **`cachedPlan`** - Check Redis plan cache
+   - Input: includes `runId` (cache is run-scoped)
+   - Output: `{ cached, plan, cacheKey }`
+
+8. **`executeByRunId`** - Execute from stored snapshot context (no plan payload required)
+   - Input: `runId`, optional `waveIds`/`skipTaskIds`/`dryRun`
+
+9. **`approveAndExecute`** - Approve plan + mark run runnable (execution via `workflow.resumePipeline`)
+   - Input: `runId`
 
 6. **`saveAsTemplate`** - Save plan as template
    - Input: runId, name, description, triggerPattern
@@ -210,10 +223,11 @@ Indexes: user, trigger, usage, created
 
 ## Testing
 
-All packages pass type checks:
-- ✅ `@alfred/pipeline` - No errors
-- ✅ `@alfred/db` - No errors  
-- ✅ `@alfred/api` - No errors
+Targeted regression coverage exists under:
+- `packages/pipeline/test/phase-api.test.ts`
+- `packages/api/test/workflow.phase.plan-load.test.ts`
+- `packages/api/test/workflow.phase.cachedplan.test.ts`
+- `packages/api/test/workflow.phase.gaps.test.ts`
 
 ## Next Steps
 

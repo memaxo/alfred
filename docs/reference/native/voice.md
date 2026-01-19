@@ -23,8 +23,8 @@
 - ✅ Foreground service support for Android (`ensureForegroundService`)
 - ✅ Drive mode screen with "Hold to Talk" interface
 - ✅ Local voice models support (Faster-Whisper + Maya1 TTS) via `VOICE_PROVIDER=maya1`
+- ✅ Full bidirectional streaming (WebSocket; STT partials + assistant + TTS back)
 - ⏳ CarPlay integration (plugin exists but disabled)
-- ⏳ Full bidirectional streaming (current implementation supports session management, audio chunk processing requires additional work)
 
 ## Shared Core Strategy
 - Introduce `packages/voice` to hold platform-neutral hooks (`useVoiceSession`), stream event mappers, and audio buffer transformers; depend only on `@alfred/type` and `@alfred/api` client facades to respect import direction.

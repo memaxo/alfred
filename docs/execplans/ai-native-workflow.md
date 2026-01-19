@@ -1,9 +1,9 @@
 # AI-Native Workflow System
 
-> **Status:** Planned  
+> **Status:** In progress (backend plumbing + web UI; pipeline/plan consolidation pending)  
 > **Owner:** Runtime Architecture  
 > **Created:** 2025-12-23  
-> **Last Updated:** 2025-01-27  
+> **Last Updated:** 2026-01-19  
 > **Linear:** [AI-Native Workflow System](https://linear.app/alfred-ops/project/ai-native-workflow-system-3795d0f5e59a)  
 > **Related:** [Gap Analysis](./ai-native-workflow-gap-analysis.md) | [Orchestrator UI Patterns](../strategy/orchestrator-ui-patterns.md)
 
@@ -478,7 +478,7 @@ const intent: WorkflowIntent = {
   timestamp: "2025-12-23T...",
   context: {
     codebase: "/Users/jackmazac/Development/alfred",
-    recentFiles: ["apps/web/src/routes/_protected/settings.tsx"],
+    recentFiles: ["apps/web/src/components/apps/settings/index.tsx"],
   }
 };
 ```
@@ -1007,11 +1007,15 @@ const WorkspaceFactory = {
 - `packages/agent/src/orchestrator/tool/learning/exec.ts` - `executeLearnPattern()` stores tool sequence patterns
 - `packages/agent/src/orchestrator/learning-worker.ts` - `learnFromRun()` extracts facts from workflows
 
-**What's Missing:**
-- `WorkflowPattern` type (different from tool sequence patterns)
-- `workflow_patterns` SQL table for fast queries and project scoping
-- Pattern matching for workflow intents
-- Pattern extraction from successful `StructuredPlan` executions
+**What Exists (as of 2026-01-19):**
+- `packages/db/src/schema/pattern.ts` + migrations `packages/db/src/migrations/0059_workflow_patterns.sql` (+ lifecycle/embedding followups) — `workflow_patterns` SQL table exists
+- `packages/plan/src/types.ts` + `packages/plan/src/schema.ts` — `WorkflowPattern` type + schema exist
+- `packages/plan/src/pattern/match.ts` — intent → pattern matching exists (plus `packages/api/src/routers/plan.ts` endpoints `plan.patternsList` / `plan.patternsMatch`)
+
+**What's Still Missing / Incomplete:**
+- A single canonical “pattern extraction” pipeline wired to real workflow outcomes (success/failure → update `successRate`, `avgDurationMs`, `lastUsedAt`, embeddings)
+- A clear contract for when patterns are suggested vs auto-applied (policy + UI affordances)
+- Consolidation between “tool sequence patterns” (existing learning worker) and “workflow plan patterns” (this system) so we don’t learn the same thing twice with incompatible schemas
 
 ```typescript
 // EXISTS: packages/knowledge/src/hypergraph.ts
@@ -1028,8 +1032,8 @@ export async function executeLearnPattern(args: {
   userId: string;
 }): Promise<LearnPatternOutput>;
 
-// MISSING: Workflow patterns
-// packages/plan/src/pattern/extract.ts
+// EXISTS: Workflow plan patterns (planning-layer, not tool-call sequences)
+// packages/plan/src/types.ts
 export type WorkflowPattern = {
   id: string;
   trigger: string;
@@ -1037,7 +1041,7 @@ export type WorkflowPattern = {
   successRate: number;
   avgDurationMs: number;
   usageCount: number;
-  projectId?: string;
+  knowledgeNodeId?: NodeId;
 };
 ```
 
@@ -1049,41 +1053,30 @@ export type WorkflowPattern = {
 
 ### Quick Summary
 
-**Overall Completion:** ~35% of required components exist (mostly partial implementations)
+**Reality check (2026-01-19):** This system is **actively implemented**, but not yet fully consolidated.
 
-**Key Findings:**
+- There is a dedicated planning package: `packages/plan/` (`@alfred/plan`) with intent parsing, research, plan generation, critique/evaluation, persistence, patterns, and project detection.
+- There is a durable execution pipeline: `packages/pipeline/` (`@alfred/pipeline`) with staged execution + checkpoints (exposed via `packages/api/src/routers/workflow.ts`).
+- There is a web UI surface: `apps/web/src/components/windows/workflow/` (`workflow` + `workflowlist`, plus an optional React Flow canvas).
 
-| Category | Status | Critical Gaps |
-|----------|--------|---------------|
-| **Execution Infrastructure** | ✅ 80% | Minor gaps in context handoff |
-| **Planning Infrastructure** | ❌ 10% | Missing `@alfred/plan` package, `StructuredPlan` type, plan persistence |
-| **Pattern Learning** | 🟡 30% | Tool sequence patterns exist, workflow patterns missing |
-| **UI Components** | ❌ 5% | Basic workflow window exists, no plan visualization |
-| **Database Schema** | ❌ 0% | Missing `workflow_plans`, `projects`, `workflow_patterns` tables |
+**Primary remaining gap:** the pipeline `PlanStage` still plans via `decomposeTask()` + ExecPlan skeletons, while `@alfred/plan` produces `StructuredPlan` separately. We need one canonical plan representation for “AI-native workflows”.
 
-**Critical Path (Must-Have Before Execution):**
+| Category | Status | Notes |
+|----------|--------|-------|
+| **Execution Infrastructure** | ✅ | `@alfred/pipeline` stages + checkpointing; `workflowRouter.phase.plan/execute` exists |
+| **Planning Infrastructure** | 🟡 | `@alfred/plan` + `planRouter` exist, but pipeline planning is still `decomposeTask()`-based |
+| **Pattern Learning** | 🟡 | `workflow_patterns` table + match/list endpoints exist; outcome→pattern feedback loop still incomplete |
+| **UI Components** | 🟡 | Web workflow windows + canvas exist; polishing + wiring to phase APIs is still ongoing |
+| **Database Schema** | ✅ | `projects`, `workflow_plans`, `workflow_patterns` tables exist (plus `workflow_runs.plan_id`) |
 
-1. `@alfred/plan` package scaffold
-2. `StructuredPlan` type definition
-3. Plan → WavePlan conversion adapter
-4. Plan persistence (`workflow_plans` table)
-5. Plan approval endpoint
+**Critical path (next):**
 
-**High-Value Additions:**
+1. Consolidate planning: decide whether pipeline should consume `StructuredPlan` (recommended) or retire it in favor of `decomposeTask()`.
+2. Implement/standardize adapters so the execution path is singular: \(Intent → Research → StructuredPlan → WavePlan → Pipeline\).
+3. Make approval deterministic: plan approval should either (a) start the pipeline execution, or (b) return a runId that the UI then executes via the same phase APIs (not a parallel path).
+4. Add end-to-end tests at the workflow layer: success, policy suspend/resume, and MAX_TRANSITIONS safeguards for the consolidated path.
 
-- Project entity (enables pattern scoping)
-- Pattern extraction (enables learning)
-- Pattern matching (enables reuse)
-- Canvas view (enables visualization)
-
-**See Full Analysis:** [`ai-native-workflow-gap-analysis.md`](./ai-native-workflow-gap-analysis.md) contains:
-- Component-by-component status (31 components analyzed)
-- Code examples showing what exists vs what's missing
-- Database schema gaps
-- API router gaps
-- Type system gaps
-- Integration gaps
-- Recommended implementation order
+**Note on the linked gap analysis:** `docs/execplans/ai-native-workflow-gap-analysis.md` is useful historical context, but parts of it are now outdated (it predates `packages/plan/` and the DB tables for plans/patterns/projects).
 
 ---
 
@@ -1317,14 +1310,15 @@ Use `installWorkflowRuntimeFixture` from `@alfred/test-kit/workflow/runtime-fixt
 | 2025-01-27 | 0 | Comprehensive gap analysis | ✅ | See `ai-native-workflow-gap-analysis.md` for detailed component-by-component gaps |
 | 2025-12-24 | 1 | Intent parser | ✅ | P1-2 implementation complete |
 | 2025-12-24 | 1 | Research aggregator (v2) | ✅ | P1-3 updated with Exa SDK v2 native research capabilities |
-| 2025-12-24 | 1 | Plan generator | ⬜ | |
+| 2026-01-19 | 2 | Plan generator (`StructuredPlan`) | ✅ | `packages/plan/src/generate/phased.ts` + unit tests; not yet canonical in `@alfred/pipeline` |
 | 2025-12-24 | 1 | @alfred/plan package scaffold | ✅ | P1-1 implementation complete |
-| | 2 | Optional plan selection/evaluator | ⬜ | |
-| | 2 | Pattern storage (SQL) | ⬜ | |
-| | 3 | Pattern learner | ⬜ | |
-| | 3 | Pattern matcher | ⬜ | |
-| | 4 | Visual builder (read-only) | ⬜ | |
-| | 4 | Visual builder (editable) | ⬜ | |
+| 2026-01-19 | 2 | Deterministic evaluation + critique | ✅ | `packages/plan/src/evaluate/*` + tests; surfaced via `packages/api/src/routers/plan.ts` |
+| 2026-01-19 | 2 | Plan persistence & approval gate | ✅ | `workflow_plans` table + `planRepo` + `planRouter.create/approve/reject/get/list` |
+| 2026-01-19 | 2 | Pattern storage (SQL) | ✅ | `workflow_patterns` table + `patternRepo` |
+| 2026-01-19 | 3 | Pattern learner (outcome → pattern feedback loop) | 🟡 | extraction exists; wiring to real workflow outcomes still incomplete |
+| 2026-01-19 | 3 | Pattern matcher | ✅ | `packages/plan/src/pattern/match.ts` + `planRouter.patternsMatch` |
+| 2026-01-19 | 4 | Visual builder (read-only) | ✅ | Web `workflow` window has optional canvas: `apps/web/src/components/windows/workflow/workflow-canvas.tsx` |
+| 2026-01-19 | 4 | Visual builder (editable) | 🟡 | Local edits supported in UI; persistence + validation (cycle prevention) still in progress |
 
 ---
 

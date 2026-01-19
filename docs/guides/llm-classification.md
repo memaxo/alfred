@@ -86,6 +86,10 @@ alfred_classification_total{type="intent", outcome="success"}
 alfred_classification_batch_size{type="phase"}
 ```
 
+Notes:
+- `type` is a **stable classification kind**: `intent|phase|path|relevance|domain|other`
+- `model` is the selected `modelKey` (for example: `cerebras/gpt-oss-120b`)
+
 ### Monitoring Recommendations
 
 1. **Watch fallback rate**: High fallback rates indicate LLM failures
@@ -126,6 +130,7 @@ async function classifyTaskPriority(description: string) {
     {
       model,
       modelKey: "cerebras/gpt-oss-120b",
+      metricType: "other",
       fallback: () => ({
         priority: "medium", // Safe default
         confidence: 0.5,

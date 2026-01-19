@@ -123,6 +123,42 @@ bun run dev         # Web app at http://localhost:3000
 
 Open [http://localhost:3000](http://localhost:3000) to access the web interface.
 
+### Optional: Enable RAG reranking (better retrieval quality)
+
+ALFRED can rerank RAG candidates via `@alfred/rerank` (fail-open; off by default).
+
+1) Enable reranking:
+
+```bash
+export RAG_RERANK=1
+```
+
+2) Choose a backend:
+
+**Qwen3-VL (self-hosted, multimodal)**:
+
+```bash
+# If ALFRED runs on your host and rerank runs via docker compose:
+docker compose --profile rerank up -d rerank
+export QWEN3VL_RERANK_URL=http://localhost:8200
+
+# If ALFRED runs inside docker compose too, use the in-network URL:
+# export QWEN3VL_RERANK_URL=http://rerank:8000
+```
+
+**Cohere (SaaS, text-only)**:
+
+```bash
+export COHERE_API_KEY=your-cohere-api-key
+```
+
+3) Verify it’s active:
+
+- **Rerank service health**: `curl http://localhost:8200/health`
+- **ALFRED metrics**: `curl http://localhost:3000/api/metrics | grep runtime_rerank_total`
+
+Details: `packages/rerank/README.md`
+
 > 💡 **Want full privacy?** See [Local Models Installation](#local-models-full-privacy) for offline STT/TTS and local LLM support.
 
 ---

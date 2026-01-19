@@ -18,20 +18,20 @@ ALFRED's voice system provides:
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 
 function VoiceButton() {
-  const { start, stopAndTranscribe, speak, state } = useVoiceSessionWeb();
+  const { stream, state } = useVoiceSessionWeb();
 
   const handlePress = async () => {
-    if (state.capture === "idle") {
-      await start();
+    if (!stream.isActive) {
+      await stream.start();
     } else {
-      const result = await stopAndTranscribe();
-      console.log("Transcription:", result?.text);
+      await stream.stop();
+      console.log("Transcription:", stream.transcript);
     }
   };
 
   return (
     <button onClick={handlePress}>
-      {state.capture === "recording" ? "Stop" : "Record"}
+      {stream.isActive ? "Stop" : "Start"}
     </button>
   );
 }
@@ -41,22 +41,23 @@ function VoiceButton() {
 
 ```tsx
 import { useVoiceSessionNative } from "@/lib/voice/session";
+import { trpc } from "@/utils/trpc";
 
 function VoiceButton() {
-  const { start, stopAndTranscribe, speak, state } = useVoiceSessionNative();
+  const { stream } = useVoiceSessionNative(trpc);
 
   const handlePress = async () => {
-    if (state.capture === "idle") {
-      await start();
+    if (!stream.isActive) {
+      await stream.start();
     } else {
-      const result = await stopAndTranscribe();
-      console.log("Transcription:", result?.text);
+      await stream.stop();
+      console.log("Transcription:", stream.transcript);
     }
   };
 
   return (
     <Pressable onPress={handlePress}>
-      <Text>{state.capture === "recording" ? "Stop" : "Record"}</Text>
+      <Text>{stream.isActive ? "Stop" : "Start"}</Text>
     </Pressable>
   );
 }
@@ -184,6 +185,29 @@ await trpc.voice.sttClearCache.mutate({ sessionId });
 await trpc.voice.sttReleaseSession.mutate({ sessionId });
 ```
 
+## WebSocket Streaming Start Payload (Advanced)
+
+When using the WebSocket streaming protocol (`/voice/stream`), the client sends a `start` event.
+You can tune Nemotron latency vs accuracy via `sttChunkSize`:
+
+```typescript
+// Sent over WebSocket as JSON
+{
+  _: "start",
+  sessionId: "uuid",
+  surface: "web",
+  // Streaming output codec (current clients expect PCM16)
+  codec: "pcm",
+  // Incoming audio mime-type (required for binary frames)
+  inputMimeType: "audio/raw;codec=pcm_s16le;rate=16000",
+  // Nemotron streaming chunk size:
+  // "fast" | "low" | "medium" | "accurate"
+  sttChunkSize: "fast",
+  vadThreshold: 0.5,
+  maxUtteranceMs: 20_000,
+}
+```
+
 ## Chunk Size Configuration
 
 Balance latency vs accuracy with `chunkSize`:
@@ -307,6 +331,15 @@ If you see `voice_stt_pool_saturated`:
 ## Environment Variables
 
 ```bash
+# Production deployment (recommended)
+# - Proxy `/voice/stream` through the main domain (no extra public port)
+# - Enable streaming server
+VOICE_STREAMING_PROTO=1
+
+# Optional dev fallback (direct port)
+# VITE_VOICE_STREAMING_PORT=8788
+# EXPO_PUBLIC_VOICE_STREAM_PORT=8788
+
 # STT Configuration
 VOICE_STT_MODEL=nvidia/nemotron-speech-streaming-en-0.6b
 VOICE_STT_DEVICE=auto  # auto, cpu, cuda, mps
@@ -319,7 +352,6 @@ VOICE_TTS_VOICE=en_US-lessac-medium
 
 # General
 VOICE_PROVIDER=maya1  # Default provider
-VOICE_STREAMING_PROTO=ws  # WebSocket protocol
 ```
 
 ## Performance Budgets

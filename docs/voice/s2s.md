@@ -124,9 +124,9 @@ Follow `docs/voice/streaming.md` for the WebSocket contract. Minimal sample:
 
 ```bash
 wscat -c ws://localhost:8788/voice/stream
-> {"type":"start","language":"en"}
-> {"type":"audio_chunk","audioBase64":"<pcm>","mimeType":"audio/pcm"}
-> {"type":"stop"}
+> {"_":"start","language":"en","protocolVersion":1,"inputMimeType":"audio/pcm","codec":"pcm"}
+> {"_":"audio_chunk","audioBase64":"<pcm>","mimeType":"audio/pcm"}
+> {"_":"stop","reason":"manual"}
 ```
 
 You should see `partial_transcript`, `vad_state`, and `final_transcript` events in real time. The Drive Mode + `/voice-s2s` UIs provide buttons to exercise the prototype without touching `wscat`.

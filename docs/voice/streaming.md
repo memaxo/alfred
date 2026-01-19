@@ -15,29 +15,39 @@ This document describes the current WebSocket prototype, the message contract, a
 - **Input codec handling**: The server accepts PCM, M4A, WebM, MP3, or Opus chunks. Each chunk is normalized via the ffmpeg helper (`decodeToPCM16`) before the Faster-Whisper pool receives it, so clients can stream whatever their recorder produces.
 - **Output codec negotiation**: Set `codec` in the `start` payload (`pcm|mp3|opus|wav`). The server now re-encodes each TTS chunk via `encodeFromPCM16` so downstream consumers receive the negotiated MIME type, falling back to PCM when the request is unsupported.
 - **Lifecycle**:
-  1. Client upgrades to WebSocket, receives `{"type":"ready","sessionId":null}`.
+  1. Client upgrades to WebSocket, receives `{"_":"ready","sessionId":null,"protocolVersion":1}`.
   2. Client sends `start` to allocate a session.
-  3. Client streams `audio_chunk` events (base64 PCM, 16 kHz mono).
+  3. Client streams audio chunks as **binary frames** (preferred) or `audio_chunk` JSON events.
   4. Client sends `stop` to flush transcription and tear down.
   5. Server emits `partial_transcript`, `final_transcript`, and status/error events.
 
 ## Configuration
 
 - `VOICE_STREAMING_PROTO=1` enables the Bun WebSocket server; `VOICE_STREAMING_PORT` (default `8788`) controls the port.
+- The server enforces idle and ping/pong timeouts:
+  - `VOICE_WS_INACTIVITY_TIMEOUT_MS` (default `120000`) closes connections with no messages or pongs.
+  - `VOICE_WS_PONG_TIMEOUT_MS` (default `60000`) closes connections that stop answering pongs.
 - Web app: set `VITE_VOICE_STREAMING_URL` (optional) and/or `VITE_VOICE_STREAMING_PORT`. When unset, the client derives `ws(s)://<frontend-host>:8788/voice/stream`.
 - Native app: set `EXPO_PUBLIC_VOICE_STREAM_URL` (optional) and/or `EXPO_PUBLIC_VOICE_STREAM_PORT`. When unset, the Expo client derives the URL from `EXPO_PUBLIC_SERVER_URL`.
 
 
 ## Message Contract
 
-All frames are UTF-8 JSON. Prototype types:
+The streaming transport uses **mixed frame types**:
+
+- **Control frames**: UTF-8 JSON with a required `_` discriminant.
+- **Audio frames**: raw **binary** WebSocket frames.
+
+Binary frames carry no metadata, so clients must provide `inputMimeType` in the `start` payload. Likewise, reply audio chunks are sent as binary frames; the negotiated output codec is established during `start`/`session_started`.
 
 ### Client → Server
 
 ```json
-{ "type": "start",
+{ "_": "start",
+  "protocolVersion": 1,
   "sessionId": "optional",
   "language": "en",
+  "inputMimeType": "audio/raw;codec=pcm_s16le;rate=16000",
   "codec": "pcm|mp3|opus|wav",
   "surface": "drive|carplay|web|native|stream|unknown",
   "vadThreshold": 0.6,
@@ -45,14 +55,16 @@ All frames are UTF-8 JSON. Prototype types:
   "maxUtteranceMs": 20000,
   "ttsVoice": "en_US-lessac-medium",
   "ttsFormat": "mp3|opus|wav" }
-{ "type": "audio_chunk", "audioBase64": "...", "mimeType": "audio/pcm", "emitPartial": true }
-{ "type": "stop" }
-{ "type": "ping" }
+{ "_": "audio_chunk", "audioBase64": "...", "mimeType": "audio/pcm", "emitPartial": true }
+{ "_": "stop", "reason": "manual|silence|timeout" }
+{ "_": "ping" }
 ```
 
 - `start`
   - `sessionId` (optional): supply to resume an abandoned session; otherwise the server generates one.
   - `language`: passed to `VoiceSessionManager.createSession` for Faster-Whisper hints.
+  - `protocolVersion`: optional; defaults to 1 when omitted.
+  - `inputMimeType`: required if you will send **binary** audio frames (since binary frames have no `mimeType` field).
   - `codec`: preferred outbound codec. The server advertises the negotiated codec in `session_started` and re-encodes chunks to `mp3`/`opus`/`wav` when requested (defaults to PCM).
   - `surface`: optional hint for the registry/UI so Drive Mode, CarPlay, and web can display the right badge.
   - `vadThreshold`: optional float (0–1) forwarded to Silero VAD; lower values make auto-stop more sensitive.
@@ -60,30 +72,36 @@ All frames are UTF-8 JSON. Prototype types:
   - `maxUtteranceMs`: safety stop per utterance (20 s default).
   - `ttsVoice` / `ttsFormat`: hints forwarded to the TTS pipeline (format is honored for clip responses; streamed chunks stay PCM today).
 - `audio_chunk`
-  - `audioBase64`: Base64 PCM (`s16le`, 16 kHz, mono). Clients should transcode before sending (mirrors Milestone 1 codec rules).
+  - `audioBase64`: Base64 audio payload. Can be PCM16 or a container (M4A/WebM/MP3/Opus); the server normalizes via `decodeToPCM16`.
   - `mimeType`: Defaults to `audio/pcm`; currently informative only.
   - `emitPartial`: Set `false` to skip per-chunk transcript pushes.
 - `stop`: Flushes transcription, emits `final_transcript`, and closes the session.
 - `ping`: Health probe (server responds with `pong`).
 
+#### Client → Server audio frames (binary)
+
+- **Preferred**: send raw binary audio frames (e.g. the bytes of an M4A or PCM chunk). The server treats each binary frame as an audio chunk using `inputMimeType` from `start`.
+
 ### Server → Client
 
 ```json
-{ "type": "ready", "sessionId": null }
-{ "type": "session_started", "sessionId": "uuid", "codec": "pcm", "negotiatedCodec": "pcm" }
-{ "type": "partial_transcript", "sessionId": "uuid", "text": "..." }
-{ "type": "vad_state", "sessionId": "uuid", "vadConfidence": 0.83, "isEmpty": false, "endOfUtterance": false }
-{ "type": "auto_stop", "sessionId": "uuid", "reason": "silence" }
-{ "type": "final_transcript", "sessionId": "uuid", "text": "..." }
-{ "type": "assistant_message", "sessionId": "uuid", "text": "...", "replayId": "optional" }
-{ "type": "tts_chunk", "sessionId": "uuid", "audioBase64": "...", "mimeType": "audio/mp3|audio/ogg;codecs=opus|audio/wav", "sequence": 0, "isLast": false }
-{ "type": "tts_complete", "sessionId": "uuid" }
-{ "type": "status", "sessionId": "uuid", "state": "recording|processing|playing|idle" }
-{ "type": "error", "sessionId": "uuid", "message": "..." }
-{ "type": "pong" }
+{ "_": "ready", "sessionId": null, "protocolVersion": 1 }
+{ "_": "session_started", "sessionId": "uuid", "codec": "pcm", "negotiatedCodec": "pcm", "protocolVersion": 1 }
+{ "_": "partial_transcript", "sessionId": "uuid", "text": "..." }
+{ "_": "vad_state", "sessionId": "uuid", "vadConfidence": 0.83, "isEmpty": false, "endOfUtterance": false }
+{ "_": "auto_stop", "sessionId": "uuid", "reason": "silence" }
+{ "_": "final_transcript", "sessionId": "uuid", "text": "..." }
+{ "_": "assistant_message", "sessionId": "uuid", "text": "...", "replayId": "optional" }
+{ "_": "tts_complete", "sessionId": "uuid" }
+{ "_": "status", "sessionId": "uuid", "state": "recording|processing|playing|idle" }
+{ "_": "error", "sessionId": "uuid", "message": "..." }
+{ "_": "pong" }
 ```
 
-The prototype keeps transcripts in memory via `VoiceSession.getTranscript()`. `partial_transcript` is emitted immediately after each `audio_chunk`, `vad_state` mirrors Silero’s confidence scores, and `auto_stop` fires when silence persists or `maxUtteranceMs` elapses. After `final_transcript`, the server runs the same assistant pipeline as `voice.speechToSpeech`, emits `assistant_message`, streams PCM `tts_chunk` events sentence-by-sentence, and terminates the turn with `tts_complete` plus a `status: idle` heartbeat.
+#### Server → Client reply audio frames (binary)
+
+- Reply audio chunks are streamed as **binary frames**. The bytes are encoded in the negotiated output codec (`codec` in `start`, echoed as `negotiatedCodec` in `session_started`).
+The prototype keeps transcripts in memory via `VoiceSession.getTranscript()`. `partial_transcript` is emitted immediately after each audio chunk, `vad_state` mirrors Silero’s confidence scores, and `auto_stop` fires when silence persists or `maxUtteranceMs` elapses. After `final_transcript`, the server runs the same assistant pipeline as `voice.speechToSpeech`, emits `assistant_message`, streams reply audio as binary frames, and terminates the turn with `tts_complete` plus a `status: idle` heartbeat.
 
 ## Server Architecture
 
@@ -91,13 +109,13 @@ The prototype keeps transcripts in memory via `VoiceSession.getTranscript()`. `p
 - The server is started automatically when `VOICE_STREAMING_PROTO=1`. The port defaults to `8788` and can be overridden via `VOICE_STREAMING_PORT`.
 - Each connection stores `{ sessionId, userId, runtimeContext, codec preferences }`, claims the shared voice session registry, and reuses the existing `VoiceSessionManager` so all PCM decoding, VAD, and buffering logic stays in one place. The registry keeps Drive Mode/web/CarPlay dashboards in sync with the streaming status.
 - Audio chunks call `VoiceSession.processAudioChunk` (now returning VAD metadata) before emitting `partial_transcript` and `vad_state` updates.
-- On `stop` (manual, silence, or timeout), the server emits a final transcript, runs `runAssistantForVoice`, streams PCM `tts_chunk` events via `TTSPool`, and finishes with `tts_complete` + `status: idle`.
+- On `stop` (manual, silence, or timeout), the server emits a final transcript, runs `runAssistantForVoice`, streams reply audio as **binary frames** via `TTSPool`, and finishes with `tts_complete` + `status: idle`.
 - Logging lives under the `voice_stream_proto_*` keys (`voice_stream_proto_start`, `voice_stream_proto_chunk`, `voice_stream_proto_error`).
 
 ### Prototype Limitations
 
-- Downstream audio is streamed as PCM chunks today. Negotiated MP3/Opus output will require per-chunk transcoding in a later iteration.
-- Audio input must already be PCM; container decode (M4A/WebM) still happens client-side (browser/native can reuse the Milestone 1 converters before pushing PCM frames).
+- Web/native clients currently **request `codec=pcm`** for streaming (lowest-latency playback). The server can encode `mp3|opus|wav`, but clients must implement compressed playback before switching.
+- Audio input does **not** have to be PCM; the server normalizes each chunk via `decodeToPCM16` when needed.
 - Requires `VOICE_PROVIDER=maya1` so the Faster-Whisper pool is present. The server short-circuits with an error if the Maya1 pools are unavailable.
 
 ## Client Usage
@@ -115,12 +133,12 @@ bun dev
 
 ```bash
 wscat -c ws://localhost:8788/voice/stream
-> {"type":"start","language":"en"}
-< {"type":"session_started","sessionId":"..."}
-> {"type":"audio_chunk","audioBase64":"<pcm>","mimeType":"audio/pcm"}
-< {"type":"partial_transcript","text":"hello"}
-> {"type":"stop"}
-< {"type":"final_transcript","text":"hello"}
+> {"_":"start","language":"en","protocolVersion":1,"inputMimeType":"audio/pcm","codec":"pcm"}
+< {"_":"session_started","sessionId":"...","codec":"pcm","negotiatedCodec":"pcm","protocolVersion":1}
+> {"_":"audio_chunk","audioBase64":"<pcm>","mimeType":"audio/pcm"}
+< {"_":"partial_transcript","sessionId":"...","text":"hello"}
+> {"_":"stop","reason":"manual"}
+< {"_":"final_transcript","sessionId":"...","text":"hello"}
 ```
 
 3. On native/web, the recorder runs in short slices (≈600–1200 ms) and each slice is uploaded immediately. The server now accepts container formats, so the clients simply base64 encode the slice (`audio/m4a`, `audio/webm`, etc.). With `autoStop=true`, the server emits `auto_stop` as soon as Silero marks end-of-utterance; clients should stop recording, wait for `assistant_message`, and buffer PCM `tts_chunk` events for playback (native wraps them in WAV before calling `expo-av`, web streams them into an `AudioBufferSourceNode`).

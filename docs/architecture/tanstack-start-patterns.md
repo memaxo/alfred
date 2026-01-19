@@ -69,7 +69,6 @@ Routes that use browser-only APIs should set `ssr: false` to prevent hydration e
 **Routes with `ssr: false`:**
 - `/` - Uses WebGPU Canvas (MindscapeEngine)
 - `/_protected/mindscape` - Uses ReactFlow and WebGPU
-- `/_protected/settings/visual` - Uses Cortex Canvas
 - `/demo/cortex` - Uses Cortex Canvas
 
 **Pattern:**

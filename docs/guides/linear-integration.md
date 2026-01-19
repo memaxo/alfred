@@ -97,6 +97,21 @@ On workflow start with Linear context:
 
 All operations are fire-and-forget (non-blocking).
 
+### Pipeline subtasks (optional)
+
+When running the **pipeline execution path** with Linear context, ALFRED can optionally create **one Linear issue per subtask** and keep them updated as agents run.
+
+- **Requirements**
+  - `linear.space` must be set (Linear workspace/organization id)
+  - `linear.teamId` must be set (required to create new issues)
+  - `authzLinear` must be set and valid
+
+- **Behavior**
+  - Subtask issues are created **at execute-stage only** (post-approval), never during plan preview.
+  - Subtask dependency edges are synced as **blocks** relations where prerequisites block dependents (dep blocks task).
+  - Status updates use workflow-state transitions (`set-started`, `set-completed`, `set-cancelled`) rather than rewriting issue descriptions.
+  - Mapping is stored in pipeline context under `linearTaskIssueMap` (subTaskId → Linear issue id) and consumed by `LinearSyncObserver`.
+
 ### Webhook Handling
 
 **Endpoint:** `POST /api/linear/webhook`

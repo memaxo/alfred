@@ -203,6 +203,11 @@ Each stage:
 - Updates Linear if configured
 - Returns final summary
 
+### Work compilation (post-run)
+- Do not rely on pipeline checkpoints for post-run UI: snapshots may be deleted on completion.
+- Persist a versioned “work compilation” artifact on completion via an API-layer observer.
+- See: `docs/architecture/work-compilation.md`
+
 ## Testing
 
 ```bash

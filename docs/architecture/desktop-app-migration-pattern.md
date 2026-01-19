@@ -217,7 +217,7 @@ For each existing settings route/component:
 
 1. **Update route to redirect**
    ```typescript
-   // routes/_protected/settings.tsx
+   // apps/web/src/routes/_protected/settings.tsx
    function SettingsRoute() {
      useEffect(() => {
        toast.info("Settings moved to desktop app");
@@ -238,9 +238,9 @@ For each existing settings route/component:
 
 4. **Delete deprecated files**
    ```bash
-   rm routes/_protected/settings/profile.tsx
-   rm routes/_protected/settings/visual.tsx
-   rm routes/_protected/settings/mcp.tsx
+   rm apps/web/src/routes/_protected/settings/profile.tsx
+   rm apps/web/src/routes/_protected/settings/visual.tsx
+   rm apps/web/src/routes/_protected/settings/mcp.tsx
    # ...
    ```
 
