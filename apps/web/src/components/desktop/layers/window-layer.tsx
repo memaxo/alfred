@@ -9,8 +9,9 @@
  * @see docs/execplans/desktop-type-migration.md
  */
 
+import { ReactFlowProvider } from "@xyflow/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { WindowErrorBoundary } from "@/components/windows/shared/error-boundary";
 import { useDesktopStore } from "@/store/desktop";
@@ -36,25 +37,29 @@ function WindowRenderer({
   isFocused: boolean;
 }) {
   const props = useWindowProps(windowId);
-  if (!props) {
+  const windowType = props?.window.type as WindowType | undefined;
+  const registryEntry = windowType ? windowRegistry[windowType] : undefined;
+  const BaseComponent = registryEntry?.component ?? null;
+  const isLegacy = registryEntry?.isLegacy ?? false;
+
+  const Component = useMemo(() => {
+    if (!BaseComponent) {
+      return null;
+    }
+    return isLegacy ? withWindowAdapter(BaseComponent) : BaseComponent;
+  }, [BaseComponent, isLegacy]);
+
+  if (!(props && Component)) {
     return null;
   }
-
-  const registryEntry = windowRegistry[props.window.type as WindowType];
-  if (!registryEntry?.component) {
-    return null;
-  }
-
-  // Wrap legacy components with adapter
-  const Component = registryEntry.isLegacy
-    ? withWindowAdapter(registryEntry.component)
-    : registryEntry.component;
 
   return (
     <WindowChrome isFocused={isFocused} windowId={windowId}>
-      <WindowErrorBoundary windowId={windowId}>
-        <Component {...props} />
-      </WindowErrorBoundary>
+      <ReactFlowProvider>
+        <WindowErrorBoundary windowId={windowId}>
+          <Component {...props} />
+        </WindowErrorBoundary>
+      </ReactFlowProvider>
     </WindowChrome>
   );
 }

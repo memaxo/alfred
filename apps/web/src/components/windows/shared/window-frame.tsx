@@ -78,10 +78,12 @@ export function WindowFrame({
 }: WindowFrameProps) {
   const removeWindow = useDesktopStore((s) => s.removeWindow);
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
+  const isSpaceMode = useDesktopStore((s) => s.isSpaceMode);
   const viewMode = useDesktopStore(
     (s) => s.windows.find((w) => w.id === id)?.data.viewMode ?? "full"
   );
   const { isDimmed, isFocused } = useWindowFocus(id);
+  const isMindscape = isSpaceMode;
 
   const tier = tierOverride ?? getWindowTier(windowType);
   const style = tierStyles[tier];
@@ -96,7 +98,7 @@ export function WindowFrame({
     <div
       aria-label={title}
       className={cn(
-        "relative flex flex-col rounded-3xl border bg-void-surface/40 backdrop-blur-xl",
+        "group relative flex flex-col rounded-3xl border bg-void-surface/40 backdrop-blur-xl",
         "transition-all duration-500 ease-fluid",
         style.border,
         style.glow,
@@ -110,8 +112,12 @@ export function WindowFrame({
       role="region"
       style={{ width }}
     >
-      {handles.target && <Handle position={Position.Left} type="target" />}
-      {handles.source && <Handle position={Position.Right} type="source" />}
+      {isMindscape && handles.target && (
+        <Handle position={Position.Left} type="target" />
+      )}
+      {isMindscape && handles.source && (
+        <Handle position={Position.Right} type="source" />
+      )}
 
       <div className="flex items-center justify-between rounded-t-3xl border-white/10 border-b bg-white/5 px-4 py-2">
         <span className="font-medium text-biolum tracking-tight">{title}</span>
@@ -126,45 +132,50 @@ export function WindowFrame({
         </div>
       )}
 
-      <Toolbar
-        className="-translate-y-12 opacity-0 transition-opacity group-hover:opacity-100"
-        position={Position.Top}
-      >
-        <Button
-          aria-label="Pin window"
-          className="h-6 w-6 hover:text-biolum"
-          size="icon"
-          variant="ghost"
+      {isMindscape ? (
+        <Toolbar
+          className="-translate-y-12 opacity-0 transition-opacity group-hover:opacity-100"
+          position={Position.Top}
         >
-          <Pin className="h-3 w-3" />
-        </Button>
-        {modes.length > 1 && (
           <Button
-            aria-label="Toggle view mode"
+            aria-label="Pin window"
             className="h-6 w-6 hover:text-biolum"
-            onClick={handleViewModeToggle}
             size="icon"
+            type="button"
             variant="ghost"
           >
-            {viewMode === "maximized" ? (
-              <Minimize2 className="h-3 w-3" />
-            ) : (
-              <Maximize2 className="h-3 w-3" />
-            )}
+            <Pin className="h-3 w-3" />
           </Button>
-        )}
-        {closable && (
-          <Button
-            aria-label="Close window"
-            className="h-6 w-6 hover:text-red-400"
-            onClick={() => removeWindow(id)}
-            size="icon"
-            variant="ghost"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        )}
-      </Toolbar>
+          {modes.length > 1 && (
+            <Button
+              aria-label="Toggle view mode"
+              className="h-6 w-6 hover:text-biolum"
+              onClick={handleViewModeToggle}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              {viewMode === "maximized" ? (
+                <Minimize2 className="h-3 w-3" />
+              ) : (
+                <Maximize2 className="h-3 w-3" />
+              )}
+            </Button>
+          )}
+          {closable && (
+            <Button
+              aria-label="Close window"
+              className="h-6 w-6 hover:text-red-400"
+              onClick={() => removeWindow(id)}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </Toolbar>
+      ) : null}
     </div>
   );
 }

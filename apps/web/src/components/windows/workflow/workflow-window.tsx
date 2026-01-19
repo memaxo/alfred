@@ -1,5 +1,7 @@
-import { type StructuredPlan, structuredPlanSchema } from "@alfred/plan";
+import { structuredPlanSchema } from "@alfred/plan/schema";
 import { useStore } from "@tanstack/react-form";
+import { skipToken } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import type { NodeProps } from "@xyflow/react";
 import {
   Check,
@@ -10,9 +12,10 @@ import {
   Workflow,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { GenUIErrorBoundary, UISchemaRenderer } from "@/components/genui";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -29,12 +32,12 @@ import {
   WindowFrame,
 } from "@/components/windows/shared";
 import { useAppForm, useSubmitInvalidFocus } from "@/form";
-import { useFocusedContext } from "@/hooks/use-focused-context";
+import { useWorkflowPlan } from "@/hooks/use-workflow-phase";
 import {
   useWorkflowSubscription,
+  type WorkflowEscalation,
   type WorkflowStep,
 } from "@/hooks/use-workflow-subscription";
-import { authClient } from "@/lib/auth-client";
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
 import { ExecutionPanel } from "./execution-panel";
@@ -43,6 +46,8 @@ import { WorkflowCanvas } from "./workflow-canvas";
 type AutoLevel = "read" | "low" | "medium" | "high";
 
 const autoOptions: AutoLevel[] = ["read", "low", "medium", "high"];
+
+type StructuredPlan = z.infer<typeof structuredPlanSchema>;
 
 const workflowWindowDataSchema = z.object({
   type: z.literal("workflow"),
@@ -60,15 +65,28 @@ const workflowWindowDataSchema = z.object({
   status: z.string().optional(),
   messages: z.array(z.unknown()).optional(),
   runId: z.string().optional(),
+  planId: z.string().optional(),
   plan: structuredPlanSchema.optional(),
   activeView: z.enum(["list", "canvas"]).default("list").optional(),
   steps: z.array(z.any()).optional(),
   executionStartTime: z.number().optional(),
   lastEventTime: z.number().optional(),
+  summaryText: z.string().optional(),
+  escalation: z
+    .object({
+      agentId: z.string(),
+      reason: z.string(),
+      details: z.string(),
+      suggestions: z.array(z.string()).optional(),
+      severity: z.enum(["warning", "blocking"]),
+      timestamp: z.number(),
+    })
+    .optional(),
 });
 
 export function WorkflowWindow({ id, data, selected }: NodeProps) {
   const lod = useLOD();
+  const navigate = useNavigate();
 
   const parsed = workflowWindowDataSchema.safeParse(data);
   const windowData = parsed.success
@@ -76,9 +94,11 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     : { type: "workflow" as const, viewMode: "full" as const };
 
   const status = windowData.status ?? "Idle";
-  const hasRun = Boolean(windowData.runId || windowData.resourceRef?.id);
+  const runId = windowData.runId ?? windowData.resourceRef?.id;
   const plan = windowData.plan as StructuredPlan | undefined;
   const activeView = windowData.activeView ?? "list";
+  const summaryText = windowData.summaryText;
+  const escalation = windowData.escalation as WorkflowEscalation | undefined;
 
   const [autoLevel, setAutoLevel] = useState<AutoLevel>(
     windowData.auto ?? "low"
@@ -87,8 +107,6 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     windowData.mode ?? "sequential"
   );
 
-  const { content, nodeType } = useFocusedContext();
-  const { data: session } = authClient.useSession();
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
 
   const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
@@ -111,20 +129,17 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
         return;
       }
       updateWindowData(id, {
-        draft: {
-          requirement: trimmed,
-          auto: autoLevel,
-          mode,
-          status: "pending",
-          title: trimmed.slice(0, 64),
-          description: trimmed,
-          messages: [],
-        },
+        requirement: trimmed,
+        auto: autoLevel,
+        mode,
+        status: "planning",
+        messages: [],
       });
     },
   });
 
   const requirement = useStore(startForm.store, (s) => s.values.requirement);
+  const planRequirement = windowData.requirement ?? requirement;
 
   const {
     run,
@@ -132,7 +147,9 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     steps: currentSteps,
     status: runStatus,
     error: runError,
+    escalation: runEscalation,
   } = useWorkflowSubscription({
+    kind: "resume",
     onWindowUpdate: (update) => {
       updateWindowData(id, update);
     },
@@ -141,120 +158,176 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     },
   });
 
-  const generatePlan = trpc.plan.generate.useMutation({
-    onSuccess: (generatedPlan) => {
+  const planning = useWorkflowPlan({
+    requirement: planRequirement,
+    onPlanReady: (out) => {
       updateWindowData(id, {
-        plan: generatedPlan,
+        runId: out.runId,
+        planId: out.planId,
+        plan: out.structuredPlan as StructuredPlan,
+        status: "suspended",
         activeView: "canvas",
       });
-      toast.success("Plan generated successfully");
+      toast.success("Plan ready");
     },
-    onError: (error) => {
-      toast.error(`Failed to generate plan: ${error.message}`);
+    onError: (err) => {
+      updateWindowData(id, { status: "failed" });
+      toast.error(`Planning failed: ${err.message}`);
     },
   });
+  const planStatus = planning.status;
+  const planSteps = planning.steps;
+  const startPlanning = planning.start;
+  const clearPlanning = planning.clear;
 
-  const handleGenerate = (event?: React.FormEvent) => {
-    event?.preventDefault();
-    if (!requirement.trim()) {
-      toast.error("Requirement is required");
-      return;
-    }
-
-    if (!session?.user?.id) {
-      toast.error("User session required");
-      return;
-    }
-
-    generatePlan.mutate({
-      intent: {
-        id: crypto.randomUUID(),
-        description: requirement.trim(),
-        source: "chat",
-        userId: session.user.id,
-        timestamp: new Date(),
-        context: {
-          existingPatterns: [],
-          constraints: [],
-          focusedContent: content,
-          focusedNodeType: nodeType,
-        },
-      },
-      research: {
-        external: [],
-        internal: {
-          existingCode: [],
-          patterns: [],
-          conventions: [],
-        },
-        metadata: {
-          totalSources: 0,
-          tokenCount: 0,
-          researchDurationMs: 0,
-        },
-      },
-      options: {
-        maxPhases: 5,
-        preferParallel: mode === "parallel",
-      },
-    });
-  };
-
-  const approvePlan = trpc.plan.approve.useMutation({
-    onSuccess: (result) => {
+  const approve = trpc.workflow.phase.approveAndExecute.useMutation({
+    onSuccess: ({ runId }) => {
       updateWindowData(id, {
-        runId: result.runId,
+        runId,
         status: "running",
         activeView: "list",
+        escalation: undefined,
       });
-
-      // Start execution subscription
       run({
-        requirement: requirement.trim(),
-        runId: result.runId,
-        auto: autoLevel,
-        mode,
-        projectId: windowData.resourceRef?.id,
-        planId: plan?.id,
+        runId,
+        dryRun: import.meta.env.VITE_TEST_MODE === "true",
       });
-
-      toast.success("Plan approved. Execution started.");
+      toast.success("Approved. Executing.");
     },
-    onError: (error) => {
-      toast.error(`Failed to approve plan: ${error.message}`);
+    onError: (err) => {
+      toast.error(`Failed to approve: ${err.message}`);
     },
   });
 
-  const rejectPlan = trpc.plan.reject.useMutation({
-    onSuccess: () => {
-      updateWindowData(id, {
-        plan: null,
-        activeView: "list",
-      });
-      toast.info("Plan rejected.");
-    },
-    onError: (error) => {
-      toast.error(`Failed to reject plan: ${error.message}`);
+  const updatePlan = trpc.workflow.phase.updatePlan.useMutation({
+    onError: (err) => {
+      toast.error(`Failed to save edits: ${err.message}`);
     },
   });
 
-  const handleApprove = () => {
-    if (!plan) {
+  const showExecutionPanel = Boolean(runId) || planStatus !== "idle";
+
+  const genuiSchemas = useMemo(() => {
+    if (!runId) {
+      return null;
+    }
+
+    const steps =
+      currentSteps.length > 0
+        ? currentSteps
+        : ((windowData.steps as WorkflowStep[]) ?? planSteps);
+
+    const phases = steps.map((s) => {
+      const status =
+        s.status === "completed"
+          ? ("completed" as const)
+          : s.status === "running"
+            ? ("running" as const)
+            : s.status === "failed"
+              ? ("error" as const)
+              : ("pending" as const);
+
+      return {
+        id: s.id,
+        name: s.name,
+        status,
+        progress: status === "completed" ? 100 : status === "running" ? 10 : 0,
+        tasks: [
+          {
+            id: s.id,
+            name: s.name,
+            status,
+            duration: typeof s.duration === "number" ? s.duration : undefined,
+          },
+        ],
+      };
+    });
+
+    const planSchema = plan
+      ? {
+          component: "plan",
+          props: {
+            plan: {
+              requirement: plan.intent ?? "",
+              tasks: plan.phases.flatMap((p) =>
+                p.tasks.map((t) => ({
+                  id: t.id,
+                  title: t.title,
+                  status: "pending" as const,
+                }))
+              ),
+            },
+          },
+        }
+      : null;
+
+    return {
+      timeline: {
+        component: "workflow-timeline",
+        props: {
+          workflowId: runId,
+          title: plan?.title ?? "Workflow",
+          phases,
+          elapsed: 0,
+        },
+      },
+      plan: planSchema,
+    } as const;
+  }, [currentSteps, plan, planSteps, runId, windowData.steps]);
+
+  const persistedPlanQuery = trpc.workflow.phase.getPlan.useQuery(
+    runId ? { runId } : skipToken,
+    { enabled: Boolean(runId) && !plan }
+  );
+
+  useEffect(() => {
+    const data = persistedPlanQuery.data;
+    if (!data || plan) {
       return;
     }
-    approvePlan.mutate({ planId: plan.id });
+    updateWindowData(id, {
+      runId: data.runId,
+      planId: data.planId,
+      plan: data.structuredPlan as StructuredPlan,
+      status: data.snapshot.status,
+      activeView: data.snapshot.status === "suspended" ? "canvas" : "list",
+    });
+  }, [persistedPlanQuery.data, plan, updateWindowData, id]);
+
+  const handleGenerate = () => {
+    void startForm.handleSubmit();
+  };
+
+  const handleApprove = () => {
+    if (!runId) {
+      return;
+    }
+    approve.mutate({ runId });
   };
 
   const handleReject = () => {
-    if (!plan) {
-      return;
-    }
-    rejectPlan.mutate({ planId: plan.id });
+    clearPlanning();
+    updateWindowData(id, {
+      plan: null,
+      planId: undefined,
+      runId: undefined,
+      status: "Idle",
+      activeView: "list",
+      steps: [],
+    });
   };
 
   const handleRevise = () => {
-    // For now, just regenerate. Ideally we'd pass feedback.
-    handleGenerate();
+    clearPlanning();
+    updateWindowData(id, {
+      plan: null,
+      planId: undefined,
+      runId: undefined,
+      status: "planning",
+      activeView: "list",
+      steps: [],
+    });
+    startPlanning();
   };
 
   const toggleView = () => {
@@ -267,16 +340,26 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     updateWindowData(id, {
       plan: updatedPlan,
     });
+
+    if (runId) {
+      updatePlan.mutate({
+        runId,
+        structuredPlan: updatedPlan,
+      });
+    }
   };
 
   useEffect(() => {
     if (windowData.requirement && windowData.requirement !== requirement) {
       startForm.setFieldValue("requirement", windowData.requirement);
-    } else if (!requirement && content) {
-      // Pre-populate from focused context if empty
-      startForm.setFieldValue("requirement", content.slice(0, 500));
     }
-  }, [windowData.requirement, requirement, content, startForm]);
+  }, [windowData.requirement, requirement, startForm]);
+
+  useEffect(() => {
+    if (windowData.status === "planning" && planStatus === "idle") {
+      startPlanning();
+    }
+  }, [windowData.status, planStatus, startPlanning]);
 
   if (lod === "tiny") {
     return (
@@ -347,11 +430,11 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
           <div className="min-h-0 flex-1">
             <WorkflowCanvas onPlanChange={handlePlanChange} plan={plan} />
 
-            {!hasRun && (
+            {status === "suspended" && runId && (
               <div className="-translate-x-1/2 fade-in slide-in-from-bottom-4 absolute bottom-4 left-1/2 flex animate-in items-center gap-2 rounded-xl border border-white/10 bg-void-surface/80 p-2 shadow-2xl backdrop-blur-xl duration-300">
                 <Button
                   className="h-9 px-4 font-bold text-red-400 text-xs uppercase tracking-widest hover:bg-red-400/10 hover:text-red-300"
-                  disabled={rejectPlan.isPending}
+                  disabled={approve.isPending}
                   onClick={handleReject}
                   size="sm"
                   variant="ghost"
@@ -362,23 +445,23 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                 <div className="h-4 w-px bg-white/10" />
                 <Button
                   className="h-9 px-4 font-bold text-biolum-dim text-xs uppercase tracking-widest hover:bg-biolum/10 hover:text-biolum"
-                  disabled={generatePlan.isPending}
+                  disabled={planStatus === "planning" || approve.isPending}
                   onClick={handleRevise}
                   size="sm"
                   variant="ghost"
                 >
                   <RefreshCw
-                    className={`mr-2 h-3.5 w-3.5 ${generatePlan.isPending ? "animate-spin" : ""}`}
+                    className={`mr-2 h-3.5 w-3.5 ${planStatus === "planning" ? "animate-spin" : ""}`}
                   />
                   Iterate
                 </Button>
                 <Button
                   className="h-9 rounded-lg bg-biolum px-6 font-black text-void text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(var(--biolum-rgb),0.4)] hover:bg-biolum-bright"
-                  disabled={approvePlan.isPending}
+                  disabled={approve.isPending}
                   onClick={handleApprove}
                   size="sm"
                 >
-                  {approvePlan.isPending ? (
+                  {approve.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Check className="mr-2 h-3.5 w-3.5" />
@@ -390,21 +473,67 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
           </div>
         ) : (
           <div className="flex flex-col gap-3 p-4">
-            {hasRun ? (
-              <ExecutionPanel
-                className="h-[300px]"
-                error={runError}
-                isRunning={
-                  runStatus === "running" || runStatus === "connecting"
-                }
-                onClose={() => {}}
-                onStop={stop}
-                steps={
-                  currentSteps.length > 0
-                    ? currentSteps
-                    : ((windowData.steps as WorkflowStep[]) ?? [])
-                }
-              />
+            {showExecutionPanel ? (
+              <div className="flex flex-col gap-3">
+                {genuiSchemas ? (
+                  <GenUIErrorBoundary>
+                    <div className="rounded-2xl border border-white/10 bg-void-surface/40 p-3 backdrop-blur">
+                      <UISchemaRenderer schema={genuiSchemas.timeline} />
+                    </div>
+                    {genuiSchemas.plan ? (
+                      <div className="rounded-2xl border border-white/10 bg-void-surface/40 p-3 backdrop-blur">
+                        <UISchemaRenderer schema={genuiSchemas.plan} />
+                      </div>
+                    ) : null}
+                  </GenUIErrorBoundary>
+                ) : null}
+
+                <ExecutionPanel
+                  className="h-[300px]"
+                  error={runError}
+                  escalation={runEscalation ?? escalation ?? null}
+                  isRunning={
+                    runStatus === "running" || runStatus === "connecting"
+                  }
+                  onClose={() => {}}
+                  onStop={stop}
+                  steps={
+                    currentSteps.length > 0
+                      ? currentSteps
+                      : ((windowData.steps as WorkflowStep[]) ?? planSteps)
+                  }
+                />
+
+                {status === "completed" && runId && (
+                  <div className="rounded-2xl border border-white/10 bg-void-surface/40 p-3 backdrop-blur">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-biolum text-sm">
+                          Completed
+                        </p>
+                        {summaryText && (
+                          <p className="mt-1 text-biolum-dim text-xs">
+                            {summaryText}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() =>
+                          navigate({
+                            to: "/workflow/$runId",
+                            params: { runId },
+                          })
+                        }
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Open Work
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <startForm.AppForm>
                 <form
@@ -461,13 +590,23 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                     <div className="flex-1" />
                     <div className="flex gap-2">
                       <Button
-                        disabled={generatePlan.isPending}
+                        disabled={
+                          (planStatus as
+                            | "idle"
+                            | "planning"
+                            | "ready"
+                            | "error") === "planning"
+                        }
                         onClick={handleGenerate}
                         size="sm"
                         type="button"
                         variant="outline"
                       >
-                        {generatePlan.isPending ? (
+                        {(planStatus as
+                          | "idle"
+                          | "planning"
+                          | "ready"
+                          | "error") === "planning" ? (
                           <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                         ) : (
                           <LayoutGrid className="mr-2 h-3 w-3" />

@@ -170,15 +170,26 @@ export function CognitiveFeedbackDialog({
                   })}
                 >
                   {({ isSubmitting }) => (
-                    <Button
-                      className="w-full"
-                      disabled={status === "pending" || isSubmitting}
-                      type="submit"
-                    >
-                      {status === "pending" || isSubmitting
-                        ? "Submitting…"
-                        : "Submit Feedback"}
-                    </Button>
+                    <div className="flex w-full gap-2">
+                      <Button
+                        className="flex-1"
+                        disabled={status === "pending" || isSubmitting}
+                        onClick={() => onOpenChange(false)}
+                        type="button"
+                        variant="secondary"
+                      >
+                        Close
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        disabled={status === "pending" || isSubmitting}
+                        type="submit"
+                      >
+                        {status === "pending" || isSubmitting
+                          ? "Submitting…"
+                          : "Submit Feedback"}
+                      </Button>
+                    </div>
                   )}
                 </form.Subscribe>
               </DialogFooter>

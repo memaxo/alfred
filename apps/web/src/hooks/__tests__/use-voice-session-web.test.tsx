@@ -6,6 +6,9 @@ import { useVoiceSessionWeb } from "../use-voice-session-web";
 const sttMutate = vi.fn();
 const ttsMutate = vi.fn();
 const s2sMutate = vi.fn();
+const connectMock = vi.fn(async () => ({ sendTelemetry: vi.fn() }));
+const startCaptureMock = vi.fn(async () => {});
+let prefsData: unknown;
 
 mock.module("@/utils/trpc", () => {
   const buildMutation = (fn: typeof sttMutate) => {
@@ -20,7 +23,7 @@ mock.module("@/utils/trpc", () => {
 
   const buildQuery = () => ({
     useQuery: () => ({
-      data: undefined,
+      data: prefsData,
       isPending: false,
       refetch: vi.fn(),
     }),
@@ -40,6 +43,34 @@ mock.module("@/utils/trpc", () => {
     },
   };
 });
+
+mock.module("../use-voice-protocol", () => ({
+  useVoiceProtocol: () => ({
+    supported: true,
+    connect: connectMock,
+    disconnect: vi.fn(async () => {}),
+    getClient: vi.fn(),
+    state: {
+      status: "idle",
+      transcript: "",
+      assistantText: "",
+      vadConfidence: null,
+      autoStopReason: null,
+      error: null,
+      sessionId: null,
+    },
+  }),
+}));
+
+mock.module("../use-voice-audio", () => ({
+  useVoiceAudio: () => ({
+    analyser: null,
+    startCapture: startCaptureMock,
+    stopCapture: vi.fn(),
+    playAudio: vi.fn(),
+    clearAudio: vi.fn(),
+  }),
+}));
 
 class MockMediaRecorder {
   public state: "inactive" | "recording" = "inactive";
@@ -114,6 +145,9 @@ describe("useVoiceSessionWeb", () => {
       transcript: { text: "hi" },
       audio: { audioBase64: "PCM", mimeType: "audio/mpeg" },
     });
+    connectMock.mockClear();
+    startCaptureMock.mockClear();
+    prefsData = undefined;
   });
 
   it("exposes legacy API stubs", () => {
@@ -139,5 +173,20 @@ describe("useVoiceSessionWeb", () => {
 
     // Restore
     (import.meta.env as any).VITE_TEST_MODE = originalEnv;
+  });
+
+  it("passes sttChunkSize from preferences into streaming start", async () => {
+    prefsData = [{ key: "voice.stt.chunk_size", value: "fast" }];
+
+    const { result } = renderHook(() => useVoiceSessionWeb());
+    await result.current.stream.start();
+
+    expect(connectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codec: "pcm",
+        sttChunkSize: "fast",
+        inputMimeType: "audio/raw;codec=pcm_s16le;rate=16000",
+      })
+    );
   });
 });

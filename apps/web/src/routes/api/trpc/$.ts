@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
 async function handler({ request }: { request: Request }) {
+  const trpcFetchPkg = "@trpc/server/adapters/fetch";
   const contextPkg = "@alfred/api/context";
   const routersPkg = "@alfred/api/routers/index";
 
+  const { fetchRequestHandler } = await import(/* @vite-ignore */ trpcFetchPkg);
   const { createContext } = await import(/* @vite-ignore */ contextPkg);
   const { appRouter } = await import(/* @vite-ignore */ routersPkg);
 

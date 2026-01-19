@@ -9,7 +9,7 @@
  * @see @alfred/history package
  */
 
-import { type BudgetSegment, computeBudgetUsage } from "@alfred/history";
+import { type BudgetSegment, computeBudgetUsage } from "@alfred/history/budget";
 import type { UIMessage } from "@alfred/type/stream";
 import { Clock, Settings2, Trash2 } from "lucide-react";
 import { useMemo } from "react";

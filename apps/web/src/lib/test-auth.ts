@@ -72,8 +72,15 @@ function base64Encode(value: string) {
   if (typeof btoa === "function") {
     return btoa(value);
   }
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(value, "utf8").toString("base64");
+  type BufferLike = {
+    from: (
+      value: string,
+      encoding: string
+    ) => { toString: (encoding: string) => string };
+  };
+  const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
+  if (B) {
+    return B.from(value, "utf8").toString("base64") as string;
   }
   throw new Error("base64_encode_unavailable");
 }
@@ -82,8 +89,15 @@ function base64Decode(value: string) {
   if (typeof atob === "function") {
     return atob(value);
   }
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(value, "base64").toString("utf8");
+  type BufferLike = {
+    from: (
+      value: string,
+      encoding: string
+    ) => { toString: (encoding: string) => string };
+  };
+  const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
+  if (B) {
+    return B.from(value, "base64").toString("utf8") as string;
   }
   throw new Error("base64_decode_unavailable");
 }
@@ -173,7 +187,35 @@ export function setTestSession(session: TestSession) {
 }
 
 export function getTestSession(): TestSession | null {
-  return globalThis.__TEST_SESSION__?.data ?? null;
+  const direct = globalThis.__TEST_SESSION__?.data ?? null;
+  if (direct) {
+    return direct;
+  }
+
+  if (!hasWindow()) {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(TEST_SESSION_STORAGE_KEY);
+    const parsed = deserializeTestSession(raw);
+    if (parsed) {
+      globalThis.__TEST_SESSION__ = { data: parsed };
+      return parsed;
+    }
+    if (!raw) {
+      return null;
+    }
+    const json = JSON.parse(raw) as TestSession;
+    if (json?.user?.id) {
+      globalThis.__TEST_SESSION__ = { data: json };
+      return json;
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
 }
 
 export function clearTestSession() {

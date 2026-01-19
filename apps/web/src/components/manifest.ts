@@ -384,7 +384,7 @@ export const componentUsage: Record<ComponentName, readonly ComponentUse[]> = {
   ],
   autocomplete: [
     {
-      file: "src/routes/_protected/settings/profile.tsx",
+      file: "src/components/apps/settings/sections/profile.tsx",
       match: 'from "@/components/autocomplete"',
     },
   ],

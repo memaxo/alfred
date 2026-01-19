@@ -1,20 +1,31 @@
 const STREAM_PATH = "/voice/stream";
-const DEFAULT_PORT = "8788";
 
-export function getVoiceStreamUrl(): string | null {
-  const direct = import.meta.env.VITE_VOICE_STREAMING_URL?.trim();
+export function getVoiceStreamUrl(opts?: {
+  origin?: string;
+  directUrl?: string;
+  port?: string;
+}): string | null {
+  const direct = (
+    opts?.directUrl ?? import.meta.env.VITE_VOICE_STREAMING_URL
+  )?.trim();
   if (direct) {
     return direct.replace(/\/$/, "") + STREAM_PATH;
   }
-  if (typeof window === "undefined") {
+  const origin =
+    opts?.origin ??
+    (typeof window !== "undefined" ? window.location.origin : null);
+  if (!origin) {
     return null;
   }
   try {
-    const url = new URL(window.location.origin);
-    const port =
-      import.meta.env.VITE_VOICE_STREAMING_PORT?.trim() || DEFAULT_PORT;
+    const url = new URL(origin);
+    const port = (
+      opts?.port ?? import.meta.env.VITE_VOICE_STREAMING_PORT
+    )?.trim();
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    url.port = port;
+    if (port) {
+      url.port = port;
+    }
     url.pathname = STREAM_PATH;
     url.search = "";
     return url.toString();

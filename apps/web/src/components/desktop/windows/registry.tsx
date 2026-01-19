@@ -40,36 +40,32 @@ import {
   Wand2,
   Workflow,
 } from "lucide-react";
-// Phase 2/3 apps
-import {
-  AdminAppWindow,
-  AgentFSAppWindow,
-  AgentsAppWindow,
-  ChatAppWindow,
-  CodeAppWindow,
-  ComponentsAppWindow,
-  CortexAppWindow,
-  DockerAppWindow,
-  FilesAppWindow,
-  InboxAppWindow,
-  KnowledgeAppWindow,
-  LearningAppWindow,
-  LinearAppWindow,
-  MetricsAppWindow,
-  NotesAppWindow,
-  PlanAppWindow,
-  PolicyAppWindow,
-  PRReviewAppWindow,
-  RagAppWindow,
-  SettingsAppWindow,
-  TaskManagerAppWindow,
-  TerminalAppWindow,
-  TimersAppWindow,
-  TuneAppWindow,
-  WorkflowAppWindow,
-  WorkingSetAppWindow,
-} from "@/components/apps";
+import { type ComponentType, lazy, Suspense } from "react";
+import { AdminAppWindow } from "@/components/apps/admin";
+import { AgentFSAppWindow } from "@/components/apps/agentfs";
+import { AgentsAppWindow } from "@/components/apps/agents";
 import { BookmarksAppWindow } from "@/components/apps/bookmarks";
+import { ChatAppWindow } from "@/components/apps/chat";
+import { ComponentsAppWindow } from "@/components/apps/components";
+import { CortexAppWindow } from "@/components/apps/cortex";
+import { DockerAppWindow } from "@/components/apps/docker";
+import { FilesAppWindow } from "@/components/apps/files";
+import { InboxAppWindow } from "@/components/apps/inbox";
+import { KnowledgeAppWindow } from "@/components/apps/knowledge";
+import { LearningAppWindow } from "@/components/apps/learning";
+import { LinearAppWindow } from "@/components/apps/linear";
+import { MetricsAppWindow } from "@/components/apps/metrics";
+import { NotesAppWindow } from "@/components/apps/notes";
+import { PlanAppWindow } from "@/components/apps/plan";
+import { PolicyAppWindow } from "@/components/apps/policy";
+import { PRReviewAppWindow } from "@/components/apps/pr-review";
+import { RagAppWindow } from "@/components/apps/rag";
+import { SettingsAppWindow } from "@/components/apps/settings";
+import { TaskManagerAppWindow } from "@/components/apps/taskmanager";
+import { TerminalAppWindow } from "@/components/apps/terminal";
+import { TimersAppWindow } from "@/components/apps/timers";
+import { TuneAppWindow } from "@/components/apps/tune";
+import { WorkingSetAppWindow } from "@/components/apps/workingset";
 import { CodexWindow } from "@/components/windows/codex/codex-window";
 import { ConceptWindow } from "@/components/windows/concept/concept-window";
 import { DroidWindow } from "@/components/windows/droid/droid-window";
@@ -80,13 +76,31 @@ import { ReminderWindow } from "@/components/windows/reminder/reminder-window";
 import { TodoWindow } from "@/components/windows/todo/todo-window";
 import { VisualBuilderWindow } from "@/components/windows/visual-builder/visual-builder-window";
 import { WorkflowListWindow } from "@/components/windows/workflow/workflow-list-window";
+import { WorkflowWindow } from "@/components/windows/workflow/workflow-window";
 
 import type { WindowType } from "@/store/desktop/types";
 
 // Adapter for legacy components
 export { useWindowProps, withWindowAdapter } from "./adapter";
 
-import type { WindowMetadata, WindowRegistryEntry } from "./types";
+import type {
+  WindowComponentProps,
+  WindowMetadata,
+  WindowRegistryEntry,
+} from "./types";
+
+const LazyCodeAppWindow = lazy(async () => {
+  const mod = await import("@/components/apps/code");
+  return {
+    default: mod.CodeAppWindow as ComponentType<WindowComponentProps>,
+  };
+});
+
+const CodeAppWindowLazy: ComponentType<WindowComponentProps> = (props) => (
+  <Suspense fallback={null}>
+    <LazyCodeAppWindow {...props} />
+  </Suspense>
+);
 
 /**
  * Window registry mapping type to component and metadata
@@ -181,7 +195,7 @@ export const windowRegistry: Record<string, WindowRegistryEntry> = {
   },
   workflow: {
     type: "workflow",
-    component: WorkflowAppWindow,
+    component: WorkflowWindow,
     metadata: {
       label: "Workflow",
       icon: GitBranch,
@@ -191,7 +205,7 @@ export const windowRegistry: Record<string, WindowRegistryEntry> = {
       singleton: false,
       tier: "secondary",
     },
-    isLegacy: false,
+    isLegacy: true,
   },
   concept: {
     type: "concept",
@@ -369,7 +383,7 @@ export const windowRegistry: Record<string, WindowRegistryEntry> = {
   // Placeholder for future windows (will be implemented as needed)
   code: {
     type: "code",
-    component: CodeAppWindow,
+    component: CodeAppWindowLazy,
     metadata: {
       label: "Code",
       icon: Code2,

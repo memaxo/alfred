@@ -31,8 +31,7 @@ export type PlanStep = {
 
 type UseWorkflowPlanOptions = {
   requirement: string;
-  workspace: string;
-  userId?: string;
+  workspace?: string;
   onPlanReady?: (plan: PlanPhaseOutput) => void;
   onError?: (error: Error) => void;
 };
@@ -54,15 +53,24 @@ export type UseWorkflowPlanReturn = {
 export function useWorkflowPlan(
   options: UseWorkflowPlanOptions
 ): UseWorkflowPlanReturn {
-  const { requirement, workspace, userId, onPlanReady, onError } = options;
+  const { requirement, workspace, onPlanReady, onError } = options;
 
   const [plan, setPlan] = useState<PlanPhaseOutput | null>(null);
   const [status, setStatus] = useState<PlanStatus>("idle");
   const [error, setError] = useState<Error | null>(null);
   const [steps, setSteps] = useState<PlanStep[]>([]);
   const [enabled, setEnabled] = useState(false);
+  const [runId, setRunId] = useState<string | null>(null);
 
   const stepsRef = useRef<PlanStep[]>([]);
+  const runIdRef = useRef<string | null>(null);
+  const loadedPlanRef = useRef(false);
+  const planOutputRef = useRef<unknown | null>(null);
+  const scheduleOutputRef = useRef<unknown | null>(null);
+  const contextOutputRef = useRef<unknown | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+  const lastEventAtRef = useRef<number | null>(null);
+  const utils = trpc.useUtils();
 
   const clear = useCallback(() => {
     setPlan(null);
@@ -70,7 +78,15 @@ export function useWorkflowPlan(
     setError(null);
     setStatus("idle");
     setEnabled(false);
+    setRunId(null);
     stepsRef.current = [];
+    runIdRef.current = null;
+    loadedPlanRef.current = false;
+    planOutputRef.current = null;
+    scheduleOutputRef.current = null;
+    contextOutputRef.current = null;
+    startedAtRef.current = null;
+    lastEventAtRef.current = null;
   }, []);
 
   const stop = useCallback(() => {
@@ -82,6 +98,12 @@ export function useWorkflowPlan(
 
   const start = useCallback(() => {
     clear();
+    const nextRunId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}`;
+    runIdRef.current = nextRunId;
+    setRunId(nextRunId);
     setEnabled(true);
     setStatus("planning");
   }, [clear]);
@@ -139,19 +161,131 @@ export function useWorkflowPlan(
     []
   );
 
-  const input = enabled
-    ? { requirement, workspace, userId: userId ?? "default" }
-    : skipToken;
+  const trimmed = requirement.trim();
+  const input =
+    enabled && runId ? { runId, requirement: trimmed, workspace } : skipToken;
+
+  const tryEmitPlanFromContext = useCallback(() => {
+    const runId = runIdRef.current;
+    const planOutput = planOutputRef.current;
+    const scheduleOutput = scheduleOutputRef.current;
+    if (!(runId && planOutput && scheduleOutput)) {
+      return false;
+    }
+    if (typeof planOutput !== "object" || typeof scheduleOutput !== "object") {
+      return false;
+    }
+
+    const planObj = planOutput as {
+      planId?: unknown;
+      structuredPlan?: unknown;
+      subtasks?: unknown;
+      execPlans?: unknown;
+      rootPlanPath?: unknown;
+    };
+    const schedObj = scheduleOutput as {
+      waves?: unknown;
+      executionMode?: unknown;
+      estimatedDuration?: unknown;
+    };
+
+    const waves = Array.isArray(schedObj.waves) ? schedObj.waves : [];
+
+    const execPlansRaw = planObj.execPlans;
+    const execPlans = (() => {
+      if (execPlansRaw && typeof execPlansRaw === "object") {
+        if (!Array.isArray(execPlansRaw)) {
+          return execPlansRaw as Record<string, string>;
+        }
+        const entries = execPlansRaw.filter(
+          (e): e is [string, string] =>
+            Array.isArray(e) &&
+            typeof e[0] === "string" &&
+            typeof e[1] === "string"
+        );
+        return Object.fromEntries(entries);
+      }
+      return {};
+    })();
+
+    const out: PlanPhaseOutput = {
+      runId,
+      planId: typeof planObj.planId === "string" ? planObj.planId : "",
+      structuredPlan:
+        planObj.structuredPlan as PlanPhaseOutput["structuredPlan"],
+      waves: waves as PlanPhaseOutput["waves"],
+      waveCount: waves.length,
+      subtasks: (Array.isArray(planObj.subtasks)
+        ? planObj.subtasks
+        : []) as PlanPhaseOutput["subtasks"],
+      execPlans,
+      rootPlanPath:
+        typeof planObj.rootPlanPath === "string" ? planObj.rootPlanPath : "",
+      executionMode:
+        schedObj.executionMode === "parallel" ? "parallel" : "sequential",
+      estimatedDuration:
+        typeof schedObj.estimatedDuration === "number"
+          ? schedObj.estimatedDuration
+          : 0,
+      snapshot: {
+        runId,
+        status: "suspended",
+        requirement: trimmed.length > 0 ? trimmed : "workflow",
+        lastCompletedStage: "schedule",
+        lastCompletedStageIndex: 3,
+        startedAt: startedAtRef.current ?? Date.now(),
+        lastEventAt: lastEventAtRef.current ?? Date.now(),
+        error: null,
+      },
+      context: (() => {
+        const ctx = contextOutputRef.current;
+        if (!ctx || typeof ctx !== "object") {
+          return;
+        }
+        const obj = ctx as { totalTokens?: unknown; ragChunks?: unknown };
+        const ragChunkCount = Array.isArray(obj.ragChunks)
+          ? obj.ragChunks.length
+          : 0;
+        return {
+          totalTokens:
+            typeof obj.totalTokens === "number" ? obj.totalTokens : 0,
+          ragChunkCount,
+        };
+      })(),
+    };
+
+    setPlan(out);
+    setStatus("ready");
+    onPlanReady?.(out);
+    return true;
+  }, [onPlanReady, trimmed]);
 
   // Subscribe to phase.streamPlan
   trpc.workflow.phase.streamPlan.useSubscription(input as never, {
-    enabled: enabled && !!requirement && !!workspace,
+    enabled: enabled && !!runId && trimmed.length > 0,
     onStarted: () => {
       setStatus("planning");
     },
     onData: (event: PipelineEvent) => {
+      lastEventAtRef.current = event.timestamp;
       switch (event.type) {
         case "pipeline:start": {
+          runIdRef.current = event.runId;
+          setRunId(event.runId);
+          startedAtRef.current = event.timestamp;
+          break;
+        }
+
+        case "context:set": {
+          if (event.key === "planOutput") {
+            planOutputRef.current = event.value;
+          }
+          if (event.key === "scheduleOutput") {
+            scheduleOutputRef.current = event.value;
+          }
+          if (event.key === "contextOutput") {
+            contextOutputRef.current = event.value;
+          }
           break;
         }
 
@@ -162,6 +296,13 @@ export function useWorkflowPlan(
 
         case "stage:exit": {
           updateStep(event.stage, "completed");
+          if (event.stage === "schedule" && !loadedPlanRef.current) {
+            loadedPlanRef.current = true;
+            setStatus("ready");
+            if (!tryEmitPlanFromContext()) {
+              void loadPlan();
+            }
+          }
           break;
         }
 
@@ -180,8 +321,26 @@ export function useWorkflowPlan(
 
         case "pipeline:suspend": {
           // Plan phase complete - load the plan via mutation
-          setStatus("ready");
-          void loadPlan();
+          if (!loadedPlanRef.current) {
+            loadedPlanRef.current = true;
+            setStatus("ready");
+            if (!tryEmitPlanFromContext()) {
+              void loadPlan();
+            }
+          }
+          break;
+        }
+
+        case "pipeline:complete": {
+          // Some plan-only runs may end with a completion event rather than an
+          // explicit suspend. Treat this as "plan ready" and fetch the plan.
+          if (!loadedPlanRef.current) {
+            loadedPlanRef.current = true;
+            setStatus("ready");
+            if (!tryEmitPlanFromContext()) {
+              void loadPlan();
+            }
+          }
           break;
         }
 
@@ -200,29 +359,37 @@ export function useWorkflowPlan(
     },
   });
 
-  // Helper mutation to load plan after streaming completes
-  const planMutation = trpc.workflow.phase.plan.useMutation({
-    onSuccess: (data) => {
+  const loadPlan = async (attempt = 0): Promise<void> => {
+    const id = runIdRef.current;
+    if (!id) {
+      return;
+    }
+    try {
+      const data = await utils.workflow.phase.getPlan.fetch({ runId: id });
       setPlan(data);
       setStatus("ready");
       onPlanReady?.(data);
-    },
-    onError: (err) => {
-      setError(new Error(err.message));
-      setStatus("error");
-      onError?.(new Error(err.message));
-    },
-  });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const retryable =
+        msg.includes("snapshot_not_found") ||
+        msg.includes("plan_not_ready") ||
+        msg.includes("NOT_FOUND") ||
+        msg.includes("BAD_REQUEST");
 
-  const loadPlan = async () => {
-    if (!(requirement && workspace)) {
-      return;
+      if (retryable && attempt < 8) {
+        const delayMs = Math.min(1500, 150 * 2 ** attempt);
+        globalThis.setTimeout(() => {
+          void loadPlan(attempt + 1);
+        }, delayMs);
+        return;
+      }
+
+      const nextError = new Error(msg);
+      setError(nextError);
+      setStatus("error");
+      onError?.(nextError);
     }
-    await planMutation.mutateAsync({
-      requirement,
-      workspace,
-      userId: userId ?? "default",
-    });
   };
 
   return {

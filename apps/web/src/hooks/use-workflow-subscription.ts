@@ -4,6 +4,15 @@ import { useCallback, useRef, useState } from "react";
 import type { WindowData } from "@/store/desktop/types.new";
 import { trpc } from "@/utils/trpc";
 
+export type WorkflowEscalation = {
+  agentId: string;
+  reason: string;
+  details: string;
+  suggestions?: string[];
+  severity: "warning" | "blocking";
+  timestamp: number;
+};
+
 export type WorkflowRunStatus =
   | "idle"
   | "connecting"
@@ -21,6 +30,7 @@ export type WorkflowStep = {
 };
 
 type UseWorkflowSubscriptionOptions = {
+  kind?: "start" | "resume";
   onWindowUpdate?: (update: Partial<WindowData>) => void;
   onError?: (error: Error) => void;
 };
@@ -30,6 +40,7 @@ export type UseWorkflowSubscriptionReturn = {
   error: Error | null;
   steps: WorkflowStep[];
   runId: string | null;
+  escalation: WorkflowEscalation | null;
   run: (input: unknown) => void;
   stop: () => void;
   clear: () => void;
@@ -41,11 +52,12 @@ export type UseWorkflowSubscriptionReturn = {
 export function useWorkflowSubscription(
   options: UseWorkflowSubscriptionOptions = {}
 ): UseWorkflowSubscriptionReturn {
-  const { onWindowUpdate, onError } = options;
+  const { kind = "start", onWindowUpdate, onError } = options;
   const [status, setStatus] = useState<WorkflowRunStatus>("idle");
   const [error, setError] = useState<Error | null>(null);
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [runId, setRunId] = useState<string | null>(null);
+  const [escalation, setEscalation] = useState<WorkflowEscalation | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [input, setInput] = useState<unknown>(null);
 
@@ -54,6 +66,7 @@ export function useWorkflowSubscription(
   const clear = useCallback(() => {
     setSteps([]);
     setError(null);
+    setEscalation(null);
     setStatus("idle");
     setRunId(null);
     setEnabled(false);
@@ -73,8 +86,18 @@ export function useWorkflowSubscription(
       setInput(workflowInput);
       setEnabled(true);
       setStatus("connecting");
+
+      if (
+        kind === "resume" &&
+        workflowInput &&
+        typeof workflowInput === "object" &&
+        "runId" in workflowInput &&
+        typeof (workflowInput as { runId?: unknown }).runId === "string"
+      ) {
+        setRunId((workflowInput as { runId: string }).runId);
+      }
     },
-    [clear]
+    [clear, kind]
   );
 
   const ensureStep = useCallback(
@@ -132,9 +155,12 @@ export function useWorkflowSubscription(
     [onWindowUpdate]
   );
 
-  // biome-ignore lint/suspicious/noExplicitAny: trpc subscription input typing mismatch with skipToken
-  trpc.workflow.streamPipeline.useSubscription((input as any) ?? skipToken, {
-    enabled: enabled && !!input,
+  type StreamInput = Parameters<
+    typeof trpc.workflow.streamPipeline.useSubscription
+  >[0];
+  const startInput: StreamInput =
+    kind === "start" && enabled && input ? (input as StreamInput) : skipToken;
+  trpc.workflow.streamPipeline.useSubscription(startInput, {
     onStarted: () => {
       setStatus("running");
       onWindowUpdate?.({ status: "running" });
@@ -184,7 +210,122 @@ export function useWorkflowSubscription(
 
         case "pipeline:complete": {
           setStatus("completed");
-          onWindowUpdate?.({ status: "completed" });
+          onWindowUpdate?.({
+            status: "completed",
+            summaryText:
+              typeof event.summaryText === "string"
+                ? event.summaryText
+                : undefined,
+          });
+          break;
+        }
+
+        case "pipeline:failed": {
+          setError(new Error(event.error));
+          setStatus("error");
+          onError?.(new Error(event.error));
+          onWindowUpdate?.({ status: "failed" });
+          break;
+        }
+
+        case "agent:escalate-request": {
+          const next: WorkflowEscalation = {
+            agentId: event.agentId,
+            reason: String(event.reason),
+            details: event.details,
+            suggestions: event.suggestions,
+            severity: event.severity,
+            timestamp: event.timestamp,
+          };
+          setEscalation(next);
+          if (event.severity === "blocking") {
+            setStatus("suspended");
+            onWindowUpdate?.({
+              status: "suspended",
+              escalation: next,
+            } satisfies Partial<WindowData>);
+          } else {
+            onWindowUpdate?.({
+              escalation: next,
+            } satisfies Partial<WindowData>);
+          }
+          break;
+        }
+      }
+    },
+    onError: (err) => {
+      setError(new Error(err.message));
+      setStatus("error");
+      onError?.(new Error(err.message));
+      onWindowUpdate?.({ status: "failed" });
+    },
+  });
+
+  const resumeRunId = (input as { runId?: unknown } | null)?.runId;
+  type ResumeInput = Parameters<
+    typeof trpc.workflow.resumePipeline.useSubscription
+  >[0];
+  const resumeInput: ResumeInput =
+    kind === "resume" && enabled && typeof resumeRunId === "string"
+      ? { runId: resumeRunId }
+      : skipToken;
+  trpc.workflow.resumePipeline.useSubscription(resumeInput, {
+    onStarted: () => {
+      setStatus("running");
+      onWindowUpdate?.({ status: "running" });
+    },
+    onData: (event: PipelineEvent) => {
+      switch (event.type) {
+        case "pipeline:start": {
+          setRunId(event.runId);
+          break;
+        }
+
+        case "stage:enter": {
+          ensureStep(event.stage, event.stage, "running");
+          break;
+        }
+
+        case "stage:exit": {
+          updateStep(event.stage, "completed");
+          break;
+        }
+
+        case "stage:error": {
+          updateStep(event.stage, "failed");
+          setError(new Error(event.error));
+          setStatus("error");
+          onError?.(new Error(event.error));
+          onWindowUpdate?.({ status: "failed" });
+          break;
+        }
+
+        case "stage:progress": {
+          ensureStep(event.stage, event.stage, "running");
+          break;
+        }
+
+        case "pipeline:suspend": {
+          setStatus("suspended");
+          onWindowUpdate?.({ status: "suspended" });
+          break;
+        }
+
+        case "pipeline:resume": {
+          setStatus("running");
+          onWindowUpdate?.({ status: "running" });
+          break;
+        }
+
+        case "pipeline:complete": {
+          setStatus("completed");
+          onWindowUpdate?.({
+            status: "completed",
+            summaryText:
+              typeof event.summaryText === "string"
+                ? event.summaryText
+                : undefined,
+          });
           break;
         }
 
@@ -210,6 +351,7 @@ export function useWorkflowSubscription(
     error,
     steps,
     runId,
+    escalation,
     run,
     stop,
     clear,

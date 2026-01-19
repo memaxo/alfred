@@ -11,6 +11,8 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import * as fumadocsConfig from "./fumadocs.config";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const isTestMode =
+  process.env.VITE_TEST_MODE === "true" || process.env.MINDSCAPE_TEST === "1";
 
 /**
  * Extract build-time constants for Vite define configuration
@@ -84,6 +86,7 @@ const serverOnlyRegex = [
   /^@alfred\/metrics(?:\/.*)?$/,
   /^@alfred\/policy(?:\/.*)?$/,
   /^@alfred\/db(?:\/.*)?$/,
+  /^@alfred\/rerank(?:\/.*)?$/,
   /^@alfred\/runtime(?:\/.*)?$/,
   /^@alfred\/voice(?:\/.*)?$/,
 ];
@@ -95,6 +98,7 @@ const serverOnlyPackages = [
   "@alfred/metrics",
   "@alfred/policy",
   "@alfred/db",
+  "@alfred/rerank",
   "@alfred/runtime",
   "@alfred/voice",
 ];
@@ -217,6 +221,15 @@ export default defineConfig({
   define: {
     ...getBuildConstants(),
   },
+  server: isTestMode
+    ? {
+        hmr: false,
+        watch: {
+          // Prevent external processes (formatters/agents) from triggering HMR during e2e.
+          ignored: ["**/*"],
+        },
+      }
+    : undefined,
   optimizeDeps: {
     exclude: [
       "@alfred/agent",
@@ -243,6 +256,13 @@ export default defineConfig({
     resolve: {
       // @ts-expect-error - Vite resolve alias types
       alias: {
+        ...(isTestMode
+          ? {
+              // Ensure SSR keeps real Node builtins even in test mode.
+              "node:module": "node:module",
+              "prom-client": resolve(__dirname, "./src/stubs/prom-client.ts"),
+            }
+          : {}),
         "@alfred/db/repo": resolve(__dirname, "../../packages/db/src/repo"),
         "@alfred/db/schema": resolve(__dirname, "../../packages/db/src/schema"),
         "@alfred/db/client": resolve(
@@ -300,6 +320,11 @@ export default defineConfig({
   resolve: {
     conditions: ["bun", "module", "import", "default"],
     alias: {
+      ...(isTestMode
+        ? {
+            "prom-client": resolve(__dirname, "./src/stubs/prom-client.ts"),
+          }
+        : {}),
       "@alfred/db/repo": resolve(__dirname, "../../packages/db/src/repo"),
       "@alfred/db/schema": resolve(__dirname, "../../packages/db/src/schema"),
       "@alfred/db/client": resolve(

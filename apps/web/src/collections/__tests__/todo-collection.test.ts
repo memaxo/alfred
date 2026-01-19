@@ -6,44 +6,56 @@ import { createTodoCollection } from "../todo";
 
 // Mock tRPC client - typed to match the expected interface
 const mockTrpcClient: Partial<inferRouterClient<TRPCAppRouter>> = {
-  todo: {
-    getAll: {
+  task: {
+    list: {
       query: mock(() =>
         Promise.resolve([
           {
-            id: 1,
-            text: "Existing Todo",
-            completed: false,
-            created: new Date().toISOString(),
-            updated: new Date().toISOString(),
+            id: crypto.randomUUID(),
+            title: "Existing Task",
+            description: null,
+            status: "pending",
+            priority: 0,
+            due: null,
+            created: new Date(),
+            updated: new Date(),
+            completed: null,
           },
         ])
       ),
     },
     create: {
-      mutate: mock((input: { text: string }) =>
+      mutate: mock((input: { title: string }) =>
         Promise.resolve({
-          id: 2,
-          text: input.text,
-          completed: false,
-          created: new Date().toISOString(),
-          updated: new Date().toISOString(),
+          id: crypto.randomUUID(),
+          title: input.title,
+          description: null,
+          status: "pending",
+          priority: 0,
+          due: null,
+          created: new Date(),
+          updated: new Date(),
+          completed: null,
         })
       ),
     },
-    toggle: {
-      mutate: mock((input: { id: number; completed: boolean }) =>
+    update: {
+      mutate: mock((input: { id: string; status: "pending" | "completed" }) =>
         Promise.resolve({
           id: input.id,
-          text: "Updated Todo",
-          completed: input.completed,
-          created: new Date().toISOString(),
-          updated: new Date().toISOString(),
+          title: "Updated Task",
+          description: null,
+          status: input.status,
+          priority: 0,
+          due: null,
+          created: new Date(),
+          updated: new Date(),
+          completed: input.status === "completed" ? new Date() : null,
         })
       ),
     },
     delete: {
-      mutate: mock(() => Promise.resolve({ success: true })),
+      mutate: mock(() => Promise.resolve({ deleted: 1 })),
     },
   },
 } as inferRouterClient<TRPCAppRouter>;
@@ -62,10 +74,10 @@ describe("Todo Collection", () => {
     });
 
     // Reset mocks
-    mockTrpcClient.todo.getAll.query.mockClear();
-    mockTrpcClient.todo.create.mutate.mockClear();
-    mockTrpcClient.todo.toggle.mutate.mockClear();
-    mockTrpcClient.todo.delete.mutate.mockClear();
+    mockTrpcClient.task.list.query.mockClear();
+    mockTrpcClient.task.create.mutate.mockClear();
+    mockTrpcClient.task.update.mutate.mockClear();
+    mockTrpcClient.task.delete.mutate.mockClear();
   });
 
   afterEach(() => {
@@ -75,11 +87,11 @@ describe("Todo Collection", () => {
   it("fetches todos correctly", async () => {
     createTodoCollection(queryClient, mockTrpcClient);
     // Use the trpc client directly to verify the query works as expected
-    const result = await mockTrpcClient.todo.getAll.query();
+    const result = await mockTrpcClient.task.list.query({ limit: 200 });
 
-    expect(mockTrpcClient.todo.getAll.query).toHaveBeenCalled();
+    expect(mockTrpcClient.task.list.query).toHaveBeenCalled();
     expect(result).toHaveLength(1);
-    expect(result[0].text).toBe("Existing Todo");
+    expect(result[0].title).toBe("Existing Task");
   });
 
   it("handles optimistic insertion", async () => {
@@ -87,8 +99,8 @@ describe("Todo Collection", () => {
 
     await insertTodo({ text: "New Task" });
 
-    expect(mockTrpcClient.todo.create.mutate).toHaveBeenCalledWith({
-      text: "New Task",
+    expect(mockTrpcClient.task.create.mutate).toHaveBeenCalledWith({
+      title: "New Task",
     });
   });
 
@@ -99,13 +111,14 @@ describe("Todo Collection", () => {
     );
 
     // Setup: Insert item first so update finds it
-    collection.insert({ id: 1, text: "Task 1", completed: false });
+    const id = crypto.randomUUID();
+    collection.insert({ id, text: "Task 1", completed: false });
 
-    await toggleTodo({ id: 1, completed: true });
+    await toggleTodo({ id, completed: true });
 
-    expect(mockTrpcClient.todo.toggle.mutate).toHaveBeenCalledWith({
-      id: 1,
-      completed: true,
+    expect(mockTrpcClient.task.update.mutate).toHaveBeenCalledWith({
+      id,
+      status: "completed",
     });
   });
 
@@ -116,24 +129,12 @@ describe("Todo Collection", () => {
     );
 
     // Setup: Insert item first so delete finds it
-    collection.insert({ id: 1, text: "Task 1", completed: false });
+    const id = crypto.randomUUID();
+    collection.insert({ id, text: "Task 1", completed: false });
 
-    await deleteTodo(1);
+    await deleteTodo(id);
 
-    expect(mockTrpcClient.todo.delete.mutate).toHaveBeenCalledWith({ id: 1 });
-  });
-
-  it("deletes numeric string ids via the API", async () => {
-    const { collection, deleteTodo } = createTodoCollection(
-      queryClient,
-      mockTrpcClient
-    );
-
-    collection.insert({ id: "1", text: "Task 1", completed: false });
-
-    await deleteTodo("1");
-
-    expect(mockTrpcClient.todo.delete.mutate).toHaveBeenCalledWith({ id: 1 });
+    expect(mockTrpcClient.task.delete.mutate).toHaveBeenCalledWith({ id });
   });
 
   it("does not call the API for temp ids", async () => {
@@ -147,6 +148,6 @@ describe("Todo Collection", () => {
 
     await deleteTodo(tempId);
 
-    expect(mockTrpcClient.todo.delete.mutate).not.toHaveBeenCalled();
+    expect(mockTrpcClient.task.delete.mutate).not.toHaveBeenCalled();
   });
 });

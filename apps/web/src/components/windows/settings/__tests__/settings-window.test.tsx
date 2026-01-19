@@ -6,10 +6,7 @@
 
 import "@/test/dom";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { createToastMock, createTrpcMock, resetMockState } from "./mocks";
 
 let mockLOD = "full";
 
@@ -32,19 +29,11 @@ mock.module("@/components/windows/shared", () => ({
   ),
 }));
 
-mock.module("sonner", () => createToastMock());
-mock.module("@/utils/trpc", () => createTrpcMock());
+mock.module("@/components/apps/settings", () => ({
+  SettingsApp: () => <div data-testid="settings-app" />,
+}));
 
 import { SettingsWindow } from "../settings-window";
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
 
 const createNodeProps = (overrides?: any) => ({
   id: "test-settings-window",
@@ -56,7 +45,6 @@ const createNodeProps = (overrides?: any) => ({
 describe("SettingsWindow", () => {
   beforeEach(() => {
     mockLOD = "full";
-    resetMockState();
   });
 
   afterEach(() => {
@@ -68,8 +56,7 @@ describe("SettingsWindow", () => {
       mockLOD = "tiny";
 
       const { getByTestId } = render(
-        <SettingsWindow {...(createNodeProps() as any)} />,
-        { wrapper: createWrapper() }
+        <SettingsWindow {...(createNodeProps() as any)} />
       );
 
       const dot = getByTestId("tiny-dot");
@@ -82,8 +69,7 @@ describe("SettingsWindow", () => {
       mockLOD = "small";
 
       const { getByTestId, getByText } = render(
-        <SettingsWindow {...(createNodeProps() as any)} />,
-        { wrapper: createWrapper() }
+        <SettingsWindow {...(createNodeProps() as any)} />
       );
 
       expect(getByTestId("small-card")).toBeTruthy();
@@ -94,8 +80,7 @@ describe("SettingsWindow", () => {
       mockLOD = "full";
 
       const { getByTestId } = render(
-        <SettingsWindow {...(createNodeProps() as any)} />,
-        { wrapper: createWrapper() }
+        <SettingsWindow {...(createNodeProps() as any)} />
       );
 
       expect(getByTestId("window-frame")).toBeTruthy();
@@ -110,8 +95,7 @@ describe("SettingsWindow", () => {
           {...(createNodeProps({
             data: { type: "settings", viewMode: "full" },
           }) as any)}
-        />,
-        { wrapper: createWrapper() }
+        />
       );
 
       const frame = getByTestId("window-frame");
@@ -124,8 +108,7 @@ describe("SettingsWindow", () => {
           {...(createNodeProps({
             data: { type: "settings", viewMode: "compact" },
           }) as any)}
-        />,
-        { wrapper: createWrapper() }
+        />
       );
 
       const frame = getByTestId("window-frame");
@@ -136,8 +119,7 @@ describe("SettingsWindow", () => {
       const { getByTestId } = render(
         <SettingsWindow
           {...(createNodeProps({ data: { invalid: "data" } }) as any)}
-        />,
-        { wrapper: createWrapper() }
+        />
       );
 
       const frame = getByTestId("window-frame");
@@ -146,8 +128,7 @@ describe("SettingsWindow", () => {
 
     it("sets correct window type", () => {
       const { getByTestId } = render(
-        <SettingsWindow {...(createNodeProps() as any)} />,
-        { wrapper: createWrapper() }
+        <SettingsWindow {...(createNodeProps() as any)} />
       );
 
       const frame = getByTestId("window-frame");
@@ -158,14 +139,12 @@ describe("SettingsWindow", () => {
   describe("Content Integration", () => {
     it("renders SettingsApp inside window", () => {
       const { getByTestId } = render(
-        <SettingsWindow {...(createNodeProps() as any)} />,
-        { wrapper: createWrapper() }
+        <SettingsWindow {...(createNodeProps() as any)} />
       );
 
       const content = getByTestId("window-content");
       expect(content).toBeTruthy();
-      // SettingsApp renders with sidebar and sections
-      expect(content.innerHTML).toContain("Settings");
+      expect(getByTestId("settings-app")).toBeTruthy();
     });
   });
 
@@ -174,8 +153,7 @@ describe("SettingsWindow", () => {
       const { getByTestId } = render(
         <SettingsWindow
           {...(createNodeProps({ data: { type: "settings" } }) as any)}
-        />,
-        { wrapper: createWrapper() }
+        />
       );
 
       const frame = getByTestId("window-frame");
@@ -188,8 +166,7 @@ describe("SettingsWindow", () => {
           {...(createNodeProps({
             data: { type: "settings", label: "Custom Label", viewMode: "full" },
           }) as any)}
-        />,
-        { wrapper: createWrapper() }
+        />
       );
 
       expect(getByTestId("window-frame")).toBeTruthy();
@@ -201,8 +178,7 @@ describe("SettingsWindow", () => {
           {...(createNodeProps({
             data: { type: "settings", viewMode: "maximized" },
           }) as any)}
-        />,
-        { wrapper: createWrapper() }
+        />
       );
 
       const frame = getByTestId("window-frame");

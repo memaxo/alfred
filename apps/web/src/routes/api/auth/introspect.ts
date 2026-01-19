@@ -9,8 +9,15 @@
  * Reference: https://datatracker.ietf.org/doc/html/rfc7662
  */
 
-import { logger } from "@alfred/logger";
 import { createFileRoute } from "@tanstack/react-router";
+
+async function getLogger() {
+  const loggerPkg = "@alfred/logger";
+  const { logger } = (await import(
+    /* @vite-ignore */ loggerPkg
+  )) as typeof import("@alfred/logger");
+  return logger;
+}
 
 async function getDbHelpers() {
   const availabilityPkg = "@alfred/api/utils/service-availability";
@@ -134,6 +141,7 @@ export const Route = createFileRoute("/api/auth/introspect")({
             },
           });
         } catch (error) {
+          const logger = await getLogger();
           if (isDbConnectionError?.(error)) {
             logger.warn("auth_token_introspection_db_unavailable", {
               error: error instanceof Error ? error.message : String(error),

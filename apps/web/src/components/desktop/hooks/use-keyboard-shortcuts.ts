@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useDesktopStore } from "@/store/desktop";
 
 type ShortcutHandler = (e: KeyboardEvent) => void;
@@ -18,19 +19,21 @@ export function useKeyboardShortcuts() {
     minimizeWindow,
     restoreWindow,
     untileWindow,
-  } = useDesktopStore((s) => ({
-    focusedWindowId: s.focusedWindowId,
-    windows: s.windows,
-    removeWindow: s.removeWindow,
-    focusWindow: s.focusWindow,
-    setSpaceMode: s.setSpaceMode,
-    isSpaceMode: s.isSpaceMode,
-    tileWindow: s.tileWindow,
-    maximizeWindow: s.maximizeWindow,
-    minimizeWindow: s.minimizeWindow,
-    restoreWindow: s.restoreWindow,
-    untileWindow: s.untileWindow,
-  }));
+  } = useDesktopStore(
+    useShallow((s) => ({
+      focusedWindowId: s.focusedWindowId,
+      windows: s.windows,
+      removeWindow: s.removeWindow,
+      focusWindow: s.focusWindow,
+      setSpaceMode: s.setSpaceMode,
+      isSpaceMode: s.isSpaceMode,
+      tileWindow: s.tileWindow,
+      maximizeWindow: s.maximizeWindow,
+      minimizeWindow: s.minimizeWindow,
+      restoreWindow: s.restoreWindow,
+      untileWindow: s.untileWindow,
+    }))
+  );
 
   const handleKeyDown: ShortcutHandler = useCallback(
     (e) => {

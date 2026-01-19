@@ -39,8 +39,14 @@ function DesktopRoute() {
   const spawnWindow = useDesktopStore((s) => s.spawnWindow);
   const focusWindow = useDesktopStore((s) => s.focusWindow);
 
+  const isTestMode =
+    import.meta.env.VITE_TEST_MODE === "true" ||
+    import.meta.env.MINDSCAPE_TEST === "1";
+
   // Intro State
-  const [introMode, setIntroMode] = useState<"intro" | "active">("intro");
+  const [introMode, setIntroMode] = useState<"intro" | "active">(
+    isTestMode ? "active" : "intro"
+  );
   const { stream } = useVoiceSessionWeb();
 
   // Process deep link params
@@ -48,6 +54,9 @@ function DesktopRoute() {
 
   // Auto-activate voice in intro mode
   useEffect(() => {
+    if (isTestMode) {
+      return;
+    }
     if (introMode !== "intro") {
       return;
     }
@@ -56,10 +65,13 @@ function DesktopRoute() {
         // Silent catch - browser autoplay policy might block
       });
     }
-  }, [introMode, stream]);
+  }, [introMode, isTestMode, stream.start, stream.status]);
 
   // Interaction dismissal
   useEffect(() => {
+    if (isTestMode) {
+      return;
+    }
     if (introMode !== "intro") {
       return;
     }
@@ -80,7 +92,7 @@ function DesktopRoute() {
       window.removeEventListener("click", dismiss);
       window.removeEventListener("touchstart", dismiss);
     };
-  }, [introMode]);
+  }, [introMode, isTestMode]);
 
   const handleVisualize = async (windowId: string) => {
     await visualizeFromWindow(windowId);

@@ -7,9 +7,11 @@ import type {
 } from "@alfred/voice/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
+import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
 import { useVoiceAudio } from "./use-voice-audio";
 import { useVoiceProtocol } from "./use-voice-protocol";
+import { useVoiceWebrtcProtocol } from "./use-voice-webrtc-protocol";
 
 // Telemetry loop interval
 const TELEMETRY_INTERVAL_MS = 5000;
@@ -71,6 +73,52 @@ export function useVoiceSessionWeb() {
     },
   });
 
+  const webrtc = useVoiceWebrtcProtocol(sessionIdRef, {
+    onInterrupt: () => {
+      audio.clearAudio();
+    },
+  });
+
+  const lastWorkflowRunIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const raw = webrtc.state.assistantRaw ?? protocol.state.assistantRaw;
+    const runId = raw?.meta?.runId;
+    const planId = raw?.meta?.planId;
+    if (typeof runId !== "string" || runId.length === 0) {
+      return;
+    }
+    if (lastWorkflowRunIdRef.current === runId) {
+      return;
+    }
+
+    const store = useDesktopStore.getState();
+    if (!store.isSpaceMode) {
+      return;
+    }
+
+    lastWorkflowRunIdRef.current = runId;
+
+    const existing = store.windows.find((w) => {
+      const data = w.data as
+        | { runId?: unknown; resourceRef?: { id?: unknown } }
+        | undefined;
+      return data?.runId === runId || data?.resourceRef?.id === runId;
+    });
+
+    const windowId =
+      existing?.id ??
+      store.spawnWindow("workflow", {
+        type: "workflow_run",
+        id: runId,
+      });
+
+    store.updateWindowData(windowId, {
+      runId,
+      planId: typeof planId === "string" ? planId : undefined,
+    });
+    store.focusWindow(windowId);
+  }, [protocol.state.assistantRaw, webrtc.state.assistantRaw]);
+
   // --- Telemetry State ---
   const telemetryRef = useRef<{
     lastTelemetrySendTime: number;
@@ -119,20 +167,44 @@ export function useVoiceSessionWeb() {
 
   const startStreaming = useCallback(
     async (options?: { vadThreshold?: number; maxUtteranceMs?: number }) => {
+      if (isTestMode) {
+        return;
+      }
+      if (webrtc.supported) {
+        try {
+          await webrtc.start({
+            vadThreshold: options?.vadThreshold,
+            maxUtteranceMs: options?.maxUtteranceMs,
+          });
+          return;
+        } catch (err) {
+          // Fall back to WS streaming if WebRTC setup fails (or server feature is off).
+          setError(err instanceof Error ? err.message : "voice_webrtc_failed");
+        }
+      }
       if (!protocol.supported) {
         throw new Error("voice_streaming_unavailable");
       }
 
-      // Resolve Codec
-      const sessionCodec = sessionInfo?.codec?.output;
-      const prefsCodec = prefs?.find((p) => p.key === "voice.codec")?.value as
-        | string
-        | undefined;
-      const codec = (prefsCodec || sessionCodec || "mp3") as VoiceStreamCodec;
+      // Streaming playback currently assumes PCM16 → Float32 for the audio worklet.
+      // Keep streaming codec fixed to "pcm" until we add compressed-audio playback.
+      const codec = "pcm" satisfies VoiceStreamCodec;
+
+      const rawChunkSize = prefs?.find((p) => p.key === "voice.stt.chunk_size")
+        ?.value as string | undefined;
+      const sttChunkSize =
+        rawChunkSize === "fast" ||
+        rawChunkSize === "low" ||
+        rawChunkSize === "medium" ||
+        rawChunkSize === "accurate"
+          ? rawChunkSize
+          : undefined;
 
       const client = await protocol.connect({
         surface: "web",
         codec,
+        inputMimeType: "audio/raw;codec=pcm_s16le;rate=16000",
+        sttChunkSize,
         vadThreshold: options?.vadThreshold,
         maxUtteranceMs: options?.maxUtteranceMs,
       });
@@ -190,6 +262,10 @@ export function useVoiceSessionWeb() {
 
   const stopStreaming = useCallback(
     async (reason?: "manual" | "silence" | "timeout") => {
+      if (webrtc.supported && webrtc.state.sessionId) {
+        await webrtc.stop(reason ?? "manual");
+        return;
+      }
       if (telemetryRef.current.interval) {
         clearInterval(telemetryRef.current.interval);
         telemetryRef.current.interval = null;
@@ -197,7 +273,7 @@ export function useVoiceSessionWeb() {
       audio.stopCapture();
       await protocol.disconnect(reason);
     },
-    [audio, protocol]
+    [audio, protocol, webrtc]
   );
 
   // Legacy REST Actions (VoiceSession)
@@ -260,16 +336,43 @@ export function useVoiceSessionWeb() {
       return res.data?.[0] || null;
     },
     stream: {
-      supported: protocol.supported,
-      status: protocol.state.status,
-      transcript: protocol.state.transcript,
-      assistantText: protocol.state.assistantText,
-      vadConfidence: protocol.state.vadConfidence,
-      autoStopReason: protocol.state.autoStopReason,
-      error: protocol.state.error,
-      isActive:
-        protocol.state.status !== "idle" && protocol.state.status !== "error",
-      sessionId: protocol.state.sessionId,
+      supported: webrtc.supported || protocol.supported,
+      transport: webrtc.state.sessionId
+        ? ("webrtc" as const)
+        : protocol.state.sessionId
+          ? ("ws" as const)
+          : null,
+      status: webrtc.state.sessionId
+        ? webrtc.state.status
+        : protocol.state.status,
+      transcript: webrtc.state.sessionId
+        ? webrtc.state.transcript
+        : protocol.state.transcript,
+      assistantText: webrtc.state.sessionId
+        ? webrtc.state.assistantText
+        : protocol.state.assistantText,
+      raw: webrtc.state.sessionId
+        ? webrtc.state.assistantRaw
+        : protocol.state.assistantRaw,
+      uiMessages: webrtc.state.sessionId
+        ? webrtc.state.uiMessages
+        : protocol.state.uiMessages,
+      workflow: webrtc.state.sessionId
+        ? webrtc.state.workflow
+        : protocol.state.workflow,
+      vadConfidence: webrtc.state.sessionId
+        ? webrtc.state.vadConfidence
+        : protocol.state.vadConfidence,
+      autoStopReason: webrtc.state.sessionId
+        ? webrtc.state.autoStopReason
+        : protocol.state.autoStopReason,
+      error: webrtc.state.sessionId ? webrtc.state.error : protocol.state.error,
+      isActive: webrtc.state.sessionId
+        ? webrtc.state.status !== "idle" && webrtc.state.status !== "error"
+        : protocol.state.status !== "idle" && protocol.state.status !== "error",
+      sessionId: webrtc.state.sessionId
+        ? webrtc.state.sessionId
+        : protocol.state.sessionId,
       analyser: audio.analyser,
       start: startStreaming,
       stop: stopStreaming,

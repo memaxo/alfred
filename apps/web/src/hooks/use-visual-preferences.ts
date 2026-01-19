@@ -90,7 +90,9 @@ export function useVisualPreferences(
       if (engine && autoApply) {
         // Using variable-based dynamic import to prevent static analysis bundling
         const configPkg = "@alfred/cortex/config";
-        const { applyVisualConfig } = await import(configPkg);
+        const { applyVisualConfig } = await import(
+          /* @vite-ignore */ configPkg
+        );
         applyVisualConfig(engine, localConfig);
       }
     }
@@ -106,7 +108,7 @@ export function useVisualPreferences(
       // Optimistic engine update
       if (engine && autoApply) {
         const configPkg = "@alfred/cortex/config";
-        import(configPkg).then(({ applyVisualConfig }) => {
+        import(/* @vite-ignore */ configPkg).then(({ applyVisualConfig }) => {
           applyVisualConfig(engine, config);
         });
       }
@@ -137,7 +139,7 @@ export function useVisualPreferences(
         // Optimistic engine update
         if (engine && autoApply) {
           const configPkg = "@alfred/cortex/config";
-          import(configPkg).then(({ applyVisualConfig }) => {
+          import(/* @vite-ignore */ configPkg).then(({ applyVisualConfig }) => {
             applyVisualConfig(engine, updated);
           });
         }
@@ -159,7 +161,7 @@ export function useVisualPreferences(
       // Optimistic engine update
       if (engine && autoApply) {
         const configPkg = "@alfred/cortex/config";
-        import(configPkg).then(({ applyVisualConfig }) => {
+        import(/* @vite-ignore */ configPkg).then(({ applyVisualConfig }) => {
           applyVisualConfig(engine, config);
         });
       }
@@ -181,7 +183,7 @@ export function useVisualPreferences(
     // Apply to engine
     if (engine && autoApply) {
       const configPkg = "@alfred/cortex/config";
-      import(configPkg).then(({ applyVisualConfig }) => {
+      import(/* @vite-ignore */ configPkg).then(({ applyVisualConfig }) => {
         applyVisualConfig(engine, defaultConfig);
       });
     }
@@ -230,7 +232,7 @@ export function useVisualPreferences(
         // Apply to engine
         if (engine && autoApply) {
           const configPkg = "@alfred/cortex/config";
-          import(configPkg).then(({ applyVisualConfig }) => {
+          import(/* @vite-ignore */ configPkg).then(({ applyVisualConfig }) => {
             applyVisualConfig(engine, parsed.config);
           });
         }

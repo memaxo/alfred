@@ -14,12 +14,12 @@ type TodoToggleInput = {
   completed: boolean;
 };
 
-function parseServerTodoId(id: number | string): number | null {
+function parseServerTodoId(id: number | string): string | null {
   if (typeof id === "number") {
     if (!Number.isFinite(id)) {
       throw new Error("Invalid todo id: non-finite number");
     }
-    return id;
+    return String(id);
   }
 
   // Optimistic local-only IDs are never persisted server-side.
@@ -27,13 +27,8 @@ function parseServerTodoId(id: number | string): number | null {
     return null;
   }
 
-  // Allow numeric IDs serialized as strings.
-  const parsed = Number(id);
-  if (Number.isInteger(parsed) && parsed >= 0) {
-    return parsed;
-  }
-
-  throw new Error(`Invalid todo id: ${id}`);
+  // Tasks use string IDs (uuid), keep as-is.
+  return id;
 }
 
 export function createTodoCollection(
@@ -44,12 +39,12 @@ export function createTodoCollection(
     queryCollectionOptions<TodoResource, number | string>({
       queryKey: ["todos"],
       queryFn: async () => {
-        const todos = await trpcClient.todo.getAll.query();
-        return todos.map(
+        const tasks = await trpcClient.task.list.query({ limit: 200 });
+        return tasks.map(
           (t): TodoResource => ({
             id: t.id,
-            text: t.text,
-            completed: t.completed ?? false,
+            text: t.title,
+            completed: t.status === "completed",
           })
         );
       },
@@ -59,9 +54,7 @@ export function createTodoCollection(
       onInsert: async ({ transaction }) => {
         const items = transaction.mutations.map((m) => m.modified);
         for (const item of items) {
-          await trpcClient.todo.create.mutate({
-            text: item.text,
-          });
+          await trpcClient.task.create.mutate({ title: item.text });
         }
         return { refetch: true };
       },
@@ -71,9 +64,9 @@ export function createTodoCollection(
         for (const item of items) {
           const serverId = parseServerTodoId(item.id);
           if (serverId !== null) {
-            await trpcClient.todo.toggle.mutate({
+            await trpcClient.task.update.mutate({
               id: serverId,
-              completed: item.completed,
+              status: item.completed ? "completed" : "pending",
             });
           }
         }
@@ -85,7 +78,7 @@ export function createTodoCollection(
         for (const id of ids) {
           const serverId = parseServerTodoId(id);
           if (serverId !== null) {
-            await trpcClient.todo.delete.mutate({ id: serverId });
+            await trpcClient.task.delete.mutate({ id: serverId });
           }
         }
         return { refetch: true };
@@ -104,7 +97,7 @@ export function createTodoCollection(
       return input;
     },
     mutationFn: async (input) => {
-      await trpcClient.todo.create.mutate({ text: input.text });
+      await trpcClient.task.create.mutate({ title: input.text });
       await collection.utils.refetch();
     },
   });
@@ -120,9 +113,9 @@ export function createTodoCollection(
     mutationFn: async (input) => {
       const serverId = parseServerTodoId(input.id);
       if (serverId !== null) {
-        await trpcClient.todo.toggle.mutate({
+        await trpcClient.task.update.mutate({
           id: serverId,
-          completed: input.completed,
+          status: input.completed ? "completed" : "pending",
         });
       }
       await collection.utils.refetch();
@@ -138,7 +131,7 @@ export function createTodoCollection(
     mutationFn: async (id) => {
       const serverId = parseServerTodoId(id);
       if (serverId !== null) {
-        await trpcClient.todo.delete.mutate({ id: serverId });
+        await trpcClient.task.delete.mutate({ id: serverId });
       }
       await collection.utils.refetch();
     },

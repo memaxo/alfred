@@ -9,6 +9,7 @@ import type { NodeProps } from "@xyflow/react";
 import { Settings2 } from "lucide-react";
 import { z } from "zod";
 import { SettingsApp } from "@/components/apps/settings";
+import type { WindowComponentProps } from "@/components/desktop/windows/types";
 import {
   SmallCard,
   TinyDot,
@@ -49,18 +50,48 @@ export function SettingsWindow({ id, data, selected }: NodeProps) {
   const isCompact = windowData.viewMode === "compact";
 
   // Mock WindowComponentProps for SettingsApp
-  const mockProps = {
-    window: {} as any,
+  const now = Date.now();
+  const windowInstance: WindowComponentProps["window"] = {
+    id,
+    type: "settings",
+    data: {
+      type: "settings",
+      label: windowData.label,
+      viewMode: windowData.viewMode,
+    },
+    bounds: {
+      x: 0,
+      y: 0,
+      width: isCompact ? 600 : 800,
+      height: 600,
+    },
+    state: "normal",
+    isTiled: false,
+    zIndex: 0,
+    isFocused: Boolean(selected),
+    minSize: { width: 400, height: 300 },
+    resizable: true,
+    createdAt: now,
+    lastFocusedAt: now,
+  };
+
+  const onDragStart: WindowComponentProps["onDragStart"] = () => {};
+  const onDragEnd: WindowComponentProps["onDragEnd"] = () => {};
+  const onResizeStart: WindowComponentProps["onResizeStart"] = () => {};
+  const onResizeEnd: WindowComponentProps["onResizeEnd"] = () => {};
+
+  const mockProps: WindowComponentProps = {
+    window: windowInstance,
     onClose: () => {},
     onMinimize: () => {},
     onMaximize: () => {},
     onRestore: () => {},
     onFocus: () => {},
     onBlur: () => {},
-    onDragStart: () => {},
-    onDragEnd: () => {},
-    onResizeStart: () => {},
-    onResizeEnd: () => {},
+    onDragStart,
+    onDragEnd,
+    onResizeStart,
+    onResizeEnd,
     onDataChange: () => {},
   };
 

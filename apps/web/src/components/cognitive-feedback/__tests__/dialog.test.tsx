@@ -133,4 +133,57 @@ describe("CognitiveFeedbackDialog", () => {
     expect(btn).toBeTruthy();
     expect(btn?.disabled).toBe(true);
   });
+
+  it("renders error message when error is provided", async () => {
+    const { findByText } = render(
+      <DialogProvider inline>
+        <CognitiveFeedbackDialog
+          draft={{
+            streamId: "s1",
+            expected: "Expected",
+            actual: "",
+            intent: "negative",
+            surface: "chat",
+          }}
+          error={new Error("boom")}
+          onOpenChange={() => {}}
+          onSubmit={() => {}}
+          status="idle"
+        />
+      </DialogProvider>
+    );
+
+    expect(await findByText("boom")).toBeTruthy();
+  });
+
+  it("invokes onOpenChange(false) when closed", async () => {
+    const onOpenChange = vi.fn();
+    const { findAllByRole } = render(
+      <DialogProvider inline>
+        <CognitiveFeedbackDialog
+          draft={{
+            streamId: "s1",
+            expected: "Expected",
+            actual: "",
+            intent: "positive",
+            surface: "mindscape",
+          }}
+          onOpenChange={onOpenChange}
+          onSubmit={() => {}}
+          status="idle"
+        />
+      </DialogProvider>
+    );
+
+    const closeButtons = await findAllByRole("button", { name: "Close" });
+    const closeButton =
+      closeButtons.find((b) => b.getAttribute("data-slot") === "button") ??
+      closeButtons[0];
+    expect(closeButton).toBeTruthy();
+    act(() => {
+      fireEvent.click(closeButton);
+    });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });

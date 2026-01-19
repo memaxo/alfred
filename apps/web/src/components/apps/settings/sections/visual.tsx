@@ -10,7 +10,7 @@ import {
   COLOR_PALETTES,
   type ColorPalette,
   type VisualPreset,
-} from "@alfred/type";
+} from "@alfred/type/visual";
 import { Check, Palette } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";

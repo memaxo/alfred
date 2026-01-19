@@ -1,14 +1,17 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 
 export function TileZonePreview() {
-  const { activeTilePreview, zones } = useDesktopStore((s) => ({
-    activeTilePreview: s.activeTilePreview,
-    zones: s.zones,
-  }));
+  const { activeTilePreview, zones } = useDesktopStore(
+    useShallow((s) => ({
+      activeTilePreview: s.activeTilePreview,
+      zones: s.zones,
+    }))
+  );
 
   const zone = zones.find((z) => z.id === activeTilePreview);
   const reduced = useReducedMotion();

@@ -97,7 +97,7 @@ export function usePlanEditor(
     (taskId: string, updates: Partial<SubTask>) => {
       pushToUndoStack();
       setCurrentPlan((prev) => {
-        const subtasks = prev.subtasks.map((task) =>
+        const subtasks = prev.subtasks.map((task: SubTask) =>
           task.id === taskId ? { ...task, ...updates } : task
         );
         return { ...prev, subtasks };
@@ -112,16 +112,16 @@ export function usePlanEditor(
       pushToUndoStack();
       setCurrentPlan((prev) => {
         // Remove from subtasks
-        const subtasks = prev.subtasks.filter((t) => t.id !== taskId);
+        const subtasks = prev.subtasks.filter((t: SubTask) => t.id !== taskId);
 
         // Remove from waves
-        const waves = prev.waves.map((wave) => ({
+        const waves = prev.waves.map((wave: WavePlan) => ({
           ...wave,
-          agents: wave.agents.filter((id) => id !== taskId),
+          agents: wave.agents.filter((id: string) => id !== taskId),
         }));
 
         // Remove dependencies
-        const cleanedSubtasks = subtasks.map((task) => ({
+        const cleanedSubtasks = subtasks.map((task: SubTask) => ({
           ...task,
           deps: task.deps.filter((id: string) => id !== taskId),
         }));
@@ -156,9 +156,9 @@ export function usePlanEditor(
     (taskId: string, waveId: string) => {
       pushToUndoStack();
       setCurrentPlan((prev) => {
-        const waves = prev.waves.map((wave) => {
+        const waves = prev.waves.map((wave: WavePlan) => {
           // Remove from all waves
-          const agents = wave.agents.filter((id) => id !== taskId);
+          const agents = wave.agents.filter((id: string) => id !== taskId);
           // Add to target wave
           if (wave.id === waveId) {
             agents.push(taskId);
@@ -269,7 +269,7 @@ function validatePlan(plan: PlanPhaseOutput): {
   }
 
   // Check for orphaned tasks (not in any wave)
-  const allWaveAgents = new Set(plan.waves.flatMap((w) => w.agents));
+  const allWaveAgents = new Set(plan.waves.flatMap((w: WavePlan) => w.agents));
   for (const task of plan.subtasks) {
     if (!allWaveAgents.has(task.id)) {
       errors.push(`Task ${task.id} is not assigned to any wave`);
@@ -283,7 +283,7 @@ function validatePlan(plan: PlanPhaseOutput): {
   }
 
   // Check for invalid dependencies
-  const taskIds = new Set(plan.subtasks.map((t) => t.id));
+  const taskIds = new Set(plan.subtasks.map((t: SubTask) => t.id));
   for (const task of plan.subtasks) {
     for (const depId of task.deps) {
       if (!taskIds.has(depId)) {
@@ -293,7 +293,7 @@ function validatePlan(plan: PlanPhaseOutput): {
   }
 
   // Check wave dependencies
-  const waveIds = new Set(plan.waves.map((w) => w.id));
+  const waveIds = new Set(plan.waves.map((w: WavePlan) => w.id));
   for (const wave of plan.waves) {
     for (const depId of wave.dependsOn) {
       if (!waveIds.has(depId)) {
@@ -367,7 +367,7 @@ function generateWavesFromDependencies(subtasks: SubTask[]): WavePlan[] {
     if (ready.length === 0) {
       // No progress - circular dependency or error
       // Put remaining tasks in final wave
-      const remaining = subtasks.filter((t) => !completed.has(t.id));
+      const remaining = subtasks.filter((t: SubTask) => !completed.has(t.id));
       if (remaining.length > 0) {
         waves.push({
           id: `wave-${waveIndex}`,

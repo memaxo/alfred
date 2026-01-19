@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
-import { Suspense, useCallback, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { AlfredDesktopDevtoolsPanel } from "@/components/desktop/devtools-panel";
 import { type JarvisHUDConfig, JarvisHUDProvider } from "@/components/hud";
 import Loader from "@/components/loader";
@@ -57,6 +57,38 @@ function RootDocument() {
   const isProtected = useRouterState({
     select: (s) => s.matches.some((m) => m.routeId === "/_protected"),
   });
+
+  useEffect(() => {
+    const g = globalThis as unknown as {
+      __ALFRED_LAST_ERROR__?:
+        | { type: "error" | "rejection"; message: string; stack: string | null }
+        | undefined;
+    };
+
+    const onError = (event: ErrorEvent) => {
+      g.__ALFRED_LAST_ERROR__ = {
+        type: "error",
+        message: event.message,
+        stack:
+          event.error instanceof Error ? (event.error.stack ?? null) : null,
+      };
+    };
+    const onRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      g.__ALFRED_LAST_ERROR__ = {
+        type: "rejection",
+        message: reason instanceof Error ? reason.message : String(reason),
+        stack: reason instanceof Error ? (reason.stack ?? null) : null,
+      };
+    };
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
 
   const jarvisSpeakEnabled =
     import.meta.env.VITE_JARVIS_SPEAK === "1" ||

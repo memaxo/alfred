@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PlanEditor } from "@/components/plan-editor";
 import { MindscapeWorkflowDrawer } from "@/components/shared/workflow-drawer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -12,6 +13,23 @@ import { trpc } from "@/utils/trpc";
 const workflowSearchSchema = z.object({
   drawer: z.literal("1").optional(),
 });
+
+type WaveAgentType =
+  | "codex"
+  | "droid"
+  | "claude-code"
+  | "research"
+  | "review"
+  | "orchestrator";
+
+const agentTypes = new Set<WaveAgentType>([
+  "codex",
+  "droid",
+  "claude-code",
+  "research",
+  "review",
+  "orchestrator",
+]);
 
 export const Route = createFileRoute("/_protected/workflow/$runId")({
   component: WorkflowRunRoute,
@@ -26,11 +44,15 @@ function WorkflowRunRoute() {
   const trajectoryQuery = useTrajectory(runId);
   const refreshTrajectory = useTrajectoryRefresh();
   const suspendMutation = trpc.workflow.suspend.useMutation();
+  const updatePlanMutation = trpc.workflow.phase.updatePlan.useMutation();
+  const approveAndExecuteMutation =
+    trpc.workflow.phase.approveAndExecute.useMutation();
   const [isResuming, setIsResuming] = useState(false);
+  const [editPlanOpen, setEditPlanOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
-    "overview"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "work" | "events" | "error"
+  >("overview");
   const [drawerOpen, setDrawerOpen] = useState(search.drawer === "1");
 
   trpc.workflow.resumePipeline.useSubscription(
@@ -56,7 +78,13 @@ function WorkflowRunRoute() {
 
   useEffect(() => {
     if (runQuery.data) {
-      setActiveTab(runQuery.data.status === "failed" ? "error" : "overview");
+      setActiveTab(
+        runQuery.data.status === "completed"
+          ? "work"
+          : runQuery.data.status === "failed"
+            ? "error"
+            : "overview"
+      );
     }
   }, [runQuery.data?.status, runQuery.data]);
 
@@ -72,6 +100,48 @@ function WorkflowRunRoute() {
     { runId },
     { enabled: runQuery.isSuccess }
   );
+  const planQuery = trpc.workflow.phase.getPlan.useQuery(
+    { runId },
+    { enabled: editPlanOpen }
+  );
+
+  const toStructuredPlan = (plan: NonNullable<typeof planQuery.data>) => {
+    const tasksById = new Map(plan.subtasks.map((t) => [t.id, t]));
+
+    const phases = plan.waves.map((wave) => {
+      const tasks = wave.agents
+        .map((id) => tasksById.get(id))
+        .filter((task): task is NonNullable<typeof task> => Boolean(task));
+
+      const agentTypeRaw =
+        typeof wave.agentType === "string" ? wave.agentType : undefined;
+      const agentType: WaveAgentType = agentTypes.has(
+        agentTypeRaw as WaveAgentType
+      )
+        ? (agentTypeRaw as WaveAgentType)
+        : "codex";
+
+      return {
+        id: wave.id,
+        name: wave.id,
+        description: `Wave ${wave.id}`,
+        tasks,
+        dependsOn: wave.dependsOn,
+        estimatedDurationMs: Math.max(60_000, tasks.length * 120_000),
+        agentType,
+      };
+    });
+
+    return {
+      id: plan.planId,
+      title: plan.structuredPlan.title,
+      intent: plan.structuredPlan.intent,
+      workspace: plan.structuredPlan.workspace,
+      phases,
+      resources: plan.structuredPlan.resources,
+      evaluationCriteria: plan.structuredPlan.evaluationCriteria,
+    };
+  };
 
   const handleSuspend = async () => {
     try {
@@ -168,10 +238,16 @@ function WorkflowRunRoute() {
             <div className="flex items-center justify-between border-white/5 border-b px-6 py-4">
               <Button
                 className="text-biolum-dim hover:text-biolum"
-                onClick={() => navigate({ to: "/" })}
+                onClick={() => {
+                  if (editPlanOpen) {
+                    setEditPlanOpen(false);
+                    return;
+                  }
+                  navigate({ to: "/" });
+                }}
                 variant="ghost"
               >
-                ← Back to Mindscape
+                ← {editPlanOpen ? "Back to Workflow" : "Back to Mindscape"}
               </Button>
               <div className="flex items-center gap-2">
                 {isRunning && (
@@ -194,6 +270,16 @@ function WorkflowRunRoute() {
                     variant="ghost"
                   >
                     {isResuming ? "Resuming..." : "Resume"}
+                  </Button>
+                )}
+                {isSuspended && !editPlanOpen && (
+                  <Button
+                    className="text-sky-400 hover:text-sky-300"
+                    onClick={() => setEditPlanOpen(true)}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Edit Plan
                   </Button>
                 )}
                 <Button
@@ -230,26 +316,89 @@ function WorkflowRunRoute() {
               </p>
             </div>
             <div className="p-6">
-              <WorkflowDetailContent
-                activeTab={activeTab}
-                events={events}
-                eventsLoading={eventsQuery.isLoading}
-                footer={
-                  <Button
-                    className="rounded-full"
-                    onClick={() => navigate({ to: "/" })}
-                    variant="outline"
-                  >
-                    Close
-                  </Button>
-                }
-                onNavigateToMindscape={handleNavigateToMindscape}
-                onTabChange={setActiveTab}
-                ragDocs={ragDocs}
-                reasoningError={reasoningError}
-                reasoningLoading={reasoningQuery.isLoading}
-                workflow={workflow}
-              />
+              {editPlanOpen ? (
+                planQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <p className="text-biolum-dim text-sm">Loading plan…</p>
+                  </div>
+                ) : planQuery.isError || !planQuery.data ? (
+                  <div className="flex flex-col gap-3 py-6">
+                    <p className="font-semibold text-lg">
+                      Unable to load plan.
+                    </p>
+                    <p className="text-biolum-dim text-sm">
+                      {planQuery.error?.message ?? "Unknown error"}
+                    </p>
+                    <Button
+                      onClick={() => planQuery.refetch()}
+                      variant="outline"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <PlanEditor
+                    onCancel={() => setEditPlanOpen(false)}
+                    onExecute={async () => {
+                      try {
+                        toast.info("Approving plan…");
+                        await approveAndExecuteMutation.mutateAsync({ runId });
+                        toast.info("Resuming workflow from checkpoint…");
+                        setIsResuming(true);
+                        setEditPlanOpen(false);
+                      } catch (error) {
+                        toast.error(
+                          `Execute failed: ${
+                            error instanceof Error
+                              ? error.message
+                              : String(error)
+                          }`
+                        );
+                      }
+                    }}
+                    onSave={async (updated) => {
+                      try {
+                        await updatePlanMutation.mutateAsync({
+                          runId,
+                          structuredPlan: toStructuredPlan(updated),
+                        });
+                        toast.success("Plan saved.");
+                        await planQuery.refetch();
+                      } catch (error) {
+                        toast.error(
+                          `Save failed: ${
+                            error instanceof Error
+                              ? error.message
+                              : String(error)
+                          }`
+                        );
+                      }
+                    }}
+                    plan={planQuery.data}
+                  />
+                )
+              ) : (
+                <WorkflowDetailContent
+                  activeTab={activeTab}
+                  events={events}
+                  eventsLoading={eventsQuery.isLoading}
+                  footer={
+                    <Button
+                      className="rounded-full"
+                      onClick={() => navigate({ to: "/" })}
+                      variant="outline"
+                    >
+                      Close
+                    </Button>
+                  }
+                  onNavigateToMindscape={handleNavigateToMindscape}
+                  onTabChange={setActiveTab}
+                  ragDocs={ragDocs}
+                  reasoningError={reasoningError}
+                  reasoningLoading={reasoningQuery.isLoading}
+                  workflow={workflow}
+                />
+              )}
             </div>
           </DialogContent>
         </Dialog>

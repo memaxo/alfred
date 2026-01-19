@@ -32,8 +32,14 @@ export function WorkflowDetailModal({
   onClose,
 }: WorkflowDetailModalProps) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
-    workflow?.status === "failed" ? "error" : "overview"
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "work" | "events" | "error"
+  >(
+    workflow?.status === "completed"
+      ? "work"
+      : workflow?.status === "failed"
+        ? "error"
+        : "overview"
   );
 
   const eventsQuery = trpc.workflow.events.useQuery(
@@ -96,8 +102,8 @@ export function WorkflowDetailModal({
 
 type WorkflowDetailContentProps = {
   workflow: WorkflowRun;
-  activeTab: "overview" | "events" | "error";
-  onTabChange: (tab: "overview" | "events" | "error") => void;
+  activeTab: "overview" | "work" | "events" | "error";
+  onTabChange: (tab: "overview" | "work" | "events" | "error") => void;
   events: WorkflowEvents;
   eventsLoading: boolean;
   ragDocs: WorkflowReasoningResult["provenance"]["ragDocuments"];
@@ -122,6 +128,10 @@ export function WorkflowDetailContent({
   onNavigateToMindscape,
 }: WorkflowDetailContentProps) {
   const showErrorTab = workflow.status === "failed";
+  const compilationQuery = trpc.workflow.compilation.get.useQuery(
+    { runId: workflow.id },
+    { enabled: activeTab === "work" }
+  );
 
   return (
     <>
@@ -162,6 +172,17 @@ export function WorkflowDetailContent({
           type="button"
         >
           Overview
+        </button>
+        <button
+          className={`px-4 py-2 text-sm transition-colors ${
+            activeTab === "work"
+              ? "border-biolum border-b-2 text-biolum"
+              : "text-biolum-dim hover:text-biolum"
+          }`}
+          onClick={() => onTabChange("work")}
+          type="button"
+        >
+          Work
         </button>
         <button
           className={`px-4 py-2 text-sm transition-colors ${
@@ -301,6 +322,132 @@ export function WorkflowDetailContent({
           </div>
         )}
 
+        {activeTab === "work" && (
+          <div className="space-y-4 p-4">
+            {compilationQuery.isLoading ? (
+              <p className="py-8 text-center text-biolum-dim">
+                Loading compilation...
+              </p>
+            ) : compilationQuery.isError ? (
+              <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-400 text-sm">
+                {compilationQuery.error.message}
+              </p>
+            ) : compilationQuery.data ? (
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-4 backdrop-blur">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="font-medium text-biolum text-sm">
+                        Completion Summary
+                      </h4>
+                      <p className="mt-2 text-biolum-dim text-sm">
+                        {compilationQuery.data.summaryText ?? "—"}
+                      </p>
+                    </div>
+                    <BiolumBadge
+                      variant={
+                        compilationQuery.data.status === "completed"
+                          ? "success"
+                          : "error"
+                      }
+                    >
+                      {compilationQuery.data.status}
+                    </BiolumBadge>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-4 backdrop-blur">
+                    <h4 className="mb-2 text-biolum-dim text-sm">Files</h4>
+                    <p className="text-biolum text-sm">
+                      Created:{" "}
+                      {compilationQuery.data.fileChanges.created.length}
+                    </p>
+                    <p className="text-biolum text-sm">
+                      Modified:{" "}
+                      {compilationQuery.data.fileChanges.modified.length}
+                    </p>
+                    <p className="text-biolum text-sm">
+                      Deleted:{" "}
+                      {compilationQuery.data.fileChanges.deleted.length}
+                    </p>
+                  </div>
+
+                  <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-4 backdrop-blur">
+                    <h4 className="mb-2 text-biolum-dim text-sm">Timing</h4>
+                    <p className="text-biolum text-sm">
+                      Total duration:{" "}
+                      {typeof compilationQuery.data.totalDurationMs === "number"
+                        ? `${compilationQuery.data.totalDurationMs}ms`
+                        : "—"}
+                    </p>
+                    <p className="text-biolum text-sm">
+                      Agents spawned:{" "}
+                      {typeof compilationQuery.data.agentsSpawned === "number"
+                        ? compilationQuery.data.agentsSpawned
+                        : "—"}
+                    </p>
+                    <p className="text-biolum text-sm">
+                      Learning insights:{" "}
+                      {typeof compilationQuery.data.learningInsights ===
+                      "number"
+                        ? compilationQuery.data.learningInsights
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-4 backdrop-blur">
+                  <h4 className="mb-2 text-biolum-dim text-sm">Agents</h4>
+                  {compilationQuery.data.agents.length === 0 ? (
+                    <p className="text-biolum-dim text-sm">
+                      No agent outcomes recorded.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {compilationQuery.data.agents.map((agent) => (
+                        <li
+                          className="rounded-2xl border border-white/10 bg-white/5 p-3"
+                          key={agent.agentId}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-mono text-biolum text-xs">
+                                {agent.agentId}
+                              </p>
+                              <p className="mt-1 text-biolum-dim text-sm">
+                                {agent.result?.summary ??
+                                  agent.escalation ??
+                                  "—"}
+                              </p>
+                            </div>
+                            <BiolumBadge
+                              variant={
+                                agent.status === "completed"
+                                  ? "success"
+                                  : agent.status === "failed" ||
+                                      agent.status === "stuck"
+                                    ? "error"
+                                    : "default"
+                              }
+                            >
+                              {agent.status}
+                            </BiolumBadge>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-biolum-dim text-sm">
+                No work compilation is available for this run yet.
+              </p>
+            )}
+          </div>
+        )}
+
         {activeTab === "events" && (
           <div className="p-4">
             {eventsLoading ? (
@@ -330,12 +477,56 @@ export function WorkflowDetailContent({
                             ).toLocaleTimeString()}
                           </span>
                         </div>
-                        {event.eventData !== null &&
-                          event.eventData !== undefined && (
-                            <pre className="mt-2 overflow-x-auto font-mono text-biolum-dim text-xs">
-                              {JSON.stringify(event.eventData, null, 2)}
-                            </pre>
-                          )}
+                        {(() => {
+                          const escalation = parseEscalation(event.eventData);
+                          if (escalation) {
+                            return (
+                              <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium text-amber-100 text-sm">
+                                    Escalation ({escalation.severity})
+                                  </div>
+                                  <div className="text-amber-200 text-xs">
+                                    {escalation.agentId}
+                                  </div>
+                                </div>
+                                <div className="mt-1 text-amber-100 text-xs">
+                                  <span className="font-medium">Reason:</span>{" "}
+                                  {escalation.reason}
+                                </div>
+                                <div className="mt-2 whitespace-pre-wrap text-amber-100 text-xs">
+                                  {escalation.details}
+                                </div>
+                                {escalation.suggestions &&
+                                  escalation.suggestions.length > 0 && (
+                                    <div className="mt-2 text-amber-100 text-xs">
+                                      <div className="font-medium">
+                                        Suggestions
+                                      </div>
+                                      <ul className="mt-1 list-inside list-disc">
+                                        {escalation.suggestions.map((s) => (
+                                          <li key={s}>{s}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                              </div>
+                            );
+                          }
+
+                          if (
+                            event.eventData !== null &&
+                            event.eventData !== undefined
+                          ) {
+                            return (
+                              <pre className="mt-2 overflow-x-auto font-mono text-biolum-dim text-xs">
+                                {JSON.stringify(event.eventData, null, 2)}
+                              </pre>
+                            );
+                          }
+
+                          return null;
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -374,4 +565,47 @@ function normalizeTimestamp(
     return;
   }
   return value;
+}
+
+type EscalationEventData = {
+  agentId: string;
+  reason: string;
+  details: string;
+  suggestions?: string[];
+  severity: "warning" | "blocking";
+};
+
+function parseEscalation(eventData: unknown): EscalationEventData | null {
+  if (!eventData || typeof eventData !== "object") {
+    return null;
+  }
+  const env = eventData as { data?: unknown };
+  if (!env.data || typeof env.data !== "object") {
+    return null;
+  }
+  const data = env.data as Record<string, unknown>;
+  if (data.kind !== "escalation") {
+    return null;
+  }
+
+  const agentId = typeof data.agentId === "string" ? data.agentId : "";
+  const reason = typeof data.reason === "string" ? data.reason : "";
+  const details = typeof data.details === "string" ? data.details : "";
+  const severity =
+    data.severity === "warning" || data.severity === "blocking"
+      ? data.severity
+      : null;
+
+  if (!(agentId && reason && details && severity)) {
+    return null;
+  }
+
+  const suggestionsRaw = data.suggestions;
+  const suggestions =
+    Array.isArray(suggestionsRaw) &&
+    suggestionsRaw.every((s) => typeof s === "string")
+      ? (suggestionsRaw as string[])
+      : undefined;
+
+  return { agentId, reason, details, suggestions, severity };
 }

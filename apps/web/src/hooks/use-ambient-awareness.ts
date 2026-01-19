@@ -182,6 +182,8 @@ const DEFAULT_TRIGGERS: ProactiveTrigger[] = [
   },
 ];
 
+const EMPTY_CUSTOM_TRIGGERS: ProactiveTrigger[] = [];
+
 /**
  * Hook for JARVIS-style ambient awareness
  */
@@ -195,7 +197,7 @@ export function useAmbientAwareness(
     workingHoursStart = 9,
     workingHoursEnd = 18,
     proactiveEnabled = true,
-    customTriggers = [],
+    customTriggers = EMPTY_CUSTOM_TRIGGERS,
   } = config;
 
   const sessionStartRef = useRef(Date.now());

@@ -1,3 +1,4 @@
+import type { phaseSchema, structuredPlanSchema } from "@alfred/plan/schema";
 import {
   addEdge,
   Background,
@@ -14,9 +15,9 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { infer as ZodInfer } from "zod";
 import "@xyflow/react/dist/style.css";
-import type { Phase, StructuredPlan } from "@alfred/plan";
 import {
   Brain,
   Plus,
@@ -37,6 +38,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+type Phase = ZodInfer<typeof phaseSchema>;
+type StructuredPlan = ZodInfer<typeof structuredPlanSchema>;
 
 type WorkflowCanvasProps = {
   plan: StructuredPlan;
@@ -135,8 +139,13 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
     return edges;
   }, [plan.phases]);
 
-  const [nodes, _setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedPhaseId(node.id);

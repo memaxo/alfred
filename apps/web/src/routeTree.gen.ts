@@ -45,11 +45,6 @@ import { Route as ApiAuthIntrospectRouteImport } from './routes/api/auth/introsp
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
 import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/workflow.$runId'
-import { Route as ProtectedSettingsVisualRouteImport } from './routes/_protected/settings/visual'
-import { Route as ProtectedSettingsProfileRouteImport } from './routes/_protected/settings/profile'
-import { Route as ProtectedSettingsPrivacyRouteImport } from './routes/_protected/settings/privacy'
-import { Route as ProtectedSettingsModelsRouteImport } from './routes/_protected/settings/models'
-import { Route as ProtectedSettingsMcpRouteImport } from './routes/_protected/settings/mcp'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
 import { Route as ProtectedComponentsNameRouteImport } from './routes/_protected/components.$name'
 import { Route as ProtectedAdminVoiceTableRouteImport } from './routes/_protected/admin/voice-table'
@@ -237,33 +232,6 @@ const ProtectedWorkflowRunIdRoute = ProtectedWorkflowRunIdRouteImport.update({
   path: '/workflow/$runId',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedSettingsVisualRoute = ProtectedSettingsVisualRouteImport.update({
-  id: '/visual',
-  path: '/visual',
-  getParentRoute: () => ProtectedSettingsRoute,
-} as any)
-const ProtectedSettingsProfileRoute =
-  ProtectedSettingsProfileRouteImport.update({
-    id: '/profile',
-    path: '/profile',
-    getParentRoute: () => ProtectedSettingsRoute,
-  } as any)
-const ProtectedSettingsPrivacyRoute =
-  ProtectedSettingsPrivacyRouteImport.update({
-    id: '/privacy',
-    path: '/privacy',
-    getParentRoute: () => ProtectedSettingsRoute,
-  } as any)
-const ProtectedSettingsModelsRoute = ProtectedSettingsModelsRouteImport.update({
-  id: '/models',
-  path: '/models',
-  getParentRoute: () => ProtectedSettingsRoute,
-} as any)
-const ProtectedSettingsMcpRoute = ProtectedSettingsMcpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => ProtectedSettingsRoute,
-} as any)
 const ProtectedExperimentalTuneRoute =
   ProtectedExperimentalTuneRouteImport.update({
     id: '/experimental/tune',
@@ -305,7 +273,7 @@ export interface FileRoutesByFullPath {
   '/book': typeof ProtectedBookRoute
   '/components': typeof ProtectedComponentsRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
-  '/settings': typeof ProtectedSettingsRouteWithChildren
+  '/settings': typeof ProtectedSettingsRoute
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/assistant': typeof ApiAssistantRouteWithChildren
@@ -321,11 +289,6 @@ export interface FileRoutesByFullPath {
   '/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
   '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
-  '/settings/mcp': typeof ProtectedSettingsMcpRoute
-  '/settings/models': typeof ProtectedSettingsModelsRoute
-  '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
-  '/settings/profile': typeof ProtectedSettingsProfileRoute
-  '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -351,7 +314,7 @@ export interface FileRoutesByTo {
   '/book': typeof ProtectedBookRoute
   '/components': typeof ProtectedComponentsRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
-  '/settings': typeof ProtectedSettingsRouteWithChildren
+  '/settings': typeof ProtectedSettingsRoute
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/assistant': typeof ApiAssistantRouteWithChildren
@@ -367,11 +330,6 @@ export interface FileRoutesByTo {
   '/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
   '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
-  '/settings/mcp': typeof ProtectedSettingsMcpRoute
-  '/settings/models': typeof ProtectedSettingsModelsRoute
-  '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
-  '/settings/profile': typeof ProtectedSettingsProfileRoute
-  '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -400,7 +358,7 @@ export interface FileRoutesById {
   '/_protected/book': typeof ProtectedBookRoute
   '/_protected/components': typeof ProtectedComponentsRouteWithChildren
   '/_protected/drive': typeof ProtectedDriveRoute
-  '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
+  '/_protected/settings': typeof ProtectedSettingsRoute
   '/_protected/timer': typeof ProtectedTimerRoute
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/assistant': typeof ApiAssistantRouteWithChildren
@@ -416,11 +374,6 @@ export interface FileRoutesById {
   '/_protected/admin/voice-table': typeof ProtectedAdminVoiceTableRoute
   '/_protected/components/$name': typeof ProtectedComponentsNameRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
-  '/_protected/settings/mcp': typeof ProtectedSettingsMcpRoute
-  '/_protected/settings/models': typeof ProtectedSettingsModelsRoute
-  '/_protected/settings/privacy': typeof ProtectedSettingsPrivacyRoute
-  '/_protected/settings/profile': typeof ProtectedSettingsProfileRoute
-  '/_protected/settings/visual': typeof ProtectedSettingsVisualRoute
   '/_protected/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -465,11 +418,6 @@ export interface FileRouteTypes {
     | '/admin/voice-table'
     | '/components/$name'
     | '/experimental/tune'
-    | '/settings/mcp'
-    | '/settings/models'
-    | '/settings/privacy'
-    | '/settings/profile'
-    | '/settings/visual'
     | '/workflow/$runId'
     | '/api/assistant/$'
     | '/api/auth/$'
@@ -511,11 +459,6 @@ export interface FileRouteTypes {
     | '/admin/voice-table'
     | '/components/$name'
     | '/experimental/tune'
-    | '/settings/mcp'
-    | '/settings/models'
-    | '/settings/privacy'
-    | '/settings/profile'
-    | '/settings/visual'
     | '/workflow/$runId'
     | '/api/assistant/$'
     | '/api/auth/$'
@@ -559,11 +502,6 @@ export interface FileRouteTypes {
     | '/_protected/admin/voice-table'
     | '/_protected/components/$name'
     | '/_protected/experimental/tune'
-    | '/_protected/settings/mcp'
-    | '/_protected/settings/models'
-    | '/_protected/settings/privacy'
-    | '/_protected/settings/profile'
-    | '/_protected/settings/visual'
     | '/_protected/workflow/$runId'
     | '/api/assistant/$'
     | '/api/auth/$'
@@ -857,41 +795,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedWorkflowRunIdRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/settings/visual': {
-      id: '/_protected/settings/visual'
-      path: '/visual'
-      fullPath: '/settings/visual'
-      preLoaderRoute: typeof ProtectedSettingsVisualRouteImport
-      parentRoute: typeof ProtectedSettingsRoute
-    }
-    '/_protected/settings/profile': {
-      id: '/_protected/settings/profile'
-      path: '/profile'
-      fullPath: '/settings/profile'
-      preLoaderRoute: typeof ProtectedSettingsProfileRouteImport
-      parentRoute: typeof ProtectedSettingsRoute
-    }
-    '/_protected/settings/privacy': {
-      id: '/_protected/settings/privacy'
-      path: '/privacy'
-      fullPath: '/settings/privacy'
-      preLoaderRoute: typeof ProtectedSettingsPrivacyRouteImport
-      parentRoute: typeof ProtectedSettingsRoute
-    }
-    '/_protected/settings/models': {
-      id: '/_protected/settings/models'
-      path: '/models'
-      fullPath: '/settings/models'
-      preLoaderRoute: typeof ProtectedSettingsModelsRouteImport
-      parentRoute: typeof ProtectedSettingsRoute
-    }
-    '/_protected/settings/mcp': {
-      id: '/_protected/settings/mcp'
-      path: '/mcp'
-      fullPath: '/settings/mcp'
-      preLoaderRoute: typeof ProtectedSettingsMcpRouteImport
-      parentRoute: typeof ProtectedSettingsRoute
-    }
     '/_protected/experimental/tune': {
       id: '/_protected/experimental/tune'
       path: '/experimental/tune'
@@ -959,31 +862,12 @@ const ProtectedComponentsRouteChildren: ProtectedComponentsRouteChildren = {
 const ProtectedComponentsRouteWithChildren =
   ProtectedComponentsRoute._addFileChildren(ProtectedComponentsRouteChildren)
 
-interface ProtectedSettingsRouteChildren {
-  ProtectedSettingsMcpRoute: typeof ProtectedSettingsMcpRoute
-  ProtectedSettingsModelsRoute: typeof ProtectedSettingsModelsRoute
-  ProtectedSettingsPrivacyRoute: typeof ProtectedSettingsPrivacyRoute
-  ProtectedSettingsProfileRoute: typeof ProtectedSettingsProfileRoute
-  ProtectedSettingsVisualRoute: typeof ProtectedSettingsVisualRoute
-}
-
-const ProtectedSettingsRouteChildren: ProtectedSettingsRouteChildren = {
-  ProtectedSettingsMcpRoute: ProtectedSettingsMcpRoute,
-  ProtectedSettingsModelsRoute: ProtectedSettingsModelsRoute,
-  ProtectedSettingsPrivacyRoute: ProtectedSettingsPrivacyRoute,
-  ProtectedSettingsProfileRoute: ProtectedSettingsProfileRoute,
-  ProtectedSettingsVisualRoute: ProtectedSettingsVisualRoute,
-}
-
-const ProtectedSettingsRouteWithChildren =
-  ProtectedSettingsRoute._addFileChildren(ProtectedSettingsRouteChildren)
-
 interface ProtectedRouteChildren {
   ProtectedAdminRoute: typeof ProtectedAdminRouteWithChildren
   ProtectedBookRoute: typeof ProtectedBookRoute
   ProtectedComponentsRoute: typeof ProtectedComponentsRouteWithChildren
   ProtectedDriveRoute: typeof ProtectedDriveRoute
-  ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
+  ProtectedSettingsRoute: typeof ProtectedSettingsRoute
   ProtectedTimerRoute: typeof ProtectedTimerRoute
   ProtectedVoiceS2sRoute: typeof ProtectedVoiceS2sRoute
   ProtectedIndexRoute: typeof ProtectedIndexRoute
@@ -996,7 +880,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedBookRoute: ProtectedBookRoute,
   ProtectedComponentsRoute: ProtectedComponentsRouteWithChildren,
   ProtectedDriveRoute: ProtectedDriveRoute,
-  ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
+  ProtectedSettingsRoute: ProtectedSettingsRoute,
   ProtectedTimerRoute: ProtectedTimerRoute,
   ProtectedVoiceS2sRoute: ProtectedVoiceS2sRoute,
   ProtectedIndexRoute: ProtectedIndexRoute,

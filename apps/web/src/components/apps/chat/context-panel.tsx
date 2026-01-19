@@ -5,7 +5,7 @@
  */
 
 import type { AssistantUIMessage } from "@alfred/agent";
-import { computeBudgetUsage } from "@alfred/history";
+import { computeBudgetUsage } from "@alfred/history/budget";
 import { Brain, Database, FileText, Link, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CompactKnowledgeGraph } from "@/components/graphs/knowledge/compact";

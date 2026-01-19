@@ -11,12 +11,9 @@ async function getSearchServer(): Promise<SearchServer> {
     return server;
   }
 
-  const fumadocsPkg = "fumadocs-core/search/server";
-  const sourcePkg = "../../lib/source";
-
   const [{ createFromSource }, { source }] = await Promise.all([
-    import(/* @vite-ignore */ fumadocsPkg),
-    import(sourcePkg),
+    import("fumadocs-core/search/server"),
+    import("../../lib/source"),
   ]);
 
   server = createFromSource(source, { language: "english" }) as SearchServer;

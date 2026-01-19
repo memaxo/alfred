@@ -79,9 +79,9 @@ export function MindscapeWorkflowDrawer({
   onNavigateToMindscape,
 }: MindscapeWorkflowDrawerProps) {
   const drawerOpen = open ?? Boolean(runId);
-  const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
-    "overview"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "work" | "events" | "error"
+  >("overview");
 
   useEffect(() => {
     setActiveTab("overview");
@@ -125,8 +125,8 @@ export function MindscapeWorkflowDrawer({
 
 type WorkflowDrawerBodyProps = MindscapeWorkflowDrawerProps & {
   drawerOpen: boolean;
-  activeTab: "overview" | "events" | "error";
-  onTabChange: (tab: "overview" | "events" | "error") => void;
+  activeTab: "overview" | "work" | "events" | "error";
+  onTabChange: (tab: "overview" | "work" | "events" | "error") => void;
 };
 
 function WorkflowDrawerBody({

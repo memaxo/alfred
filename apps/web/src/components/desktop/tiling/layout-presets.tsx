@@ -7,6 +7,7 @@ import {
   SplitSquareHorizontal,
   SplitSquareVertical,
 } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
@@ -61,11 +62,13 @@ type LayoutPresetsProps = {
 };
 
 export function LayoutPresets({ className }: LayoutPresetsProps) {
-  const { config, setLayout, autoTile } = useDesktopStore((s) => ({
-    config: s.config,
-    setLayout: s.setLayout,
-    autoTile: s.autoTile,
-  }));
+  const { config, setLayout, autoTile } = useDesktopStore(
+    useShallow((s) => ({
+      config: s.config,
+      setLayout: s.setLayout,
+      autoTile: s.autoTile,
+    }))
+  );
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>

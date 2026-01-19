@@ -72,6 +72,10 @@ export function AlfredDesktopShell({
   onVisualize,
   onAsk,
 }: AlfredDesktopShellProps) {
+  const isTestMode =
+    import.meta.env.VITE_TEST_MODE === "true" ||
+    import.meta.env.MINDSCAPE_TEST === "1";
+
   const { mode, focusedWindowId, setDesktopArea } = useDesktopStore(
     useShallow((s) => ({
       mode: s.isSpaceMode ? "mindscape" : "desktop",
@@ -188,7 +192,7 @@ export function AlfredDesktopShell({
         </LayerErrorBoundary>
 
         {/* Orb Layer */}
-        <OrbLayer style={{ zIndex: Z_INDEX.ORB }} />
+        {isTestMode ? null : <OrbLayer style={{ zIndex: Z_INDEX.ORB }} />}
 
         {/* Overlay Layer (Command Palette, Modals) */}
         <div
@@ -203,7 +207,7 @@ export function AlfredDesktopShell({
         {children}
 
         {/* Onboarding Overlay */}
-        <OnboardingOverlay />
+        {isTestMode ? null : <OnboardingOverlay />}
       </div>
     </ShellErrorBoundary>
   );
