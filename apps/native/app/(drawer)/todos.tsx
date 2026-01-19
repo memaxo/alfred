@@ -12,44 +12,45 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
-import { authClient } from "@/lib/auth-client";
+import { useAuthClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 export default function TodosScreen() {
+  const authClient = useAuthClient();
   const { data: session } = authClient.useSession();
   const [newTodoText, setNewTodoText] = useState("");
 
   const utils = trpc.useUtils();
-  const todosQuery = trpc.todo.getAll.useQuery();
+  const tasksQuery = trpc.task.list.useQuery({ limit: 200 });
   type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
   type RouterInputs = inferRouterInputs<TRPCAppRouter>;
-  type TodoItem = RouterOutputs["todo"]["getAll"][number];
-  type CreateTodoInput = RouterInputs["todo"]["create"];
-  type ToggleTodoInput = RouterInputs["todo"]["toggle"];
-  type DeleteTodoInput = RouterInputs["todo"]["delete"];
-  const todos: TodoItem[] = todosQuery.data ?? [];
+  type TaskItem = RouterOutputs["task"]["list"][number];
+  type CreateTaskInput = RouterInputs["task"]["create"];
+  type UpdateTaskInput = RouterInputs["task"]["update"];
+  type DeleteTaskInput = RouterInputs["task"]["delete"];
+  const tasks: TaskItem[] = tasksQuery.data ?? [];
 
-  const createMutation = trpc.todo.create.useMutation({
+  const createMutation = trpc.task.create.useMutation({
     onSuccess: async () => {
-      await utils.todo.getAll.invalidate();
+      await utils.task.list.invalidate();
       setNewTodoText("");
     },
   });
-  const toggleMutation = trpc.todo.toggle.useMutation({
+  const updateMutation = trpc.task.update.useMutation({
     onSuccess: async () => {
-      await utils.todo.getAll.invalidate();
+      await utils.task.list.invalidate();
     },
   });
-  const deleteMutation = trpc.todo.delete.useMutation({
+  const deleteMutation = trpc.task.delete.useMutation({
     onSuccess: async () => {
-      await utils.todo.getAll.invalidate();
+      await utils.task.list.invalidate();
     },
   });
 
   const handleAddTodo = () => {
     if (newTodoText.trim()) {
-      const input: CreateTodoInput = { text: newTodoText };
+      const input: CreateTaskInput = { title: newTodoText };
       createMutation.mutate(input);
     }
   };
@@ -58,19 +59,22 @@ export default function TodosScreen() {
     return <Redirect href="/(drawer)/" />;
   }
 
-  const handleToggleTodo = (id: number, completed: boolean) => {
-    const input: ToggleTodoInput = { id, completed: !completed };
-    toggleMutation.mutate(input);
+  const handleToggleTodo = (id: string, isCompleted: boolean) => {
+    const input: UpdateTaskInput = {
+      id,
+      status: isCompleted ? "pending" : "completed",
+    };
+    updateMutation.mutate(input);
   };
 
-  const handleDeleteTodo = (id: number) => {
+  const handleDeleteTodo = (id: string) => {
     Alert.alert("Delete Todo", "Are you sure you want to delete this todo?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: () => {
-          const input: DeleteTodoInput = { id };
+          const input: DeleteTaskInput = { id };
           deleteMutation.mutate(input);
         },
       },
@@ -78,7 +82,7 @@ export default function TodosScreen() {
   };
 
   const renderTodosContent = () => {
-    if (todosQuery.isLoading) {
+    if (tasksQuery.isLoading) {
       return (
         <View className="flex justify-center py-8">
           <ActivityIndicator color="#3b82f6" size="large" />
@@ -86,7 +90,7 @@ export default function TodosScreen() {
       );
     }
 
-    if (todos.length === 0) {
+    if (tasks.length === 0) {
       return (
         <Text className="py-8 text-center text-muted-foreground">
           No todos yet. Add one above!
@@ -96,40 +100,43 @@ export default function TodosScreen() {
 
     return (
       <View className="space-y-2">
-        {todos.map((todo) => (
-          <View
-            className="flex-row items-center justify-between rounded-md border border-border bg-background p-3"
-            key={todo.id}
-          >
-            <View className="flex-1 flex-row items-center">
-              <TouchableOpacity
-                className="mr-3"
-                onPress={() => handleToggleTodo(todo.id, todo.completed)}
-              >
-                <Ionicons
-                  color={todo.completed ? "#22c55e" : "#6b7280"}
-                  name={todo.completed ? "checkbox" : "square-outline"}
-                  size={24}
-                />
-              </TouchableOpacity>
-              <Text
-                className={`flex-1 ${
-                  todo.completed
-                    ? "text-muted-foreground line-through"
-                    : "text-foreground"
-                }`}
-              >
-                {todo.text}
-              </Text>
-            </View>
-            <TouchableOpacity
-              className="ml-2 p-1"
-              onPress={() => handleDeleteTodo(todo.id)}
+        {tasks.map((task) => {
+          const isCompleted = task.status === "completed";
+          return (
+            <View
+              className="flex-row items-center justify-between rounded-md border border-border bg-background p-3"
+              key={task.id}
             >
-              <Ionicons color="#ef4444" name="trash-outline" size={20} />
-            </TouchableOpacity>
-          </View>
-        ))}
+              <View className="flex-1 flex-row items-center">
+                <TouchableOpacity
+                  className="mr-3"
+                  onPress={() => handleToggleTodo(task.id, isCompleted)}
+                >
+                  <Ionicons
+                    color={isCompleted ? "#22c55e" : "#6b7280"}
+                    name={isCompleted ? "checkbox" : "square-outline"}
+                    size={24}
+                  />
+                </TouchableOpacity>
+                <Text
+                  className={`flex-1 ${
+                    isCompleted
+                      ? "text-muted-foreground line-through"
+                      : "text-foreground"
+                  }`}
+                >
+                  {task.title}
+                </Text>
+              </View>
+              <TouchableOpacity
+                className="ml-2 p-1"
+                onPress={() => handleDeleteTodo(task.id)}
+              >
+                <Ionicons color="#ef4444" name="trash-outline" size={20} />
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </View>
     );
   };

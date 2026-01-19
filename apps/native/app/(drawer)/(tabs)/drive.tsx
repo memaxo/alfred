@@ -1,6 +1,10 @@
 import type { UIMessage } from "@alfred/type/stream";
+import type { TRPCClient } from "@trpc/client";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppState, Platform, Pressable, Text, View } from "react-native";
+import { useServerUrl, useTrpcClient } from "@/lib/api";
+import { useAuthClient } from "@/lib/auth-client";
 import { setupCarPlay } from "@/lib/carplay";
 import { logError } from "@/lib/devlog";
 import { useColorScheme } from "@/lib/use-color-scheme";
@@ -10,9 +14,11 @@ import {
   registerQueueDrain,
   useVoiceSessionNative,
 } from "@/lib/voice";
+import { getCookieFromAuthClient } from "@/lib/voice/cookie";
 import { ensureForegroundService } from "@/lib/voice/foreground";
 import type { PendingItem } from "@/lib/voice/queue";
-import { trpcClient } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import { trpc } from "@/utils/trpc";
 
 const THREAD_ID = "drive-mode";
 
@@ -38,7 +44,8 @@ function getDrivePalette(isDarkColorScheme: boolean) {
 
 async function processQueueItem(
   item: PendingItem,
-  voice: VoiceSession
+  voice: VoiceSession,
+  trpcClient: TRPCClient<TRPCAppRouter>
 ): Promise<unknown> {
   if (item.kind === "stt") {
     const result = await trpcClient.voice.sttTranscribe.mutate({
@@ -93,16 +100,36 @@ async function processQueueItem(
 }
 
 export default function DriveScreen() {
+  const router = useRouter();
+  const trpcClient = useTrpcClient<TRPCAppRouter>();
+  const authClient = useAuthClient();
+  const { serverUrl } = useServerUrl();
   const { isDarkColorScheme } = useColorScheme();
   const palette = useMemo(
     () => getDrivePalette(isDarkColorScheme),
     [isDarkColorScheme]
   );
 
-  const voice = useVoiceSessionNative(trpcClient, { surface: "drive" });
+  const { data: prefs } = trpc.preference.list.useQuery({
+    limit: 100,
+    offset: 0,
+  });
+  const sttChunkSize =
+    (prefs?.find(
+      (p: { key: string; value?: unknown }) => p.key === "voice.stt.chunk_size"
+    )?.value as "fast" | "low" | "medium" | "accurate" | undefined) ??
+    undefined;
+
+  const voice = useVoiceSessionNative(trpcClient, {
+    surface: "drive",
+    getCookie: () => getCookieFromAuthClient(authClient),
+    baseUrl: serverUrl,
+    sttChunkSize,
+  });
   const useStreaming = voice.stream?.supported ?? false;
   const [status, setStatus] = useState<Status>("idle");
   const [reply, setReply] = useState("");
+  const workflowRunId = voice.stream?.workflow?.runId ?? null;
 
   useEffect(() => {
     if (Platform.OS === "android") {
@@ -121,13 +148,13 @@ export default function DriveScreen() {
   const processPendingItem = useCallback(
     async (item: PendingItem): Promise<void> => {
       try {
-        await processQueueItem(item, voice);
+        await processQueueItem(item, voice, trpcClient);
       } catch (error) {
         logError("voice QueueDrain process", error);
         throw error;
       }
     },
-    [voice]
+    [trpcClient, voice]
   );
 
   useEffect(() => {
@@ -360,6 +387,28 @@ export default function DriveScreen() {
           {reply || "Awaiting reply"}
         </Text>
       </View>
+
+      {workflowRunId ? (
+        <View
+          className={`mt-6 w-full rounded-2xl border ${palette.cardBorder} ${palette.cardBg} p-4`}
+        >
+          <Text className={`font-semibold text-sm ${palette.text}`}>
+            Workflow ready
+          </Text>
+          <Text className={`mt-1 text-xs ${palette.subtle}`}>
+            Run ID: {workflowRunId.slice(-8)}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            className="mt-3 rounded-xl bg-emerald-600 px-4 py-3"
+            onPress={() => router.push(`/workflows/${workflowRunId}`)}
+          >
+            <Text className="text-center font-semibold text-sm text-white">
+              Open workflow details
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
       {voice.stream?.supported ? (
         <View
           className={`mt-8 w-full rounded-2xl border ${palette.cardBorder} ${palette.cardBg} p-4`}

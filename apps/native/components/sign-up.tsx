@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { authClient } from "@/lib/auth-client";
+import { useAuthClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 
 function errorText(value: unknown): string {
@@ -25,6 +25,7 @@ function errorText(value: unknown): string {
 }
 
 export function SignUp() {
+  const authClient = useAuthClient();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

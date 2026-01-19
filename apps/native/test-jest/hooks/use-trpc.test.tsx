@@ -1,5 +1,4 @@
 import { renderHook } from "@testing-library/react-native";
-import type React from "react";
 import {
   useBookmarkList,
   useNoteCreate,
@@ -7,9 +6,8 @@ import {
   useReminderList,
   useTimerActive,
 } from "@/hooks/use-trpc";
-import { TestProviders } from "../utils/test-helpers";
 
-// Mock tRPC
+// Mock tRPC (these hooks are pure wrappers around `trpc.*.useQuery/useMutation`)
 jest.mock("@/utils/trpc", () => ({
   trpc: {
     note: {
@@ -31,10 +29,6 @@ jest.mock("@/utils/trpc", () => ({
 import { trpc } from "@/utils/trpc";
 
 describe("tRPC hooks", () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TestProviders>{children}</TestProviders>
-  );
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -44,7 +38,7 @@ describe("tRPC hooks", () => {
     (trpc.note.list.useQuery as jest.Mock).mockReturnValue(mockQuery);
 
     const { result } = renderHook(() => useNoteList({ limit: 10, offset: 0 }), {
-      wrapper,
+      // No providers needed: trpc hooks are mocked.
     });
 
     expect(trpc.note.list.useQuery).toHaveBeenCalledWith({
@@ -58,7 +52,7 @@ describe("tRPC hooks", () => {
     const mockMutation = { mutate: jest.fn(), isPending: false };
     (trpc.note.create.useMutation as jest.Mock).mockReturnValue(mockMutation);
 
-    const { result } = renderHook(() => useNoteCreate(), { wrapper });
+    const { result } = renderHook(() => useNoteCreate());
 
     expect(trpc.note.create.useMutation).toHaveBeenCalled();
     expect(result.current).toEqual(mockMutation);
@@ -66,19 +60,19 @@ describe("tRPC hooks", () => {
 
   it("useReminderList should call trpc.remind.list.useQuery", () => {
     (trpc.remind.list.useQuery as jest.Mock).mockReturnValue({ data: [] });
-    renderHook(() => useReminderList({ limit: 10, offset: 0 }), { wrapper });
+    renderHook(() => useReminderList({ limit: 10, offset: 0 }));
     expect(trpc.remind.list.useQuery).toHaveBeenCalled();
   });
 
   it("useTimerActive should call trpc.timer.active.useQuery", () => {
     (trpc.timer.active.useQuery as jest.Mock).mockReturnValue({ data: [] });
-    renderHook(() => useTimerActive(), { wrapper });
+    renderHook(() => useTimerActive());
     expect(trpc.timer.active.useQuery).toHaveBeenCalled();
   });
 
   it("useBookmarkList should call trpc.book.list.useQuery", () => {
     (trpc.book.list.useQuery as jest.Mock).mockReturnValue({ data: [] });
-    renderHook(() => useBookmarkList({ limit: 100, offset: 0 }), { wrapper });
+    renderHook(() => useBookmarkList({ limit: 100, offset: 0 }));
     expect(trpc.book.list.useQuery).toHaveBeenCalled();
   });
 });

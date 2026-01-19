@@ -1,9 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
-import type React from "react";
 import { useNoteCreate, useNoteDelete, useNoteList } from "@/hooks/use-trpc";
 import { trpc } from "@/utils/trpc";
 import { createMockNote } from "../utils/mock-factories";
-import { TestProviders } from "../utils/test-helpers";
 
 // Mock tRPC
 jest.mock("@/utils/trpc", () => ({
@@ -17,10 +15,6 @@ jest.mock("@/utils/trpc", () => ({
 }));
 
 describe("tRPC Integration Flows", () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TestProviders>{children}</TestProviders>
-  );
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -46,9 +40,7 @@ describe("tRPC Integration Flows", () => {
       });
 
       // 1. Create note
-      const { result: createResult } = renderHook(() => useNoteCreate(), {
-        wrapper,
-      });
+      const { result: createResult } = renderHook(() => useNoteCreate());
       act(() => {
         createResult.current.mutate({
           title: "Integration Test",
@@ -59,9 +51,8 @@ describe("tRPC Integration Flows", () => {
       expect(mutate).toHaveBeenCalled();
 
       // 2. Fetch list
-      const { result: listResult } = renderHook(
-        () => useNoteList({ limit: 10, offset: 0 }),
-        { wrapper }
+      const { result: listResult } = renderHook(() =>
+        useNoteList({ limit: 10, offset: 0 })
       );
 
       await waitFor(() => {
@@ -77,7 +68,7 @@ describe("tRPC Integration Flows", () => {
         isPending: false,
       });
 
-      const { result } = renderHook(() => useNoteDelete(), { wrapper });
+      const { result } = renderHook(() => useNoteDelete());
 
       act(() => {
         result.current.mutate({ id: "123" });

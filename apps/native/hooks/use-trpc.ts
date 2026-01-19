@@ -168,6 +168,13 @@ export function useWorkflowGet(input: WorkflowRouterInputs["get"]) {
   return trpc.workflow.get.useQuery(input);
 }
 
+export function useWorkflowCompilationGet(
+  input: WorkflowRouterInputs["compilation"]["get"],
+  options?: Parameters<typeof trpc.workflow.compilation.get.useQuery>[1]
+) {
+  return trpc.workflow.compilation.get.useQuery(input, options);
+}
+
 export function useWorkflowResume(
   options?: Parameters<typeof trpc.workflow.resume.useMutation>[0]
 ) {

@@ -10,6 +10,18 @@ export default function SettingsLayout() {
   return (
     <Stack>
       <Stack.Screen
+        name="index"
+        options={{
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="server"
+        options={{
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
         name="preferences"
         options={{
           presentation: "card",

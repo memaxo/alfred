@@ -5,9 +5,11 @@ import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { fetch as expoFetch } from "expo/fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useServerUrl, useTrpcClient } from "@/lib/api";
+import { useAuthClient } from "@/lib/auth-client";
+import { getCookieFromAuthClient } from "@/lib/voice/cookie";
 import { useVoiceSessionNative } from "@/lib/voice/session";
-import { trpcClient } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
 
 export type AgentType = "assistant" | "orchestrator";
 
@@ -20,6 +22,9 @@ function conversationStorageKey(
 }
 
 export function useChatLogic() {
+  const authClient = useAuthClient();
+  const { serverUrl } = useServerUrl();
+  const trpcClient = useTrpcClient<TRPCAppRouter>();
   const [currentAgent, setCurrentAgent] = useState<AgentType>("assistant");
   const { data: session } = authClient.useSession();
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -31,13 +36,13 @@ export function useChatLogic() {
   type FetchArgs = Parameters<typeof globalThis.fetch>;
 
   const apiEndpoint = useMemo(
-    () => `${process.env.EXPO_PUBLIC_SERVER_URL}/api/${currentAgent}`,
-    [currentAgent]
+    () => `${serverUrl ?? ""}/api/${currentAgent}`,
+    [currentAgent, serverUrl]
   );
 
   const headers = useMemo(() => {
     const h: Record<string, string> = {};
-    const cookies = authClient.getCookie();
+    const cookies = getCookieFromAuthClient(authClient);
     if (cookies) {
       h.Cookie = cookies;
     }
@@ -50,8 +55,10 @@ export function useChatLogic() {
       api: apiEndpoint,
       headers,
       fetch: (async (input: FetchArgs[0], init?: FetchArgs[1]) => {
-        const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
-        const storageKey = conversationStorageKey(agentAtTime, serverUrl);
+        const storageKey = conversationStorageKey(
+          agentAtTime,
+          serverUrl ?? undefined
+        );
 
         const updatedInit = (() => {
           if (!init?.body || typeof init.body !== "string") {
@@ -101,8 +108,10 @@ export function useChatLogic() {
   // Hydration
   useEffect(() => {
     const hydrate = async () => {
-      const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
-      const storageKey = conversationStorageKey(currentAgent, serverUrl);
+      const storageKey = conversationStorageKey(
+        currentAgent,
+        serverUrl ?? undefined
+      );
 
       try {
         const storedId = await AsyncStorage.getItem(storageKey);
@@ -115,7 +124,7 @@ export function useChatLogic() {
         setConversationId(storedId);
         conversationIdRef.current = storedId;
 
-        const cookies = authClient.getCookie();
+        const cookies = getCookieFromAuthClient(authClient);
         if (!(cookies && serverUrl)) {
           return;
         }
@@ -141,9 +150,13 @@ export function useChatLogic() {
     };
 
     void hydrate();
-  }, [currentAgent, authClient.getCookie()]);
+  }, [currentAgent, serverUrl]);
 
-  const voice = useVoiceSessionNative(trpcClient, { surface: "native" });
+  const voice = useVoiceSessionNative(trpcClient, {
+    surface: "native",
+    getCookie: () => getCookieFromAuthClient(authClient),
+    baseUrl: serverUrl,
+  });
 
   // Voice transcript should send exactly once per "idle" cycle.
   // We reset the guard whenever the stream leaves idle.
@@ -179,13 +192,15 @@ export function useChatLogic() {
   }, [voice]);
 
   const clearMessages = useCallback(() => {
-    const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
-    const storageKey = conversationStorageKey(currentAgent, serverUrl);
+    const storageKey = conversationStorageKey(
+      currentAgent,
+      serverUrl ?? undefined
+    );
     void AsyncStorage.removeItem(storageKey);
     setConversationId(null);
     conversationIdRef.current = null;
     chat.setMessages([]);
-  }, [chat, currentAgent]);
+  }, [chat, currentAgent, serverUrl]);
 
   const handleSend = useCallback(
     (text: string) => {

@@ -32,6 +32,7 @@
     "@alfred/voice": "workspace:*",
     "@better-auth/expo": "1.4.7",
     "@better-auth/passkey": "1.4.7",
+    "@config-plugins/react-native-webrtc": "^13.0.0",
     "@expo/vector-icons": "^15.0.2",
     "@g4rb4g3/react-native-carplay": "^2.7.5",
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -82,7 +83,9 @@
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-web": "^0.21.0",
-    "react-native-worklets": "^0.5.1"
+    "react-native-webrtc": "^124.0.7",
+    "react-native-worklets": "^0.5.1",
+    "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@babel/core": "^7.26.10",

@@ -1,15 +1,32 @@
-import { useChat as useChatAi } from "@ai-sdk/react";
 import { act, renderHook } from "@testing-library/react-native";
-import { useChatLogic } from "@/hooks/use-chat-logic";
-import { useVoiceSessionNative } from "@/lib/voice/session";
 
-jest.mock("@ai-sdk/react", () => ({
-  useChat: jest.fn(),
+jest.mock("@ai-sdk/react", () => ({ useChat: jest.fn() }));
+jest.mock("@/lib/voice/session", () => ({ useVoiceSessionNative: jest.fn() }));
+
+jest.mock("@/lib/auth-client", () => ({
+  useAuthClient: () => ({
+    useSession: () => ({ data: null }),
+    getCookie: () => "",
+  }),
 }));
 
-jest.mock("@/lib/voice/session", () => ({
-  useVoiceSessionNative: jest.fn(),
+jest.mock("@/lib/api", () => ({
+  useServerUrl: () => ({ serverUrl: "https://example.com" }),
+  useTrpcClient: () => ({}),
 }));
+
+const { useChat: useChatAi } = require("@ai-sdk/react") as {
+  useChat: jest.Mock;
+};
+const { useVoiceSessionNative } = require("@/lib/voice/session") as {
+  useVoiceSessionNative: jest.Mock;
+};
+
+import type { useChatLogic as UseChatLogic } from "@/hooks/use-chat-logic";
+
+const { useChatLogic } = require("@/hooks/use-chat-logic") as {
+  useChatLogic: typeof UseChatLogic;
+};
 
 type VoiceStreamMock = {
   status:
@@ -35,8 +52,8 @@ describe("useChatLogic", () => {
       stop: async () => {},
     };
 
-    (useVoiceSessionNative as jest.Mock).mockReturnValue({ stream });
-    (useChatAi as jest.Mock).mockReturnValue({
+    useVoiceSessionNative.mockReturnValue({ stream });
+    useChatAi.mockReturnValue({
       messages: [],
       sendMessage: jest.fn(),
       status: "idle",
@@ -57,15 +74,14 @@ describe("useChatLogic", () => {
 
   it("should update agent when setAgent is called", () => {
     const stop = jest.fn();
-    const setMessages = jest.fn();
-    (useChatAi as jest.Mock).mockReturnValue({
+    useChatAi.mockReturnValue({
       messages: [],
       sendMessage: jest.fn(),
       status: "idle",
       error: null,
       stop,
       regenerate: jest.fn(),
-      setMessages,
+      setMessages: jest.fn(),
     });
 
     const { result } = renderHook(() => useChatLogic());
@@ -75,16 +91,15 @@ describe("useChatLogic", () => {
     });
 
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(setMessages).toHaveBeenCalledWith([]);
     expect(result.current.currentAgent).toBe("orchestrator");
     expect(useChatAi).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: "orchestrator" })
+      expect.objectContaining({ id: "chat-orchestrator" })
     );
   });
 
   it("should call handleSend when sendMessage is called", () => {
     const sendMessage = jest.fn();
-    (useChatAi as jest.Mock).mockReturnValue({
+    useChatAi.mockReturnValue({
       messages: [],
       sendMessage,
       status: "idle",
@@ -105,7 +120,7 @@ describe("useChatLogic", () => {
 
   it("should send a voice transcript exactly once per idle cycle", () => {
     const sendMessage = jest.fn();
-    (useChatAi as jest.Mock).mockReturnValue({
+    useChatAi.mockReturnValue({
       messages: [],
       sendMessage,
       status: "idle",
@@ -121,7 +136,7 @@ describe("useChatLogic", () => {
       start: async () => {},
       stop: async () => {},
     };
-    (useVoiceSessionNative as jest.Mock).mockReturnValue({ stream });
+    useVoiceSessionNative.mockReturnValue({ stream });
 
     const { rerender } = renderHook(
       (_props: { tick: number }) => useChatLogic(),

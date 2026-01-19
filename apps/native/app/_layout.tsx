@@ -19,9 +19,9 @@ import { OnboardingScreen } from "@/components/onboarding/onboarding-screen";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { analytics } from "@/lib/analytics";
 import { setAndroidNavigationBar } from "@/lib/android-navigation-bar";
-import { authClient } from "@/lib/auth-client";
+import { ApiProvider, useAuthClient, useTrpcClient } from "@/lib/api";
 import { NAV_THEME } from "@/lib/constants";
-import { registerForPushNotificationsAsync } from "@/lib/notifications";
+import { registerForPushNotificationsWithClient } from "@/lib/notifications";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import {
   checkForUpdates,
@@ -29,7 +29,8 @@ import {
   promptUpdate,
   reloadApp,
 } from "@/lib/version-check";
-import { queryClient, trpc, trpcClient } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import { queryClient } from "@/utils/trpc";
 
 const LIGHT_THEME: Theme = {
   ...DefaultTheme,
@@ -45,6 +46,18 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ApiProvider>
+          <RootLayoutInner />
+        </ApiProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}
+
+function RootLayoutInner() {
   const hasMounted = useRef(false);
   const _router = useRouter();
   const { colorScheme, isDarkColorScheme } = useColorScheme();
@@ -54,7 +67,10 @@ export default function RootLayout() {
     isLoading: onboardingLoading,
     completeOnboarding,
   } = useOnboarding();
+  const authClient = useAuthClient();
+  const trpcClient = useTrpcClient<TRPCAppRouter>();
   const { data: session } = authClient.useSession();
+  const testNavRef = useRef(false);
 
   // Initialize analytics when user is logged in
   useEffect(() => {
@@ -71,8 +87,49 @@ export default function RootLayout() {
 
   // Register for push notifications on mount
   React.useEffect(() => {
-    registerForPushNotificationsAsync().catch((_error) => {});
-  }, []);
+    if (!session?.user) {
+      return;
+    }
+    registerForPushNotificationsWithClient(trpcClient).catch((_error) => {});
+  }, [session?.user, trpcClient]);
+
+  // Deterministic UI-test route: start in Call screen when enabled.
+  useEffect(() => {
+    const uiTestMode = (() => {
+      if (process.env.EXPO_PUBLIC_TEST_MODE === "1") {
+        return true;
+      }
+      if (Platform.OS !== "ios") {
+        return false;
+      }
+      // XCUITest can pass `-ALFRED_TEST_MODE 1` as a launch argument,
+      // which iOS exposes via NSUserDefaults.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { NativeModules } = require("react-native") as {
+          NativeModules?: {
+            SettingsManager?: { settings?: Record<string, unknown> };
+          };
+        };
+        const raw = NativeModules?.SettingsManager?.settings?.ALFRED_TEST_MODE;
+        return raw === "1" || raw === "true";
+      } catch {
+        return false;
+      }
+    })();
+
+    if (!uiTestMode) {
+      return;
+    }
+    if (!session?.user?.id) {
+      return;
+    }
+    if (testNavRef.current) {
+      return;
+    }
+    testNavRef.current = true;
+    _router.replace("/(drawer)/call");
+  }, [session?.user?.id, _router]);
 
   // Check for app updates on mount
   React.useEffect(() => {
@@ -135,32 +192,20 @@ export default function RootLayout() {
     );
   }
 
-  // Extract tRPC provider to avoid JSX syntax issues with type assertion
-  const TrpcProvider = trpc.Provider;
-
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TrpcProvider client={trpcClient} queryClient={queryClient}>
-          <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-            <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-            <OfflineBanner />
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <Stack>
-                <Stack.Screen
-                  name="(drawer)"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="modal"
-                  options={{ title: "Modal", presentation: "modal" }}
-                />
-              </Stack>
-            </GestureHandlerRootView>
-          </ThemeProvider>
-        </TrpcProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+      <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
+      <OfflineBanner />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack>
+          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="modal"
+            options={{ title: "Modal", presentation: "modal" }}
+          />
+        </Stack>
+      </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }
 

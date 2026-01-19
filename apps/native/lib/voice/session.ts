@@ -1,5 +1,12 @@
+import { logger } from "@alfred/logger";
 import { markVoice } from "@alfred/metrics/performance";
-import type { VoiceStreamCodec } from "@alfred/type/voice";
+import type { UIMessage } from "@alfred/type/stream";
+import type {
+  VoiceAssistantRaw,
+  VoiceStreamCodec,
+  VoiceStreamServerEvent,
+} from "@alfred/type/voice";
+import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
 import type { PlatformAdapter } from "@alfred/voice";
 import { wrapPCM16AsWavBase64 } from "@alfred/voice/audio";
 import { createVoiceSession, VoiceSessionError } from "@alfred/voice/session";
@@ -15,6 +22,10 @@ import type {
 import { Audio } from "expo-av";
 import { deleteAsync, EncodingType, readAsStringAsync } from "expo-file-system";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppState, NativeModules, Platform } from "react-native";
+import type RnMediaStream from "react-native-webrtc/lib/typescript/MediaStream";
+import type RnDataChannel from "react-native-webrtc/lib/typescript/RTCDataChannel";
+import type RnPeerConnection from "react-native-webrtc/lib/typescript/RTCPeerConnection";
 import { ExpoCapture } from "./capture";
 import { configureAudioSession } from "./config";
 import { getVoiceStreamUrl } from "./env";
@@ -27,14 +38,23 @@ type MutationAdapter = {
 };
 
 type MutationInvoker = (path: string, input: unknown) => Promise<unknown>;
+type QueryInvoker = (path: string, input?: unknown) => Promise<unknown>;
 
 function hasMutationInvoker(
   value: unknown
 ): value is { mutation: MutationInvoker } {
   return (
-    typeof value === "object" &&
+    (typeof value === "object" || typeof value === "function") &&
     value !== null &&
     typeof (value as { mutation?: unknown }).mutation === "function"
+  );
+}
+
+function hasQueryInvoker(value: unknown): value is { query: QueryInvoker } {
+  return (
+    (typeof value === "object" || typeof value === "function") &&
+    value !== null &&
+    typeof (value as { query?: unknown }).query === "function"
   );
 }
 
@@ -42,7 +62,7 @@ function hasMutate(
   value: unknown
 ): value is { mutate: (input: unknown) => Promise<unknown> } {
   return (
-    typeof value === "object" &&
+    (typeof value === "object" || typeof value === "function") &&
     value !== null &&
     typeof (value as { mutate?: unknown }).mutate === "function"
   );
@@ -57,24 +77,29 @@ function resolveMutation(
   path: string,
   input: unknown
 ): Promise<unknown> {
-  if (hasMutationInvoker(rawClient)) {
-    return rawClient.mutation(path, input);
-  }
-
   const segments = path.split(".");
   let cursor: unknown = rawClient;
 
   for (const segment of segments) {
-    if (isRecord(cursor) && segment in cursor) {
-      cursor = cursor[segment];
-    } else {
+    if (cursor === null || cursor === undefined) {
       cursor = null;
       break;
     }
+    const t = cursor as unknown as Record<string, unknown>;
+    const next = t[segment];
+    if (next === undefined) {
+      cursor = null;
+      break;
+    }
+    cursor = next;
   }
 
   if (hasMutate(cursor)) {
     return cursor.mutate(input);
+  }
+
+  if (hasMutationInvoker(rawClient)) {
+    return rawClient.mutation(path, input);
   }
 
   throw new Error(`tRPC client missing mutation handler for ${path}`);
@@ -84,7 +109,7 @@ function hasQuery(
   value: unknown
 ): value is { query: (input: unknown) => Promise<unknown> } {
   return (
-    typeof value === "object" &&
+    (typeof value === "object" || typeof value === "function") &&
     value !== null &&
     typeof (value as { query?: unknown }).query === "function"
   );
@@ -99,16 +124,24 @@ function resolveQuery(
   let cursor: unknown = rawClient;
 
   for (const segment of segments) {
-    if (cursor && typeof cursor === "object" && segment in cursor) {
-      cursor = (cursor as Record<string, unknown>)[segment];
-    } else {
+    if (cursor === null || cursor === undefined) {
       cursor = null;
       break;
     }
+    const t = cursor as unknown as Record<string, unknown>;
+    const next = t[segment];
+    if (next === undefined) {
+      cursor = null;
+      break;
+    }
+    cursor = next;
   }
 
   if (hasQuery(cursor)) {
     return cursor.query(input);
+  }
+  if (hasQueryInvoker(rawClient)) {
+    return rawClient.query(path, input);
   }
   throw new Error(`tRPC client missing query handler for ${path}`);
 }
@@ -123,6 +156,21 @@ function toMutationAdapter(trpc: unknown): MutationAdapter {
 type VoiceSessionNativeOptions = {
   mode?: "classic" | "s2s";
   surface?: VoiceSessionSurface;
+  /**
+   * Cookie accessor used for authenticated WebSocket streaming.
+   * Required on native where cookies are not automatically attached to WS.
+   */
+  getCookie?: () => string | null;
+  /**
+   * Base URL for voice streaming WebSocket resolution.
+   * If omitted, falls back to `EXPO_PUBLIC_SERVER_URL` (build-time default).
+   */
+  baseUrl?: string | null;
+  /**
+   * Optional Nemotron streaming chunk size (latency/accuracy).
+   * If omitted, the server default is used.
+   */
+  sttChunkSize?: "fast" | "low" | "medium" | "accurate";
   speechDefaults?: Partial<
     Pick<
       SpeechToSpeechRequest,
@@ -142,8 +190,12 @@ type StreamStatus =
 type NativeStreamState = {
   supported: boolean;
   status: StreamStatus;
+  transport: "webrtc" | "ws" | null;
   transcript: string;
   assistantText: string;
+  assistantRaw: VoiceAssistantRaw | null;
+  uiMessages: UIMessage[];
+  workflow: { runId: string; planId?: string } | null;
   vadConfidence: number | null;
   autoStopReason: string | null;
   error: string | null;
@@ -153,6 +205,7 @@ type NativeStreamState = {
 const STREAM_CHUNK_MS = 1200;
 const STREAM_TIMEOUT_MS = 20_000;
 const STREAM_CAPTURE_MIME = "audio/m4a";
+const WEBRTC_POLL_MS = 200;
 
 function generateVoiceSessionId() {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } })
@@ -185,10 +238,123 @@ function decodeBase64ToBytes(value: string): Uint8Array {
   return bytes;
 }
 
+type RtcIceServer = {
+  credential?: string;
+  url?: string;
+  urls?: string | string[];
+  username?: string;
+};
+
+type EventTargetLike = {
+  addEventListener?: (type: string, listener: (event: unknown) => void) => void;
+  [key: string]: unknown;
+};
+
+function addEvt(
+  target: unknown,
+  type: string,
+  listener: (event: unknown) => void
+) {
+  if (!target) {
+    return;
+  }
+  const t = target as unknown as EventTargetLike;
+  if (typeof t.addEventListener === "function") {
+    t.addEventListener(type, listener);
+    return;
+  }
+  // Fallback for implementations that only expose `on<Event>` handlers.
+  const prop = `on${type}` as const;
+  (t as unknown as Record<string, unknown>)[prop] = listener as unknown;
+}
+
+function parseIceServers(value: unknown): RtcIceServer[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const out: RtcIceServer[] = [];
+  for (const item of value) {
+    if (!isRecord(item)) {
+      continue;
+    }
+    const urls = item.urls;
+    const url = item.url;
+    const record: RtcIceServer = {};
+    if (
+      typeof urls === "string" ||
+      (Array.isArray(urls) && urls.every((u) => typeof u === "string"))
+    ) {
+      record.urls = urls;
+    } else if (typeof url === "string") {
+      record.url = url;
+    } else {
+      continue;
+    }
+    if (typeof item.username === "string") {
+      record.username = item.username;
+    }
+    if (typeof item.credential === "string") {
+      record.credential = item.credential;
+    }
+    out.push(record);
+  }
+  return out;
+}
+
+function parseIceCandidateInfo(value: unknown): {
+  candidate: string;
+  sdpMLineIndex?: number | null;
+  sdpMid?: string | null;
+} | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const candidate = value.candidate;
+  if (typeof candidate !== "string" || candidate.length === 0) {
+    return null;
+  }
+  const sdpMLineIndex = value.sdpMLineIndex;
+  const sdpMid = value.sdpMid;
+  return {
+    candidate,
+    sdpMLineIndex:
+      typeof sdpMLineIndex === "number" || sdpMLineIndex === null
+        ? sdpMLineIndex
+        : undefined,
+    sdpMid: typeof sdpMid === "string" || sdpMid === null ? sdpMid : undefined,
+  };
+}
+
 export function useVoiceSessionNative(
   trpc: unknown,
   options?: VoiceSessionNativeOptions
 ) {
+  const webrtcEnabled = (() => {
+    if (Platform.OS === "web") {
+      return false;
+    }
+    // Prefer WebRTC on local dev servers (test-mode backend).
+    if (options?.baseUrl) {
+      try {
+        const url = new URL(options.baseUrl);
+        if (url.hostname === "127.0.0.1" || url.hostname === "localhost") {
+          return true;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (process.env.EXPO_PUBLIC_VOICE_WEBRTC === "1") {
+      return true;
+    }
+    if (Platform.OS !== "ios") {
+      return false;
+    }
+    const settings = (NativeModules as unknown as { SettingsManager?: unknown })
+      .SettingsManager as { settings?: Record<string, unknown> } | undefined;
+    const raw = settings?.settings?.ALFRED_VOICE_WEBRTC;
+    return raw === "1" || raw === "true";
+  })();
   const captureRef = useMemo(() => ({ current: new ExpoCapture() }), []);
   const mutationAdapter = useMemo(() => toMutationAdapter(trpc), [trpc]);
   const client = useMemo(
@@ -209,13 +375,9 @@ export function useVoiceSessionNative(
     }),
     [options]
   );
-  const preferredStreamCodec = useMemo<VoiceStreamCodec>(() => {
-    const format = options?.speechDefaults?.ttsFormat ?? "mp3";
-    if (format === "opus" || format === "wav") {
-      return format;
-    }
-    return "mp3";
-  }, [options]);
+  // Streaming playback on native currently expects PCM16 (wrapped as WAV).
+  // Keep streaming codec fixed to "pcm" until we add compressed-audio playback.
+  const preferredStreamCodec = useMemo<VoiceStreamCodec>(() => "pcm", []);
 
   const adapter: PlatformAdapter = useMemo(
     () => ({
@@ -233,12 +395,16 @@ export function useVoiceSessionNative(
     [adapter, client]
   );
 
-  const streamUrlRef = useRef(getVoiceStreamUrl());
+  const streamUrlRef = useRef(getVoiceStreamUrl(options?.baseUrl ?? null));
   const [streamState, setStreamState] = useState<NativeStreamState>({
-    supported: Boolean(streamUrlRef.current),
+    supported: Boolean(streamUrlRef.current) || webrtcEnabled,
     status: "idle",
+    transport: null,
     transcript: "",
     assistantText: "",
+    assistantRaw: null,
+    uiMessages: [],
+    workflow: null,
     vadConfidence: null,
     autoStopReason: null,
     error: null,
@@ -250,12 +416,19 @@ export function useVoiceSessionNative(
   );
 
   const streamClientRef = useRef<VoiceStreamClient | null>(null);
+  const transportRef = useRef<"webrtc" | "ws" | null>(null);
   const streamingActiveRef = useRef(false);
   const streamingStopRef = useRef(false);
   const streamingMutedRef = useRef(false);
   const currentRecordingRef = useRef<Audio.Recording | null>(null);
   const playbackQueueRef = useRef<string[]>([]);
   const playbackRunningRef = useRef(false);
+  const playbackAbortRef = useRef<AbortController | null>(null);
+
+  const webrtcPcRef = useRef<unknown>(null);
+  const webrtcDcRef = useRef<unknown>(null);
+  const webrtcPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const webrtcLocalStreamRef = useRef<unknown>(null);
   const syncSessionInfo = useCallback(
     (snapshot: VoiceSessionDescriptor | null) => {
       if (snapshot?.id) {
@@ -387,12 +560,12 @@ export function useVoiceSessionNative(
       : undefined;
 
   useEffect(() => {
-    streamUrlRef.current = getVoiceStreamUrl();
+    streamUrlRef.current = getVoiceStreamUrl(options?.baseUrl ?? null);
     setStreamState((prev) => ({
       ...prev,
-      supported: Boolean(streamUrlRef.current),
+      supported: Boolean(streamUrlRef.current) || webrtcEnabled,
     }));
-  }, []);
+  }, [options?.baseUrl]);
 
   useEffect(() => {
     refreshSessionInfo().catch(() => {
@@ -408,10 +581,14 @@ export function useVoiceSessionNative(
     }
     playbackRunningRef.current = true;
     try {
+      playbackAbortRef.current?.abort();
+      playbackAbortRef.current = new AbortController();
       while (playbackQueueRef.current.length > 0) {
         const clip = playbackQueueRef.current.shift();
         if (clip) {
-          await playBase64(clip, "audio/wav");
+          await playBase64(clip, "audio/wav", {
+            signal: playbackAbortRef.current.signal,
+          });
         }
       }
     } finally {
@@ -443,6 +620,9 @@ export function useVoiceSessionNative(
           error: null,
           transcript: "",
           assistantText: "",
+          assistantRaw: null,
+          uiMessages: [],
+          workflow: null,
           autoStopReason: null,
         }));
         sessionIdRef.current = event.sessionId;
@@ -473,10 +653,26 @@ export function useVoiceSessionNative(
         }));
         void stopStreamingCapture();
       },
-      onAssistantMessage: (event: { text: string }) => {
+      onAssistantMessage: (event: { text: string; raw?: unknown }) => {
+        const parsed =
+          event.raw === undefined ? null : parseVoiceAssistantRaw(event.raw);
+        const assistantRaw = parsed?.ok ? parsed.value : null;
+        const runId = assistantRaw?.meta?.runId;
+        const planId = assistantRaw?.meta?.planId;
+        const workflow =
+          typeof runId === "string" && runId.length > 0
+            ? {
+                runId,
+                planId: typeof planId === "string" ? planId : undefined,
+              }
+            : null;
+
         setStreamState((prev) => ({
           ...prev,
           assistantText: event.text,
+          assistantRaw,
+          uiMessages: assistantRaw?.uiMessages ?? [],
+          workflow,
         }));
       },
       onTtsChunk: (event: { audioBase64: string }) => {
@@ -491,11 +687,7 @@ export function useVoiceSessionNative(
       onInterrupt: () => {
         // Clear any queued playback
         playbackQueueRef.current = [];
-        // If we have an active audio object (how Expo handles it?),
-        // playBase64 doesn't return a handle to stop.
-        // It's fire-and-forget in the current implementation.
-        // We would need to refactor playBase64 to return sound object to stop it.
-        // For now, we just clear the queue.
+        playbackAbortRef.current?.abort();
         setStreamState((prev) => ({
           ...prev,
           status: "recording", // Resume listening state
@@ -519,6 +711,293 @@ export function useVoiceSessionNative(
     [enqueuePlayback, stopStreamingCapture]
   );
 
+  const handleRealtimeEvent = useCallback(
+    (event: VoiceStreamServerEvent) => {
+      switch (event._) {
+        case "ready":
+        case "pong":
+          return;
+        case "session_started":
+          logger.info("voice_webrtc_session_started", {
+            sessionId: event.sessionId,
+          });
+          streamHandlers.onSessionStarted({ sessionId: event.sessionId });
+          return;
+        case "partial_transcript":
+          streamHandlers.onPartialTranscript({ text: event.text });
+          return;
+        case "final_transcript":
+          streamHandlers.onFinalTranscript({ text: event.text });
+          return;
+        case "vad_state":
+          streamHandlers.onVadState({
+            vadConfidence: event.vadConfidence ?? null,
+          });
+          return;
+        case "auto_stop":
+          streamHandlers.onAutoStop({ reason: event.reason });
+          return;
+        case "assistant_message":
+          streamHandlers.onAssistantMessage({
+            text: event.text,
+            raw: event.raw,
+          });
+          return;
+        case "tts_complete":
+          streamHandlers.onTtsComplete();
+          return;
+        case "interrupt":
+          streamHandlers.onInterrupt();
+          return;
+        case "status":
+          streamHandlers.onStatus({ state: event.state as StreamStatus });
+          return;
+        case "error":
+          streamHandlers.onError({ message: event.message });
+          return;
+        // WebRTC uses RTP audio instead of `tts_chunk`.
+        case "tts_chunk":
+          return;
+      }
+    },
+    [streamHandlers]
+  );
+
+  const startWebrtcStreaming = useCallback(
+    async (config?: {
+      sttChunkSize?: "fast" | "low" | "medium" | "accurate";
+    }) => {
+      const webrtc = await import("react-native-webrtc");
+      const {
+        RTCPeerConnection,
+        RTCIceCandidate,
+        RTCSessionDescription,
+        mediaDevices,
+      } = webrtc;
+
+      const created = (await resolveMutation(trpc, "voice.webrtcCreate", {
+        surface: sessionSurface,
+      })) as { sessionId: string; iceServers: unknown };
+
+      logger.info("voice_webrtc_create_ok", { sessionId: created.sessionId });
+
+      sessionIdRef.current = created.sessionId;
+      setStreamState((prev) => ({
+        ...prev,
+        status: "connecting",
+        transport: "webrtc",
+        sessionId: created.sessionId,
+      }));
+
+      const pc = new RTCPeerConnection({
+        iceServers: parseIceServers(created.iceServers),
+      });
+      webrtcPcRef.current = pc;
+
+      addEvt(pc, "iceconnectionstatechange", () => {
+        try {
+          logger.info("voice_webrtc_ice_state", {
+            sessionId: created.sessionId,
+            state: (pc as unknown as { iceConnectionState?: unknown })
+              .iceConnectionState,
+          });
+        } catch {
+          // ignore
+        }
+      });
+
+      addEvt(pc, "icecandidate", (ev: unknown) => {
+        if (!isRecord(ev)) {
+          return;
+        }
+        const cand = ev.candidate as
+          | { toJSON?: () => unknown }
+          | null
+          | undefined;
+        if (!cand) {
+          return;
+        }
+        const payload =
+          typeof cand.toJSON === "function" ? cand.toJSON() : cand;
+        void resolveMutation(trpc, "voice.webrtcIce", {
+          sessionId: created.sessionId,
+          candidate: payload,
+        }).catch(() => {});
+      });
+
+      const installDc = (channel: unknown) => {
+        if (!channel) {
+          return;
+        }
+        webrtcDcRef.current = channel;
+        addEvt(channel, "message", (msg: unknown) => {
+          if (!isRecord(msg)) {
+            return;
+          }
+          const data = msg.data;
+          if (typeof data !== "string") {
+            return;
+          }
+          try {
+            const parsed = JSON.parse(data) as VoiceStreamServerEvent;
+            if (
+              parsed &&
+              typeof parsed === "object" &&
+              typeof parsed._ === "string"
+            ) {
+              handleRealtimeEvent(parsed);
+            }
+          } catch {
+            // ignore
+          }
+        });
+        addEvt(channel, "open", () => {
+          logger.info("voice_webrtc_dc_open", { sessionId: created.sessionId });
+          try {
+            (channel as RnDataChannel).send(
+              JSON.stringify({ _: "start", sttChunkSize: config?.sttChunkSize })
+            );
+          } catch {
+            // ignore
+          }
+        });
+      };
+
+      // Offerer creates the DataChannel so the SDP includes it.
+      try {
+        const dc = (
+          pc as unknown as { createDataChannel?: (label: string) => unknown }
+        ).createDataChannel?.("voice-events");
+        if (dc) {
+          installDc(dc);
+        }
+      } catch {
+        // ignore
+      }
+
+      // Back-compat: accept server-created channels (older servers/spikes).
+      addEvt(pc, "datachannel", (ev: unknown) => {
+        if (webrtcDcRef.current) {
+          return;
+        }
+        if (!isRecord(ev)) {
+          return;
+        }
+        const channel = ev.channel;
+        if (!channel) {
+          return;
+        }
+        installDc(channel);
+      });
+
+      const localStream = (await mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      })) as RnMediaStream;
+      webrtcLocalStreamRef.current = localStream;
+      for (const track of localStream.getTracks()) {
+        if (track.kind === "audio") {
+          track.enabled = !streamingMutedRef.current;
+        }
+        pc.addTrack(track, localStream);
+      }
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      logger.info("voice_webrtc_offer_set_local", {
+        sessionId: created.sessionId,
+      });
+      const answer = (await resolveMutation(trpc, "voice.webrtcOffer", {
+        sessionId: created.sessionId,
+        offer: { type: "offer", sdp: pc.localDescription?.sdp ?? offer.sdp },
+      })) as { type: "answer"; sdp: string };
+      await pc.setRemoteDescription(
+        new RTCSessionDescription({ type: "answer", sdp: answer.sdp })
+      );
+      logger.info("voice_webrtc_answer_set_remote", {
+        sessionId: created.sessionId,
+      });
+
+      if (webrtcPollRef.current) {
+        clearInterval(webrtcPollRef.current);
+      }
+      webrtcPollRef.current = setInterval(() => {
+        void (async () => {
+          try {
+            const drained = (await resolveQuery(
+              trpc,
+              "voice.webrtcCandidates",
+              {
+                sessionId: created.sessionId,
+              }
+            )) as { candidates: unknown[] };
+            for (const cand of drained.candidates ?? []) {
+              try {
+                const info = parseIceCandidateInfo(cand);
+                if (info) {
+                  await pc.addIceCandidate(new RTCIceCandidate(info));
+                }
+              } catch {
+                // ignore bad candidates
+              }
+            }
+          } catch {
+            // ignore polling errors
+          }
+        })();
+      }, WEBRTC_POLL_MS);
+    },
+    [handleRealtimeEvent, sessionSurface, trpc]
+  );
+
+  const stopWebrtcStreaming = useCallback(async () => {
+    if (webrtcPollRef.current) {
+      clearInterval(webrtcPollRef.current);
+      webrtcPollRef.current = null;
+    }
+
+    const dc = webrtcDcRef.current as RnDataChannel | null;
+    try {
+      dc?.send(JSON.stringify({ _: "stop", reason: "manual" }));
+    } catch {
+      // ignore
+    }
+    webrtcDcRef.current = null;
+
+    const localStream = webrtcLocalStreamRef.current as RnMediaStream | null;
+    if (localStream) {
+      for (const track of localStream.getTracks()) {
+        track.stop();
+      }
+    }
+    webrtcLocalStreamRef.current = null;
+
+    const pc = webrtcPcRef.current as RnPeerConnection | null;
+    try {
+      pc?.close();
+    } catch {
+      // ignore
+    }
+    webrtcPcRef.current = null;
+
+    try {
+      await resolveMutation(trpc, "voice.webrtcEnd", {
+        sessionId: sessionIdRef.current,
+      });
+    } catch {
+      // ignore
+    }
+
+    setStreamState((prev) => ({
+      ...prev,
+      status: "idle",
+      transport: null,
+      autoStopReason: null,
+      error: null,
+      sessionId: null,
+    }));
+  }, [trpc]);
+
   const ensureStreamClient = useCallback(() => {
     const url = streamUrlRef.current;
     if (!url) {
@@ -527,7 +1006,9 @@ export function useVoiceSessionNative(
     if (streamClientRef.current) {
       return streamClientRef.current;
     }
-    const client = new VoiceStreamClient({ url }, streamHandlers);
+    const cookie = options?.getCookie?.() ?? null;
+    const headers = cookie ? { Cookie: cookie } : undefined;
+    const client = new VoiceStreamClient({ url, headers }, streamHandlers);
     streamClientRef.current = client;
     return client;
   }, [streamHandlers]);
@@ -617,23 +1098,56 @@ export function useVoiceSessionNative(
   );
 
   const startStreaming = useCallback(async () => {
+    setStreamState((prev) => ({
+      ...prev,
+      status: "connecting",
+      transport: webrtcEnabled ? "webrtc" : "ws",
+      transcript: "",
+      assistantText: "",
+      autoStopReason: null,
+      error: null,
+    }));
+
+    if (webrtcEnabled) {
+      try {
+        transportRef.current = "webrtc";
+        await startWebrtcStreaming({
+          sttChunkSize: options?.sttChunkSize,
+        });
+        return;
+      } catch (error) {
+        // Fall back to WebSocket streaming
+        const errorText =
+          error instanceof Error
+            ? [error.message, error.stack].filter(Boolean).join("\n")
+            : typeof error === "string"
+              ? error
+              : "voice_webrtc_failed";
+        setStreamState((prev) => ({
+          ...prev,
+          error: errorText,
+        }));
+        transportRef.current = null;
+      }
+    }
+
     if (!streamUrlRef.current) {
       throw new Error("voice_streaming_unavailable");
     }
     setStreamState((prev) => ({
       ...prev,
       status: "connecting",
-      transcript: "",
-      assistantText: "",
-      autoStopReason: null,
-      error: null,
+      transport: "ws",
     }));
     try {
+      transportRef.current = "ws";
       const client = ensureStreamClient();
       await client.startSession({
         sessionId: sessionIdRef.current,
         surface: sessionSurface,
         codec: preferredStreamCodec,
+        inputMimeType: STREAM_CAPTURE_MIME,
+        sttChunkSize: options?.sttChunkSize,
       });
       void runStreamCapture(client);
     } catch (error) {
@@ -650,9 +1164,20 @@ export function useVoiceSessionNative(
     preferredStreamCodec,
     runStreamCapture,
     sessionSurface,
+    webrtcEnabled,
+    startWebrtcStreaming,
   ]);
 
   const stopStreaming = useCallback(async () => {
+    // Always stop any in-flight playback first so interruptions are deterministic.
+    playbackQueueRef.current = [];
+    playbackAbortRef.current?.abort();
+
+    if (transportRef.current === "webrtc") {
+      await stopWebrtcStreaming();
+      transportRef.current = null;
+      return;
+    }
     setStreamState((prev) => ({
       ...prev,
       status: "processing",
@@ -669,7 +1194,22 @@ export function useVoiceSessionNative(
           error instanceof Error ? error.message : "voice_stream_stop_failed",
       }));
     }
-  }, [stopStreamingCapture]);
+  }, [stopStreamingCapture, stopWebrtcStreaming]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") {
+        return;
+      }
+      if (!streamingActiveRef.current) {
+        return;
+      }
+      void stopStreaming();
+    });
+    return () => {
+      sub.remove();
+    };
+  }, [stopStreaming]);
 
   useEffect(
     () => () => {
@@ -678,8 +1218,9 @@ export function useVoiceSessionNative(
       if (client) {
         void client.close();
       }
+      void stopWebrtcStreaming();
     },
-    [stopStreamingCapture]
+    [stopStreamingCapture, stopWebrtcStreaming]
   );
 
   const startFallback = () => {
@@ -693,23 +1234,51 @@ export function useVoiceSessionNative(
   const streamApi = {
     supported: streamState.supported,
     status: streamState.status,
+    transport: streamState.transport,
     transcript: streamState.transcript,
     assistantText: streamState.assistantText,
+    assistantRaw: streamState.assistantRaw,
+    uiMessages: streamState.uiMessages,
+    workflow: streamState.workflow,
     vadConfidence: streamState.vadConfidence,
     autoStopReason: streamState.autoStopReason,
     error: streamState.error,
     sessionId: streamState.sessionId,
     start: streamState.supported ? startStreaming : startFallback,
     stop: streamState.supported ? stopStreaming : stopFallback,
-    isActive: streamState.status === "recording",
+    isActive: streamState.status !== "idle" && streamState.status !== "error",
     mute: () => {
       streamingMutedRef.current = true;
+      if (transportRef.current === "webrtc") {
+        const local = webrtcLocalStreamRef.current as RnMediaStream | null;
+        for (const track of local?.getTracks?.() ?? []) {
+          if (track.kind === "audio") {
+            track.enabled = false;
+          }
+        }
+      }
     },
     unmute: () => {
       streamingMutedRef.current = false;
+      if (transportRef.current === "webrtc") {
+        const local = webrtcLocalStreamRef.current as RnMediaStream | null;
+        for (const track of local?.getTracks?.() ?? []) {
+          if (track.kind === "audio") {
+            track.enabled = true;
+          }
+        }
+      }
     },
     toggleMute: () => {
       streamingMutedRef.current = !streamingMutedRef.current;
+      if (transportRef.current === "webrtc") {
+        const local = webrtcLocalStreamRef.current as RnMediaStream | null;
+        for (const track of local?.getTracks?.() ?? []) {
+          if (track.kind === "audio") {
+            track.enabled = !streamingMutedRef.current;
+          }
+        }
+      }
       return streamingMutedRef.current;
     },
     get isMuted() {

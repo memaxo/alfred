@@ -4,6 +4,7 @@
  * View workflow details and resume suspended workflows with biometric auth.
  */
 
+import { workflowCompilationSchema } from "@alfred/type/compilation";
 import { Ionicons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -17,7 +18,11 @@ import {
   View,
 } from "react-native";
 import { Container } from "@/components/container";
-import { useWorkflowGet, useWorkflowResume } from "@/hooks/use-trpc";
+import {
+  useWorkflowCompilationGet,
+  useWorkflowGet,
+  useWorkflowResume,
+} from "@/hooks/use-trpc";
 
 export default function WorkflowDetailScreen() {
   const router = useRouter();
@@ -25,6 +30,17 @@ export default function WorkflowDetailScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const workflowQuery = useWorkflowGet({ runId: id ?? "" });
+  const workflow = workflowQuery.data;
+  const isCompletedOrFailed =
+    workflow?.status === "completed" || workflow?.status === "failed";
+  const compilationQuery = useWorkflowCompilationGet(
+    { runId: id ?? "" },
+    { enabled: Boolean(id) && isCompletedOrFailed }
+  );
+  const compilationParsed = workflowCompilationSchema.safeParse(
+    compilationQuery.data
+  );
+  const compilation = compilationParsed.success ? compilationParsed.data : null;
 
   const resumeMutation = useWorkflowResume({
     onSuccess: () => {
@@ -102,7 +118,6 @@ export default function WorkflowDetailScreen() {
     );
   }
 
-  const workflow = workflowQuery.data;
   const isSuspended = workflow?.status === "suspended";
 
   return (
@@ -151,6 +166,96 @@ export default function WorkflowDetailScreen() {
             <Text className="text-foreground">
               {new Date(workflow.created).toLocaleString()}
             </Text>
+          </View>
+        )}
+
+        {isCompletedOrFailed && (
+          <View className="mb-4">
+            <Text className="mb-2 font-semibold text-foreground">
+              Work Compilation
+            </Text>
+            {compilationQuery.isLoading ? (
+              <View className="items-center justify-center py-3">
+                <ActivityIndicator color="#00D9FF" size="small" />
+              </View>
+            ) : compilationQuery.isError ? (
+              <Text className="text-red-500">
+                {compilationQuery.error.message}
+              </Text>
+            ) : compilationQuery.data ? (
+              compilation ? (
+                <View className="gap-3 rounded-xl border border-border bg-card p-4">
+                  <View>
+                    <Text className="mb-1 text-muted-foreground text-xs">
+                      Summary
+                    </Text>
+                    <Text className="text-foreground">
+                      {compilation.summaryText ?? "—"}
+                    </Text>
+                  </View>
+
+                  <View>
+                    <Text className="mb-1 text-muted-foreground text-xs">
+                      Files
+                    </Text>
+                    <Text className="text-foreground">
+                      Created: {compilation.fileChanges.created.length}
+                    </Text>
+                    <Text className="text-foreground">
+                      Modified: {compilation.fileChanges.modified.length}
+                    </Text>
+                    <Text className="text-foreground">
+                      Deleted: {compilation.fileChanges.deleted.length}
+                    </Text>
+                  </View>
+
+                  <View>
+                    <Text className="mb-1 text-muted-foreground text-xs">
+                      Agents
+                    </Text>
+                    {compilation.agents.length === 0 ? (
+                      <Text className="text-muted-foreground">
+                        No agent outcomes recorded.
+                      </Text>
+                    ) : (
+                      <View className="gap-2">
+                        {compilation.agents.slice(0, 20).map((agent) => (
+                          <View
+                            className="rounded-lg border border-border bg-background p-3"
+                            key={agent.agentId}
+                          >
+                            <Text className="font-mono text-foreground text-xs">
+                              {agent.agentId}
+                            </Text>
+                            <Text className="text-muted-foreground text-xs">
+                              {agent.status}
+                            </Text>
+                            {agent.result?.summary ? (
+                              <Text className="mt-1 text-foreground">
+                                {agent.result.summary}
+                              </Text>
+                            ) : null}
+                          </View>
+                        ))}
+                        {compilation.agents.length > 20 ? (
+                          <Text className="text-muted-foreground text-xs">
+                            Showing first 20 agents.
+                          </Text>
+                        ) : null}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                <Text className="text-muted-foreground">
+                  Compilation is not in a supported format yet.
+                </Text>
+              )
+            ) : (
+              <Text className="text-muted-foreground">
+                No compilation is available for this run yet.
+              </Text>
+            )}
           </View>
         )}
 

@@ -7,7 +7,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderOptions, render } from "@testing-library/react-native";
 import type React from "react";
-import { trpc, trpcClient } from "@/utils/trpc";
+import { ApiProvider } from "@/lib/api";
 
 /**
  * Creates a QueryClient with test-friendly defaults
@@ -37,17 +37,10 @@ export function TestProviders({
   queryClient?: QueryClient;
 }) {
   const client = queryClient ?? createTestQueryClient();
-  const TrpcProvider = trpc.Provider;
 
   return (
     <QueryClientProvider client={client}>
-      {TrpcProvider ? (
-        <TrpcProvider client={trpcClient} queryClient={client}>
-          {children}
-        </TrpcProvider>
-      ) : (
-        children
-      )}
+      <ApiProvider queryClient={client}>{children}</ApiProvider>
     </QueryClientProvider>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Container } from "@/components/container";
 import { useChatLogic } from "@/hooks/use-chat-logic";
-import { authClient } from "@/lib/auth-client";
+import { useAuthClient } from "@/lib/auth-client";
 
 function friendlyChatError(message: string): string {
   if (message.includes("ai_api_key_missing")) {
@@ -26,6 +26,7 @@ function friendlyChatError(message: string): string {
 }
 
 export default function AIScreen() {
+  const authClient = useAuthClient();
   const { data: session } = authClient.useSession();
   const [input, setInput] = useState("");
   const {

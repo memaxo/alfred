@@ -25,13 +25,20 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ALFRED_COLORS, ORB_SIZES, Orb, useOrbState } from "@/components/orb";
 import { ControlBar } from "@/components/orb/control-bar";
-import { authClient } from "@/lib/auth-client";
+import { useServerUrl, useTrpcClient } from "@/lib/api";
+import { useAuthClient } from "@/lib/auth-client";
+import { isLocalServer } from "@/lib/server-url";
+import { getCookieFromAuthClient } from "@/lib/voice/cookie";
 import { useVoiceSessionNative } from "@/lib/voice/session";
-import { trpcClient } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import { trpc } from "@/utils/trpc";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function VoiceCallScreen() {
+  const authClient = useAuthClient();
+  const trpcClient = useTrpcClient<TRPCAppRouter>();
+  const { serverUrl } = useServerUrl();
   const { data: session } = authClient.useSession();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -42,7 +49,22 @@ export default function VoiceCallScreen() {
   const [elapsedSec, setElapsedSec] = useState(0);
 
   // Voice session
-  const { stream } = useVoiceSessionNative(trpcClient, { surface: "native" });
+  const { data: prefs } = trpc.preference.list.useQuery({
+    limit: 100,
+    offset: 0,
+  });
+  const sttChunkSize =
+    (prefs?.find(
+      (p: { key: string; value?: unknown }) => p.key === "voice.stt.chunk_size"
+    )?.value as "fast" | "low" | "medium" | "accurate" | undefined) ??
+    undefined;
+
+  const { stream } = useVoiceSessionNative(trpcClient, {
+    surface: "native",
+    getCookie: () => getCookieFromAuthClient(authClient),
+    baseUrl: serverUrl,
+    sttChunkSize,
+  });
 
   // Map voice state to orb props
   const orbProps = useOrbState({
@@ -103,7 +125,7 @@ export default function VoiceCallScreen() {
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
   }, [elapsedSec]);
 
-  if (!session?.user) {
+  if (!(session?.user || isLocalServer(serverUrl))) {
     return <Redirect href="/(drawer)/" />;
   }
 
@@ -196,6 +218,36 @@ export default function VoiceCallScreen() {
         </Animated.View>
       ) : null}
 
+      {/* Debug telemetry for local dev server runs */}
+      {isLocalServer(serverUrl) ? (
+        <View style={styles.debugPanel}>
+          <Text
+            accessibilityLabel={`Transport: ${stream.transport ?? "none"}`}
+            style={styles.debugText}
+            testID="voice-transport"
+          >
+            Transport: {stream.transport ?? "none"}
+          </Text>
+          <Text
+            accessibilityLabel={`Session: ${stream.sessionId ?? "none"}`}
+            style={styles.debugText}
+            testID="voice-session"
+          >
+            Session: {stream.sessionId ?? "none"}
+          </Text>
+          <Text
+            accessibilityLabel={`Status: ${stream.status}`}
+            style={styles.debugText}
+            testID="voice-status"
+          >
+            Status: {stream.status}
+          </Text>
+          {stream.error ? (
+            <Text style={styles.debugText}>Error: {stream.error}</Text>
+          ) : null}
+        </View>
+      ) : null}
+
       {/* Control bar */}
       <Animated.View
         entering={SlideInDown.delay(100)}
@@ -276,6 +328,21 @@ const styles = StyleSheet.create({
     color: ALFRED_COLORS.textMuted,
     textAlign: "center",
     lineHeight: 24,
+  },
+  debugPanel: {
+    marginHorizontal: 24,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  debugText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 12,
+    lineHeight: 16,
   },
   controlBarContainer: {
     paddingHorizontal: 24,

@@ -46,6 +46,12 @@ jest.mock("expo-notifications", () => ({
   cancelAllScheduledNotificationsAsync: jest.fn(),
 }));
 
+// expo/fetch relies on native winter runtime; mock it for Jest.
+jest.mock("expo/fetch", () => ({
+  fetch: (...args: Parameters<typeof globalThis.fetch>) =>
+    globalThis.fetch(...args),
+}));
+
 jest.mock("expo-av", () => ({
   Audio: {
     setAudioModeAsync: jest.fn(),
@@ -56,8 +62,11 @@ jest.mock("expo-av", () => ({
 }));
 
 jest.mock("expo-file-system", () => ({
+  cacheDirectory: "file:///tmp/",
   deleteAsync: jest.fn(),
+  documentDirectory: "file:///tmp/",
   readAsStringAsync: jest.fn(),
+  writeAsStringAsync: jest.fn(),
   EncodingType: {
     Base64: "base64",
   },

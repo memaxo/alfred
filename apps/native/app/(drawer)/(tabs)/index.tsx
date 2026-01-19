@@ -12,11 +12,15 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { ChatList } from "@/components/chat/chat-list";
 import { Container } from "@/components/container";
 import { useChatLogic } from "@/hooks/use-chat-logic";
-import { authClient } from "@/lib/auth-client";
+import { useServerUrl } from "@/lib/api";
+import { useAuthClient } from "@/lib/auth-client";
+import { isLocalServer } from "@/lib/server-url";
 import { useColorScheme } from "@/lib/use-color-scheme";
 
 export default function ChatScreen() {
+  const authClient = useAuthClient();
   const { data: session } = authClient.useSession();
+  const { serverUrl } = useServerUrl();
   const { isDarkColorScheme } = useColorScheme();
   const {
     messages,
@@ -32,7 +36,7 @@ export default function ChatScreen() {
   } = useChatLogic();
 
   // Redirect to home if not authenticated
-  if (!session?.user) {
+  if (!(session?.user || isLocalServer(serverUrl))) {
     return <Redirect href="/(drawer)/" />;
   }
 

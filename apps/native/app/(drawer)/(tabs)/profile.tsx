@@ -12,7 +12,7 @@ import {
 
 import { Container } from "@/components/container";
 import { VoiceSelector } from "@/components/voice-selector";
-import { authClient } from "@/lib/auth-client";
+import { useAuthClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { queryClient, trpc } from "@/utils/trpc";
 
@@ -24,6 +24,7 @@ type Passkey = {
 };
 
 export default function ProfileTab() {
+  const authClient = useAuthClient();
   const { data: session } = authClient.useSession();
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
   const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
@@ -152,6 +153,30 @@ export default function ProfileTab() {
     return;
   })();
 
+  const currentChunkSize = (() => {
+    const pref = preferenceQuery.data?.find(
+      (p) => p.key === "voice.stt.chunk_size"
+    );
+    const value = pref?.value;
+    const raw = typeof value === "string" ? value : "";
+    const parsed = (() => {
+      try {
+        if (raw.startsWith('"') && raw.endsWith('"')) {
+          return JSON.parse(raw) as unknown;
+        }
+      } catch {
+        // ignore
+      }
+      return raw;
+    })();
+    return parsed === "fast" ||
+      parsed === "low" ||
+      parsed === "medium" ||
+      parsed === "accurate"
+      ? parsed
+      : "medium";
+  })();
+
   const handleVoiceChange = (voice: string) => {
     setPreference.mutate({
       key: "voice.tts",
@@ -165,6 +190,17 @@ export default function ProfileTab() {
     setPreference.mutate({
       key: "voice.stt.language",
       value: lang,
+      confidence: 1,
+      source: "user",
+    });
+  };
+
+  const handleChunkSizeChange = (
+    size: "fast" | "low" | "medium" | "accurate"
+  ) => {
+    setPreference.mutate({
+      key: "voice.stt.chunk_size",
+      value: size,
       confidence: 1,
       source: "user",
     });
@@ -240,6 +276,37 @@ export default function ProfileTab() {
                 placeholderTextColor="#666"
                 value={(currentLanguage as string) ?? ""}
               />
+            </View>
+            <View>
+              <Text className="mb-2 text-muted-foreground text-sm">
+                STT Chunk Size
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {(["fast", "low", "medium", "accurate"] as const).map(
+                  (size) => (
+                    <TouchableOpacity
+                      className={`rounded-md px-3 py-2 ${
+                        currentChunkSize === size ? "bg-primary" : "bg-muted"
+                      }`}
+                      key={size}
+                      onPress={() => handleChunkSizeChange(size)}
+                    >
+                      <Text
+                        className={`text-sm ${
+                          currentChunkSize === size
+                            ? "text-white"
+                            : "text-foreground"
+                        }`}
+                      >
+                        {size}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+              <Text className="mt-2 text-muted-foreground text-xs">
+                Smaller chunks reduce latency but may reduce accuracy.
+              </Text>
             </View>
           </View>
         </View>

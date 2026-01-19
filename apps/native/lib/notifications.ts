@@ -5,10 +5,11 @@
  */
 
 import { logger } from "@alfred/logger";
+import type { TRPCClient } from "@trpc/client";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { trpcClient } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -58,9 +59,9 @@ function getExpoProjectId(): string | null {
   return null;
 }
 
-export async function registerForPushNotificationsAsync(): Promise<
-  string | null
-> {
+export async function registerForPushNotificationsWithClient(
+  trpcClient?: TRPCClient<TRPCAppRouter> | null
+): Promise<string | null> {
   let token: string | null = null;
 
   if (Platform.OS === "android") {
@@ -117,7 +118,7 @@ export async function registerForPushNotificationsAsync(): Promise<
       })
     ).data;
 
-    if (token) {
+    if (token && trpcClient) {
       try {
         await trpcClient.user.registerPushToken.mutate({
           token,
@@ -146,6 +147,23 @@ export async function registerForPushNotificationsAsync(): Promise<
     }
   }
 
+  return token;
+}
+
+/**
+ * Back-compat wrapper for callers that don't have a tRPC client handy yet.
+ * This still registers for push notifications and returns the Expo push token,
+ * but will skip backend registration.
+ */
+export async function registerForPushNotificationsAsync(): Promise<
+  string | null
+> {
+  const token = await registerForPushNotificationsWithClient(null).catch(
+    (error) => {
+      logger.warn("Push notification registration failed", { error });
+      return null;
+    }
+  );
   return token;
 }
 

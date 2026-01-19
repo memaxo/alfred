@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { authClient } from "@/lib/auth-client";
+import { useAuthClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 
 function errorText(value: unknown): string {
@@ -25,6 +25,7 @@ function errorText(value: unknown): string {
 }
 
 export function SignIn() {
+  const authClient = useAuthClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,10 @@ export function SignIn() {
           password: value.password,
         },
         {
-          onError: (error) => {
+          onError: (error: {
+            error?: { message?: string };
+            response?: unknown;
+          }) => {
             const message = error.error?.message || "Failed to sign in";
             const resp = (error as unknown as { response?: unknown })
               .response as

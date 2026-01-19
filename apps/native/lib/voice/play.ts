@@ -31,7 +31,8 @@ const extensionForMime = (mimeType: string) => {
 
 export async function playBase64(
   audioBase64: string,
-  mimeType: string
+  mimeType: string,
+  options?: { signal?: AbortSignal }
 ): Promise<void> {
   await configureAudioSession(Audio, { background: true });
   const dir = fallbackDir();
@@ -43,17 +44,51 @@ export async function playBase64(
   });
   try {
     const { sound } = await Audio.Sound.createAsync({ uri });
+    let abort: (() => void) | null = null;
     try {
-      await sound.playAsync();
-      // Wait for playback to finish
+      if (options?.signal?.aborted) {
+        return;
+      }
+      // Wait for playback to finish (or abort) deterministically.
       await new Promise<void>((resolve) => {
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            resolve();
+        let settled = false;
+        const finish = () => {
+          if (settled) {
+            return;
           }
+          settled = true;
+          resolve();
+        };
+
+        abort = () => {
+          sound.stopAsync().catch(() => {});
+          finish();
+        };
+        options?.signal?.addEventListener("abort", abort, { once: true });
+
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (!status.isLoaded) {
+            return;
+          }
+          if (status.didJustFinish) {
+            finish();
+          }
+        });
+
+        if (options?.signal?.aborted) {
+          finish();
+          return;
+        }
+
+        sound.playAsync().catch(() => {
+          finish();
         });
       });
     } finally {
+      if (abort) {
+        options?.signal?.removeEventListener("abort", abort);
+      }
+      sound.setOnPlaybackStatusUpdate(null);
       await sound.unloadAsync();
     }
   } finally {
