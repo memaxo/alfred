@@ -42,6 +42,16 @@ export async function* runOrchestrator(
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const workspace = input.workspace ?? process.cwd();
 
+  // Best-effort scope gating signal (mirrors legacy runner behavior).
+  // This does not block execution by itself; consumers may suspend/require authz.
+  if (input.auto === "medium" || input.auto === "high") {
+    yield {
+      _: "require-scope",
+      scopes: ["repo.write", "droid.exec"],
+      event: "bio-authz",
+    } as WorkflowEvent;
+  }
+
   // Load plan if planId is provided
   let plan: StructuredPlan | null = null;
   if (input.planId) {

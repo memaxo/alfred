@@ -103,6 +103,8 @@
     "harbor:dataset": "bun scripts/harbor-dataset.ts",
     "harbor:ingest": "bun scripts/harbor-ingest.ts",
     "harbor:smoke": "bun scripts/harbor-smoke.ts",
+    "harbor:verify": "bun scripts/harbor-verify.ts",
+    "harbor:summary": "bun scripts/harbor-summary.ts",
     "load:workflow": "bun scripts/load-workflow.ts",
     "load:workflow:stream": "bun scripts/load-workflow-stream.ts",
     "prepare": "lefthook install"

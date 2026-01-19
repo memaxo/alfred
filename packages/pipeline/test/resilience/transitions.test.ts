@@ -23,7 +23,7 @@ describe("MAX_TRANSITIONS Guard", () => {
   function createMockStage(name: StageName, emitCount = 0) {
     return {
       name,
-      execute: async (_input: unknown, ctx: PipelineContext) => {
+      execute: (_input: unknown, ctx: PipelineContext) => {
         for (let i = 0; i < emitCount; i++) {
           ctx.emit({
             type: "stage:progress",
@@ -75,7 +75,12 @@ describe("MAX_TRANSITIONS Guard", () => {
       }
     }).toThrow(/max_transitions_exceeded/);
 
-    expect(events.find((e) => e.type === "pipeline:failed")).toBeDefined();
+    const failed = events.find((e) => e.type === "pipeline:failed");
+    expect(failed).toBeDefined();
+    if (failed && failed.type === "pipeline:failed") {
+      expect(failed.error).toContain("pipeline_max_transitions_exceeded");
+      expect(typeof failed.lastStage).toBe("string");
+    }
   }, 30_000);
 
   it("completes successfully when under maxTransitions limit", async () => {

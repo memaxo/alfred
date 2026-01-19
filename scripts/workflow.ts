@@ -3,10 +3,18 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
+import { eventToUiMessages } from "@alfred/agent/utils/normalize";
+import { redactEventData } from "@alfred/agent/utils/redaction";
 import { workflowInput } from "@alfred/agent/workflow/schema";
-import type { PipelineEvent } from "@alfred/pipeline";
-import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
-import { PipelineEventQueueObserver } from "@alfred/pipeline/observers";
+import type { WorkflowEventType } from "@alfred/db/schema/workflow";
+import { runOrchestrator } from "@alfred/runtime/orchestrator";
+import type { PersistedWorkflowEvent } from "@alfred/runtime/trajectory/atif";
+import { buildAtifTrajectory } from "@alfred/runtime/trajectory/atif";
+import { validateAtifTrajectory } from "@alfred/runtime/trajectory/validate";
+import type { RuntimeInput } from "@alfred/runtime/types";
+import { makeEventId } from "@alfred/type/id";
+import type { WorkflowEvent } from "@alfred/type/plan";
 
 type RunArgs = {
   requirement: string;
@@ -84,16 +92,167 @@ async function ensureParent(filePath: string): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 }
 
+const VALID_EVENT_TYPES = new Set<WorkflowEventType>([
+  "run",
+  "progress",
+  "context",
+  "require-scope",
+  "notice",
+  "error",
+  "stdout",
+  "stderr",
+  "droid",
+  "data-cache-handoff",
+  "ui-message",
+  "text-delta",
+  "tool-call",
+  "tool-result",
+  "reasoning",
+  "finish",
+  "data-status",
+  "file",
+  "obligation",
+  "plan-selected",
+  "phase-start",
+  "phase-complete",
+  "phase-progress",
+  "agent-start",
+  "agent-complete",
+  "wave-start",
+  "wave-complete",
+  "agent-handoff",
+  "assistant",
+  "report",
+  "step-start",
+  "step-complete",
+  "step-skip",
+  "step_start",
+  "step_complete",
+  "suspend",
+  "resume",
+]);
+
+function getEventType(event: WorkflowEvent): WorkflowEventType {
+  const raw = typeof event._ === "string" ? event._ : "error";
+  return VALID_EVENT_TYPES.has(raw as WorkflowEventType)
+    ? (raw as WorkflowEventType)
+    : "error";
+}
+
+function coerceNonEmptyString(val: unknown): string | null {
+  return typeof val === "string" && val.length > 0 ? val : null;
+}
+
+function coerceRecord(val: unknown): Record<string, unknown> {
+  if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+    return val as Record<string, unknown>;
+  }
+  return {};
+}
+
+function normalizeWorkflowEvent(event: WorkflowEvent): WorkflowEvent {
+  const redactedData = redactEventData(event);
+  const record = coerceRecord(redactedData);
+  const discriminant = typeof event._ === "string" ? event._ : "error";
+  return {
+    ...record,
+    _: coerceNonEmptyString(record._) ?? discriminant,
+  } as WorkflowEvent;
+}
+
+function buildPersistedEvents(args: {
+  runId: string;
+  workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }>;
+}): PersistedWorkflowEvent[] {
+  const out: PersistedWorkflowEvent[] = [];
+  let seq = 1;
+
+  for (const { event, createdAt } of args.workflowEvents) {
+    const normalized = normalizeWorkflowEvent(event);
+    const eventType = getEventType(normalized);
+    const eventData = redactEventData(normalized);
+    const eventId = makeEventId({
+      runId: args.runId,
+      type: eventType,
+      data: eventData,
+    });
+
+    out.push({
+      eventId,
+      eventType,
+      seq,
+      timestamp: new Date(createdAt),
+      eventData: wrapEventEnvelope({
+        id: eventId,
+        type: eventType,
+        resource: "user",
+        data: eventData,
+        createdAt,
+      }),
+    });
+    seq += 1;
+
+    const uiMessages = eventToUiMessages(normalized);
+    if (Array.isArray(uiMessages) && uiMessages.length > 0) {
+      const uiEventId = makeEventId({
+        runId: args.runId,
+        type: "ui-message",
+        data: uiMessages,
+      });
+      out.push({
+        eventId: uiEventId,
+        eventType: "ui-message",
+        seq,
+        timestamp: new Date(createdAt),
+        eventData: wrapEventEnvelope({
+          id: uiEventId,
+          type: "ui-message",
+          resource: "user",
+          data: uiMessages,
+          createdAt,
+        }),
+      });
+      seq += 1;
+    }
+  }
+
+  return out;
+}
+
 async function writeTrajectory(args: {
   runId: string;
-  events: PipelineEvent[];
+  requirement: string;
+  workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }>;
   outPath: string;
-}): Promise<void> {
+}): Promise<{ ok: boolean; errors: Array<{ path: string; message: string }> }> {
+  const persisted = buildPersistedEvents({
+    runId: args.runId,
+    workflowEvents: args.workflowEvents,
+  });
+
+  const trajectory = buildAtifTrajectory({
+    runId: args.runId,
+    requirement: args.requirement,
+    events: persisted,
+    agent: {
+      name: "alfred",
+      version:
+        process.env.ALFRED_VERSION ??
+        process.env.ALFRED_GIT_COMMIT ??
+        "unknown",
+      modelName:
+        process.env.AI_MODEL_ORCHESTRATOR ??
+        process.env.AI_MODEL ??
+        process.env.OPENAI_MODEL_PLAN ??
+        "unknown",
+    },
+  });
+
+  const validation = validateAtifTrajectory(trajectory);
   await ensureParent(args.outPath);
-  await Bun.write(
-    args.outPath,
-    JSON.stringify({ runId: args.runId, events: args.events }, null, 2)
-  );
+  await Bun.write(args.outPath, JSON.stringify(trajectory, null, 2));
+
+  return validation;
 }
 
 async function runWorkflow(args: RunArgs) {
@@ -111,56 +270,48 @@ async function runWorkflow(args: RunArgs) {
 
   const session = { user: { id: payload.userId ?? "harbor" } };
 
-  const runner = new PipelineRunner({
-    maxParallel: payload.mode === "parallel" ? 4 : 1,
-    enableLearning: true,
-  });
-  registerDefaultStages(runner);
-
-  const queueObserver = new PipelineEventQueueObserver();
-  runner.addObserver(queueObserver);
-
-  const events: PipelineEvent[] = [];
-  const collectEvents = (async () => {
-    for await (const event of queueObserver.stream()) {
-      events.push(event);
-    }
-  })();
+  const abortController = new AbortController();
+  const workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }> = [];
 
   let runError: unknown | null = null;
   try {
-    for await (const _event of runner.run({
-      runId,
+    const input: RuntimeInput = {
       requirement: payload.requirement,
+      auto: payload.auto,
+      mode: payload.mode,
       workspace,
-      userId: session.user.id,
-      authz: payload.authz,
-      linear: payload.linear
-        ? {
-            sessionId: payload.linear.sessionId ?? "",
-            space: payload.linear.space,
-            issueId: payload.linear.issueId,
-            authz: payload.authzLinear ?? "",
-          }
-        : undefined,
-    })) {
-      void _event;
+    };
+
+    for await (const event of runOrchestrator(
+      input,
+      runId,
+      abortController.signal,
+      undefined,
+      undefined,
+      undefined,
+      payload.authz,
+      undefined,
+      session.user.id
+    )) {
+      workflowEvents.push({ event, createdAt: new Date().toISOString() });
     }
   } catch (error) {
     runError = error;
-  } finally {
-    queueObserver.close();
-    await collectEvents;
   }
 
   let trajError: string | null = null;
+  let trajOk: boolean | null = null;
+  let trajErrors: Array<{ path: string; message: string }> | null = null;
   if (args.outTrajectory) {
     try {
-      await writeTrajectory({
+      const validation = await writeTrajectory({
         runId,
-        events,
+        requirement: payload.requirement,
+        workflowEvents,
         outPath: args.outTrajectory,
       });
+      trajOk = validation.ok;
+      trajErrors = validation.errors;
     } catch (error) {
       trajError = error instanceof Error ? error.message : String(error);
     }
@@ -171,7 +322,9 @@ async function runWorkflow(args: RunArgs) {
       {
         runId,
         trajectoryError: trajError,
-        eventCount: events.length,
+        trajectoryOk: trajOk,
+        trajectoryValidationErrors: trajErrors,
+        eventCount: workflowEvents.length,
         error:
           runError instanceof Error
             ? runError.message

@@ -1,0 +1,5 @@
+{
+  "name": "harbor-fixture-regress",
+  "private": true,
+  "type": "module"
+}

@@ -6,6 +6,7 @@ import { db } from "@alfred/db";
 import * as trajectoryRepo from "@alfred/db/repo/trajectory";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type { WorkflowTrajectoryFormat } from "@alfred/db/schema/workflow";
+import { validateAtifTrajectory } from "@alfred/runtime/trajectory/validate";
 import { sql } from "drizzle-orm";
 
 type HarborRun = {
@@ -30,6 +31,17 @@ async function readTrajectory(trajectoryPath: string): Promise<unknown> {
   return JSON.parse(content);
 }
 
+async function readOptionalReason(taskDir: string): Promise<string | null> {
+  const p = path.join(taskDir, "reason.txt");
+  const exists = await Bun.file(p).exists();
+  if (!exists) {
+    return null;
+  }
+  const txt = await Bun.file(p).text();
+  const t = txt.trim();
+  return t.length > 0 ? t : null;
+}
+
 async function ingestRun(run: HarborRun, userId: string): Promise<void> {
   // Ensure user exists
   await db.execute(sql`
@@ -38,35 +50,49 @@ async function ingestRun(run: HarborRun, userId: string): Promise<void> {
     ON CONFLICT (id) DO NOTHING
   `);
 
+  // Read trajectory
+  const trajectoryData = await readTrajectory(run.trajectoryPath);
+  const traj = trajectoryData as { schema_version?: string; steps?: unknown[] };
+  const validation = validateAtifTrajectory(trajectoryData);
+  const schemaVersion = traj.schema_version ?? "ATIF-v1.4";
+  const reason = await readOptionalReason(path.dirname(run.trajectoryPath));
+  const ok = run.reward === 1 && validation.ok;
+
   // Create workflow run
   const _workflowRun = await workflowRepo.createRun({
     id: run.runId,
     userId,
     workflowId: "harbor",
-    status: run.reward === 1 ? "completed" : "failed",
+    status: ok ? "completed" : "failed",
     requirement: `Harbor task: ${run.taskId}`,
     inputData: {
       taskId: run.taskId,
       harborRun: true,
+      reward: run.reward,
+      trajectoryOk: validation.ok,
+      trajectorySchemaVersion: schemaVersion,
+      ...(reason ? { reason } : {}),
       ...(run.metadata ?? {}),
     },
   });
-
-  // Read trajectory
-  const trajectoryData = await readTrajectory(run.trajectoryPath);
-  const traj = trajectoryData as { schema_version?: string; steps?: unknown[] };
 
   // Upsert trajectory
   await trajectoryRepo.upsertTrajectory({
     runId: run.runId,
     format: "atif" as WorkflowTrajectoryFormat,
-    schemaVersion: traj.schema_version ?? "ATIF-v1.4",
+    schemaVersion,
     data: trajectoryData,
     lastEventId: null,
     lastSeq: traj.steps?.length ?? null,
-    valid: true,
-    errors:
-      run.reward === 1 ? null : { reward: run.reward, taskId: run.taskId },
+    valid: validation.ok,
+    errors: ok
+      ? null
+      : {
+          taskId: run.taskId,
+          reward: run.reward,
+          reason,
+          validationErrors: validation.ok ? null : validation.errors,
+        },
   });
 
   console.log(

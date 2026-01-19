@@ -8,6 +8,8 @@ type GenArgs = {
   id: string;
   requirement: string;
   verifyCmd: string;
+  oracleCmd: string;
+  auto: "" | "read" | "low" | "medium" | "high";
   timeoutSec: number;
   alfredGitUrl: string;
   alfredGitRef: string;
@@ -16,13 +18,15 @@ type GenArgs = {
 function usage(): string {
   return [
     "Usage:",
-    "  bun scripts/harbor.ts gen --outDir <dir> --id <taskId> --requirement <text> --verify <cmd>",
+    "  bun scripts/harbor.ts gen --outDir <dir> --id <taskId> --requirement <text> --verify <cmd> [--oracle <cmd>]",
     "",
     "Options:",
     "  --outDir <dir>        Output directory (task folder will be created under it)",
     "  --id <taskId>         Task directory name (single word recommended)",
     "  --requirement <text>  Instruction for ALFRED",
     "  --verify <cmd>        Shell command to verify success (run inside /task/workspace)",
+    "  --oracle <cmd>        Optional. Shell command that deterministically produces a correct solution (run inside /task/workspace)",
+    "  --auto <band>         Optional. read|low|medium|high (passed to bun workflow:run)",
     "  --timeoutSec <n>      Agent/verifier timeout (default 3600)",
     "  --alfredGitUrl <url>  REQUIRED. Git URL to clone ALFRED inside the task container (or env ALFRED_GIT_URL)",
     "  --alfredGitRef <ref>  Git ref/branch/tag (default main)",
@@ -36,6 +40,8 @@ function parseArgs(argv: string[]): { cmd: string | null; args: GenArgs } {
     id: "",
     requirement: "",
     verifyCmd: "",
+    oracleCmd: "",
+    auto: "",
     timeoutSec: 3600,
     alfredGitUrl: process.env.ALFRED_GIT_URL ?? "",
     alfredGitRef: process.env.ALFRED_GIT_REF ?? "main",
@@ -64,6 +70,19 @@ function parseArgs(argv: string[]): { cmd: string | null; args: GenArgs } {
     }
     if (a === "--verify") {
       out.verifyCmd = argv[i + 1] ?? "";
+      i += 1;
+      continue;
+    }
+    if (a === "--oracle") {
+      out.oracleCmd = argv[i + 1] ?? "";
+      i += 1;
+      continue;
+    }
+    if (a === "--auto") {
+      const v = (argv[i + 1] ?? "").trim().toLowerCase();
+      if (v === "read" || v === "low" || v === "medium" || v === "high") {
+        out.auto = v;
+      }
       i += 1;
       continue;
     }
@@ -129,31 +148,32 @@ function taskToml(args: GenArgs): string {
   ].join("\n");
 }
 
-function solveSh(): string {
+function solveSh(args: GenArgs): string {
   return [
     "#!/bin/bash",
     "set -euo pipefail",
     "",
-    "# Oracle solution: deterministic implementation that always passes.",
-    "# This is the reference implementation used to verify task correctness.",
-    "# Harbor will compare agent outputs against this oracle.",
-    "",
-    "# Harbor convention: the verifier mount is at /logs/verifier",
-    "mkdir -p /logs/verifier",
+    "# Oracle solution: deterministic implementation that should satisfy the verifier.",
+    "# This script must NOT write reward files; the verifier owns reward output.",
     "",
     "cd /task/workspace",
     "",
-    "# Run the oracle implementation (this should always succeed).",
-    "# For now, this is a placeholder - replace with deterministic oracle logic.",
-    "# The oracle should produce the same result as a perfect agent execution.",
+    "ORACLE_CMD=$(cat <<'EOF'",
+    `${args.oracleCmd}`.trimEnd(),
+    "EOF",
+    ")",
     "",
-    "# Mark oracle as successful (always passes).",
-    "echo 1 > /logs/verifier/reward.txt",
+    'if [ -z "$ORACLE_CMD" ]; then',
+    '  echo "No oracle configured (use --oracle). Skipping oracle execution." >&2',
+    "  exit 0",
+    "fi",
+    "",
+    'bash -lc "$ORACLE_CMD"',
     "",
   ].join("\n");
 }
 
-function agentSh(): string {
+function agentSh(args: GenArgs): string {
   return [
     "#!/bin/bash",
     "set -euo pipefail",
@@ -180,7 +200,15 @@ function agentSh(): string {
     "",
     'export DATABASE_URL="sqlite:$DB"',
     "",
-    'bun workflow:run --requirement "$REQ" --workspace "$WORKDIR" --outTrajectory "$TRAJ"',
+    ...(args.auto
+      ? [
+          'bun workflow:run --requirement "$REQ" --workspace "$WORKDIR" --outTrajectory "$TRAJ" --auto "' +
+            args.auto +
+            '"',
+        ]
+      : [
+          'bun workflow:run --requirement "$REQ" --workspace "$WORKDIR" --outTrajectory "$TRAJ"',
+        ]),
     "",
   ].join("\n");
 }
@@ -217,9 +245,9 @@ async function genTask(args: GenArgs): Promise<void> {
     `${args.requirement.trim()}\n`
   );
   await writeFile(path.join(root, "environment/Dockerfile"), dockerfile(args));
-  await writeFile(path.join(root, "solution/solve.sh"), solveSh());
+  await writeFile(path.join(root, "solution/solve.sh"), solveSh(args));
   await writeFile(path.join(root, "tests/test.sh"), testSh(args));
-  await writeFile(path.join(root, "agents/alfred.sh"), agentSh());
+  await writeFile(path.join(root, "agents/alfred.sh"), agentSh(args));
 
   // Minimal workspace placeholder (users can replace this folder with a real repo snapshot).
   await writeFile(

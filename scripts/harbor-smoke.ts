@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -87,26 +87,31 @@ async function main() {
 
   // Step 1: Generate task
   console.log("Step 1: Generating Harbor task...");
-  execSync(
-    [
+  {
+    const proc = spawnSync(
       "bun",
-      "scripts/harbor.ts",
-      "gen",
-      "--outDir",
-      tmpDir,
-      "--id",
-      TEST_TASK_ID,
-      "--requirement",
-      TEST_REQUIREMENT,
-      "--verify",
-      TEST_VERIFY,
-      "--alfredGitUrl",
-      alfredGitUrl,
-      "--alfredGitRef",
-      alfredGitRef,
-    ].join(" "),
-    { stdio: "inherit" }
-  );
+      [
+        "scripts/harbor.ts",
+        "gen",
+        "--outDir",
+        tmpDir,
+        "--id",
+        TEST_TASK_ID,
+        "--requirement",
+        TEST_REQUIREMENT,
+        "--verify",
+        TEST_VERIFY,
+        "--alfredGitUrl",
+        alfredGitUrl,
+        "--alfredGitRef",
+        alfredGitRef,
+      ],
+      { stdio: "inherit" }
+    );
+    if (proc.status !== 0) {
+      throw new Error(`harbor_smoke_gen_failed status=${proc.status}`);
+    }
+  }
   console.log("✓ Task generated\n");
 
   // Step 2: Verify structure
@@ -133,14 +138,19 @@ async function main() {
   // Step 4: Verify registry.json generation
   console.log("Step 4: Testing dataset generation...");
   const datasetDir = path.join(tmpDir, "dataset");
-  execSync(["bun", "scripts/harbor-dataset.ts", datasetDir].join(" "), {
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      ALFRED_GIT_URL: alfredGitUrl,
-      ALFRED_GIT_REF: alfredGitRef,
-    },
-  });
+  {
+    const proc = spawnSync("bun", ["scripts/harbor-dataset.ts", datasetDir], {
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        ALFRED_GIT_URL: alfredGitUrl,
+        ALFRED_GIT_REF: alfredGitRef,
+      },
+    });
+    if (proc.status !== 0) {
+      throw new Error(`harbor_smoke_dataset_failed status=${proc.status}`);
+    }
+  }
 
   const registryPath = path.join(datasetDir, "registry.json");
   if (!(await checkFileExists(registryPath))) {
@@ -172,17 +182,20 @@ async function main() {
   // Test ingestion (requires DATABASE_URL)
   if (process.env.DATABASE_URL) {
     try {
-      execSync(
+      const proc = spawnSync(
+        "bun",
         [
-          "bun",
           "scripts/harbor-ingest.ts",
           "--dir",
           ingestTestDir,
           "--userId",
           "smoke-test",
-        ].join(" "),
+        ],
         { stdio: "inherit" }
       );
+      if (proc.status !== 0) {
+        throw new Error(`harbor_smoke_ingest_failed status=${proc.status}`);
+      }
       console.log("✓ Eval ingestion works\n");
     } catch (error) {
       console.warn(

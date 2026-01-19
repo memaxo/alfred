@@ -404,6 +404,25 @@ export function buildAtifTrajectory(args: {
         message: msg,
         extra,
       });
+      continue;
+    }
+
+    if (e.eventType === "require-scope") {
+      const r = coerceRecord(data);
+      const scopes = Array.isArray(r.scopes) ? r.scopes : [];
+      const evt = coerceString(r.event) ?? "require-scope";
+      const msg = `require-scope:${evt}`;
+      steps.push({
+        step_id: stepId++,
+        timestamp: ts,
+        source: "system",
+        message: msg,
+        extra: {
+          ...extra,
+          scopes,
+          event: evt,
+        },
+      });
     }
   }
 

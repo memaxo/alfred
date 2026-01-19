@@ -1,0 +1,5 @@
+{
+  "name": "harbor-fixture-failtest",
+  "private": true,
+  "type": "module"
+}

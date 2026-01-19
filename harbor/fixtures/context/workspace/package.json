@@ -1,0 +1,5 @@
+{
+  "name": "harbor-fixture-context",
+  "private": true,
+  "type": "module"
+}
