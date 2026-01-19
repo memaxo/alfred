@@ -124,7 +124,7 @@ describe("enforceWorkflowPlanPolicy", () => {
 
     expect(result).toEqual({ obligations: [bioObligation] });
     expect(consumeRouteRateLimitMock).toHaveBeenCalledWith(
-      "workflow.stream",
+      "workflow.streamPipeline",
       "user-1"
     );
     expect(createAuditLogMock).toHaveBeenCalledWith(

@@ -33,6 +33,15 @@ import {
   releaseVoiceSession,
   updateVoiceSession,
 } from "../voice/session-registry";
+import { getVoiceIceServers, isVoiceWebrtcEnabled } from "../voice/webrtc";
+import {
+  addWebrtcIceCandidate,
+  applyWebrtcOffer,
+  closeWebrtcSession,
+  createWebrtcSession,
+  drainWebrtcIceCandidates,
+  getWebrtcSession,
+} from "../voice/webrtcsession";
 
 const sttInput = z.object({
   audioBase64: z.string().min(1, "audio_base64_required"),
@@ -89,6 +98,33 @@ const voiceStreamInput = z.object({
   surface: voiceSurfaceInput.optional(),
 });
 
+const webrtcCreateInput = z.object({
+  sessionId: z.string().min(8).max(64).optional(),
+  surface: voiceSurfaceInput.default("web"),
+});
+
+const webrtcSessionInput = z.object({
+  sessionId: z.string().min(8).max(64),
+});
+
+const webrtcOfferInput = z.object({
+  sessionId: z.string().min(8).max(64),
+  offer: z.object({
+    type: z.literal("offer"),
+    sdp: z.string().min(1),
+  }),
+});
+
+const webrtcIceInput = z.object({
+  sessionId: z.string().min(8).max(64),
+  candidate: z.object({
+    candidate: z.string().min(1),
+    sdpMid: z.string().nullable().optional(),
+    sdpMLineIndex: z.number().int().nullable().optional(),
+    usernameFragment: z.string().optional(),
+  }),
+});
+
 const s2sInput = z.object({
   audioBase64: z.string().min(1, "audio_base64_required"),
   mimeType: z.string().min(1, "mime_type_required"),
@@ -137,6 +173,11 @@ const toTtsResource = (raw: unknown) => {
         : DEFAULT_TTS_MODEL,
   };
 };
+
+const toWebrtcResource = (_raw: unknown) => ({
+  kind: "voice.model" as const,
+  id: "local-webrtc",
+});
 
 export const voiceRouter = router({
   sttTranscribe: authedProcedure
@@ -677,6 +718,197 @@ export const voiceRouter = router({
       }
     }),
 
+  webrtcCreate: authedProcedure
+    .use(requirePolicy("voice.stt", toWebrtcResource))
+    .use(requirePolicy("voice.tts", toWebrtcResource))
+    .input(webrtcCreateInput)
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      if (!isVoiceWebrtcEnabled()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "voice_webrtc_disabled",
+        });
+      }
+
+      const sessionId = input.sessionId ?? randomUUID();
+      const existing = getWebrtcSession(sessionId);
+      if (existing && existing.userId === session.user.id) {
+        logger.info("voice_webrtc_create", {
+          userId: session.user.id,
+          sessionId,
+          surface: input.surface,
+          reused: true,
+        });
+        return {
+          sessionId,
+          iceServers: getVoiceIceServers(),
+        };
+      }
+
+      await createWebrtcSession({
+        userId: session.user.id,
+        sessionId,
+        surface: input.surface,
+        runtime: ctx.runtimeContext,
+      });
+
+      logger.info("voice_webrtc_create", {
+        userId: session.user.id,
+        sessionId,
+        surface: input.surface,
+        reused: false,
+      });
+
+      return {
+        sessionId,
+        iceServers: getVoiceIceServers(),
+      };
+    }),
+
+  webrtcOffer: authedProcedure
+    .use(requirePolicy("voice.stt", toWebrtcResource))
+    .use(requirePolicy("voice.tts", toWebrtcResource))
+    .input(webrtcOfferInput)
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      if (!isVoiceWebrtcEnabled()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "voice_webrtc_disabled",
+        });
+      }
+      const existing = getWebrtcSession(input.sessionId);
+      if (!existing || existing.userId !== session.user.id) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "voice_webrtc_session_missing",
+        });
+      }
+      try {
+        logger.info("voice_webrtc_offer", {
+          userId: session.user.id,
+          sessionId: input.sessionId,
+          sdpChars: input.offer.sdp.length,
+        });
+        const answer = await applyWebrtcOffer({
+          sessionId: input.sessionId,
+          offer: input.offer,
+        });
+        logger.info("voice_webrtc_answer", {
+          userId: session.user.id,
+          sessionId: input.sessionId,
+          sdpChars: answer.sdp.length,
+        });
+        return answer;
+      } catch (error) {
+        throw toTRPCError(error, "voice_webrtc_offer_failed");
+      }
+    }),
+
+  webrtcIce: authedProcedure
+    .use(requirePolicy("voice.stt", toWebrtcResource))
+    .use(requirePolicy("voice.tts", toWebrtcResource))
+    .input(webrtcIceInput)
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      if (!isVoiceWebrtcEnabled()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "voice_webrtc_disabled",
+        });
+      }
+      const existing = getWebrtcSession(input.sessionId);
+      if (!existing || existing.userId !== session.user.id) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "voice_webrtc_session_missing",
+        });
+      }
+      try {
+        logger.info("voice_webrtc_ice", {
+          userId: session.user.id,
+          sessionId: input.sessionId,
+        });
+        await addWebrtcIceCandidate({
+          sessionId: input.sessionId,
+          candidate: input.candidate,
+        });
+      } catch (error) {
+        throw toTRPCError(error, "voice_webrtc_ice_failed");
+      }
+      return { ok: true };
+    }),
+
+  webrtcCandidates: authedProcedure
+    .use(requirePolicy("voice.stt", toWebrtcResource))
+    .use(requirePolicy("voice.tts", toWebrtcResource))
+    .input(webrtcSessionInput)
+    .query(({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      if (!isVoiceWebrtcEnabled()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "voice_webrtc_disabled",
+        });
+      }
+      const existing = getWebrtcSession(input.sessionId);
+      if (!existing || existing.userId !== session.user.id) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "voice_webrtc_session_missing",
+        });
+      }
+      return {
+        sessionId: input.sessionId,
+        candidates: drainWebrtcIceCandidates(input.sessionId),
+      };
+    }),
+
+  webrtcEnd: authedProcedure
+    .use(requirePolicy("voice.stt", toWebrtcResource))
+    .use(requirePolicy("voice.tts", toWebrtcResource))
+    .input(webrtcSessionInput)
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      const existing = getWebrtcSession(input.sessionId);
+      if (!existing || existing.userId !== session.user.id) {
+        return { ok: true };
+      }
+      await closeWebrtcSession(input.sessionId, "client_end");
+      return { ok: true };
+    }),
+
   stream: authedProcedure
     .input(voiceStreamInput)
     .subscription(({ input, ctx }) =>
@@ -734,4 +966,64 @@ export const voiceRouter = router({
         }
       })
     ),
+
+  /**
+   * Subscribe to voice workflow notifications (completion, progress, phase).
+   *
+   * Clients subscribe to receive proactive updates about workflow execution
+   * based on user notification preferences.
+   */
+  workflowNotification: authedProcedure.subscription(async function* ({ ctx }) {
+    const { subscribeToNotifications } = await import("../voice/notifier.js");
+
+    const userId = ctx.session.user.id;
+    const notifications: Array<{
+      type: "completion" | "progress" | "phase_complete";
+      runId: string;
+      message: string;
+      notificationMode: string;
+      audioBase64?: string;
+      mimeType?: string;
+    }> = [];
+
+    let resolveNext: (() => void) | undefined;
+
+    const unsubscribe = subscribeToNotifications(userId, (event) => {
+      notifications.push({
+        type: event.type,
+        runId: event.runId,
+        message: event.message,
+        notificationMode: event.notificationMode,
+        audioBase64: event.audioBase64,
+        mimeType: event.mimeType,
+      });
+      if (resolveNext) {
+        resolveNext();
+        resolveNext = undefined;
+      }
+    });
+
+    try {
+      while (true) {
+        // Wait for notifications or timeout
+        if (notifications.length === 0) {
+          await new Promise<void>((resolve) => {
+            resolveNext = resolve;
+            // Heartbeat timeout - emit empty to keep connection alive
+            setTimeout(resolve, 30_000);
+          });
+        }
+
+        // Yield all pending notifications
+        while (notifications.length > 0) {
+          const notification = notifications.shift();
+          if (notification) {
+            yield notification;
+          }
+        }
+      }
+    } finally {
+      unsubscribe();
+    }
+  }),
 });

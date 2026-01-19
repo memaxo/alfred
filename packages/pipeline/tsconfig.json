@@ -9,6 +9,7 @@
     { "path": "../agent" },
     { "path": "../db" },
     { "path": "../logger" },
+    { "path": "../mcp" },
     { "path": "../metrics" },
     { "path": "../pacer" },
     { "path": "../plan" },

@@ -31,6 +31,8 @@ export type RerankOptions = {
   topN?: number;
   /** Custom instruction for the reranker (Qwen3-VL supports this) */
   instruction?: string;
+  /** Request server-side stage timings (Qwen3-VL only) */
+  debug?: boolean;
   /** Telemetry hooks */
   telemetry?: RerankTelemetry;
 };
@@ -120,9 +122,35 @@ export type Qwen3VLRerankResponse = {
     text_only_ms: number;
     multimodal_ms: number;
     sort_ms: number;
+    text_batches: Array<{
+      start_index: number;
+      size: number;
+      ms: number;
+      seq_len?: number;
+    }>;
+    multimodal_docs: Array<{
+      id: string;
+      index: number;
+      ms: number;
+      seq_len?: number;
+      has_image: boolean;
+      has_video: boolean;
+    }>;
     profile_path?: string;
   };
 };
+
+export type Qwen3VLRerankDebugBatch = NonNullable<
+  Qwen3VLRerankResponse["debug"]
+>["text_batches"][number];
+
+export type Qwen3VLRerankDebugDoc = NonNullable<
+  Qwen3VLRerankResponse["debug"]
+>["multimodal_docs"][number];
+
+export type Qwen3VLRerankDebugInfo = NonNullable<
+  Qwen3VLRerankResponse["debug"]
+>;
 
 /**
  * Health check response from Qwen3-VL server
@@ -133,6 +161,12 @@ export type Qwen3VLHealthResponse = {
   device: string;
   /** Batch size for text-only document processing */
   batch_size?: number;
+  /** Maximum docs per request */
+  max_docs?: number;
+  /** Maximum concurrent inference requests */
+  max_concurrency?: number;
+  /** Whether file:// URLs are allowed */
+  allow_file_urls?: boolean;
   /** Whether torch.compile is enabled */
   compiled?: boolean;
   /** Peak memory usage in GB (CUDA only) */

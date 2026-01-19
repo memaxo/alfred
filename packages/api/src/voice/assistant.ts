@@ -6,9 +6,17 @@ import { logger } from "@alfred/logger";
 import type { CognitiveEffect, CognitiveLoopResult } from "@alfred/runtime";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
+import type { VoiceAssistantRaw } from "@alfred/type/voice";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { sanitizeResult } from "../utils/generate";
+import { classifyVoiceIntent } from "./intent.js";
+import { getVoiceWorkflowContext } from "./session-context.js";
+import {
+  handleApprovalIntent,
+  handleStatusQuery,
+  handleWorkflowIntent,
+} from "./workflow-handler.js";
 
 export type VoiceAssistantInput = {
   text: string;
@@ -22,7 +30,7 @@ export type VoiceAssistantInput = {
 export type VoiceAssistantResult = {
   text: string;
   replayId: string | null;
-  raw: ReturnType<typeof sanitizeResult>;
+  raw: VoiceAssistantRaw;
   durationSeconds: number;
 };
 
@@ -146,6 +154,48 @@ function formatCognitiveContext(state: FocusState | null): string {
 
 import { DefaultAIAdapter } from "../adapters/ai-generation";
 
+/**
+ * Preference key for voice workflow setting.
+ * Users can disable via Settings > Voice > Workflow Planning.
+ */
+export const VOICE_WORKFLOW_PREFERENCE_KEY = "domain.voice.workflow_enabled";
+
+/**
+ * Check if voice workflow routing is enabled for a user.
+ * Enabled by default; users can disable via preferences.
+ */
+async function isVoiceWorkflowEnabled(userId: string): Promise<boolean> {
+  try {
+    const preferences = (await userRepo.getPreferences(
+      userId
+    )) as unknown as Array<{ key: string; value: unknown }>;
+
+    const entry = preferences.find(
+      (pref) => pref.key === VOICE_WORKFLOW_PREFERENCE_KEY
+    );
+
+    // Default to true if preference not set
+    if (!entry) {
+      return true;
+    }
+
+    // Handle boolean or string values
+    const value = entry.value;
+    if (typeof value === "boolean") {
+      return value;
+    }
+    if (typeof value === "string") {
+      return value === "true" || value === "1";
+    }
+
+    // Default to true for unknown values
+    return true;
+  } catch {
+    // Default to enabled if preference lookup fails
+    return true;
+  }
+}
+
 export async function runAssistantForVoice(
   ctx: RuntimeContext,
   input: VoiceAssistantInput
@@ -158,6 +208,78 @@ export async function runAssistantForVoice(
       role: "voice",
     });
   }
+
+  // Voice workflow routing (enabled by default, can be disabled via preferences)
+  const workflowEnabled = await isVoiceWorkflowEnabled(input.userId);
+  if (workflowEnabled) {
+    try {
+      const workflowResult = await routeVoiceWorkflow(ctx, input);
+      if (workflowResult) {
+        return workflowResult;
+      }
+    } catch (error) {
+      // Log but fall through to conversational assistant
+      logger.warn("voice_workflow_routing_failed", {
+        userId: input.userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // Continue with conversational assistant
+  return runConversationalAssistant(ctx, input);
+}
+
+/**
+ * Route voice input to workflow handlers if applicable.
+ * Returns null if the input should be handled by the conversational assistant.
+ */
+async function routeVoiceWorkflow(
+  ctx: RuntimeContext,
+  input: VoiceAssistantInput
+): Promise<VoiceAssistantResult | null> {
+  // Get existing workflow context for the user
+  const sessionContext = await getVoiceWorkflowContext(input.userId);
+
+  // Classify the intent
+  const intentResult = await classifyVoiceIntent(input.text, sessionContext);
+
+  logger.debug("voice_intent_classified", {
+    userId: input.userId,
+    intentType: intentResult.type,
+    hasSessionContext: !!sessionContext,
+    sessionPhase: sessionContext?.state.phase,
+  });
+
+  // Route based on intent type
+  switch (intentResult.type) {
+    case "workflow":
+      return handleWorkflowIntent(ctx, input, sessionContext);
+
+    case "approval":
+      return handleApprovalIntent(
+        ctx,
+        input,
+        sessionContext,
+        intentResult.action
+      );
+
+    case "status_query":
+      return handleStatusQuery(ctx, input, intentResult.runId);
+
+    default:
+      // Fall through to conversational assistant
+      return null;
+  }
+}
+
+/**
+ * Run the conversational assistant (original implementation).
+ */
+async function runConversationalAssistant(
+  ctx: RuntimeContext,
+  input: VoiceAssistantInput
+): Promise<VoiceAssistantResult> {
   const { getVoiceAgentDefaults } = await import("@alfred/agent/agents");
   const { getModelForRole } = await import("@alfred/agent/selector");
   const defaults = getVoiceAgentDefaults();
@@ -317,7 +439,19 @@ export async function runAssistantForVoice(
   return {
     text: finalSanitized.text ?? "",
     replayId,
-    raw: finalSanitized,
+    raw: {
+      uiMessages: [
+        {
+          id: `voice-assistant-${Date.now()}`,
+          role: "assistant",
+          parts: [{ type: "text", text: finalSanitized.text ?? "" }],
+        },
+      ],
+      meta: {
+        thread: threadId,
+        resource: resourceId,
+      },
+    },
     durationSeconds,
   };
 }

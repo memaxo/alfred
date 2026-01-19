@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@alfred/agent": "workspace:*",
-    "@alfred/api": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/runtime": "workspace:*",

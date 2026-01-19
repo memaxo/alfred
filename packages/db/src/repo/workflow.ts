@@ -62,6 +62,9 @@ export async function createRun(args: {
 export async function updateRun(
   runId: string,
   patch: Partial<{
+    planId: string | null;
+    projectId: string | null;
+    requirement: string | null;
     status: WorkflowStatus;
     inputData: unknown;
     stateData: unknown;
@@ -78,6 +81,15 @@ export async function updateRun(
   const [row] = await db
     .update(workflowRuns)
     .set({
+      ...(Object.hasOwn(patch, "planId")
+        ? { planId: patch.planId ?? null }
+        : {}),
+      ...(Object.hasOwn(patch, "projectId")
+        ? { projectId: patch.projectId ?? null }
+        : {}),
+      ...(Object.hasOwn(patch, "requirement")
+        ? { requirement: patch.requirement ?? null }
+        : {}),
       ...(patch.status ? { status: patch.status } : {}),
       ...(Object.hasOwn(patch, "inputData")
         ? {
@@ -479,32 +491,41 @@ export async function listRunsByStatuses(
  * Follows the CheckpointStorage interface from @alfred/pipeline.
  */
 export class PostgresCheckpointStorage {
-  async save(runId: string, snapshot: any): Promise<void> {
+  private getLastEventId(snapshot: unknown): string | null {
+    if (!snapshot || typeof snapshot !== "object") {
+      return null;
+    }
+    const lastEventId = (snapshot as { lastEventId?: unknown }).lastEventId;
+    return typeof lastEventId === "string" ? lastEventId : null;
+  }
+
+  async save(runId: string, snapshot: unknown): Promise<void> {
+    const lastEventId = this.getLastEventId(snapshot);
     await db
       .insert(workflowSnapshots)
       .values({
         runId,
         state: snapshot,
-        lastEventId: (snapshot as any).lastEventId ?? null,
+        lastEventId,
       })
       .onConflictDoUpdate({
         target: workflowSnapshots.runId,
         set: {
           state: snapshot,
-          lastEventId: (snapshot as any).lastEventId ?? null,
+          lastEventId,
           createdAt: new Date(),
         },
       });
   }
 
-  async load(runId: string): Promise<any | null> {
+  async load(runId: string): Promise<unknown | null> {
     const [row] = await db
       .select()
       .from(workflowSnapshots)
       .where(eq(workflowSnapshots.runId, runId))
       .limit(1);
 
-    return (row?.state ?? null) as any;
+    return row?.state ?? null;
   }
 
   async delete(runId: string): Promise<void> {

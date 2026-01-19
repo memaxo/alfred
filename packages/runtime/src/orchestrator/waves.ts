@@ -102,6 +102,21 @@ export async function* runWaves(
         _: "notice",
         message: "waves_using_cached_context",
       } as WorkflowEvent;
+    } else if (input.context?.enable === false) {
+      context = {
+        requirement: effectiveRequirement,
+        receipts: {
+          code: [],
+          created: new Date(),
+          summary: "context_disabled",
+        },
+        bundle: null,
+        totalTokens: 0,
+      };
+      yield {
+        _: "notice",
+        message: "waves_context_disabled",
+      } as WorkflowEvent;
     } else {
       const builder = new ContextBuilder();
       context = await builder.build({
@@ -114,7 +129,7 @@ export async function* runWaves(
         exts: input.context?.exts,
         ignore: input.context?.ignore,
         seeds: input.context?.seeds,
-        authz: undefined,
+        authz,
         userId,
       });
     }
@@ -329,6 +344,7 @@ export async function* runWaves(
               userId,
               trackerContextRef,
               queue,
+              runtimeMcp: ctx.runtimeMcp,
             });
           } catch (error) {
             if (isAbortError(error)) {

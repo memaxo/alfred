@@ -202,7 +202,7 @@ export class ContextBuilder {
             useHybrid: true,
             topK: RAG_TOP_K,
             threshold: RAG_THRESHOLD,
-            useReranking: false,
+            useReranking: process.env.RAG_RERANK === "1",
           });
 
           // Estimate RAG chunk tokens

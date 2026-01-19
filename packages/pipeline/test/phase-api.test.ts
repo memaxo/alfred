@@ -385,12 +385,114 @@ describe("Phase Schemas", () => {
 
       expect(result.success).toBe(true);
     });
+
+    it("accepts waveIds and skipTaskIds", () => {
+      const input = {
+        runId: "run-123",
+        waves: [{ id: "wave-1", agents: ["task-1"], dependsOn: [] }],
+        subtasks: [
+          {
+            id: "task-1",
+            title: "Task",
+            requirement: "Do it",
+            deps: [],
+            priority: 1,
+            acceptance: [],
+            filesHint: [],
+          },
+        ],
+        execPlans: { "task-1": "/path/to/plan.md" },
+        rootPlanPath: "/path/to/root.md",
+        workspace: "/repo",
+        userId: "user-123",
+        waveIds: ["wave-1"],
+        skipTaskIds: ["task-1"],
+      };
+
+      const result = executePhaseInputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.waveIds).toEqual(["wave-1"]);
+        expect(result.data.skipTaskIds).toEqual(["task-1"]);
+      }
+    });
+
+    it("defaults dryRun to false when omitted", () => {
+      const input = {
+        runId: "run-123",
+        waves: [{ id: "wave-1", agents: ["task-1"], dependsOn: [] }],
+        subtasks: [
+          {
+            id: "task-1",
+            title: "Task",
+            requirement: "Do it",
+            deps: [],
+            priority: 1,
+            acceptance: [],
+            filesHint: [],
+          },
+        ],
+        execPlans: { "task-1": "/path/to/plan.md" },
+        rootPlanPath: "/path/to/root.md",
+        workspace: "/repo",
+        userId: "user-123",
+      };
+
+      const result = executePhaseInputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.dryRun).toBe(false);
+      }
+    });
+
+    it("accepts dryRun=true", () => {
+      const input = {
+        runId: "run-123",
+        waves: [{ id: "wave-1", agents: ["task-1"], dependsOn: [] }],
+        subtasks: [
+          {
+            id: "task-1",
+            title: "Task",
+            requirement: "Do it",
+            deps: [],
+            priority: 1,
+            acceptance: [],
+            filesHint: [],
+          },
+        ],
+        execPlans: { "task-1": "/path/to/plan.md" },
+        rootPlanPath: "/path/to/root.md",
+        workspace: "/repo",
+        userId: "user-123",
+        dryRun: true,
+      };
+
+      const result = executePhaseInputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.dryRun).toBe(true);
+      }
+    });
   });
 
   describe("planPhaseOutputSchema", () => {
     it("validates valid output", () => {
       const output = {
         runId: "run-123",
+        planId: "plan-123",
+        structuredPlan: {
+          id: "plan-123",
+          title: "Test plan",
+          intent: "test",
+          workspace: "/workspace",
+          phases: [],
+          resources: {
+            agentCount: 1,
+            strategy: "sequential",
+            isolation: "agentfs",
+          },
+          evaluationCriteria: [],
+        },
         waves: [{ id: "wave-1", agents: ["task-1"], dependsOn: [] }],
         waveCount: 1,
         subtasks: [

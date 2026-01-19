@@ -12,6 +12,7 @@ Usage:
 Notes:
 - This script assumes the server is already running.
 - Use --profile-once to request a single cProfile dump (see RERANK_PROFILE_DIR on the server).
+- If you pass a local file path to --image, the server must be started with RERANK_ALLOW_FILE_URLS=1.
 """
 
 from __future__ import annotations

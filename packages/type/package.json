@@ -31,6 +31,10 @@
       "types": "./dist/cognitive.zod.d.ts",
       "default": "./src/cognitive.zod.ts"
     },
+    "./compilation": {
+      "types": "./dist/compilation.d.ts",
+      "default": "./src/compilation.ts"
+    },
     "./envelope": {
       "types": "./dist/envelope.d.ts",
       "default": "./src/envelope.ts"

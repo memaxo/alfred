@@ -14,7 +14,6 @@
     { "path": "../db" },
     { "path": "../voice" },
     { "path": "../agent" },
-    { "path": "../runtime" },
-    { "path": "../api" }
+    { "path": "../runtime" }
   ]
 }

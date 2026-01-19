@@ -389,7 +389,9 @@ describeFn("assistantRepo", () => {
 
     it("filters tasks by status", async () => {
       const task1 = await assistantRepo.createTask(TEST_USER, "Task 1");
-      await assistantRepo.updateTask(task1.id, { status: "completed" });
+      await assistantRepo.updateTask(TEST_USER, task1.id, {
+        status: "completed",
+      });
       await assistantRepo.createTask(TEST_USER, "Task 2");
 
       const completed = await assistantRepo.getTasks(TEST_USER, "completed");
@@ -404,7 +406,7 @@ describeFn("assistantRepo", () => {
       const task = await assistantRepo.createTask(TEST_USER, "Original");
 
       const start = performance.now();
-      const updated = await assistantRepo.updateTask(task.id, {
+      const updated = await assistantRepo.updateTask(TEST_USER, task.id, {
         title: "Updated",
         priority: 10,
       });
@@ -422,7 +424,7 @@ describeFn("assistantRepo", () => {
       const task = await assistantRepo.createTask(TEST_USER, "To delete");
 
       const start = performance.now();
-      const deleted = await assistantRepo.deleteTask(task.id);
+      const deleted = await assistantRepo.deleteTask(TEST_USER, task.id);
       const deleteTime = performance.now() - start;
 
       expect(deleted).toBe(1);

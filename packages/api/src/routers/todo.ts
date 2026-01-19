@@ -1,6 +1,4 @@
-import { db } from "@alfred/db";
-import { todo } from "@alfred/db/schema/todo";
-import { eq } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import z from "zod";
 import { requireScopes } from "../middleware/scopes";
 import { authedProcedure, router } from "../trpc";
@@ -9,6 +7,8 @@ import { authedProcedure, router } from "../trpc";
  * Todo Router
  *
  * CRUD operations for todos with MCP scope enforcement.
+ *
+ * Deprecated: use `task.*` routes backed by `assistant_tasks`.
  *
  * Required scopes:
  * - read:todos - List todos
@@ -21,7 +21,12 @@ export const todoRouter = router({
    */
   getAll: authedProcedure
     .use(requireScopes({ required: "read:todos" }))
-    .query(async () => await db.select().from(todo)),
+    .query(() => {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "todo_deprecated_use_task",
+      });
+    }),
 
   /**
    * Create a new todo.
@@ -30,12 +35,12 @@ export const todoRouter = router({
   create: authedProcedure
     .use(requireScopes({ required: "write:todos" }))
     .input(z.object({ text: z.string().min(1) }))
-    .mutation(
-      async ({ input }) =>
-        await db.insert(todo).values({
-          text: input.text,
-        })
-    ),
+    .mutation(() => {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "todo_deprecated_use_task",
+      });
+    }),
 
   /**
    * Toggle todo completion status.
@@ -44,13 +49,12 @@ export const todoRouter = router({
   toggle: authedProcedure
     .use(requireScopes({ required: "write:todos" }))
     .input(z.object({ id: z.number(), completed: z.boolean() }))
-    .mutation(
-      async ({ input }) =>
-        await db
-          .update(todo)
-          .set({ completed: input.completed })
-          .where(eq(todo.id, input.id))
-    ),
+    .mutation(() => {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "todo_deprecated_use_task",
+      });
+    }),
 
   /**
    * Delete a todo.
@@ -59,7 +63,10 @@ export const todoRouter = router({
   delete: authedProcedure
     .use(requireScopes({ required: "write:todos" }))
     .input(z.object({ id: z.number() }))
-    .mutation(
-      async ({ input }) => await db.delete(todo).where(eq(todo.id, input.id))
-    ),
+    .mutation(() => {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "todo_deprecated_use_task",
+      });
+    }),
 });

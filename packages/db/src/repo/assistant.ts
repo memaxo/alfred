@@ -88,6 +88,7 @@ export function getTasks(
 }
 
 export async function updateTask(
+  userId: string,
   taskId: string,
   updates: Partial<TaskInsert>
 ): Promise<number> {
@@ -100,15 +101,18 @@ export async function updateTask(
   const rows = await db
     .update(tasks)
     .set(patch)
-    .where(eq(tasks.id, taskId))
+    .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
     .returning({ id: tasks.id });
   return rows.length;
 }
 
-export async function deleteTask(taskId: string): Promise<number> {
+export async function deleteTask(
+  userId: string,
+  taskId: string
+): Promise<number> {
   const rows = await db
     .delete(tasks)
-    .where(eq(tasks.id, taskId))
+    .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
     .returning({ id: tasks.id });
   return rows.length;
 }

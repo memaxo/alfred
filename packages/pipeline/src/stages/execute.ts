@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Workspace } from "@alfred/agent/environment/types";
 import { logger } from "@alfred/logger";
+import { RuntimeMcpServer } from "@alfred/mcp";
 import type { WorkflowEvent } from "@alfred/type";
 import { createEvent } from "../events";
 import type { PipelineContext, PipelineStage } from "../pipeline";
@@ -28,6 +29,67 @@ export class ExecuteStage
 {
   readonly name = "execute" as const;
 
+  private normalizeId(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private buildSubtaskTitle(title: string, subTaskId: string): string {
+    const MAX = 240;
+    const base = `${title} (${subTaskId})`.trim();
+    if (base.length <= MAX) {
+      return base;
+    }
+    return `${base.slice(0, MAX - 3)}...`;
+  }
+
+  private buildSubtaskDescription(args: {
+    runId: string;
+    requirement: string;
+    subtask: {
+      id: string;
+      title: string;
+      requirement: string;
+      acceptance: string[];
+      filesHint: string[];
+    };
+  }): string {
+    const lines: string[] = [];
+    lines.push(`Run: ${args.runId}`);
+    lines.push("");
+    lines.push("## Workflow");
+    lines.push(args.requirement.trim());
+    lines.push("");
+    lines.push("## Subtask");
+    lines.push(`ID: ${args.subtask.id}`);
+    lines.push(args.subtask.requirement.trim());
+
+    if (args.subtask.acceptance.length > 0) {
+      lines.push("");
+      lines.push("## Acceptance");
+      for (const item of args.subtask.acceptance) {
+        if (item.trim().length > 0) {
+          lines.push(`- ${item.trim()}`);
+        }
+      }
+    }
+
+    if (args.subtask.filesHint.length > 0) {
+      lines.push("");
+      lines.push("## File hints");
+      for (const hint of args.subtask.filesHint) {
+        if (hint.trim().length > 0) {
+          lines.push(`- ${hint.trim()}`);
+        }
+      }
+    }
+
+    return lines.join("\n").trim();
+  }
+
   private formatQueueEvent(event: WorkflowEvent): string {
     const payload = event as unknown as Record<string, unknown>;
     if (typeof payload.message === "string" && payload.message.length > 0) {
@@ -50,6 +112,27 @@ export class ExecuteStage
     const fileChanges: FileChange[] = [];
     const handoffs: string[] = [];
     const activeWorkspaces: Workspace[] = [];
+
+    const stageAbortController = new AbortController();
+    const parentAbortListener = () => {
+      try {
+        stageAbortController.abort();
+      } catch {
+        // ignore
+      }
+    };
+    if (ctx.signal.aborted) {
+      parentAbortListener();
+    } else {
+      ctx.signal.addEventListener("abort", parentAbortListener, { once: true });
+    }
+
+    const runtimeMcp = new RuntimeMcpServer({
+      bindHost: process.env.ORCH_MCP_BIND_HOST?.trim() || "0.0.0.0",
+      port: Number.parseInt(process.env.ORCH_MCP_PORT ?? "0", 10),
+      path: "/mcp",
+    });
+    const runtimeMcpUrl = await runtimeMcp.start().then((r) => r.url);
 
     // Check for partial execution options
     const waveIds = ctx.get<string[]>("waveIds");
@@ -144,6 +227,154 @@ export class ExecuteStage
     const subTaskById = new Map(subtasks.map((t) => [t.id, t]));
     const execPlans = planOutput?.execPlans ?? new Map();
     const rootExecPlanPath = planOutput?.rootPlanPath ?? "";
+
+    // Best-effort: create per-subtask Linear issues (execute-stage only).
+    try {
+      const space = this.normalizeId(ctx.get("linearSpace"));
+      const authz = this.normalizeId(ctx.get("linearAuthz"));
+      const teamId = this.normalizeId(ctx.get("linearTeamId"));
+      const rootIssueId =
+        this.normalizeId(ctx.get("linearIssueId")) ??
+        this.normalizeId(ctx.get("linearSessionId"));
+
+      const selectedTaskIds = new Set<string>(
+        wavesToExecute.flatMap((w) => w.agents)
+      );
+      const selectedSubtasks = subtasks.filter((t) =>
+        selectedTaskIds.has(t.id)
+      );
+
+      if (space && authz && teamId && selectedSubtasks.length > 0) {
+        const existingRaw = ctx.get("linearTaskIssueMap") as unknown;
+        const existing =
+          existingRaw &&
+          typeof existingRaw === "object" &&
+          !Array.isArray(existingRaw)
+            ? (existingRaw as Record<string, string>)
+            : {};
+        const linearTaskIssueMap: Record<string, string> = { ...existing };
+
+        const { toolTicket } = await import(
+          "@alfred/agent/orchestrator/tool/ticket"
+        );
+        const { syncDepsToLinear } = await import(
+          "@alfred/agent/orchestrator/multi/linear-sync"
+        );
+
+        let createdCount = 0;
+
+        for (const subtask of selectedSubtasks) {
+          if (linearTaskIssueMap[subtask.id]) {
+            continue;
+          }
+
+          const title = this.buildSubtaskTitle(subtask.title, subtask.id);
+          const description = this.buildSubtaskDescription({
+            runId: ctx.runId,
+            requirement: ctx.requirement,
+            subtask: {
+              id: subtask.id,
+              title: subtask.title,
+              requirement: subtask.requirement,
+              acceptance: subtask.acceptance,
+              filesHint: subtask.filesHint,
+            },
+          });
+
+          try {
+            const created = await toolTicket.execute({
+              input: {
+                space,
+                action: "create",
+                teamId,
+                title,
+                description,
+                authz,
+              },
+            });
+
+            const issueId = this.normalizeId(created.id);
+            if (!issueId) {
+              logger.warn("linear_subtask_issue_missing_id", {
+                runId: ctx.runId,
+                subTaskId: subtask.id,
+              });
+              continue;
+            }
+
+            linearTaskIssueMap[subtask.id] = issueId;
+            createdCount++;
+
+            // Persist incrementally for best-effort resume safety.
+            ctx.set("linearTaskIssueMap", linearTaskIssueMap);
+
+            // Best-effort: link root issue to subtask issue.
+            if (rootIssueId) {
+              try {
+                await toolTicket.execute({
+                  input: {
+                    space,
+                    action: "add-relation",
+                    issueId: rootIssueId,
+                    relatedIssueId: issueId,
+                    relationType: "related",
+                    authz,
+                  },
+                });
+              } catch (error) {
+                logger.warn("linear_subtask_relation_failed", {
+                  runId: ctx.runId,
+                  rootIssueId,
+                  subTaskId: subtask.id,
+                  issueId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            }
+          } catch (error) {
+            logger.warn("linear_subtask_issue_create_failed", {
+              runId: ctx.runId,
+              subTaskId: subtask.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        if (createdCount > 0) {
+          ctx.emit(
+            createEvent("stage:progress", {
+              stage: "execute",
+              message: `Linear: created ${createdCount} subtask issues`,
+            })
+          );
+        }
+
+        // Best-effort: sync dependency edges to Linear.
+        try {
+          const map = new Map<string, string>(
+            Object.entries(linearTaskIssueMap)
+          );
+          await syncDepsToLinear(
+            selectedSubtasks as unknown as Parameters<
+              typeof syncDepsToLinear
+            >[0],
+            map as unknown as Parameters<typeof syncDepsToLinear>[1],
+            { space, authz }
+          );
+        } catch (error) {
+          logger.warn("linear_subtask_deps_sync_failed", {
+            runId: ctx.runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    } catch (error) {
+      logger.warn("linear_subtask_issue_setup_failed", {
+        runId: ctx.runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     // Initialize TrackerContext for stuck detection
     const stuckDetectionOptions = ctx.config.stuckDetection ?? {
       noProgressMs: 60_000,
@@ -244,6 +475,36 @@ export class ExecuteStage
               const queue = new AsyncQueue<WorkflowEvent>();
               const drainQueue = (async () => {
                 for await (const event of queue) {
+                  const payload = event as unknown as Record<string, unknown>;
+                  if (payload.type === "agent:escalate-request") {
+                    ctx.emit(
+                      createEvent("agent:escalate-request", {
+                        agentId: String(payload.agentId ?? agentSpec.agentId),
+                        reason: String(payload.reason ?? "unknown"),
+                        details: String(payload.details ?? ""),
+                        suggestions:
+                          Array.isArray(payload.suggestions) &&
+                          payload.suggestions.every(
+                            (s) => typeof s === "string"
+                          )
+                            ? (payload.suggestions as string[])
+                            : undefined,
+                        severity:
+                          payload.severity === "warning"
+                            ? "warning"
+                            : "blocking",
+                      })
+                    );
+
+                    if (payload.severity !== "warning") {
+                      ctx.set("pipelineSuspend", {
+                        reason: "agent_escalation",
+                        agentId: String(payload.agentId ?? agentSpec.agentId),
+                      });
+                      parentAbortListener();
+                    }
+                    continue;
+                  }
                   ctx.emit(
                     createEvent("agent:progress", {
                       agentId: agentSpec.agentId,
@@ -266,11 +527,12 @@ export class ExecuteStage
                   activeWorkspaces,
                   agentFileHints: new Map(),
                   rootExecPlanPath,
-                  signal: ctx.signal,
+                  signal: stageAbortController.signal,
                   authz: ctx.get("authz"),
                   userId: ctx.userId,
                   trackerContextRef,
                   queue,
+                  runtimeMcp: { server: runtimeMcp, url: runtimeMcpUrl },
                 });
               } finally {
                 queue.close();
@@ -289,38 +551,66 @@ export class ExecuteStage
                 ts: Date.now(),
               });
 
-              // Check for stuck detection
-              const isStuck = detectStuckWithContext(
-                trackerContext,
-                agentSpec.agentId,
-                Date.now()
-              );
-
-              if (isStuck && !result.stuck) {
-                result.stuck = true;
-                result.status = "stuck";
+              // Trust runtime's stuck/escalation status (runtime handles real-time detection)
+              // Pipeline only does secondary stuck detection as fallback
+              if (!result.stuck) {
+                const isStuck = detectStuckWithContext(
+                  trackerContext,
+                  agentSpec.agentId,
+                  Date.now()
+                );
+                if (isStuck) {
+                  result.stuck = true;
+                  result.status = "stuck";
+                  ctx.emit(
+                    createEvent("agent:stuck", {
+                      agentId: agentSpec.agentId,
+                      reason: "no_progress",
+                    })
+                  );
+                }
+              } else if (result.stuck) {
+                // Emit stuck event if runtime already detected it
                 ctx.emit(
                   createEvent("agent:stuck", {
                     agentId: agentSpec.agentId,
-                    reason: "no_progress",
+                    reason: "loop_detected",
                   })
                 );
               }
 
-              // Check for escalation file
-              const escalationReason = await readEscalationFile(
-                agentSpec.workingDirectory,
-                agentSpec.agentId
-              );
-              if (escalationReason && !result.escalation) {
-                result.escalation = escalationReason;
-                result.status = "escalated";
+              // Check for escalation - runtime now handles real-time escalation via tool,
+              // file-based check kept as deprecated fallback
+              if (result.escalation) {
+                // Emit escalated event for runtime-detected escalation
                 ctx.emit(
                   createEvent("agent:escalated", {
                     agentId: agentSpec.agentId,
-                    reason: escalationReason,
+                    reason: result.escalation,
                   })
                 );
+              } else {
+                const escalationReason = await readEscalationFile(
+                  agentSpec.workingDirectory,
+                  agentSpec.agentId
+                );
+                if (escalationReason) {
+                  // Log deprecation warning for file-based escalation
+                  logger.warn("deprecated_file_escalation", {
+                    runId: ctx.runId,
+                    agentId: agentSpec.agentId,
+                    message:
+                      "File-based escalation is deprecated. Use the escalate tool instead.",
+                  });
+                  result.escalation = escalationReason;
+                  result.status = "escalated";
+                  ctx.emit(
+                    createEvent("agent:escalated", {
+                      agentId: agentSpec.agentId,
+                      reason: escalationReason,
+                    })
+                  );
+                }
               }
 
               lastResult = result;
@@ -520,6 +810,16 @@ export class ExecuteStage
         handoffs,
       };
     } finally {
+      ctx.signal.removeEventListener("abort", parentAbortListener);
+      try {
+        await runtimeMcp.stop();
+      } catch (error) {
+        logger.warn("runtime_mcp_server_stop_failed", {
+          runId: ctx.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
       // Mirror legacy orchestrator cleanup guarantees.
       try {
         const { stopAllServers } = await import(

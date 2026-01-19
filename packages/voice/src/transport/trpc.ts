@@ -3,6 +3,8 @@ import type {
   SpeechToSpeechResponse,
   SttRequest,
   SttResult,
+  SttStreamingRequest,
+  SttStreamingResult,
   TtsRequest,
   TtsResult,
   VoiceClient,
@@ -20,6 +22,22 @@ export function createVoiceClient({
   return {
     sttTranscribe: (input: SttRequest): Promise<SttResult> =>
       trpc.mutation("voice.sttTranscribe", input),
+    sttTranscribeStreaming: (
+      input: SttStreamingRequest
+    ): Promise<SttStreamingResult> =>
+      trpc.mutation("voice.sttTranscribeStreaming", input),
+    sttClearCache: (input: {
+      sessionId: string;
+    }): Promise<{
+      cleared: boolean;
+      sessionId: string;
+    }> => trpc.mutation("voice.sttClearCache", input),
+    sttReleaseSession: (input: {
+      sessionId: string;
+    }): Promise<{
+      released: boolean;
+      sessionId: string;
+    }> => trpc.mutation("voice.sttReleaseSession", input),
     ttsSynthesize: (input: TtsRequest): Promise<TtsResult> =>
       trpc.mutation("voice.ttsSynthesize", input),
     speechToSpeech: (

@@ -155,6 +155,7 @@ export async function classifyPaths(
       {
         model,
         modelKey,
+        metricType: "path",
         fallback: () => ({
           assignments: paths.map((p, i) => ({
             index: i,
@@ -234,7 +235,7 @@ export async function classifyPathsWithMetadata(
       pathClassificationSchema,
       buildPathPrompt(paths),
       "",
-      { model, modelKey }
+      { model, modelKey, metricType: "path" }
     );
 
     const assignments = new Map<string, PathBucket>();

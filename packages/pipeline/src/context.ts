@@ -95,6 +95,7 @@ export function exportContextStorage(
     "reviewGateState",
     "fixAttempts",
     "linearSessionId",
+    "linearTeamId",
     "executeOutput",
     "fileChanges",
   ];

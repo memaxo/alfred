@@ -34,6 +34,7 @@ import { receiptRouter } from "./receipt";
 import { remindRouter } from "./remind";
 import { runtimeRouter } from "./runtime";
 import { shortcutsRouter } from "./shortcuts";
+import { taskRouter } from "./task";
 import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
 import { todoRouter } from "./todo";
@@ -61,6 +62,7 @@ export const appRouter = router({
     user: ctx.session.user,
   })),
   todo: todoRouter,
+  task: taskRouter,
   note: noteRouter,
   remind: remindRouter,
   timer: timerRouter,

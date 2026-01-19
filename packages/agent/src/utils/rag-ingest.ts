@@ -41,7 +41,7 @@ export async function ingest(
     source,
     `Doc @ ${new Date().toISOString()}`
   );
-  const pieces = await chunk(content);
+  const pieces: string[] = await chunk(content);
 
   if (pieces.length === 0) {
     return document.id;
@@ -68,7 +68,7 @@ export async function ingest(
   // Get current model ID to track which model generated these embeddings
   const modelId = getCurrentModelId();
 
-  const chunks = pieces.map((piece, index) => ({
+  const chunks = pieces.map((piece: string, index: number) => ({
     content: piece,
     order: index,
     embedding:

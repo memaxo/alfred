@@ -5,6 +5,7 @@ import type {
   VoiceStreamStartPayload,
   VoiceStreamStatusEvent,
 } from "@alfred/type/voice";
+import { PCM_MIME_TYPE } from "./audio/pcm";
 
 type StartPayload = Omit<VoiceStreamStartPayload, "_">;
 type AudioChunkPayload = Omit<VoiceStreamAudioChunkPayload, "_">;
@@ -330,7 +331,7 @@ export class VoiceStreamClient {
               _: "tts_chunk",
               sessionId: this.sessionId ?? "unknown",
               audioBase64,
-              mimeType: "application/octet-stream",
+              mimeType: PCM_MIME_TYPE,
               sequence: this.ttsSeq++,
             });
             return;

@@ -6,8 +6,15 @@ function encodeBase64(binary: string): string {
   if (typeof btoa === "function") {
     return btoa(binary);
   }
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(binary, "binary").toString("base64");
+  type BufferLike = {
+    from: (
+      value: string,
+      encoding: string
+    ) => { toString: (encoding: string) => string };
+  };
+  const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
+  if (B) {
+    return B.from(binary, "binary").toString("base64") as string;
   }
   throw new Error("base64_encode_unavailable");
 }
@@ -16,8 +23,15 @@ function decodeBase64(base64: string): string {
   if (typeof atob === "function") {
     return atob(base64);
   }
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(base64, "base64").toString("binary");
+  type BufferLike = {
+    from: (
+      value: string,
+      encoding: string
+    ) => { toString: (encoding: string) => string };
+  };
+  const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
+  if (B) {
+    return B.from(base64, "base64").toString("binary") as string;
   }
   throw new Error("base64_decode_unavailable");
 }

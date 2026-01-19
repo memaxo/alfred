@@ -59,6 +59,7 @@ registerDefaultStages(runner);
 // Add Linear observer
 runner.addObserver(new LinearSyncObserver({
   syncIntervalMs: 30_000,
+  space: 'workspace-1',
   issueId: 'ALF-123',
   authz: 'your-linear-token',
 }));
@@ -67,6 +68,10 @@ for await (const event of runner.run(input)) {
   // Linear updates happen automatically via observer
 }
 ```
+
+Notes:
+- `space` is required for Linear operations (do not infer it from issue identifiers).
+- Per-subtask issue creation requires `input.linear.teamId` and happens in the execute stage only.
 
 ### Custom Observer
 

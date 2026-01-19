@@ -269,3 +269,43 @@ export const voiceWebSocketPayloadTooLargeTotal = ensureCounter({
   help: "Count of WebSocket messages rejected due to payload size limit.",
   registers: [metricsRegistry],
 });
+
+// WebRTC metrics (SRTP Opus transport)
+export const voiceWebrtcSessionsCurrent = ensureGauge({
+  name: "voice_webrtc_sessions_current",
+  help: "Current active WebRTC sessions for realtime voice.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebrtcSessionsCreatedTotal = ensureCounter({
+  name: "voice_webrtc_sessions_created_total",
+  help: "Count of created WebRTC sessions grouped by surface.",
+  labelNames: ["surface"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebrtcSessionsClosedTotal = ensureCounter({
+  name: "voice_webrtc_sessions_closed_total",
+  help: "Count of closed WebRTC sessions grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebrtcOfferDurationSeconds = ensureHistogram({
+  name: "voice_webrtc_offer_duration_seconds",
+  help: "Duration of applying WebRTC offers (SDP) in seconds.",
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+export const voiceWebrtcRtpPacketsReceivedTotal = ensureCounter({
+  name: "voice_webrtc_rtp_packets_received_total",
+  help: "Total RTP audio packets received over WebRTC.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebrtcRtpPacketsSentTotal = ensureCounter({
+  name: "voice_webrtc_rtp_packets_sent_total",
+  help: "Total RTP audio packets sent over WebRTC.",
+  registers: [metricsRegistry],
+});

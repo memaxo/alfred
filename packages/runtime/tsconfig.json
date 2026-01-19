@@ -25,6 +25,7 @@
     { "path": "../history" },
     { "path": "../db" },
     { "path": "../metrics" },
+    { "path": "../mcp" },
     { "path": "../plan" },
     { "path": "../agent" },
     { "path": "../rag" }

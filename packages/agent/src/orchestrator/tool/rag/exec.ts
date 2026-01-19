@@ -5,6 +5,7 @@
 
 import * as ragRepo from "@alfred/db/repo/rag";
 import { logger } from "@alfred/logger";
+import type { Chunk } from "@alfred/rag";
 import { ingest, ingestWithOptions, retrieve } from "@alfred/rag";
 import type {
   RagDeleteInput,
@@ -62,14 +63,18 @@ export async function executeIngest(
         imageUrl: imageUrl.slice(0, 100),
       });
     } else {
-      documentId = await ingest(source, content, (processed, total) => {
-        chunksCreated = total;
-        logger.debug("rag_ingest_progress", {
-          source,
-          processed,
-          total,
-        });
-      });
+      documentId = await ingest(
+        source,
+        content,
+        (processed: number, total: number) => {
+          chunksCreated = total;
+          logger.debug("rag_ingest_progress", {
+            source,
+            processed,
+            total,
+          });
+        }
+      );
     }
 
     // Get actual chunk count from the database
@@ -108,7 +113,7 @@ export async function executeQuery(
 ): Promise<RagQueryOutput> {
   const { query, k = DEFAULT_K, threshold = DEFAULT_THRESHOLD } = input;
 
-  const chunks = await retrieve(query, k, threshold);
+  const chunks: Chunk[] = await retrieve(query, k, threshold);
 
   // Filter by source if specified
   const source = input.source;

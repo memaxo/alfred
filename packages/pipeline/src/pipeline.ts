@@ -1,3 +1,8 @@
+import type { StuckDetectionConfig } from "@alfred/agent/orchestrator/multi/tracker";
+
+// Re-export for consumers who import from pipeline
+export type { StuckDetectionConfig };
+
 // Stage name enumeration
 export type StageName =
   | "init" // Create project, link Linear
@@ -38,19 +43,6 @@ export type PipelineContext = {
   emit(event: PipelineEvent): void;
   get<T>(key: string): T | undefined;
   set(key: string, value: unknown): void;
-};
-
-/**
- * Stuck detection configuration.
- * Imported from @alfred/agent/orchestrator/multi/tracker.
- */
-export type StuckDetectionConfig = {
-  /** Time in milliseconds without events before agent is considered stuck (default: 60000) */
-  noProgressMs?: number;
-  /** Maximum transitions before agent is considered stuck (default: 200) */
-  maxTransitions?: number;
-  /** Similarity threshold for semantic loop detection (default: 0.92) */
-  similarityThreshold?: number;
 };
 
 /**

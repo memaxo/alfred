@@ -7,10 +7,14 @@
  */
 
 // Context types (unified execute signature)
-export type {
-  ToolExecuteArgs,
-  ToolExecuteContext,
-  ToolWriter,
+export {
+  AGENT_ESCALATION_REASONS,
+  type AgentEscalationEvent,
+  type AgentEscalationReason,
+  isAgentEscalationEvent,
+  type ToolExecuteArgs,
+  type ToolExecuteContext,
+  type ToolWriter,
 } from "./context";
 // Metrics utilities
 export {

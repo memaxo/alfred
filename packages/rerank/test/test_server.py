@@ -120,7 +120,7 @@ def test_with_image(image_path: str):
     """Test reranking with an image."""
     print(f"\nTesting multimodal reranking with image: {image_path}")
     
-    # Convert local path to file:// URL
+    # Convert local path to file:// URL (server requires RERANK_ALLOW_FILE_URLS=1)
     if not image_path.startswith(("http://", "https://", "file://")):
         image_path = f"file://{os.path.abspath(image_path)}"
     
@@ -162,12 +162,19 @@ def main():
         test_text_only_rerank()
         test_batch_processing()
         
-        # Test with image if available
-        alfred_ui_image = os.path.expanduser("~/Desktop/ALFRED UI/alfred-1.png")
-        if os.path.exists(alfred_ui_image):
-            test_with_image(alfred_ui_image)
+        # Test with image if allowed/available
+        allow_file_urls = health.get("allow_file_urls") is True
+        test_image_url = os.getenv("TEST_IMAGE_URL", "").strip()
+        if test_image_url:
+            test_with_image(test_image_url)
+        elif allow_file_urls:
+            alfred_ui_image = os.path.expanduser("~/Desktop/ALFRED UI/alfred-1.png")
+            if os.path.exists(alfred_ui_image):
+                test_with_image(alfred_ui_image)
+            else:
+                print("\nSkipping image test (no local test image found)")
         else:
-            print("\nSkipping image test (no test image found)")
+            print("\nSkipping image test (file:// disabled; set TEST_IMAGE_URL or enable RERANK_ALLOW_FILE_URLS=1)")
         
         print("\n" + "=" * 50)
         print("All tests passed! ✓")

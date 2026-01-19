@@ -1,4 +1,6 @@
-import { register } from "prom-client";
+import client from "prom-client";
+
+const { register } = client;
 
 // Inline manifest types to avoid tsconfig rootDir issues
 type HealthStatus = {

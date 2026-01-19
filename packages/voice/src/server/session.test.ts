@@ -22,6 +22,8 @@ class MockSTTPool {
       model: "faster-whisper-large-v3-turbo",
     });
   }
+
+  releaseSession(_sessionId: string) {}
 }
 
 class MockTTSPool {

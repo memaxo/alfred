@@ -14,6 +14,7 @@ import type { UIMessage } from "@alfred/type/stream";
 import { resetAgentMocks } from "./utils/agent-mock";
 import { dbModuleStub } from "./utils/mock-db-client";
 import { metricsStub } from "./utils/mock-metrics";
+import { installPipelineMocks } from "./utils/pipeline";
 import {
   mockPolicyAudit,
   mockRunRegistry,
@@ -68,6 +69,7 @@ mock.module("../src/workflow/access", () => ({
 
 setupTestEnv();
 mockPolicyAudit();
+installPipelineMocks();
 
 const workflowRepoMocks = mockWorkflowRepo();
 const runRegistryMocks = mockRunRegistry();
@@ -100,127 +102,6 @@ mock.module("@alfred/api/metrics", () => ({
   workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
   workflowStreamEventsTotal: workflowStreamEventsTotalMock,
 }));
-
-mock.module("@alfred/pipeline", () => {
-  class PipelineRunner {
-    private readonly observers = new Set<{
-      onEvent: (event: PipelineEvent) => void;
-      onComplete?: () => void;
-    }>();
-
-    addObserver(observer: { onEvent: (event: PipelineEvent) => void }) {
-      this.observers.add(observer);
-      return this;
-    }
-
-    *run(input: { runId: string; requirement: string }) {
-      const events: PipelineEvent[] = [
-        {
-          type: "pipeline:start",
-          runId: input.runId,
-          requirement: input.requirement,
-          timestamp: Date.now(),
-        },
-        {
-          type: "pipeline:complete",
-          runId: input.runId,
-          timestamp: Date.now(),
-          summary: {
-            agentsSpawned: 0,
-            filesChanged: 0,
-            learningInsights: 0,
-            durationMs: 1,
-            stages: [],
-          },
-        },
-      ];
-
-      for (const event of events) {
-        for (const observer of this.observers) {
-          observer.onEvent(event);
-        }
-        yield event;
-      }
-
-      for (const observer of this.observers) {
-        observer.onComplete?.();
-      }
-    }
-  }
-
-  return {
-    PipelineRunner,
-    registerDefaultStages: () => {},
-  };
-});
-
-mock.module("@alfred/pipeline/observers", () => {
-  class PipelineEventQueueObserver {
-    private readonly queue: PipelineEvent[] = [];
-    private readonly waiters: Array<(event: PipelineEvent | null) => void> = [];
-    private closed = false;
-
-    onEvent(event: PipelineEvent) {
-      const waiter = this.waiters.shift();
-      if (waiter) {
-        waiter(event);
-        return;
-      }
-      this.queue.push(event);
-    }
-
-    close() {
-      if (this.closed) {
-        return;
-      }
-      this.closed = true;
-      for (const waiter of this.waiters.splice(0)) {
-        waiter(null);
-      }
-    }
-
-    onComplete() {
-      this.close();
-    }
-
-    async *stream(): AsyncGenerator<PipelineEvent, void, void> {
-      while (true) {
-        const next = this.queue.shift();
-        if (next) {
-          yield next;
-          continue;
-        }
-        if (this.closed) {
-          return;
-        }
-        const event = await new Promise<PipelineEvent | null>((resolve) => {
-          this.waiters.push(resolve);
-        });
-        if (!event) {
-          return;
-        }
-        yield event;
-      }
-    }
-  }
-
-  class NoopObserver {
-    onEvent() {}
-  }
-
-  class CheckpointObserver extends NoopObserver {}
-  class CostCleanupObserver extends NoopObserver {}
-  class LinearSyncObserver extends NoopObserver {}
-  class MetricsObserver extends NoopObserver {}
-
-  return {
-    CheckpointObserver,
-    CostCleanupObserver,
-    LinearSyncObserver,
-    MetricsObserver,
-    PipelineEventQueueObserver,
-  };
-});
 
 const { createTestCaller } = await import("./utils/trpc");
 

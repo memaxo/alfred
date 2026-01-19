@@ -3,6 +3,7 @@
 // fails or hangs when run alongside other tests. See test isolation refactor task.
 // NOTE: Refactor to use dependency injection instead of mock.module().
 import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
+import { createServer } from "node:net";
 
 // Gate all module-level side effects behind a flag so they don't pollute other tests
 const SHOULD_RUN = process.env.RUN_VOICE_STREAMING_TESTS === "1";
@@ -11,6 +12,7 @@ if (SHOULD_RUN) {
   // Install stable, full-surface stubs to prevent cross-test module conflicts.
   await import("./utils/mock-db-client");
   await import("./utils/agent-mock");
+  await import("./utils/mock-metrics");
 
   // Mock auth
   mock.module("@alfred/auth", () => ({
@@ -22,12 +24,6 @@ if (SHOULD_RUN) {
         }),
       },
     },
-  }));
-
-  // Mock policies
-  mock.module("@alfred/policy", () => ({
-    evaluate: async () => ({ allow: true, obligations: [] }),
-    registerCacheObs: () => {},
   }));
 
   // Mock dependencies that require native modules or external services
@@ -45,17 +41,34 @@ type VoiceFixtureHandle = { restore: () => void } | null;
 const describeFn = SHOULD_RUN ? describe : describe.skip;
 
 describeFn("voice streaming integration", () => {
+  let port = 0;
   let startVoiceStreamingPrototype: any;
   let stopVoiceStreamingPrototype: any;
   let initializeVoicePools: any;
   let shutdownVoicePools: any;
   let voiceFixture: VoiceFixtureHandle | null = null;
 
+  async function getFreePort(): Promise<number> {
+    const server = createServer();
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve)
+    );
+    const addr = server.address();
+    if (!addr || typeof addr === "string") {
+      server.close();
+      throw new Error("free_port_unavailable");
+    }
+    const p = addr.port;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    return p;
+  }
+
   beforeAll(async () => {
     process.env.OPENAI_API_KEY = "dummy"; // Satisfy any other checks
     process.env.VOICE_PROVIDER = "maya1";
     process.env.VOICE_STREAMING_PROTO = "1";
-    process.env.VOICE_STREAMING_PORT = "8799";
+    port = await getFreePort();
+    process.env.VOICE_STREAMING_PORT = String(port);
 
     const { installVoiceTestPools: installPools } = await import(
       "@alfred/test-kit/voice/runtime-fixture"
@@ -85,7 +98,7 @@ describeFn("voice streaming integration", () => {
   });
 
   it("connects and handles start/stop", async () => {
-    const ws = new WebSocket("ws://localhost:8799/voice/stream");
+    const ws = new WebSocket(`ws://localhost:${port}/voice/stream`);
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -94,21 +107,21 @@ describeFn("voice streaming integration", () => {
       }, 5000);
 
       ws.onopen = () => {
-        ws.send(JSON.stringify({ type: "start", language: "en" }));
+        ws.send(JSON.stringify({ _: "start", language: "en" }));
       };
 
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data as string);
-        if (msg.type === "ready") {
+        if (msg._ === "ready") {
           return;
         }
 
-        if (msg.type === "session_started") {
+        if (msg._ === "session_started") {
           expect(msg.sessionId).toBeDefined();
-          ws.send(JSON.stringify({ type: "stop" }));
+          ws.send(JSON.stringify({ _: "stop" }));
         }
 
-        if (msg.type === "final_transcript") {
+        if (msg._ === "final_transcript") {
           clearTimeout(timeout);
           ws.close();
           resolve();

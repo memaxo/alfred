@@ -48,6 +48,65 @@ export const wavePlanSchema = z.object({
 });
 
 /**
+ * StructuredPlan schema (local copy).
+ *
+ * NOTE: We intentionally do NOT import `structuredPlanSchema` from `@alfred/plan/schema`
+ * because `@alfred/plan` may resolve a different `zod` major version than
+ * `@alfred/pipeline`, and mixing zod instances breaks parsing at runtime.
+ */
+export const structuredPlanPhaseSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  description: z.string(),
+  tasks: z.array(subTaskSchema),
+  dependsOn: z.array(z.string()),
+  estimatedDurationMs: z.number().min(0),
+  agentType: z.enum([
+    "codex",
+    "droid",
+    "claude-code",
+    "research",
+    "review",
+    "orchestrator",
+  ]),
+});
+
+export const structuredPlanSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1),
+  intent: z.string().min(1),
+  workspace: z.string().optional(),
+  phases: z.array(structuredPlanPhaseSchema),
+  waves: z
+    .array(
+      z.object({
+        id: z.string(),
+        agents: z.array(z.string()),
+        dependsOn: z.array(z.string()),
+        agentType: z.string().optional(),
+        isolation: z.enum(["agentfs"]).optional(),
+        phaseId: z.string().optional(),
+      })
+    )
+    .optional(),
+  resources: z.object({
+    agentCount: z.number().min(1),
+    strategy: z.enum(["sequential", "parallel", "mixed", "topological"]),
+    isolation: z.enum(["agentfs"]),
+  }),
+  evaluationCriteria: z.array(
+    z.union([
+      z.string(),
+      z.object({
+        name: z.string(),
+        weight: z.number(),
+        threshold: z.string(),
+      }),
+    ])
+  ),
+});
+
+/**
  * Update Plan Input - for modifying an existing plan
  */
 export const updatePlanInputSchema = z.object({
@@ -92,9 +151,9 @@ export const planPhaseInputSchema = z.object({
   /** The requirement/task description */
   requirement: z.string().min(1),
   /** Workspace/repository path */
-  workspace: z.string().min(1),
+  workspace: z.string().min(1).optional(),
   /** User ID for authorization */
-  userId: z.string().min(1),
+  userId: z.string().min(1).optional(),
   /** Optional authorization token */
   authz: z.string().optional(),
   /** Optional Linear integration config */
@@ -171,6 +230,10 @@ export const contextBundleSchema = z.object({
 export const planPhaseOutputSchema = z.object({
   /** Run ID for this pipeline execution */
   runId: z.string(),
+  /** Persisted plan ID */
+  planId: z.string(),
+  /** Canonical structured plan */
+  structuredPlan: structuredPlanSchema,
   /** Generated wave plans */
   waves: z.array(wavePlanSchema),
   /** Number of waves */

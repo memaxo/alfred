@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { planRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
+import { RuntimeMcpServer } from "@alfred/mcp";
 import type { StructuredPlan } from "@alfred/plan";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
@@ -42,6 +43,24 @@ export async function* runOrchestrator(
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const workspace = input.workspace ?? process.cwd();
 
+  const orchMcp = (process.env.ORCH_MCP ?? "").trim().toLowerCase();
+  const enableMcp = orchMcp === "1" || orchMcp === "true" || orchMcp === "yes";
+
+  // Optional: Start the runtime MCP server early so executors can connect deterministically.
+  // Off by default to keep evals/CI deterministic (no unexpected port binds).
+  // When enabled, we bind to 0.0.0.0 to support AgentFS containers on Linux (host-gateway),
+  // but rely on per-agent bearer tokens for safety.
+  let runtimeMcp: RuntimeMcpServer | null = null;
+  let runtimeMcpUrl: string | null = null;
+  if (enableMcp) {
+    runtimeMcp = new RuntimeMcpServer({
+      bindHost: process.env.ORCH_MCP_BIND_HOST?.trim() || "0.0.0.0",
+      port: Number.parseInt(process.env.ORCH_MCP_PORT ?? "0", 10),
+      path: "/mcp",
+    });
+    runtimeMcpUrl = await runtimeMcp.start().then((r) => r.url);
+  }
+
   // Best-effort scope gating signal (mirrors legacy runner behavior).
   // This does not block execution by itself; consumers may suspend/require authz.
   if (input.auto === "medium" || input.auto === "high") {
@@ -73,6 +92,13 @@ export async function* runOrchestrator(
     scanContext,
     userId,
     plan,
+    runtimeMcp:
+      runtimeMcp && runtimeMcpUrl
+        ? {
+            server: runtimeMcp,
+            url: runtimeMcpUrl,
+          }
+        : undefined,
   };
 
   let wavesResult: WavesResult | null = null;
@@ -132,6 +158,17 @@ export async function* runOrchestrator(
 
     return; // Placeholder for result type
   } finally {
+    try {
+      if (runtimeMcp) {
+        await runtimeMcp.stop();
+      }
+    } catch (error) {
+      logger.warn("runtime_mcp_server_stop_failed", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     try {
       const { stopAllServers } = await import(
         "@alfred/agent/orchestrator/tool/shared/server"

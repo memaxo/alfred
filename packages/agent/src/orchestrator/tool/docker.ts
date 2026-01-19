@@ -87,6 +87,8 @@ const dockerInputSchema = z.object({
   hostPort: z.number().int().min(1).max(65_535).optional(),
   env: z.record(z.string(), z.string()).optional(),
   network: z.string().optional(),
+  /** Extra host mappings (passed as repeated --add-host) */
+  addHosts: z.array(z.string().min(1)).optional(),
   volumes: z.array(z.string()).optional(), // Phase 11: Volume mounts
   devices: z.array(z.string()).optional(),
   capAdd: z.array(z.string()).optional(),
@@ -118,7 +120,9 @@ async function enforcePolicy(input: DockerInput) {
   const scopes =
     input.action === "exec.probe" ? ["deploy.read"] : ["deploy.write"];
   await requireToolScopesAndPolicy(input.authz, scopes, {
-    action: `docker.${input.action}`,
+    // Policy actions are expressed in scope-like verbs (deploy.read/deploy.write),
+    // not tool-specific operation names.
+    action: scopes[0] ?? "deploy.write",
     resource: {
       kind: "deploy",
       id: input.name ?? input.tag ?? "runtime",
@@ -997,7 +1001,7 @@ function executeBuild(input: DockerInput, writer: ToolWriter) {
   });
 }
 
-function executeRun(input: DockerInput, writer: ToolWriter) {
+function executeRunLegacy(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const tag = ensure(input.tag, "docker_tag_required");
     const name = ensure(input.name, "docker_name_required");
@@ -1027,6 +1031,12 @@ function executeRun(input: DockerInput, writer: ToolWriter) {
 
     if (input.network) {
       args.push("--network", input.network);
+    }
+
+    if (input.addHosts) {
+      for (const host of input.addHosts) {
+        args.push("--add-host", host);
+      }
     }
 
     if (input.env) {
@@ -1517,6 +1527,135 @@ exit $EXIT_CODE
     const selected = input.hostPort
       ? (mapped.find((entry) => entry.host === input.hostPort) ?? mapped[0])
       : mapped[0];
+
+    return {
+      ok: true as const,
+      details: {
+        name,
+        containerId,
+        containerPort,
+        hostPort: selected?.host ?? input.hostPort ?? null,
+        ports: mapped,
+      },
+    };
+  });
+}
+
+function executeRun(input: DockerInput, writer: ToolWriter) {
+  if (process.env.ORCH_DOCKER_RUN_LEGACY === "1") {
+    return executeRunLegacy(input, writer);
+  }
+
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const tag = ensure(input.tag, "docker_tag_required");
+    const name = ensure(input.name, "docker_name_required");
+    const containerPort = input.containerPort ?? 3000;
+
+    const args = ["run", "-d", "--name", name, "--restart", "unless-stopped"];
+
+    if (input.hostPort) {
+      args.push("-p", `${input.hostPort}:${containerPort}`);
+    } else {
+      args.push("-P");
+    }
+
+    if (input.network) {
+      args.push("--network", input.network);
+    }
+
+    if (input.addHosts) {
+      for (const host of input.addHosts) {
+        args.push("--add-host", host);
+      }
+    }
+
+    if (input.env) {
+      for (const [key, value] of Object.entries(input.env)) {
+        args.push("-e", `${key}=${value}`);
+      }
+    }
+
+    if (input.volumes) {
+      for (const vol of input.volumes) {
+        args.push("-v", vol);
+      }
+    }
+
+    if (input.devices) {
+      for (const dev of input.devices) {
+        args.push("--device", dev);
+      }
+    }
+
+    if (input.capAdd) {
+      for (const cap of input.capAdd) {
+        args.push("--cap-add", cap);
+      }
+    }
+
+    if (input.privileged) {
+      args.push("--privileged");
+    }
+
+    if (input.resources) {
+      if (input.resources.cpus) {
+        args.push("--cpus", String(input.resources.cpus));
+      }
+      if (input.resources.memory) {
+        args.push("--memory", input.resources.memory);
+      }
+    }
+
+    args.push(tag);
+
+    const result = await runDocker({
+      args,
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_run_failed");
+    }
+
+    const containerIdFromStdout = (result.stdout ?? "").trim().split(/\s+/u)[0];
+
+    const inspectResult = await runDocker({
+      args: ["inspect", name],
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (inspectResult.exitCode !== 0) {
+      throw new Error("docker_inspect_failed");
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(inspectResult.stdout || "[]");
+    } catch {
+      parsed = [];
+    }
+
+    const mapped = parseInspectPorts(parsed, containerPort);
+    const selected = input.hostPort
+      ? (mapped.find((entry) => entry.host === input.hostPort) ?? mapped[0])
+      : mapped[0];
+
+    const first = Array.isArray(parsed) ? parsed[0] : undefined;
+    let containerId: string | undefined = containerIdFromStdout || undefined;
+    if (!containerId && first && typeof first === "object") {
+      const record = first as Record<string, unknown>;
+      if (typeof record.Id === "string") {
+        containerId = record.Id;
+      }
+    }
+
+    if (!containerId) {
+      throw new Error("docker_run_no_container_id");
+    }
 
     return {
       ok: true as const,

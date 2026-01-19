@@ -3,6 +3,7 @@ import { arrayBufferToBase64, base64ToArrayBuffer } from "./converter";
 export const PCM_SAMPLE_RATE = 16_000;
 export const PCM_CHANNELS = 1;
 export const PCM_BIT_DEPTH = 16;
+export const PCM_MIME_TYPE = "audio/raw;codec=pcm_s16le;rate=16000" as const;
 
 function writeString(view: DataView, offset: number, value: string) {
   for (let i = 0; i < value.length; i += 1) {

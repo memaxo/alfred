@@ -17,11 +17,13 @@ const PLAN_CACHE_PREFIX = "plan:cache:";
  * Includes file tree snapshot to invalidate on workspace changes.
  */
 export function getPlanCacheKey(input: {
+  runId: string;
   requirement: string;
   workspace: string;
   fileTreeHash?: string;
 }): string {
   const hash = createHash("sha256");
+  hash.update(input.runId);
   hash.update(input.requirement);
   hash.update(input.workspace);
   if (input.fileTreeHash) {

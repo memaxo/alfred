@@ -1,4 +1,5 @@
 import type { WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
+import type { StructuredPlan } from "@alfred/plan";
 import type { AgentOutcome } from "@alfred/runtime/orchestrator/agent";
 // Import actual types from dependencies to avoid type mismatches
 import type { SubTask } from "@alfred/type/plan";
@@ -66,6 +67,7 @@ export type PipelineInput = {
   linear?: {
     sessionId: string;
     space: string;
+    teamId?: string;
     issueId?: string;
     authz: string;
   };
@@ -85,6 +87,8 @@ export type ContextOutput = {
 };
 
 export type PlanOutput = {
+  planId: string;
+  structuredPlan: StructuredPlan;
   subtasks: SubTask[];
   execPlans: Map<string, string>; // subtaskId -> path to .md file
   rootPlanPath: string;

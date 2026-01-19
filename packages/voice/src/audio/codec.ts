@@ -1,10 +1,13 @@
-import { Buffer } from "node:buffer";
+import type { Buffer } from "node:buffer";
 import { decodeOpus } from "./opus";
+import {
+  PCM_BIT_DEPTH,
+  PCM_CHANNELS,
+  PCM_MIME_TYPE,
+  PCM_SAMPLE_RATE,
+} from "./pcm";
 
-const PCM_SAMPLE_RATE = 16_000;
-const PCM_CHANNELS = 1;
-const PCM_BIT_DEPTH = 16;
-export const PCM_MIME_TYPE = "audio/raw;codec=pcm_s16le;rate=16000";
+export { PCM_MIME_TYPE } from "./pcm";
 
 const DEFAULT_BITRATES: Record<TargetFormat, string> = {
   mp3: "96k",
@@ -53,7 +56,7 @@ export async function decodeToPCM16({
   mimeType,
 }: DecodeRequest): Promise<DecodeResult> {
   const cleaned = stripBase64Prefix(audioBase64);
-  const inputBuffer = Buffer.from(cleaned, "base64");
+  const inputBuffer = bufFrom(cleaned, "base64");
   if (inputBuffer.byteLength === 0) {
     throw new Error("audio_payload_empty");
   }
@@ -99,7 +102,7 @@ export async function decodeToPCM16({
   }
 
   return {
-    audioBase64: Buffer.from(stdout).toString("base64"),
+    audioBase64: bufFrom(stdout).toString("base64"),
     mimeType: PCM_MIME_TYPE,
     sampleRate: PCM_SAMPLE_RATE,
     channels: PCM_CHANNELS,
@@ -124,7 +127,7 @@ export async function encodeFromPCM16({
   bitrate,
 }: EncodeRequest): Promise<EncodeResult> {
   const cleaned = stripBase64Prefix(audioBase64);
-  const inputBuffer = Buffer.from(cleaned, "base64");
+  const inputBuffer = bufFrom(cleaned, "base64");
   if (inputBuffer.byteLength === 0) {
     throw new Error("audio_payload_empty");
   }
@@ -172,7 +175,7 @@ export async function encodeFromPCM16({
   }
 
   return {
-    audioBase64: Buffer.from(stdout).toString("base64"),
+    audioBase64: bufFrom(stdout).toString("base64"),
     mimeType: target.mimeType,
     format,
   };
@@ -229,13 +232,32 @@ function runFfmpeg(args: string[], stdin?: Buffer): Buffer {
   });
 
   if (proc.exitCode !== 0) {
-    const stderr = Buffer.from(proc.stderr ?? []).toString("utf-8");
+    const stderr = bufFrom(proc.stderr ?? []).toString("utf-8");
     throw new Error(
       `ffmpeg_failed(exit=${proc.exitCode}): ${stderr || "no stderr"}`
     );
   }
 
-  return Buffer.from(proc.stdout ?? []);
+  return bufFrom(proc.stdout ?? []);
+}
+
+function bufFrom(
+  value: ArrayBuffer | ArrayBufferView | string,
+  encoding?: "base64"
+): Buffer {
+  type BufferLike = {
+    from: (
+      value: ArrayBuffer | ArrayBufferView | string,
+      encoding?: "base64"
+    ) => Buffer;
+  };
+  const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
+  if (!B) {
+    throw new Error("buffer_unavailable");
+  }
+  return encoding
+    ? (B.from(value, encoding) as Buffer)
+    : (B.from(value) as Buffer);
 }
 
 function stripBase64Prefix(raw: string) {

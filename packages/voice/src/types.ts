@@ -44,12 +44,25 @@ export type SttRequest = {
   prompt?: string;
 };
 
+export type SttChunkSize = "fast" | "low" | "medium" | "accurate";
+
+export type SttStreamingRequest = SttRequest & {
+  sessionId: string;
+  chunkSize?: SttChunkSize;
+  clearCache?: boolean;
+};
+
 export type SttResult = {
   text: string;
   language?: string | null;
   model?: string;
   durationSeconds?: number;
   provider?: string;
+};
+
+export type SttStreamingResult = SttResult & {
+  isPartial?: boolean;
+  streamingEnabled?: boolean;
 };
 
 export type TtsRequest = {
@@ -145,6 +158,22 @@ export type VoiceSession = VoiceSessionMethods & {
 
 export type VoiceClient = {
   sttTranscribe(input: SttRequest): Promise<SttResult>;
+  sttTranscribeStreaming?: (
+    input: SttStreamingRequest
+  ) => Promise<SttStreamingResult>;
+  sttClearCache?: (input: { sessionId: string }) => Promise<{
+    cleared: boolean;
+    sessionId: string;
+  }>;
+  sttReleaseSession?: (input: { sessionId: string }) => Promise<{
+    released: boolean;
+    sessionId: string;
+  }>;
+  sttSessionInfo?: (input: { sessionId: string }) => Promise<{
+    sessionId: string;
+    hasAffinity: boolean;
+    processIndex?: number;
+  }>;
   ttsSynthesize(input: TtsRequest): Promise<TtsResult>;
   speechToSpeech?: (
     input: SpeechToSpeechRequest

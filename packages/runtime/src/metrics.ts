@@ -78,6 +78,21 @@ export const runtimeRagRetrievalDurationSeconds = new client.Histogram({
   registers: [metricsRegistry],
 });
 
+export const runtimeRerankTotal = new client.Counter({
+  name: "runtime_rerank_total",
+  help: "Count of rerank operations by backend and status",
+  labelNames: ["backend", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runtimeRerankDurationSeconds = new client.Histogram({
+  name: "runtime_rerank_duration_seconds",
+  help: "Duration of rerank operations in seconds",
+  labelNames: ["backend"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [metricsRegistry],
+});
+
 // AI SDK metrics
 
 export const runtimeAiSdkCallsTotal = new client.Counter({

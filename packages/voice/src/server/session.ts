@@ -266,6 +266,20 @@ export class VoiceSession {
     this.transcriptBuffer = "";
   }
 
+  clearAudio(): void {
+    this.audioBuffer.length = 0;
+  }
+
+  /**
+   * Reset per-utterance buffers while keeping session identity.
+   * Call this after an utterance completes.
+   */
+  clearUtterance(): void {
+    this.clearTranscript();
+    this.clearAudio();
+    this.sttCacheCleared = false;
+  }
+
   isIdle(timeoutMs: number = 5 * 60 * 1000): boolean {
     return Date.now() - this.lastActivity > timeoutMs;
   }
@@ -278,8 +292,11 @@ export class VoiceSession {
 
   /**
    * Deactivate session and cleanup resources.
+   *
+   * This must be synchronous so call sites can safely perform cleanup
+   * without leaking unhandled promises during shutdown paths.
    */
-  async deactivate(): Promise<void> {
+  deactivate(): void {
     // Release session affinity in the STT pool
     this.config.sttPool.releaseSession(this.config.sessionId);
     this.logger.info("voice_session_deactivated", {

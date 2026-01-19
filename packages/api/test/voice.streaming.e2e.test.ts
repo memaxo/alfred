@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { Buffer } from "node:buffer";
+import { createServer } from "node:net";
 import { installVoiceTestPools } from "@alfred/test-kit/voice/runtime-fixture";
+import "./utils/mock-metrics";
 
 // Define mocks BEFORE any imports
 mock.module("@discordjs/opus", () => ({
@@ -61,7 +63,6 @@ mock.module("@alfred/agent", () => ({
 
 // Set env vars
 process.env.OPENAI_API_KEY = "test-key";
-process.env.VOICE_STREAMING_PORT = "8799";
 process.env.VOICE_PROVIDER = "maya1";
 process.env.VOICE_STREAMING_PROTO = "1";
 
@@ -85,8 +86,7 @@ mock.module("../src/ai/generate", () => ({
 // } from "../src/voice/streaming";
 
 // We need a client WebSocket to test the server
-const PORT = 8799;
-process.env.VOICE_STREAMING_PORT = String(PORT);
+let PORT = 0;
 process.env.VOICE_PROVIDER = "maya1";
 process.env.VOICE_STREAMING_PROTO = "1";
 
@@ -110,7 +110,7 @@ function waitForOpen(ws: WebSocket): Promise<void> {
   });
 }
 
-function waitForMessage(ws: WebSocket, type: string): Promise<any> {
+function waitForMessage(ws: WebSocket, kind: string): Promise<any> {
   return new Promise((resolve) => {
     const handler = (event: MessageEvent) => {
       if (typeof event.data !== "string") {
@@ -118,7 +118,7 @@ function waitForMessage(ws: WebSocket, type: string): Promise<any> {
       }
       try {
         const data = JSON.parse(event.data as string);
-        if (data.type === type) {
+        if (data._ === kind) {
           ws.removeEventListener("message", handler);
           resolve(data);
         }
@@ -144,6 +144,20 @@ function waitForBinary(ws: WebSocket): Promise<any> {
 
 describe("voice streaming e2e", () => {
   beforeAll(async () => {
+    // Pick a free local port to avoid conflicts under parallel runs.
+    const server = createServer();
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve)
+    );
+    const addr = server.address();
+    if (!addr || typeof addr === "string") {
+      server.close();
+      throw new Error("free_port_unavailable");
+    }
+    PORT = addr.port;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    process.env.VOICE_STREAMING_PORT = String(PORT);
+
     voiceFixture = await installVoiceTestPools({
       transcript: "Hello world",
       chunkText: "chunk",
@@ -185,7 +199,7 @@ describe("voice streaming e2e", () => {
     // 2. Start Session
     wsClient.send(
       JSON.stringify({
-        type: "start",
+        _: "start",
         language: "en",
         codec: "pcm",
         autoStop: true,
@@ -202,7 +216,7 @@ describe("voice streaming e2e", () => {
     ); // 0.1s of silence/audio
     wsClient.send(
       JSON.stringify({
-        type: "audio_chunk",
+        _: "audio_chunk",
         audioBase64,
         mimeType: "audio/pcm",
       })
@@ -211,7 +225,7 @@ describe("voice streaming e2e", () => {
     // 4. Stop Session (Manual)
     wsClient.send(
       JSON.stringify({
-        type: "stop",
+        _: "stop",
       })
     );
 

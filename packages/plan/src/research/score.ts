@@ -202,6 +202,7 @@ export async function calculateRelevanceWithLLM(
       {
         model,
         modelKey,
+        metricType: "relevance",
         fallback: () => ({
           relevance: calculateRelevanceHeuristic(source, intentDescription),
         }),

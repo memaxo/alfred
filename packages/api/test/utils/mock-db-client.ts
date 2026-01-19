@@ -108,29 +108,9 @@ export const dbModuleStub = {
     ),
   },
   userRepo: {
-    getPreferences: vi.fn().mockResolvedValue([]),
-    setPreference: vi
-      .fn()
-      .mockImplementation(
-        (
-          userId: string,
-          key: string,
-          value: unknown,
-          confidence = 1,
-          source = "user"
-        ) =>
-          Promise.resolve({
-            id: `pref-${Date.now()}`,
-            userId,
-            key,
-            value,
-            confidence,
-            source,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          })
-      ),
-    deletePreference: vi.fn().mockResolvedValue(0),
+    getPreferences: vi.fn(),
+    setPreference: vi.fn(),
+    deletePreference: vi.fn(),
     addFeedback: vi.fn().mockResolvedValue(undefined),
     getFeedback: vi.fn().mockResolvedValue([]),
     getProfile: vi.fn().mockImplementation((userId: string) =>
@@ -176,6 +156,83 @@ export const dbModuleStub = {
   userSchema: {},
   workflowSchema: {},
 };
+
+type PrefRow = {
+  id: string;
+  userId: string;
+  projectId: string | null;
+  key: string;
+  value: unknown;
+  confidence: number;
+  source: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const prefStore = new Map<string, PrefRow>();
+
+function prefKey(userId: string, key: string, projectId?: string) {
+  return `${userId}::${projectId ?? "global"}::${key}`;
+}
+
+dbModuleStub.userRepo.getPreferences.mockImplementation(
+  (userId: string, projectId?: string) => {
+    const out: PrefRow[] = [];
+    for (const row of prefStore.values()) {
+      if (row.userId !== userId) {
+        continue;
+      }
+      if (projectId) {
+        if (row.projectId === null || row.projectId === projectId) {
+          out.push(row);
+        }
+      } else if (row.projectId === null) {
+        out.push(row);
+      }
+    }
+    // newest first
+    out.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    return Promise.resolve(out);
+  }
+);
+
+dbModuleStub.userRepo.setPreference.mockImplementation(
+  (
+    userId: string,
+    key: string,
+    value: unknown,
+    confidence = 1,
+    source = "user",
+    projectId?: string
+  ) => {
+    const id = `pref-${userId}-${key}-${projectId ?? "global"}`;
+    const storeKey = prefKey(userId, key, projectId);
+    const existing = prefStore.get(storeKey);
+    const createdAt = existing?.createdAt ?? new Date();
+    const updatedAt = new Date();
+    const row: PrefRow = {
+      id,
+      userId,
+      projectId: projectId ?? null,
+      key,
+      value,
+      confidence,
+      source,
+      createdAt,
+      updatedAt,
+    };
+    prefStore.set(storeKey, row);
+    return Promise.resolve(row);
+  }
+);
+
+dbModuleStub.userRepo.deletePreference.mockImplementation(
+  (userId: string, key: string, projectId?: string) => {
+    const storeKey = prefKey(userId, key, projectId);
+    const existed = prefStore.delete(storeKey);
+    return Promise.resolve(existed ? 1 : 0);
+  }
+);
 
 const dbAbs = new URL("../../../db/src/index.ts", import.meta.url).pathname;
 const realDb = await import(dbAbs);

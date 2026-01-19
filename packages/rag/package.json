@@ -5,7 +5,7 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
+      "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     }
   },
@@ -14,7 +14,7 @@
     "dev": "tsc -b --watch",
     "lint": "biome check .",
     "check-types": "tsc --noEmit",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b --emitDeclarationOnly --pretty false"
   },
   "dependencies": {
     "@alfred/db": "workspace:*",

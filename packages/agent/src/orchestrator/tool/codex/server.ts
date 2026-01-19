@@ -433,7 +433,28 @@ async function startServer(args: {
             : "completed";
 
       if (state.status === "failed") {
-        state.reject(new Error("codex_server_turn_failed"));
+        const errRecord = isRecord(turn.error) ? turn.error : null;
+        const errMsg =
+          (errRecord ? asString(errRecord.message) : null) ??
+          asString((turn as Record<string, unknown>).failureReason) ??
+          asString((turn as Record<string, unknown>).reason);
+        let payload = "";
+        if (!errMsg) {
+          try {
+            payload = JSON.stringify(turn).slice(0, 2000);
+          } catch {
+            payload = "";
+          }
+        }
+        state.reject(
+          new Error(
+            errMsg
+              ? `codex_server_turn_failed: ${errMsg}`
+              : payload
+                ? `codex_server_turn_failed: ${payload}`
+                : "codex_server_turn_failed"
+          )
+        );
       } else if (state.status === "interrupted") {
         state.reject(new DOMException("Aborted", "AbortError"));
       } else {

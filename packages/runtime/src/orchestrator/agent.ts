@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { setTimeout as setNodeTimeout } from "node:timers";
 import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import type { Workspace } from "@alfred/agent/environment/types";
@@ -13,7 +14,13 @@ import {
   updateTrackerWithContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import {
+  type AgentEscalationEvent,
+  isAgentEscalationEvent,
+} from "@alfred/agent/orchestrator/tool/shared/context";
+import { issueMcpSessionToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
+import type { RuntimeMcpServer } from "@alfred/mcp";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
 import type { AsyncQueue } from "../utils/concurrency";
@@ -37,6 +44,10 @@ export type RunAgentOptions = {
   userId?: string;
   trackerContextRef: { current: TrackerContext };
   queue: AsyncQueue<WorkflowEvent>;
+  runtimeMcp?: {
+    server: RuntimeMcpServer;
+    url: string;
+  };
 };
 
 export type AgentOutcome = {
@@ -47,6 +58,8 @@ export type AgentOutcome = {
   durationSeconds: number;
   role: string;
   escalation?: string;
+  /** Structured escalation data from escalate tool (real-time) */
+  escalationData?: AgentEscalationEvent;
   result?: {
     summary: string;
     artifacts: string[];
@@ -124,6 +137,7 @@ export async function runAgent({
   userId,
   trackerContextRef,
   queue,
+  runtimeMcp,
 }: RunAgentOptions): Promise<AgentOutcome> {
   spec.workingDirectory = normalizeWorkingDirectory(
     spec.workingDirectory,
@@ -334,11 +348,23 @@ export async function runAgent({
     clarifications
   );
 
+  // Track real-time escalation data from escalate tool
+  let realTimeEscalationData: AgentEscalationEvent | undefined;
+
   const writer = createAgentWriter(
     spec,
     trackerContextRef,
     agentFileHints,
-    queue
+    queue,
+    (escalationEvent) => {
+      // Capture escalation data for outcome
+      realTimeEscalationData = escalationEvent;
+      logger.info("agent_escalation_callback", {
+        agentId: spec.agentId,
+        reason: escalationEvent.reason,
+        severity: escalationEvent.severity,
+      });
+    }
   );
 
   // Phase 4: Test-Driven Development Loop
@@ -387,378 +413,614 @@ export async function runAgent({
       ? profileRaw
       : undefined;
 
-  // Checkpoint before execution
-  if (workspaceEnv) {
+  // Runtime MCP: deterministic escalation with immediate tool-call receipt.
+  // We use an agent-local AbortController so the MCP server can request abort
+  // without relying on prompt compliance or post-exit file checks.
+  const agentAbortController = new AbortController();
+  const parentAbortListener = () => {
     try {
-      await workspaceEnv.checkpoint("pre-agent");
-    } catch (err) {
-      logger.warn("checkpoint_failed", {
+      agentAbortController.abort();
+    } catch {
+      // ignore
+    }
+  };
+  if (signal.aborted) {
+    parentAbortListener();
+  } else {
+    signal.addEventListener("abort", parentAbortListener, { once: true });
+  }
+  const agentSignal = agentAbortController.signal;
+
+  type McpEscalationState = {
+    input: import("@alfred/mcp").RuntimeMcpEscalationInput;
+    receipt: import("@alfred/mcp").RuntimeMcpEscalationReceipt;
+  };
+  let mcpEscalation: McpEscalationState | undefined;
+
+  const mcpAbortDelayMs = (() => {
+    const raw = process.env.ORCH_MCP_ABORT_DELAY_MS?.trim();
+    const n = raw ? Number(raw) : 250;
+    return Number.isFinite(n) && n >= 0 && n <= 30_000 ? n : 250;
+  })();
+
+  const mcpToken = runtimeMcp
+    ? await issueMcpSessionToken(userId ?? spec.agentId, ["mcp.escalate"])
+    : undefined;
+
+  if (runtimeMcp && mcpToken) {
+    runtimeMcp.server.registerSession(
+      {
+        runId,
         agentId: spec.agentId,
-        error: String(err),
+        abort: (reason) => {
+          logger.info("runtime_mcp_abort_requested", {
+            runId,
+            agentId: spec.agentId,
+            reason,
+          });
+          // Delay the abort slightly so the MCP tool call can return its receipt.
+          const t = setNodeTimeout(
+            () => parentAbortListener(),
+            mcpAbortDelayMs
+          );
+          t.unref();
+        },
+        onEscalate: (payload) => {
+          mcpEscalation = {
+            input: payload.input,
+            receipt: payload.receipt,
+          };
+          // Normalize runtime MCP escalations into the canonical escalation event path
+          // so pipeline + UI see the same `agent:escalate-request` signal.
+          writer.write({
+            type: "escalate",
+            reason: payload.input.reason as AgentEscalationEvent["reason"],
+            details: payload.input.details,
+            suggestions: payload.input.suggestions,
+            severity: payload.input.severity,
+          } satisfies AgentEscalationEvent);
+        },
+      },
+      { token: mcpToken }
+    );
+  }
+
+  const runtimeMcpUrlForExecutor = (() => {
+    const raw = runtimeMcp?.url;
+    if (!raw) {
+      return;
+    }
+    const parsed = new URL(raw);
+    const hostForContainers =
+      process.env.ORCH_MCP_HOST?.trim() || "host.docker.internal";
+    const containerExec =
+      (executor === "codex" || executor === "opencode") &&
+      Boolean(containerName);
+    const host = containerExec ? hostForContainers : "127.0.0.1";
+    parsed.host = `${host}:${parsed.port}`;
+    return parsed.toString();
+  })();
+
+  const codexHomeInContainer = `/agentfs/codex-home/${safeAgentId}`;
+  const codexHomeOnHost = path.resolve(
+    workspace,
+    ".agentfs",
+    runId.replace(/[^a-zA-Z0-9-]/g, "-"),
+    "codex-home",
+    safeAgentId
+  );
+  const codexHomeEnv = containerName ? codexHomeInContainer : codexHomeOnHost;
+
+  if (executor === "codex" && mcpToken && runtimeMcpUrlForExecutor) {
+    const configToml = [
+      "[mcp_servers.alfred_runtime]",
+      `url = "${runtimeMcpUrlForExecutor}"`,
+      'bearer_token_env_var = "MCP_AUTH_TOKEN"',
+      "startup_timeout_sec = 10",
+      "tool_timeout_sec = 30",
+      'enabled_tools = ["escalate"]',
+      "",
+    ].join("\n");
+    try {
+      await fs.mkdir(codexHomeOnHost, { recursive: true });
+      await Bun.write(path.join(codexHomeOnHost, "config.toml"), configToml);
+    } catch (error) {
+      logger.warn("runtime_mcp_codex_home_write_failed", {
+        runId,
+        agentId: spec.agentId,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  let escalationReason: string | undefined;
-  let status = "completed";
-  let stuck = false;
-  let durationSeconds = 0;
-  const agentKey =
-    spec.agentId as import("@alfred/agent/orchestrator/multi/spawn").AgentId;
-
   try {
-    if (executor === "codex") {
-      const run = (nextProfile: ExecProfile | undefined) =>
-        toolCodex.execute({
+    // Checkpoint before execution
+    if (workspaceEnv) {
+      try {
+        await workspaceEnv.checkpoint("pre-agent");
+      } catch (err) {
+        logger.warn("checkpoint_failed", {
+          agentId: spec.agentId,
+          error: String(err),
+        });
+      }
+    }
+
+    let escalationReason: string | undefined;
+    let status = "completed";
+    let stuck = false;
+    let durationSeconds = 0;
+    const agentKey =
+      spec.agentId as import("@alfred/agent/orchestrator/multi/spawn").AgentId;
+
+    try {
+      if (executor === "codex") {
+        const run = (nextProfile: ExecProfile | undefined) =>
+          toolCodex.execute({
+            input: {
+              action: "exec",
+              execProfile: nextProfile,
+              prompt,
+              out: "text",
+              auto: spec.auto,
+              cw: spec.workingDirectory,
+              sessionId: spec.sessionId,
+              agentfsDbPath,
+              containerName,
+              containerCw,
+              model: spec.model,
+              profile: codexCliProfile,
+              authz,
+              env: mcpToken
+                ? {
+                    CODEX_HOME: codexHomeEnv,
+                    MCP_AUTH_TOKEN: mcpToken,
+                  }
+                : undefined,
+              context: {
+                linearSessionId: spec.context.linearSessionId,
+                linearSpace: spec.context.linearSpace,
+                linearAuthz: spec.context.linearAuthz,
+                linearIssueId: spec.context.linearIssueId,
+                relevantFiles: spec.context.relevantFiles,
+              },
+              userId,
+            },
+            writer,
+            signal: agentSignal,
+          });
+
+        try {
+          await run(execProfile);
+        } catch (error) {
+          if (
+            execProfile === "server" &&
+            !execProfileStrict &&
+            !agentSignal.aborted &&
+            isServerStartFailure("codex", error)
+          ) {
+            void Promise.resolve(
+              writer.write?.({
+                type: "notice",
+                message: "executor_server_fallback_default",
+              })
+            ).catch(() => {});
+            await run("default");
+          } else {
+            throw error;
+          }
+        }
+      } else if (executor === "droid") {
+        if (execProfile === "server") {
+          void Promise.resolve(
+            writer.write?.({
+              type: "notice",
+              message: "droid_server_profile_unsupported",
+            })
+          ).catch(() => {});
+        }
+        const { toolDroid } = await import(
+          "@alfred/agent/orchestrator/tool/droid"
+        );
+
+        const droidHomeOnHost = path.resolve(
+          workspace,
+          ".agentfs",
+          runId.replace(/[^a-zA-Z0-9-]/g, "-"),
+          "droid-home",
+          safeAgentId
+        );
+
+        if (mcpToken && runtimeMcpUrlForExecutor) {
+          const mcpJson = {
+            mcpServers: {
+              alfred_runtime: {
+                type: "http",
+                url: runtimeMcpUrlForExecutor,
+                headers: {
+                  authorization: `Bearer ${mcpToken}`,
+                },
+                disabled: false,
+              },
+            },
+          } as const;
+          try {
+            await fs.mkdir(path.join(droidHomeOnHost, ".factory"), {
+              recursive: true,
+            });
+            await Bun.write(
+              path.join(droidHomeOnHost, ".factory", "mcp.json"),
+              JSON.stringify(mcpJson, null, 2)
+            );
+          } catch (error) {
+            logger.warn("runtime_mcp_droid_home_write_failed", {
+              runId,
+              agentId: spec.agentId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        await toolDroid.execute({
           input: {
-            action: "exec",
-            execProfile: nextProfile,
             prompt,
             out: "text",
             auto: spec.auto,
             cw: spec.workingDirectory,
-            sessionId: spec.sessionId,
-            agentfsDbPath,
-            containerName,
-            containerCw,
             model: spec.model,
-            profile: codexCliProfile,
             authz,
-            context: {
-              linearSessionId: spec.context.linearSessionId,
-              linearSpace: spec.context.linearSpace,
-              linearAuthz: spec.context.linearAuthz,
-              linearIssueId: spec.context.linearIssueId,
-              relevantFiles: spec.context.relevantFiles,
+            env: mcpToken
+              ? {
+                  HOME: droidHomeOnHost,
+                }
+              : undefined,
+          },
+          writer,
+          signal: agentSignal,
+        });
+      } else {
+        const { toolOpenCode } = await import(
+          "@alfred/agent/orchestrator/tool/opencode/index"
+        );
+        const run = (nextProfile: ExecProfile | undefined) =>
+          toolOpenCode.execute({
+            input: {
+              action: "exec",
+              execProfile: nextProfile,
+              prompt,
+              auto: spec.auto,
+              cw: spec.workingDirectory,
+              sessionId: spec.sessionId,
+              model: spec.model,
+              authz,
+              containerName,
+              containerCw,
+              mcpServers:
+                mcpToken && runtimeMcpUrlForExecutor
+                  ? [
+                      {
+                        name: "alfred_runtime",
+                        url: runtimeMcpUrlForExecutor,
+                        headers: [
+                          {
+                            name: "authorization",
+                            value: `Bearer ${mcpToken}`,
+                          },
+                        ],
+                      },
+                    ]
+                  : undefined,
             },
-            userId,
-          },
-          writer,
-          signal,
-        });
+            writer,
+            signal: agentSignal,
+          });
 
-      try {
-        await run(execProfile);
-      } catch (error) {
-        if (
-          execProfile === "server" &&
-          !execProfileStrict &&
-          !signal.aborted &&
-          isServerStartFailure("codex", error)
-        ) {
-          void Promise.resolve(
-            writer.write?.({
-              type: "notice",
-              message: "executor_server_fallback_default",
-            })
-          ).catch(() => {});
-          await run("default");
-        } else {
-          throw error;
+        try {
+          await run(execProfile);
+        } catch (error) {
+          if (
+            execProfile === "server" &&
+            !execProfileStrict &&
+            !agentSignal.aborted &&
+            isServerStartFailure("opencode", error)
+          ) {
+            void Promise.resolve(
+              writer.write?.({
+                type: "notice",
+                message: "executor_server_fallback_default",
+              })
+            ).catch(() => {});
+            await run("default");
+          } else {
+            throw error;
+          }
         }
       }
-    } else if (executor === "droid") {
-      if (execProfile === "server") {
-        void Promise.resolve(
-          writer.write?.({
-            type: "notice",
-            message: "droid_server_profile_unsupported",
-          })
-        ).catch(() => {});
-      }
-      const { toolDroid } = await import(
-        "@alfred/agent/orchestrator/tool/droid"
-      );
-      await toolDroid.execute({
-        input: {
-          prompt,
-          out: "text",
-          auto: spec.auto,
-          cw: spec.workingDirectory,
-          model: spec.model,
-          authz,
-        },
-        writer,
-        signal,
-      });
-    } else {
-      const { toolOpenCode } = await import(
-        "@alfred/agent/orchestrator/tool/opencode/index"
-      );
-      const run = (nextProfile: ExecProfile | undefined) =>
-        toolOpenCode.execute({
-          input: {
-            action: "exec",
-            execProfile: nextProfile,
-            prompt,
-            auto: spec.auto,
-            cw: spec.workingDirectory,
-            sessionId: spec.sessionId,
-            model: spec.model,
-            authz,
-            containerName,
-            containerCw,
+    } catch (error: unknown) {
+      // Abort should propagate as an interruption (not a failure) so upstream waves
+      // can terminate promptly and runOrchestrator can guarantee cleanup.
+      const isAbort =
+        agentSignal.aborted ||
+        (error instanceof DOMException && error.name === "AbortError") ||
+        (error instanceof Error && error.name === "AbortError");
+
+      if (isAbort) {
+        queue.enqueue({
+          type: "notice",
+          message: `agent_interrupted_abort:${spec.agentId}`,
+        } as unknown as WorkflowEvent);
+
+        const interruptedAt = Date.now();
+        const interruptedSeconds = Math.max(
+          0,
+          (interruptedAt - startedAt) / 1000
+        );
+
+        const wasBlockingEscalation =
+          mcpEscalation?.input.severity === "blocking";
+        return {
+          agentId: spec.agentId,
+          phaseId,
+          stuck: false,
+          status: wasBlockingEscalation ? "escalated" : "interrupted",
+          durationSeconds: interruptedSeconds,
+          role: executor,
+          escalation:
+            wasBlockingEscalation && mcpEscalation
+              ? `runtime_mcp_escalate:${mcpEscalation.input.reason}:${mcpEscalation.input.details}`
+              : undefined,
+          result: {
+            summary: wasBlockingEscalation
+              ? "agent escalated (runtime mcp)"
+              : "agent interrupted (abort)",
+            artifacts: [],
+            changes: [],
+            notes: [],
           },
-          writer,
-          signal,
-        });
-
-      try {
-        await run(execProfile);
-      } catch (error) {
-        if (
-          execProfile === "server" &&
-          !execProfileStrict &&
-          !signal.aborted &&
-          isServerStartFailure("opencode", error)
-        ) {
-          void Promise.resolve(
-            writer.write?.({
-              type: "notice",
-              message: "executor_server_fallback_default",
-            })
-          ).catch(() => {});
-          await run("default");
-        } else {
-          throw error;
-        }
+        };
       }
-    }
-  } catch (error: unknown) {
-    // Abort should propagate as an interruption (not a failure) so upstream waves
-    // can terminate promptly and runOrchestrator can guarantee cleanup.
-    const isAbort =
-      signal.aborted ||
-      (error instanceof DOMException && error.name === "AbortError") ||
-      (error instanceof Error && error.name === "AbortError");
 
-    if (isAbort) {
-      queue.enqueue({
-        type: "notice",
-        message: `agent_interrupted_abort:${spec.agentId}`,
-      } as unknown as WorkflowEvent);
+      // Handle Supervisor Interrupts
+      if (
+        executor === "codex" &&
+        String(error).includes("codex_exec_interrupted")
+      ) {
+        logger.warn("agent_interrupted_by_supervisor", {
+          agentId: spec.agentId,
+          error: String(error),
+        });
+        queue.enqueue({
+          type: "notice",
+          message: `agent_interrupted: ${String(error)}`,
+        } as unknown as WorkflowEvent);
 
-      const interruptedAt = Date.now();
-      const interruptedSeconds = Math.max(
-        0,
-        (interruptedAt - startedAt) / 1000
-      );
+        if (workspaceEnv) {
+          try {
+            await workspaceEnv.restore("pre-agent");
+          } catch (restoreErr) {
+            logger.error("restore_failed_on_interrupt", {
+              agentId: spec.agentId,
+              error: String(restoreErr),
+            });
+          }
+        }
 
-      return {
-        agentId: spec.agentId,
-        phaseId,
-        stuck: false,
-        status: "interrupted",
-        durationSeconds: interruptedSeconds,
-        role: executor,
-      };
-    }
+        const interruptFinishedAt = Date.now();
+        const interruptDurationSeconds = Math.max(
+          0,
+          (interruptFinishedAt - startedAt) / 1000
+        );
+        return {
+          agentId: spec.agentId,
+          phaseId,
+          stuck: false,
+          status: "interrupted",
+          durationSeconds: interruptDurationSeconds,
+          role: executor,
+        };
+      }
 
-    // Handle Supervisor Interrupts
-    if (
-      executor === "codex" &&
-      String(error).includes("codex_exec_interrupted")
-    ) {
-      logger.warn("agent_interrupted_by_supervisor", {
-        agentId: spec.agentId,
-        error: String(error),
-      });
-      queue.enqueue({
-        type: "notice",
-        message: `agent_interrupted: ${String(error)}`,
-      } as unknown as WorkflowEvent);
+      // Restore on crash (non-interrupt errors)
+      if (executor === "codex") {
+        const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+          formatCodexRuntimeError(error);
+        queue.enqueue({
+          type: "notice",
+          message: userMessage,
+        } as unknown as WorkflowEvent);
+        logger.error("codex_agent_failed", {
+          agentId: spec.agentId,
+          error: rawMessage,
+          code,
+          needsElevation,
+          limitExceeded,
+        });
+      } else {
+        const message =
+          error instanceof Error
+            ? error.message
+            : `agent_failed:${String(error)}`;
+        queue.enqueue({
+          type: "notice",
+          message: `${executor}_agent_failed:${message}`,
+        } as unknown as WorkflowEvent);
+        logger.error("agent_failed", {
+          agentId: spec.agentId,
+          executor,
+          error: message,
+        });
+      }
 
       if (workspaceEnv) {
+        logger.warn("agent_crashed_restoring_checkpoint", {
+          agentId: spec.agentId,
+        });
         try {
           await workspaceEnv.restore("pre-agent");
         } catch (restoreErr) {
-          logger.error("restore_failed_on_interrupt", {
+          logger.error("restore_failed", {
             agentId: spec.agentId,
             error: String(restoreErr),
           });
         }
       }
 
-      const interruptFinishedAt = Date.now();
-      const interruptDurationSeconds = Math.max(
-        0,
-        (interruptFinishedAt - startedAt) / 1000
-      );
-      return {
-        agentId: spec.agentId,
-        phaseId,
-        stuck: false,
-        status: "interrupted",
-        durationSeconds: interruptDurationSeconds,
-        role: executor,
-      };
+      status = "failed";
     }
 
-    // Restore on crash (non-interrupt errors)
-    if (executor === "codex") {
-      const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
-        formatCodexRuntimeError(error);
-      queue.enqueue({
-        type: "notice",
-        message: userMessage,
-      } as unknown as WorkflowEvent);
-      logger.error("codex_agent_failed", {
-        agentId: spec.agentId,
-        error: rawMessage,
-        code,
-        needsElevation,
-        limitExceeded,
-      });
-    } else {
-      const message =
-        error instanceof Error
-          ? error.message
-          : `agent_failed:${String(error)}`;
-      queue.enqueue({
-        type: "notice",
-        message: `${executor}_agent_failed:${message}`,
-      } as unknown as WorkflowEvent);
-      logger.error("agent_failed", {
-        agentId: spec.agentId,
-        executor,
-        error: message,
-      });
-    }
+    const finishedAt = Date.now();
 
-    if (workspaceEnv) {
-      logger.warn("agent_crashed_restoring_checkpoint", {
-        agentId: spec.agentId,
-      });
-      try {
-        await workspaceEnv.restore("pre-agent");
-      } catch (restoreErr) {
-        logger.error("restore_failed", {
-          agentId: spec.agentId,
-          error: String(restoreErr),
-        });
-      }
-    }
-
-    status = "failed";
-  }
-
-  const finishedAt = Date.now();
-
-  // Use context-aware stuck detection
-  if (status !== "failed") {
-    // Ensure a successful run always marks the agent as completed even if the
-    // executor emitted only notices (which create the agent entry but do not
-    // advance status).
-    trackerContextRef.current = updateTrackerWithContext(
-      trackerContextRef.current,
-      {
-        type: "agent/command",
-        agentId: agentKey,
-        command: "agent_finished",
-        status: "completed",
-        ts: finishedAt,
-      }
-    );
-  }
-
-  stuck = detectStuckWithContext(
-    trackerContextRef.current,
-    agentKey,
-    Date.now()
-  );
-  const trackerAgent = trackerContextRef.current.state.agents[agentKey];
-  if (status !== "failed") {
-    status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
-  }
-  durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-
-  if (execPlanAbsolutePath) {
-    const statusLabel = stuck ? "stuck" : status;
-    const durationLabel = durationSeconds.toFixed(1);
-    await appendPlanProgressEntry(
-      execPlanAbsolutePath,
-      `Agent ${spec.agentId} ${statusLabel} in ${durationLabel}s.`,
-      !stuck && status === "completed"
-    );
-    if (stuck || status === "failed") {
-      await appendDecisionEntry(
-        execPlanAbsolutePath,
-        `Agent flagged ${statusLabel}`,
-        "Runtime detected the agent did not complete cleanly."
-      );
-    }
-  }
-
-  // Check for Escalation
-  try {
-    const escalationPath = path.join(spec.workingDirectory, escalationFile);
-    const escalationFileObj = Bun.file(escalationPath);
-    if (await escalationFileObj.exists()) {
-      const escalationContent = await escalationFileObj.text();
-      if (escalationContent.trim().length > 0) {
-        escalationReason = escalationContent;
-        logger.warn("agent_escalated", {
-          runId,
-          userId,
-          agentId: spec.agentId,
-          reason: escalationReason,
-        });
-
-        if (execPlanAbsolutePath) {
-          await appendDecisionEntry(
-            execPlanAbsolutePath,
-            "Escalated",
-            escalationReason
-          );
+    // Use context-aware stuck detection
+    if (status !== "failed") {
+      // Ensure a successful run always marks the agent as completed even if the
+      // executor emitted only notices (which create the agent entry but do not
+      // advance status).
+      trackerContextRef.current = updateTrackerWithContext(
+        trackerContextRef.current,
+        {
+          type: "agent/command",
+          agentId: agentKey,
+          command: "agent_finished",
+          status: "completed",
+          ts: finishedAt,
         }
+      );
+    }
+
+    stuck = detectStuckWithContext(
+      trackerContextRef.current,
+      agentKey,
+      Date.now()
+    );
+    const trackerAgent = trackerContextRef.current.state.agents[agentKey];
+    if (status !== "failed") {
+      status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
+    }
+    durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+
+    if (execPlanAbsolutePath) {
+      const statusLabel = stuck ? "stuck" : status;
+      const durationLabel = durationSeconds.toFixed(1);
+      await appendPlanProgressEntry(
+        execPlanAbsolutePath,
+        `Agent ${spec.agentId} ${statusLabel} in ${durationLabel}s.`,
+        !stuck && status === "completed"
+      );
+      if (stuck || status === "failed") {
         await appendDecisionEntry(
-          rootExecPlanPath,
-          `Subtask ${spec.subTaskId} escalated`,
-          escalationReason,
-          `Agent ${spec.agentId}`
+          execPlanAbsolutePath,
+          `Agent flagged ${statusLabel}`,
+          "Runtime detected the agent did not complete cleanly."
         );
       }
     }
-  } catch {
-    // No escalation file found
-  }
 
-  // Extract learning data from AgentFS before cleanup
-  if (isAgentFSWorkspace(workspaceEnv)) {
-    try {
-      const { processForLearning } = await import(
-        "@alfred/agent/agentfs/learning-bridge"
-      );
-      await processForLearning(workspaceEnv.dbPath).catch((error: Error) =>
-        logger.warn("agentfs_learning_failed", {
-          runId,
-          userId,
-          agentId: spec.agentId,
-          error,
-        })
-      );
-    } catch {
-      // Learning extraction is best-effort
+    // Check for Escalation (file-based fallback - deprecated)
+    // Real-time escalation via escalate tool is preferred
+    if (!realTimeEscalationData) {
+      try {
+        const escalationPath = path.join(spec.workingDirectory, escalationFile);
+        const escalationFileObj = Bun.file(escalationPath);
+        if (await escalationFileObj.exists()) {
+          const escalationContent = await escalationFileObj.text();
+          if (escalationContent.trim().length > 0) {
+            escalationReason = escalationContent;
+
+            // Log deprecation warning for file-based escalation
+            logger.warn("deprecated_file_escalation", {
+              runId,
+              userId,
+              agentId: spec.agentId,
+              message:
+                "File-based escalation is deprecated. Use the escalate tool for real-time escalation handling.",
+            });
+
+            logger.warn("agent_escalated", {
+              runId,
+              userId,
+              agentId: spec.agentId,
+              reason: escalationReason,
+              source: "file", // Indicate this came from deprecated file mechanism
+            });
+
+            if (execPlanAbsolutePath) {
+              await appendDecisionEntry(
+                execPlanAbsolutePath,
+                "Escalated (via deprecated file mechanism)",
+                escalationReason
+              );
+            }
+            await appendDecisionEntry(
+              rootExecPlanPath,
+              `Subtask ${spec.subTaskId} escalated`,
+              escalationReason,
+              `Agent ${spec.agentId}`
+            );
+          }
+        }
+      } catch {
+        // No escalation file found
+      }
+    }
+
+    // Extract learning data from AgentFS before cleanup
+    if (isAgentFSWorkspace(workspaceEnv)) {
+      try {
+        const { processForLearning } = await import(
+          "@alfred/agent/agentfs/learning-bridge"
+        );
+        await processForLearning(workspaceEnv.dbPath).catch((error: Error) =>
+          logger.warn("agentfs_learning_failed", {
+            runId,
+            userId,
+            agentId: spec.agentId,
+            error,
+          })
+        );
+      } catch {
+        // Learning extraction is best-effort
+      }
+    }
+
+    const hints = agentFileHints.get(spec.agentId);
+
+    // Prefer runtime MCP escalation (deterministic) over writer/file fallbacks.
+    const effectiveEscalation = mcpEscalation
+      ? `runtime_mcp_escalate:${mcpEscalation.input.reason}:${mcpEscalation.input.details}`
+      : (realTimeEscalationData?.details ?? escalationReason);
+    const hasAnyEscalation =
+      Boolean(mcpEscalation) ||
+      Boolean(realTimeEscalationData) ||
+      Boolean(escalationReason);
+    const hasBlockingEscalation =
+      mcpEscalation?.input.severity === "blocking" ||
+      realTimeEscalationData?.severity === "blocking" ||
+      Boolean(escalationReason);
+    const effectiveStatus = hasBlockingEscalation ? "escalated" : status;
+
+    return {
+      agentId: spec.agentId,
+      phaseId,
+      stuck,
+      status: effectiveStatus,
+      durationSeconds,
+      role: executor,
+      escalation: hasAnyEscalation ? effectiveEscalation : undefined,
+      escalationData: realTimeEscalationData,
+      result: {
+        summary: `${executor} agent execution`,
+        artifacts: [],
+        changes: hints ? Array.from(hints) : [],
+        notes: [],
+        branch: workspaceEnv?.branch ?? undefined,
+      },
+    };
+  } finally {
+    signal.removeEventListener("abort", parentAbortListener);
+    if (mcpToken && runtimeMcp) {
+      runtimeMcp.server.unregisterToken(mcpToken);
     }
   }
-
-  const hints = agentFileHints.get(spec.agentId);
-  return {
-    agentId: spec.agentId,
-    phaseId,
-    stuck,
-    status,
-    durationSeconds,
-    role: executor,
-    escalation: escalationReason,
-    result: {
-      summary: `${executor} agent execution`,
-      artifacts: [],
-      changes: hints ? Array.from(hints) : [],
-      notes: [],
-      branch: workspaceEnv?.branch ?? undefined,
-    },
-  };
 }
 
 function buildAgentPrompt(
@@ -768,6 +1030,14 @@ function buildAgentPrompt(
   escalationFile: string,
   clarifications?: Array<{ response: string }>
 ): string {
+  const executor = normalizeAgentType(spec.agentType);
+  const runtimeEscalateTool =
+    executor === "codex" || executor === "droid"
+      ? "mcp__alfred_runtime__escalate"
+      : executor === "opencode"
+        ? "alfred_runtime_escalate"
+        : "escalate";
+
   const promptLines = [
     "You are a coding agent executing a single subtask ExecPlan.",
     "",
@@ -778,7 +1048,15 @@ function buildAgentPrompt(
     "- Update the Progress and Decision Log sections as you work.",
     "- Make small, idempotent edits to both the ExecPlan and the code.",
     "- Prefer minimal, safe changes that can be retried without harm.",
-    `- If you encounter a blocking issue that requires re-planning (e.g. missing dependency, wrong architecture), write a file named '${escalationFile}' with the reason and exit.`,
+    `- If you encounter a blocking issue that requires re-planning, call the runtime MCP tool \`${runtimeEscalateTool}\` with:`,
+    "  - reason: one of 'missing_dependency', 'wrong_architecture', 'permission_denied', 'resource_exhausted', 'external_service_unavailable', 'conflicting_requirements', or 'other'",
+    "  - details: a clear description of the blocker and what you attempted",
+    "  - suggestions: optional list of potential resolutions (max 5)",
+    "  - severity: 'blocking' if work cannot continue, 'warning' if it can continue with degraded results",
+    "- Wait for the receipt.",
+    '  - If `action: "abort"`, stop immediately (the orchestrator is aborting your session).',
+    '  - If `action: "continue"`, continue working; the orchestrator will surface your escalation in the UI.',
+    `- Fallback (deprecated): if MCP tools are unavailable, write a file named '${escalationFile}' with the reason and exit (treated as blocking).`,
     "- At the end, summarise what you changed.",
   ];
 
@@ -817,11 +1095,17 @@ function buildAgentPrompt(
   return promptLines.join("\n");
 }
 
+/**
+ * Escalation callback for real-time escalation handling.
+ */
+type EscalationCallback = (event: AgentEscalationEvent) => void;
+
 function createAgentWriter(
   spec: AgentSpec,
   trackerContextRef: { current: TrackerContext },
   agentFileHints: Map<string, Set<string>>,
-  queue: AsyncQueue<WorkflowEvent>
+  queue: AsyncQueue<WorkflowEvent>,
+  onEscalation?: EscalationCallback
 ) {
   return {
     write: (chunk: unknown): Promise<void> => {
@@ -830,6 +1114,32 @@ function createAgentWriter(
       }
       const payload = chunk as Record<string, unknown>;
       const type = typeof payload.type === "string" ? payload.type : "";
+
+      // Real-time escalation detection - check before other processing
+      if (isAgentEscalationEvent(chunk)) {
+        logger.warn("agent_escalation_detected", {
+          agentId: spec.agentId,
+          reason: chunk.reason,
+          severity: chunk.severity,
+          details: chunk.details.slice(0, 200), // Truncate for logging
+        });
+
+        // Emit escalation event to workflow queue
+        queue.enqueue({
+          type: "agent:escalate-request",
+          agentId: spec.agentId,
+          reason: chunk.reason,
+          details: chunk.details,
+          suggestions: chunk.suggestions,
+          severity: chunk.severity,
+          timestamp: Date.now(),
+        } as unknown as WorkflowEvent);
+
+        // Invoke callback for immediate handling (e.g., abort signal)
+        onEscalation?.(chunk);
+
+        return Promise.resolve();
+      }
 
       if (type === "stdout" || type === "stderr") {
         const innerRaw = payload.event;

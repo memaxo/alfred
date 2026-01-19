@@ -8,6 +8,7 @@ import type {
   VoiceStreamStartPayload,
   VoiceStreamStopPayload,
 } from "@alfred/type/voice";
+import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
 import type { ServerWebSocket } from "bun";
 import {
   decodeToPCM16,
@@ -22,9 +23,14 @@ import {
   voiceSessionPacketLossTotal,
   voiceSessionRttMillis,
   voiceStreamLatencySeconds,
+  voiceWebSocketBinaryChunkSizeBytes,
+  voiceWebSocketMessageLatencySeconds,
+  voiceWebSocketPayloadTooLargeTotal,
 } from "../metrics";
 import type { VoiceRegistry } from "./registry";
 import type { VoiceSession } from "./session";
+
+const MAX_WS_BINARY_BYTES = 64 * 1024;
 
 export type VoiceSocketData = {
   userId: string;
@@ -34,15 +40,20 @@ export type VoiceSocketData = {
   language?: string;
   codec?: string;
   negotiatedCodec?: string;
+  inputMimeType?: string;
+  sttChunkSize?: "fast" | "low" | "medium" | "accurate";
+  needsSttCacheClear?: boolean;
   vadThreshold?: number;
   autoStop?: boolean;
   maxUtteranceMs?: number;
   ttsVoice?: string;
   ttsFormat?: "mp3" | "opus" | "wav";
   ttsInProgress?: boolean;
+  ttsAbortToken?: number;
   utteranceStartedAt?: number;
   lastActivity: number;
   pingSentAt?: number | null;
+  lastPongAt?: number | null;
   runtime?: unknown; // Pass-through for application context
 };
 
@@ -177,6 +188,8 @@ export class VoiceSocketHandler {
     message: string | ArrayBuffer | Uint8Array
   ) {
     ws.data.lastActivity = Date.now();
+    const timerStart = performance.now();
+    let metricType = "unknown";
     try {
       // Binary Audio Chunk
       if (
@@ -185,11 +198,29 @@ export class VoiceSocketHandler {
           message instanceof Uint8Array ||
           message instanceof ArrayBuffer)
       ) {
+        metricType = "binary_audio";
+        if (!ws.data.sessionId) {
+          throw new Error("session_not_started");
+        }
+        if (!ws.data.inputMimeType) {
+          throw new Error("input_mime_type_required");
+        }
+
+        const bytes =
+          message instanceof ArrayBuffer
+            ? message.byteLength
+            : message.byteLength;
+        voiceWebSocketBinaryChunkSizeBytes.observe(bytes);
+        if (bytes > MAX_WS_BINARY_BYTES) {
+          voiceWebSocketPayloadTooLargeTotal.inc();
+          throw new Error("payload_too_large");
+        }
+
+        const inputMimeType = ws.data.inputMimeType ?? PCM_MIME_TYPE;
         await this.handleChunk(ws, {
           _: "audio_chunk",
           audioBase64: toBufferFromBinary(message).toString("base64"),
-          mimeType:
-            ws.data.codec === "opus" ? "audio/ogg;codecs=opus" : PCM_MIME_TYPE, // Assume negotiated codec
+          mimeType: inputMimeType,
           emitPartial: true,
         });
         return;
@@ -205,6 +236,7 @@ export class VoiceSocketHandler {
       if (!kind) {
         throw new Error("event_type_missing");
       }
+      metricType = kind;
 
       switch (kind) {
         case "start":
@@ -264,6 +296,12 @@ export class VoiceSocketHandler {
         sessionId: ws.data.sessionId ?? null,
         message: msg,
       });
+    } finally {
+      const wallSeconds = (performance.now() - timerStart) / 1000;
+      voiceWebSocketMessageLatencySeconds.observe(
+        { message_type: metricType },
+        wallSeconds
+      );
     }
   }
 
@@ -277,7 +315,11 @@ export class VoiceSocketHandler {
 
     // Create processing session
     this.sessionRegistry.removeSession(sessionId);
-    this.sessionRegistry.createSession(userId, sessionId, language);
+    const session = this.sessionRegistry.createSession(
+      userId,
+      sessionId,
+      language
+    );
 
     const requestedCodec = normalizeCodec(payload.codec);
     const negotiatedCodec = requestedCodec; // Simplified negotiation
@@ -296,20 +338,31 @@ export class VoiceSocketHandler {
     ws.data.sessionId = sessionId;
     ws.data.sessionRegistryId = registryId;
     ws.data.language = language;
+    ws.data.inputMimeType = payload.inputMimeType;
     ws.data.codec = requestedCodec;
     ws.data.negotiatedCodec = negotiatedCodec;
+    ws.data.sttChunkSize = payload.sttChunkSize;
+    ws.data.needsSttCacheClear = true;
     ws.data.vadThreshold = payload.vadThreshold;
     ws.data.autoStop = payload.autoStop !== false;
     ws.data.maxUtteranceMs = payload.maxUtteranceMs ?? 20_000;
     ws.data.ttsVoice = payload.ttsVoice;
     ws.data.ttsFormat = ttsFormat;
     ws.data.ttsInProgress = false;
+    ws.data.ttsAbortToken = 0;
+
+    if (payload.sttChunkSize) {
+      session.setChunkSize(payload.sttChunkSize);
+    }
 
     this.sendWithErrorHandling(ws, {
       _: "session_started",
       sessionId,
       codec: requestedCodec,
       negotiatedCodec,
+      protocolVersion: 1,
+      inputMimeType: ws.data.inputMimeType,
+      ttsFormat,
     });
 
     await this.updateStatus(ws, "recording");
@@ -332,6 +385,12 @@ export class VoiceSocketHandler {
     const rawAudioBase64 = payload.audioBase64;
     if (!rawAudioBase64) {
       throw new Error("audio_chunk_missing");
+    }
+
+    if (ws.data.ttsInProgress) {
+      ws.data.ttsAbortToken = (ws.data.ttsAbortToken ?? 0) + 1;
+      this.sendWithErrorHandling(ws, { _: "interrupt", sessionId });
+      await this.updateStatus(ws, "recording");
     }
 
     let mimeType = payload.mimeType || PCM_MIME_TYPE;
@@ -360,14 +419,20 @@ export class VoiceSocketHandler {
       }
     }
 
+    const shouldClearCache = ws.data.needsSttCacheClear === true;
     const result = await session.processAudioChunk(
       processedAudioBase64,
       mimeType,
       {
         vadThreshold: ws.data.vadThreshold,
         sessionId,
+        chunkSize: ws.data.sttChunkSize,
+        clearCache: shouldClearCache,
       }
     );
+    if (shouldClearCache) {
+      ws.data.needsSttCacheClear = false;
+    }
 
     if (!ws.data.utteranceStartedAt) {
       ws.data.utteranceStartedAt = Date.now();
@@ -456,20 +521,12 @@ export class VoiceSocketHandler {
       await this.updateStatus(ws, "processing");
     }
 
-    // Cleanup session processing state (but keep socket session ID for playback)
-    this.sessionRegistry.removeSession(sessionId);
-    // Re-create session for next turn? Or just use it for TTS?
-    // Actually we removed it, so we can't use it for TTS synthesis if TTS uses session.
-    // But `VoiceSession.streamSynthesis` uses `ttsPool`.
-    // We need the session object to call `streamSynthesis`.
-    // So we should NOT remove it yet if we want to use it for TTS.
-    // Re-add it back? Or just don't remove it.
-    // `finalizeSession` in streaming.ts removed it.
-    // But `streamTts` logic was using `ttsPool` directly from `getVoicePools()`.
-    // Here we want to use `session.streamSynthesis`.
-    // So let's keep the session!
-    // But we might want to reset transcript buffer?
-    session.clearTranscript();
+    // Prepare for next utterance:
+    // - keep the session alive for reuse on the same socket
+    // - clear transcript buffer
+    // - ensure Nemotron streaming cache is cleared on the next chunk
+    session.clearUtterance();
+    ws.data.needsSttCacheClear = true;
     ws.data.utteranceStartedAt = undefined;
 
     if (!transcript.trim()) {
@@ -505,12 +562,20 @@ export class VoiceSocketHandler {
         durationSeconds
       );
 
+      const rawParsed = parseVoiceAssistantRaw(assistant.raw);
+      if (!rawParsed.ok && assistant.raw !== undefined) {
+        logger.warn("voice_assistant_raw_invalid", {
+          sessionId,
+          error: rawParsed.error,
+        });
+      }
+
       this.sendWithErrorHandling(ws, {
         _: "assistant_message",
         sessionId,
         text: assistant.text,
         replayId: assistant.replayId ?? null,
-        raw: assistant.raw,
+        raw: rawParsed.ok ? rawParsed.value : undefined,
       });
 
       if (ws.data.sessionRegistryId) {
@@ -551,6 +616,8 @@ export class VoiceSocketHandler {
     }
     // const sequence = 0;
     ws.data.ttsInProgress = true;
+    ws.data.ttsAbortToken = (ws.data.ttsAbortToken ?? 0) + 1;
+    const token = ws.data.ttsAbortToken;
     await this.updateStatus(ws, "playing");
 
     const negotiatedCodec = ws.data.negotiatedCodec ?? "pcm";
@@ -558,6 +625,9 @@ export class VoiceSocketHandler {
 
     try {
       await session.streamSynthesis(text, ws.data.ttsVoice, async (chunk) => {
+        if (ws.data.ttsAbortToken !== token) {
+          return;
+        }
         // Chunk is PCM 16 (from Piper). Encode if needed.
         let payloadAudio = chunk.toString("base64");
         // let payloadMime = PCM_MIME_TYPE;
@@ -603,7 +673,9 @@ export class VoiceSocketHandler {
         */
       });
 
-      this.sendWithErrorHandling(ws, { _: "tts_complete", sessionId });
+      if (ws.data.ttsAbortToken === token) {
+        this.sendWithErrorHandling(ws, { _: "tts_complete", sessionId });
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (ws.data.sessionRegistryId) {
@@ -615,11 +687,14 @@ export class VoiceSocketHandler {
         message: msg,
       });
     } finally {
+      const aborted = ws.data.ttsAbortToken !== token;
       ws.data.ttsInProgress = false;
-      if (ws.data.sessionRegistryId) {
-        await this.hooks.onSessionComplete(ws.data.sessionRegistryId);
+      if (!aborted) {
+        if (ws.data.sessionRegistryId) {
+          await this.hooks.onSessionComplete(ws.data.sessionRegistryId);
+        }
+        await this.updateStatus(ws, "idle");
       }
-      await this.updateStatus(ws, "idle");
       // Now we can optionally clean up session if needed, or wait for inactivity
     }
   }

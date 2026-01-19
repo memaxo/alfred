@@ -285,9 +285,15 @@ export function initApiServices(): void {
     cleanupRoot,
   });
 
-  // FIX: Check UV availability before initializing voice pools
-  // Initialize voice pools (Maya1 or Supertonic)
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
+  // FIX: Check UV availability before initializing voice pools.
+  // Default to remote voice in test to avoid local Python pool startup.
+  const defaultVoiceProvider =
+    process.env.NODE_ENV === "test" || process.env.VITE_TEST_MODE === "true"
+      ? "openai"
+      : "maya1";
+  const voiceProvider = (
+    process.env.VOICE_PROVIDER ?? defaultVoiceProvider
+  ).toLowerCase();
   if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
     // Check if UV is available before trying to initialize voice pools
     if (isUvAvailable()) {

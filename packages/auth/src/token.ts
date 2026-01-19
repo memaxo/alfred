@@ -13,9 +13,12 @@ import { getRedis } from "./redis";
 
 const ISSUER = process.env.AGENT_ISSUER || "alfred";
 const DEFAULT_AUDIENCE = process.env.TOOL_AUDIENCE || "alfred:tools";
+const MCP_AUDIENCE = process.env.ALFRED_MCP_AUDIENCE || "alfred:mcp";
 const KID = process.env.AGENT_JWK_KID || "agent-ed25519";
 const DEFAULT_TTL =
   Number.parseInt(process.env.TOOL_TOKEN_TTL || "", 10) || 300;
+const DEFAULT_MCP_TTL =
+  Number.parseInt(process.env.ALFRED_MCP_TOKEN_TTL_SEC || "", 10) || 900;
 
 let privateKeyPromise: Promise<KeyLike> | null = null;
 let publicKeyPromise: Promise<KeyLike> | null = null;
@@ -106,10 +109,26 @@ export async function issueAccessToken(
   return signer.sign(await getPrivateKey());
 }
 
-export async function verifyAccessToken(
+export function verifyAccessToken(
   token: string,
   audience = DEFAULT_AUDIENCE,
   requiredScopes: string[] = []
+): Promise<TokenClaims> {
+  return verifyAccessTokenInternal(token, audience, requiredScopes, {
+    replayProtection: true,
+  });
+}
+
+type VerifyOptions = {
+  /** When false, skips JTI replay protection (required for multi-request sessions). */
+  replayProtection: boolean;
+};
+
+async function verifyAccessTokenInternal(
+  token: string,
+  audience: string,
+  requiredScopes: string[],
+  options: VerifyOptions
 ): Promise<TokenClaims> {
   const { payload } = await jwtVerify(token, await getPublicKey(), {
     issuer: ISSUER,
@@ -141,7 +160,9 @@ export async function verifyAccessToken(
     throw new Error("token_expired");
   }
 
-  await cacheJTI(payload.jti, ttl);
+  if (options.replayProtection) {
+    await cacheJTI(payload.jti, ttl);
+  }
 
   return {
     sub: payload.sub,
@@ -159,6 +180,27 @@ export async function verifyAccessToken(
     aud: payload.aud ?? audience,
     iss: payload.iss ?? ISSUER,
   };
+}
+
+export function verifyMcpSessionToken(
+  token: string,
+  requiredScopes: string[] = [],
+  audience = MCP_AUDIENCE
+): Promise<TokenClaims> {
+  return verifyAccessTokenInternal(token, audience, requiredScopes, {
+    replayProtection: false,
+  });
+}
+
+export function issueMcpSessionToken(
+  sub: string,
+  scopes: string[],
+  options: IssueOptions = {},
+  audience = MCP_AUDIENCE
+): Promise<string> {
+  const ttlSec =
+    options.ttlSec && options.ttlSec > 0 ? options.ttlSec : DEFAULT_MCP_TTL;
+  return issueAccessToken(sub, scopes, audience, { ...options, ttlSec });
 }
 
 export type ToolPolicyInput = {
@@ -184,7 +226,16 @@ export async function requireToolScopesAndPolicy(
 
   const token = authz.slice("Bearer ".length);
   const audience = policyInput.audience ?? DEFAULT_AUDIENCE;
-  const claims = await verifyAccessToken(token, audience, requiredScopes);
+  // Tool tokens may be reused across multiple tool calls for the duration of a run.
+  // Replay protection is intended for one-time tokens, not tool execution tokens.
+  const claims = await verifyAccessTokenInternal(
+    token,
+    audience,
+    requiredScopes,
+    {
+      replayProtection: false,
+    }
+  );
 
   const decision = await evaluate({
     subject: {

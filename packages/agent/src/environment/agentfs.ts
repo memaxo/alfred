@@ -278,6 +278,10 @@ export class AgentFSWorkspace implements Workspace {
           action: "run",
           tag: this._image,
           name: this._containerName,
+          addHosts:
+            process.platform === "linux"
+              ? ["host.docker.internal:host-gateway"]
+              : undefined,
           volumes: [
             `${absRepoBase}:/workspace.base:ro`,
             `${agentfsHostDir}:/agentfs`,

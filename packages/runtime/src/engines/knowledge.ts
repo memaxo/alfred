@@ -12,7 +12,8 @@ import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 import { execute, parse, semanticQuery } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
 import { type Chunk, embed } from "@alfred/rag";
-import { rerank } from "@alfred/rerank";
+import { isRerankAvailable, rerank } from "@alfred/rerank";
+import { runtimeRerankDurationSeconds, runtimeRerankTotal } from "../metrics";
 
 /**
  * KnowledgeEngine provides knowledge graph query operations
@@ -90,13 +91,33 @@ export class KnowledgeEngine {
     }
 
     // Generate query embedding
-    const embedding = await embed(query);
+    let embedding: Awaited<ReturnType<typeof embed>>;
+    try {
+      embedding = await embed(query);
+    } catch (error) {
+      logger.debug("knowledge_engine_retrieve_context_embed_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
 
     // Use hybrid search if enabled, otherwise pure vector search
     if (useHybrid) {
+      const rerankMaxDocsRaw = process.env.RERANK_MAX_DOCS;
+      const rerankMaxDocsParsed =
+        typeof rerankMaxDocsRaw === "string"
+          ? Number.parseInt(rerankMaxDocsRaw, 10)
+          : Number.NaN;
+      const rerankMaxDocs =
+        Number.isFinite(rerankMaxDocsParsed) && rerankMaxDocsParsed > 0
+          ? rerankMaxDocsParsed
+          : 200;
+
       // We fetch more candidates if reranking is enabled to allow re-ordering
       // Default limit * 3 for candidate generation
-      const candidateLimit = useReranking ? topK * 3 : topK;
+      const candidateLimit = useReranking
+        ? Math.min(topK * 3, rerankMaxDocs)
+        : topK;
 
       let results = await searchChunksHybrid({
         embedding,
@@ -107,7 +128,13 @@ export class KnowledgeEngine {
         // Note: db function no longer handles reranking
       });
 
-      if (useReranking && results.length > 0) {
+      const rerankTopN = Math.min(topK, candidateLimit);
+      if (
+        useReranking &&
+        rerankTopN > 0 &&
+        results.length > 0 &&
+        isRerankAvailable()
+      ) {
         try {
           const rerankResults = await rerank({
             query,
@@ -115,7 +142,34 @@ export class KnowledgeEngine {
               id: row.id,
               text: row.content,
             })),
-            topN: topK,
+            topN: rerankTopN,
+            telemetry: {
+              onSuccess: (ctx) => {
+                runtimeRerankTotal.inc({ backend: ctx.backend, status: "ok" });
+                runtimeRerankDurationSeconds
+                  .labels({ backend: ctx.backend })
+                  .observe(ctx.durationMs / 1000);
+                logger.debug("knowledge_engine_rerank_ok", {
+                  backend: ctx.backend,
+                  docCount: ctx.docCount,
+                  durationMs: ctx.durationMs,
+                });
+              },
+              onError: (ctx) => {
+                runtimeRerankTotal.inc({
+                  backend: ctx.backend,
+                  status: "error",
+                });
+                logger.warn("knowledge_engine_rerank_failed", {
+                  backend: ctx.backend,
+                  docCount: ctx.docCount,
+                  error:
+                    ctx.error instanceof Error
+                      ? ctx.error.message
+                      : String(ctx.error),
+                });
+              },
+            },
           });
 
           if (rerankResults.length > 0) {

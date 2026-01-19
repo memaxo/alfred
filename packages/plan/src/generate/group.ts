@@ -241,6 +241,7 @@ async function groupIntoPhasesAsync(
       {
         model,
         modelKey,
+        metricType: "phase",
         fallback: () => ({
           assignments: subtasks.map((t, i) => ({
             index: i,
@@ -345,7 +346,7 @@ export async function groupIntoPhasesWithMetadata(
       phaseAssignmentSchema,
       buildPhasePrompt(subtasks),
       "",
-      { model, modelKey }
+      { model, modelKey, metricType: "phase" }
     );
 
     const groups = new Map<PhaseId, SubTask[]>();

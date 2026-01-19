@@ -46,6 +46,7 @@ export class InitStage implements PipelineStage<PipelineInput, InitOutput> {
       ctx.set("linearIssueId", linearIssueId ?? null);
       ctx.set("linearSessionId", input.linear.sessionId);
       ctx.set("linearSpace", input.linear.space);
+      ctx.set("linearTeamId", input.linear.teamId ?? null);
     }
 
     return {

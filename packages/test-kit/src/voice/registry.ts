@@ -18,6 +18,7 @@ class DeterministicSTTPool {
 
   async initialize() {}
   async shutdown() {}
+  releaseSession(_sessionId: string) {}
 
   getHealth() {
     return [{ isHealthy: true }];

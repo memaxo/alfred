@@ -7,10 +7,12 @@
 
 /** @jsxImportSource @opentui/react */
 
+import { appRouter } from "@alfred/api/router";
 import type { SubTask, WavePlan } from "@alfred/pipeline/schemas";
 import type { KeyEvent } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useState } from "react";
+import { createCliContext } from "../../../cli/context";
 
 export type PlanModeProps = {
   isOpen: boolean;
@@ -24,11 +26,81 @@ type PlanState =
   | { status: "loaded"; runId: string; waves: WavePlan[]; subtasks: SubTask[] }
   | { status: "error"; error: string };
 
+type PromptState =
+  | { kind: "none" }
+  | { kind: "load"; runId: string }
+  | { kind: "genReq"; requirement: string }
+  | { kind: "genWs"; requirement: string; workspace: string };
+
 export function PlanMode({ isOpen, onClose, onExecute }: PlanModeProps) {
   const { width, height } = useTerminalDimensions();
-  const [plan, _setPlan] = useState<PlanState>({ status: "idle" });
+  const [plan, setPlan] = useState<PlanState>({ status: "idle" });
+  const [prompt, setPrompt] = useState<PromptState>({ kind: "none" });
   const [selectedWaveIndex, setSelectedWaveIndex] = useState(0);
   const [expandedWaves, setExpandedWaves] = useState<Set<string>>(new Set());
+
+  const loadByRunId = useCallback(async (runId: string) => {
+    setPlan({ status: "loading" });
+    try {
+      const ctx = await createCliContext();
+      const caller = appRouter.createCaller(
+        ctx as unknown as Parameters<typeof appRouter.createCaller>[0]
+      );
+      const res = await caller.workflow.phase.getPlan({ runId });
+      setExpandedWaves(new Set(res.waves.map((w) => w.id)));
+      setSelectedWaveIndex(0);
+      setPlan({
+        status: "loaded",
+        runId: res.runId,
+        waves: res.waves,
+        subtasks: res.subtasks,
+      });
+    } catch (error) {
+      setPlan({
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setPrompt({ kind: "none" });
+    }
+  }, []);
+
+  const generatePlan = useCallback(
+    async (requirement: string, workspace: string) => {
+      setPlan({ status: "loading" });
+      try {
+        const ctx = await createCliContext();
+        const caller = appRouter.createCaller(
+          ctx as unknown as Parameters<typeof appRouter.createCaller>[0]
+        );
+        const userId =
+          ctx.session?.user?.id && ctx.session.user.id.length > 0
+            ? ctx.session.user.id
+            : "tui";
+        const res = await caller.workflow.phase.plan({
+          requirement,
+          workspace,
+          userId,
+        });
+        setExpandedWaves(new Set(res.waves.map((w) => w.id)));
+        setSelectedWaveIndex(0);
+        setPlan({
+          status: "loaded",
+          runId: res.runId,
+          waves: res.waves,
+          subtasks: res.subtasks,
+        });
+      } catch (error) {
+        setPlan({
+          status: "error",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        setPrompt({ kind: "none" });
+      }
+    },
+    []
+  );
 
   const handleKeyboard = useCallback(
     (event: KeyEvent) => {
@@ -39,6 +111,92 @@ export function PlanMode({ isOpen, onClose, onExecute }: PlanModeProps) {
       if (event.name === "escape" || event.name === "q") {
         onClose();
         return;
+      }
+
+      // Prompt input handling (load/generate flows)
+      if (prompt.kind !== "none") {
+        if (event.name === "enter") {
+          if (prompt.kind === "load" && prompt.runId.trim().length > 0) {
+            void loadByRunId(prompt.runId.trim());
+          }
+          if (
+            prompt.kind === "genReq" &&
+            prompt.requirement.trim().length > 0
+          ) {
+            setPrompt({
+              kind: "genWs",
+              requirement: prompt.requirement.trim(),
+              workspace: process.cwd(),
+            });
+          }
+          if (prompt.kind === "genWs") {
+            const ws =
+              prompt.workspace.trim().length > 0
+                ? prompt.workspace.trim()
+                : process.cwd();
+            void generatePlan(prompt.requirement, ws);
+          }
+          return;
+        }
+
+        if (event.name === "backspace") {
+          setPrompt((prev) => {
+            if (prev.kind === "load") {
+              return { kind: "load", runId: prev.runId.slice(0, -1) };
+            }
+            if (prev.kind === "genReq") {
+              return {
+                kind: "genReq",
+                requirement: prev.requirement.slice(0, -1),
+              };
+            }
+            if (prev.kind === "genWs") {
+              return {
+                kind: "genWs",
+                requirement: prev.requirement,
+                workspace: prev.workspace.slice(0, -1),
+              };
+            }
+            return prev;
+          });
+          return;
+        }
+
+        const alt = (event as { alt?: boolean }).alt ?? false;
+        if (event.name.length === 1 && !event.ctrl && !alt) {
+          setPrompt((prev) => {
+            if (prev.kind === "load") {
+              return { kind: "load", runId: prev.runId + event.name };
+            }
+            if (prev.kind === "genReq") {
+              return {
+                kind: "genReq",
+                requirement: prev.requirement + event.name,
+              };
+            }
+            if (prev.kind === "genWs") {
+              return {
+                kind: "genWs",
+                requirement: prev.requirement,
+                workspace: prev.workspace + event.name,
+              };
+            }
+            return prev;
+          });
+          return;
+        }
+      }
+
+      // Entry shortcuts (from idle/error)
+      if (plan.status !== "loaded") {
+        if (event.name === "l") {
+          setPrompt({ kind: "load", runId: "" });
+          return;
+        }
+        if (event.name === "g") {
+          setPrompt({ kind: "genReq", requirement: "" });
+          return;
+        }
       }
 
       if (plan.status !== "loaded") {
@@ -93,7 +251,16 @@ export function PlanMode({ isOpen, onClose, onExecute }: PlanModeProps) {
         return;
       }
     },
-    [isOpen, plan, selectedWaveIndex, onClose, onExecute]
+    [
+      generatePlan,
+      isOpen,
+      loadByRunId,
+      onClose,
+      onExecute,
+      plan,
+      prompt.kind,
+      selectedWaveIndex,
+    ]
   );
 
   useKeyboard(handleKeyboard);
@@ -121,9 +288,15 @@ export function PlanMode({ isOpen, onClose, onExecute }: PlanModeProps) {
           {plan.status === "idle" && (
             <>
               <text content="" />
+              <text content=" Plan Mode" style={{ fg: "#8A9199" }} />
+              <text content="" />
               <text
-                content=" No plan loaded. Use 'alfred plan' to generate a plan."
-                style={{ fg: "#8A9199" }}
+                content=" Press g to generate a new plan."
+                style={{ fg: "#39BAE6" }}
+              />
+              <text
+                content=" Press l to load a plan by runId."
+                style={{ fg: "#39BAE6" }}
               />
               <text content="" />
               <text
@@ -149,8 +322,52 @@ export function PlanMode({ isOpen, onClose, onExecute }: PlanModeProps) {
               />
               <text content="" />
               <text
+                content=" Press g to generate a new plan."
+                style={{ fg: "#39BAE6" }}
+              />
+              <text
+                content=" Press l to load a plan by runId."
+                style={{ fg: "#39BAE6" }}
+              />
+              <text content="" />
+              <text
                 content=" Press Esc/q to return to dashboard."
                 style={{ fg: "#39BAE6" }}
+              />
+            </>
+          )}
+
+          {prompt.kind !== "none" && (
+            <>
+              <text content="" />
+              <text content=" Input:" style={{ fg: "#8A9199" }} />
+              {prompt.kind === "load" && (
+                <text
+                  content={` Run ID: ${prompt.runId}`}
+                  style={{ fg: "#59C2FF" }}
+                />
+              )}
+              {prompt.kind === "genReq" && (
+                <text
+                  content={` Requirement: ${prompt.requirement}`}
+                  style={{ fg: "#59C2FF" }}
+                />
+              )}
+              {prompt.kind === "genWs" && (
+                <>
+                  <text
+                    content={` Requirement: ${prompt.requirement}`}
+                    style={{ fg: "#59C2FF" }}
+                  />
+                  <text
+                    content={` Workspace: ${prompt.workspace}`}
+                    style={{ fg: "#59C2FF" }}
+                  />
+                </>
+              )}
+              <text
+                content=" Enter to confirm, Backspace to edit."
+                style={{ fg: "#8A9199" }}
               />
             </>
           )}

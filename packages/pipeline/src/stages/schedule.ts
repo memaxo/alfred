@@ -12,8 +12,11 @@ export class ScheduleStage
     input: PlanOutput,
     ctx: PipelineContext
   ): Promise<ScheduleOutput> {
+    const strategy = input.structuredPlan.resources.strategy;
     const executionMode =
-      ctx.config.maxParallel > 1 ? "parallel" : "sequential";
+      ctx.config.maxParallel > 1 && strategy !== "sequential"
+        ? "parallel"
+        : "sequential";
 
     ctx.emit(
       createEvent("stage:progress", {
@@ -23,13 +26,11 @@ export class ScheduleStage
     );
 
     // Import dynamically to avoid circular dependencies
-    const { planWaves } = await import(
-      "@alfred/agent/orchestrator/multi/spawn"
-    );
+    const { planToWaves } = await import("@alfred/plan/generate");
 
-    // Use existing wave planning
-    const plannedWaves = planWaves(input.subtasks, {
-      maxParallel: ctx.config.maxParallel,
+    const plannedWaves = planToWaves(input.structuredPlan, {
+      maxConcurrency: ctx.config.maxParallel,
+      forceSequential: executionMode === "sequential",
     });
 
     // Estimate duration (rough heuristic: 2min per agent sequential, 1min parallel)

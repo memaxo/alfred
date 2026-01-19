@@ -81,6 +81,7 @@ export class PipelineRunner {
     input: PipelineInput,
     signal?: AbortSignal
   ): AsyncGenerator<PipelineEvent, PipelineResult, void> {
+    await Promise.resolve();
     return yield* this.executeFromStage(input, 0, [], [], signal);
   }
 
@@ -98,6 +99,7 @@ export class PipelineRunner {
     stopAfter: StageName,
     signal?: AbortSignal
   ): AsyncGenerator<PipelineEvent, unknown, void> {
+    await Promise.resolve();
     const stopIndex = STAGE_ORDER.indexOf(stopAfter);
     if (stopIndex === -1) {
       throw new Error(`Unknown stage: ${stopAfter}`);
@@ -168,6 +170,7 @@ export class PipelineRunner {
     input: PipelineInput,
     signal?: AbortSignal
   ): AsyncGenerator<PipelineEvent, PipelineResult, void> {
+    await Promise.resolve();
     // Validate snapshot matches input
     if (snapshot.runId !== input.runId) {
       throw new Error(
@@ -284,6 +287,7 @@ export class PipelineRunner {
         ctx.set("linearAuthz", input.linear?.authz ?? null);
         ctx.set("linearSessionId", input.linear?.sessionId ?? null);
         ctx.set("linearSpace", input.linear?.space ?? null);
+        ctx.set("linearTeamId", input.linear?.teamId ?? null);
         ctx.set("linearIssueId", input.linear?.issueId ?? null);
 
         const startEvent = createEvent("pipeline:start", {
@@ -356,6 +360,24 @@ export class PipelineRunner {
             stage: currentStage,
             durationMs,
           });
+
+          const pipelineSuspend = ctx.get<{ reason?: unknown }>(
+            "pipelineSuspend"
+          );
+          if (pipelineSuspend) {
+            const reason =
+              typeof pipelineSuspend.reason === "string" &&
+              pipelineSuspend.reason.length > 0
+                ? pipelineSuspend.reason
+                : "unknown";
+            const suspendEvent = createEvent("pipeline:suspend", {
+              reason,
+            });
+            assertWithinTransitionLimit(suspendEvent.type);
+            yield suspendEvent;
+            this.emit(suspendEvent);
+            return lastStageOutput;
+          }
         } catch (error) {
           const durationMs = Math.round(performance.now() - stageStart);
           stageResults.push({
@@ -511,6 +533,7 @@ export class PipelineRunner {
         ctx.set("linearAuthz", input.linear?.authz ?? null);
         ctx.set("linearSessionId", input.linear?.sessionId ?? null);
         ctx.set("linearSpace", input.linear?.space ?? null);
+        ctx.set("linearTeamId", input.linear?.teamId ?? null);
         ctx.set("linearIssueId", input.linear?.issueId ?? null);
 
         const startEvent = createEvent("pipeline:start", {
@@ -591,6 +614,24 @@ export class PipelineRunner {
             stage: currentStage,
             durationMs,
           });
+
+          const pipelineSuspend = ctx.get<{ reason?: unknown }>(
+            "pipelineSuspend"
+          );
+          if (pipelineSuspend) {
+            const reason =
+              typeof pipelineSuspend.reason === "string" &&
+              pipelineSuspend.reason.length > 0
+                ? pipelineSuspend.reason
+                : "unknown";
+            const suspendEvent = createEvent("pipeline:suspend", {
+              reason,
+            });
+            assertWithinTransitionLimit(suspendEvent.type);
+            yield suspendEvent;
+            this.emit(suspendEvent);
+            return stageInput as PipelineResult;
+          }
         } catch (error) {
           const durationMs = Math.round(performance.now() - stageStart);
           stageResults.push({
@@ -647,7 +688,18 @@ export class PipelineRunner {
         learningInsights: metrics.learningInsights,
       };
 
-      const completeEvent = createEvent("pipeline:complete", { summary });
+      const summaryText = (() => {
+        const out = ctx.get<{ summary?: unknown }>("summarizeOutput");
+        const text = out?.summary;
+        return typeof text === "string" && text.trim().length > 0
+          ? text.trim()
+          : undefined;
+      })();
+
+      const completeEvent = createEvent("pipeline:complete", {
+        summary,
+        summaryText,
+      });
       assertWithinTransitionLimit(completeEvent.type);
       yield completeEvent;
       this.emit(completeEvent);

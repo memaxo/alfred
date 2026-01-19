@@ -5,7 +5,9 @@
     "declarationMap": false,
     "sourceMap": false,
     "outDir": "dist",
+    "rootDir": "src",
     "composite": true,
+    "tsBuildInfoFile": "dist/rag.tsbuildinfo",
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },

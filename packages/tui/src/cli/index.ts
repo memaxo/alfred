@@ -40,6 +40,24 @@ export async function runCli(args: string[]): Promise<void> {
       return await voiceCommands(args.slice(1));
     }
 
+    // Phase commands (kept outside registry init for fast UX).
+    if (args[0] === "plan") {
+      const { handlePlanCommand } = await import("./phase");
+      return await handlePlanCommand(args.slice(1));
+    }
+    if (args[0] === "execute") {
+      const { handleExecuteCommand } = await import("./phase");
+      return await handleExecuteCommand(args.slice(1));
+    }
+    if (args[0] === "status") {
+      const { handleStatusCommand } = await import("./phase");
+      return await handleStatusCommand(args.slice(1));
+    }
+    if (args[0] === "work" || args[0] === "compilation") {
+      const { handleCompilationCommand } = await import("./phase");
+      return await handleCompilationCommand(args.slice(1));
+    }
+
     // Handle TUI commands (also before registry init).
     if (args[0] === "tui") {
       return await handleTuiCommand(args.slice(1));

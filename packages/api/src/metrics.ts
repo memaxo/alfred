@@ -7,6 +7,7 @@
 
 import { logger } from "@alfred/logger";
 import { metricsRegistry } from "@alfred/metrics/registry";
+import "@alfred/metrics/classification";
 
 export { metricsRegistry };
 

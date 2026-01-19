@@ -708,7 +708,7 @@ async function startOpenCodeServer(args: {
 
         const session = await connection.newSession({
           cwd: sessionCw,
-          mcpServers: [],
+          mcpServers: input.mcpServers ?? [],
           ...(input.sessionId ? { sessionId: input.sessionId } : {}),
           ...(input.model ? { model: input.model } : {}),
           mode: mapAutonomyToAcpMode(input.auto),

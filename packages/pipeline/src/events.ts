@@ -1,5 +1,9 @@
+import type { AgentEscalationReason } from "@alfred/agent/orchestrator/tool/shared/context";
 import type { StageName } from "./pipeline";
 import type { SerializableValue } from "./snapshot";
+
+// Re-export for convenience
+export type { AgentEscalationReason };
 
 // Agent execution outcome
 export type AgentOutcome = {
@@ -78,6 +82,16 @@ export type PipelineEvent =
       timestamp: number;
     }
   | {
+      /** Real-time escalation request from agent via escalate tool */
+      type: "agent:escalate-request";
+      agentId: string;
+      reason: AgentEscalationReason;
+      details: string;
+      suggestions?: string[];
+      severity: "warning" | "blocking";
+      timestamp: number;
+    }
+  | {
       type: "agent:retry";
       agentId: string;
       attempt: number;
@@ -139,7 +153,12 @@ export type PipelineEvent =
     }
   | { type: "pipeline:suspend"; reason: string; timestamp: number }
   | { type: "pipeline:resume"; fromStage: StageName; timestamp: number }
-  | { type: "pipeline:complete"; summary: ExecutionSummary; timestamp: number }
+  | {
+      type: "pipeline:complete";
+      summary: ExecutionSummary;
+      summaryText?: string;
+      timestamp: number;
+    }
   | {
       type: "pipeline:failed";
       error: string;

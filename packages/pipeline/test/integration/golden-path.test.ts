@@ -1,10 +1,42 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import type { PipelineEvent } from "../../src/events";
-import { PipelineRunner } from "../../src/runner";
-import { registerDefaultStages } from "../../src/stages";
+
+mock.module("ai", () => ({
+  generateObject: () => {
+    throw new Error("mock_ai_disabled");
+  },
+  generateText: () => {
+    throw new Error("mock_ai_disabled");
+  },
+}));
+
+mock.module("@alfred/runtime/orchestrator/agent", () => ({
+  runAgent: async ({ spec, phaseId }: { spec: any; phaseId: string }) => ({
+    agentId: spec.agentId,
+    phaseId,
+    stuck: false,
+    status: "success",
+    durationSeconds: 0,
+    role: "agent",
+    result: {
+      summary: "mock agent success",
+      artifacts: [],
+      changes: [],
+      notes: [],
+    },
+  }),
+}));
+
+mock.module("@alfred/runtime/orchestrator/summary", () => ({
+  generateWaveSummary: async () => "mock summary",
+}));
+
+// Imports must come after mocks (Bun mock.module).
+type PipelineEvent = typeof import("../../src/events")["PipelineEvent"];
+const { PipelineRunner } = await import("../../src/runner");
+const { registerDefaultStages } = await import("../../src/stages");
 
 describe("Golden Path Pipeline", () => {
   const testWorkspace = join(

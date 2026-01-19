@@ -43,6 +43,12 @@ The backend is automatically selected based on environment variables:
 |----------|---------|-------------|
 | `RERANK_BACKEND` | auto-detect | Force backend: `cohere`, `qwen3vl`, `none` |
 
+### RAG Integration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RAG_RERANK` | `0` | Enable reranking inside RAG retrieval paths (hybrid search candidate reorder). |
+
 ### Cohere (SaaS)
 
 | Variable | Default | Description |
@@ -84,6 +90,7 @@ RERANK_DEVICE=cuda docker compose --profile rerank up -d
 Then configure ALFRED to use it:
 
 ```bash
+export RAG_RERANK=1
 export QWEN3VL_RERANK_URL=http://localhost:8200
 # or with Docker networking
 export QWEN3VL_RERANK_URL=http://rerank:8000
@@ -194,6 +201,16 @@ uv run python python/bench.py --url http://localhost:8200 --requests 1 --concurr
 ```bash
 python -m pstats ./.agent/profiles/rerank/rerank_<id>.pstats
 ```
+
+## Hardening & Limits
+
+The server enforces basic safety limits:
+
+- **Max documents per request**: `RERANK_MAX_DOCS` (default: 200)
+- **Inference concurrency**: `RERANK_MAX_CONCURRENCY` (default: 1)
+- **Disable `file://` by default**: set `RERANK_ALLOW_FILE_URLS=1` only for local testing (Docker should prefer http(s)).
+
+These settings are also reported by `GET /health` (`max_docs`, `max_concurrency`, `allow_file_urls`).
 
 ## Apple Silicon Optimizations
 

@@ -4,6 +4,11 @@
  * Detects stuck workflows and provides recovery mechanisms.
  */
 
+import type { StuckDetectionConfig } from "@alfred/agent/orchestrator/multi/tracker";
+
+// Re-export the unified StuckDetectionConfig from agent/tracker
+export type { StuckDetectionConfig };
+
 /**
  * Escalation reasons.
  */
@@ -116,26 +121,19 @@ export class EscalationDetector {
 }
 
 /**
- * Stuck detection configuration.
- */
-export type StuckDetectionConfig = {
-  /** Max transitions before considering stuck */
-  maxTransitions: number;
-  /** Max time in ms before considering stuck */
-  maxTimeMs: number;
-  /** Max repeated errors before escalating */
-  maxRepeatedErrors: number;
-};
-
-/**
  * Detect if workflow is stuck based on various signals.
  *
- * @param config - Detection configuration
+ * @param config - Detection configuration (uses unified StuckDetectionConfig from @alfred/agent)
  * @param context - Current workflow context
  * @returns Escalation reason if stuck, null otherwise
  */
 export function detectStuck(
-  config: StuckDetectionConfig,
+  config: Required<
+    Pick<
+      StuckDetectionConfig,
+      "maxTransitions" | "maxTimeMs" | "maxRepeatedErrors"
+    >
+  >,
   context: {
     transitionCount: number;
     elapsedMs: number;

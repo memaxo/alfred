@@ -48,6 +48,10 @@ device_name = None
 batch_size = 8  # Default batch size for text-only documents
 use_compile = False  # Whether to use torch.compile
 profile_lock = threading.Lock()
+infer_lock = threading.Semaphore(1)
+max_docs = 200
+allow_file_urls = False
+max_concurrency = 1
 
 
 def detect_device() -> str:
@@ -155,14 +159,22 @@ def load_model():
     - Configure attention implementation for better performance
     - Use inference_mode for memory efficiency
     """
-    global model, model_name, device_name, batch_size, use_compile
+    global model, model_name, device_name, batch_size, use_compile, infer_lock, max_docs, allow_file_urls, max_concurrency
 
     model_name = os.getenv("RERANK_MODEL", "Qwen/Qwen3-VL-Reranker-2B")
     device_name = resolve_device(os.getenv("RERANK_DEVICE"))
-    batch_size = int(os.getenv("RERANK_BATCH_SIZE", "8"))
+    batch_size = max(1, int(os.getenv("RERANK_BATCH_SIZE", "8")))
     use_compile = os.getenv("RERANK_COMPILE", "0") == "1"
+    max_docs = max(1, int(os.getenv("RERANK_MAX_DOCS", "200")))
+    allow_file_urls = os.getenv("RERANK_ALLOW_FILE_URLS", "0") == "1"
+    max_concurrency = max(1, int(os.getenv("RERANK_MAX_CONCURRENCY", "1")))
+    infer_lock = threading.Semaphore(max_concurrency)
 
-    logger.info(f"Loading model {model_name} on device {device_name} (batch_size={batch_size}, compile={use_compile})...")
+    logger.info(
+        f"Loading model {model_name} on device {device_name} "
+        f"(batch_size={batch_size}, compile={use_compile}, max_docs={max_docs}, "
+        f"max_concurrency={max_concurrency}, allow_file_urls={allow_file_urls})..."
+    )
 
     # Setup device-specific optimizations
     if device_name == "mps":
@@ -302,7 +314,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Qwen3-VL Reranker",
     description="Multimodal document reranking service",
-    version="0.1.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -322,8 +334,12 @@ class DocumentInput(BaseModel):
 class RerankRequest(BaseModel):
     query: QueryInput
     documents: list[DocumentInput]
-    instruction: Optional[str] = "Retrieve images or text relevant to the user's query."
-    top_n: Optional[int] = 10
+    instruction: str = Field(
+        default="Retrieve images or text relevant to the user's query.",
+        max_length=2048,
+        description="Reranker instruction (kept short to control prompt length).",
+    )
+    top_n: int = Field(default=10, ge=0, le=1000)
     fps: Optional[float] = 1.0
     debug: bool = Field(
         default=False,
@@ -379,6 +395,9 @@ class HealthResponse(BaseModel):
     model: str
     device: str
     batch_size: Optional[int] = None
+    max_docs: Optional[int] = None
+    max_concurrency: Optional[int] = None
+    allow_file_urls: Optional[bool] = None
     compiled: Optional[bool] = None
     peak_memory_gb: Optional[float] = None
     error: Optional[str] = None
@@ -402,6 +421,17 @@ def build_content(doc: DocumentInput) -> list[dict]:
         content.append({"type": "text", "text": ""})
 
     return content
+
+
+def _validate_url(url: str, *, allow_file: bool) -> None:
+    """
+    Validate URL schemes for image/video inputs.
+
+    Security hardening: `file://` is disabled by default to avoid reading host files.
+    Enable explicitly with RERANK_ALLOW_FILE_URLS=1.
+    """
+    if url.startswith("file://") and not allow_file:
+        raise HTTPException(status_code=400, detail="file_urls_disabled")
 
 
 def is_text_only(doc: DocumentInput) -> bool:
@@ -612,7 +642,7 @@ def score_pair(query_content: list[dict], doc_content: list[dict], instruction: 
 
 
 @app.post("/rerank", response_model=RerankResponse)
-async def rerank(request: RerankRequest):
+def rerank(request: RerankRequest):
     """
     Rerank documents against a query.
     
@@ -628,8 +658,28 @@ async def rerank(request: RerankRequest):
     profile_dir = os.getenv("RERANK_PROFILE_DIR", "")
     profile_path: Optional[str] = None
 
+    if not request.documents:
+        return RerankResponse(results=[], debug=None)
+
+    if len(request.documents) > max_docs:
+        raise HTTPException(status_code=413, detail="too_many_documents")
+
+    # Clamp top_n to the number of documents; allow 0 to request no results.
+    top_n = min(request.top_n, len(request.documents))
+    if top_n == 0:
+        return RerankResponse(results=[], debug=None)
+
     def _run_once(profile_path_for_debug: Optional[str]) -> tuple[list[RerankResultItem], Optional[DebugInfo]]:
         t0 = time.perf_counter()
+
+        # Validate URL schemes (fail fast before heavy work).
+        if request.query.image:
+            _validate_url(request.query.image, allow_file=allow_file_urls)
+        for d in request.documents:
+            if d.image:
+                _validate_url(d.image, allow_file=allow_file_urls)
+            if d.video:
+                _validate_url(d.video, allow_file=allow_file_urls)
 
         # Build query content
         t_build_query0 = time.perf_counter()
@@ -642,7 +692,7 @@ async def rerank(request: RerankRequest):
             query_content.append({"type": "text", "text": ""})
         build_query_ms = (time.perf_counter() - t_build_query0) * 1000
 
-        instruction = request.instruction or "Retrieve images or text relevant to the user's query."
+        instruction = request.instruction
 
         # Separate text-only and multimodal documents
         t_split0 = time.perf_counter()
@@ -737,7 +787,6 @@ async def rerank(request: RerankRequest):
         scores.sort(key=lambda x: x[2], reverse=True)
 
         # Take top N
-        top_n = request.top_n or 10
         top_scores = scores[:top_n]
 
         results = [
@@ -769,27 +818,32 @@ async def rerank(request: RerankRequest):
         )
         return (results, dbg)
 
-    if not profile_enabled:
-        results, dbg = _run_once(None)
+    # Concurrency guard: protect GPU/MPS from request pileups.
+    infer_lock.acquire()
+    try:
+        if not profile_enabled:
+            results, dbg = _run_once(None)
+            return RerankResponse(results=results, debug=dbg)
+
+        # Deep profiling (cProfile) — gated and lock-protected
+        if not profile_dir:
+            profile_dir = os.path.join(os.getcwd(), ".agent", "profiles", "rerank")
+        os.makedirs(profile_dir, exist_ok=True)
+        run_id = uuid.uuid4().hex[:8]
+        profile_path = os.path.join(profile_dir, f"rerank_{run_id}.pstats")
+
+        import cProfile
+
+        with profile_lock:
+            pr = cProfile.Profile()
+            pr.enable()
+            results, dbg = _run_once(profile_path)
+            pr.disable()
+            pr.dump_stats(profile_path)
+
         return RerankResponse(results=results, debug=dbg)
-
-    # Deep profiling (cProfile) — gated and lock-protected
-    if not profile_dir:
-        profile_dir = os.path.join(os.getcwd(), ".agent", "profiles", "rerank")
-    os.makedirs(profile_dir, exist_ok=True)
-    run_id = uuid.uuid4().hex[:8]
-    profile_path = os.path.join(profile_dir, f"rerank_{run_id}.pstats")
-
-    import cProfile
-
-    with profile_lock:
-        pr = cProfile.Profile()
-        pr.enable()
-        results, dbg = _run_once(profile_path)
-        pr.disable()
-        pr.dump_stats(profile_path)
-
-    return RerankResponse(results=results, debug=dbg)
+    finally:
+        infer_lock.release()
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -810,6 +864,9 @@ async def health():
         model=model_name or "unknown",
         device=device_name or "unknown",
         batch_size=batch_size,
+        max_docs=max_docs,
+        max_concurrency=max_concurrency,
+        allow_file_urls=allow_file_urls,
         compiled=use_compile,
         peak_memory_gb=peak_memory if peak_memory > 0 else None,
     )
@@ -820,7 +877,7 @@ async def root():
     """Root endpoint with basic info."""
     return {
         "service": "Qwen3-VL Reranker",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "model": model_name,
         "device": device_name,
         "batch_size": batch_size,

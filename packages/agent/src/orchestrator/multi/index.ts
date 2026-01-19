@@ -123,6 +123,8 @@ export {
   getStuckDetectionDefaults,
   propagateCompletionWithContext,
   resetTrackerContext,
+  type StuckDetectionConfig,
+  /** @deprecated Use StuckDetectionConfig instead */
   type StuckDetectionOptions,
   type TrackerAgentState,
   type TrackerContext,

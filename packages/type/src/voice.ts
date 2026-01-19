@@ -1,3 +1,5 @@
+import type { UIMessage } from "ai";
+
 export type VoiceStreamCodec = "pcm" | "mp3" | "opus" | "wav";
 export type VoiceStreamSurface =
   | "drive"
@@ -7,13 +9,47 @@ export type VoiceStreamSurface =
   | "stream"
   | "unknown";
 
+/**
+ * Canonical rich payload for voice assistant responses.
+ *
+ * This is transported via `VoiceStreamServerEvent._ === "assistant_message"` as `raw`.
+ * It is designed to be AI SDK v6-compatible (UIMessage parts), so all surfaces can
+ * render GenUI and tool results consistently.
+ */
+export type VoiceAssistantRaw = {
+  uiMessages: UIMessage[];
+  meta?: {
+    runId?: string;
+    planId?: string;
+    [key: string]: unknown;
+  };
+};
+
 export type VoiceStreamStartPayload = {
   _: "start";
+  /**
+   * Version of the realtime voice protocol.
+   * Optional for backwards compatibility; defaults to 1 when omitted.
+   */
+  protocolVersion?: number;
   sessionId?: string;
   language?: string;
+  /**
+   * MIME type of incoming audio chunks.
+   * Required when the client sends binary frames, since binary frames carry no metadata.
+   */
+  inputMimeType?: string;
   codec?: VoiceStreamCodec;
   surface?: VoiceStreamSurface;
   vadThreshold?: number;
+  /**
+   * STT chunk size for latency/accuracy tradeoff (Nemotron streaming).
+   * - fast: 80ms
+   * - low: 160ms
+   * - medium: 560ms (default)
+   * - accurate: 1.12s
+   */
+  sttChunkSize?: "fast" | "low" | "medium" | "accurate";
   autoStop?: boolean;
   maxUtteranceMs?: number;
   ttsVoice?: string;
@@ -46,12 +82,15 @@ export type VoiceStreamAutoStopEvent = {
 };
 
 export type VoiceStreamServerEvent =
-  | { _: "ready"; sessionId: null }
+  | { _: "ready"; sessionId: null; protocolVersion?: number }
   | {
       _: "session_started";
       sessionId: string;
       codec: VoiceStreamCodec;
       negotiatedCodec: VoiceStreamCodec;
+      protocolVersion?: number;
+      inputMimeType?: string;
+      ttsFormat?: "mp3" | "opus" | "wav";
     }
   | {
       _: "partial_transcript";
@@ -77,7 +116,7 @@ export type VoiceStreamServerEvent =
       sessionId: string;
       text: string;
       replayId?: string | null;
-      raw?: unknown;
+      raw?: VoiceAssistantRaw;
     }
   | {
       _: "tts_chunk";

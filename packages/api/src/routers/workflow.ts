@@ -1,5 +1,5 @@
+import * as path from "node:path";
 import { performance } from "node:perf_hooks";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import {
   codexLinearActivitiesDroppedTotal,
   codexLinearActivitiesEmittedTotal,
@@ -14,14 +14,24 @@ import type {
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
-import type { PipelineEvent, PipelineSnapshot } from "@alfred/pipeline";
+import type {
+  CheckpointStorage,
+  PipelineEvent,
+  PipelineSnapshot,
+} from "@alfred/pipeline";
+import { InMemoryCheckpointStorage } from "@alfred/pipeline/observers";
 import {
   executePhaseInputSchema,
   phaseStatusSchema,
   planPhaseInputSchema,
   planPhaseOutputSchema,
 } from "@alfred/pipeline/schemas";
+import {
+  isSerializable,
+  type SerializableValue,
+} from "@alfred/pipeline/snapshot";
 import type { Obligation } from "@alfred/type";
+import { workflowCompilationSchema } from "@alfred/type/compilation";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -29,6 +39,8 @@ import { z } from "zod";
 import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { triggerPreferenceRefresh } from "../preference/refresh";
+import { CompilationObserver } from "../services/compilation";
+import { upsertWorkflowPatternFromCompletion } from "../services/pattern";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { enforceWorkflowPlanPolicy } from "../workflow/access";
@@ -40,6 +52,122 @@ const requiresBiometric = (obligations: Obligation[]): boolean =>
       (typeof obligation.metadata?.code === "string" &&
         obligation.metadata.code === "requireBio")
   );
+
+const isTestMode =
+  process.env.VITE_TEST_MODE === "true" || process.env.MINDSCAPE_TEST === "1";
+
+let memCheckpointStorage: InMemoryCheckpointStorage | null = null;
+function getTestCheckpointStorage(): InMemoryCheckpointStorage {
+  memCheckpointStorage ??= new InMemoryCheckpointStorage();
+  return memCheckpointStorage;
+}
+
+const workflowPlanPolicy = requirePolicy("workflow.plan", (raw) =>
+  mapWorkflowResourceLocal(raw)
+);
+
+const workflowExecutePolicy = requirePolicy("workflow.execute", (raw) =>
+  mapWorkflowRunResourceLocal(raw)
+);
+
+const phasePlanProcedure = isTestMode
+  ? authedProcedure.use(rateLimit)
+  : authedProcedure.use(rateLimit).use(workflowPlanPolicy);
+
+const phaseExecuteProcedure = isTestMode
+  ? authedProcedure.use(rateLimit)
+  : authedProcedure.use(rateLimit).use(workflowExecutePolicy);
+
+class WorkflowCheckpointStorage implements CheckpointStorage {
+  private readonly stageNameSchema = z.enum([
+    "init",
+    "context",
+    "plan",
+    "schedule",
+    "execute",
+    "review",
+    "learn",
+    "summarize",
+  ] as const);
+
+  private readonly snapshotSchema = z.object({
+    runId: z.string().min(1),
+    status: z.enum(["idle", "running", "suspended", "completed", "failed"]),
+    requirement: z.string(),
+    lastCompletedStage: z
+      .enum([
+        "init",
+        "context",
+        "plan",
+        "schedule",
+        "execute",
+        "review",
+        "learn",
+        "summarize",
+      ])
+      .nullable(),
+    lastCompletedStageIndex: z.number(),
+    contextEntries: z.array(z.tuple([z.string(), z.unknown()])).optional(),
+    stageResults: z
+      .array(
+        z.object({
+          name: this.stageNameSchema,
+          durationMs: z.number(),
+          status: z.enum(["success", "failure", "skipped"]),
+        })
+      )
+      .optional(),
+    startedAt: z.number(),
+    lastEventAt: z.number(),
+    lastEventId: z.string().nullable(),
+    error: z.string().nullable(),
+  });
+
+  constructor(
+    private readonly inner: {
+      save(runId: string, snapshot: unknown): Promise<void>;
+      load(runId: string): Promise<unknown | null>;
+      delete?(runId: string): Promise<void>;
+    }
+  ) {}
+
+  async save(runId: string, snapshot: PipelineSnapshot): Promise<void> {
+    await this.inner.save(runId, snapshot);
+  }
+
+  async load(runId: string): Promise<PipelineSnapshot | null> {
+    const raw = await this.inner.load(runId);
+    if (!raw) {
+      return null;
+    }
+    const parsed = this.snapshotSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new Error("checkpoint_snapshot_invalid");
+    }
+    const contextEntries = parsed.data.contextEntries ?? [];
+    const typedEntries: [string, SerializableValue][] = [];
+    for (const [key, value] of contextEntries) {
+      if (!isSerializable(value)) {
+        throw new Error(`checkpoint_snapshot_nonserializable:${key}`);
+      }
+      typedEntries.push([key, value]);
+    }
+    return {
+      ...(parsed.data as Omit<
+        PipelineSnapshot,
+        "contextEntries" | "stageResults"
+      >),
+      contextEntries: typedEntries,
+      stageResults: parsed.data.stageResults ?? [],
+    };
+  }
+
+  async delete(runId: string): Promise<void> {
+    if (this.inner.delete) {
+      await this.inner.delete(runId);
+    }
+  }
+}
 
 let workflowMetricsInit = false;
 async function initWorkflowMetrics(): Promise<void> {
@@ -179,23 +307,25 @@ const workflowPhaseRouter = router({
             phasePlanRequestsTotal,
             phasePlanDurationSeconds,
             phasePlanPreviewsTotal,
+            phaseCacheHitsTotal,
           },
           { getPlanCacheKey, getCachedPlan, cachePlan, computeFileTreeHash },
-          { phaseCacheHitsTotal },
         ] = await Promise.all([
           import("@alfred/pipeline"),
           import("@alfred/pipeline/observers"),
           import("@alfred/db/repo/workflow"),
           import("@alfred/pipeline/metrics"),
           import("@alfred/pipeline/cache"),
-          import("@alfred/pipeline/metrics"),
         ]);
 
+        const workspace = input.workspace ?? process.cwd();
+
         // Check cache
-        const fileTreeHash = await computeFileTreeHash(input.workspace);
+        const fileTreeHash = await computeFileTreeHash(workspace);
         const cacheKey = getPlanCacheKey({
+          runId,
           requirement: input.requirement,
-          workspace: input.workspace,
+          workspace,
           fileTreeHash,
         });
 
@@ -210,6 +340,31 @@ const workflowPhaseRouter = router({
 
         phaseCacheHitsTotal.inc({ result: "miss" });
 
+        const { workflowRepo } = await import("@alfred/db");
+        const { planRepo } = await import("@alfred/db");
+
+        // Ensure a workflow run row exists before snapshots are persisted (FK).
+        const existingRun = await workflowRepo.getRun(runId);
+        if (!existingRun) {
+          await workflowRepo.createRun({
+            id: runId,
+            userId: session.user.id,
+            projectId: undefined,
+            planId: undefined,
+            requirement: input.requirement,
+            workflowId: "pipeline",
+            status: "running",
+            inputData: {
+              requirement: input.requirement,
+              workspace,
+              runId,
+            },
+            linearSessionId: input.linear?.sessionId,
+            linearSpace: input.linear?.space,
+            linearIssueId: input.linear?.issueId,
+          });
+        }
+
         const runner = new PipelineRunner({
           maxParallel: 1,
           enableLearning: false,
@@ -217,7 +372,11 @@ const workflowPhaseRouter = router({
         });
         registerDefaultStages(runner);
 
-        const storage = new PostgresCheckpointStorage();
+        const storage = new WorkflowCheckpointStorage(
+          isTestMode
+            ? getTestCheckpointStorage()
+            : new PostgresCheckpointStorage()
+        );
         const queueObserver = new PipelineEventQueueObserver();
         runner.addObserver(queueObserver);
         runner.addObserver(new MetricsObserver());
@@ -226,8 +385,8 @@ const workflowPhaseRouter = router({
         const pipelineInput = {
           runId,
           requirement: input.requirement,
-          workspace: input.workspace,
-          userId: input.userId ?? session.user.id,
+          workspace,
+          userId: session.user.id,
           authz: input.authz,
           linear: input.linear
             ? {
@@ -256,10 +415,14 @@ const workflowPhaseRouter = router({
           });
         }
 
-        const ctxMap = new Map(
-          (snapshot as PipelineSnapshot).contextEntries ?? []
+        const { createContextFromSnapshot } = await import(
+          "@alfred/pipeline/snapshot"
         );
-        const scheduleOutput = ctxMap.get("scheduleOutput") as {
+        const ctxDecoded = createContextFromSnapshot(snapshot, {
+          emit: () => {},
+        });
+
+        const scheduleOutput = ctxDecoded.get("scheduleOutput") as {
           waves: Array<{
             id: string;
             agents: string[];
@@ -270,7 +433,9 @@ const workflowPhaseRouter = router({
           executionMode: "sequential" | "parallel";
           estimatedDuration: number;
         };
-        const planOutput = ctxMap.get("planOutput") as {
+        const planOutput = ctxDecoded.get("planOutput") as {
+          planId: string;
+          structuredPlan: unknown;
           subtasks: Array<{
             id: string;
             title: string;
@@ -283,19 +448,65 @@ const workflowPhaseRouter = router({
           execPlans: Map<string, string> | Record<string, string>;
           rootPlanPath: string;
         };
-        const contextOutput = ctxMap.get("contextOutput") as {
+        const contextOutput = ctxDecoded.get("contextOutput") as {
           totalTokens?: number;
           ragChunks?: unknown[];
         };
 
         // Convert Map to record if needed
-        const execPlansRecord: Record<string, string> =
+        const execPlansRecord: Record<string, string> = Object.fromEntries(
           planOutput.execPlans instanceof Map
-            ? Object.fromEntries(planOutput.execPlans)
-            : planOutput.execPlans;
+            ? planOutput.execPlans
+            : Object.entries(planOutput.execPlans)
+        );
+
+        const initOutput = ctxDecoded.get("initOutput") as
+          | { projectId?: string }
+          | undefined;
+
+        // Persist/refresh plan row for approval gate and history.
+        try {
+          await planRepo.createPlan({
+            id: planOutput.planId,
+            userId: session.user.id,
+            projectId:
+              initOutput?.projectId && typeof initOutput.projectId === "string"
+                ? initOutput.projectId
+                : null,
+            intent: input.requirement,
+            plan: planOutput.structuredPlan,
+            status: "pending",
+          });
+        } catch {
+          await planRepo.updatePlan(planOutput.planId, {
+            projectId:
+              initOutput?.projectId && typeof initOutput.projectId === "string"
+                ? initOutput.projectId
+                : null,
+            intent: input.requirement,
+            plan: planOutput.structuredPlan,
+            status: "pending",
+          });
+        }
+
+        // Mark the run as awaiting approval.
+        await workflowRepo.updateRun(runId, {
+          status: "suspended",
+          planId: planOutput.planId,
+          projectId:
+            initOutput?.projectId && typeof initOutput.projectId === "string"
+              ? initOutput.projectId
+              : null,
+          requirement: input.requirement,
+          suspendedAt: new Date(),
+          resumedAt: null,
+          completedAt: null,
+        });
 
         const result = {
           runId,
+          planId: planOutput.planId,
+          structuredPlan: planOutput.structuredPlan,
           waves: scheduleOutput.waves,
           waveCount: scheduleOutput.waves.length,
           subtasks: planOutput.subtasks,
@@ -304,16 +515,14 @@ const workflowPhaseRouter = router({
           executionMode: scheduleOutput.executionMode,
           estimatedDuration: scheduleOutput.estimatedDuration,
           snapshot: {
-            runId: (snapshot as PipelineSnapshot).runId,
-            status: (snapshot as PipelineSnapshot).status,
-            requirement: (snapshot as PipelineSnapshot).requirement,
-            lastCompletedStage: (snapshot as PipelineSnapshot)
-              .lastCompletedStage,
-            lastCompletedStageIndex: (snapshot as PipelineSnapshot)
-              .lastCompletedStageIndex,
-            startedAt: (snapshot as PipelineSnapshot).startedAt,
-            lastEventAt: (snapshot as PipelineSnapshot).lastEventAt,
-            error: (snapshot as PipelineSnapshot).error,
+            runId: snapshot.runId,
+            status: snapshot.status,
+            requirement: snapshot.requirement,
+            lastCompletedStage: snapshot.lastCompletedStage,
+            lastCompletedStageIndex: snapshot.lastCompletedStageIndex,
+            startedAt: snapshot.startedAt,
+            lastEventAt: snapshot.lastEventAt,
+            error: snapshot.error,
           },
           context: contextOutput
             ? {
@@ -344,6 +553,18 @@ const workflowPhaseRouter = router({
           await import("@alfred/pipeline/metrics");
         phasePlanRequestsTotal.inc({ status: "error" });
         phasePlanDurationSeconds.observe({ status: "error" }, durationSec);
+
+        try {
+          const { workflowRepo } = await import("@alfred/db");
+          await workflowRepo.updateRun(runId, {
+            status: "failed",
+            completedAt: new Date(),
+            errorMessage:
+              error instanceof Error ? error.message : String(error),
+          });
+        } catch {
+          // Best-effort.
+        }
 
         throw toTRPCError(error, "workflow_phase_plan_failed");
       }
@@ -390,7 +611,11 @@ const workflowPhaseRouter = router({
           import("@alfred/pipeline/metrics"),
         ]);
 
-        const storage = new PostgresCheckpointStorage();
+        const storage = new WorkflowCheckpointStorage(
+          isTestMode
+            ? getTestCheckpointStorage()
+            : new PostgresCheckpointStorage()
+        );
 
         // Load existing snapshot
         const snapshot = await storage.load(input.runId);
@@ -399,6 +624,19 @@ const workflowPhaseRouter = router({
             code: "NOT_FOUND",
             message: "snapshot_not_found",
           });
+        }
+
+        // Best-effort: mark run as running when executing.
+        try {
+          const { workflowRepo } = await import("@alfred/db");
+          await workflowRepo.updateRun(input.runId, {
+            status: "running",
+            suspendedAt: null,
+            resumedAt: new Date(),
+            errorMessage: null,
+          });
+        } catch {
+          // Ignore; execution should still proceed.
         }
 
         const runner = new PipelineRunner({
@@ -411,11 +649,18 @@ const workflowPhaseRouter = router({
         runner.addObserver(new MetricsObserver());
         runner.addObserver(new CostCleanupObserver());
         runner.addObserver(new CheckpointObserver(storage));
+        runner.addObserver(
+          new CompilationObserver({
+            runId: input.runId,
+            requirement: snapshot.requirement,
+          })
+        );
 
         if (input.linear?.sessionId && input.authzLinear) {
           runner.addObserver(
             new LinearSyncObserver({
               syncIntervalMs: 30_000,
+              space: input.linear.space,
               issueId: input.linear.issueId ?? input.linear.sessionId,
               authz: input.authzLinear,
             })
@@ -424,7 +669,7 @@ const workflowPhaseRouter = router({
 
         const pipelineInput = {
           runId: input.runId,
-          requirement: (snapshot as PipelineSnapshot).requirement,
+          requirement: snapshot.requirement,
           workspace: input.workspace,
           userId: input.userId ?? session.user.id,
           authz: input.authz,
@@ -432,6 +677,7 @@ const workflowPhaseRouter = router({
             ? {
                 sessionId: input.linear.sessionId ?? "",
                 space: input.linear.space,
+                teamId: input.linear.teamId,
                 issueId: input.linear.issueId,
                 authz: input.authzLinear ?? "",
               }
@@ -440,8 +686,8 @@ const workflowPhaseRouter = router({
 
         // Set partial execution params in snapshot context if provided
         if (input.waveIds || input.skipTaskIds || input.dryRun) {
-          const updatedSnapshot = { ...(snapshot as PipelineSnapshot) };
-          const contextMap = new Map(updatedSnapshot.contextEntries ?? []);
+          const updatedSnapshot = { ...snapshot };
+          const contextMap = new Map(updatedSnapshot.contextEntries);
 
           if (input.waveIds) {
             contextMap.set("waveIds", input.waveIds);
@@ -459,10 +705,16 @@ const workflowPhaseRouter = router({
 
         // Reload snapshot with partial execution params
         const executionSnapshot = await storage.load(input.runId);
+        if (!executionSnapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
 
         // Resume from the snapshot (will continue from execute stage)
         for await (const _event of runner.resume(
-          executionSnapshot as PipelineSnapshot,
+          executionSnapshot,
           pipelineInput
         )) {
           // Events are emitted to observers
@@ -471,8 +723,82 @@ const workflowPhaseRouter = router({
         // Load final snapshot
         const finalSnapshot = await storage.load(input.runId);
 
-        const status =
-          (finalSnapshot as PipelineSnapshot | null)?.status ?? "failed";
+        const status = finalSnapshot?.status ?? "failed";
+
+        if (finalSnapshot && status === "completed") {
+          try {
+            const { createContextFromSnapshot } = await import(
+              "@alfred/pipeline/snapshot"
+            );
+            const ctxDecoded = createContextFromSnapshot(finalSnapshot, {
+              emit: () => {},
+            });
+            const planOutput = ctxDecoded.get("planOutput") as
+              | { structuredPlan?: unknown }
+              | undefined;
+            const initOutput = ctxDecoded.get("initOutput") as
+              | { projectId?: string }
+              | undefined;
+            const plan = planOutput?.structuredPlan;
+
+            const isRecord = (
+              value: unknown
+            ): value is Record<string, unknown> =>
+              typeof value === "object" &&
+              value !== null &&
+              !Array.isArray(value);
+
+            if (isRecord(plan)) {
+              const phases = plan.phases;
+              const resources = plan.resources;
+              const evaluationCriteria = plan.evaluationCriteria;
+              const intent =
+                typeof plan.intent === "string" && plan.intent.length > 0
+                  ? plan.intent
+                  : finalSnapshot.requirement;
+
+              if (phases && resources && evaluationCriteria) {
+                await upsertWorkflowPatternFromCompletion({
+                  userId: session.user.id,
+                  projectId: initOutput?.projectId ?? null,
+                  intent,
+                  planTemplate: {
+                    phases,
+                    resources,
+                    evaluationCriteria,
+                  },
+                  durationMs: Math.max(
+                    0,
+                    finalSnapshot.lastEventAt - finalSnapshot.startedAt
+                  ),
+                });
+              }
+            }
+          } catch {
+            // Best-effort.
+          }
+        }
+
+        try {
+          const { workflowRepo } = await import("@alfred/db");
+          await workflowRepo.updateRun(input.runId, {
+            status:
+              status === "completed"
+                ? "completed"
+                : status === "suspended"
+                  ? "suspended"
+                  : "failed",
+            suspendedAt: status === "suspended" ? new Date() : null,
+            completedAt:
+              status === "completed" || status === "failed" ? new Date() : null,
+            errorMessage:
+              status === "failed"
+                ? (finalSnapshot?.error ?? "pipeline_failed")
+                : null,
+          });
+        } catch {
+          // Best-effort.
+        }
 
         // Record metrics
         const durationSec = (performance.now() - startTime) / 1000;
@@ -498,6 +824,230 @@ const workflowPhaseRouter = router({
         phaseExecuteDurationSeconds.observe({ status: "error" }, durationSec);
 
         throw toTRPCError(error, "workflow_phase_execute_failed");
+      }
+    }),
+
+  /**
+   * Execute a workflow run by runId only.
+   * Derives execute inputs from the persisted snapshot context.
+   */
+  executeByRunId: authedProcedure
+    .use(rateLimit)
+    .use(
+      requirePolicy("workflow.execute", (raw) =>
+        mapWorkflowRunResourceLocal(raw)
+      )
+    )
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        waveIds: z.array(z.string()).optional(),
+        skipTaskIds: z.array(z.string()).optional(),
+        dryRun: z.boolean().optional(),
+        authz: z.string().optional(),
+        linear: linearInputSchema.optional(),
+        authzLinear: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const startTime = performance.now();
+
+      try {
+        const [
+          { PipelineRunner, registerDefaultStages },
+          {
+            CheckpointObserver,
+            CostCleanupObserver,
+            MetricsObserver,
+            LinearSyncObserver,
+          },
+          { PostgresCheckpointStorage },
+          { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds },
+        ] = await Promise.all([
+          import("@alfred/pipeline"),
+          import("@alfred/pipeline/observers"),
+          import("@alfred/db/repo/workflow"),
+          import("@alfred/pipeline/metrics"),
+        ]);
+
+        const storage = new WorkflowCheckpointStorage(
+          new PostgresCheckpointStorage()
+        );
+
+        const snapshot = await storage.load(input.runId);
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
+
+        const { createContextFromSnapshot } = await import(
+          "@alfred/pipeline/snapshot"
+        );
+        const ctxDecoded = createContextFromSnapshot(snapshot, {
+          emit: () => {},
+        });
+
+        const scheduleOutput = ctxDecoded.get("scheduleOutput") as
+          | {
+              waves: Array<{
+                id: string;
+                agents: string[];
+                dependsOn: string[];
+              }>;
+            }
+          | undefined;
+
+        const planOutput = ctxDecoded.get("planOutput") as
+          | {
+              rootPlanPath: string;
+            }
+          | undefined;
+
+        if (!(scheduleOutput && planOutput)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "plan_not_ready",
+          });
+        }
+
+        if (
+          !("rootPlanPath" in planOutput) ||
+          typeof planOutput.rootPlanPath !== "string" ||
+          planOutput.rootPlanPath.length === 0
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "plan_not_ready",
+          });
+        }
+
+        const workspace =
+          ctxDecoded.get<string>("workspace") ??
+          // Fallback: infer workspace from root plan path: <workspace>/.agent/plans/<runId>/root.md
+          path.resolve(planOutput.rootPlanPath, "..", "..", "..", "..");
+
+        // Auto-include prerequisite waves when waveIds are provided.
+        const expandedWaveIds = input.waveIds
+          ? expandWaveIds(scheduleOutput.waves, input.waveIds)
+          : undefined;
+
+        // Persist partial execution params to snapshot context so execute stage can read them.
+        if (expandedWaveIds || input.skipTaskIds || input.dryRun) {
+          const contextMap = new Map(snapshot.contextEntries ?? []);
+
+          if (expandedWaveIds) {
+            contextMap.set("waveIds", expandedWaveIds);
+          }
+          if (input.skipTaskIds) {
+            contextMap.set("skipTaskIds", input.skipTaskIds);
+          }
+          if (typeof input.dryRun === "boolean") {
+            contextMap.set("dryRun", input.dryRun);
+          }
+
+          await storage.save(input.runId, {
+            ...snapshot,
+            contextEntries: Array.from(contextMap.entries()),
+          });
+        }
+
+        const executionSnapshot = await storage.load(input.runId);
+        if (!executionSnapshot) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "snapshot_not_found_after_update",
+          });
+        }
+
+        const runner = new PipelineRunner({
+          enableLearning: true,
+          enableLinearSync: Boolean(input.linear?.sessionId),
+          linearSyncInterval: 30_000,
+        });
+        registerDefaultStages(runner);
+
+        runner.addObserver(new MetricsObserver());
+        runner.addObserver(new CostCleanupObserver());
+        runner.addObserver(new CheckpointObserver(storage));
+        runner.addObserver(
+          new CompilationObserver({
+            runId: input.runId,
+            requirement: snapshot.requirement,
+          })
+        );
+
+        if (input.linear?.sessionId && input.authzLinear) {
+          runner.addObserver(
+            new LinearSyncObserver({
+              syncIntervalMs: 30_000,
+              space: input.linear.space,
+              issueId: input.linear.issueId ?? input.linear.sessionId,
+              authz: input.authzLinear,
+            })
+          );
+        }
+
+        const userId = ctxDecoded.get<string>("userId") ?? session.user.id;
+
+        const pipelineInput = {
+          runId: input.runId,
+          requirement: snapshot.requirement,
+          workspace,
+          userId,
+          authz: input.authz,
+          linear: input.linear
+            ? {
+                sessionId: input.linear.sessionId ?? "",
+                space: input.linear.space,
+                teamId: input.linear.teamId,
+                issueId: input.linear.issueId,
+                authz: input.authzLinear ?? "",
+              }
+            : undefined,
+        };
+
+        for await (const _event of runner.resume(
+          executionSnapshot,
+          pipelineInput
+        )) {
+          // observers handle persistence/metrics
+        }
+
+        const finalSnapshot = await storage.load(input.runId);
+        const status = finalSnapshot?.status ?? "failed";
+
+        const durationSec = (performance.now() - startTime) / 1000;
+        phaseExecuteRequestsTotal.inc({
+          status: status === "completed" ? "success" : "error",
+        });
+        phaseExecuteDurationSeconds.observe(
+          { status: status === "completed" ? "success" : "error" },
+          durationSec
+        );
+
+        return {
+          runId: input.runId,
+          status,
+          completed: status === "completed",
+        };
+      } catch (error) {
+        const durationSec = (performance.now() - startTime) / 1000;
+        const { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds } =
+          await import("@alfred/pipeline/metrics");
+        phaseExecuteRequestsTotal.inc({ status: "error" });
+        phaseExecuteDurationSeconds.observe({ status: "error" }, durationSec);
+
+        throw toTRPCError(error, "workflow_phase_execute_by_runid_failed");
       }
     }),
 
@@ -545,7 +1095,11 @@ const workflowPhaseRouter = router({
             });
             registerDefaultStages(runner);
 
-            const storage = new PostgresCheckpointStorage();
+            const storage = new WorkflowCheckpointStorage(
+              isTestMode
+                ? getTestCheckpointStorage()
+                : new PostgresCheckpointStorage()
+            );
             const queueObserver = new PipelineEventQueueObserver();
             runner.addObserver(queueObserver);
             runner.addObserver(new MetricsObserver());
@@ -556,11 +1110,33 @@ const workflowPhaseRouter = router({
               queueObserver.close();
             };
 
+            const workspace = input.workspace ?? process.cwd();
+
+            // Ensure run exists before persisting checkpoints (FK to workflow_snapshots).
+            const existingRun = await workflowRepo.getRun(runId);
+            if (!existingRun) {
+              await workflowRepo.createRun({
+                id: runId,
+                userId: session.user.id,
+                requirement: input.requirement,
+                workflowId: "pipeline",
+                status: "running",
+                inputData: {
+                  requirement: input.requirement,
+                  workspace,
+                  runId,
+                },
+                linearSessionId: input.linear?.sessionId,
+                linearSpace: input.linear?.space,
+                linearIssueId: input.linear?.issueId,
+              });
+            }
+
             const pipelineInput = {
               runId,
               requirement: input.requirement,
-              workspace: input.workspace,
-              userId: input.userId ?? session.user.id,
+              workspace,
+              userId: session.user.id,
               authz: input.authz,
               linear: input.linear
                 ? {
@@ -621,7 +1197,9 @@ const workflowPhaseRouter = router({
         );
         const { getResumeStage } = await import("@alfred/pipeline/snapshot");
 
-        const storage = new PostgresCheckpointStorage();
+        const storage = new WorkflowCheckpointStorage(
+          new PostgresCheckpointStorage()
+        );
         const snapshot = await storage.load(input.runId);
 
         if (!snapshot) {
@@ -631,20 +1209,19 @@ const workflowPhaseRouter = router({
           });
         }
 
-        const typedSnapshot = snapshot as PipelineSnapshot;
-        const nextStage = getResumeStage(typedSnapshot);
+        const nextStage = getResumeStage(snapshot);
         const canResume =
-          typedSnapshot.status !== "completed" &&
-          typedSnapshot.status !== "failed" &&
+          snapshot.status !== "completed" &&
+          snapshot.status !== "failed" &&
           nextStage !== null;
 
         return phaseStatusSchema.parse({
-          runId: typedSnapshot.runId,
-          status: typedSnapshot.status,
-          lastCompletedStage: typedSnapshot.lastCompletedStage,
-          lastCompletedStageIndex: typedSnapshot.lastCompletedStageIndex,
-          stageResults: typedSnapshot.stageResults ?? [],
-          error: typedSnapshot.error,
+          runId: snapshot.runId,
+          status: snapshot.status,
+          lastCompletedStage: snapshot.lastCompletedStage,
+          lastCompletedStageIndex: snapshot.lastCompletedStageIndex,
+          stageResults: snapshot.stageResults ?? [],
+          error: snapshot.error,
           canResume,
           nextStage,
         });
@@ -657,42 +1234,220 @@ const workflowPhaseRouter = router({
     }),
 
   /**
+   * Load a persisted plan by runId.
+   * Returns the same shape as `phase.plan` (PlanPhaseOutput).
+   */
+  getPlan: phaseExecuteProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      try {
+        const storage = isTestMode
+          ? new WorkflowCheckpointStorage(getTestCheckpointStorage())
+          : new WorkflowCheckpointStorage(
+              new (
+                await import("@alfred/db/repo/workflow")
+              ).PostgresCheckpointStorage()
+            );
+        const snapshot = await storage.load(input.runId);
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
+
+        const { createContextFromSnapshot } = await import(
+          "@alfred/pipeline/snapshot"
+        );
+        const ctxDecoded = createContextFromSnapshot(snapshot, {
+          emit: () => {},
+        });
+
+        const scheduleOutput = ctxDecoded.get("scheduleOutput") as
+          | {
+              waves: Array<{
+                id: string;
+                agents: string[];
+                dependsOn: string[];
+                agentType?: string;
+                phaseId?: string;
+              }>;
+              executionMode: "sequential" | "parallel";
+              estimatedDuration: number;
+            }
+          | undefined;
+
+        const planOutput = ctxDecoded.get("planOutput") as
+          | {
+              planId: string;
+              structuredPlan: unknown;
+              subtasks: Array<{
+                id: string;
+                title: string;
+                requirement: string;
+                deps: string[];
+                priority: number;
+                acceptance: string[];
+                filesHint: string[];
+              }>;
+              execPlans: Map<string, string> | Record<string, string>;
+              rootPlanPath: string;
+            }
+          | undefined;
+
+        const contextOutput = ctxDecoded.get("contextOutput") as
+          | {
+              totalTokens?: number;
+              ragChunks?: unknown[];
+            }
+          | undefined;
+
+        if (!(scheduleOutput && planOutput)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "plan_not_ready",
+          });
+        }
+
+        const execPlansRaw = planOutput.execPlans;
+        const execPlansRecord: Record<string, string> =
+          execPlansRaw instanceof Map
+            ? Object.fromEntries(execPlansRaw)
+            : Array.isArray(execPlansRaw)
+              ? Object.fromEntries(execPlansRaw)
+              : execPlansRaw;
+
+        const result = {
+          runId: snapshot.runId,
+          planId: planOutput.planId,
+          structuredPlan: planOutput.structuredPlan,
+          waves: scheduleOutput.waves,
+          waveCount: scheduleOutput.waves.length,
+          subtasks: planOutput.subtasks,
+          execPlans: execPlansRecord,
+          rootPlanPath: planOutput.rootPlanPath,
+          executionMode: scheduleOutput.executionMode,
+          estimatedDuration: scheduleOutput.estimatedDuration,
+          snapshot: {
+            runId: snapshot.runId,
+            status: snapshot.status,
+            requirement: snapshot.requirement,
+            lastCompletedStage: snapshot.lastCompletedStage,
+            lastCompletedStageIndex: snapshot.lastCompletedStageIndex,
+            startedAt: snapshot.startedAt,
+            lastEventAt: snapshot.lastEventAt,
+            error: snapshot.error,
+          },
+          context: contextOutput
+            ? {
+                totalTokens: contextOutput.totalTokens ?? 0,
+                ragChunkCount: Array.isArray(contextOutput.ragChunks)
+                  ? contextOutput.ragChunks.length
+                  : 0,
+              }
+            : undefined,
+        };
+
+        return planPhaseOutputSchema.parse(result);
+      } catch (error) {
+        throw toTRPCError(error, "workflow_phase_get_plan_failed");
+      }
+    }),
+
+  /**
+   * Check whether a plan is available in Redis cache.
+   * Returns the cached plan (if present) plus the cache key.
+   */
+  cachedPlan: phasePlanProcedure
+    .input(planPhaseInputSchema)
+    .query(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const { computeFileTreeHash, getCachedPlan, getPlanCacheKey } =
+          await import("@alfred/pipeline/cache");
+
+        const workspace = input.workspace ?? process.cwd();
+        const fileTreeHash = await computeFileTreeHash(workspace);
+        const cacheKey = getPlanCacheKey({
+          runId: input.runId ?? "",
+          requirement: input.requirement,
+          workspace,
+          fileTreeHash,
+        });
+
+        const plan = await getCachedPlan(cacheKey);
+        return {
+          cached: Boolean(plan),
+          plan,
+          cacheKey,
+        };
+      } catch (error) {
+        throw toTRPCError(error, "workflow_phase_cached_plan_failed");
+      }
+    }),
+
+  /**
    * Update an existing plan with modified subtasks.
    * Optionally regenerate waves based on new dependencies.
    */
-  updatePlan: authedProcedure
-    .use(rateLimit)
-    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
+  updatePlan: phasePlanProcedure
     .input(
       z.object({
         runId: z.string().min(1),
-        subtasks: z.array(
-          z.object({
-            id: z.string(),
-            title: z.string(),
-            requirement: z.string(),
-            deps: z.array(z.string()),
-            priority: z.number(),
-            acceptance: z.array(z.string()),
-            filesHint: z.array(z.string()),
-          })
-        ),
-        regenerateWaves: z.boolean().default(true),
+        structuredPlan: z.unknown(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
       const startTime = performance.now();
 
       try {
-        const [
-          { PostgresCheckpointStorage },
-          { phaseUpdatePlanDurationSeconds },
-        ] = await Promise.all([
-          import("@alfred/db/repo/workflow"),
-          import("@alfred/pipeline/metrics"),
-        ]);
+        const { phaseUpdatePlanDurationSeconds } = await import(
+          "@alfred/pipeline/metrics"
+        );
 
-        const storage = new PostgresCheckpointStorage();
+        const { structuredPlanSchema } = await import("@alfred/plan/schema");
+        const { hasCycles, planToWaves } = await import(
+          "@alfred/plan/generate"
+        );
+
+        const parsedPlan = structuredPlanSchema.parse(input.structuredPlan);
+        if (hasCycles(parsedPlan.phases)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "plan_has_cycles",
+          });
+        }
+
+        const subtasks = parsedPlan.phases.flatMap((p) => p.tasks);
+        if (subtasks.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "plan_has_no_tasks",
+          });
+        }
+
+        const storage = isTestMode
+          ? new WorkflowCheckpointStorage(getTestCheckpointStorage())
+          : new WorkflowCheckpointStorage(
+              new (
+                await import("@alfred/db/repo/workflow")
+              ).PostgresCheckpointStorage()
+            );
         const snapshot = await storage.load(input.runId);
 
         if (!snapshot) {
@@ -702,57 +1457,27 @@ const workflowPhaseRouter = router({
           });
         }
 
-        // Validate dependencies
-        const taskIds = new Set(input.subtasks.map((t) => t.id));
-        for (const task of input.subtasks) {
-          for (const depId of task.deps) {
-            if (!taskIds.has(depId)) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `invalid_dependency: ${task.id} depends on non-existent task ${depId}`,
-              });
-            }
-          }
-        }
-
-        type WaveValue = { id: string; agents: string[]; dependsOn: string[] };
-
-        // Regenerate waves if requested
-        const existingScheduleOutput = (snapshot as PipelineSnapshot)
-          .contextEntries
-          ? (new Map((snapshot as PipelineSnapshot).contextEntries).get(
-              "scheduleOutput"
-            ) as { waves?: WaveValue[] } | undefined)
-          : undefined;
-
-        let waves: WaveValue[] = existingScheduleOutput?.waves ?? [];
-
-        if (input.regenerateWaves) {
-          // Generate waves using topological sort
-          waves = generateWavesFromDeps(input.subtasks);
-        }
+        const waves = planToWaves(parsedPlan, { maxConcurrency: 5 });
 
         // Update snapshot context
-        const ctxMap = new Map(
-          (snapshot as PipelineSnapshot).contextEntries ?? []
-        );
-        const planOutput = ctxMap.get("planOutput") as {
-          subtasks: unknown[];
-          rootPlanPath: string;
-        } | null;
+        const ctxMap = new Map(snapshot.contextEntries ?? []);
+        const planOutput = ctxMap.get("planOutput") as Record<
+          string,
+          unknown
+        > | null;
 
         if (planOutput) {
           ctxMap.set("planOutput", {
             ...planOutput,
-            subtasks: input.subtasks,
+            structuredPlan: parsedPlan,
+            subtasks,
           });
         }
 
-        const scheduleOutputEntry = ctxMap.get("scheduleOutput") as {
-          waves: WaveValue[];
-          executionMode: string;
-          estimatedDuration?: number;
-        } | null;
+        const scheduleOutputEntry = ctxMap.get("scheduleOutput") as Record<
+          string,
+          unknown
+        > | null;
 
         if (scheduleOutputEntry) {
           ctxMap.set("scheduleOutput", {
@@ -763,11 +1488,21 @@ const workflowPhaseRouter = router({
 
         // Update snapshot
         const updatedSnapshot: PipelineSnapshot = {
-          ...(snapshot as PipelineSnapshot),
+          ...snapshot,
           contextEntries: Array.from(ctxMap.entries()),
         };
 
         await storage.save(input.runId, updatedSnapshot);
+
+        // Persist the plan edits (skip in test mode)
+        if (!isTestMode) {
+          try {
+            const { planRepo } = await import("@alfred/db");
+            await planRepo.updatePlan(parsedPlan.id, { plan: parsedPlan });
+          } catch {
+            // Best-effort (plan persistence is not required for snapshot execution).
+          }
+        }
 
         // Record metrics
         const durationSec = (performance.now() - startTime) / 1000;
@@ -777,7 +1512,8 @@ const workflowPhaseRouter = router({
           runId: input.runId,
           waves,
           waveCount: waves.length,
-          subtasks: input.subtasks,
+          structuredPlan: parsedPlan,
+          subtasks,
         };
       } catch (error) {
         const durationSec = (performance.now() - startTime) / 1000;
@@ -787,6 +1523,94 @@ const workflowPhaseRouter = router({
         phaseUpdatePlanDurationSeconds.observe(durationSec);
 
         throw toTRPCError(error, "workflow_phase_update_plan_failed");
+      }
+    }),
+
+  /**
+   * Approve a planned workflow and transition the run to executable state.
+   * Execution itself is performed via `workflow.resumePipeline` (streaming).
+   */
+  approveAndExecute: phaseExecuteProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const { createContextFromSnapshot } = await import(
+          "@alfred/pipeline/snapshot"
+        );
+
+        const storage = isTestMode
+          ? new WorkflowCheckpointStorage(getTestCheckpointStorage())
+          : new WorkflowCheckpointStorage(
+              new (
+                await import("@alfred/db/repo/workflow")
+              ).PostgresCheckpointStorage()
+            );
+        const snapshot = await storage.load(input.runId);
+        if (!snapshot) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "snapshot_not_found",
+          });
+        }
+
+        const ctxDecoded = createContextFromSnapshot(snapshot, {
+          emit: () => {},
+        });
+        const planOutput = ctxDecoded.get("planOutput") as
+          | { planId?: string; structuredPlan?: unknown }
+          | undefined;
+
+        const planId = planOutput?.planId;
+        if (typeof planId !== "string" || planId.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "plan_not_ready",
+          });
+        }
+
+        if (isTestMode) {
+          return { runId: input.runId, planId };
+        }
+
+        const [{ updateRun }, planRepo] = await Promise.all([
+          import("@alfred/db/repo/workflow"),
+          import("@alfred/db/repo/plan"),
+        ]);
+
+        // Ensure plan exists, then approve.
+        const existing = await planRepo.getPlanById(planId);
+        if (!existing) {
+          await planRepo.createPlan({
+            id: planId,
+            userId: session.user.id,
+            projectId: null,
+            intent: snapshot.requirement,
+            plan: planOutput?.structuredPlan ?? {},
+            status: "pending",
+          });
+        }
+        await planRepo.updatePlanStatus(planId, "approved", session.user.id);
+
+        // Transition run to running (resume subscription performs actual execution).
+        await updateRun(input.runId, {
+          status: "running",
+          planId,
+          suspendedAt: null,
+          resumedAt: new Date(),
+          errorMessage: null,
+        });
+
+        return { runId: input.runId, planId };
+      } catch (error) {
+        throw toTRPCError(error, "workflow_phase_approve_failed");
       }
     }),
 
@@ -820,7 +1644,9 @@ const workflowPhaseRouter = router({
             import("@alfred/db"),
           ]);
 
-        const storage = new PostgresCheckpointStorage();
+        const storage = new WorkflowCheckpointStorage(
+          new PostgresCheckpointStorage()
+        );
         const snapshot = await storage.load(input.runId);
 
         if (!snapshot) {
@@ -830,9 +1656,7 @@ const workflowPhaseRouter = router({
           });
         }
 
-        const ctxMap = new Map(
-          (snapshot as PipelineSnapshot).contextEntries ?? []
-        );
+        const ctxMap = new Map(snapshot.contextEntries ?? []);
         const planOutput = ctxMap.get("planOutput");
 
         if (!planOutput) {
@@ -882,7 +1706,7 @@ const workflowPhaseRouter = router({
           description: t.description,
           triggerPattern: t.triggerPattern,
           successRate: t.successRate ? Number.parseFloat(t.successRate) : null,
-          usageCount: Number.parseInt(t.usageCount || "0", 10),
+          usageCount: typeof t.usageCount === "number" ? t.usageCount : 0,
           lastUsedAt: t.lastUsedAt?.toISOString() ?? null,
           createdAt: t.createdAt?.toISOString() ?? new Date().toISOString(),
         }));
@@ -928,6 +1752,44 @@ export const workflowRouter = router({
   // Phase-level APIs for staged execution
   phase: workflowPhaseRouter,
 
+  compilation: router({
+    get: authedProcedure
+      .use(rateLimit)
+      .use(
+        requirePolicy("workflow.read", (raw) =>
+          mapWorkflowRunResourceLocal(raw)
+        )
+      )
+      .input(z.object({ runId: z.string().min(1) }))
+      .query(async ({ input, ctx }) => {
+        const session = ctx.session;
+        if (!session?.user?.id) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "session_required",
+          });
+        }
+
+        const run = await workflowRepo.getRun(input.runId);
+        if (!run) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+        }
+        if (run.userId !== session.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "access_denied" });
+        }
+
+        const stateData =
+          run.stateData &&
+          typeof run.stateData === "object" &&
+          run.stateData !== null
+            ? (run.stateData as Record<string, unknown>)
+            : {};
+        const compilation = stateData.compilation;
+        const parsed = workflowCompilationSchema.safeParse(compilation);
+        return parsed.success ? parsed.data : null;
+      }),
+  }),
+
   start: authedProcedure
     .use(rateLimit)
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
@@ -943,7 +1805,7 @@ export const workflowRouter = router({
 
       await initWorkflowMetrics();
       const { workflowInput } = await import("@alfred/agent/workflow/schema");
-      const workflow = workflowInput.parse(input) as WorkflowInputPayload;
+      const workflow = workflowInput.parse(input);
 
       // Enforce obligations for medium/high autonomy workflows
       if (workflow.auto === "medium" || workflow.auto === "high") {
@@ -984,11 +1846,10 @@ export const workflowRouter = router({
         const workflowPayload = {
           ...workflow,
           linear: preparedLinear,
-        } as typeof workflow;
+        };
 
         const executor = await createWorkflowExecutor(
-          // biome-ignore lint/suspicious/noExplicitAny: Internal payload compatibility
-          workflowPayload as any,
+          workflowPayload,
           abortController,
           undefined,
           ctx.runtimeContext
@@ -1141,18 +2002,22 @@ export const workflowRouter = router({
           const runId = input.runId ?? crypto.randomUUID();
 
           try {
+            const normalizedMode =
+              input.mode === "parallel" || input.mode === "sequential"
+                ? input.mode
+                : "sequential";
+            const { workflowInput } = await import(
+              "@alfred/agent/workflow/schema"
+            );
+            const policyInput = workflowInput.parse({
+              ...input,
+              auto: input.auto ?? "low",
+              mode: normalizedMode,
+            });
+
             const { obligations } = await enforceWorkflowPlanPolicy({
               session,
-              input: {
-                ...input,
-                auto: input.auto ?? "low",
-                mode:
-                  (input.mode as
-                    | "sequential"
-                    | "parallel"
-                    | null
-                    | undefined) ?? "sequential",
-              } as WorkflowInputPayload,
+              input: policyInput,
             });
 
             if (obligations.length > 0) {
@@ -1240,13 +2105,22 @@ export const workflowRouter = router({
             runner.addObserver(new MetricsObserver());
             runner.addObserver(new CostCleanupObserver());
             runner.addObserver(
-              new CheckpointObserver(new PostgresCheckpointStorage())
+              new CheckpointObserver(
+                new WorkflowCheckpointStorage(new PostgresCheckpointStorage())
+              )
+            );
+            runner.addObserver(
+              new CompilationObserver({
+                runId,
+                requirement: input.requirement,
+              })
             );
 
             if (normalizedLinear?.sessionId && input.authzLinear) {
               runner.addObserver(
                 new LinearSyncObserver({
                   syncIntervalMs: 30_000,
+                  space: normalizedLinear.space,
                   issueId:
                     normalizedLinear.issueId ?? normalizedLinear.sessionId,
                   authz: input.authzLinear,
@@ -1281,6 +2155,26 @@ export const workflowRouter = router({
                   ? rawInput.cw
                   : process.cwd();
 
+            // Ensure run exists before persisting checkpoints/compilation (FK).
+            const existingRun = await workflowRepo.getRun(runId);
+            if (!existingRun) {
+              await workflowRepo.createRun({
+                id: runId,
+                userId: session.user.id,
+                requirement: input.requirement,
+                workflowId: "pipeline",
+                status: "running",
+                inputData: {
+                  requirement: input.requirement,
+                  workspace,
+                  runId,
+                },
+                linearSessionId: normalizedLinear?.sessionId,
+                linearSpace: normalizedLinear?.space,
+                linearIssueId: normalizedLinear?.issueId,
+              });
+            }
+
             const pipelineInput = {
               runId,
               requirement: input.requirement,
@@ -1292,10 +2186,160 @@ export const workflowRouter = router({
                 ? {
                     sessionId: normalizedLinear.sessionId ?? "",
                     space: normalizedLinear.space,
+                    teamId: normalizedLinear.teamId,
                     issueId: normalizedLinear.issueId,
                     authz: input.authzLinear ?? "",
                   }
                 : undefined,
+            };
+
+            const { wrapEventEnvelope } = await import(
+              "@alfred/agent/utils/envelope"
+            );
+
+            const persistTasks = new Set<Promise<void>>();
+            const persistPipelineEvent = (event: PipelineEvent): void => {
+              // Skip high-volume chatter
+              if (
+                event.type === "stage:progress" ||
+                event.type === "agent:progress"
+              ) {
+                return;
+              }
+
+              const mapped = ((): {
+                eventType: import("@alfred/db/schema/workflow").WorkflowEventType;
+                data: Record<string, unknown>;
+              } | null => {
+                switch (event.type) {
+                  case "pipeline:start":
+                    return {
+                      eventType: "run",
+                      data: {
+                        kind: "pipeline_start",
+                        runId: event.runId,
+                        requirement: event.requirement,
+                      },
+                    };
+                  case "stage:enter":
+                    return {
+                      eventType: "step-start",
+                      data: { kind: "stage_enter", stage: event.stage },
+                    };
+                  case "stage:exit":
+                    return {
+                      eventType: "step-complete",
+                      data: {
+                        kind: "stage_exit",
+                        stage: event.stage,
+                        durationMs: event.durationMs,
+                      },
+                    };
+                  case "stage:error":
+                    return {
+                      eventType: "error",
+                      data: {
+                        kind: "stage_error",
+                        stage: event.stage,
+                        message: event.error,
+                      },
+                    };
+                  case "agent:spawn":
+                    return {
+                      eventType: "agent-start",
+                      data: {
+                        kind: "agent_spawn",
+                        agentId: event.agentId,
+                        taskId: event.taskId,
+                      },
+                    };
+                  case "agent:complete":
+                    return {
+                      eventType: "agent-complete",
+                      data: {
+                        kind: "agent_complete",
+                        agentId: event.agentId,
+                        outcome: event.outcome,
+                      },
+                    };
+                  case "agent:escalate-request":
+                    return {
+                      eventType: "notice",
+                      data: {
+                        kind: "escalation",
+                        agentId: event.agentId,
+                        reason: event.reason,
+                        details: event.details,
+                        suggestions: event.suggestions,
+                        severity: event.severity,
+                        timestamp: event.timestamp,
+                      },
+                    };
+                  case "pipeline:suspend":
+                    return {
+                      eventType: "suspend",
+                      data: { kind: "pipeline_suspend", reason: event.reason },
+                    };
+                  case "pipeline:resume":
+                    return {
+                      eventType: "resume",
+                      data: {
+                        kind: "pipeline_resume",
+                        fromStage: event.fromStage,
+                      },
+                    };
+                  case "pipeline:complete":
+                    return {
+                      eventType: "finish",
+                      data: {
+                        kind: "pipeline_complete",
+                        summary: event.summary,
+                        summaryText: event.summaryText,
+                      },
+                    };
+                  case "pipeline:failed":
+                    return {
+                      eventType: "error",
+                      data: {
+                        kind: "pipeline_failed",
+                        lastStage: event.lastStage,
+                        message: event.error,
+                      },
+                    };
+                }
+                return null;
+              })();
+
+              if (!mapped) {
+                return;
+              }
+
+              const p = workflowRepo
+                .appendEvent({
+                  runId,
+                  eventType: mapped.eventType,
+                  timestamp: new Date(event.timestamp),
+                  eventData: wrapEventEnvelope({
+                    id: crypto.randomUUID(),
+                    type: mapped.eventType,
+                    resource: "user",
+                    data: mapped.data,
+                  }),
+                })
+                .then(() => {})
+                .catch((error) => {
+                  logger.warn("workflow_pipeline_event_persist_failed", {
+                    runId,
+                    eventType: event.type,
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  });
+                })
+                .finally(() => {
+                  persistTasks.delete(p);
+                });
+
+              persistTasks.add(p);
             };
 
             void (async () => {
@@ -1318,8 +2362,10 @@ export const workflowRouter = router({
             })();
 
             for await (const event of queueObserver.stream()) {
+              persistPipelineEvent(event);
               emit.next(event);
             }
+            await Promise.allSettled(Array.from(persistTasks));
             emit.complete();
           } catch (error) {
             emit.error(toTRPCError(error, "workflow_pipeline_stream_error"));
@@ -1738,7 +2784,12 @@ export const workflowRouter = router({
     }),
 
   resumePipeline: authedProcedure
-    .input(z.object({ runId: z.string().min(1) }))
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        dryRun: z.boolean().optional(),
+      })
+    )
     .subscription(({ input, ctx }) =>
       observable<PipelineEvent>((emit) => {
         const session = ctx.session;
@@ -1771,7 +2822,11 @@ export const workflowRouter = router({
               import("@alfred/agent/workflow/session-recovery"),
             ]);
 
-            const storage = new PostgresCheckpointStorage();
+            const storage = new WorkflowCheckpointStorage(
+              isTestMode
+                ? getTestCheckpointStorage()
+                : new PostgresCheckpointStorage()
+            );
             const snapshot = await storage.load(input.runId);
             if (!snapshot) {
               emit.error(
@@ -1783,7 +2838,32 @@ export const workflowRouter = router({
               return;
             }
 
-            const ctxEntries = new Map(snapshot.contextEntries);
+            if (input.dryRun) {
+              try {
+                const updatedSnapshot = { ...snapshot };
+                const contextMap = new Map(updatedSnapshot.contextEntries);
+                contextMap.set("dryRun", true);
+                updatedSnapshot.contextEntries = Array.from(
+                  contextMap.entries()
+                );
+                await storage.save(input.runId, updatedSnapshot);
+              } catch {
+                // Best-effort.
+              }
+            }
+
+            const resumeSnapshot = await storage.load(input.runId);
+            if (!resumeSnapshot) {
+              emit.error(
+                new TRPCError({
+                  code: "NOT_FOUND",
+                  message: "no_checkpoint_found",
+                })
+              );
+              return;
+            }
+
+            const ctxEntries = new Map(resumeSnapshot.contextEntries ?? []);
             const workspace =
               (ctxEntries.get("workspace") as string | undefined) ??
               process.cwd();
@@ -1793,6 +2873,7 @@ export const workflowRouter = router({
             const linearSessionId = ctxEntries.get("linearSessionId");
             const linearIssueId = ctxEntries.get("linearIssueId");
             const linearSpace = ctxEntries.get("linearSpace");
+            const linearTeamId = ctxEntries.get("linearTeamId");
             const linearAuthz = ctxEntries.get("linearAuthz");
 
             const runner = new PipelineRunner({
@@ -1807,6 +2888,25 @@ export const workflowRouter = router({
             runner.addObserver(new MetricsObserver());
             runner.addObserver(new CostCleanupObserver());
             runner.addObserver(new CheckpointObserver(storage));
+            runner.addObserver(
+              new CompilationObserver({
+                runId: input.runId,
+                requirement: resumeSnapshot.requirement,
+              })
+            );
+
+            // Best-effort: mark run as running when resuming.
+            try {
+              const { workflowRepo } = await import("@alfred/db");
+              await workflowRepo.updateRun(input.runId, {
+                status: "running",
+                suspendedAt: null,
+                resumedAt: new Date(),
+                errorMessage: null,
+              });
+            } catch {
+              // Ignore; streaming resume should still proceed.
+            }
 
             if (
               typeof linearSessionId === "string" &&
@@ -1818,6 +2918,7 @@ export const workflowRouter = router({
               runner.addObserver(
                 new LinearSyncObserver({
                   syncIntervalMs: 30_000,
+                  space: linearSpace,
                   issueId: linearIssueId,
                   authz: linearAuthz,
                 })
@@ -1846,7 +2947,7 @@ export const workflowRouter = router({
 
             const pipelineInput = {
               runId: input.runId,
-              requirement: snapshot.requirement,
+              requirement: resumeSnapshot.requirement,
               workspace,
               userId,
               authz: undefined,
@@ -1858,6 +2959,10 @@ export const workflowRouter = router({
                   ? {
                       sessionId: linearSessionId,
                       space: linearSpace,
+                      teamId:
+                        typeof linearTeamId === "string"
+                          ? linearTeamId
+                          : undefined,
                       issueId:
                         typeof linearIssueId === "string"
                           ? linearIssueId
@@ -1870,26 +2975,273 @@ export const workflowRouter = router({
             void (async () => {
               try {
                 for await (const _event of runner.resume(
-                  snapshot,
+                  resumeSnapshot,
                   pipelineInput,
                   abortController.signal
                 )) {
                   void _event;
+                }
+
+                try {
+                  const finalSnapshot = await storage.load(input.runId);
+                  const finalStatus = finalSnapshot?.status ?? "failed";
+
+                  if (finalSnapshot && finalStatus === "completed") {
+                    try {
+                      const { createContextFromSnapshot } = await import(
+                        "@alfred/pipeline/snapshot"
+                      );
+                      const ctxDecoded = createContextFromSnapshot(
+                        finalSnapshot,
+                        {
+                          emit: () => {},
+                        }
+                      );
+                      const planOutput = ctxDecoded.get("planOutput") as
+                        | { structuredPlan?: unknown }
+                        | undefined;
+                      const initOutput = ctxDecoded.get("initOutput") as
+                        | { projectId?: string }
+                        | undefined;
+                      const plan = planOutput?.structuredPlan;
+
+                      const isRecord = (
+                        value: unknown
+                      ): value is Record<string, unknown> =>
+                        typeof value === "object" &&
+                        value !== null &&
+                        !Array.isArray(value);
+
+                      if (isRecord(plan)) {
+                        const phases = plan.phases;
+                        const resources = plan.resources;
+                        const evaluationCriteria = plan.evaluationCriteria;
+                        const intent =
+                          typeof plan.intent === "string" &&
+                          plan.intent.length > 0
+                            ? plan.intent
+                            : finalSnapshot.requirement;
+
+                        if (phases && resources && evaluationCriteria) {
+                          await upsertWorkflowPatternFromCompletion({
+                            userId,
+                            projectId: initOutput?.projectId ?? null,
+                            intent,
+                            planTemplate: {
+                              phases,
+                              resources,
+                              evaluationCriteria,
+                            },
+                            durationMs: Math.max(
+                              0,
+                              finalSnapshot.lastEventAt -
+                                finalSnapshot.startedAt
+                            ),
+                          });
+                        }
+                      }
+                    } catch {
+                      // Best-effort.
+                    }
+                  }
+
+                  const { workflowRepo } = await import("@alfred/db");
+                  await workflowRepo.updateRun(input.runId, {
+                    status:
+                      finalStatus === "completed"
+                        ? "completed"
+                        : finalStatus === "suspended"
+                          ? "suspended"
+                          : "failed",
+                    suspendedAt:
+                      finalStatus === "suspended" ? new Date() : null,
+                    completedAt:
+                      finalStatus === "completed" || finalStatus === "failed"
+                        ? new Date()
+                        : null,
+                    errorMessage:
+                      finalStatus === "failed"
+                        ? (finalSnapshot?.error ?? "pipeline_failed")
+                        : null,
+                  });
+                } catch {
+                  // Best-effort.
                 }
               } catch (error) {
                 logger.warn("pipeline_resume_failed", {
                   runId: input.runId,
                   error: error instanceof Error ? error.message : String(error),
                 });
+                try {
+                  const { workflowRepo } = await import("@alfred/db");
+                  await workflowRepo.updateRun(input.runId, {
+                    status: "failed",
+                    completedAt: new Date(),
+                    errorMessage:
+                      error instanceof Error ? error.message : String(error),
+                  });
+                } catch {
+                  // Best-effort.
+                }
               } finally {
                 queueObserver.close();
                 await unregisterRunHandle(input.runId).catch(() => {});
               }
             })();
 
+            const { wrapEventEnvelope } = await import(
+              "@alfred/agent/utils/envelope"
+            );
+
+            const persistTasks = new Set<Promise<void>>();
+            const persistPipelineEvent = (event: PipelineEvent): void => {
+              if (
+                event.type === "stage:progress" ||
+                event.type === "agent:progress"
+              ) {
+                return;
+              }
+
+              const mapped = ((): {
+                eventType: import("@alfred/db/schema/workflow").WorkflowEventType;
+                data: Record<string, unknown>;
+              } | null => {
+                switch (event.type) {
+                  case "pipeline:start":
+                    return {
+                      eventType: "run",
+                      data: {
+                        kind: "pipeline_start",
+                        runId: event.runId,
+                        requirement: event.requirement,
+                      },
+                    };
+                  case "stage:enter":
+                    return {
+                      eventType: "step-start",
+                      data: { kind: "stage_enter", stage: event.stage },
+                    };
+                  case "stage:exit":
+                    return {
+                      eventType: "step-complete",
+                      data: {
+                        kind: "stage_exit",
+                        stage: event.stage,
+                        durationMs: event.durationMs,
+                      },
+                    };
+                  case "stage:error":
+                    return {
+                      eventType: "error",
+                      data: {
+                        kind: "stage_error",
+                        stage: event.stage,
+                        message: event.error,
+                      },
+                    };
+                  case "agent:spawn":
+                    return {
+                      eventType: "agent-start",
+                      data: {
+                        kind: "agent_spawn",
+                        agentId: event.agentId,
+                        taskId: event.taskId,
+                      },
+                    };
+                  case "agent:complete":
+                    return {
+                      eventType: "agent-complete",
+                      data: {
+                        kind: "agent_complete",
+                        agentId: event.agentId,
+                        outcome: event.outcome,
+                      },
+                    };
+                  case "agent:escalate-request":
+                    return {
+                      eventType: "notice",
+                      data: {
+                        kind: "escalation",
+                        agentId: event.agentId,
+                        reason: event.reason,
+                        details: event.details,
+                        suggestions: event.suggestions,
+                        severity: event.severity,
+                        timestamp: event.timestamp,
+                      },
+                    };
+                  case "pipeline:suspend":
+                    return {
+                      eventType: "suspend",
+                      data: { kind: "pipeline_suspend", reason: event.reason },
+                    };
+                  case "pipeline:resume":
+                    return {
+                      eventType: "resume",
+                      data: {
+                        kind: "pipeline_resume",
+                        fromStage: event.fromStage,
+                      },
+                    };
+                  case "pipeline:complete":
+                    return {
+                      eventType: "finish",
+                      data: {
+                        kind: "pipeline_complete",
+                        summary: event.summary,
+                        summaryText: event.summaryText,
+                      },
+                    };
+                  case "pipeline:failed":
+                    return {
+                      eventType: "error",
+                      data: {
+                        kind: "pipeline_failed",
+                        lastStage: event.lastStage,
+                        message: event.error,
+                      },
+                    };
+                }
+                return null;
+              })();
+
+              if (!mapped) {
+                return;
+              }
+
+              const p = workflowRepo
+                .appendEvent({
+                  runId: input.runId,
+                  eventType: mapped.eventType,
+                  timestamp: new Date(event.timestamp),
+                  eventData: wrapEventEnvelope({
+                    id: crypto.randomUUID(),
+                    type: mapped.eventType,
+                    resource: "user",
+                    data: mapped.data,
+                  }),
+                })
+                .then(() => {})
+                .catch((error) => {
+                  logger.warn("workflow_pipeline_event_persist_failed", {
+                    runId: input.runId,
+                    eventType: event.type,
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  });
+                })
+                .finally(() => {
+                  persistTasks.delete(p);
+                });
+
+              persistTasks.add(p);
+            };
+
             for await (const event of queueObserver.stream()) {
+              persistPipelineEvent(event);
               emit.next(event);
             }
+            await Promise.allSettled(Array.from(persistTasks));
             emit.complete();
           } catch (error) {
             emit.error(toTRPCError(error, "workflow_resume_failed"));
@@ -1907,52 +3259,30 @@ export const workflowRouter = router({
 
 // ─── Helper Functions ──────────────────────────────────────────────────────────
 
-/**
- * Generate waves from task dependencies using topological sort.
- */
-function generateWavesFromDeps(
-  subtasks: Array<{
-    id: string;
-    deps: string[];
-  }>
-): Array<{ id: string; agents: string[]; dependsOn: string[] }> {
-  const waves: Array<{ id: string; agents: string[]; dependsOn: string[] }> =
-    [];
-  const completed = new Set<string>();
-  let waveIndex = 0;
+function expandWaveIds(
+  waves: Array<{ id: string; dependsOn: string[] }>,
+  selected: string[]
+): string[] {
+  const waveById = new Map(waves.map((w) => [w.id, w]));
+  const out = new Set<string>();
+  const stack = [...selected];
 
-  while (completed.size < subtasks.length) {
-    const ready = subtasks.filter((task) => {
-      if (completed.has(task.id)) {
-        return false;
-      }
-      return task.deps.every((depId) => completed.has(depId));
-    });
-
-    if (ready.length === 0) {
-      const remaining = subtasks.filter((t) => !completed.has(t.id));
-      if (remaining.length > 0) {
-        waves.push({
-          id: `wave-${waveIndex}`,
-          agents: remaining.map((t) => t.id),
-          dependsOn: waveIndex > 0 ? [`wave-${waveIndex - 1}`] : [],
-        });
-      }
-      break;
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (!id || out.has(id)) {
+      continue;
     }
-
-    waves.push({
-      id: `wave-${waveIndex}`,
-      agents: ready.map((t) => t.id),
-      dependsOn: waveIndex > 0 ? [`wave-${waveIndex - 1}`] : [],
-    });
-
-    for (const task of ready) {
-      completed.add(task.id);
+    out.add(id);
+    const wave = waveById.get(id);
+    if (!wave) {
+      continue;
     }
-
-    waveIndex++;
+    for (const dep of wave.dependsOn) {
+      if (!out.has(dep)) {
+        stack.push(dep);
+      }
+    }
   }
 
-  return waves;
+  return [...out];
 }

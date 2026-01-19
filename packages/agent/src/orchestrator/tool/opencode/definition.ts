@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+const mcpHttpHeaderSchema = z
+  .object({
+    name: z.string().min(1),
+    value: z.string(),
+  })
+  .passthrough();
+
+const mcpServerHttpSchema = z
+  .object({
+    name: z.string().min(1),
+    url: z.string().url(),
+    headers: z.array(mcpHttpHeaderSchema),
+  })
+  .passthrough();
+
 export const opencodeInputSchema = z.object({
   action: z
     .literal("exec")
@@ -69,6 +84,10 @@ export const opencodeInputSchema = z.object({
     .array(z.string().min(1))
     .optional()
     .describe("Arguments to pass when launching the ACP agent."),
+  mcpServers: z
+    .array(mcpServerHttpSchema)
+    .optional()
+    .describe("Optional MCP servers to include in the ACP session."),
 });
 
 export type OpenCodeToolInput = z.infer<typeof opencodeInputSchema>;

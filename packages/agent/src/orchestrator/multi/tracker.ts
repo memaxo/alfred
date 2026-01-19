@@ -3,23 +3,35 @@ import type { SubTask, SubTaskId } from "./decompose";
 import type { AgentId, WaveId } from "./spawn";
 
 /**
- * Configuration options for stuck detection thresholds.
+ * Unified configuration for stuck detection thresholds.
  * All thresholds can be tuned per-workflow or via environment variables.
+ *
+ * This is the single source of truth for stuck detection configuration.
+ * Previously duplicated in @alfred/resilience and @alfred/pipeline.
  */
-export type StuckDetectionOptions = {
+export type StuckDetectionConfig = {
   /** Time in milliseconds without events before agent is considered stuck (default: 60000) */
   noProgressMs?: number;
   /** Maximum transitions before agent is considered stuck (default: 200) */
   maxTransitions?: number;
   /** Similarity threshold for semantic loop detection (default: 0.92) */
   similarityThreshold?: number;
+  /** Max time in ms before considering stuck - used for workflow-level timeout (default: 600000) */
+  maxTimeMs?: number;
+  /** Max repeated errors before escalating (default: 5) */
+  maxRepeatedErrors?: number;
 };
+
+/**
+ * @deprecated Use StuckDetectionConfig instead. Will be removed in next major version.
+ */
+export type StuckDetectionOptions = StuckDetectionConfig;
 
 /**
  * Get stuck detection defaults from environment variables.
  * Falls back to hardcoded defaults if env vars not set.
  */
-export function getStuckDetectionDefaults(): Required<StuckDetectionOptions> {
+export function getStuckDetectionDefaults(): Required<StuckDetectionConfig> {
   return {
     noProgressMs: Number.parseInt(
       process.env.STUCK_NO_PROGRESS_MS ?? "60000",
@@ -31,6 +43,11 @@ export function getStuckDetectionDefaults(): Required<StuckDetectionOptions> {
     ),
     similarityThreshold: Number.parseFloat(
       process.env.STUCK_SIMILARITY_THRESHOLD ?? "0.92"
+    ),
+    maxTimeMs: Number.parseInt(process.env.STUCK_MAX_TIME_MS ?? "600000", 10),
+    maxRepeatedErrors: Number.parseInt(
+      process.env.STUCK_MAX_REPEATED_ERRORS ?? "5",
+      10
     ),
   };
 }
@@ -94,8 +111,8 @@ export type TrackerContext = {
   dependsOn: Map<SubTaskId, Set<SubTaskId>>;
   /** Per-agent loop detectors */
   detectors: Map<AgentId, LoopDetector>;
-  /** Stuck detection options */
-  options: Required<StuckDetectionOptions>;
+  /** Stuck detection configuration */
+  options: Required<StuckDetectionConfig>;
 };
 
 /**
@@ -104,7 +121,7 @@ export type TrackerContext = {
  */
 export function createTrackerContext(
   tasks: SubTask[],
-  options?: StuckDetectionOptions
+  options?: StuckDetectionConfig
 ): TrackerContext {
   const defaults = getStuckDetectionDefaults();
   const blockedBy = new Map<SubTaskId, Set<SubTaskId>>();
@@ -129,6 +146,9 @@ export function createTrackerContext(
       maxTransitions: options?.maxTransitions ?? defaults.maxTransitions,
       similarityThreshold:
         options?.similarityThreshold ?? defaults.similarityThreshold,
+      maxTimeMs: options?.maxTimeMs ?? defaults.maxTimeMs,
+      maxRepeatedErrors:
+        options?.maxRepeatedErrors ?? defaults.maxRepeatedErrors,
     },
   };
 }

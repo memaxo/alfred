@@ -32,9 +32,19 @@ export type ClassifyOptions<T extends z.ZodType> = {
   model?: LanguageModel;
   /** Model identifier for logging (since LanguageModel doesn't expose modelId) */
   modelKey?: string;
+  /** Stable metric type for classification observability */
+  metricType?: ClassificationMetricType;
   /** Maximum retries on failure before using fallback */
   maxRetries?: number;
 };
+
+export type ClassificationMetricType =
+  | "intent"
+  | "phase"
+  | "path"
+  | "relevance"
+  | "domain"
+  | "other";
 
 /**
  * Classification result with metadata
@@ -78,7 +88,13 @@ export async function classify<T extends z.ZodType>(
   prompt: string,
   options: ClassifyOptions<T> = {}
 ): Promise<ClassifyResult<z.infer<T>>> {
-  const { fallback, model, modelKey, maxRetries = 1 } = options;
+  const {
+    fallback,
+    model,
+    modelKey,
+    metricType = "other",
+    maxRetries = 1,
+  } = options;
   const start = performance.now();
 
   // Use fallback in offline mode
@@ -88,11 +104,8 @@ export async function classify<T extends z.ZodType>(
         "classify_offline_no_fallback: ALFRED_CLASSIFY_OFFLINE=1 but no fallback provided"
       );
     }
-    const classifyType = modelKey
-      ? modelKey.split("/")[1] || "unknown"
-      : "unknown";
-    classificationFallbackTotal.inc({ type: classifyType, reason: "offline" });
-    classificationTotal.inc({ type: classifyType, outcome: "fallback" });
+    classificationFallbackTotal.inc({ type: metricType, reason: "offline" });
+    classificationTotal.inc({ type: metricType, outcome: "fallback" });
 
     const result = fallback();
     return {
@@ -104,11 +117,7 @@ export async function classify<T extends z.ZodType>(
 
   // Require model to be passed explicitly (avoid circular dependency with @alfred/agent)
   if (!model) {
-    const classifyType = modelKey
-      ? modelKey.split("/")[1] || "unknown"
-      : "unknown";
-    classificationFallbackTotal.inc({ type: classifyType, reason: "no_model" });
-
+    classificationTotal.inc({ type: metricType, outcome: "error" });
     throw new Error(
       "classify_model_required: Must provide model option. Use getClassificationModel() from @alfred/agent/selector"
     );
@@ -125,16 +134,13 @@ export async function classify<T extends z.ZodType>(
       });
 
       const latencyMs = performance.now() - start;
-      const classifyType = modelKey
-        ? modelKey.split("/")[1] || "unknown"
-        : "unknown";
 
       // Track metrics
       classificationLatencySeconds.observe(
-        { type: classifyType, model: modelKey || "unknown" },
+        { type: metricType, model: modelKey || "unknown" },
         latencyMs / 1000
       );
-      classificationTotal.inc({ type: classifyType, outcome: "success" });
+      classificationTotal.inc({ type: metricType, outcome: "success" });
 
       // Track confidence if present in result
       const result = response.object as z.infer<T>;
@@ -145,7 +151,7 @@ export async function classify<T extends z.ZodType>(
       ) {
         const confidence = (result as { confidence?: unknown }).confidence;
         if (typeof confidence === "number") {
-          classificationConfidence.observe({ type: classifyType }, confidence);
+          classificationConfidence.observe({ type: metricType }, confidence);
         }
       }
 
@@ -175,6 +181,8 @@ export async function classify<T extends z.ZodType>(
     logger.warn("classify_using_fallback", {
       error: lastError?.message,
     });
+    classificationFallbackTotal.inc({ type: metricType, reason: "error" });
+    classificationTotal.inc({ type: metricType, outcome: "fallback" });
     return {
       result: fallback(),
       source: "fallback",
@@ -182,6 +190,7 @@ export async function classify<T extends z.ZodType>(
     };
   }
 
+  classificationTotal.inc({ type: metricType, outcome: "error" });
   throw lastError ?? new Error("classify_failed: Unknown error");
 }
 
@@ -217,9 +226,7 @@ export async function classifyBatch<T extends z.ZodType>(
   const prompt = `${systemPrompt}\n\n${itemsDescription}`;
 
   // Track batch size if we can parse it from the items description
-  const classifyType = options.modelKey
-    ? options.modelKey.split("/")[1] || "unknown"
-    : "unknown";
+  const classifyType = options.metricType ?? "other";
   const itemCount = itemsDescription
     .split("\n")
     .filter((line) => line.trim().match(/^\d+:/)).length;

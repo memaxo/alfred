@@ -7,6 +7,7 @@
 import {
   decimal,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -24,7 +25,7 @@ export const planTemplates = pgTable(
     triggerPattern: text("trigger_pattern"),
     planData: jsonb("plan_data").notNull(),
     successRate: decimal("success_rate", { precision: 5, scale: 2 }),
-    usageCount: text("usage_count").default("0"),
+    usageCount: integer("usage_count").notNull().default(0),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

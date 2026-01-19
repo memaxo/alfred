@@ -3,13 +3,16 @@ import { LiteBatcher } from "@alfred/pacer";
 import type { PipelineEvent } from "../events";
 import type { PipelineObserver } from "../runner";
 
-type LinearUpdate = {
-  type: "status" | "comment" | "progress";
-  value: string;
-};
+type LinearUpdate =
+  | {
+      action: "set-started" | "set-completed" | "set-cancelled";
+      issueId: string;
+    }
+  | { action: "comment"; issueId: string; body: string };
 
 export type LinearObserverConfig = {
   syncIntervalMs: number;
+  space: string;
   issueId: string;
   authz: string;
 };
@@ -27,6 +30,8 @@ export class LinearSyncObserver implements PipelineObserver {
   > | null = null;
   private flushInterval: ReturnType<typeof setInterval> | null = null;
   private readonly config: LinearObserverConfig;
+  private readonly agentToTaskId = new Map<string, string>();
+  private taskIssueMap = new Map<string, string>();
 
   constructor(config: LinearObserverConfig) {
     this.config = config;
@@ -53,39 +58,110 @@ export class LinearSyncObserver implements PipelineObserver {
     }
   }
 
+  private applyTaskIssueMap(value: unknown): void {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return;
+    }
+    const raw = value as Record<string, unknown>;
+    const next = new Map<string, string>();
+    for (const [k, v] of Object.entries(raw)) {
+      if (typeof k !== "string" || k.length === 0) {
+        continue;
+      }
+      if (typeof v === "string" && v.trim().length > 0) {
+        next.set(k, v.trim());
+      }
+    }
+    if (next.size > 0) {
+      this.taskIssueMap = next;
+    }
+  }
+
   onEvent(event: PipelineEvent): void {
     switch (event.type) {
-      case "stage:enter":
-        if (event.stage === "execute") {
-          this.pendingUpdates.addItem({ type: "status", value: "In Progress" });
+      case "context:set":
+        if (event.key === "linearTaskIssueMap") {
+          this.applyTaskIssueMap(event.value);
         }
         break;
 
-      case "stage:progress":
-        this.pendingUpdates.addItem({
-          type: "progress",
-          value: `${event.stage}: ${event.message}`,
-        });
+      case "stage:enter":
+        if (event.stage === "execute") {
+          this.pendingUpdates.addItem({
+            action: "set-started",
+            issueId: this.config.issueId,
+          });
+        }
         break;
 
+      case "agent:spawn": {
+        this.agentToTaskId.set(event.agentId, event.taskId);
+        const issueId = this.taskIssueMap.get(event.taskId);
+        if (issueId) {
+          this.pendingUpdates.addItem({ action: "set-started", issueId });
+        }
+        break;
+      }
+
       case "agent:complete":
-        this.pendingUpdates.addItem({
-          type: "comment",
-          value: `Agent completed with status: ${event.outcome.status}`,
-        });
+        {
+          const taskId = this.agentToTaskId.get(event.agentId);
+          if (!taskId) {
+            break;
+          }
+          const issueId = this.taskIssueMap.get(taskId);
+          if (!issueId) {
+            break;
+          }
+
+          if (event.outcome.status === "success") {
+            this.pendingUpdates.addItem({ action: "set-completed", issueId });
+            break;
+          }
+
+          const details: string[] = [];
+          if (event.outcome.handoff) {
+            details.push(`Handoff: ${event.outcome.handoff}`);
+          }
+          if (event.outcome.error) {
+            details.push(`Error: ${event.outcome.error}`);
+          }
+
+          const body =
+            details.length > 0
+              ? `Task ${taskId} completed with status: ${event.outcome.status}\n\n${details.join("\n")}`
+              : `Task ${taskId} completed with status: ${event.outcome.status}`;
+
+          this.pendingUpdates.addItem({ action: "comment", issueId, body });
+          this.pendingUpdates.addItem({ action: "set-cancelled", issueId });
+        }
         break;
 
       case "pipeline:complete":
-        this.pendingUpdates.addItem({ type: "status", value: "Done" });
+        this.pendingUpdates.addItem({
+          action: "set-completed",
+          issueId: this.config.issueId,
+        });
+        if (event.summaryText) {
+          this.pendingUpdates.addItem({
+            action: "comment",
+            issueId: this.config.issueId,
+            body: `Summary:\n${event.summaryText}`,
+          });
+        }
         void this.flush(); // Immediate flush on completion
         break;
 
       case "pipeline:failed":
         this.pendingUpdates.addItem({
-          type: "comment",
-          value: `Pipeline failed at ${event.lastStage}: ${event.error}`,
+          action: "comment",
+          issueId: this.config.issueId,
+          body: `Pipeline failed at ${event.lastStage}: ${event.error}`,
         });
-        this.pendingUpdates.addItem({ type: "status", value: "Cancelled" });
+        this.pendingUpdates.addItem({
+          action: "set-cancelled",
+          issueId: this.config.issueId,
+        });
         void this.flush(); // Immediate flush on failure
         break;
     }
@@ -113,7 +189,7 @@ export class LinearSyncObserver implements PipelineObserver {
         await this.applyUpdate(update);
       } catch (error) {
         logger.warn("linear_update_failed", {
-          type: update.type,
+          action: update.action,
           error: error instanceof Error ? error.message : String(error),
         });
       }
@@ -126,27 +202,26 @@ export class LinearSyncObserver implements PipelineObserver {
       "@alfred/agent/orchestrator/tool/ticket"
     );
 
-    switch (update.type) {
-      case "status":
+    switch (update.action) {
+      case "set-started":
+      case "set-completed":
+      case "set-cancelled":
         await toolTicket.execute({
           input: {
-            space: this.config.issueId.split("-")[0] ?? "", // Extract space from issueId if needed
-            action: "update",
-            issueId: this.config.issueId,
-            description: update.value,
+            space: this.config.space,
+            action: update.action,
+            issueId: update.issueId,
             authz: this.config.authz,
           },
         });
         break;
-
       case "comment":
-      case "progress":
         await toolTicket.execute({
           input: {
-            space: this.config.issueId.split("-")[0] ?? "",
+            space: this.config.space,
             action: "comment",
-            issueId: this.config.issueId,
-            description: update.value,
+            issueId: update.issueId,
+            description: update.body,
             authz: this.config.authz,
           },
         });

@@ -10,6 +10,8 @@ export * from "./build-constants";
 // Cognitive domain types
 export * from "./cognitive";
 export * from "./cognitive.zod";
+// Work compilation artifacts
+export * from "./compilation";
 export * from "./envelope";
 export * from "./envelope.zod";
 export * from "./events";

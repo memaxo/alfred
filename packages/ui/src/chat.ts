@@ -4,6 +4,8 @@ export {
   extractStructuredData,
   getAgentLabel,
   getTimestamp,
+  getToolInvocationName,
+  getToolInvocationState,
   isDataCachePart,
   isDataPart,
   isDataPartNamed,
@@ -12,5 +14,6 @@ export {
   isReasoningPart,
   isTextPart,
   isToolCallPart,
+  isToolInvocationPart,
   isToolResultPart,
 } from "./chat/parts";

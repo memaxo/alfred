@@ -117,6 +117,10 @@ function pickEnv(custom: Record<string, string> | undefined) {
     if (key === "PATH") {
       continue;
     }
+    if (key === "HOME") {
+      safeEnv.HOME = value;
+      continue;
+    }
     if (key.startsWith("DROID_")) {
       safeEnv[key] = value;
     }

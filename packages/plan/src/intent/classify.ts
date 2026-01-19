@@ -127,6 +127,7 @@ export async function classifyIntent(
     {
       model,
       modelKey,
+      metricType: "intent",
       fallback: () => ({
         category: classifyIntentHeuristic(description),
         confidence: 0.5,
@@ -169,6 +170,7 @@ export async function classifyIntentWithMetadata(
     {
       model,
       modelKey,
+      metricType: "intent",
       fallback: () => ({
         category: classifyIntentHeuristic(description),
         confidence: 0.5,

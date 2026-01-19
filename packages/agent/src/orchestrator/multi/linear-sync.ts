@@ -33,22 +33,25 @@ export async function syncDepsToLinear(
   };
 
   for (const task of tasks) {
-    const blockingIssueId = taskToIssueId.get(task.id);
-    if (!blockingIssueId) {
+    const taskIssueId = taskToIssueId.get(task.id);
+    if (!taskIssueId) {
       continue;
     }
 
     for (const depId of task.deps) {
-      const blockedIssueId = taskToIssueId.get(depId);
-      if (!blockedIssueId) {
+      const depIssueId = taskToIssueId.get(depId);
+      if (!depIssueId) {
         continue;
       }
 
       try {
+        // SubTask deps are prerequisites. That means the dependency must be done
+        // before the task can proceed.
+        // In Linear terms: depIssue blocks taskIssue.
         const response = await createLinearBlockingRelation({
           space: config.space,
-          blockingIssueId,
-          blockedIssueId,
+          blockingIssueId: depIssueId,
+          blockedIssueId: taskIssueId,
           authz: config.authz,
         });
 
@@ -57,16 +60,16 @@ export async function syncDepsToLinear(
         } else {
           result.failed++;
           result.errors.push({
-            from: task.id,
-            to: depId,
+            from: depId,
+            to: task.id,
             error: "linear_relation_failed",
           });
         }
       } catch (error) {
         result.failed++;
         result.errors.push({
-          from: task.id,
-          to: depId,
+          from: depId,
+          to: task.id,
           error: error instanceof Error ? error.message : String(error),
         });
       }

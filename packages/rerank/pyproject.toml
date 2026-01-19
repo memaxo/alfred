@@ -7,6 +7,7 @@ dependencies = [
     "transformers>=4.57.0",
     "qwen-vl-utils>=0.0.14",
     "torch>=2.8.0",
+    "torchvision>=0.24.0",
     "fastapi>=0.109.0",
     "uvicorn>=0.27.0",
     "huggingface-hub>=0.20.0",

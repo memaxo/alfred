@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "../client";
 import { workflowPatterns } from "../schema/pattern";
 
@@ -22,6 +22,28 @@ export async function getPatternById(
     .select()
     .from(workflowPatterns)
     .where(eq(workflowPatterns.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getActivePatternByTrigger(args: {
+  userId: string;
+  trigger: string;
+  projectId: string | null;
+}): Promise<WorkflowPattern | null> {
+  const [row] = await db
+    .select()
+    .from(workflowPatterns)
+    .where(
+      and(
+        eq(workflowPatterns.userId, args.userId),
+        eq(workflowPatterns.trigger, args.trigger),
+        args.projectId === null
+          ? isNull(workflowPatterns.projectId)
+          : eq(workflowPatterns.projectId, args.projectId),
+        eq(workflowPatterns.status, "active")
+      )
+    )
     .limit(1);
   return row ?? null;
 }

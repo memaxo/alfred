@@ -6,7 +6,7 @@ export { createVoiceFixture, createVoiceTestRegistry } from "./registry";
 import type { VoiceTestOptions } from "./registry";
 
 export async function installVoiceTestPools(options?: VoiceTestOptions) {
-  const poolsModule = await import("@alfred/api/voice/pools");
+  const poolsModule = await import("@alfred/voice/process/pool-manager");
   const { registry, sttPool, ttsPool } = createVoiceTestRegistry(options);
   // Use the return type from getVoicePools to ensure type compatibility
   type VoicePools = ReturnType<typeof poolsModule.getVoicePools>;

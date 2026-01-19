@@ -55,6 +55,27 @@ async function fetchWithTimeout(
   }
 }
 
+type Qwen3VLHttpError = {
+  status: number;
+  body: string;
+};
+
+function asQwen3VLHttpError(value: unknown): Qwen3VLHttpError | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const v = value as Record<string, unknown>;
+  const status = v.status;
+  const body = v.body;
+  if (typeof status !== "number") {
+    return null;
+  }
+  if (typeof body !== "string") {
+    return null;
+  }
+  return { status, body };
+}
+
 /**
  * Rerank documents using the Qwen3-VL server.
  *
@@ -101,7 +122,7 @@ export async function qwen3vlRerank(
     })),
     instruction: opts.instruction,
     top_n: opts.topN ?? 10,
-    debug: process.env.QWEN3VL_DEBUG === "1" ? true : undefined,
+    debug: opts.debug ?? (process.env.QWEN3VL_DEBUG === "1" ? true : undefined),
   };
 
   let lastError: unknown;
@@ -122,12 +143,16 @@ export async function qwen3vlRerank(
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
-        throw new Error(
-          `qwen3vl_rerank_failed:${response.status}:${errorBody.slice(0, 200)}`
-        );
+        throw {
+          status: response.status,
+          body: errorBody.slice(0, 200),
+        } satisfies Qwen3VLHttpError;
       }
 
       const body = (await response.json()) as Qwen3VLRerankResponse;
+      if (!Array.isArray(body.results)) {
+        throw new Error("qwen3vl_rerank_failed:invalid_response");
+      }
 
       const results: RerankResult[] = body.results.map((item) => ({
         id: item.id,
@@ -148,15 +173,20 @@ export async function qwen3vlRerank(
 
       // Check if we should retry
       if (attempt < retryCount) {
-        const isRetryable =
+        const httpError = asQwen3VLHttpError(error);
+        const isRetryableHttp =
+          httpError?.status === 429 ||
+          httpError?.status === 502 ||
+          httpError?.status === 503 ||
+          httpError?.status === 504;
+
+        const isRetryableNetwork =
           error instanceof Error &&
           (error.name === "AbortError" ||
             error.message.includes("fetch failed") ||
-            error.message.includes("ECONNREFUSED") ||
-            error.message.includes("503") ||
-            error.message.includes("502"));
+            error.message.includes("ECONNREFUSED"));
 
-        if (isRetryable) {
+        if (isRetryableHttp || isRetryableNetwork) {
           await sleep(retryDelayMs * (attempt + 1));
           continue;
         }

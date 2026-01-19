@@ -55,6 +55,8 @@ const mockSession = {
     return Promise.resolve();
   }),
   clearTranscript: mock(() => {}),
+  clearUtterance: mock(() => {}),
+  setChunkSize: mock(() => {}),
 };
 
 const mockManager = {
@@ -142,15 +144,16 @@ describe("VoiceSocketHandler", () => {
   it("should handle binary audio message", async () => {
     ws.data.sessionId = "sess-1";
     ws.data.codec = "pcm";
+    ws.data.inputMimeType = "audio/raw;codec=pcm_s16le;rate=16000";
 
-    const audioData = Buffer.from("test-audio");
-    await handler.handleMessage(ws, audioData);
+    const bytes = new TextEncoder().encode("test-audio");
+    await handler.handleMessage(ws, bytes);
 
     expect(mockSession.processAudioChunk).toHaveBeenCalled();
     // Internally converts buffer to base64
     expect(mockSession.processAudioChunk).toHaveBeenCalledWith(
-      audioData.toString("base64"),
-      expect.any(String), // mimeType
+      Buffer.from(bytes).toString("base64"),
+      "audio/raw;codec=pcm_s16le;rate=16000",
       expect.any(Object)
     );
   });
@@ -188,5 +191,106 @@ describe("VoiceSocketHandler", () => {
         return typeof name === "string" && name.endsWith("_count");
       })?.value ?? 0;
     expect(count).toBeGreaterThan(0);
+  });
+
+  it("should allow a new utterance after stop (session reuse + cache clear)", async () => {
+    // Start session
+    await handler.handleMessage(
+      ws,
+      JSON.stringify({ _: "start", sessionId: "sess-1", language: "en" })
+    );
+
+    // First chunk should request cache clear (fresh session)
+    await handler.handleMessage(
+      ws,
+      JSON.stringify({
+        _: "audio_chunk",
+        audioBase64: "dGVzdA==",
+        mimeType: "audio/pcm",
+      })
+    );
+    expect(mockSession.processAudioChunk).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({ clearCache: true })
+    );
+
+    // Stop (finalize utterance)
+    await handler.handleMessage(ws, JSON.stringify({ _: "stop" }));
+    expect(mockSession.clearUtterance).toHaveBeenCalled();
+
+    // Next chunk should again request cache clear (new utterance)
+    await handler.handleMessage(
+      ws,
+      JSON.stringify({
+        _: "audio_chunk",
+        audioBase64: "dGVzdA==",
+        mimeType: "audio/pcm",
+      })
+    );
+    expect(mockSession.processAudioChunk).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({ clearCache: true })
+    );
+  });
+
+  it("rejects binary audio before start", async () => {
+    const bytes = new TextEncoder().encode("test-audio");
+    await handler.handleMessage(ws, bytes);
+
+    expect(mockSession.processAudioChunk).not.toHaveBeenCalled();
+    expect(ws.send).toHaveBeenCalled();
+    const sent = (ws.send as any).mock.calls.map((c: any) => JSON.parse(c[0]));
+    expect(sent.some((m: any) => m._ === "error")).toBe(true);
+  });
+
+  it("rejects binary audio when inputMimeType is missing", async () => {
+    ws.data.sessionId = "sess-1";
+    const bytes = new TextEncoder().encode("test-audio");
+    await handler.handleMessage(ws, bytes);
+
+    expect(mockSession.processAudioChunk).not.toHaveBeenCalled();
+    expect(ws.send).toHaveBeenCalled();
+    const sent = (ws.send as any).mock.calls.map((c: any) => JSON.parse(c[0]));
+    expect(sent.some((m: any) => m._ === "error")).toBe(true);
+  });
+
+  it("rejects oversized binary audio payloads", async () => {
+    ws.data.sessionId = "sess-1";
+    ws.data.codec = "pcm";
+    ws.data.inputMimeType = "audio/raw;codec=pcm_s16le;rate=16000";
+
+    const bytes = new Uint8Array(70_000);
+    await handler.handleMessage(ws, bytes);
+
+    expect(mockSession.processAudioChunk).not.toHaveBeenCalled();
+    const sent = (ws.send as any).mock.calls.map((c: any) => JSON.parse(c[0]));
+    expect(sent.some((m: any) => m._ === "error")).toBe(true);
+  });
+
+  it("interrupts TTS (barge-in) when audio arrives during playback", async () => {
+    ws.data.sessionId = "sess-1";
+    ws.data.sessionRegistryId = "reg-1";
+    ws.data.codec = "pcm";
+    ws.data.inputMimeType = "audio/raw;codec=pcm_s16le;rate=16000";
+    ws.data.ttsInProgress = true;
+    ws.data.ttsAbortToken = 0;
+
+    const payload = JSON.stringify({
+      _: "audio_chunk",
+      audioBase64: "dGVzdA==",
+      mimeType: "audio/raw;codec=pcm_s16le;rate=16000",
+    });
+    await handler.handleMessage(ws, payload);
+
+    const sent = (ws.send as any).mock.calls.map((c: any) => {
+      if (c[0] instanceof Buffer || c[0] instanceof Uint8Array) {
+        return { _: "binary" };
+      }
+      return JSON.parse(c[0]);
+    });
+    expect(sent.some((m: any) => m._ === "interrupt")).toBe(true);
+    expect(ws.data.ttsAbortToken).toBe(1);
   });
 });

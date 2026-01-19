@@ -21,6 +21,14 @@ Linear Agent Activities enable ALFRED to function as a first-class Linear agent 
 
 5. **Error handling.** Linear API errors must be logged with structured logging, non-fatal (don't throw), tracked via metrics, and never expose internal details to Linear UI.
 
+6. **Subtask issue creation happens at execute-stage only.** Never create per-subtask Linear issues during plan preview; create them only once the run is executing (post-approval) so Linear stays aligned with “approved work”.
+
+7. **Subtask issue prerequisites.** Per-subtask issue creation requires a Linear `teamId`. If missing, degrade to root-only sync.
+
+8. **Dependency direction.** When a subtask lists `deps`, treat them as prerequisites: dependency issues **block** the dependent task issue.
+
+9. **Pipeline observer config must include `space`.** Never infer Linear workspace from issue identifiers (e.g. `issueId.split("-")`); pass `space` explicitly.
+
 6. **Cycles and sprint planning.** Use 2-week cycles for sprint planning. Assign high-priority issues to current cycle. Track velocity via cycle completion rate.
 
 7. **Issue estimates.** Add story point estimates to all issues. Use Fibonacci scale (1, 2, 3, 5, 8, 13). Most features: 2-5 points (30-90 minutes per agent cycle, 1-3 cycles per feature). Complex features: 8 points. Use estimates for capacity planning.

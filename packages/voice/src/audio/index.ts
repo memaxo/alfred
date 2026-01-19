@@ -13,3 +13,5 @@ export {
   pcm16Base64ToFloat32,
   wrapPCM16AsWavBase64,
 } from "./pcm";
+
+export { int16ToBuffer, pcm16ViewToInt16, resamplePcm16Mono } from "./resample";

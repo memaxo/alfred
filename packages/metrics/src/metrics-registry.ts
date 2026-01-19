@@ -5,7 +5,9 @@
  * Provides consistent metric names and recording across all systems.
  */
 
-import { Counter, Gauge, Histogram, Registry } from "prom-client";
+import client from "prom-client";
+
+const { Counter, Gauge, Histogram, Registry } = client;
 
 const register = new Registry();
 
@@ -209,6 +211,6 @@ export const queryHelper = {
   },
 };
 
-export function getMetricsRegistry(): Registry {
+export function getMetricsRegistry() {
   return register;
 }

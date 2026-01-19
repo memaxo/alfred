@@ -1,4 +1,5 @@
-import type { StuckDetectionOptions } from "@alfred/agent/orchestrator/multi/tracker";
+import type { StuckDetectionConfig } from "@alfred/agent/orchestrator/multi/tracker";
+import type { RuntimeMcpServer } from "@alfred/mcp";
 import type { StructuredPlan } from "@alfred/plan";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
@@ -13,7 +14,7 @@ export type ProjectConfig = {
   installCommand: string;
   buildCommand: string;
   /** Optional stuck detection thresholds for tuning agent behavior */
-  stuckDetection?: StuckDetectionOptions;
+  stuckDetection?: StuckDetectionConfig;
 };
 
 export type OrchestratorContext = {
@@ -28,6 +29,11 @@ export type OrchestratorContext = {
   scanContext?: ExecutionContext | null;
   userId?: string;
   plan?: StructuredPlan | null; // New: Loaded plan for phased execution
+  runtimeMcp?: {
+    server: RuntimeMcpServer;
+    /** Host bind URL for local callers (not necessarily container-reachable) */
+    url: string;
+  };
 };
 
 export type FileChanges = {

@@ -137,11 +137,11 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
   /**
    * Check agent outcomes and record in gate.
    */
-  private async checkAgentOutcomes(
+  private checkAgentOutcomes(
     input: ExecuteOutput,
     gate: import("@alfred/agent/workflow/review-gate").ReviewGate,
     ctx: PipelineContext
-  ): Promise<void> {
+  ): void {
     for (const [taskId, outcome] of input.outcomes) {
       const passed = outcome.status === "success";
 
@@ -269,6 +269,8 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
                   noProgressMs: 60_000,
                   maxTransitions: 200,
                   similarityThreshold: 0.92,
+                  maxTimeMs: 600_000,
+                  maxRepeatedErrors: 5,
                 },
               },
             },

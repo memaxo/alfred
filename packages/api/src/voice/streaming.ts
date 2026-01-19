@@ -44,7 +44,9 @@ import {
 } from "./session-registry";
 
 const DEFAULT_PORT = 8788;
-const INACTIVITY_TIMEOUT_MS = 30_000;
+const INACTIVITY_TIMEOUT_MS =
+  Number.parseInt(process.env.VOICE_WS_INACTIVITY_TIMEOUT_MS ?? "", 10) ||
+  120_000;
 const CLEANUP_INTERVAL_MS = 10_000;
 const MAX_CONCURRENT_CONNECTIONS = 100;
 
@@ -72,7 +74,8 @@ const MAX_CONNECTIONS_PER_MINUTE_PER_IP =
   Number.parseInt(process.env.VOICE_WS_RATE_LIMIT_PER_IP ?? "", 10) || 10;
 const MAX_CONNECTIONS_PER_MINUTE_PER_USER =
   Number.parseInt(process.env.VOICE_WS_RATE_LIMIT_PER_USER ?? "", 10) || 5;
-const PING_TIMEOUT_MS = 60_000;
+const PING_TIMEOUT_MS =
+  Number.parseInt(process.env.VOICE_WS_PONG_TIMEOUT_MS ?? "", 10) || 60_000;
 
 let server: ReturnType<typeof Bun.serve> | null = null;
 const activeSockets = new Set<ServerWebSocket<VoiceSocketData>>();
@@ -124,6 +127,13 @@ export class VoiceStreamAuthError extends Error {
     this.name = "VoiceStreamAuthError";
     this.status = status;
   }
+}
+
+export function isVoiceStreamingEnabled(
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  const raw = (env.VOICE_STREAMING_PROTO ?? "0").toLowerCase();
+  return raw === "1" || raw === "true";
 }
 
 async function evaluateVoicePolicy(
@@ -226,13 +236,7 @@ export async function authorizeVoiceStreamRequest(req: Request) {
 }
 
 export function startVoiceStreamingPrototype(): void {
-  if (server || process.env.VOICE_STREAMING_PROTO !== "1") {
-    return;
-  }
-  if ((process.env.VOICE_PROVIDER ?? "openai") !== "maya1") {
-    logger.warn("voice_stream_proto_disabled", {
-      reason: "maya1_provider_required",
-    });
+  if (server || !isVoiceStreamingEnabled()) {
     return;
   }
 
@@ -322,6 +326,7 @@ export function startVoiceStreamingPrototype(): void {
               runtime: ctx.runtimeContext,
               lastActivity: Date.now(),
               pingSentAt: null as number | null,
+              lastPongAt: Date.now(),
             },
           });
           if (!upgraded) {
@@ -363,12 +368,15 @@ export function startVoiceStreamingPrototype(): void {
         }
         ws.data.lastActivity = Date.now();
         ws.data.pingSentAt = Date.now();
+        ws.data.lastPongAt = Date.now();
         activeSockets.add(ws);
         voiceWebSocketConnectionsCurrent.set(activeSockets.size);
 
         // Send ready
         try {
-          ws.send(JSON.stringify({ _: "ready", sessionId: null }));
+          ws.send(
+            JSON.stringify({ _: "ready", sessionId: null, protocolVersion: 1 })
+          );
         } catch (error) {
           logger.error("voice_stream_proto_send_failed", {
             sessionId: null,
@@ -392,12 +400,16 @@ export function startVoiceStreamingPrototype(): void {
       },
       pong(ws, _data) {
         ws.data.lastActivity = Date.now();
+        ws.data.lastPongAt = Date.now();
       },
       close(ws) {
         activeSockets.delete(ws);
         voiceWebSocketConnectionsCurrent.set(activeSockets.size);
         if (ws.data.sessionId) {
           voiceRegistry.removeSession(ws.data.sessionId);
+        }
+        if (ws.data.sessionRegistryId) {
+          void completeVoiceSession(ws.data.sessionRegistryId).catch(() => {});
         }
       },
     },
@@ -407,7 +419,7 @@ export function startVoiceStreamingPrototype(): void {
     const now = Date.now();
     for (const ws of activeSockets) {
       // Check ping timeout
-      if (ws.data.pingSentAt && now - ws.data.pingSentAt > PING_TIMEOUT_MS) {
+      if (ws.data.lastPongAt && now - ws.data.lastPongAt > PING_TIMEOUT_MS) {
         voiceWebSocketPingTimeoutTotal.inc();
         logger.info("voice_stream_proto_ping_timeout", {
           sessionId: ws.data.sessionId,
@@ -417,6 +429,9 @@ export function startVoiceStreamingPrototype(): void {
         voiceWebSocketConnectionsCurrent.set(activeSockets.size);
         if (ws.data.sessionId) {
           voiceRegistry.removeSession(ws.data.sessionId);
+        }
+        if (ws.data.sessionRegistryId) {
+          void completeVoiceSession(ws.data.sessionRegistryId).catch(() => {});
         }
         continue;
       }

@@ -116,7 +116,7 @@ export async function applyTemplate(
   await db
     .update(planTemplates)
     .set({
-      usageCount: sql`${planTemplates.usageCount}::integer + 1`,
+      usageCount: sql`${planTemplates.usageCount} + 1`,
       lastUsedAt: new Date(),
     })
     .where(eq(planTemplates.id, templateId));
@@ -139,8 +139,11 @@ export async function updateTemplateSuccess(
   }
 
   // Simple success rate calculation
-  const usageCount = Number.parseInt(template.usageCount || "0", 10);
-  const currentRate = Number.parseFloat(template.successRate || "0");
+  const usageCount =
+    typeof template.usageCount === "number"
+      ? template.usageCount
+      : Number.parseInt(String(template.usageCount ?? 0), 10);
+  const currentRate = Number.parseFloat(String(template.successRate ?? 0));
 
   const newSuccessCount = successful
     ? currentRate * usageCount + 100

@@ -24,6 +24,16 @@ export class VoiceRegistry {
     sessionId: string,
     language?: string
   ): VoiceSession {
+    const defaultChunkSize = (() => {
+      const raw = (process.env.VOICE_STT_CHUNK_SIZE ?? "").toLowerCase();
+      return raw === "fast" ||
+        raw === "low" ||
+        raw === "medium" ||
+        raw === "accurate"
+        ? (raw as "fast" | "low" | "medium" | "accurate")
+        : undefined;
+    })();
+
     const session = new VoiceSession({
       userId,
       sessionId,
@@ -31,6 +41,7 @@ export class VoiceRegistry {
       sttPool: this.sttPool,
       ttsPool: this.ttsPool,
       logger: this.logger,
+      defaultChunkSize,
     });
 
     this.sessions.set(sessionId, session);
@@ -62,6 +73,11 @@ export class VoiceRegistry {
         if (session.isIdle(timeoutMs)) {
           this.removeSession(sessionId);
         }
+      }
+
+      const cleaned = this.sttPool.cleanupIdleSessions(timeoutMs);
+      if (cleaned > 0) {
+        this.logger.info("voice_stt_idle_sessions_cleaned", { cleaned });
       }
     }, 60_000).unref(); // Check every minute
   }

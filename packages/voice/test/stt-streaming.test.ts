@@ -183,6 +183,8 @@ describe("STT Session Affinity", () => {
     expect(pool.getSessionInfo("session-new").hasAffinity).toBe(true);
 
     // Cleanup with very short timeout (immediate cleanup)
+    // Ensure time advances so lastAccess is strictly older than "now".
+    await new Promise((resolve) => setTimeout(resolve, 5));
     const cleaned = pool.cleanupIdleSessions(0);
     expect(cleaned).toBe(2);
 
