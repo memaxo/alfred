@@ -36,7 +36,7 @@ async function verifyTaskStructure(taskDir: string): Promise<void> {
     "agents/alfred.sh",
     "solution/solve.sh",
     "tests/test.sh",
-    "workspace/README.md",
+    "environment/workspace/README.md", // Workspace files go in environment/ for Docker build context
   ];
 
   console.log("Verifying task structure...");
