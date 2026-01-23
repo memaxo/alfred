@@ -69,7 +69,7 @@ function buildConfig(): LoadConfig {
   const url = process.env.VOICE_LOAD_URL ?? "ws://localhost:8788/voice/stream";
   const mode = (process.env.VOICE_LOAD_MODE ?? "handshake") as LoadMode;
   const concurrency = intEnv("VOICE_LOAD_CONCURRENCY", 10);
-  const durationMs = intEnv("VOICE_LOAD_DURATION_MS", 5_000);
+  const durationMs = intEnv("VOICE_LOAD_DURATION_MS", 5000);
   const chunkIntervalMs = intEnv("VOICE_LOAD_CHUNK_INTERVAL_MS", 50);
   const chunkBytes = intEnv("VOICE_LOAD_CHUNK_BYTES", 3200); // 100ms @ 16kHz PCM16
 
@@ -173,12 +173,20 @@ async function runClient(cfg: LoadConfig, i: number, counters: Counters) {
   });
 
   // Wait for session_started (or timeout), then optionally stream audio.
-  const waitStartMs = 2_000;
+  const waitStartMs = 2000;
   const startAt = Date.now();
-  while (!sawStarted && Date.now() - startAt < waitStartMs && ws.readyState === 0) {
+  while (
+    !sawStarted &&
+    Date.now() - startAt < waitStartMs &&
+    ws.readyState === 0
+  ) {
     await sleep(10);
   }
-  while (!sawStarted && Date.now() - startAt < waitStartMs && ws.readyState === 1) {
+  while (
+    !sawStarted &&
+    Date.now() - startAt < waitStartMs &&
+    ws.readyState === 1
+  ) {
     await sleep(10);
   }
 
@@ -251,4 +259,3 @@ async function main() {
 if (import.meta.main) {
   await main();
 }
-

@@ -2,15 +2,15 @@
 
 /**
  * Run tests grouped by module and identify failures.
- * 
+ *
  * Usage:
  *   bun scripts/test-by-module.ts [--scope unit|integration|e2e|perf|all] [--module <name>]
  */
 
-import { Glob } from "bun";
-import path from "node:path";
 import { spawn } from "node:child_process";
+import path from "node:path";
 import { promisify } from "node:util";
+import { Glob } from "bun";
 
 const exec = promisify(spawn);
 
@@ -25,7 +25,13 @@ interface TestFailure {
   testFile: string;
   testName?: string;
   error: string;
-  failureType: "assertion" | "timeout" | "exception" | "mock" | "type" | "unknown";
+  failureType:
+    | "assertion"
+    | "timeout"
+    | "exception"
+    | "mock"
+    | "type"
+    | "unknown";
   stack?: string;
 }
 
@@ -147,7 +153,10 @@ async function discoverTestFiles(
   return byModule;
 }
 
-function classifyFailure(error: string, stack?: string): TestFailure["failureType"] {
+function classifyFailure(
+  error: string,
+  stack?: string
+): TestFailure["failureType"] {
   const lower = error.toLowerCase();
   if (lower.includes("timeout") || lower.includes("timed out")) {
     return "timeout";
@@ -155,10 +164,17 @@ function classifyFailure(error: string, stack?: string): TestFailure["failureTyp
   if (lower.includes("mock") || lower.includes("mock.module")) {
     return "mock";
   }
-  if (lower.includes("type") && (lower.includes("error") || lower.includes("not assignable"))) {
+  if (
+    lower.includes("type") &&
+    (lower.includes("error") || lower.includes("not assignable"))
+  ) {
     return "type";
   }
-  if (lower.includes("expected") || lower.includes("assertion") || lower.includes("to be")) {
+  if (
+    lower.includes("expected") ||
+    lower.includes("assertion") ||
+    lower.includes("to be")
+  ) {
     return "assertion";
   }
   if (stack || lower.includes("error:") || lower.includes("exception")) {
@@ -193,7 +209,9 @@ function parseBunTestOutput(output: string, module: string): TestFailure[] {
 
     // Detect test name (pass/fail)
     if (line.includes("(fail)") || line.includes("(error)")) {
-      const match = line.match(/\(fail\)\s+(.+?)(?:\s|$)/) || line.match(/\(error\)\s+(.+?)(?:\s|$)/);
+      const match =
+        line.match(/\(fail\)\s+(.+?)(?:\s|$)/) ||
+        line.match(/\(error\)\s+(.+?)(?:\s|$)/);
       if (match) {
         currentTest = match[1].trim();
         collectingError = true;
@@ -204,7 +222,11 @@ function parseBunTestOutput(output: string, module: string): TestFailure[] {
 
     // Collect error message
     if (collectingError) {
-      if (line.trim().startsWith("Error:") || line.trim().startsWith("TypeError:") || line.trim().startsWith("ReferenceError:")) {
+      if (
+        line.trim().startsWith("Error:") ||
+        line.trim().startsWith("TypeError:") ||
+        line.trim().startsWith("ReferenceError:")
+      ) {
         errorBuffer.push(line.trim());
       } else if (line.trim() && !line.trim().startsWith("at ")) {
         errorBuffer.push(line.trim());
@@ -213,14 +235,22 @@ function parseBunTestOutput(output: string, module: string): TestFailure[] {
       }
 
       // End of error block
-      if (line.trim() === "" && errorBuffer.length > 0 && i < lines.length - 1 && !lines[i + 1]?.trim().startsWith("at ")) {
+      if (
+        line.trim() === "" &&
+        errorBuffer.length > 0 &&
+        i < lines.length - 1 &&
+        !lines[i + 1]?.trim().startsWith("at ")
+      ) {
         if (currentFile && currentTest) {
           failures.push({
             module,
             testFile: currentFile,
             testName: currentTest,
             error: errorBuffer.join(" "),
-            failureType: classifyFailure(errorBuffer.join(" "), stackBuffer.join("\n")),
+            failureType: classifyFailure(
+              errorBuffer.join(" "),
+              stackBuffer.join("\n")
+            ),
             stack: stackBuffer.length > 0 ? stackBuffer.join("\n") : undefined,
           });
         }
@@ -238,7 +268,10 @@ function parseBunTestOutput(output: string, module: string): TestFailure[] {
       testFile: currentFile,
       testName: currentTest,
       error: errorBuffer.join(" "),
-      failureType: classifyFailure(errorBuffer.join(" "), stackBuffer.join("\n")),
+      failureType: classifyFailure(
+        errorBuffer.join(" "),
+        stackBuffer.join("\n")
+      ),
       stack: stackBuffer.length > 0 ? stackBuffer.join("\n") : undefined,
     });
   }
@@ -259,7 +292,14 @@ async function runModuleTests(
   console.log(`${"=".repeat(80)}\n`);
 
   const proc = Bun.spawn(
-    ["bunx", "turbo", "run", "test", `--filter=${filter}`, "--cache=local:r,remote:r"],
+    [
+      "bunx",
+      "turbo",
+      "run",
+      "test",
+      `--filter=${filter}`,
+      "--cache=local:r,remote:r",
+    ],
     {
       cwd: process.cwd(),
       env: {
@@ -284,9 +324,13 @@ async function runModuleTests(
   const failMatch = output.match(/(\d+)\s+fail/);
   const totalMatch = output.match(/Ran\s+(\d+)\s+tests/);
 
-  const passed = passMatch ? parseInt(passMatch[1], 10) : 0;
-  const failed = failMatch ? parseInt(failMatch[1], 10) : failures.length;
-  const totalTests = totalMatch ? parseInt(totalMatch[1], 10) : passed + failed;
+  const passed = passMatch ? Number.parseInt(passMatch[1], 10) : 0;
+  const failed = failMatch
+    ? Number.parseInt(failMatch[1], 10)
+    : failures.length;
+  const totalTests = totalMatch
+    ? Number.parseInt(totalMatch[1], 10)
+    : passed + failed;
 
   return {
     module,
@@ -317,9 +361,7 @@ async function main() {
       continue;
     }
     const scopedFiles =
-      scope === "all"
-        ? files
-        : files.filter((f) => f.kind === scope);
+      scope === "all" ? files : files.filter((f) => f.kind === scope);
     if (scopedFiles.length > 0) {
       filtered.set(module, scopedFiles);
     }
@@ -390,9 +432,13 @@ async function main() {
             console.log(`Test: ${failure.testName}`);
           }
           console.log(`Type: ${failure.failureType}`);
-          console.log(`Error: ${failure.error.substring(0, 200)}${failure.error.length > 200 ? "..." : ""}`);
+          console.log(
+            `Error: ${failure.error.substring(0, 200)}${failure.error.length > 200 ? "..." : ""}`
+          );
           if (failure.stack) {
-            console.log(`Stack: ${failure.stack.split("\n").slice(0, 3).join("\n")}...`);
+            console.log(
+              `Stack: ${failure.stack.split("\n").slice(0, 3).join("\n")}...`
+            );
           }
           console.log("");
         }

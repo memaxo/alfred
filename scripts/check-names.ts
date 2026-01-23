@@ -64,14 +64,14 @@ function stripKnownSuffixes(stem: string): string {
 
 function baseStem(file: string): string {
   const name = basename(file);
-  
+
   // Handle .integration.test.ts and .e2e.test.ts files - extract base name before .integration/.e2e
   if (name.includes(".integration.test.") || name.includes(".e2e.test.")) {
     const parts = name.split(".");
     const basePart = parts[0];
     return basePart;
   }
-  
+
   // Handle .test.ts, .spec.ts, .types.ts, .hot.ts
   if (name.endsWith(".d.ts")) {
     return stripKnownSuffixes(name.slice(0, -".d.ts".length));
@@ -92,22 +92,37 @@ function allowFrameworkFileStem(stem: string, file: string): boolean {
   if (stem.includes("$")) {
     return true;
   }
-  
+
   // Allow React/React Native ergonomics in UI packages (per .ruler/01-naming-conventions.md)
   // Examples: use-color-scheme.ts, android-navigation-bar.tsx, header-button.tsx, sign-in.tsx
-  if (file.includes("/packages/ui/") || file.includes("/apps/web/src/") || file.includes("/apps/native/")) {
+  if (
+    file.includes("/packages/ui/") ||
+    file.includes("/apps/web/src/") ||
+    file.includes("/apps/native/")
+  ) {
     // Allow common UI patterns: use-*, *-button, *-bar, sign-*, etc.
-    if (stem.startsWith("use-") || stem.endsWith("-button") || stem.endsWith("-bar") || 
-        stem.startsWith("sign-") || stem.includes("-navigation-") || stem.includes("-color-")) {
+    if (
+      stem.startsWith("use-") ||
+      stem.endsWith("-button") ||
+      stem.endsWith("-bar") ||
+      stem.startsWith("sign-") ||
+      stem.includes("-navigation-") ||
+      stem.includes("-color-")
+    ) {
       return true;
     }
   }
-  
+
   // Allow generated outputs outside apps/*/src and packages/*/src
-  if (!file.match(/\/apps\/[^/]+\/src\//) && !file.match(/\/packages\/[^/]+\/src\//)) {
+  if (
+    !(
+      file.match(/\/apps\/[^/]+\/src\//) ||
+      file.match(/\/packages\/[^/]+\/src\//)
+    )
+  ) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -179,14 +194,16 @@ function checkExportedSymbols(
         }
 
         // Skip destructured parameters (handled separately)
-        if (ts.isObjectBindingPattern(param.name) || ts.isArrayBindingPattern(param.name)) {
+        if (
+          ts.isObjectBindingPattern(param.name) ||
+          ts.isArrayBindingPattern(param.name)
+        ) {
           return;
         }
 
-        const paramName =
-          ts.isIdentifier(param.name)
-            ? param.name.text
-            : param.name.getText(sourceFile);
+        const paramName = ts.isIdentifier(param.name)
+          ? param.name.text
+          : param.name.getText(sourceFile);
         const line =
           sourceFile.getLineAndCharacterOfPosition(param.name.getStart()).line +
           1;
@@ -281,7 +298,11 @@ async function checkNames(): Promise<Violation[]> {
 
       // Skip lines that are only comments
       const trimmed = line.trim();
-      if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
+      if (
+        trimmed.startsWith("//") ||
+        trimmed.startsWith("*") ||
+        trimmed.startsWith("/*")
+      ) {
         continue;
       }
 

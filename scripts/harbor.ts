@@ -290,7 +290,7 @@ function dockerComposeWithDockerSock(): string {
     "      - /var/run/docker.sock:/var/run/docker.sock",
     // Mount the host workspace directory at the SAME absolute host path, so
     // Docker launched from inside the container can mount it successfully.
-      "      - ${CONTEXT_DIR}/workspace:${CONTEXT_DIR}/workspace:rw",
+    "      - ${CONTEXT_DIR}/workspace:${CONTEXT_DIR}/workspace:rw",
     "    deploy:",
     "      resources:",
     "        limits:",
