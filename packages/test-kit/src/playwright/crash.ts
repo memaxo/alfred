@@ -80,7 +80,7 @@ export function createCrashMonitor(
   // Detect page crash
   page.on("crash", async () => {
     const screenshot = screenshots
-      ? await screenshots.captureError("page-crash").catch(() => undefined)
+      ? await screenshots.captureError("page-crash").catch(() => {})
       : undefined;
 
     crashes.push({

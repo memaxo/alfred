@@ -5,9 +5,9 @@
  * into conversations.
  */
 
+import { randomUUID } from "node:crypto";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
-import { randomUUID } from "node:crypto";
 import type { UIMessage } from "@alfred/type/stream";
 
 type FormSubmission = {
@@ -25,7 +25,8 @@ type FormSubmission = {
  * @param submission - Form submission data
  */
 export async function inject(submission: FormSubmission): Promise<void> {
-  const { userId, conversationId, formId, toolCallId, data, schema } = submission;
+  const { userId, conversationId, formId, toolCallId, data, schema } =
+    submission;
 
   // Create tool-result part from form submission
   // Match AI SDK v6 tool-result format: { type, toolCallId, toolName, output }

@@ -36,4 +36,3 @@ export const linearInputSchema = z.object({
   description: z.string().optional(),
   issueUrl: z.string().optional(),
 });
-

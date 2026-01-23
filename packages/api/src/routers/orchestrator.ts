@@ -49,7 +49,9 @@ export const orchestratorRouter = router({
       const stopTimer = orchestratorGenerateDurationSeconds.startTimer();
       orchestratorGenerateRequestsTotal.inc({ status: "started" });
       try {
-        const { generateOrchestratorText } = await import("../services/orchestrator");
+        const { generateOrchestratorText } = await import(
+          "../services/orchestrator"
+        );
         const result = await generateOrchestratorText({
           userId: ctx.session.user.id,
           projectId: input.projectId,
@@ -98,7 +100,9 @@ export const orchestratorRouter = router({
           message: "session_required",
         });
       }
-      const { listRunsWithDetails } = await import("../services/orchestrator-runs");
+      const { listRunsWithDetails } = await import(
+        "../services/orchestrator-runs"
+      );
       return await listRunsWithDetails({
         userId: ctx.session.user.id,
         status: input.status,
@@ -116,7 +120,9 @@ export const orchestratorRouter = router({
           message: "session_required",
         });
       }
-      const { getRunWithDetails } = await import("../services/orchestrator-runs");
+      const { getRunWithDetails } = await import(
+        "../services/orchestrator-runs"
+      );
       return await getRunWithDetails({
         runId: input.runId,
         userId: ctx.session.user.id,

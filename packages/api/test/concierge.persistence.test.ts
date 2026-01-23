@@ -123,4 +123,3 @@ describe("concierge persistence (db-shim)", () => {
     expect(deltas[0]?.scope).toBe("workflow_run");
   });
 });
-

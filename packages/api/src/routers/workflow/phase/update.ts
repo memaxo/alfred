@@ -6,8 +6,8 @@ import { requirePolicy } from "../../../gate";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
 import {
-  WorkflowCheckpointStorage,
   getTestCheckpointStorage,
+  WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
 import { mapWorkflowResourceLocal } from "../../../workflow/resource";
 
@@ -41,7 +41,9 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
     const startTime = performance.now();
 
     try {
-      const { phaseUpdatePlanDurationSeconds } = await import("@alfred/pipeline/metrics");
+      const { phaseUpdatePlanDurationSeconds } = await import(
+        "@alfred/pipeline/metrics"
+      );
 
       const { structuredPlanSchema } = await import("@alfred/plan/schema");
       const { hasCycles, planToWaves } = await import("@alfred/plan/generate");
@@ -65,7 +67,9 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
       const storage = isTestMode
         ? new WorkflowCheckpointStorage(getTestCheckpointStorage())
         : new WorkflowCheckpointStorage(
-            new (await import("@alfred/db/repo/workflow")).PostgresCheckpointStorage()
+            new (
+              await import("@alfred/db/repo/workflow")
+            ).PostgresCheckpointStorage()
           );
       const snapshot = await storage.load(input.runId);
 
@@ -80,7 +84,10 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
 
       // Update snapshot context
       const ctxMap = new Map(snapshot.contextEntries ?? []);
-      const planOutput = ctxMap.get("planOutput") as Record<string, unknown> | null;
+      const planOutput = ctxMap.get("planOutput") as Record<
+        string,
+        unknown
+      > | null;
 
       if (planOutput) {
         ctxMap.set("planOutput", {
@@ -90,7 +97,10 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
         });
       }
 
-      const scheduleOutputEntry = ctxMap.get("scheduleOutput") as Record<string, unknown> | null;
+      const scheduleOutputEntry = ctxMap.get("scheduleOutput") as Record<
+        string,
+        unknown
+      > | null;
 
       if (scheduleOutputEntry) {
         ctxMap.set("scheduleOutput", {
@@ -130,10 +140,11 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
       };
     } catch (error) {
       const durationSec = (performance.now() - startTime) / 1000;
-      const { phaseUpdatePlanDurationSeconds } = await import("@alfred/pipeline/metrics");
+      const { phaseUpdatePlanDurationSeconds } = await import(
+        "@alfred/pipeline/metrics"
+      );
       phaseUpdatePlanDurationSeconds.observe(durationSec);
 
       throw toTRPCError(error, "workflow_phase_update_plan_failed");
     }
   });
-

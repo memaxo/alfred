@@ -22,7 +22,10 @@ export const attentionItems = pgTable("attention_items", {
   }),
   kind: text("kind").notNull(),
   status: text("status").$type<AttentionStatus>().notNull().default("open"),
-  urgency: text("urgency").$type<AttentionUrgency>().notNull().default("normal"),
+  urgency: text("urgency")
+    .$type<AttentionUrgency>()
+    .notNull()
+    .default("normal"),
   title: text("title"),
   body: text("body"),
   payload: jsonb("payload"),
@@ -33,4 +36,3 @@ export const attentionItems = pgTable("attention_items", {
 
 export type AttentionItem = typeof attentionItems.$inferSelect;
 export type NewAttentionItem = typeof attentionItems.$inferInsert;
-

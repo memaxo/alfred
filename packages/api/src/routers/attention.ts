@@ -1,11 +1,11 @@
 import { attentionRepo } from "@alfred/db";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
-import { assertResourceAccess } from "../utils/error-helpers";
 import { resolveAttentionItem } from "../services/attention";
 import type { NotifyEvent } from "../services/notify";
 import { subscribeToNotify } from "../services/notify";
 import { authedProcedure, rateLimit, router } from "../trpc";
+import { assertResourceAccess } from "../utils/error-helpers";
 
 const attentionStatusSchema = z.enum(["open", "acknowledged", "resolved"]);
 const attentionUrgencySchema = z.enum(["low", "normal", "high", "critical"]);
@@ -69,4 +69,3 @@ export const attentionRouter = router({
     })
   ),
 });
-

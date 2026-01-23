@@ -24,7 +24,7 @@ export function parseOptionalDate(
   value: string | null | undefined
 ): Date | null | undefined {
   if (value === undefined) {
-    return undefined;
+    return;
   }
   if (value === null) {
     return null;

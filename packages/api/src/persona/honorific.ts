@@ -1,5 +1,8 @@
 import * as userRepo from "@alfred/db/repo/user";
-import { parseHonorificPreference, type HonorificPreference } from "@alfred/persona";
+import {
+  type HonorificPreference,
+  parseHonorificPreference,
+} from "@alfred/persona";
 
 const HONORIFIC_PREF_KEY = "persona.honorific";
 
@@ -26,4 +29,3 @@ export async function getHonorificPreference(
     return "sir";
   }
 }
-

@@ -1,6 +1,6 @@
-import type { PipelineEvent } from "@alfred/pipeline";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
+import type { PipelineEvent } from "@alfred/pipeline";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
@@ -10,8 +10,8 @@ import { upsertWorkflowPatternFromCompletion } from "../../services/pattern";
 import { authedProcedure } from "../../trpc";
 import { toTRPCError } from "../../utils/error";
 import {
-  WorkflowCheckpointStorage,
   getTestCheckpointStorage,
+  WorkflowCheckpointStorage,
 } from "../../workflow/checkpoint";
 
 const isTestMode =
@@ -28,7 +28,9 @@ export const workflowResumePipelineProcedure = authedProcedure
     observable<PipelineEvent>((emit) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
+        emit.error(
+          new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
+        );
         return () => {};
       }
 
@@ -55,7 +57,9 @@ export const workflowResumePipelineProcedure = authedProcedure
           ]);
 
           const storage = new WorkflowCheckpointStorage(
-            isTestMode ? getTestCheckpointStorage() : new PostgresCheckpointStorage()
+            isTestMode
+              ? getTestCheckpointStorage()
+              : new PostgresCheckpointStorage()
           );
           const snapshot = await storage.load(input.runId);
           if (!snapshot) {
@@ -93,7 +97,8 @@ export const workflowResumePipelineProcedure = authedProcedure
 
           const ctxEntries = new Map(resumeSnapshot.contextEntries ?? []);
           const workspace =
-            (ctxEntries.get("workspace") as string | undefined) ?? process.cwd();
+            (ctxEntries.get("workspace") as string | undefined) ??
+            process.cwd();
           const userId =
             (ctxEntries.get("userId") as string | undefined) ?? session.user.id;
           const linearSessionId = ctxEntries.get("linearSessionId");
@@ -191,8 +196,14 @@ export const workflowResumePipelineProcedure = authedProcedure
                 ? {
                     sessionId: linearSessionId,
                     space: linearSpace,
-                    teamId: typeof linearTeamId === "string" ? linearTeamId : undefined,
-                    issueId: typeof linearIssueId === "string" ? linearIssueId : undefined,
+                    teamId:
+                      typeof linearTeamId === "string"
+                        ? linearTeamId
+                        : undefined,
+                    issueId:
+                      typeof linearIssueId === "string"
+                        ? linearIssueId
+                        : undefined,
                     authz: linearAuthz,
                   }
                 : undefined,
@@ -217,9 +228,12 @@ export const workflowResumePipelineProcedure = authedProcedure
                     const { createContextFromSnapshot } = await import(
                       "@alfred/pipeline/snapshot"
                     );
-                    const ctxDecoded = createContextFromSnapshot(finalSnapshot, {
-                      emit: () => {},
-                    });
+                    const ctxDecoded = createContextFromSnapshot(
+                      finalSnapshot,
+                      {
+                        emit: () => {},
+                      }
+                    );
                     const planOutput = ctxDecoded.get("planOutput") as
                       | { structuredPlan?: unknown }
                       | undefined;
@@ -228,15 +242,20 @@ export const workflowResumePipelineProcedure = authedProcedure
                       | undefined;
                     const plan = planOutput?.structuredPlan;
 
-                    const isRecord = (value: unknown): value is Record<string, unknown> =>
-                      typeof value === "object" && value !== null && !Array.isArray(value);
+                    const isRecord = (
+                      value: unknown
+                    ): value is Record<string, unknown> =>
+                      typeof value === "object" &&
+                      value !== null &&
+                      !Array.isArray(value);
 
                     if (isRecord(plan)) {
                       const phases = plan.phases;
                       const resources = plan.resources;
                       const evaluationCriteria = plan.evaluationCriteria;
                       const intent =
-                        typeof plan.intent === "string" && plan.intent.length > 0
+                        typeof plan.intent === "string" &&
+                        plan.intent.length > 0
                           ? plan.intent
                           : finalSnapshot.requirement;
 
@@ -293,7 +312,8 @@ export const workflowResumePipelineProcedure = authedProcedure
                 await workflowRepo.updateRun(input.runId, {
                   status: "failed",
                   completedAt: new Date(),
-                  errorMessage: error instanceof Error ? error.message : String(error),
+                  errorMessage:
+                    error instanceof Error ? error.message : String(error),
                 });
               } catch {
                 // Best-effort.
@@ -304,11 +324,16 @@ export const workflowResumePipelineProcedure = authedProcedure
             }
           })();
 
-          const { wrapEventEnvelope } = await import("@alfred/agent/utils/envelope");
+          const { wrapEventEnvelope } = await import(
+            "@alfred/agent/utils/envelope"
+          );
 
           const persistTasks = new Set<Promise<void>>();
           const persistPipelineEvent = (event: PipelineEvent): void => {
-            if (event.type === "stage:progress" || event.type === "agent:progress") {
+            if (
+              event.type === "stage:progress" ||
+              event.type === "agent:progress"
+            ) {
               return;
             }
 
@@ -464,4 +489,3 @@ export const workflowResumePipelineProcedure = authedProcedure
       };
     })
   );
-

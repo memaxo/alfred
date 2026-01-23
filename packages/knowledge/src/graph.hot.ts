@@ -5,24 +5,15 @@ import { desc, inArray } from "drizzle-orm";
  * Type guard for JSONB properties object.
  * Fast path: no allocations, pure type narrowing.
  */
-function isPropertiesObject(
-  value: unknown
-): value is Record<string, unknown> {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value)
-  );
+function isPropertiesObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**
  * Extract title from properties with type safety.
  * Returns label fallback if title not found.
  */
-function extractTitle(
-  properties: unknown,
-  label: string
-): string {
+function extractTitle(properties: unknown, label: string): string {
   if (!isPropertiesObject(properties)) {
     return label;
   }
@@ -34,9 +25,7 @@ function extractTitle(
  * Extract properties object with type safety.
  * Returns empty object if invalid.
  */
-function extractProperties(
-  properties: unknown
-): Record<string, unknown> {
+function extractProperties(properties: unknown): Record<string, unknown> {
   if (!isPropertiesObject(properties)) {
     return {};
   }

@@ -5,8 +5,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { containsFormComponents, extractFormId } from "../detect";
 import type { UIComponent } from "@alfred/type/genui";
+import { containsFormComponents, extractFormId } from "../detect";
 
 describe("detect", () => {
   describe("containsFormComponents", () => {

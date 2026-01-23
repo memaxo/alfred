@@ -1,7 +1,7 @@
 import { planRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { validateIntentUserId, requireUserId } from "../services/plan";
+import { requireUserId, validateIntentUserId } from "../services/plan";
 import { authedProcedure, router } from "../trpc.js";
 
 /**
@@ -509,7 +509,9 @@ export const planRouter = router({
       const userId = requireUserId(ctx.session);
 
       try {
-        const { categorizePatterns, matchPatterns } = await import("@alfred/plan");
+        const { categorizePatterns, matchPatterns } = await import(
+          "@alfred/plan"
+        );
         const matches = await matchPatterns(input.intent, input.projectId, {
           minSimilarity: input.minSimilarity,
           maxResults: input.maxResults,

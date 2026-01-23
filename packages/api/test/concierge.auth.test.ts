@@ -47,12 +47,13 @@ describe("concierge routers auth", () => {
     await expect(unauthed.notify.status()).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
-    await expect(unauthed.notify.ping({ message: "hi" })).rejects.toMatchObject({
-      code: "UNAUTHORIZED",
-    });
+    await expect(unauthed.notify.ping({ message: "hi" })).rejects.toMatchObject(
+      {
+        code: "UNAUTHORIZED",
+      }
+    );
     await expect(unauthed.notify.subscribe()).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
   });
 });
-

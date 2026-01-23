@@ -36,7 +36,13 @@ type DashboardProps = {
   initialMode?: ModeId;
 };
 
-type PanelId = "focus" | "cognitive" | "workflow" | "metrics" | "voice" | "knowledge";
+type PanelId =
+  | "focus"
+  | "cognitive"
+  | "workflow"
+  | "metrics"
+  | "voice"
+  | "knowledge";
 type ModeId = "none" | "chat" | "debug" | "plan" | "help";
 
 const PANELS: PanelId[] = [

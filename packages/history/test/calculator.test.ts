@@ -2,11 +2,11 @@ import { describe, expect, it } from "bun:test";
 import {
   BUDGET_RATIOS,
   calculateBudget,
+  calculateUsageCost,
   checkBudgetHealth,
   estimateTurnsRemaining,
-  calculateUsageCost,
-  getAllowedOverdraft,
   formatBudgetSummary,
+  getAllowedOverdraft,
 } from "../src/calculator";
 
 describe("Budget Calculator", () => {
@@ -38,9 +38,9 @@ describe("Budget Calculator", () => {
       expect(budget.maxContextTokens).toBe(64_000);
 
       // Should use calculated percentages since 8% of 64k = 5,120 > 2,000
-      expect(budget.systemReserveTokens).toBe(5_120);
-      expect(budget.headroomTokens).toBe(9_600);
-      expect(budget.toolingReserveTokens).toBe(3_840);
+      expect(budget.systemReserveTokens).toBe(5120);
+      expect(budget.headroomTokens).toBe(9600);
+      expect(budget.toolingReserveTokens).toBe(3840);
     });
 
     it("applies aggressive mode reduction", () => {
@@ -215,8 +215,12 @@ describe("Budget Calculator", () => {
 
     it("estimates turns with typical usage", () => {
       const currentUsage = 10_000;
-      const avgPerTurn = 5_000;
-      const remaining = estimateTurnsRemaining(budget, currentUsage, avgPerTurn);
+      const avgPerTurn = 5000;
+      const remaining = estimateTurnsRemaining(
+        budget,
+        currentUsage,
+        avgPerTurn
+      );
 
       const expectedRemaining = Math.floor(
         (budget.historyBudgetTokens - currentUsage) / avgPerTurn
@@ -228,14 +232,14 @@ describe("Budget Calculator", () => {
       const remaining = estimateTurnsRemaining(
         budget,
         budget.historyBudgetTokens + 1000,
-        5_000
+        5000
       );
       expect(remaining).toBe(0);
     });
 
     it("returns infinity for zero average", () => {
       const remaining = estimateTurnsRemaining(budget, 0, 0);
-      expect(remaining).toBe(Infinity);
+      expect(remaining).toBe(Number.POSITIVE_INFINITY);
     });
   });
 
@@ -243,16 +247,17 @@ describe("Budget Calculator", () => {
     const budget = calculateBudget({ modelId: "anthropic/claude-sonnet-4" });
 
     it("calculates cost for non-cached usage", () => {
-      const cost = calculateUsageCost(budget, 10_000, 2_000, false);
+      const cost = calculateUsageCost(budget, 10_000, 2000, false);
 
       // Claude Sonnet 4: $3/M input, $15/M output
-      const expectedCost = (10_000 / 1_000_000) * 3.0 + (2_000 / 1_000_000) * 15.0;
+      const expectedCost =
+        (10_000 / 1_000_000) * 3.0 + (2000 / 1_000_000) * 15.0;
       expect(cost).toBeCloseTo(expectedCost, 6);
     });
 
     it("applies cached discount", () => {
-      const uncached = calculateUsageCost(budget, 10_000, 2_000, false);
-      const cached = calculateUsageCost(budget, 10_000, 2_000, true);
+      const uncached = calculateUsageCost(budget, 10_000, 2000, false);
+      const cached = calculateUsageCost(budget, 10_000, 2000, true);
 
       // Cached should be cheaper (10x discount: $0.3/M vs $3/M)
       expect(cached).toBeLessThan(uncached);
@@ -264,8 +269,10 @@ describe("Budget Calculator", () => {
     });
 
     it("handles models without cached pricing", () => {
-      const deepseekBudget = calculateBudget({ modelId: "deepseek/deepseek-v3" });
-      const cost = calculateUsageCost(deepseekBudget, 10_000, 2_000, true);
+      const deepseekBudget = calculateBudget({
+        modelId: "deepseek/deepseek-v3",
+      });
+      const cost = calculateUsageCost(deepseekBudget, 10_000, 2000, true);
 
       // Should still calculate (uses cached rate or falls back)
       expect(cost).toBeGreaterThan(0);
@@ -299,7 +306,8 @@ describe("Budget Calculator", () => {
   describe("Cost Projections", () => {
     it("projects reasonable cost ranges", () => {
       const budget = calculateBudget({ modelId: "anthropic/claude-sonnet-4" });
-      const { minCostUsd, typicalCostUsd, maxCostUsd } = budget.estimatedCostPerTurn;
+      const { minCostUsd, typicalCostUsd, maxCostUsd } =
+        budget.estimatedCostPerTurn;
 
       // Min < typical < max
       expect(minCostUsd).toBeLessThan(typicalCostUsd);

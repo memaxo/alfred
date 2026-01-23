@@ -3,11 +3,13 @@ import { db } from "../client";
 import {
   type DeltaBrief,
   type DeltaBriefScope,
-  type NewDeltaBrief,
   deltaBriefs,
+  type NewDeltaBrief,
 } from "../schema/delta";
 
-export async function createDeltaBrief(data: NewDeltaBrief): Promise<DeltaBrief> {
+export async function createDeltaBrief(
+  data: NewDeltaBrief
+): Promise<DeltaBrief> {
   const [row] = await db.insert(deltaBriefs).values(data).returning();
   if (!row) {
     throw new Error("delta_brief_create_failed");
@@ -49,4 +51,3 @@ export async function listDeltaBriefs(args: {
     .limit(limit)
     .offset(offset);
 }
-

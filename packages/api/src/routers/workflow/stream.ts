@@ -3,13 +3,13 @@ import { logger } from "@alfred/logger";
 import type { PipelineEvent } from "@alfred/pipeline";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { CompilationObserver } from "../../services/compilation";
+import { ConciergeObserver } from "../../services/concierge";
 import { authedProcedure, rateLimit } from "../../trpc";
 import { toTRPCError } from "../../utils/error";
 import { enforceWorkflowPlanPolicy } from "../../workflow/access";
 import { WorkflowCheckpointStorage } from "../../workflow/checkpoint";
 import { linearInputSchema, workflowInputSchema } from "../../workflow/input";
-import { CompilationObserver } from "../../services/compilation";
-import { ConciergeObserver } from "../../services/concierge";
 
 export const workflowStreamPipelineProcedure = authedProcedure
   .use(rateLimit)
@@ -18,7 +18,9 @@ export const workflowStreamPipelineProcedure = authedProcedure
     observable<PipelineEvent>((emit) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
+        emit.error(
+          new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
+        );
         return () => {};
       }
 
@@ -33,7 +35,9 @@ export const workflowStreamPipelineProcedure = authedProcedure
             input.mode === "parallel" || input.mode === "sequential"
               ? input.mode
               : "sequential";
-          const { workflowInput } = await import("@alfred/agent/workflow/schema");
+          const { workflowInput } = await import(
+            "@alfred/agent/workflow/schema"
+          );
           const policyInput = workflowInput.parse({
             ...input,
             auto: input.auto ?? "low",
@@ -79,7 +83,9 @@ export const workflowStreamPipelineProcedure = authedProcedure
 
           const rawInput = input as Record<string, unknown>;
           const parsedLinear = linearInputSchema.safeParse(input.linear);
-          let normalizedLinear = parsedLinear.success ? parsedLinear.data : undefined;
+          let normalizedLinear = parsedLinear.success
+            ? parsedLinear.data
+            : undefined;
 
           if (normalizedLinear && input.authzLinear) {
             try {
@@ -110,7 +116,8 @@ export const workflowStreamPipelineProcedure = authedProcedure
           const maxParallel =
             typeof toolgraph === "object" &&
             toolgraph !== null &&
-            typeof (toolgraph as { maxParallel?: unknown }).maxParallel === "number"
+            typeof (toolgraph as { maxParallel?: unknown }).maxParallel ===
+              "number"
               ? (toolgraph as { maxParallel: number }).maxParallel
               : 4;
 
@@ -175,7 +182,8 @@ export const workflowStreamPipelineProcedure = authedProcedure
           };
 
           const workspace =
-            typeof rawInput.workspace === "string" && rawInput.workspace.length > 0
+            typeof rawInput.workspace === "string" &&
+            rawInput.workspace.length > 0
               ? rawInput.workspace
               : typeof rawInput.cw === "string" && rawInput.cw.length > 0
                 ? rawInput.cw
@@ -206,7 +214,8 @@ export const workflowStreamPipelineProcedure = authedProcedure
             requirement: input.requirement,
             workspace,
             userId: session.user.id,
-            authz: typeof rawInput.authz === "string" ? rawInput.authz : undefined,
+            authz:
+              typeof rawInput.authz === "string" ? rawInput.authz : undefined,
             linear: normalizedLinear
               ? {
                   sessionId: normalizedLinear.sessionId ?? "",
@@ -218,12 +227,17 @@ export const workflowStreamPipelineProcedure = authedProcedure
               : undefined,
           };
 
-          const { wrapEventEnvelope } = await import("@alfred/agent/utils/envelope");
+          const { wrapEventEnvelope } = await import(
+            "@alfred/agent/utils/envelope"
+          );
 
           const persistTasks = new Set<Promise<void>>();
           const persistPipelineEvent = (event: PipelineEvent): void => {
             // Skip high-volume chatter
-            if (event.type === "stage:progress" || event.type === "agent:progress") {
+            if (
+              event.type === "stage:progress" ||
+              event.type === "agent:progress"
+            ) {
               return;
             }
 
@@ -363,7 +377,10 @@ export const workflowStreamPipelineProcedure = authedProcedure
 
           void (async () => {
             try {
-              for await (const _event of runner.run(pipelineInput, abortController.signal)) {
+              for await (const _event of runner.run(
+                pipelineInput,
+                abortController.signal
+              )) {
                 void _event;
               }
             } catch (error) {
@@ -395,4 +412,3 @@ export const workflowStreamPipelineProcedure = authedProcedure
       };
     })
   );
-

@@ -34,7 +34,7 @@ function readViteEnv(name: string): string | undefined {
   };
   const env = meta?.env;
   if (!env) {
-    return undefined;
+    return;
   }
   if (name === "ALFRED_LOG_REDACT") {
     return typeof env.ALFRED_LOG_REDACT === "string"
@@ -44,12 +44,15 @@ function readViteEnv(name: string): string | undefined {
   if (name === "LOG_REDACT") {
     return typeof env.LOG_REDACT === "string" ? env.LOG_REDACT : undefined;
   }
-  return undefined;
+  return;
 }
 
 function redactionDisabled(): boolean {
-  const v = readNodeEnv("ALFRED_LOG_REDACT") ?? readNodeEnv("LOG_REDACT") ??
-    readViteEnv("ALFRED_LOG_REDACT") ?? readViteEnv("LOG_REDACT");
+  const v =
+    readNodeEnv("ALFRED_LOG_REDACT") ??
+    readNodeEnv("LOG_REDACT") ??
+    readViteEnv("ALFRED_LOG_REDACT") ??
+    readViteEnv("LOG_REDACT");
   if (!v) {
     return false;
   }

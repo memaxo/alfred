@@ -13,11 +13,7 @@
  * @module @alfred/history/calculator
  */
 
-import {
-  DEFAULT_MODEL_SPEC,
-  getModelSpec,
-  type ModelSpec,
-} from "./registry";
+import { DEFAULT_MODEL_SPEC, getModelSpec, type ModelSpec } from "./registry";
 
 // ============================================================================
 // Research-Based Budget Ratios
@@ -36,7 +32,7 @@ export const BUDGET_RATIOS = Object.freeze({
   DEFAULT_HISTORY_RATIO: 0.55, // 55% - below retrieval degradation threshold
   MIN_HISTORY_RATIO: 0.15, // 15% - minimum viable conversation
   MAX_HISTORY_RATIO: 0.75, // 75% - safety margin from 85% cliff
-  AGGRESSIVE_REDUCTION: 0.10, // 10% reduction when aggressive mode enabled
+  AGGRESSIVE_REDUCTION: 0.1, // 10% reduction when aggressive mode enabled
 
   // Reserve percentages (of total context)
   SYSTEM_RESERVE_RATIO: 0.08, // 8% - critical instructions in primacy zone
@@ -52,12 +48,12 @@ export const BUDGET_RATIOS = Object.freeze({
   CRITICAL_THRESHOLD_RATIO: 0.01, // 1% - fail gracefully
 
   // Absolute minimums (for small context models)
-  MIN_SYSTEM_RESERVE: 2_000,
-  MIN_HEADROOM: 2_000,
-  MIN_TOOLING_RESERVE: 1_000,
+  MIN_SYSTEM_RESERVE: 2000,
+  MIN_HEADROOM: 2000,
+  MIN_TOOLING_RESERVE: 1000,
   MIN_HIGH_OVERDRAFT: 512,
   MIN_MEDIUM_OVERDRAFT: 256,
-  MIN_WARNING_THRESHOLD: 1_000,
+  MIN_WARNING_THRESHOLD: 1000,
 });
 
 // ============================================================================
@@ -148,8 +144,7 @@ export function calculateBudget(config: BudgetConfig): CalculatedBudget {
       : baseContextTokens;
 
   // Calculate history ratio
-  let historyRatio =
-    config.historyRatio ?? modelSpec.recommendedHistoryRatio;
+  let historyRatio = config.historyRatio ?? modelSpec.recommendedHistoryRatio;
 
   if (config.aggressive) {
     historyRatio -= BUDGET_RATIOS.AGGRESSIVE_REDUCTION;
@@ -180,7 +175,10 @@ export function calculateBudget(config: BudgetConfig): CalculatedBudget {
   // Calculate history budget
   const historyWindow = Math.floor(effectiveContextTokens * historyRatio);
   const systemTokens = config.systemTokens ?? systemReserveTokens;
-  const totalReserve = Math.max(systemTokens, systemReserveTokens) + headroomTokens + toolingReserveTokens;
+  const totalReserve =
+    Math.max(systemTokens, systemReserveTokens) +
+    headroomTokens +
+    toolingReserveTokens;
   const historyBudgetTokens = Math.max(0, historyWindow - totalReserve);
 
   // Calculate tier overdrafts (based on history budget)
@@ -206,7 +204,11 @@ export function calculateBudget(config: BudgetConfig): CalculatedBudget {
   );
 
   // Calculate effective utilization
-  const totalAllocated = systemReserveTokens + headroomTokens + toolingReserveTokens + historyBudgetTokens;
+  const totalAllocated =
+    systemReserveTokens +
+    headroomTokens +
+    toolingReserveTokens +
+    historyBudgetTokens;
   const effectiveUtilization = totalAllocated / effectiveContextTokens;
 
   // Calculate cost projections
@@ -257,7 +259,10 @@ function calculateCostProjection(
 
   // Typical: half history budget + medium response
   const typicalInputTokens = systemTokens + historyBudget * 0.5;
-  const typicalOutputTokens = Math.min(2000, spec.capabilities.maxOutputTokens * 0.25);
+  const typicalOutputTokens = Math.min(
+    2000,
+    spec.capabilities.maxOutputTokens * 0.25
+  );
   const typicalCostUsd =
     (typicalInputTokens * inputCostPer1k) / 1000 +
     (typicalOutputTokens * outputCostPer1k) / 1000;
@@ -389,7 +394,7 @@ export function estimateTurnsRemaining(
   avgTokensPerTurn: number
 ): number {
   if (avgTokensPerTurn <= 0) {
-    return Infinity;
+    return Number.POSITIVE_INFINITY;
   }
   const remaining = budget.historyBudgetTokens - currentUsage;
   return Math.max(0, Math.floor(remaining / avgTokensPerTurn));
@@ -404,12 +409,14 @@ export function calculateUsageCost(
   outputTokens: number,
   cached = false
 ): number {
-  const inputRate = cached && budget.modelSpec.pricing.cachedInputPer1M
-    ? budget.modelSpec.pricing.cachedInputPer1M
-    : budget.modelSpec.pricing.inputPer1M;
+  const inputRate =
+    cached && budget.modelSpec.pricing.cachedInputPer1M
+      ? budget.modelSpec.pricing.cachedInputPer1M
+      : budget.modelSpec.pricing.inputPer1M;
 
   const inputCost = (inputTokens / 1_000_000) * inputRate;
-  const outputCost = (outputTokens / 1_000_000) * budget.modelSpec.pricing.outputPer1M;
+  const outputCost =
+    (outputTokens / 1_000_000) * budget.modelSpec.pricing.outputPer1M;
 
   return inputCost + outputCost;
 }
@@ -424,26 +431,26 @@ export function formatBudgetSummary(budget: CalculatedBudget): string {
   return [
     `Model: ${budget.modelSpec.displayName}`,
     `Context Window: ${formatK(budget.effectiveContextTokens)} tokens`,
-    ``,
-    `Budget Allocation:`,
+    "",
+    "Budget Allocation:",
     `  System Reserve:  ${formatK(budget.systemReserveTokens)} (${((budget.systemReserveTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
     `  Headroom:        ${formatK(budget.headroomTokens)} (${((budget.headroomTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
     `  Tooling:         ${formatK(budget.toolingReserveTokens)} (${((budget.toolingReserveTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
     `  History Budget:  ${formatK(budget.historyBudgetTokens)} (${((budget.historyBudgetTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
-    ``,
-    `Overdraft Allowances:`,
+    "",
+    "Overdraft Allowances:",
     `  High Tier:   ${budget.highTierOverdraft} tokens`,
     `  Medium Tier: ${budget.mediumTierOverdraft} tokens`,
-    ``,
-    `Warning Thresholds:`,
+    "",
+    "Warning Thresholds:",
     `  Warning:  < ${formatK(budget.warningThreshold)} remaining`,
     `  Critical: < ${formatK(budget.criticalThreshold)} remaining`,
-    ``,
-    `Cost Estimates (per turn):`,
+    "",
+    "Cost Estimates (per turn):",
     `  Minimum:  ${formatUsd(budget.estimatedCostPerTurn.minCostUsd)}`,
     `  Typical:  ${formatUsd(budget.estimatedCostPerTurn.typicalCostUsd)}`,
     `  Maximum:  ${formatUsd(budget.estimatedCostPerTurn.maxCostUsd)}`,
-    ``,
+    "",
     `Effective Utilization: ${(budget.effectiveUtilization * 100).toFixed(1)}%`,
   ].join("\n");
 }

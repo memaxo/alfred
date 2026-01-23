@@ -23,4 +23,3 @@ describe("delta router", () => {
     expect(list[0]?.scope).toBe("workflow_run");
   });
 });
-

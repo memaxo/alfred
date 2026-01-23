@@ -16,4 +16,3 @@ describe("persona boundaries", () => {
     }
   });
 });
-

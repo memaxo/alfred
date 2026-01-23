@@ -3,7 +3,10 @@ import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { sanitizeResult } from "../utils/generate";
 
-function coerceUsage(value: unknown): { inputTokens: number; outputTokens: number } {
+function coerceUsage(value: unknown): {
+  inputTokens: number;
+  outputTokens: number;
+} {
   if (!value || typeof value !== "object") {
     return { inputTokens: 0, outputTokens: 0 };
   }

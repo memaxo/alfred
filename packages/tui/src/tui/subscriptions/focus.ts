@@ -4,8 +4,8 @@
  * Minimal Concierge Focus polling for TUI panels.
  */
 
-import { getApiClient } from "../api/client";
 import type { ApiResult } from "../api/client";
+import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
 import { addPollingWithFallback, type DataMode } from "./mode";
 
@@ -117,7 +117,9 @@ export type FocusSubscriptionOptions = {
   mode?: DataMode;
 };
 
-export function setupFocusSubscription(options: FocusSubscriptionOptions): void {
+export function setupFocusSubscription(
+  options: FocusSubscriptionOptions
+): void {
   const { manager, store, pollingInterval = 5000, mode } = options;
 
   addPollingWithFallback({
@@ -188,4 +190,3 @@ export function setupFocusSubscription(options: FocusSubscriptionOptions): void 
 export function createFocusStore(): FocusStore {
   return new FocusStore();
 }
-

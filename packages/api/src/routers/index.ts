@@ -2,16 +2,20 @@ import { protectedProcedure, publicProcedure, router } from "../trpc";
 import { adminRouter } from "./admin";
 import { agentfsRouter } from "./agentfs";
 import { assistantRouter } from "./assistant";
+import { attentionRouter } from "./attention";
 import { bookRouter } from "./book";
 import { captureRouter } from "./capture";
 import { codexRouter } from "./codex";
 import { codexIntentRouter } from "./codex-intent";
 import { cognitiveRouter } from "./cognitive";
+import { deltaRouter } from "./delta";
 import { deployRouter } from "./deploy";
 import { droidsRouter } from "./droids";
 import { embedRouter } from "./embed";
 import { evalRouter } from "./eval";
+import { focusRouter } from "./focus";
 import { fsRouter } from "./fs";
+import { genuiRouter } from "./genui";
 import { githubRouter } from "./github";
 import { graphRouter } from "./graph";
 import { homeRouter } from "./home";
@@ -46,10 +50,6 @@ import { visualRouter } from "./visual";
 import { voiceRouter } from "./voice";
 import { workflowRouter } from "./workflow";
 import { workingsetRouter } from "./workingset";
-import { focusRouter } from "./focus";
-import { attentionRouter } from "./attention";
-import { deltaRouter } from "./delta";
-import { genuiRouter } from "./genui";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => "OK"),

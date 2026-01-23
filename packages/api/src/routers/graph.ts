@@ -5,13 +5,10 @@ import { memoryEdges } from "@alfred/db/schema/graph";
 import { logger } from "@alfred/logger";
 import { observable } from "@trpc/server/observable";
 import { and, eq, inArray, or } from "drizzle-orm";
-import type { EdgeRow } from "../services/graph";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
-import {
-  graphQueriesTotal,
-  graphQueryDurationSeconds,
-} from "../metrics";
+import { graphQueriesTotal, graphQueryDurationSeconds } from "../metrics";
+import type { EdgeRow } from "../services/graph";
 import { authedProcedure, router } from "../trpc";
 
 function mapGraphWriteResource(raw: unknown) {

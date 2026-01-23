@@ -5,12 +5,11 @@
  * tool results with GenUI data-ui parts.
  */
 
+import { randomUUID } from "node:crypto";
 import type { SchemaContext } from "@alfred/type/genui";
-import type { NormalizableGenerate } from "./normalize";
 import type { UIMessage } from "@alfred/type/stream";
 import { enrich } from "./enrich";
-import type { ToolResultShape } from "./normalize";
-import { randomUUID } from "node:crypto";
+import type { NormalizableGenerate, ToolResultShape } from "./normalize";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -50,10 +49,7 @@ function inferToolName(data: { toolName?: string; name?: string }): string {
   return "tool";
 }
 
-function getToolInput(shape: {
-  args?: unknown;
-  input?: unknown;
-}): unknown {
+function getToolInput(shape: { args?: unknown; input?: unknown }): unknown {
   if (shape.args !== undefined) {
     return shape.args;
   }

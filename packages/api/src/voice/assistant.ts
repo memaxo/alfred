@@ -122,8 +122,18 @@ function extractToolNames(toolCalls: unknown[]): string[] {
 
 function withPersonaTelemetry(input: {
   result: VoiceAssistantResult;
-  speechAct: "greet" | "ack" | "clarify" | "answer" | "tooling" | "recover" | "close";
-  intent: { type: "workflow" | "approval" | "status_query" | "conversational"; confidence: number | null };
+  speechAct:
+    | "greet"
+    | "ack"
+    | "clarify"
+    | "answer"
+    | "tooling"
+    | "recover"
+    | "close";
+  intent: {
+    type: "workflow" | "approval" | "status_query" | "conversational";
+    confidence: number | null;
+  };
   heuristicFallbackUsed: boolean;
   focusMode: boolean;
   honorific: "sir" | "madam" | "neutral";
@@ -308,7 +318,8 @@ export async function runAssistantForVoice(
                 ? workflowRouted.intent.result.confidence
                 : null,
           },
-          heuristicFallbackUsed: workflowRouted.intent.meta.heuristicFallbackUsed,
+          heuristicFallbackUsed:
+            workflowRouted.intent.meta.heuristicFallbackUsed,
           focusMode,
           honorific,
           sessionStart,
@@ -360,7 +371,10 @@ async function routeVoiceWorkflow(
   // Route based on intent type
   switch (intent.result.type) {
     case "workflow":
-      return { handled: await handleWorkflowIntent(ctx, input, sessionContext), intent };
+      return {
+        handled: await handleWorkflowIntent(ctx, input, sessionContext),
+        intent,
+      };
 
     case "approval":
       return {

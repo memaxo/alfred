@@ -50,7 +50,10 @@ export function subscribeToNotify(userId: string, cb: Subscriber): () => void {
   };
 }
 
-export function notifyStatus(userId: string): { inAppSubscribers: number; pushConfigured: boolean } {
+export function notifyStatus(userId: string): {
+  inAppSubscribers: number;
+  pushConfigured: boolean;
+} {
   return {
     inAppSubscribers: subscribers.get(userId)?.size ?? 0,
     pushConfigured: false,
@@ -120,4 +123,3 @@ export function publishDelta(userId: string, brief: DeltaBrief): void {
 export function publishPing(userId: string, message: string): void {
   publish(userId, { type: "ping", data: { message, timestamp: Date.now() } });
 }
-

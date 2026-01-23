@@ -4,7 +4,11 @@
  * Time-appropriate greetings in the style of a proper butler.
  */
 
-import { formatGreeting, getTransition, timeOfDayFromHour } from "@alfred/persona";
+import {
+  formatGreeting,
+  getTransition,
+  timeOfDayFromHour,
+} from "@alfred/persona";
 import { colors } from "../theme";
 import { dim, fg } from "../typography";
 

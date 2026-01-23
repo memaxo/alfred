@@ -1,12 +1,17 @@
 import { focusRepo } from "@alfred/db";
 import { z } from "zod";
+import { authedProcedure, rateLimit, router } from "../trpc";
 import { assertResourceAccess } from "../utils/error-helpers";
 import { optionalNullableDateSchema } from "../utils/zod-schemas";
-import { authedProcedure, rateLimit, router } from "../trpc";
 
 const focusSetStatusSchema = z.enum(["active", "closed"]);
 const focusLaneSchema = z.enum(["spotlight", "background", "maintenance"]);
-const focusCommitmentStatusSchema = z.enum(["active", "paused", "done", "cancelled"]);
+const focusCommitmentStatusSchema = z.enum([
+  "active",
+  "paused",
+  "done",
+  "cancelled",
+]);
 
 export const focusRouter = router({
   list: authedProcedure
@@ -203,4 +208,3 @@ export const focusRouter = router({
       return { ok: true };
     }),
 });
-

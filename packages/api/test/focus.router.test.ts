@@ -35,4 +35,3 @@ describe("focus router", () => {
     expect(list).toHaveLength(1);
   });
 });
-

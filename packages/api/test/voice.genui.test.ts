@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { uiComponentSchema } from "@alfred/type/genui.zod";
 
 type EnvSnapshot = Record<string, string | undefined>;
@@ -174,7 +182,10 @@ describe("voice workflow GenUI raw output", () => {
                   subtasks: [{ id: "t1" }],
                 },
               },
-              { key: "scheduleOutput", value: { waves: [{ id: "w1", agents: [] }] } },
+              {
+                key: "scheduleOutput",
+                value: { waves: [{ id: "w1", agents: [] }] },
+              },
             ],
           };
         }
@@ -193,13 +204,15 @@ describe("voice workflow GenUI raw output", () => {
           if (k === "scheduleOutput") {
             return { waves: [{ id: "w1", agents: [] }] };
           }
-          return undefined;
+          return;
         },
       }),
       fromSerializable: (v: unknown) => v,
     }));
 
-    const { handleWorkflowIntent } = await import("../src/voice/workflow-handler");
+    const { handleWorkflowIntent } = await import(
+      "../src/voice/workflow-handler"
+    );
 
     const out = await handleWorkflowIntent(
       // ctx unused
@@ -218,4 +231,3 @@ describe("voice workflow GenUI raw output", () => {
     }
   });
 });
-

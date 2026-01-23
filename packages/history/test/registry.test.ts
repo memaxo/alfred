@@ -1,31 +1,37 @@
 import { describe, expect, it } from "bun:test";
 import {
   getModelSpec,
+  listModelIds,
   listModels,
   listModelsByProvider,
-  listModelIds,
+  MODEL_REGISTRY,
   requireModelSpec,
   resolveModelId,
-  MODEL_REGISTRY,
 } from "../src/registry";
 
 describe("Model Registry", () => {
   describe("resolveModelId", () => {
     it("returns canonical ID for known aliases", () => {
       expect(resolveModelId("gpt-4o")).toBe("openai/gpt-4o");
-      expect(resolveModelId("claude-sonnet-4")).toBe("anthropic/claude-sonnet-4");
+      expect(resolveModelId("claude-sonnet-4")).toBe(
+        "anthropic/claude-sonnet-4"
+      );
       expect(resolveModelId("gemini-2.5-pro")).toBe("google/gemini-2.5-pro");
       expect(resolveModelId("deepseek-v3")).toBe("deepseek/deepseek-v3");
     });
 
     it("returns input unchanged for canonical IDs", () => {
       expect(resolveModelId("openai/gpt-4o")).toBe("openai/gpt-4o");
-      expect(resolveModelId("anthropic/claude-opus-4")).toBe("anthropic/claude-opus-4");
+      expect(resolveModelId("anthropic/claude-opus-4")).toBe(
+        "anthropic/claude-opus-4"
+      );
     });
 
     it("handles case insensitivity", () => {
       expect(resolveModelId("GPT-4O")).toBe("openai/gpt-4o");
-      expect(resolveModelId("Claude-Sonnet-4")).toBe("anthropic/claude-sonnet-4");
+      expect(resolveModelId("Claude-Sonnet-4")).toBe(
+        "anthropic/claude-sonnet-4"
+      );
     });
 
     it("returns normalized unknown models", () => {
@@ -84,7 +90,9 @@ describe("Model Registry", () => {
     });
 
     it("throws for unknown models", () => {
-      expect(() => requireModelSpec("unknown-model")).toThrow("Unknown model: unknown-model");
+      expect(() => requireModelSpec("unknown-model")).toThrow(
+        "Unknown model: unknown-model"
+      );
     });
   });
 
@@ -180,7 +188,9 @@ describe("Model Registry", () => {
       const models = listModels();
       for (const model of models) {
         if (model.pricing.cachedInputPer1M !== undefined) {
-          expect(model.pricing.cachedInputPer1M).toBeLessThan(model.pricing.inputPer1M);
+          expect(model.pricing.cachedInputPer1M).toBeLessThan(
+            model.pricing.inputPer1M
+          );
         }
       }
     });
@@ -207,7 +217,7 @@ describe("Model Registry", () => {
     it("all aliases point to valid registry entries", () => {
       const models = listModels();
       const validIds = new Set(models.map((m) => m.id));
-      
+
       // Check a sample of aliases
       const aliasTests = [
         "gpt-4o",
@@ -215,7 +225,7 @@ describe("Model Registry", () => {
         "gemini-2.5-pro",
         "o3-mini",
       ];
-      
+
       for (const alias of aliasTests) {
         const canonical = resolveModelId(alias);
         expect(validIds.has(canonical)).toBe(true);
@@ -226,7 +236,7 @@ describe("Model Registry", () => {
       const o1 = getModelSpec("openai/o1");
       const r1 = getModelSpec("deepseek/deepseek-r1");
       const gpt4o = getModelSpec("openai/gpt-4o");
-      
+
       expect(o1?.recommendedHistoryRatio).toBe(0.45);
       expect(r1?.recommendedHistoryRatio).toBe(0.45);
       expect(gpt4o?.recommendedHistoryRatio).toBe(0.55);

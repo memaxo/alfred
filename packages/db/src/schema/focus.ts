@@ -6,8 +6,8 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { conversations } from "./conversation";
 import { user } from "./auth";
+import { conversations } from "./conversation";
 import { workflowRuns } from "./workflow";
 
 export type FocusSetStatus = "active" | "closed";
@@ -61,4 +61,3 @@ export type FocusSet = typeof focusSets.$inferSelect;
 export type NewFocusSet = typeof focusSets.$inferInsert;
 export type FocusCommitment = typeof focusCommitments.$inferSelect;
 export type NewFocusCommitment = typeof focusCommitments.$inferInsert;
-

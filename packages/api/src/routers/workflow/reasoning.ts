@@ -12,7 +12,9 @@ import { parseWorkflowInputData } from "../../workflow/input";
 import { mapWorkflowRunResourceLocal } from "../../workflow/resource";
 
 export const workflowReasoningProcedure = authedProcedure
-  .use(requirePolicy("workflow.read", (raw) => mapWorkflowRunResourceLocal(raw)))
+  .use(
+    requirePolicy("workflow.read", (raw) => mapWorkflowRunResourceLocal(raw))
+  )
   .input(
     z.object({
       runId: z.string().min(1),
@@ -41,12 +43,14 @@ export const workflowReasoningProcedure = authedProcedure
     const resource =
       typeof inputData.cw === "string" && inputData.cw.length > 0
         ? inputData.cw
-        : typeof inputData.workspace === "string" && inputData.workspace.length > 0
+        : typeof inputData.workspace === "string" &&
+            inputData.workspace.length > 0
           ? inputData.workspace
           : process.cwd();
 
     const executionId =
-      typeof inputData.executionId === "string" && inputData.executionId.length > 0
+      typeof inputData.executionId === "string" &&
+      inputData.executionId.length > 0
         ? inputData.executionId
         : run.id;
 
@@ -138,7 +142,9 @@ export const workflowReasoningProcedure = authedProcedure
 
       documents = rows
         .filter(
-          (row: (typeof rows)[number]): row is { label: string; documentId: string } =>
+          (
+            row: (typeof rows)[number]
+          ): row is { label: string; documentId: string } =>
             typeof row.documentId === "string" && row.documentId.length > 0
         )
         .map((row: { label: string; documentId: string }) => ({
@@ -157,4 +163,3 @@ export const workflowReasoningProcedure = authedProcedure
       },
     };
   });
-

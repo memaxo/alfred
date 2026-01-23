@@ -64,4 +64,3 @@ export type DeltaBriefRecord = {
   data: Record<string, unknown> | null;
   createdAt: Timestamp;
 };
-

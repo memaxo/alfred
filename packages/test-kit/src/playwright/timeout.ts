@@ -121,7 +121,7 @@ export async function waitForWithHangDetection(
   selector: string,
   options: { timeout?: number; state?: "visible" | "attached" | "hidden" } = {}
 ): Promise<void> {
-  const timeout = options.timeout ?? 30000;
+  const timeout = options.timeout ?? 30_000;
   const checkInterval = 5000;
   let lastCheck = Date.now();
   let attempts = 0;

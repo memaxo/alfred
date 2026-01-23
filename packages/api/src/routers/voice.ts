@@ -12,6 +12,27 @@ import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
+import { getVoicePools } from "../voice/pools";
+import {
+  getVoiceSession,
+  listVoiceSessions,
+  releaseVoiceSession,
+} from "../voice/session-registry";
+import { getVoiceIceServers, isVoiceWebrtcEnabled } from "../voice/webrtc";
+import {
+  addWebrtcIceCandidate,
+  applyWebrtcOffer,
+  closeWebrtcSession,
+  createWebrtcSession,
+  drainWebrtcIceCandidates,
+  getWebrtcSession,
+} from "../voice/webrtcsession";
+import {
+  voiceDownloadModelProcedure,
+  voiceListAvailableModelsProcedure,
+  voiceListVoicesProcedure,
+} from "./voice/model";
+import { voiceSpeechToSpeechProcedure } from "./voice/s2s";
 import {
   toWebrtcResource,
   voiceSessionStatusInput,
@@ -29,30 +50,9 @@ import {
   voiceSttTranscribeStreamingProcedure,
 } from "./voice/stt";
 import {
-  voiceDownloadModelProcedure,
-  voiceListAvailableModelsProcedure,
-  voiceListVoicesProcedure,
-} from "./voice/model";
-import { voiceSpeechToSpeechProcedure } from "./voice/s2s";
-import {
   voicePreviewVoiceProcedure,
   voiceTtsSynthesizeProcedure,
 } from "./voice/tts";
-import { getVoicePools } from "../voice/pools";
-import {
-  getVoiceSession,
-  listVoiceSessions,
-  releaseVoiceSession,
-} from "../voice/session-registry";
-import { getVoiceIceServers, isVoiceWebrtcEnabled } from "../voice/webrtc";
-import {
-  addWebrtcIceCandidate,
-  applyWebrtcOffer,
-  closeWebrtcSession,
-  createWebrtcSession,
-  drainWebrtcIceCandidates,
-  getWebrtcSession,
-} from "../voice/webrtcsession";
 
 export const voiceRouter = router({
   sttTranscribe: voiceSttTranscribeProcedure,

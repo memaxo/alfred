@@ -29,7 +29,7 @@ export const optionalNullableDateSchema = z
   .optional()
   .transform((val) => {
     if (val === undefined) {
-      return undefined;
+      return;
     }
     if (val === null) {
       return null;

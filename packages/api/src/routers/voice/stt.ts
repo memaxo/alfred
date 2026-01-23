@@ -17,7 +17,10 @@ export const voiceSttTranscribeProcedure = authedProcedure
     let language = input.language;
 
     if (session) {
-      language = await resolveSttLanguagePreference(session.user.id, input.language);
+      language = await resolveSttLanguagePreference(
+        session.user.id,
+        input.language
+      );
     }
 
     try {
@@ -40,7 +43,10 @@ export const voiceSttTranscribeStreamingProcedure = authedProcedure
     let language = input.language;
 
     if (session) {
-      language = await resolveSttLanguagePreference(session.user.id, input.language);
+      language = await resolveSttLanguagePreference(
+        session.user.id,
+        input.language
+      );
     }
 
     try {
@@ -78,10 +84,11 @@ export const voiceSttReleaseSessionProcedure = authedProcedure
   .input(sttSessionInput)
   .mutation(async ({ input }) => {
     try {
-      const [{ releaseStreamingSession }, { getVoicePools }] = await Promise.all([
-        import("@alfred/voice/services/stt"),
-        import("../../voice/pools"),
-      ]);
+      const [{ releaseStreamingSession }, { getVoicePools }] =
+        await Promise.all([
+          import("@alfred/voice/services/stt"),
+          import("../../voice/pools"),
+        ]);
       const { sttPool } = getVoicePools();
       releaseStreamingSession(sttPool, input.sessionId);
       return { released: true, sessionId: input.sessionId };
@@ -94,10 +101,11 @@ export const voiceSttSessionInfoProcedure = authedProcedure
   .input(sttSessionInput)
   .query(async ({ input }) => {
     try {
-      const [{ getStreamingSessionInfo }, { getVoicePools }] = await Promise.all([
-        import("@alfred/voice/services/stt"),
-        import("../../voice/pools"),
-      ]);
+      const [{ getStreamingSessionInfo }, { getVoicePools }] =
+        await Promise.all([
+          import("@alfred/voice/services/stt"),
+          import("../../voice/pools"),
+        ]);
       const { sttPool } = getVoicePools();
       const info = getStreamingSessionInfo(sttPool, input.sessionId);
       return { sessionId: input.sessionId, ...info };
@@ -105,4 +113,3 @@ export const voiceSttSessionInfoProcedure = authedProcedure
       throw toTRPCError(error, "voice_stt_session_info_failed");
     }
   });
-

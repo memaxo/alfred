@@ -140,4 +140,3 @@ export const toWebrtcResource = (_raw: unknown) => ({
   kind: "voice.model" as const,
   id: "local-webrtc",
 });
-

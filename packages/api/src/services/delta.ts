@@ -7,10 +7,15 @@ type EnsureRunDeltaArgs = {
   runId: string;
   focusSetId?: string | null;
   commitmentId?: string | null;
-  event: Extract<PipelineEvent, { type: "pipeline:complete" | "pipeline:failed" }>;
+  event: Extract<
+    PipelineEvent,
+    { type: "pipeline:complete" | "pipeline:failed" }
+  >;
 };
 
-export async function ensureRunDeltaBrief(args: EnsureRunDeltaArgs): Promise<void> {
+export async function ensureRunDeltaBrief(
+  args: EnsureRunDeltaArgs
+): Promise<void> {
   const existing = await deltaRepo.listDeltaBriefs({
     userId: args.userId,
     scope: "workflow_run",
@@ -23,7 +28,7 @@ export async function ensureRunDeltaBrief(args: EnsureRunDeltaArgs): Promise<voi
 
   const summaryText =
     args.event.type === "pipeline:complete"
-      ? args.event.summaryText ?? "Workflow completed."
+      ? (args.event.summaryText ?? "Workflow completed.")
       : `Workflow failed: ${args.event.error}`;
 
   const brief = await deltaRepo.createDeltaBrief({
@@ -46,4 +51,3 @@ export async function ensureRunDeltaBrief(args: EnsureRunDeltaArgs): Promise<voi
   });
   publishDelta(args.userId, brief);
 }
-

@@ -1,7 +1,11 @@
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import type { NotifyEvent } from "../services/notify";
-import { notifyStatus, publishPing, subscribeToNotify } from "../services/notify";
+import {
+  notifyStatus,
+  publishPing,
+  subscribeToNotify,
+} from "../services/notify";
 import { authedProcedure, rateLimit, router } from "../trpc";
 
 export const notifyRouter = router({
@@ -31,4 +35,3 @@ export const notifyRouter = router({
     })
   ),
 });
-

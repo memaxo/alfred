@@ -12,10 +12,17 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "bun:test";
 import { randomUUID } from "node:crypto";
-import { createTestCaller } from "../utils/trpc";
 import type { UIComponent } from "@alfred/type/genui";
+import { createTestCaller } from "../utils/trpc";
 
 describe("genui router", () => {
   let caller: Awaited<ReturnType<typeof createTestCaller>>;
@@ -69,7 +76,10 @@ describe("genui router", () => {
 
       // Verify message was created in conversation
       const conversationRepo = await import("@alfred/db/repo/conversation");
-      const messages = await conversationRepo.getMessages(userId, conversationId);
+      const messages = await conversationRepo.getMessages(
+        userId,
+        conversationId
+      );
 
       expect(messages.length).toBe(1);
       const message = messages[0];
@@ -102,7 +112,10 @@ describe("genui router", () => {
       });
 
       const conversationRepo = await import("@alfred/db/repo/conversation");
-      const messages = await conversationRepo.getMessages(userId, conversationId);
+      const messages = await conversationRepo.getMessages(
+        userId,
+        conversationId
+      );
 
       expect(messages.length).toBe(1);
       const part = messages[0].parts[0];
@@ -129,7 +142,10 @@ describe("genui router", () => {
       });
 
       const conversationRepo = await import("@alfred/db/repo/conversation");
-      const messages = await conversationRepo.getMessages(userId, conversationId);
+      const messages = await conversationRepo.getMessages(
+        userId,
+        conversationId
+      );
 
       const part = messages[0].parts[0];
       if (part.type === "tool-result") {
@@ -162,7 +178,10 @@ describe("genui router", () => {
       });
 
       const conversationRepo = await import("@alfred/db/repo/conversation");
-      const messages = await conversationRepo.getMessages(userId, conversationId);
+      const messages = await conversationRepo.getMessages(
+        userId,
+        conversationId
+      );
 
       expect(messages.length).toBe(2);
       expect(messages[0].parts[0]).toMatchObject({
@@ -214,7 +233,10 @@ describe("genui router", () => {
       });
 
       const conversationRepo = await import("@alfred/db/repo/conversation");
-      const messages = await conversationRepo.getMessages(userId, conversationId);
+      const messages = await conversationRepo.getMessages(
+        userId,
+        conversationId
+      );
 
       const part = messages[0].parts[0];
       if (part.type === "tool-result") {

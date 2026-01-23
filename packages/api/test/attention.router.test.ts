@@ -30,4 +30,3 @@ describe("attention router", () => {
     expect(after[0]?.id).toBe(item.id);
   });
 });
-

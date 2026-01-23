@@ -1,17 +1,17 @@
+import { buildPersonaPrompt } from "@alfred/persona";
 import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
-import { buildPersonaPrompt } from "@alfred/persona";
 import { buildAssistantContext } from "../ai/assistant-context";
 import * as generateModule from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { cloneRuntimeContext } from "../context";
-import { getHonorificPreference } from "../persona/honorific";
 import { requirePolicy } from "../gate";
 import {
   assistantGenerateDurationSeconds,
   assistantGenerateRequestsTotal,
 } from "../metrics";
+import { getHonorificPreference } from "../persona/honorific";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { sanitizeResult } from "../utils/generate";
@@ -176,7 +176,7 @@ export const assistantRouter = router({
         stopTimer({ status: "success" });
 
         const output = sanitizeResult(result);
-        
+
         // Extract SchemaContext for GenUI enrichment
         // Determine surface from user agent or default to "web"
         const userAgent = ctx.runtime.userAgent ?? "";
@@ -188,14 +188,14 @@ export const assistantRouter = router({
         ) {
           surface = "mobile";
         }
-        
+
         const schemaContext = {
           userId,
           projectId: input.projectId,
           surface,
           mode: "assistant" as const,
         };
-        
+
         // Persist for replay with async normalization
         const persistResultFn =
           ctx.deps?.assistant?.persistResult ?? generateModule.persistResult;
@@ -256,7 +256,7 @@ export const assistantRouter = router({
           });
           return result;
         }
-        
+
         // Fallback to direct import
         const { toolHandoff } = await import(
           "@alfred/agent/assistant/tool/handoff"

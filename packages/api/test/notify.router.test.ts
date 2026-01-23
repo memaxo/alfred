@@ -61,4 +61,3 @@ describe("notify router", () => {
     expect(typeof ping.data.timestamp).toBe("number");
   });
 });
-

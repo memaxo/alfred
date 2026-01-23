@@ -4,8 +4,8 @@ import {
   type AttentionItem,
   type AttentionStatus,
   type AttentionUrgency,
-  type NewAttentionItem,
   attentionItems,
+  type NewAttentionItem,
 } from "../schema/attention";
 
 export async function createAttentionItem(
@@ -90,4 +90,3 @@ export async function updateAttentionItem(
   }
   return row;
 }
-

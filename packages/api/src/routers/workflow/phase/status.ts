@@ -9,10 +9,14 @@ export const workflowPhaseStatusProcedure = authedProcedure
   .input(z.object({ runId: z.string().min(1) }))
   .query(async ({ input }) => {
     try {
-      const { PostgresCheckpointStorage } = await import("@alfred/db/repo/workflow");
+      const { PostgresCheckpointStorage } = await import(
+        "@alfred/db/repo/workflow"
+      );
       const { getResumeStage } = await import("@alfred/pipeline/snapshot");
 
-      const storage = new WorkflowCheckpointStorage(new PostgresCheckpointStorage());
+      const storage = new WorkflowCheckpointStorage(
+        new PostgresCheckpointStorage()
+      );
       const snapshot = await storage.load(input.runId);
 
       if (!snapshot) {
@@ -45,4 +49,3 @@ export const workflowPhaseStatusProcedure = authedProcedure
       throw toTRPCError(error, "workflow_phase_status_failed");
     }
   });
-

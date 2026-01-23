@@ -7,12 +7,9 @@
  * @module @alfred/history/tracking
  */
 
-import { Counter, Gauge, Histogram, Registry } from "prom-client";
-import {
-  calculateBudget,
-  type CalculatedBudget,
-} from "./calculator";
 import type { ModelProvider } from "@alfred/type/model";
+import { Counter, Gauge, Histogram, Registry } from "prom-client";
+import { type CalculatedBudget, calculateBudget } from "./calculator";
 import { getModelSpec } from "./registry";
 
 // ============================================================================
@@ -141,7 +138,7 @@ export const trackingMetrics = {
     name: "alfred_request_latency_ms",
     help: "Request latency in milliseconds",
     labelNames: ["provider", "model"],
-    buckets: [50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
+    buckets: [50, 100, 250, 500, 1000, 2500, 5000, 10_000, 30_000],
     registers: [defaultRegistry],
   }),
 
@@ -192,7 +189,7 @@ export class UsageTracker {
 
   constructor(config: TrackingConfig) {
     this.sessionId = config.sessionId;
-    this.budgetUsd = config.budgetUsd ?? Infinity;
+    this.budgetUsd = config.budgetUsd ?? Number.POSITIVE_INFINITY;
     this.startTime = new Date();
     this.verbose = config.verbose ?? false;
 
@@ -208,10 +205,7 @@ export class UsageTracker {
         { session: this.sessionId },
         this.budgetUsd
       );
-      trackingMetrics.budgetUtilization.set(
-        { session: this.sessionId },
-        0
-      );
+      trackingMetrics.budgetUtilization.set({ session: this.sessionId }, 0);
     }
   }
 
@@ -389,17 +383,20 @@ export class UsageTracker {
     const percentUsed = (this.totalCostUsd / this.budgetUsd) * 100;
 
     if (percentUsed >= 100) {
-      trackingMetrics.budgetAlerts.inc(
-        { session: this.sessionId, alert_type: "exceeded" }
-      );
+      trackingMetrics.budgetAlerts.inc({
+        session: this.sessionId,
+        alert_type: "exceeded",
+      });
     } else if (percentUsed >= 90) {
-      trackingMetrics.budgetAlerts.inc(
-        { session: this.sessionId, alert_type: "critical" }
-      );
+      trackingMetrics.budgetAlerts.inc({
+        session: this.sessionId,
+        alert_type: "critical",
+      });
     } else if (percentUsed >= 75) {
-      trackingMetrics.budgetAlerts.inc(
-        { session: this.sessionId, alert_type: "warning" }
-      );
+      trackingMetrics.budgetAlerts.inc({
+        session: this.sessionId,
+        alert_type: "warning",
+      });
     }
   }
 
@@ -423,13 +420,15 @@ export class UsageTracker {
     }
 
     // Estimate turns remaining based on average cost
-    const avgCostPerTurn = this.records.length > 0
-      ? this.totalCostUsd / this.records.length
-      : this.budget.estimatedCostPerTurn.typicalCostUsd;
+    const avgCostPerTurn =
+      this.records.length > 0
+        ? this.totalCostUsd / this.records.length
+        : this.budget.estimatedCostPerTurn.typicalCostUsd;
 
-    const projectedTurnsRemaining = avgCostPerTurn > 0
-      ? Math.floor(remainingUsd / avgCostPerTurn)
-      : Infinity;
+    const projectedTurnsRemaining =
+      avgCostPerTurn > 0
+        ? Math.floor(remainingUsd / avgCostPerTurn)
+        : Number.POSITIVE_INFINITY;
 
     return {
       budgetUsd: this.budgetUsd,
@@ -445,21 +444,31 @@ export class UsageTracker {
    * Get session summary.
    */
   getSummary(): SessionSummary {
-    const totalInputTokens = this.records.reduce((sum, r) => sum + r.inputTokens, 0);
-    const totalOutputTokens = this.records.reduce((sum, r) => sum + r.outputTokens, 0);
-    const totalCachedTokens = this.records.reduce((sum, r) => sum + r.cachedTokens, 0);
-    const totalReasoningTokens = this.records.reduce((sum, r) => sum + r.reasoningTokens, 0);
+    const totalInputTokens = this.records.reduce(
+      (sum, r) => sum + r.inputTokens,
+      0
+    );
+    const totalOutputTokens = this.records.reduce(
+      (sum, r) => sum + r.outputTokens,
+      0
+    );
+    const totalCachedTokens = this.records.reduce(
+      (sum, r) => sum + r.cachedTokens,
+      0
+    );
+    const totalReasoningTokens = this.records.reduce(
+      (sum, r) => sum + r.reasoningTokens,
+      0
+    );
     const totalLatency = this.records.reduce((sum, r) => sum + r.latencyMs, 0);
-    const avgLatencyMs = this.records.length > 0
-      ? totalLatency / this.records.length
-      : 0;
+    const avgLatencyMs =
+      this.records.length > 0 ? totalLatency / this.records.length : 0;
 
     return {
       sessionId: this.sessionId,
       startTime: this.startTime,
-      endTime: this.records.length > 0
-        ? this.records.at(-1)?.timestamp
-        : undefined,
+      endTime:
+        this.records.length > 0 ? this.records.at(-1)?.timestamp : undefined,
       totalInputTokens,
       totalOutputTokens,
       totalCachedTokens,
@@ -520,16 +529,16 @@ export class UsageTracker {
       `Session: ${summary.sessionId}`,
       `Duration: ${this.formatDuration(summary.startTime, summary.endTime)}`,
       `Turns: ${summary.turnCount}`,
-      ``,
-      `Token Usage:`,
+      "",
+      "Token Usage:",
       `  Input:     ${formatK(summary.totalInputTokens)}`,
       `  Output:    ${formatK(summary.totalOutputTokens)}`,
       `  Cached:    ${formatK(summary.totalCachedTokens)} (${((summary.totalCachedTokens / Math.max(1, summary.totalInputTokens)) * 100).toFixed(1)}% cache hit)`,
       `  Reasoning: ${formatK(summary.totalReasoningTokens)}`,
-      ``,
+      "",
       `Cost: ${formatUsd(summary.totalCostUsd)}`,
       `Avg Latency: ${summary.avgLatencyMs.toFixed(0)}ms`,
-      ``,
+      "",
       `Budget Status: ${summary.budgetStatus.status.toUpperCase()}`,
     ];
 
@@ -542,7 +551,7 @@ export class UsageTracker {
     }
 
     if (summary.modelBreakdown.size > 1) {
-      lines.push(``, `Model Breakdown:`);
+      lines.push("", "Model Breakdown:");
       for (const [modelId, usage] of summary.modelBreakdown) {
         lines.push(
           `  ${modelId}: ${usage.turnCount} turns, ${formatK(usage.inputTokens + usage.outputTokens)} tokens, ${formatUsd(usage.costUsd)}`

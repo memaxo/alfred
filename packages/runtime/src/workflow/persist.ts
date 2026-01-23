@@ -1,13 +1,13 @@
-import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { enrichToolResultEvent } from "@alfred/agent/utils/enrich-event";
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { eventToUiMessages } from "@alfred/agent/utils/normalize";
 import { redactEventData } from "@alfred/agent/utils/redaction";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type { WorkflowEventType } from "@alfred/db/schema/workflow";
 import { logger } from "@alfred/logger";
-import type { SchemaContext } from "@alfred/type/genui";
 import type { WorkflowEvent } from "@alfred/type";
+import type { SchemaContext } from "@alfred/type/genui";
 import { makeEventId } from "@alfred/type/id";
 import type { UIMessage } from "@alfred/type/stream";
 import { persistWorkflowMessages } from "./executor";
@@ -90,7 +90,7 @@ function extractSchemaContext(args: {
   event: WorkflowEvent;
 }): SchemaContext {
   const { userId, event } = args;
-  
+
   // Infer mode from event type
   let mode: "assistant" | "workflow" | "focus" = "assistant";
   if (
@@ -102,10 +102,10 @@ function extractSchemaContext(args: {
   ) {
     mode = "workflow";
   }
-  
+
   // Default surface to "web" (can be enhanced later with runtime context)
   const surface: "web" | "mobile" | "voice" | "tui" = "web";
-  
+
   return {
     userId,
     surface,
@@ -125,7 +125,7 @@ async function maybeUiMessagesAsync(
     const enriched = await enrichToolResultEvent(event, ctx);
     return enriched;
   }
-  
+
   // Use synchronous conversion for other event types
   return maybeUiMessages(event);
 }

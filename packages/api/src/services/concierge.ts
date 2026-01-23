@@ -1,7 +1,7 @@
 import { logger } from "@alfred/logger";
 import type { PipelineEvent, PipelineObserver } from "@alfred/pipeline";
-import { ensureRunDeltaBrief } from "./delta";
 import { upsertAttentionItem, upsertSuspendAttentionItem } from "./attention";
+import { ensureRunDeltaBrief } from "./delta";
 
 type ConciergeObserverOptions = {
   userId: string;
@@ -25,7 +25,10 @@ function defaultFireAndForget(
 
 export class ConciergeObserver implements PipelineObserver {
   private readonly opts: ConciergeObserverOptions;
-  private readonly fire: (p: Promise<unknown>, meta: Record<string, unknown>) => void;
+  private readonly fire: (
+    p: Promise<unknown>,
+    meta: Record<string, unknown>
+  ) => void;
 
   constructor(options: ConciergeObserverOptions) {
     this.opts = options;
@@ -147,4 +150,3 @@ export class ConciergeObserver implements PipelineObserver {
     }
   }
 }
-

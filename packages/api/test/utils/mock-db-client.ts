@@ -318,10 +318,13 @@ dbModuleStub.focusRepo = {
     commitmentStore.set(id, row);
     return row;
   }),
-  getCommitmentById: vi.fn(async (id: string) => commitmentStore.get(id) ?? null),
+  getCommitmentById: vi.fn(
+    async (id: string) => commitmentStore.get(id) ?? null
+  ),
   listCommitments: vi.fn(async (args: any) => {
     const userId = String(args.userId);
-    const focusSetId = typeof args.focusSetId === "string" ? args.focusSetId : undefined;
+    const focusSetId =
+      typeof args.focusSetId === "string" ? args.focusSetId : undefined;
     const status = args.status as FocusCommitmentRow["status"] | undefined;
     const lane = args.lane as FocusCommitmentRow["lane"] | undefined;
     const limit = typeof args.limit === "number" ? args.limit : 50;
@@ -378,13 +381,16 @@ dbModuleStub.attentionRepo = {
     attentionStore.set(id, row);
     return row;
   }),
-  getAttentionItemById: vi.fn(async (id: string) => attentionStore.get(id) ?? null),
+  getAttentionItemById: vi.fn(
+    async (id: string) => attentionStore.get(id) ?? null
+  ),
   listAttentionItems: vi.fn(async (args: any) => {
     const userId = String(args.userId);
     const kind = typeof args.kind === "string" ? args.kind : undefined;
     const status = args.status as AttentionItemRow["status"] | undefined;
     const urgency = args.urgency as AttentionItemRow["urgency"] | undefined;
-    const focusSetId = typeof args.focusSetId === "string" ? args.focusSetId : undefined;
+    const focusSetId =
+      typeof args.focusSetId === "string" ? args.focusSetId : undefined;
     const commitmentId =
       typeof args.commitmentId === "string" ? args.commitmentId : undefined;
     const workflowRunId =
@@ -399,7 +405,9 @@ dbModuleStub.attentionRepo = {
       .filter((r) => (urgency ? r.urgency === urgency : true))
       .filter((r) => (focusSetId ? r.focusSetId === focusSetId : true))
       .filter((r) => (commitmentId ? r.commitmentId === commitmentId : true))
-      .filter((r) => (workflowRunId ? r.workflowRunId === workflowRunId : true));
+      .filter((r) =>
+        workflowRunId ? r.workflowRunId === workflowRunId : true
+      );
 
     return listByCreatedAtDesc(rows).slice(offset, offset + limit);
   }),
@@ -439,7 +447,8 @@ dbModuleStub.deltaRepo = {
   listDeltaBriefs: vi.fn(async (args: any) => {
     const userId = String(args.userId);
     const scope = args.scope as DeltaBriefRow["scope"] | undefined;
-    const focusSetId = typeof args.focusSetId === "string" ? args.focusSetId : undefined;
+    const focusSetId =
+      typeof args.focusSetId === "string" ? args.focusSetId : undefined;
     const commitmentId =
       typeof args.commitmentId === "string" ? args.commitmentId : undefined;
     const workflowRunId =
@@ -452,7 +461,9 @@ dbModuleStub.deltaRepo = {
       .filter((r) => (scope ? r.scope === scope : true))
       .filter((r) => (focusSetId ? r.focusSetId === focusSetId : true))
       .filter((r) => (commitmentId ? r.commitmentId === commitmentId : true))
-      .filter((r) => (workflowRunId ? r.workflowRunId === workflowRunId : true));
+      .filter((r) =>
+        workflowRunId ? r.workflowRunId === workflowRunId : true
+      );
 
     return listByCreatedAtDesc(rows).slice(offset, offset + limit);
   }),

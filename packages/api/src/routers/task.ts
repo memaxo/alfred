@@ -6,9 +6,8 @@ import {
 } from "@alfred/db/repo/assistant";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
-import { optionalNullableDateSchema } from "../utils/zod-schemas";
 import { authedProcedure, router } from "../trpc";
+import { optionalNullableDateSchema } from "../utils/zod-schemas";
 
 const statusSchema = z.enum([
   "pending",

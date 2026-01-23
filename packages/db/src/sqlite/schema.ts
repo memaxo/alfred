@@ -501,10 +501,7 @@ export function ensureSqliteTestSchema(db: Database): void {
   for (const stmt of statements) {
     try {
       const normalized = stmt
-        .replace(
-          /gen_random_uuid\(\)/g,
-          "(lower(hex(randomblob(16))))"
-        )
+        .replace(/gen_random_uuid\(\)/g, "(lower(hex(randomblob(16))))")
         .replace(/\bnow\(\)/gi, "CURRENT_TIMESTAMP");
       db.exec(normalized);
     } catch (error) {

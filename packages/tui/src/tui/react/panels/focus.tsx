@@ -141,4 +141,3 @@ export function FocusPanel({ width, height, focused, x, y }: FocusPanelProps) {
     </box>
   );
 }
-

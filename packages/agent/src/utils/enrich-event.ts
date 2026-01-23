@@ -5,12 +5,12 @@
  * This is the async version for use in event stream processing.
  */
 
-import type { SchemaContext } from "@alfred/type/genui";
+import { randomUUID } from "node:crypto";
 import type { WorkflowEvent } from "@alfred/type";
+import type { SchemaContext } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
 import { enrich } from "./enrich";
 import { eventToUiMessages } from "./normalize";
-import { randomUUID } from "node:crypto";
 
 type ToolResultEventPayload = WorkflowEvent & {
   _: "tool-result";
@@ -55,7 +55,8 @@ export async function enrichToolResultEvent(
     return null;
   }
 
-  const eventId = "id" in event && typeof event.id === "string" ? event.id : randomUUID();
+  const eventId =
+    "id" in event && typeof event.id === "string" ? event.id : randomUUID();
   return [
     {
       id: eventId,

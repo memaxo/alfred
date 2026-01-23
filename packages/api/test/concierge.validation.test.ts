@@ -37,4 +37,3 @@ describe("concierge routers validation", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
-

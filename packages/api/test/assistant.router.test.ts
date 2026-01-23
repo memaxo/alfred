@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
+import { createMockDeps } from "@alfred/api/deps";
 import {
   getAssistantAgentDefaultsMock,
   resetAgentMocks,
@@ -10,7 +11,6 @@ import {
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
-import { createMockDeps } from "@alfred/api/deps";
 
 setupTestEnv();
 mockPolicyAudit();

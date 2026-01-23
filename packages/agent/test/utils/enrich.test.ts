@@ -2,10 +2,10 @@
  * Tests for tool result GenUI auto-enrichment
  */
 
-import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { isUIDataPart } from "@alfred/type/genui";
 import { enrich } from "../../src/utils/enrich";
 import type { ToolResultShape } from "../../src/utils/normalize";
-import { isUIDataPart } from "@alfred/type/genui";
 
 describe("enrich", () => {
   beforeEach(() => {

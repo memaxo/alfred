@@ -1,3 +1,4 @@
+import { buildPersonaPrompt } from "@alfred/persona";
 import {
   type InferAgentUIMessage,
   type LanguageModel,
@@ -6,8 +7,6 @@ import {
   ToolLoopAgent,
   type ToolLoopAgentSettings,
 } from "ai";
-
-import { buildPersonaPrompt } from "@alfred/persona";
 import { getModelForRole } from "./selector";
 import { buildAssistantTools, buildTools } from "./v6";
 

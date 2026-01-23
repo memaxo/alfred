@@ -21,8 +21,10 @@ const dockerOk = isDockerAvailable();
 const imageOk = dockerOk && isImageAvailable(IMAGE);
 
 function hasZenKey(): boolean {
-  return typeof process.env.OPENCODE_API_KEY === "string" &&
-    process.env.OPENCODE_API_KEY.trim().length > 0;
+  return (
+    typeof process.env.OPENCODE_API_KEY === "string" &&
+    process.env.OPENCODE_API_KEY.trim().length > 0
+  );
 }
 
 function e2eEnabled(): boolean {
@@ -83,4 +85,3 @@ describe("OpenCode Zen (grok-code) via ACP (integration)", () => {
     }
   );
 });
-

@@ -2,8 +2,8 @@ import { db } from "@alfred/db";
 import { upsertEdges, upsertNodes } from "@alfred/db/repo/graph";
 import { touchNodes } from "@alfred/db/repo/graph/write";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
-import { logger } from "@alfred/logger";
 import type { Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
+import { logger } from "@alfred/logger";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 /** Maximum facts to fetch for entity filtering */
@@ -162,14 +162,12 @@ function makeEdge(
  * Extracts business logic from knowledge router to keep routers thin.
  * Handles knowledge graph visualization, extraction, and persistence.
  */
-export async function visualizeKnowledge(
-  input: {
-    text: string;
-    resource?: string;
-    limit?: number;
-    userId: string;
-  }
-): Promise<VisualizeResult> {
+export async function visualizeKnowledge(input: {
+  text: string;
+  resource?: string;
+  limit?: number;
+  userId: string;
+}): Promise<VisualizeResult> {
   const resource = input.resource ?? "user";
   const limit = input.limit ?? 20;
   const source = `mindscape:${input.userId}`;

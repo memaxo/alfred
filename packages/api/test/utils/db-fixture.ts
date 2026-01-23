@@ -7,9 +7,8 @@
  * @see docs/architecture/test-dependency-injection.md
  */
 
-import { sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@alfred/db";
+import { sql } from "drizzle-orm";
 
 type DbFixture = {
   db: typeof db;

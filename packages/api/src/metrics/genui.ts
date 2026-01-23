@@ -4,4 +4,3 @@ export {
   genuiSchemaGenerationDurationSeconds,
   genuiSchemaGenerationTotal,
 } from "@alfred/metrics/genui";
-

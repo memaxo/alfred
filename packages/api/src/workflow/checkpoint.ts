@@ -1,10 +1,13 @@
-import type { CheckpointStorage, PipelineSnapshot } from "@alfred/pipeline";
+import type {
+  CheckpointStorage,
+  PipelineSnapshot,
+  PipelineSnapshot as TypedPipelineSnapshot,
+} from "@alfred/pipeline";
 import { InMemoryCheckpointStorage } from "@alfred/pipeline/observers";
 import {
   isSerializable,
   type SerializableValue,
 } from "@alfred/pipeline/snapshot";
-import type { PipelineSnapshot as TypedPipelineSnapshot } from "@alfred/pipeline";
 import { z } from "zod";
 
 let memCheckpointStorage: InMemoryCheckpointStorage | null = null;
@@ -89,7 +92,10 @@ export class WorkflowCheckpointStorage implements CheckpointStorage {
       typedEntries.push([key, value]);
     }
     return {
-      ...(parsed.data as Omit<TypedPipelineSnapshot, "contextEntries" | "stageResults">),
+      ...(parsed.data as Omit<
+        TypedPipelineSnapshot,
+        "contextEntries" | "stageResults"
+      >),
       contextEntries: typedEntries,
       stageResults: parsed.data.stageResults ?? [],
     };
@@ -101,4 +107,3 @@ export class WorkflowCheckpointStorage implements CheckpointStorage {
     }
   }
 }
-

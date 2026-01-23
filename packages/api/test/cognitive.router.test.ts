@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { Obligation } from "@alfred/type";
 import { metricsStub } from "./utils/mock-metrics";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";

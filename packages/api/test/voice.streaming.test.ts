@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { resetAgentMocks } from "./utils/agent-mock";
 import { policyStub } from "./utils/mock-metrics";
 

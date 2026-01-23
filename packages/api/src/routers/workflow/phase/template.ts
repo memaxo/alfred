@@ -27,12 +27,15 @@ export const workflowPhaseSaveAsTemplateProcedure = authedProcedure
     }
 
     try {
-      const [{ PostgresCheckpointStorage }, { templateRepo }] = await Promise.all([
-        import("@alfred/db/repo/workflow"),
-        import("@alfred/db"),
-      ]);
+      const [{ PostgresCheckpointStorage }, { templateRepo }] =
+        await Promise.all([
+          import("@alfred/db/repo/workflow"),
+          import("@alfred/db"),
+        ]);
 
-      const storage = new WorkflowCheckpointStorage(new PostgresCheckpointStorage());
+      const storage = new WorkflowCheckpointStorage(
+        new PostgresCheckpointStorage()
+      );
       const snapshot = await storage.load(input.runId);
 
       if (!snapshot) {
@@ -126,4 +129,3 @@ export const workflowPhaseApplyTemplateProcedure = authedProcedure
       throw toTRPCError(error, "workflow_apply_template_failed");
     }
   });
-

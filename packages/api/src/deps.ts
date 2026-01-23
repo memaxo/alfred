@@ -77,7 +77,9 @@ export type PlanDeps = {
 export type AssistantDeps = {
   generateText: (
     input: Parameters<typeof import("./ai/generate").generateText>[0]
-  ) => Promise<Awaited<ReturnType<typeof import("./ai/generate").generateText>>>;
+  ) => Promise<
+    Awaited<ReturnType<typeof import("./ai/generate").generateText>>
+  >;
   persistResult: (
     args: Parameters<typeof import("./ai/generate").persistResult>[0]
   ) => Promise<string | null>;

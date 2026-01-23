@@ -154,8 +154,7 @@ export async function listNetworkConnections(): Promise<{
         const addr = line.slice(1);
         if (addr.includes(":")) {
           currentId++;
-          const isListening =
-            addr.includes("*:") || addr.includes("0.0.0.0:");
+          const isListening = addr.includes("*:") || addr.includes("0.0.0.0:");
           connections.push({
             id: String(currentId),
             localAddress: addr.split("->")[0] ?? addr,
@@ -189,15 +188,17 @@ export async function getTaskHistory(
   userId: string,
   projectId: string | undefined,
   limit: number
-): Promise<{ history: Array<{
-  id: string;
-  type: "agent";
-  name: string;
-  status: "success" | "failure" | "cancelled";
-  startTime: string;
-  duration: number;
-  tokenUsage: undefined;
-}> }> {
+): Promise<{
+  history: Array<{
+    id: string;
+    type: "agent";
+    name: string;
+    status: "success" | "failure" | "cancelled";
+    startTime: string;
+    duration: number;
+    tokenUsage: undefined;
+  }>;
+}> {
   const runs = await workflowRepo.listRuns({
     userId,
     projectId,

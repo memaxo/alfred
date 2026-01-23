@@ -94,10 +94,10 @@ describe("SchemaGenerator", () => {
     const { SchemaGenerator } = await import("../src/services/schema");
     const gen = new SchemaGenerator();
     expect(
-      gen.selectComponent(
-        [{ createdAt: "2026-01-01T00:00:00Z", msg: "hi" }],
-        { surface: "web", mode: "assistant" }
-      )
+      gen.selectComponent([{ createdAt: "2026-01-01T00:00:00Z", msg: "hi" }], {
+        surface: "web",
+        mode: "assistant",
+      })
     ).toBe("list");
   });
 
@@ -211,14 +211,15 @@ describe("SchemaGenerator", () => {
     setEnv("AI_MODEL_REF_CLASSIFY", "openai:gpt-4o-mini");
 
     const { DefaultAIAdapter } = await import("../src/adapters/ai-generation");
-    type MinimalGenerateObjectResult<T> = { object: T } & Record<string, unknown>;
+    type MinimalGenerateObjectResult<T> = { object: T } & Record<
+      string,
+      unknown
+    >;
     const spy = vi
       .spyOn(DefaultAIAdapter.prototype, "generateObject")
-      .mockResolvedValue(
-        {
-          object: { component: "list", props: { items: [] } },
-        } as unknown as MinimalGenerateObjectResult<unknown>
-      );
+      .mockResolvedValue({
+        object: { component: "list", props: { items: [] } },
+      } as unknown as MinimalGenerateObjectResult<unknown>);
 
     const { SchemaGenerator } = await import("../src/services/schema");
     const gen = new SchemaGenerator();
@@ -235,4 +236,3 @@ describe("SchemaGenerator", () => {
     expect(uiComponentSchema.safeParse(out.ui).success).toBe(true);
   });
 });
-

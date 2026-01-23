@@ -11,11 +11,7 @@
  * const budget = calculateBudget({ modelId: "openai/gpt-4o" });
  */
 
-import {
-  getModelSpec,
-  MODEL_REGISTRY,
-  resolveModelId,
-} from "./registry";
+import { getModelSpec, MODEL_REGISTRY, resolveModelId } from "./registry";
 
 export type ModelContextInfo = {
   maxContextTokens: number;

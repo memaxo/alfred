@@ -3,13 +3,15 @@ import { workflowCompilationSchema } from "@alfred/type/compilation";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { requirePolicy } from "../../gate";
-import { rateLimit, router, authedProcedure } from "../../trpc";
+import { authedProcedure, rateLimit, router } from "../../trpc";
 import { mapWorkflowRunResourceLocal } from "../../workflow/resource";
 
 export const workflowCompilationRouter = router({
   get: authedProcedure
     .use(rateLimit)
-    .use(requirePolicy("workflow.read", (raw) => mapWorkflowRunResourceLocal(raw)))
+    .use(
+      requirePolicy("workflow.read", (raw) => mapWorkflowRunResourceLocal(raw))
+    )
     .input(z.object({ runId: z.string().min(1) }))
     .query(async ({ input, ctx }) => {
       const session = ctx.session;
@@ -29,7 +31,9 @@ export const workflowCompilationRouter = router({
       }
 
       const stateData =
-        run.stateData && typeof run.stateData === "object" && run.stateData !== null
+        run.stateData &&
+        typeof run.stateData === "object" &&
+        run.stateData !== null
           ? (run.stateData as Record<string, unknown>)
           : {};
       const compilation = stateData.compilation;
@@ -37,4 +41,3 @@ export const workflowCompilationRouter = router({
       return parsed.success ? parsed.data : null;
     }),
 });
-

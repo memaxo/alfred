@@ -20,7 +20,11 @@ export function int16ToBuffer(view: Int16Array): Buffer {
   if (!B) {
     throw new Error("buffer_unavailable");
   }
-  return B.from(view.buffer as ArrayBuffer, view.byteOffset, view.byteLength) as Buffer;
+  return B.from(
+    view.buffer as ArrayBuffer,
+    view.byteOffset,
+    view.byteLength
+  ) as Buffer;
 }
 
 /**

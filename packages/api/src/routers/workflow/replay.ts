@@ -16,11 +16,13 @@ export const workflowReplayProcedure = authedProcedure
   )
   .query(async ({ input }) => {
     await initWorkflowMetrics();
-    const [{ replayQueriesTotal, replayQueryDurationSeconds }, { unwrapEventEnvelope }] =
-      await Promise.all([
-        import("@alfred/agent/workflow/metrics"),
-        import("@alfred/agent/utils/envelope"),
-      ]);
+    const [
+      { replayQueriesTotal, replayQueryDurationSeconds },
+      { unwrapEventEnvelope },
+    ] = await Promise.all([
+      import("@alfred/agent/workflow/metrics"),
+      import("@alfred/agent/utils/envelope"),
+    ]);
     let stop: (() => void) | null = null;
     try {
       stop = replayQueryDurationSeconds.startTimer({
@@ -63,4 +65,3 @@ export const workflowReplayProcedure = authedProcedure
     }
     return { items: transformed, page, pageSize, total, hasMore };
   });
-

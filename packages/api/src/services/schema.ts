@@ -1,8 +1,8 @@
 import { logger } from "@alfred/logger";
 import type { SchemaContext, UIComponent } from "@alfred/type/genui";
 import { uiComponentSchema } from "@alfred/type/genui.zod";
-import type { ModelMessage } from "ai";
 import type { ModelRole } from "@alfred/type/model";
+import type { ModelMessage } from "ai";
 import {
   genuiSchemaGenerationDurationSeconds,
   genuiSchemaGenerationTotal,
@@ -37,7 +37,9 @@ function coerceRecord(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
-function isPrimitive(value: unknown): value is string | number | boolean | null {
+function isPrimitive(
+  value: unknown
+): value is string | number | boolean | null {
   return (
     value === null ||
     typeof value === "string" ||
@@ -69,7 +71,13 @@ function looksLikeTimestampValue(value: unknown): boolean {
 }
 
 function hasTimestampishField(obj: Record<string, unknown>): boolean {
-  for (const k of ["timestamp", "time", "createdAt", "updatedAt", "startedAt"]) {
+  for (const k of [
+    "timestamp",
+    "time",
+    "createdAt",
+    "updatedAt",
+    "startedAt",
+  ]) {
     const v = obj[k];
     if (looksLikeTimestampValue(v)) {
       return true;
@@ -144,7 +152,10 @@ function buildDeterministicUi(args: {
   };
 }
 
-function buildChartFromNumberArray(nums: number[], title?: string): SchemaResult {
+function buildChartFromNumberArray(
+  nums: number[],
+  title?: string
+): SchemaResult {
   const data = nums.map((value, idx) => ({
     name: `${idx + 1}`,
     value,
@@ -155,7 +166,9 @@ function buildChartFromNumberArray(nums: number[], title?: string): SchemaResult
   });
 }
 
-function buildListFromRecords(records: Array<Record<string, unknown>>): SchemaResult {
+function buildListFromRecords(
+  records: Array<Record<string, unknown>>
+): SchemaResult {
   const items = records.slice(0, 20).map((r, idx) => ({
     id: typeof r.id === "string" && r.id.length > 0 ? r.id : `row-${idx}`,
     content: safeJson(r, 800),
@@ -173,12 +186,18 @@ function buildGridFromRecord(rec: Record<string, unknown>): SchemaResult {
         component: "term",
         props: {
           title: key,
-          lines: [{ text: isPrimitive(value) ? String(value) : safeJson(value) }],
+          lines: [
+            { text: isPrimitive(value) ? String(value) : safeJson(value) },
+          ],
         },
       },
     ],
   }));
-  return buildDeterministicUi({ component: "grid", props: { cols: 2 }, children });
+  return buildDeterministicUi({
+    component: "grid",
+    props: { cols: 2 },
+    children,
+  });
 }
 
 type SchemaGeneratorInit = {
@@ -270,7 +289,8 @@ export class SchemaGenerator {
     preferredComponent?: string | null;
   }): Promise<SchemaResult> {
     const startedAt = performance.now();
-    const picked = args.preferredComponent ?? this.selectComponent(args.data, args.ctx);
+    const picked =
+      args.preferredComponent ?? this.selectComponent(args.data, args.ctx);
     const finish = (result: SchemaResult, outcome: string): SchemaResult => {
       const durationMs = performance.now() - startedAt;
       const component =
@@ -322,7 +342,11 @@ export class SchemaGenerator {
       return finish(out, out.ui ? "success" : "invalid");
     }
 
-    if (picked === "list" && Array.isArray(args.data) && args.data.every(isRecord)) {
+    if (
+      picked === "list" &&
+      Array.isArray(args.data) &&
+      args.data.every(isRecord)
+    ) {
       const out = buildListFromRecords(args.data);
       return finish(out, out.ui ? "success" : "invalid");
     }
@@ -369,7 +393,9 @@ export class SchemaGenerator {
       );
     }
 
-    const { getModelForRole, supportsGenUI } = await import("@alfred/agent/selector");
+    const { getModelForRole, supportsGenUI } = await import(
+      "@alfred/agent/selector"
+    );
     const selection = projectId
       ? await getModelForRole(this.role, { userId, projectId })
       : await getModelForRole(this.role, { userId });
@@ -389,7 +415,11 @@ export class SchemaGenerator {
     }
 
     const { DefaultAIAdapter } = await import("../adapters/ai-generation");
-    const adapter = new DefaultAIAdapter({ userId, projectId, role: this.role });
+    const adapter = new DefaultAIAdapter({
+      userId,
+      projectId,
+      role: this.role,
+    });
 
     const candidates = [picked];
     if (picked === "workflow-timeline") {
@@ -513,4 +543,3 @@ export class SchemaGenerator {
     };
   }
 }
-

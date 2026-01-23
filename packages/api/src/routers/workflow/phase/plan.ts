@@ -9,12 +9,12 @@ import {
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { requirePolicy } from "../../../gate";
+import { ConciergeObserver } from "../../../services/concierge";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
-import { ConciergeObserver } from "../../../services/concierge";
 import {
-  WorkflowCheckpointStorage,
   getTestCheckpointStorage,
+  WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
 import { mapWorkflowResourceLocal } from "../../../workflow/resource";
 
@@ -120,7 +120,9 @@ export const workflowPhasePlanProcedure = authedProcedure
       registerDefaultStages(runner);
 
       const storage = new WorkflowCheckpointStorage(
-        isTestMode ? getTestCheckpointStorage() : new PostgresCheckpointStorage()
+        isTestMode
+          ? getTestCheckpointStorage()
+          : new PostgresCheckpointStorage()
       );
       const queueObserver = new PipelineEventQueueObserver();
       runner.addObserver(queueObserver);
@@ -150,7 +152,10 @@ export const workflowPhasePlanProcedure = authedProcedure
       };
 
       // Run pipeline up to and including 'schedule' stage
-      for await (const _event of runner.runUntilStage(pipelineInput, "schedule")) {
+      for await (const _event of runner.runUntilStage(
+        pipelineInput,
+        "schedule"
+      )) {
         // Events are consumed; outputs stored in context by checkpoint observer
         void _event;
       }
@@ -164,7 +169,9 @@ export const workflowPhasePlanProcedure = authedProcedure
         });
       }
 
-      const { createContextFromSnapshot } = await import("@alfred/pipeline/snapshot");
+      const { createContextFromSnapshot } = await import(
+        "@alfred/pipeline/snapshot"
+      );
       const ctxDecoded = createContextFromSnapshot(snapshot, {
         emit: () => {},
       });
@@ -329,9 +336,8 @@ export const workflowPhaseCachedPlanProcedure = phasePlanProcedure
     }
 
     try {
-      const { computeFileTreeHash, getCachedPlan, getPlanCacheKey } = await import(
-        "@alfred/pipeline/cache"
-      );
+      const { computeFileTreeHash, getCachedPlan, getPlanCacheKey } =
+        await import("@alfred/pipeline/cache");
 
       const workspace = input.workspace ?? process.cwd();
       const fileTreeHash = await computeFileTreeHash(workspace);
@@ -360,7 +366,9 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
     observable<PipelineEvent>((emit) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
+        emit.error(
+          new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
+        );
         return () => {};
       }
 
@@ -389,7 +397,9 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
           registerDefaultStages(runner);
 
           const storage = new WorkflowCheckpointStorage(
-            isTestMode ? getTestCheckpointStorage() : new PostgresCheckpointStorage()
+            isTestMode
+              ? getTestCheckpointStorage()
+              : new PostgresCheckpointStorage()
           );
           const queueObserver = new PipelineEventQueueObserver();
           runner.addObserver(queueObserver);
@@ -481,4 +491,3 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
       };
     })
   );
-

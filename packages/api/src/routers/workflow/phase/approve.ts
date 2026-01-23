@@ -4,8 +4,8 @@ import { requirePolicy } from "../../../gate";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
 import {
-  WorkflowCheckpointStorage,
   getTestCheckpointStorage,
+  WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
 import { mapWorkflowRunResourceLocal } from "../../../workflow/resource";
 
@@ -32,12 +32,16 @@ export const workflowPhaseApproveAndExecuteProcedure = phaseExecuteProcedure
     }
 
     try {
-      const { createContextFromSnapshot } = await import("@alfred/pipeline/snapshot");
+      const { createContextFromSnapshot } = await import(
+        "@alfred/pipeline/snapshot"
+      );
 
       const storage = isTestMode
         ? new WorkflowCheckpointStorage(getTestCheckpointStorage())
         : new WorkflowCheckpointStorage(
-            new (await import("@alfred/db/repo/workflow")).PostgresCheckpointStorage()
+            new (
+              await import("@alfred/db/repo/workflow")
+            ).PostgresCheckpointStorage()
           );
       const snapshot = await storage.load(input.runId);
       if (!snapshot) {
@@ -66,7 +70,9 @@ export const workflowPhaseApproveAndExecuteProcedure = phaseExecuteProcedure
         return { runId: input.runId, planId };
       }
 
-      const { workflowRepo: dbWorkflowRepo, planRepo } = await import("@alfred/db");
+      const { workflowRepo: dbWorkflowRepo, planRepo } = await import(
+        "@alfred/db"
+      );
 
       // Ensure plan exists, then approve.
       const existing = await planRepo.getPlanById(planId);
@@ -96,4 +102,3 @@ export const workflowPhaseApproveAndExecuteProcedure = phaseExecuteProcedure
       throw toTRPCError(error, "workflow_phase_approve_failed");
     }
   });
-

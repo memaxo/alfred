@@ -52,9 +52,7 @@ function resamplePCM(
     const fraction = srcIndex - lower;
     const lowerVal = pcm[lower] ?? 0;
     const upperVal = pcm[upper] ?? 0;
-    resampled[i] = Math.round(
-      lowerVal * (1 - fraction) + upperVal * fraction
-    );
+    resampled[i] = Math.round(lowerVal * (1 - fraction) + upperVal * fraction);
   }
 
   return resampled;

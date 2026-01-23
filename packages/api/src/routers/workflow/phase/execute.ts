@@ -1,19 +1,17 @@
 import * as path from "node:path";
 import { performance } from "node:perf_hooks";
-import {
-  executePhaseInputSchema,
-} from "@alfred/pipeline/schemas";
+import { executePhaseInputSchema } from "@alfred/pipeline/schemas";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { requirePolicy } from "../../../gate";
-import { authedProcedure, rateLimit } from "../../../trpc";
-import { toTRPCError } from "../../../utils/error";
 import { CompilationObserver } from "../../../services/compilation";
 import { ConciergeObserver } from "../../../services/concierge";
 import { upsertWorkflowPatternFromCompletion } from "../../../services/pattern";
+import { authedProcedure, rateLimit } from "../../../trpc";
+import { toTRPCError } from "../../../utils/error";
 import {
-  WorkflowCheckpointStorage,
   getTestCheckpointStorage,
+  WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
 import { linearInputSchema } from "../../../workflow/input";
 import { mapWorkflowRunResourceLocal } from "../../../workflow/resource";
@@ -24,7 +22,9 @@ const isTestMode =
 
 export const workflowPhaseExecuteProcedure = authedProcedure
   .use(rateLimit)
-  .use(requirePolicy("workflow.execute", (raw) => mapWorkflowRunResourceLocal(raw)))
+  .use(
+    requirePolicy("workflow.execute", (raw) => mapWorkflowRunResourceLocal(raw))
+  )
   .input(executePhaseInputSchema)
   .mutation(async ({ input, ctx }) => {
     const session = ctx.session;
@@ -40,7 +40,12 @@ export const workflowPhaseExecuteProcedure = authedProcedure
     try {
       const [
         { PipelineRunner, registerDefaultStages },
-        { CheckpointObserver, CostCleanupObserver, MetricsObserver, LinearSyncObserver },
+        {
+          CheckpointObserver,
+          CostCleanupObserver,
+          MetricsObserver,
+          LinearSyncObserver,
+        },
         { PostgresCheckpointStorage },
         { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds },
       ] = await Promise.all([
@@ -51,7 +56,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       ]);
 
       const storage = new WorkflowCheckpointStorage(
-        isTestMode ? getTestCheckpointStorage() : new PostgresCheckpointStorage()
+        isTestMode
+          ? getTestCheckpointStorage()
+          : new PostgresCheckpointStorage()
       );
 
       // Load existing snapshot
@@ -162,7 +169,10 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       }
 
       // Resume from the snapshot (will continue from execute stage)
-      for await (const _event of runner.resume(executionSnapshot, pipelineInput)) {
+      for await (const _event of runner.resume(
+        executionSnapshot,
+        pipelineInput
+      )) {
         void _event;
       }
 
@@ -173,7 +183,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
 
       if (finalSnapshot && status === "completed") {
         try {
-          const { createContextFromSnapshot } = await import("@alfred/pipeline/snapshot");
+          const { createContextFromSnapshot } = await import(
+            "@alfred/pipeline/snapshot"
+          );
           const ctxDecoded = createContextFromSnapshot(finalSnapshot, {
             emit: () => {},
           });
@@ -186,7 +198,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
           const plan = planOutput?.structuredPlan;
 
           const isRecord = (value: unknown): value is Record<string, unknown> =>
-            typeof value === "object" && value !== null && !Array.isArray(value);
+            typeof value === "object" &&
+            value !== null &&
+            !Array.isArray(value);
 
           if (isRecord(plan)) {
             const phases = plan.phases;
@@ -229,9 +243,12 @@ export const workflowPhaseExecuteProcedure = authedProcedure
                 ? "suspended"
                 : "failed",
           suspendedAt: status === "suspended" ? new Date() : null,
-          completedAt: status === "completed" || status === "failed" ? new Date() : null,
+          completedAt:
+            status === "completed" || status === "failed" ? new Date() : null,
           errorMessage:
-            status === "failed" ? (finalSnapshot?.error ?? "pipeline_failed") : null,
+            status === "failed"
+              ? (finalSnapshot?.error ?? "pipeline_failed")
+              : null,
         });
       } catch {
         // Best-effort.
@@ -255,9 +272,8 @@ export const workflowPhaseExecuteProcedure = authedProcedure
     } catch (error) {
       // Record error metrics
       const durationSec = (performance.now() - startTime) / 1000;
-      const { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds } = await import(
-        "@alfred/pipeline/metrics"
-      );
+      const { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds } =
+        await import("@alfred/pipeline/metrics");
       phaseExecuteRequestsTotal.inc({ status: "error" });
       phaseExecuteDurationSeconds.observe({ status: "error" }, durationSec);
 
@@ -267,7 +283,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
 
 export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
   .use(rateLimit)
-  .use(requirePolicy("workflow.execute", (raw) => mapWorkflowRunResourceLocal(raw)))
+  .use(
+    requirePolicy("workflow.execute", (raw) => mapWorkflowRunResourceLocal(raw))
+  )
   .input(
     z.object({
       runId: z.string().min(1),
@@ -293,7 +311,12 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
     try {
       const [
         { PipelineRunner, registerDefaultStages },
-        { CheckpointObserver, CostCleanupObserver, MetricsObserver, LinearSyncObserver },
+        {
+          CheckpointObserver,
+          CostCleanupObserver,
+          MetricsObserver,
+          LinearSyncObserver,
+        },
         { PostgresCheckpointStorage },
         { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds },
       ] = await Promise.all([
@@ -303,7 +326,9 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
         import("@alfred/pipeline/metrics"),
       ]);
 
-      const storage = new WorkflowCheckpointStorage(new PostgresCheckpointStorage());
+      const storage = new WorkflowCheckpointStorage(
+        new PostgresCheckpointStorage()
+      );
 
       const snapshot = await storage.load(input.runId);
       if (!snapshot) {
@@ -313,7 +338,9 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
         });
       }
 
-      const { createContextFromSnapshot } = await import("@alfred/pipeline/snapshot");
+      const { createContextFromSnapshot } = await import(
+        "@alfred/pipeline/snapshot"
+      );
       const ctxDecoded = createContextFromSnapshot(snapshot, {
         emit: () => {},
       });
@@ -437,7 +464,10 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
           : undefined,
       };
 
-      for await (const _event of runner.resume(executionSnapshot, pipelineInput)) {
+      for await (const _event of runner.resume(
+        executionSnapshot,
+        pipelineInput
+      )) {
         void _event;
       }
 
@@ -460,13 +490,11 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
       };
     } catch (error) {
       const durationSec = (performance.now() - startTime) / 1000;
-      const { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds } = await import(
-        "@alfred/pipeline/metrics"
-      );
+      const { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds } =
+        await import("@alfred/pipeline/metrics");
       phaseExecuteRequestsTotal.inc({ status: "error" });
       phaseExecuteDurationSeconds.observe({ status: "error" }, durationSec);
 
       throw toTRPCError(error, "workflow_phase_execute_by_runid_failed");
     }
   });
-

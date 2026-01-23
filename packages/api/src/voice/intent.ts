@@ -76,7 +76,10 @@ export async function classifyVoiceIntent(
   }
 
   // Safe degradation: do not guess with keyword forests.
-  return { result: { type: "conversational" }, meta: { heuristicFallbackUsed: false } };
+  return {
+    result: { type: "conversational" },
+    meta: { heuristicFallbackUsed: false },
+  };
 }
 
 /**

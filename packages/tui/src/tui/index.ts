@@ -18,7 +18,10 @@ import {
   createCognitiveStore,
   setupCognitiveSubscription,
 } from "./subscriptions/cognitive";
-import { createFocusStore, setupFocusSubscription } from "./subscriptions/focus";
+import {
+  createFocusStore,
+  setupFocusSubscription,
+} from "./subscriptions/focus";
 import {
   getSubscriptionManager,
   resetSubscriptionManager,

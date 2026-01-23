@@ -300,7 +300,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "GPT OSS 120B (Cerebras)",
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -319,7 +319,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "GPT OSS 20B (Cerebras)",
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -426,7 +426,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Claude 3.5 Sonnet",
     capabilities: {
       maxContextTokens: 200_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -446,7 +446,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Claude 3.5 Haiku",
     capabilities: {
       maxContextTokens: 200_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -466,7 +466,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Claude 3 Opus",
     capabilities: {
       maxContextTokens: 200_000,
-      maxOutputTokens: 4_096,
+      maxOutputTokens: 4096,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -501,7 +501,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
       cachedInputPer1M: 0.125,
       outputPer1M: 10.0,
     },
-    recommendedHistoryRatio: 0.50, // Lower for very large contexts
+    recommendedHistoryRatio: 0.5, // Lower for very large contexts
     releaseDate: "2025-03",
   },
   "google/gemini-2.5-flash": {
@@ -521,7 +521,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
       cachedInputPer1M: 0.0375,
       outputPer1M: 0.6,
     },
-    recommendedHistoryRatio: 0.50,
+    recommendedHistoryRatio: 0.5,
     releaseDate: "2025-02",
   },
   "google/gemini-2.0-pro": {
@@ -531,7 +531,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Gemini 2.0 Pro",
     capabilities: {
       maxContextTokens: 2_000_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -550,7 +550,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Gemini 2.0 Flash",
     capabilities: {
       maxContextTokens: 1_000_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -559,7 +559,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
       inputPer1M: 0.0, // Free during experimental
       outputPer1M: 0.0,
     },
-    recommendedHistoryRatio: 0.50,
+    recommendedHistoryRatio: 0.5,
     releaseDate: "2024-12",
   },
   "google/gemini-1.5-pro": {
@@ -569,7 +569,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Gemini 1.5 Pro",
     capabilities: {
       maxContextTokens: 2_000_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -593,7 +593,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "DeepSeek V3",
     capabilities: {
       maxContextTokens: 64_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -613,7 +613,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "DeepSeek R1 (Reasoner)",
     capabilities: {
       maxContextTokens: 64_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -638,7 +638,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Mistral Large",
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -657,7 +657,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Mistral Small",
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -676,7 +676,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Codestral",
     capabilities: {
       maxContextTokens: 256_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -699,7 +699,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Grok 3",
     capabilities: {
       maxContextTokens: 131_072,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -741,7 +741,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Llama 4 Scout (Cerebras)",
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -877,10 +877,7 @@ export function listModelsByProvider(provider: ModelProvider): ModelSpec[] {
  * Get all available model IDs (including aliases).
  */
 export function listModelIds(): string[] {
-  return [
-    ...Object.keys(MODEL_REGISTRY),
-    ...Object.keys(MODEL_ALIASES),
-  ].sort();
+  return [...Object.keys(MODEL_REGISTRY), ...Object.keys(MODEL_ALIASES)].sort();
 }
 
 // ============================================================================
@@ -894,7 +891,7 @@ export const DEFAULT_MODEL_SPEC: ModelSpec = Object.freeze({
   displayName: "Unknown Model",
   capabilities: {
     maxContextTokens: 128_000,
-    maxOutputTokens: 8_192,
+    maxOutputTokens: 8192,
     toolCalling: true,
     structuredOutput: true,
     vision: false,

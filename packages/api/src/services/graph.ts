@@ -68,10 +68,7 @@ export async function executeContextQuery(
     .where(
       and(
         eq(memoryEdges.resource, resource),
-        or(
-          eq(memoryEdges.fromId, nodeId),
-          eq(memoryEdges.toId, nodeId)
-        )
+        or(eq(memoryEdges.fromId, nodeId), eq(memoryEdges.toId, nodeId))
       )
     );
 

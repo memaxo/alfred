@@ -6,13 +6,13 @@
  * appropriate UIComponent schemas.
  */
 
+import { randomUUID } from "node:crypto";
+import { logger } from "@alfred/logger";
 import type { SchemaContext } from "@alfred/type/genui";
 import { isGenUIToolResult } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
-import type { ToolResultShape } from "./normalize";
-import { logger } from "@alfred/logger";
-import { randomUUID } from "node:crypto";
 import { SchemaGenerator } from "../services/schema";
+import type { ToolResultShape } from "./normalize";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -43,10 +43,8 @@ export async function enrich(
   const recordMetrics = async (outcome: string): Promise<void> => {
     const durationMs = performance.now() - startedAt;
     try {
-      const {
-        genuiAutoEnrichmentDurationSeconds,
-        genuiAutoEnrichmentTotal,
-      } = await import("@alfred/metrics/genui");
+      const { genuiAutoEnrichmentDurationSeconds, genuiAutoEnrichmentTotal } =
+        await import("@alfred/metrics/genui");
       genuiAutoEnrichmentTotal.inc({
         outcome,
         tool_name: toolName,
@@ -112,10 +110,7 @@ export async function enrich(
         data: dataUiPart.data ?? output,
       } as MessagePart;
       // Return both tool-result (for compatibility) and data-ui (for visualization)
-      return [
-        createToolResultPart(toolResult),
-        dataUiPartWithData,
-      ];
+      return [createToolResultPart(toolResult), dataUiPartWithData];
     }
 
     await recordMetrics("no_component");
@@ -138,7 +133,7 @@ function getToolOutput(shape: ToolResultShape): unknown {
   if (shape.output !== undefined) {
     return shape.output;
   }
-  return undefined;
+  return;
 }
 
 function createToolResultPart(result: ToolResultShape): MessagePart {

@@ -17,4 +17,3 @@ export function mapWorkflowRunResourceLocal(raw: unknown) {
       : "unknown";
   return { kind: "workflow.run" as const, id, attrs: { scope: "self" } };
 }
-

@@ -12,8 +12,8 @@ import type { StructuredPlan } from "@alfred/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import type { VoiceAssistantRaw } from "@alfred/type/voice";
-import { SchemaGenerator } from "../services/schema.js";
 import { getHonorificPreference } from "../persona/honorific";
+import { SchemaGenerator } from "../services/schema.js";
 import type { VoiceAssistantInput, VoiceAssistantResult } from "./assistant.js";
 import {
   clarificationToSpeech,
@@ -122,11 +122,7 @@ export async function handleWorkflowIntent(
         userId: input.userId,
         prefs,
       });
-      return createVoiceResult(
-        autoApproveText.trim(),
-        startTime,
-        raw
-      );
+      return createVoiceResult(autoApproveText.trim(), startTime, raw);
     }
 
     // 6. Store state in session for approval flow (with timeout)
@@ -154,11 +150,7 @@ export async function handleWorkflowIntent(
       userId: input.userId,
       prefs,
     });
-    return createVoiceResult(
-      planResult.summary,
-      startTime,
-      raw
-    );
+    return createVoiceResult(planResult.summary, startTime, raw);
   } catch (error) {
     logger.error("voice_workflow_intent_failed", {
       userId: input.userId,
@@ -219,7 +211,7 @@ export async function handleApprovalIntent(
 
   try {
     const prefs = await getVoiceWorkflowPreferences(input.userId).catch(
-      () => undefined
+      () => {}
     );
     if (action === "approve") {
       // Approve the plan
@@ -252,11 +244,7 @@ export async function handleApprovalIntent(
         userId: input.userId,
         prefs,
       });
-      return createVoiceResult(
-        text,
-        startTime,
-        raw
-      );
+      return createVoiceResult(text, startTime, raw);
     }
 
     // Rejection
@@ -279,11 +267,7 @@ export async function handleApprovalIntent(
       userId: input.userId,
       prefs,
     });
-    return createVoiceResult(
-      text,
-      startTime,
-      raw
-    );
+    return createVoiceResult(text, startTime, raw);
   } catch (error) {
     logger.error("voice_approval_intent_failed", {
       userId: input.userId,
@@ -328,7 +312,7 @@ export async function handleStatusQuery(
   try {
     const status = await getWorkflowStatus(targetRunId);
     const prefs = await getVoiceWorkflowPreferences(input.userId).catch(
-      () => undefined
+      () => {}
     );
 
     if (status.status === "completed") {
@@ -349,11 +333,7 @@ export async function handleStatusQuery(
         userId: input.userId,
         prefs,
       });
-      return createVoiceResult(
-        text,
-        startTime,
-        raw
-      );
+      return createVoiceResult(text, startTime, raw);
     }
 
     if (status.status === "running") {
@@ -371,11 +351,7 @@ export async function handleStatusQuery(
         userId: input.userId,
         prefs,
       });
-      return createVoiceResult(
-        text,
-        startTime,
-        raw
-      );
+      return createVoiceResult(text, startTime, raw);
     }
 
     if (status.status === "failed") {
@@ -391,11 +367,7 @@ export async function handleStatusQuery(
         userId: input.userId,
         prefs,
       });
-      return createVoiceResult(
-        text,
-        startTime,
-        raw
-      );
+      return createVoiceResult(text, startTime, raw);
     }
 
     // Suspended or other status
@@ -572,7 +544,9 @@ async function buildVoiceWorkflowRaw(input: {
     role: "assistant",
     parts: [
       { type: "text", text: input.text },
-      ...(timelinePart ? [timelinePart as unknown as UIMessage["parts"][number]] : []),
+      ...(timelinePart
+        ? [timelinePart as unknown as UIMessage["parts"][number]]
+        : []),
       ...(planPart ? [planPart as unknown as UIMessage["parts"][number]] : []),
     ],
   };

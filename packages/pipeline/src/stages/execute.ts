@@ -44,9 +44,7 @@ export class ExecuteStage
   private coerceEscalationReason(value: unknown): AgentEscalationReason {
     if (typeof value === "string") {
       const v = value.trim();
-      if (
-        (Object.values(AGENT_ESCALATION_REASONS) as string[]).includes(v)
-      ) {
+      if ((Object.values(AGENT_ESCALATION_REASONS) as string[]).includes(v)) {
         return v as AgentEscalationReason;
       }
     }

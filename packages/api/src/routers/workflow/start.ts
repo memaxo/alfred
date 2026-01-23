@@ -7,10 +7,10 @@ import { requirePolicy } from "../../gate";
 import { triggerPreferenceRefresh } from "../../preference/refresh";
 import { authedProcedure, rateLimit } from "../../trpc";
 import { toTRPCError } from "../../utils/error";
+import { workflowInputSchema } from "../../workflow/input";
 import { initWorkflowMetrics } from "../../workflow/metrics";
 import { requiresBiometric } from "../../workflow/obligation";
 import { mapWorkflowResourceLocal } from "../../workflow/resource";
-import { workflowInputSchema } from "../../workflow/input";
 
 export const workflowStartProcedure = authedProcedure
   .use(rateLimit)
@@ -84,7 +84,8 @@ export const workflowStartProcedure = authedProcedure
       };
       const linearIssueId =
         preparedLinear?.issueId ?? preparedLinear?.sessionId ?? undefined;
-      const linearIssueUrl = ticket?.issueUrl ?? preparedLinear?.issueUrl ?? undefined;
+      const linearIssueUrl =
+        ticket?.issueUrl ?? preparedLinear?.issueUrl ?? undefined;
 
       await workflowRepo.createRun({
         id: executor.runId,
@@ -146,7 +147,9 @@ export const workflowStartProcedure = authedProcedure
           const persisted = await persistWorkflowMessages({
             userId: session.user.id,
             conversationId: conversation.id,
-            messages: [createRequirementMessage(workflowPayload, executor.runId)],
+            messages: [
+              createRequirementMessage(workflowPayload, executor.runId),
+            ],
             persistedKeys: new Set(),
             runId: executor.runId,
             eventType: "workflow.requirement",
@@ -200,4 +203,3 @@ export const workflowStartProcedure = authedProcedure
       throw toTRPCError(error, "workflow_start_failed");
     }
   });
-

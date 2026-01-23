@@ -2,10 +2,14 @@ import { authedProcedure } from "../../trpc";
 import { toTRPCError } from "../../utils/error";
 import { voiceDownloadInput } from "./schema";
 
-export const voiceListAvailableModelsProcedure = authedProcedure.query(async () => {
-  const { listAvailableModels } = await import("@alfred/voice/services/models");
-  return listAvailableModels();
-});
+export const voiceListAvailableModelsProcedure = authedProcedure.query(
+  async () => {
+    const { listAvailableModels } = await import(
+      "@alfred/voice/services/models"
+    );
+    return listAvailableModels();
+  }
+);
 
 export const voiceDownloadModelProcedure = authedProcedure
   .input(voiceDownloadInput)
@@ -22,4 +26,3 @@ export const voiceListVoicesProcedure = authedProcedure.query(async () => {
   const { listVoices } = await import("@alfred/voice/services/models");
   return listVoices();
 });
-

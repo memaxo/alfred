@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { beforeAll, beforeEach, expect, it } from "bun:test";
 import { describeSqlite, requireSqliteTestEnv } from "@alfred/db/testing";
 
 describeSqlite("focus/attention/delta repos (sqlite drift-catcher)", () => {
@@ -119,4 +119,3 @@ describeSqlite("focus/attention/delta repos (sqlite drift-catcher)", () => {
     expect(briefs[0]?.summaryText).toBe("Done");
   });
 });
-

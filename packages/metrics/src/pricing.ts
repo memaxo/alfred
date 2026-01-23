@@ -30,20 +30,64 @@ type PricingRegistry = Record<string, ModelPricing>;
 // OpenAI pricing (January 2025)
 const openaiPricing: PricingRegistry = {
   // GPT-5 family
-  "gpt-5.2": { promptCostPer1M: 1.75, completionCostPer1M: 14.0, cachedPromptPer1M: 0.175 },
+  "gpt-5.2": {
+    promptCostPer1M: 1.75,
+    completionCostPer1M: 14.0,
+    cachedPromptPer1M: 0.175,
+  },
   // GPT-4o family
-  "gpt-4o": { promptCostPer1M: 2.5, completionCostPer1M: 10.0, cachedPromptPer1M: 1.25 },
-  "gpt-4o-mini": { promptCostPer1M: 0.15, completionCostPer1M: 0.6, cachedPromptPer1M: 0.075 },
+  "gpt-4o": {
+    promptCostPer1M: 2.5,
+    completionCostPer1M: 10.0,
+    cachedPromptPer1M: 1.25,
+  },
+  "gpt-4o-mini": {
+    promptCostPer1M: 0.15,
+    completionCostPer1M: 0.6,
+    cachedPromptPer1M: 0.075,
+  },
   // GPT-4.1 family
-  "gpt-4.1": { promptCostPer1M: 2.0, completionCostPer1M: 8.0, cachedPromptPer1M: 0.5 },
-  "gpt-4.1-mini": { promptCostPer1M: 0.4, completionCostPer1M: 1.6, cachedPromptPer1M: 0.1 },
-  "gpt-4.1-nano": { promptCostPer1M: 0.1, completionCostPer1M: 0.4, cachedPromptPer1M: 0.025 },
+  "gpt-4.1": {
+    promptCostPer1M: 2.0,
+    completionCostPer1M: 8.0,
+    cachedPromptPer1M: 0.5,
+  },
+  "gpt-4.1-mini": {
+    promptCostPer1M: 0.4,
+    completionCostPer1M: 1.6,
+    cachedPromptPer1M: 0.1,
+  },
+  "gpt-4.1-nano": {
+    promptCostPer1M: 0.1,
+    completionCostPer1M: 0.4,
+    cachedPromptPer1M: 0.025,
+  },
   // o-series (reasoning)
-  o1: { promptCostPer1M: 15.0, completionCostPer1M: 60.0, reasoningPer1M: 60.0 },
-  "o1-mini": { promptCostPer1M: 1.1, completionCostPer1M: 4.4, reasoningPer1M: 4.4 },
-  o3: { promptCostPer1M: 10.0, completionCostPer1M: 40.0, reasoningPer1M: 40.0 },
-  "o3-mini": { promptCostPer1M: 1.1, completionCostPer1M: 4.4, reasoningPer1M: 4.4 },
-  "o4-mini": { promptCostPer1M: 1.1, completionCostPer1M: 4.4, reasoningPer1M: 4.4 },
+  o1: {
+    promptCostPer1M: 15.0,
+    completionCostPer1M: 60.0,
+    reasoningPer1M: 60.0,
+  },
+  "o1-mini": {
+    promptCostPer1M: 1.1,
+    completionCostPer1M: 4.4,
+    reasoningPer1M: 4.4,
+  },
+  o3: {
+    promptCostPer1M: 10.0,
+    completionCostPer1M: 40.0,
+    reasoningPer1M: 40.0,
+  },
+  "o3-mini": {
+    promptCostPer1M: 1.1,
+    completionCostPer1M: 4.4,
+    reasoningPer1M: 4.4,
+  },
+  "o4-mini": {
+    promptCostPer1M: 1.1,
+    completionCostPer1M: 4.4,
+    reasoningPer1M: 4.4,
+  },
   // Legacy
   "gpt-4-turbo": { promptCostPer1M: 10.0, completionCostPer1M: 30.0 },
   "gpt-4": { promptCostPer1M: 30.0, completionCostPer1M: 60.0 },
@@ -53,16 +97,48 @@ const openaiPricing: PricingRegistry = {
 // Anthropic pricing (January 2025)
 const anthropicPricing: PricingRegistry = {
   // Claude 4.5 family
-  "claude-opus-4.5": { promptCostPer1M: 5.0, completionCostPer1M: 25.0, cachedPromptPer1M: 0.5 },
-  "claude-sonnet-4.5": { promptCostPer1M: 3.0, completionCostPer1M: 15.0, cachedPromptPer1M: 0.3 },
+  "claude-opus-4.5": {
+    promptCostPer1M: 5.0,
+    completionCostPer1M: 25.0,
+    cachedPromptPer1M: 0.5,
+  },
+  "claude-sonnet-4.5": {
+    promptCostPer1M: 3.0,
+    completionCostPer1M: 15.0,
+    cachedPromptPer1M: 0.3,
+  },
   // Claude 4 family
-  "claude-opus-4": { promptCostPer1M: 15.0, completionCostPer1M: 75.0, cachedPromptPer1M: 1.5 },
-  "claude-sonnet-4": { promptCostPer1M: 3.0, completionCostPer1M: 15.0, cachedPromptPer1M: 0.3 },
+  "claude-opus-4": {
+    promptCostPer1M: 15.0,
+    completionCostPer1M: 75.0,
+    cachedPromptPer1M: 1.5,
+  },
+  "claude-sonnet-4": {
+    promptCostPer1M: 3.0,
+    completionCostPer1M: 15.0,
+    cachedPromptPer1M: 0.3,
+  },
   // Claude 3.5 family
-  "claude-3-5-sonnet": { promptCostPer1M: 3.0, completionCostPer1M: 15.0, cachedPromptPer1M: 0.3 },
-  "claude-3.5-sonnet": { promptCostPer1M: 3.0, completionCostPer1M: 15.0, cachedPromptPer1M: 0.3 },
-  "claude-3-5-haiku": { promptCostPer1M: 0.8, completionCostPer1M: 4.0, cachedPromptPer1M: 0.08 },
-  "claude-3.5-haiku": { promptCostPer1M: 0.8, completionCostPer1M: 4.0, cachedPromptPer1M: 0.08 },
+  "claude-3-5-sonnet": {
+    promptCostPer1M: 3.0,
+    completionCostPer1M: 15.0,
+    cachedPromptPer1M: 0.3,
+  },
+  "claude-3.5-sonnet": {
+    promptCostPer1M: 3.0,
+    completionCostPer1M: 15.0,
+    cachedPromptPer1M: 0.3,
+  },
+  "claude-3-5-haiku": {
+    promptCostPer1M: 0.8,
+    completionCostPer1M: 4.0,
+    cachedPromptPer1M: 0.08,
+  },
+  "claude-3.5-haiku": {
+    promptCostPer1M: 0.8,
+    completionCostPer1M: 4.0,
+    cachedPromptPer1M: 0.08,
+  },
   // Claude 3 family
   "claude-3-opus": { promptCostPer1M: 15.0, completionCostPer1M: 75.0 },
   "claude-3-sonnet": { promptCostPer1M: 3.0, completionCostPer1M: 15.0 },
@@ -72,23 +148,51 @@ const anthropicPricing: PricingRegistry = {
 // Google pricing (January 2025)
 const googlePricing: PricingRegistry = {
   // Gemini 2.5 family
-  "gemini-2.5-pro": { promptCostPer1M: 1.25, completionCostPer1M: 10.0, cachedPromptPer1M: 0.125 },
-  "gemini-2.5-flash": { promptCostPer1M: 0.15, completionCostPer1M: 0.6, cachedPromptPer1M: 0.0375 },
+  "gemini-2.5-pro": {
+    promptCostPer1M: 1.25,
+    completionCostPer1M: 10.0,
+    cachedPromptPer1M: 0.125,
+  },
+  "gemini-2.5-flash": {
+    promptCostPer1M: 0.15,
+    completionCostPer1M: 0.6,
+    cachedPromptPer1M: 0.0375,
+  },
   // Gemini 2.0 family
   "gemini-2.0-pro": { promptCostPer1M: 0.1, completionCostPer1M: 0.4 },
   "gemini-2.0-flash": { promptCostPer1M: 0.0, completionCostPer1M: 0.0 }, // Free experimental
   // Gemini 1.5 family
-  "gemini-1.5-pro": { promptCostPer1M: 1.25, completionCostPer1M: 5.0, cachedPromptPer1M: 0.3125 },
+  "gemini-1.5-pro": {
+    promptCostPer1M: 1.25,
+    completionCostPer1M: 5.0,
+    cachedPromptPer1M: 0.3125,
+  },
   "gemini-1.5-flash": { promptCostPer1M: 0.075, completionCostPer1M: 0.3 },
   "gemini-pro-1.5": { promptCostPer1M: 1.25, completionCostPer1M: 5.0 },
 };
 
 // DeepSeek pricing (January 2025) - Ultra low cost
 const deepseekPricing: PricingRegistry = {
-  "deepseek-v3": { promptCostPer1M: 0.27, completionCostPer1M: 1.1, cachedPromptPer1M: 0.07 },
-  "deepseek-chat": { promptCostPer1M: 0.27, completionCostPer1M: 1.1, cachedPromptPer1M: 0.07 },
-  "deepseek-r1": { promptCostPer1M: 0.55, completionCostPer1M: 2.19, reasoningPer1M: 2.19 },
-  "deepseek-reasoner": { promptCostPer1M: 0.55, completionCostPer1M: 2.19, reasoningPer1M: 2.19 },
+  "deepseek-v3": {
+    promptCostPer1M: 0.27,
+    completionCostPer1M: 1.1,
+    cachedPromptPer1M: 0.07,
+  },
+  "deepseek-chat": {
+    promptCostPer1M: 0.27,
+    completionCostPer1M: 1.1,
+    cachedPromptPer1M: 0.07,
+  },
+  "deepseek-r1": {
+    promptCostPer1M: 0.55,
+    completionCostPer1M: 2.19,
+    reasoningPer1M: 2.19,
+  },
+  "deepseek-reasoner": {
+    promptCostPer1M: 0.55,
+    completionCostPer1M: 2.19,
+    reasoningPer1M: 2.19,
+  },
 };
 
 // Mistral pricing (January 2025)
@@ -178,7 +282,7 @@ export function getModelPricing(
 
   // Normalize model ID (remove provider prefix if present)
   const normalizedId = modelId.includes("/")
-    ? modelId.split("/").pop() ?? modelId
+    ? (modelId.split("/").pop() ?? modelId)
     : modelId;
 
   // Try exact match with original ID
@@ -302,7 +406,8 @@ export function calculateDetailedCostUsd(
 
   // Reasoning tokens (for o1/R1 models)
   const reasoningRate = pricing.reasoningPer1M ?? pricing.completionCostPer1M;
-  const reasoningCost = ((usage.reasoningTokens ?? 0) / 1_000_000) * reasoningRate;
+  const reasoningCost =
+    ((usage.reasoningTokens ?? 0) / 1_000_000) * reasoningRate;
 
   return {
     promptCost,

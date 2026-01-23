@@ -375,9 +375,7 @@ function resolveBudget(
 
   // Allow explicit overrides to take precedence
   const minSystemReserveTokens =
-    overrides.minSystemReserveTokens ??
-    envSystemReserve ??
-    scaledSystemReserve;
+    overrides.minSystemReserveTokens ?? envSystemReserve ?? scaledSystemReserve;
   const minHeadroomTokens =
     overrides.minHeadroomTokens ?? envHeadroom ?? scaledHeadroom;
   const reservedToolingTokens =
@@ -615,7 +613,7 @@ function getAllowedOverdraft(tier: HistoryTier, budget: number): number {
       HIGH_TIER_OVERDRAFT,
       Math.min(
         Math.floor(budget * BUDGET_RATIOS.HIGH_TIER_OVERDRAFT_RATIO),
-        4_000 // Cap at 4k for very large contexts
+        4000 // Cap at 4k for very large contexts
       )
     );
   }
@@ -625,7 +623,7 @@ function getAllowedOverdraft(tier: HistoryTier, budget: number): number {
       MEDIUM_TIER_OVERDRAFT,
       Math.min(
         Math.floor(budget * BUDGET_RATIOS.MEDIUM_TIER_OVERDRAFT_RATIO),
-        2_000 // Cap at 2k for very large contexts
+        2000 // Cap at 2k for very large contexts
       )
     );
   }

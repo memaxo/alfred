@@ -1,14 +1,14 @@
 import { performance } from "node:perf_hooks";
 import { logger } from "@alfred/logger";
-import type { SttInput } from "@alfred/voice/services/stt";
-import type { TtsInput } from "@alfred/voice/services/tts";
-import { TRPCError } from "@trpc/server";
 import { voiceStreamLatencySeconds } from "@alfred/voice/metrics";
 import {
   getVoiceProvider,
   resolveSttLanguagePreference,
   resolveVoicePreference,
 } from "@alfred/voice/services/config";
+import type { SttInput } from "@alfred/voice/services/stt";
+import type { TtsInput } from "@alfred/voice/services/tts";
+import { TRPCError } from "@trpc/server";
 import { requirePolicy } from "../../gate";
 import { authedProcedure } from "../../trpc";
 import { toTRPCError } from "../../utils/error";
@@ -71,13 +71,18 @@ export const voiceSpeechToSpeechProcedure = authedProcedure
         prompt: input.prompt,
       };
 
-      const [{ transcribeLocal }, { synthesizeLocal }, { runAssistantForVoice }] =
-        await Promise.all([
-          import("@alfred/voice/services/stt"),
-          import("@alfred/voice/services/tts"),
-          import("../../voice/assistant"),
-        ]);
-      const { sttPool, ttsPool } = (await import("../../voice/pools")).getVoicePools();
+      const [
+        { transcribeLocal },
+        { synthesizeLocal },
+        { runAssistantForVoice },
+      ] = await Promise.all([
+        import("@alfred/voice/services/stt"),
+        import("@alfred/voice/services/tts"),
+        import("../../voice/assistant"),
+      ]);
+      const { sttPool, ttsPool } = (
+        await import("../../voice/pools")
+      ).getVoicePools();
 
       const sttResult = await transcribeLocal(sttPool, sttPayload);
 
@@ -105,7 +110,10 @@ export const voiceSpeechToSpeechProcedure = authedProcedure
         lastAssistantText: assistantResult.text ?? undefined,
       });
 
-      const ttsVoice = await resolveVoicePreference(session.user.id, input.ttsVoice);
+      const ttsVoice = await resolveVoicePreference(
+        session.user.id,
+        input.ttsVoice
+      );
 
       const ttsPayload: TtsInput = {
         text: assistantResult.text || "I heard you.",
@@ -117,7 +125,10 @@ export const voiceSpeechToSpeechProcedure = authedProcedure
       const ttsResult = await synthesizeLocal(ttsPool, ttsPayload);
 
       const totalSeconds = (performance.now() - s2sTimerStart) / 1000;
-      voiceStreamLatencySeconds.observe({ stage: "speech_to_speech" }, totalSeconds);
+      voiceStreamLatencySeconds.observe(
+        { stage: "speech_to_speech" },
+        totalSeconds
+      );
       logger.info("voice_s2s_complete", {
         provider,
         sttModel: sttResult.model,
@@ -150,9 +161,9 @@ export const voiceSpeechToSpeechProcedure = authedProcedure
         session: finalSession,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error ?? "error");
+      const message =
+        error instanceof Error ? error.message : String(error ?? "error");
       await markVoiceSessionError(claimedSession.id, message);
       throw toTRPCError(error, "voice_s2s_failed");
     }
   });
-

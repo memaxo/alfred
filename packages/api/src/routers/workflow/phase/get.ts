@@ -5,8 +5,8 @@ import { requirePolicy } from "../../../gate";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
 import {
-  WorkflowCheckpointStorage,
   getTestCheckpointStorage,
+  WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
 import { mapWorkflowRunResourceLocal } from "../../../workflow/resource";
 
@@ -28,7 +28,9 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
       const storage = isTestMode
         ? new WorkflowCheckpointStorage(getTestCheckpointStorage())
         : new WorkflowCheckpointStorage(
-            new (await import("@alfred/db/repo/workflow")).PostgresCheckpointStorage()
+            new (
+              await import("@alfred/db/repo/workflow")
+            ).PostgresCheckpointStorage()
           );
       const snapshot = await storage.load(input.runId);
       if (!snapshot) {
@@ -38,7 +40,9 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
         });
       }
 
-      const { createContextFromSnapshot } = await import("@alfred/pipeline/snapshot");
+      const { createContextFromSnapshot } = await import(
+        "@alfred/pipeline/snapshot"
+      );
       const ctxDecoded = createContextFromSnapshot(snapshot, {
         emit: () => {},
       });
@@ -133,4 +137,3 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
       throw toTRPCError(error, "workflow_phase_get_plan_failed");
     }
   });
-

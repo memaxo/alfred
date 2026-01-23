@@ -5,8 +5,8 @@
  * optimized for TTS synthesis and voice interaction.
  */
 
+import { type HonorificPreference, renderHonorific } from "@alfred/persona";
 import type { Phase, StructuredPlan } from "@alfred/plan";
-import { renderHonorific, type HonorificPreference } from "@alfred/persona";
 import type { VoiceWorkflowVerbosity } from "./preferences.js";
 
 /**
@@ -46,8 +46,11 @@ export function planToSpeech(
   plan: StructuredPlan,
   options: PlanToSpeechOptions = {}
 ): string {
-  const { includeApprovalPrompt = true, verbosity = "standard", honorific } =
-    options;
+  const {
+    includeApprovalPrompt = true,
+    verbosity = "standard",
+    honorific,
+  } = options;
 
   // Determine settings based on verbosity level
   const isBrief = verbosity === "brief" || options.brief === true;

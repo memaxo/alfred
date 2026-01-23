@@ -29,4 +29,3 @@ export const deltaBriefs = pgTable("delta_briefs", {
 
 export type DeltaBrief = typeof deltaBriefs.$inferSelect;
 export type NewDeltaBrief = typeof deltaBriefs.$inferInsert;
-

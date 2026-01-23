@@ -97,11 +97,8 @@ export async function gatherFullResearchService(
   userId: string,
   options?: unknown
 ) {
-  const {
-    gatherFullResearch,
-    researchOptionsSchema,
-    workflowIntentSchema,
-  } = await import("@alfred/plan");
+  const { gatherFullResearch, researchOptionsSchema, workflowIntentSchema } =
+    await import("@alfred/plan");
   const parsedIntent = workflowIntentSchema.parse(intent);
   const parsedOptions = options
     ? researchOptionsSchema.parse(options)
@@ -165,5 +162,10 @@ export async function critiquePlanService(
   const parsedOptions = options ? optionsSchema.parse(options) : undefined;
 
   validateIntentUserId(parsedIntent, userId);
-  return await critiquePlan(parsedPlan, parsedIntent, parsedResearch, parsedOptions);
+  return await critiquePlan(
+    parsedPlan,
+    parsedIntent,
+    parsedResearch,
+    parsedOptions
+  );
 }

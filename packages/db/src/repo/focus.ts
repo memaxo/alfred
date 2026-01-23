@@ -6,10 +6,10 @@ import {
   type FocusLane,
   type FocusSet,
   type FocusSetStatus,
-  type NewFocusCommitment,
-  type NewFocusSet,
   focusCommitments,
   focusSets,
+  type NewFocusCommitment,
+  type NewFocusSet,
 } from "../schema/focus";
 
 export async function createFocusSet(data: NewFocusSet): Promise<FocusSet> {
@@ -21,7 +21,11 @@ export async function createFocusSet(data: NewFocusSet): Promise<FocusSet> {
 }
 
 export async function getFocusSetById(id: string): Promise<FocusSet | null> {
-  const [row] = await db.select().from(focusSets).where(eq(focusSets.id, id)).limit(1);
+  const [row] = await db
+    .select()
+    .from(focusSets)
+    .where(eq(focusSets.id, id))
+    .limit(1);
   return row ?? null;
 }
 
@@ -156,4 +160,3 @@ export async function updateCommitment(
   }
   return row;
 }
-

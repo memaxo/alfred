@@ -8,4 +8,3 @@ export function requiresBiometric(obligations: Obligation[]): boolean {
         obligation.metadata.code === "requireBio")
   );
 }
-

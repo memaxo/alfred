@@ -15,7 +15,9 @@ type UpsertAttentionArgs = {
   payload?: Record<string, unknown> | null;
 };
 
-type AttentionRow = Awaited<ReturnType<typeof attentionRepo.createAttentionItem>>;
+type AttentionRow = Awaited<
+  ReturnType<typeof attentionRepo.createAttentionItem>
+>;
 export type UpsertAttentionResult = { item: AttentionRow; created: boolean };
 
 export async function upsertAttentionItem(
@@ -70,7 +72,9 @@ export async function upsertSuspendAttentionItem(args: {
   };
 
   try {
-    const requests = await clarificationRepo.listRequestsByRunId(args.workflowRunId);
+    const requests = await clarificationRepo.listRequestsByRunId(
+      args.workflowRunId
+    );
     const open = requests
       .filter((r) => !r.response)
       .sort((a, b) => {
@@ -111,9 +115,10 @@ export async function upsertSuspendAttentionItem(args: {
   });
 }
 
-export async function resolveAttentionItem(
-  args: { userId: string; id: string }
-): Promise<void> {
+export async function resolveAttentionItem(args: {
+  userId: string;
+  id: string;
+}): Promise<void> {
   try {
     const item = await attentionRepo.updateAttentionItem(args.id, {
       status: "resolved",
@@ -128,4 +133,3 @@ export async function resolveAttentionItem(
     });
   }
 }
-

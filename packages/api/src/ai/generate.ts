@@ -91,7 +91,7 @@ export async function persistResult(args: PersistArgs): Promise<string | null> {
       inputData: args.input,
       stateData: null,
     });
-    
+
     // Use async normalization with GenUI enrichment
     const schemaCtx: Partial<SchemaContext> = args.schemaContext ?? {
       userId: args.userId,
