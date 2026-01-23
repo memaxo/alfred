@@ -115,3 +115,4 @@ tmp-policy-test/
 **/*.heapsnapshot
 
 design-reference/intro-videos/
+.agent/xcodebuild/
