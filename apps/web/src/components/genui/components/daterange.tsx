@@ -4,16 +4,16 @@
  * Renders date range inputs (start and end dates) that integrate with TanStack Form.
  */
 
-import { useFieldContext } from "@/form";
+import type { UIComponent } from "@alfred/type/genui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { UIComponent } from "@alfred/type/genui";
+import { useFieldContext } from "@/form";
 import {
+  extractBooleanProp,
   extractFieldName,
   extractLabel,
-  extractBooleanProp,
-  formatDateValue,
   FieldErrors,
+  formatDateValue,
   joinIds,
 } from "../helpers";
 
@@ -38,11 +38,16 @@ export function GenUIDaterange({ schema }: { schema: UIComponent }) {
       <Label>{label}</Label>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-xs text-muted-foreground" htmlFor={startField.name ?? ""}>
+          <Label
+            className="text-muted-foreground text-xs"
+            htmlFor={startField.name ?? ""}
+          >
             Start
           </Label>
           <Input
-            aria-describedby={joinIds([hasStartErrors ? startErrorId : undefined])}
+            aria-describedby={joinIds([
+              hasStartErrors ? startErrorId : undefined,
+            ])}
             aria-invalid={hasStartErrors}
             className="w-full"
             disabled={disabled}

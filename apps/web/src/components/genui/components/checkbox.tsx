@@ -4,14 +4,14 @@
  * Renders a checkbox that integrates with TanStack Form.
  */
 
-import { useFieldContext } from "@/form";
+import type { UIComponent } from "@alfred/type/genui";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import type { UIComponent } from "@alfred/type/genui";
+import { useFieldContext } from "@/form";
 import {
+  extractBooleanProp,
   extractFieldName,
   extractLabel,
-  extractBooleanProp,
   FieldErrors,
   joinIds,
 } from "../helpers";
@@ -37,7 +37,7 @@ export function GenUICheckbox({ schema }: { schema: UIComponent }) {
           id={field.name}
           onCheckedChange={(checked) => field.handleChange(checked === true)}
         />
-        <Label htmlFor={field.name} className="cursor-pointer">
+        <Label className="cursor-pointer" htmlFor={field.name}>
           {label}
         </Label>
       </div>

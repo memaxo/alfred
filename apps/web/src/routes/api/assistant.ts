@@ -6,7 +6,9 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
     const agentPkg = "@alfred/agent";
     const personaPkg = "@alfred/persona";
 
-    const { analyzeContext } = await import(/* @vite-ignore */ "@alfred/agent/assistant/src/adapter");
+    const { analyzeContext } = await import(
+      /* @vite-ignore */ "@alfred/agent/assistant/src/adapter"
+    );
     const { buildPersonaPrompt } = await import(/* @vite-ignore */ personaPkg);
     const { getAssistantAgentDefaults } = await import(
       /* @vite-ignore */ agentPkg

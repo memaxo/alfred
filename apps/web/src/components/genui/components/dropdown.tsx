@@ -5,8 +5,8 @@
  * This is an alias for the select component.
  */
 
-import { GenUISelect } from "./select";
 import type { UIComponent } from "@alfred/type/genui";
+import { GenUISelect } from "./select";
 
 export function GenUIDropdown({ schema }: { schema: UIComponent }) {
   // Dropdown is functionally the same as select

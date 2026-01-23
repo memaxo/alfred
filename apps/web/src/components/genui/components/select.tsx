@@ -4,7 +4,8 @@
  * Renders a select dropdown that integrates with TanStack Form.
  */
 
-import { useFieldContext } from "@/form";
+import type { UIComponent } from "@alfred/type/genui";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -12,17 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import type { UIComponent } from "@alfred/type/genui";
+import { useFieldContext } from "@/form";
 import {
+  extractArrayProp,
+  extractBooleanProp,
   extractFieldName,
   extractLabel,
-  extractBooleanProp,
-  extractArrayProp,
-  parseOptionValue,
-  parseOptionLabel,
   FieldErrors,
   joinIds,
+  parseOptionLabel,
+  parseOptionValue,
 } from "../helpers";
 
 export function GenUISelect({ schema }: { schema: UIComponent }) {

@@ -8,8 +8,8 @@
  * @module hooks/use-ambient-awareness
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import { formatGreeting, getTransition } from "@alfred/persona";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Time of day categories

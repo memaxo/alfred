@@ -7,17 +7,22 @@
 
 import type { UIComponent } from "@alfred/type/genui";
 import { z } from "zod";
-import { FORM_COMPONENTS, extractFieldName } from "./helpers";
+import { extractFieldName, FORM_COMPONENTS } from "./helpers";
 
 /**
  * Convert a single UIComponent to a Zod schema for that field.
  */
 function componentToZodField(schema: UIComponent): z.ZodTypeAny {
-  const props = typeof schema.props === "object" && schema.props !== null ? schema.props : {};
-  
+  const props =
+    typeof schema.props === "object" && schema.props !== null
+      ? schema.props
+      : {};
+
   const required =
-    "required" in props && typeof props.required === "boolean" ? props.required : false;
-  
+    "required" in props && typeof props.required === "boolean"
+      ? props.required
+      : false;
+
   const componentType = schema.component;
 
   let baseSchema: z.ZodTypeAny;
@@ -26,30 +31,37 @@ function componentToZodField(schema: UIComponent): z.ZodTypeAny {
     case "text":
     case "autocomplete":
     case "dropdown": {
-      const type = "type" in props && typeof props.type === "string" ? props.type : "text";
-      
+      const type =
+        "type" in props && typeof props.type === "string" ? props.type : "text";
+
       let stringSchema = z.string();
-      
+
       // Email validation
       if (type === "email") {
         stringSchema = stringSchema.email("Invalid email address");
       }
-      
+
       // URL validation
       if (type === "url") {
         stringSchema = stringSchema.url("Invalid URL");
       }
-      
+
       // Min length
       if ("min" in props && typeof props.min === "number") {
-        stringSchema = stringSchema.min(props.min, `Must be at least ${props.min} characters`);
+        stringSchema = stringSchema.min(
+          props.min,
+          `Must be at least ${props.min} characters`
+        );
       }
-      
+
       // Max length
       if ("max" in props && typeof props.max === "number") {
-        stringSchema = stringSchema.max(props.max, `Must be at most ${props.max} characters`);
+        stringSchema = stringSchema.max(
+          props.max,
+          `Must be at most ${props.max} characters`
+        );
       }
-      
+
       // Pattern (regex)
       if ("pattern" in props && typeof props.pattern === "string") {
         try {
@@ -59,15 +71,15 @@ function componentToZodField(schema: UIComponent): z.ZodTypeAny {
           // Invalid regex, ignore
         }
       }
-      
+
       baseSchema = stringSchema;
       break;
     }
-    
+
     case "select":
     case "choice": {
       baseSchema = z.string();
-      
+
       // Validate against options if provided
       if ("options" in props && Array.isArray(props.options)) {
         const validValues: string[] = [];
@@ -87,36 +99,40 @@ function componentToZodField(schema: UIComponent): z.ZodTypeAny {
           baseSchema = z.enum(validValues as [string, ...string[]]);
         }
       }
-      
+
       break;
     }
-    
+
     case "date": {
-      baseSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format");
+      baseSchema = z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format");
       break;
     }
-    
+
     case "daterange": {
       // Daterange creates nested fields: { start: string, end: string }
       baseSchema = z.object({
-        start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid start date format"),
+        start: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid start date format"),
         end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid end date format"),
       });
       break;
     }
-    
+
     case "checkbox": {
       baseSchema = z.boolean();
       break;
     }
-    
+
     default: {
       // Unknown component type, default to unknown
       baseSchema = z.unknown();
       break;
     }
   }
-  
+
   // Apply required/optional
   if (required) {
     return baseSchema;
@@ -135,15 +151,15 @@ export function uiComponentToZodSchema(schema: UIComponent): z.ZodTypeAny {
   if (FORM_COMPONENTS.has(schema.component)) {
     return componentToZodField(schema);
   }
-  
+
   // If this has children, create an object schema with nested fields
   if (schema.children && schema.children.length > 0) {
     const shape: Record<string, z.ZodTypeAny> = {};
-    
+
     for (const child of schema.children) {
       if (FORM_COMPONENTS.has(child.component)) {
         const fieldName = extractFieldName(child);
-        
+
         // Handle nested fields (e.g., daterange creates start/end)
         if (child.component === "daterange") {
           const daterangeSchema = componentToZodField(child);
@@ -163,12 +179,12 @@ export function uiComponentToZodSchema(schema: UIComponent): z.ZodTypeAny {
         }
       }
     }
-    
+
     if (Object.keys(shape).length > 0) {
       return z.object(shape);
     }
   }
-  
+
   // Default: accept any object
   return z.record(z.string(), z.unknown());
 }

@@ -4,18 +4,18 @@
  * Renders radio buttons that integrate with TanStack Form.
  */
 
-import { useFieldContext } from "@/form";
-import { Label } from "@/components/ui/label";
 import type { UIComponent } from "@alfred/type/genui";
+import { Label } from "@/components/ui/label";
+import { useFieldContext } from "@/form";
 import {
+  extractArrayProp,
+  extractBooleanProp,
   extractFieldName,
   extractLabel,
-  extractBooleanProp,
-  extractArrayProp,
-  parseOptionValue,
-  parseOptionLabel,
   FieldErrors,
   joinIds,
+  parseOptionLabel,
+  parseOptionValue,
 } from "../helpers";
 
 export function GenUIChoice({ schema }: { schema: UIComponent }) {
@@ -38,7 +38,7 @@ export function GenUIChoice({ schema }: { schema: UIComponent }) {
           const optionLabel = parseOptionLabel(option, value);
           const optionId = `${field.name}-${value}`;
           return (
-            <div key={value} className="flex items-center gap-2">
+            <div className="flex items-center gap-2" key={value}>
               <input
                 aria-describedby={joinIds([hasErrors ? errorId : undefined])}
                 aria-invalid={hasErrors}

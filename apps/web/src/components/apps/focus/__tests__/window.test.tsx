@@ -6,8 +6,9 @@ import type { WindowInstance } from "@/store/desktop/types.new";
 
 const spawnWindowMock = vi.fn();
 vi.mock("@/store/desktop", () => ({
-  useDesktopStore: vi.fn((selector: (s: { spawnWindow: typeof spawnWindowMock }) => unknown) =>
-    selector({ spawnWindow: spawnWindowMock })
+  useDesktopStore: vi.fn(
+    (selector: (s: { spawnWindow: typeof spawnWindowMock }) => unknown) =>
+      selector({ spawnWindow: spawnWindowMock })
   ),
 }));
 
@@ -158,4 +159,3 @@ describe("FocusAppWindow", () => {
     });
   });
 });
-

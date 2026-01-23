@@ -6,6 +6,7 @@
  */
 
 import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIComponent } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
 import {
   extractStructuredData,
@@ -21,8 +22,8 @@ import {
   type ToolInvocationPart,
   type ToolResultPart,
 } from "@alfred/ui/chat/parts";
+import { containsFormComponents } from "@alfred/ui/genui";
 import type { ReactNode } from "react";
-import type { UIComponent } from "@alfred/type/genui";
 import {
   GenUIErrorBoundary,
   isGenUIToolResult,
@@ -30,7 +31,6 @@ import {
   UISchemaRenderer,
 } from "@/components/genui";
 import { GenUIFormWrapper } from "@/components/genui/form-wrapper";
-import { containsFormComponents } from "@alfred/ui/genui";
 import { Artifact } from "./artifact";
 import { Branch } from "./branch";
 import { Canvas } from "./canvas";
@@ -582,7 +582,7 @@ function extractToolCallIdFromMessage(
       return (toolCallPart as unknown as ToolCallPart).toolCallId;
     }
   }
-  return undefined;
+  return;
 }
 
 function renderStructuredPart(

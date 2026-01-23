@@ -24,6 +24,7 @@
       "@alfred/db": ["../../packages/db/src/index.ts"],
       "@alfred/db/*": ["../../packages/db/src/*"],
       "@alfred/metrics/*": ["../../packages/metrics/src/*"],
+      "@alfred/persona/*": ["../../packages/persona/src/*"],
       "@alfred/policy/*": ["../../packages/policy/src/*"],
       "@alfred/rag/*": ["../../packages/rag/src/*"],
       "@alfred/runtime/*": ["../../packages/runtime/src/*"],

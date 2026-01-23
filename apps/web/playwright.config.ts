@@ -32,8 +32,8 @@ export default defineConfig({
   outputDir: "./test-results",
   snapshotDir: "./test-snapshots",
   fullyParallel: !FAIL_FAST,
-  retries: FAIL_FAST ? 0 : (process.env.CI ? 1 : 0),
-  workers: FAIL_FAST ? 1 : (process.env.CI ? 2 : undefined),
+  retries: FAIL_FAST ? 0 : process.env.CI ? 1 : 0,
+  workers: FAIL_FAST ? 1 : process.env.CI ? 2 : undefined,
   maxFailures: FAIL_FAST ? 1 : undefined,
   // Reporter configuration for comprehensive analysis
   reporter: AI_MODE

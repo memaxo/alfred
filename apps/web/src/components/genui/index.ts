@@ -5,6 +5,14 @@
  * plus web-specific initialization.
  */
 
+// Re-export types and type guards from type package
+export {
+  isGenUIToolResult,
+  isUIDataPart,
+  type UIComponent,
+  type UIDataPart,
+  type UIInterpreterOptions,
+} from "@alfred/type/genui";
 // Re-export core genui APIs from the package
 export {
   canRender,
@@ -18,15 +26,6 @@ export {
   // Validation
   validateRenderable,
 } from "@alfred/ui/genui";
-
-// Re-export types and type guards from type package
-export {
-  type UIComponent,
-  type UIDataPart,
-  type UIInterpreterOptions,
-  isGenUIToolResult,
-  isUIDataPart,
-} from "@alfred/type/genui";
 
 // Web-specific initialization
 export {

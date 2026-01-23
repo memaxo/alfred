@@ -85,9 +85,10 @@ export function FocusApp({
   const [setTitle, setSetTitle] = useState("");
   const [commitmentTitle, setCommitmentTitle] = useState("");
 
-  const canCreateCommitment = useMemo(() => {
-    return Boolean(focusSetId) && commitmentTitle.trim().length > 0;
-  }, [focusSetId, commitmentTitle]);
+  const canCreateCommitment = useMemo(
+    () => Boolean(focusSetId) && commitmentTitle.trim().length > 0,
+    [focusSetId, commitmentTitle]
+  );
 
   const createCommitmentNow = useCallback(() => {
     if (!focusSetId) {
@@ -178,33 +179,7 @@ export function FocusApp({
         </div>
       </div>
 
-      {!activeSet.data ? (
-        <div className="space-y-3 p-4">
-          <div className="text-sm text-white/70">
-            No active focus set. Create one to start tracking commitments.
-          </div>
-          <div className="flex gap-2">
-            <Input
-              onChange={(e) => setSetTitle(e.target.value)}
-              placeholder="Focus set title (optional)"
-              value={setTitle}
-            />
-            <Button
-              disabled={createSet.isPending}
-              onClick={() => {
-                createSet.mutate({
-                  title: setTitle.trim() ? setTitle.trim() : undefined,
-                  wipLimit: 5,
-                });
-              }}
-              variant="ghost"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create
-            </Button>
-          </div>
-        </div>
-      ) : (
+      {activeSet.data ? (
         <div className="grid h-[calc(100%-40px)] grid-cols-3 gap-3 p-3">
           <div className="flex min-w-0 flex-col rounded-md border border-white/10 bg-void-surface">
             <div className="flex items-center justify-between border-white/5 border-b px-3 py-2">
@@ -240,7 +215,9 @@ export function FocusApp({
             <ScrollArea className="flex-1">
               <div className="space-y-2 p-3">
                 {(commitments.data ?? []).length === 0 ? (
-                  <div className="text-sm text-white/50">No commitments yet.</div>
+                  <div className="text-sm text-white/50">
+                    No commitments yet.
+                  </div>
                 ) : (
                   commitments.data?.map((c) => (
                     <div
@@ -278,7 +255,7 @@ export function FocusApp({
                         {a.title ?? a.kind}
                       </div>
                       {a.body ? (
-                        <div className="mt-1 line-clamp-2 text-xs text-white/60">
+                        <div className="mt-1 line-clamp-2 text-white/60 text-xs">
                           {a.body}
                         </div>
                       ) : null}
@@ -304,7 +281,9 @@ export function FocusApp({
                           ) : null}
                           <Button
                             disabled={resolveAttention.isPending}
-                            onClick={() => resolveAttention.mutate({ id: a.id })}
+                            onClick={() =>
+                              resolveAttention.mutate({ id: a.id })
+                            }
                             size="sm"
                             variant="ghost"
                           >
@@ -333,13 +312,39 @@ export function FocusApp({
                       className="rounded border border-white/10 bg-black/20 px-3 py-2"
                       key={d.id}
                     >
-                      <div className="text-xs text-white/50">{d.scope}</div>
+                      <div className="text-white/50 text-xs">{d.scope}</div>
                       <div className="mt-1 text-sm">{d.summaryText}</div>
                     </div>
                   ))
                 )}
               </div>
             </ScrollArea>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 p-4">
+          <div className="text-sm text-white/70">
+            No active focus set. Create one to start tracking commitments.
+          </div>
+          <div className="flex gap-2">
+            <Input
+              onChange={(e) => setSetTitle(e.target.value)}
+              placeholder="Focus set title (optional)"
+              value={setTitle}
+            />
+            <Button
+              disabled={createSet.isPending}
+              onClick={() => {
+                createSet.mutate({
+                  title: setTitle.trim() ? setTitle.trim() : undefined,
+                  wipLimit: 5,
+                });
+              }}
+              variant="ghost"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create
+            </Button>
           </div>
         </div>
       )}
@@ -350,4 +355,3 @@ export function FocusApp({
 export function FocusAppWindow(props: WindowComponentProps) {
   return <FocusApp {...props} className="h-full" />;
 }
-

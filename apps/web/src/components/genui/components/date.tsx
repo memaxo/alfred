@@ -4,16 +4,16 @@
  * Renders a date input that integrates with TanStack Form.
  */
 
-import { useFieldContext } from "@/form";
+import type { UIComponent } from "@alfred/type/genui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { UIComponent } from "@alfred/type/genui";
+import { useFieldContext } from "@/form";
 import {
+  extractBooleanProp,
   extractFieldName,
   extractLabel,
-  extractBooleanProp,
-  formatDateValue,
   FieldErrors,
+  formatDateValue,
   joinIds,
 } from "../helpers";
 

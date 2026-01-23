@@ -1,6 +1,6 @@
 import { uiComponentSchema } from "@alfred/type/genui.zod";
-import { streamObject } from "ai";
 import { createFileRoute } from "@tanstack/react-router";
+import { streamObject } from "ai";
 import { z } from "zod";
 
 const requestSchema = z.object({
@@ -58,7 +58,9 @@ async function handleGenUiRequest(request: Request): Promise<Response> {
     );
   }
 
-  const { getModelForRole, supportsGenUI } = await import("@alfred/agent/selector");
+  const { getModelForRole, supportsGenUI } = await import(
+    "@alfred/agent/selector"
+  );
   const selection = await getModelForRole("classify", { userId });
   if (!supportsGenUI(selection)) {
     return Response.json(
@@ -73,7 +75,7 @@ async function handleGenUiRequest(request: Request): Promise<Response> {
 
   const prompt = [
     "Generate a single UIComponent JSON object matching the schema.",
-    `Allowed components include: chart, grid, list, number, plan, task, term, code, panel, workflow-timeline, progress-window, streaming-terminal.`,
+    "Allowed components include: chart, grid, list, number, plan, task, term, code, panel, workflow-timeline, progress-window, streaming-terminal.",
     `Surface: ${surface}`,
     `Mode: ${mode}`,
     viewport ? `Viewport: ${JSON.stringify(viewport)}` : "Viewport: unknown",
@@ -81,7 +83,9 @@ async function handleGenUiRequest(request: Request): Promise<Response> {
     "User prompt:",
     parsed.input,
     "",
-    parsed.data !== undefined ? `Backing data (JSON): ${JSON.stringify(parsed.data)}` : "",
+    parsed.data !== undefined
+      ? `Backing data (JSON): ${JSON.stringify(parsed.data)}`
+      : "",
   ]
     .filter((v) => v.length > 0)
     .join("\n");
@@ -110,4 +114,3 @@ export const Route = createFileRoute("/api/genui")({
     },
   },
 });
-

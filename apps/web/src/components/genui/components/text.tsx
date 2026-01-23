@@ -5,16 +5,16 @@
  * Extracts field name and props from the UIComponent schema.
  */
 
+import type { UIComponent } from "@alfred/type/genui";
 import type * as React from "react";
-import { useFieldContext } from "@/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { UIComponent } from "@alfred/type/genui";
+import { useFieldContext } from "@/form";
 import {
+  extractBooleanProp,
   extractFieldName,
   extractLabel,
   extractStringProp,
-  extractBooleanProp,
   FieldErrors,
   joinIds,
 } from "../helpers";
@@ -22,12 +22,15 @@ import {
 export function GenUIText({ schema }: { schema: UIComponent }) {
   const fieldName = extractFieldName(schema);
   const field = useFieldContext<string>();
-  
+
   const label = extractLabel(schema, fieldName);
   const placeholder = extractStringProp(schema, "placeholder");
   const disabled = extractBooleanProp(schema, "disabled");
   const type =
-    (extractStringProp(schema, "type") as React.ComponentProps<"input">["type"]) ?? "text";
+    (extractStringProp(
+      schema,
+      "type"
+    ) as React.ComponentProps<"input">["type"]) ?? "text";
 
   const errorId = `${field.name}-error`;
   const hasErrors = field.state.meta.errors.length > 0;

@@ -32,7 +32,7 @@ describe("/api/genui route", () => {
     const text = await Bun.file(
       new URL("../../routeTree.gen.ts", import.meta.url)
     ).text();
-    expect(text.includes("'\/api\/genui'")).toBe(true);
+    expect(text.includes("'/api/genui'")).toBe(true);
   });
 
   it("returns 401 when session is missing", async () => {
@@ -42,13 +42,15 @@ describe("/api/genui route", () => {
       /* @vite-ignore */
       authPkg
     );
-    (auth.api.getSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      null
-    );
+    (
+      auth.api.getSession as unknown as ReturnType<typeof vi.fn>
+    ).mockResolvedValueOnce(null);
 
     const res = await Route.options.server?.handlers?.POST?.(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { request: new Request("http://localhost/api/genui", { method: "POST" }) } as any
+      {
+        request: new Request("http://localhost/api/genui", { method: "POST" }),
+      } as any
     );
 
     expect(res?.status).toBe(401);
@@ -82,4 +84,3 @@ describe("/api/genui route", () => {
     expect(res?.headers.get("x-model")).toBe("openai/gpt-4o-mini");
   });
 });
-
