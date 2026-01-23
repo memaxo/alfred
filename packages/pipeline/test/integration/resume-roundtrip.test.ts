@@ -43,12 +43,19 @@ describe("Pipeline resume roundtrip", () => {
     expect(scheduleResult).toBe("ok");
 
     // Minimal snapshot that resumes at execute stage boundary.
+    const now = Date.now();
     const snapshot: PipelineSnapshot = {
       runId,
       status: "running",
+      requirement: input.requirement,
+      lastCompletedStage: "schedule",
       lastCompletedStageIndex: 3, // schedule is index 3 in STAGE_ORDER
       contextEntries: [],
       stageResults: [],
+      startedAt: now,
+      lastEventAt: now,
+      lastEventId: null,
+      error: null,
     };
 
     // Resume should start at execute and then proceed; we don't assert success because it may

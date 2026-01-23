@@ -2,6 +2,7 @@ import { withBudget } from "@alfred/metrics/performance";
 import { createTokenEstimator } from "@alfred/metrics/token";
 import type { UIMessage } from "@alfred/type/stream";
 import { convertToModelMessages, pruneMessages } from "ai";
+import { BUDGET_RATIOS } from "./calculator";
 import { getModelContextInfo } from "./model";
 import type {
   BuildHistoryContextOptions,
@@ -11,14 +12,24 @@ import type {
   HistoryTier,
 } from "./types";
 
-const DEFAULT_HISTORY_RATIO = 0.5;
-const MIN_HISTORY_RATIO = 0.05;
-const MAX_HISTORY_RATIO = 0.95;
-const DEFAULT_MIN_SYSTEM_RESERVE = 2000;
-const DEFAULT_MIN_HEADROOM = 2000;
-const DEFAULT_RESERVED_TOOLING = 1000;
-const HIGH_TIER_OVERDRAFT = 512;
-const MEDIUM_TIER_OVERDRAFT = 256;
+/**
+ * Research-backed budget constants (January 2025)
+ *
+ * Sources:
+ * - "Lost in the Middle" (Liu et al., 2023): 55% utilization threshold
+ * - Context Engineering Guide: 70% warn, 85% hard cap
+ * - LLMLingua/LongLLMLingua: Compression budget controller patterns
+ *
+ * @see packages/history/src/calculator.ts for full rationale
+ */
+const DEFAULT_HISTORY_RATIO = BUDGET_RATIOS.DEFAULT_HISTORY_RATIO; // 0.55
+const MIN_HISTORY_RATIO = BUDGET_RATIOS.MIN_HISTORY_RATIO; // 0.15
+const MAX_HISTORY_RATIO = BUDGET_RATIOS.MAX_HISTORY_RATIO; // 0.75
+const DEFAULT_MIN_SYSTEM_RESERVE = BUDGET_RATIOS.MIN_SYSTEM_RESERVE; // 2000 (scaled by model)
+const DEFAULT_MIN_HEADROOM = BUDGET_RATIOS.MIN_HEADROOM; // 2000 (scaled by model)
+const DEFAULT_RESERVED_TOOLING = BUDGET_RATIOS.MIN_TOOLING_RESERVE; // 1000 (scaled by model)
+const HIGH_TIER_OVERDRAFT = BUDGET_RATIOS.MIN_HIGH_OVERDRAFT; // 512 (scaled by model)
+const MEDIUM_TIER_OVERDRAFT = BUDGET_RATIOS.MIN_MEDIUM_OVERDRAFT; // 256 (scaled by model)
 
 const ROLE_WEIGHTS: Record<string, number> = {
   user: 3,
@@ -332,6 +343,7 @@ function resolveBudget(
   );
   const envHeadroom = parseEnvNumber(process.env.HISTORY_MIN_HEADROOM);
 
+  // Allow env/option overrides for backward compatibility
   let ratio =
     typeof overrides.historyRatio === "number"
       ? overrides.historyRatio
@@ -339,20 +351,37 @@ function resolveBudget(
         modelContext.defaultHistoryRatio ??
         DEFAULT_HISTORY_RATIO);
   if (options.aggressive) {
-    ratio -= 0.1;
+    ratio -= BUDGET_RATIOS.AGGRESSIVE_REDUCTION;
   }
   ratio = clamp(ratio, MIN_HISTORY_RATIO, MAX_HISTORY_RATIO);
 
   const maxContextTokens =
     overrides.maxContextTokens ?? modelContext.maxContextTokens;
+
+  // Scale reserves based on context window (research-backed ratios)
+  // For models with larger context windows, use percentage-based scaling
+  const scaledSystemReserve = Math.max(
+    DEFAULT_MIN_SYSTEM_RESERVE,
+    Math.floor(maxContextTokens * BUDGET_RATIOS.SYSTEM_RESERVE_RATIO)
+  );
+  const scaledHeadroom = Math.max(
+    DEFAULT_MIN_HEADROOM,
+    Math.floor(maxContextTokens * BUDGET_RATIOS.HEADROOM_RATIO)
+  );
+  const scaledTooling = Math.max(
+    DEFAULT_RESERVED_TOOLING,
+    Math.floor(maxContextTokens * BUDGET_RATIOS.TOOLING_RESERVE_RATIO)
+  );
+
+  // Allow explicit overrides to take precedence
   const minSystemReserveTokens =
     overrides.minSystemReserveTokens ??
     envSystemReserve ??
-    DEFAULT_MIN_SYSTEM_RESERVE;
+    scaledSystemReserve;
   const minHeadroomTokens =
-    overrides.minHeadroomTokens ?? envHeadroom ?? DEFAULT_MIN_HEADROOM;
+    overrides.minHeadroomTokens ?? envHeadroom ?? scaledHeadroom;
   const reservedToolingTokens =
-    overrides.reservedToolingTokens ?? DEFAULT_RESERVED_TOOLING;
+    overrides.reservedToolingTokens ?? scaledTooling;
 
   const historyWindow = Math.max(0, Math.floor(maxContextTokens * ratio));
   const systemReserve = Math.max(systemTokens, minSystemReserveTokens);
@@ -564,15 +593,41 @@ function pickHigherTier(a: HistoryTier, b: HistoryTier): HistoryTier {
   return order.indexOf(b) > order.indexOf(a) ? b : a;
 }
 
+/**
+ * Get allowed overdraft for a message tier.
+ *
+ * Research-backed ratios:
+ * - High tier (user messages): 2% of budget, min 512 tokens
+ * - Medium tier (assistant/tool): 1% of budget, min 256 tokens
+ * - Low tier: no overdraft
+ *
+ * The percentage caps ensure overdraft scales with context window
+ * while the fixed minimums ensure small models still have reasonable
+ * overdraft allowances.
+ */
 function getAllowedOverdraft(tier: HistoryTier, budget: number): number {
   if (budget <= 0) {
     return 0;
   }
   if (tier === "high") {
-    return Math.min(HIGH_TIER_OVERDRAFT, Math.floor(budget * 0.2));
+    // 2% of budget, bounded by min/max
+    return Math.max(
+      HIGH_TIER_OVERDRAFT,
+      Math.min(
+        Math.floor(budget * BUDGET_RATIOS.HIGH_TIER_OVERDRAFT_RATIO),
+        4_000 // Cap at 4k for very large contexts
+      )
+    );
   }
   if (tier === "medium") {
-    return Math.min(MEDIUM_TIER_OVERDRAFT, Math.floor(budget * 0.1));
+    // 1% of budget, bounded by min/max
+    return Math.max(
+      MEDIUM_TIER_OVERDRAFT,
+      Math.min(
+        Math.floor(budget * BUDGET_RATIOS.MEDIUM_TIER_OVERDRAFT_RATIO),
+        2_000 // Cap at 2k for very large contexts
+      )
+    );
   }
   return 0;
 }

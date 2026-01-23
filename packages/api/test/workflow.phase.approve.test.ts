@@ -53,7 +53,15 @@ describe("workflow.phase.approveAndExecute", () => {
       ),
     };
 
-    mock.module("@alfred/db/repo/plan", () => planRepo);
+    const dbAbs = new URL("../../db/src/index.ts", import.meta.url).pathname;
+    const realDb = await import(dbAbs);
+    mock.module("@alfred/db", () => ({
+      ...realDb,
+      planRepo,
+      workflowRepo: {
+        updateRun: workflowRepo.updateRun,
+      },
+    }));
 
     const { createTestCaller } = await import("./utils/trpc");
     caller = await createTestCaller({

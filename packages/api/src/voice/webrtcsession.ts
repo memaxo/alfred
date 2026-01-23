@@ -530,6 +530,14 @@ function avgAbsPcm16(pcm: Int16Array): number {
   return sum / pcm.length;
 }
 
+function safeGetVoicePools() {
+  try {
+    return getVoicePools();
+  } catch {
+    return null;
+  }
+}
+
 async function flushQueuedAudio(sess: WebrtcSession) {
   if (sess.pcm16QueuedBytes === 0) {
     return;
@@ -538,7 +546,13 @@ async function flushQueuedAudio(sess: WebrtcSession) {
   sess.pcm16Queue.length = 0;
   sess.pcm16QueuedBytes = 0;
 
-  const { voiceRegistry } = getVoicePools();
+  const pools = safeGetVoicePools();
+  if (!pools) {
+    // Graceful degradation: WebRTC transport can still negotiate/stream even if
+    // local voice pools (STT/TTS) are not initialized in this server runtime.
+    return;
+  }
+  const { voiceRegistry } = pools;
   const voiceSession =
     voiceRegistry.getSession(sess.sessionId) ??
     voiceRegistry.createSession(sess.userId, sess.sessionId);
@@ -598,7 +612,11 @@ async function flushQueuedAudio(sess: WebrtcSession) {
 
 async function finalizeQueuedAudio(sess: WebrtcSession) {
   await flushQueuedAudio(sess);
-  const { voiceRegistry } = getVoicePools();
+  const pools = safeGetVoicePools();
+  if (!pools) {
+    return;
+  }
+  const { voiceRegistry } = pools;
   const voiceSession = voiceRegistry.getSession(sess.sessionId);
   if (voiceSession) {
     await finalizeUtterance(sess, voiceSession);
@@ -680,7 +698,11 @@ async function streamTtsAsOpus(sess: WebrtcSession, text: string) {
   sess.ttsInProgress = true;
   updateStatus(sess, "responding");
   try {
-    const { ttsPool } = getVoicePools();
+    const pools = safeGetVoicePools();
+    if (!pools) {
+      return;
+    }
+    const { ttsPool } = pools;
 
     // Collect PCM chunks from the TTS pool; we then resample to 48k and stream
     // as Opus RTP packets in 20ms frames.

@@ -7,6 +7,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { optionalNullableDateSchema } from "../utils/zod-schemas";
 import { authedProcedure, router } from "../trpc";
 
 const statusSchema = z.enum([
@@ -38,8 +39,8 @@ const taskUpdateInput = z
     description: z.string().max(4096).nullable().optional(),
     status: statusSchema.optional(),
     priority: z.number().int().min(0).max(10).nullable().optional(),
-    due: z.string().datetime().nullable().optional(),
-    completed: z.string().datetime().nullable().optional(),
+    due: optionalNullableDateSchema,
+    completed: optionalNullableDateSchema,
     metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .refine(
@@ -84,19 +85,9 @@ export const taskRouter = router({
         description: input.description ?? undefined,
         status: input.status,
         priority: input.priority ?? undefined,
-        due:
-          input.due === null
-            ? null
-            : input.due
-              ? new Date(input.due)
-              : undefined,
+        due: input.due,
         projectId: input.projectId ?? undefined,
-        completed:
-          input.completed === null
-            ? null
-            : input.completed
-              ? new Date(input.completed)
-              : undefined,
+        completed: input.completed,
         metadata: input.metadata ?? undefined,
       });
       if (updated === 0) {

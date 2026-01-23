@@ -1,12 +1,36 @@
 import { Pressable, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { MindscapeCanvas } from "@/components/desktop/mindscape";
 import { WindowLayer } from "@/components/desktop/windows/layer";
 import { GlobalOrb } from "@/components/orb/global";
 import { useDesktopStore } from "@/store/desktop";
 import { useMindscapeStore } from "@/store/mindscape";
 
+function ShellButton({
+  label,
+  accessibilityLabel,
+  onPress,
+}: {
+  label: string;
+  accessibilityLabel?: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel ?? label}
+      className="rounded-md border border-border bg-background/80 px-3 py-2"
+      onPress={onPress}
+    >
+      <Text className="text-foreground text-sm">{label}</Text>
+    </Pressable>
+  );
+}
+
 export function DesktopShell() {
+  const insets = useSafeAreaInsets();
   const mode = useDesktopStore((s) => s.mode);
   const toggleMode = useDesktopStore((s) => s.toggleMode);
   const openWindow = useDesktopStore((s) => s.openWindow);
@@ -38,18 +62,17 @@ export function DesktopShell() {
         <GlobalOrb />
 
         {/* Overlay layer */}
-        <View className="absolute top-4 left-4 flex-row items-center gap-2">
-          <Pressable
-            className="rounded-md border border-border bg-background px-3 py-2"
+        <View
+          className="absolute flex-row items-center gap-2"
+          style={{ left: 16, top: insets.top + 12 }}
+        >
+          <ShellButton
+            label={mode === "desktop" ? "Open Mindscape" : "Back to Desktop"}
             onPress={toggleMode}
-          >
-            <Text className="text-foreground text-sm">
-              {mode === "desktop" ? "Open Mindscape" : "Back to Desktop"}
-            </Text>
-          </Pressable>
-          <Pressable
+          />
+          <ShellButton
             accessibilityLabel="Open Chat window"
-            className="rounded-md border border-border bg-background px-3 py-2"
+            label="Chat"
             onPress={() => {
               const id = openWindow("chat", { label: "Chat" });
               const nodeId = spawnFromWindow({
@@ -71,16 +94,17 @@ export function DesktopShell() {
               }
               pulseEdge(edgeId);
             }}
-          >
-            <Text className="text-foreground text-sm">Open Chat</Text>
-          </Pressable>
-          <Pressable
+          />
+          <ShellButton
+            accessibilityLabel="Open Components window"
+            label="Launcher"
+            onPress={() => openWindow("components", { label: "Components" })}
+          />
+          <ShellButton
             accessibilityLabel="Open Terminal window"
-            className="rounded-md border border-border bg-background px-3 py-2"
+            label="Terminal"
             onPress={() => openWindow("terminal", { label: "Terminal" })}
-          >
-            <Text className="text-foreground text-sm">Open Terminal</Text>
-          </Pressable>
+          />
         </View>
       </View>
     </SafeAreaView>

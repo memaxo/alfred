@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatGreeting, getTransition } from "@alfred/persona";
 
 /**
  * Time of day categories
@@ -130,7 +131,7 @@ const DEFAULT_TRIGGERS: ProactiveTrigger[] = [
     priority: "low",
     message: () => ({
       title: "Burning the midnight oil",
-      body: "Sir, it's quite late. Shall I dim the display?",
+      body: "It’s quite late. Shall I dim the display?",
     }),
     cooldownMs: 60 * 60 * 1000, // 1 hour
     type: "info",
@@ -142,7 +143,7 @@ const DEFAULT_TRIGGERS: ProactiveTrigger[] = [
     priority: "low",
     message: () => ({
       title: "Systems on standby",
-      body: "I'll be here when you need me, Sir.",
+      body: "I’ll be here when you need me.",
     }),
     cooldownMs: 30 * 60 * 1000, // 30 minutes
     type: "info",
@@ -433,33 +434,12 @@ export function useAmbientAwareness(
  * JARVIS-style greeting based on time of day
  */
 export function getJarvisGreeting(state: AmbientState): string {
-  const greetings = {
-    morning: [
-      "Good morning, Sir.",
-      "Morning, Sir. Systems are ready.",
-      "Good morning. I've prepared your daily briefing.",
-    ],
-    afternoon: [
-      "Good afternoon, Sir.",
-      "Afternoon, Sir. How may I assist?",
-      "Good afternoon. Ready when you are.",
-    ],
-    evening: [
-      "Good evening, Sir.",
-      "Evening, Sir. Shall we continue?",
-      "Good evening. I trust the day treated you well.",
-    ],
-    night: [
-      "Still at it, Sir?",
-      "Burning the midnight oil, I see.",
-      "The night shift begins. Coffee protocols recommended.",
-    ],
-  };
-
-  const options = greetings[state.time.timeOfDay];
-  const hourKey = Math.floor(state.time.current.getTime() / 3_600_000);
-  const idx = Math.abs(hourKey) % options.length;
-  return options[idx] ?? options.at(0) ?? "";
+  const base = formatGreeting({
+    timeOfDay: state.time.timeOfDay,
+    honorific: "neutral",
+  });
+  const tail = getTransition("greet", "neutral");
+  return `${base} ${tail}`.trim();
 }
 
 /**

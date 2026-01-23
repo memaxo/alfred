@@ -22,12 +22,15 @@ import {
   type ToolResultPart,
 } from "@alfred/ui/chat/parts";
 import type { ReactNode } from "react";
+import type { UIComponent } from "@alfred/type/genui";
 import {
   GenUIErrorBoundary,
   isGenUIToolResult,
   isUIDataPart,
   UISchemaRenderer,
 } from "@/components/genui";
+import { GenUIFormWrapper } from "@/components/genui/form-wrapper";
+import { containsFormComponents } from "@alfred/ui/genui";
 import { Artifact } from "./artifact";
 import { Branch } from "./branch";
 import { Canvas } from "./canvas";
@@ -326,7 +329,8 @@ type AssistantPart = AssistantUIMessage["parts"][number];
 type PartRenderer = (
   part: AssistantPart,
   message: AssistantUIMessage,
-  handlers?: PartHandlers
+  handlers?: PartHandlers,
+  conversationId?: string | null
 ) => ReactNode | null;
 
 type PartHandlers = {
@@ -343,15 +347,56 @@ type PartHandlers = {
  * This allows the LLM to return arbitrary UI schemas that
  * are interpreted and rendered using the component registry.
  */
-function renderGenUI(part: AssistantPart): ReactNode | null {
+function renderGenUI(
+  part: AssistantPart,
+  message: AssistantUIMessage,
+  _handlers?: PartHandlers,
+  conversationId?: string | null
+): ReactNode | null {
   if (!isUIDataPart(part)) {
     return null;
   }
+
+  const schema = part.ui;
+
+  // If schema contains form components and we have conversationId, wrap with form wrapper
+  if (containsFormComponents(schema) && conversationId) {
+    const formId = extractFormId(schema);
+    const toolCallId = extractToolCallIdFromMessage(message, part);
+    const formData =
+      typeof part === "object" && "data" in part ? part.data : undefined;
+
+    return (
+      <GenUIErrorBoundary schema={schema}>
+        <GenUIFormWrapper
+          conversationId={conversationId}
+          formData={formData}
+          formId={formId}
+          schema={schema}
+          toolCallId={toolCallId}
+        />
+      </GenUIErrorBoundary>
+    );
+  }
+
+  // Regular GenUI rendering
   return (
-    <GenUIErrorBoundary schema={part.ui}>
-      <UISchemaRenderer schema={part.ui} />
+    <GenUIErrorBoundary schema={schema}>
+      <UISchemaRenderer schema={schema} />
     </GenUIErrorBoundary>
   );
+}
+
+function extractFormId(schema: UIComponent): string {
+  if (
+    typeof schema.props === "object" &&
+    schema.props !== null &&
+    "formId" in schema.props &&
+    typeof schema.props.formId === "string"
+  ) {
+    return schema.props.formId;
+  }
+  return `form-${schema.component}-${schema.key ?? "default"}`;
 }
 
 function renderGenUIOutput(output: unknown): ReactNode | null {
@@ -367,7 +412,8 @@ function renderGenUIOutput(output: unknown): ReactNode | null {
 
 const dataPartRenderers: PartRenderer[] = [
   // GenUI dynamic component renderer (must come first)
-  renderGenUI,
+  (part, message, handlers, conversationId) =>
+    renderGenUI(part, message, handlers, conversationId),
   (part) =>
     renderStructuredPart(part, "plan", (data) => {
       if (isPlanData(data)) {
@@ -507,15 +553,36 @@ const partRenderers: PartRenderer[] = [
 export function renderAssistantPart(
   part: AssistantPart,
   message: AssistantUIMessage,
-  handlers?: PartHandlers
+  handlers?: PartHandlers,
+  conversationId?: string | null
 ): ReactNode {
   for (const renderer of partRenderers) {
-    const rendered = renderer(part, message, handlers);
+    const rendered = renderer(part, message, handlers, conversationId);
     if (rendered) {
       return rendered;
     }
   }
   return null;
+}
+
+function extractToolCallIdFromMessage(
+  message: AssistantUIMessage,
+  part: AssistantPart
+): string | undefined {
+  // Look for associated tool-call part in the same message
+  if (isUIDataPart(part) && part.id) {
+    const toolCallPart = message.parts.find((p) => {
+      if (!isToolCallPart(p)) {
+        return false;
+      }
+      const toolCall = p as unknown as ToolCallPart;
+      return toolCall.toolCallId === part.id;
+    });
+    if (toolCallPart) {
+      return (toolCallPart as unknown as ToolCallPart).toolCallId;
+    }
+  }
+  return undefined;
 }
 
 function renderStructuredPart(
@@ -695,12 +762,13 @@ function renderToolResult(
 }
 
 export const createPartRenderer =
-  (handlers?: PartHandlers) =>
+  (handlers?: PartHandlers, conversationId?: string | null) =>
   (part: UIMessage["parts"][number], message: UIMessage): ReactNode =>
     renderAssistantPart(
       part as AssistantPart,
       message as AssistantUIMessage,
-      handlers
+      handlers,
+      conversationId
     );
 
 // Deprecated: use createPartRenderer

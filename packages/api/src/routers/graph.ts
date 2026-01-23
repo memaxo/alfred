@@ -1,22 +1,18 @@
 import { createHash } from "node:crypto";
 import { db } from "@alfred/db";
 import { ensureMirrorNodes, touchNodes } from "@alfred/db/repo/graph/write";
-import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import { memoryEdges } from "@alfred/db/schema/graph";
 import { logger } from "@alfred/logger";
 import { observable } from "@trpc/server/observable";
 import { and, eq, inArray, or } from "drizzle-orm";
+import type { EdgeRow } from "../services/graph";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import {
-  graphContextDurationSeconds,
   graphQueriesTotal,
   graphQueryDurationSeconds,
-  graphRagEmptyTotal,
-  graphRagHitsTotal,
 } from "../metrics";
 import { authedProcedure, router } from "../trpc";
-
-type EdgeRow = typeof memoryEdges.$inferSelect;
 
 function mapGraphWriteResource(raw: unknown) {
   const input =
@@ -329,185 +325,13 @@ export const graphRouter = router({
 
         // Context Query: Parallel Graph Traversal + Vector RAG
         if (input.kind === "context") {
-          let stopContextTimer: (() => void) | null = null;
-          try {
-            stopContextTimer = graphContextDurationSeconds.startTimer();
-          } catch {
-            /* ignore */
-          }
-
-          // 1. Graph Traversal (1-hop neighbors)
-          const edgesPromise = db
-            .select()
-            .from(memoryEdges)
-            .where(
-              and(
-                eq(memoryEdges.resource, resource),
-                or(
-                  eq(memoryEdges.fromId, input.nodeId),
-                  eq(memoryEdges.toId, input.nodeId)
-                )
-              )
-            );
-
-          // 2. Vector RAG
-          // We reuse the runUnifiedQuery logic for semantic search by constructing a synthetic input
-          const ragInput = {
-            kind: "semantic" as const,
-            text: input.text,
-            topK: input.topK,
-            preferRag: true,
-            resource,
-          };
-          const ragPromise = runUnifiedQuery(ragInput, { resource });
-
-          const [edges, ragResult] = await Promise.all([
-            edgesPromise,
-            ragPromise,
-          ]);
-
-          // 1. Identify 1-hop neighbors
-          const neighborIds = new Set<string>();
-          edges.forEach((edge) => {
-            if (edge.fromId !== input.nodeId) {
-              neighborIds.add(edge.fromId);
-            }
-            if (edge.toId !== input.nodeId) {
-              neighborIds.add(edge.toId);
-            }
-          });
-
-          // 2. Deep RAG: If 1-hop is sparse (< 3) and we have neighbors, go deeper (2-hop)
-          let deepEdges: EdgeRow[] = [];
-          const oneHopIds = Array.from(neighborIds);
-
-          if (edges.length < 3 && oneHopIds.length > 0) {
-            try {
-              deepEdges = await db
-                .select()
-                .from(memoryEdges)
-                .where(
-                  and(
-                    eq(memoryEdges.resource, resource),
-                    or(
-                      inArray(memoryEdges.fromId, oneHopIds),
-                      inArray(memoryEdges.toId, oneHopIds)
-                    )
-                  )
-                )
-                .limit(10);
-
-              // Filter edges connecting back to start node
-              deepEdges = deepEdges.filter(
-                (e) => e.fromId !== input.nodeId && e.toId !== input.nodeId
-              );
-
-              // Add 2-hop neighbors to ID set for label fetching
-              deepEdges.forEach((e) => {
-                if (!neighborIds.has(e.fromId)) {
-                  neighborIds.add(e.fromId);
-                }
-                if (!neighborIds.has(e.toId)) {
-                  neighborIds.add(e.toId);
-                }
-              });
-            } catch (error) {
-              // Ignore deep RAG failures, fallback to 1-hop
-              logger.warn("graph_context_deep_traversal_failed", {
-                resource,
-                nodeId: input.nodeId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-            }
-          }
-
-          // 3. Fetch labels for all identified nodes (1-hop + 2-hop)
-          const neighborsPromise =
-            neighborIds.size > 0
-              ? db
-                  .select({ id: memoryNodes.id, label: memoryNodes.label })
-                  .from(memoryNodes)
-                  .where(inArray(memoryNodes.id, Array.from(neighborIds)))
-              : Promise.resolve([]);
-
-          const neighbors = await neighborsPromise;
-          const labelMap = new Map(neighbors.map((n) => [n.id, n.label]));
-
-          // 4. Format 1-hop edges
-          const graphNodes = edges.map((edge) => {
-            const isOutgoing = edge.fromId === input.nodeId;
-            const neighborId = isOutgoing ? edge.toId : edge.fromId;
-            const label = labelMap.get(neighborId) ?? neighborId;
-
-            return {
-              id: { uiId: neighborId },
-              kind: "link",
-              label,
-              properties: {
-                relation: edge.kind,
-                direction: isOutgoing ? "outgoing" : "incoming",
-              },
-            };
-          });
-
-          // 5. Format 2-hop edges
-          const deepGraphNodes = deepEdges.map((edge) => {
-            // Heuristic: Identify the "bridge" node (the one in 1-hop set)
-            // If both are 1-hop, it's a lateral connection.
-            // If one is new, it's the target.
-            const fromIs1Hop = oneHopIds.includes(edge.fromId);
-
-            // Default to 'to' as target if 'from' is the bridge
-            const bridgeId = fromIs1Hop ? edge.fromId : edge.toId;
-            const targetId = fromIs1Hop ? edge.toId : edge.fromId;
-
-            const targetLabel = labelMap.get(targetId) ?? targetId;
-            const bridgeLabel = labelMap.get(bridgeId) ?? bridgeId;
-
-            return {
-              id: { uiId: targetId },
-              kind: "link",
-              label: `${targetLabel} (via ${bridgeLabel})`,
-              properties: {
-                relation: edge.kind,
-                direction: "indirect",
-              },
-            };
-          });
-
-          const allGraphNodes = [...graphNodes, ...deepGraphNodes];
-          const allEdges = [...edges, ...deepEdges, ...(ragResult.edges || [])];
-
-          // Record metrics
-          try {
-            const vectorCount = (ragResult.nodes || []).length;
-            const graphCount = allGraphNodes.length;
-
-            if (vectorCount > 0) {
-              graphRagHitsTotal.inc({ source: "vector" }, vectorCount);
-            }
-            if (graphCount > 0) {
-              graphRagHitsTotal.inc({ source: "graph" }, graphCount);
-            }
-            if (vectorCount === 0 && graphCount === 0) {
-              graphRagEmptyTotal.inc();
-            }
-          } catch {
-            /* ignore metrics errors */
-          }
-
-          if (stopContextTimer) {
-            stopContextTimer();
-          }
-
-          return {
-            nodes: [...allGraphNodes, ...(ragResult.nodes || [])],
-            edges: allEdges,
-            meta: {
-              graphCount: allGraphNodes.length,
-              ragCount: (ragResult.nodes || []).length,
-            },
-          };
+          const { executeContextQuery } = await import("../services/graph");
+          return await executeContextQuery(
+            input.nodeId,
+            input.text,
+            input.topK,
+            resource
+          );
         }
 
         if (

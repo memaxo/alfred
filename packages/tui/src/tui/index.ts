@@ -18,6 +18,7 @@ import {
   createCognitiveStore,
   setupCognitiveSubscription,
 } from "./subscriptions/cognitive";
+import { createFocusStore, setupFocusSubscription } from "./subscriptions/focus";
 import {
   getSubscriptionManager,
   resetSubscriptionManager,
@@ -56,6 +57,7 @@ export class TuiApp {
 
   // Stores for data
   private readonly cognitiveStore = createCognitiveStore();
+  private readonly focusStore = createFocusStore();
   private readonly workflowStore = createWorkflowStore();
   private readonly voiceStore = createVoiceStore();
   private readonly metricsStore = createMetricsStore();
@@ -196,6 +198,7 @@ export class TuiApp {
           process.stdout.write(
             [
               "ALFRED Dashboard",
+              "Focus",
               "Cognitive",
               "Workflows",
               "Metrics",
@@ -267,6 +270,13 @@ export class TuiApp {
       const timeout = setTimeout(() => finish(0), idleMs);
       (timeout as unknown as { unref?: () => void }).unref?.();
 
+      // In some headless environments (notably Bun + piped stdin),
+      // input may be fully delivered before we attach a 'data' listener.
+      // Ensure we still exit promptly once stdin closes.
+      const onEnd = () => {
+        finish(0);
+      };
+
       const onData = (chunk: Buffer | string) => {
         const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
         for (const ch of text) {
@@ -314,11 +324,15 @@ export class TuiApp {
       };
 
       process.stdin.on("data", onData);
+      process.stdin.on("end", onEnd);
+      process.stdin.on("close", onEnd);
       process.stdin.resume();
 
       // Ensure we detach the listener on exit.
       const cleanup = () => {
         process.stdin.off("data", onData);
+        process.stdin.off("end", onEnd);
+        process.stdin.off("close", onEnd);
       };
       process.on("beforeExit", cleanup);
     });
@@ -352,6 +366,12 @@ export class TuiApp {
       mode,
     });
 
+    setupFocusSubscription({
+      manager,
+      store: this.focusStore,
+      mode,
+    });
+
     setupWorkflowSubscription({
       manager,
       store: this.workflowStore,
@@ -374,6 +394,7 @@ export class TuiApp {
   private connectStoresToDashboard() {
     return {
       cognitive: this.cognitiveStore,
+      focus: this.focusStore,
       workflow: this.workflowStore,
       metrics: this.metricsStore,
       voice: this.voiceStore,

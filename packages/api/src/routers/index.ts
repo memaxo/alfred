@@ -24,6 +24,7 @@ import { mcpRouter } from "./mcp";
 import { metricsRouter } from "./metrics";
 import { noteRouter } from "./note";
 import { notificationRouter } from "./notification";
+import { notifyRouter } from "./notify";
 import { orchestratorRouter } from "./orchestrator";
 import { planRouter } from "./plan";
 import { preferenceRouter } from "./preference";
@@ -37,7 +38,6 @@ import { shortcutsRouter } from "./shortcuts";
 import { taskRouter } from "./task";
 import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
-import { todoRouter } from "./todo";
 import { tokenRouter } from "./token";
 import { trajectoryRouter } from "./trajectory";
 import { tuneRouter } from "./tune";
@@ -46,6 +46,10 @@ import { visualRouter } from "./visual";
 import { voiceRouter } from "./voice";
 import { workflowRouter } from "./workflow";
 import { workingsetRouter } from "./workingset";
+import { focusRouter } from "./focus";
+import { attentionRouter } from "./attention";
+import { deltaRouter } from "./delta";
+import { genuiRouter } from "./genui";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => "OK"),
@@ -61,7 +65,6 @@ export const appRouter = router({
     message: "This is private",
     user: ctx.session.user,
   })),
-  todo: todoRouter,
   task: taskRouter,
   note: noteRouter,
   remind: remindRouter,
@@ -100,5 +103,10 @@ export const appRouter = router({
   github: githubRouter,
   terminal: terminalRouter,
   tune: tuneRouter,
+  focus: focusRouter,
+  attention: attentionRouter,
+  delta: deltaRouter,
+  notify: notifyRouter,
+  genui: genuiRouter,
 });
 export type AppRouter = typeof appRouter;

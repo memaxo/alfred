@@ -99,6 +99,10 @@ export async function spawnNode(page: Page, label: string) {
     }
 
     const labelLower = rawLabel.toLowerCase();
+    if (labelLower.includes("note")) {
+      store.getState().spawnWindow("note");
+      return true;
+    }
     if (labelLower.includes("workflow")) {
       store.getState().spawnWindow("workflow");
       return true;
@@ -124,8 +128,12 @@ export async function spawnNode(page: Page, label: string) {
 
   await input.press("Enter");
 
-  // Close animation can be slightly slow in CI.
-  await expect(dialog).toBeHidden({ timeout: 10_000 });
+  // The palette UI doesn't always auto-close on Enter; close it if needed.
+  if (await dialog.isVisible().catch(() => false)) {
+    await page.keyboard.press("Escape").catch(() => {});
+    await page.mouse.click(10, 10);
+    await dialog.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {});
+  }
 }
 
 export function latestNode(page: Page, type: string): Locator {

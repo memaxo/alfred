@@ -879,3 +879,68 @@ export function createFlowCapture(screenshots: ScreenshotManager) {
     },
   };
 }
+
+// ============================================================================
+// AI-Optimized Helpers
+// ============================================================================
+
+/**
+ * Capture screenshot and augment error with screenshot path
+ *
+ * @param screenshots - Screenshot manager instance
+ * @param errorName - Name for the error screenshot
+ * @param error - Original error to augment
+ * @throws Augmented error with screenshot reference
+ */
+export async function captureAndThrow(
+  screenshots: ScreenshotManager,
+  errorName: string,
+  error: Error
+): Promise<never> {
+  const path = await screenshots.captureError(errorName);
+
+  // Augment error message with screenshot reference
+  const augmentedMessage =
+    `${error.message}\n\n` +
+    `[SCREENSHOT] ${path}\n` +
+    `[VIEWPORT] ${JSON.stringify(screenshots.getMetadata().at(-1)?.viewport)}\n` +
+    `[URL] ${screenshots.getMetadata().at(-1)?.url}`;
+
+  const augmented = new Error(augmentedMessage);
+  augmented.stack = error.stack;
+  throw augmented;
+}
+
+/**
+ * Wrap assertion with automatic screenshot on failure
+ *
+ * @param screenshots - Screenshot manager instance
+ * @param name - Name for the assertion
+ * @param assertion - Async assertion function
+ * @returns Result of the assertion
+ * @throws Error with screenshot reference if assertion fails
+ *
+ * @example
+ * ```typescript
+ * await assertWithScreenshot(screenshots, "workflow-visible", async () => {
+ *   await expect(page.locator('[data-testid="workflow"]')).toBeVisible();
+ * });
+ * ```
+ */
+export async function assertWithScreenshot<T>(
+  screenshots: ScreenshotManager,
+  name: string,
+  assertion: () => Promise<T>
+): Promise<T> {
+  try {
+    return await assertion();
+  } catch (error) {
+    await captureAndThrow(
+      screenshots,
+      name,
+      error instanceof Error ? error : new Error(String(error))
+    );
+    // TypeScript doesn't understand captureAndThrow always throws
+    throw new Error("unreachable");
+  }
+}

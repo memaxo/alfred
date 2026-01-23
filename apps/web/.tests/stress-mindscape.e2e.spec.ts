@@ -1,46 +1,80 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/ai-harness";
+import { signUpTestUser } from "./helpers/auth";
 
 test.describe("Mindscape Stress Test", () => {
-  test("Spawn Starfield (1000 Nodes)", async ({ page }) => {
-    // Use '/' or '/mindscape' depending on your router config
-    // assuming '/mindscape' exists, or '/' is the mindscape route
-    await page.goto("http://127.0.0.1:3100/mindscape");
+  test("Spawn Starfield (1000 Nodes)", async ({
+    page,
+    screenshots,
+    safeAction,
+    safeAssert,
+  }) => {
+    await safeAction(
+      "signup-test-user",
+      async () => {
+        await signUpTestUser(page);
+      },
+      60_000
+    );
+    await screenshots.captureMilestone("authenticated");
+
+    await safeAction(
+      "goto-mindscape",
+      async () => {
+        await page.goto("/mindscape");
+      },
+      20_000
+    );
+    await screenshots.captureMilestone("mindscape");
 
     // Wait for initialization
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 30_000 });
+    await safeAssert("react-flow-visible", async () => {
+      await expect(page.locator(".react-flow")).toBeVisible({
+        timeout: 30_000,
+      });
+    });
 
     // Manually inject nodes via window store (exposed for debug in dev)
-    await page.evaluate(() => {
-      const store = (window as any).__MINDSCAPE_STORE__;
-      if (!store) {
-        throw new Error(
-          "Store not found - ensure window.__MINDSCAPE_STORE__ is exposed"
-        );
-      }
+    await safeAction(
+      "inject-1000-nodes",
+      async () => {
+        await page.evaluate(() => {
+          const store = (window as any).__MINDSCAPE_STORE__;
+          if (!store) {
+            throw new Error(
+              "Store not found - ensure window.__MINDSCAPE_STORE__ is exposed"
+            );
+          }
 
-      const nodes: Array<{
-        id: string;
-        type: string;
-        position: { x: number; y: number };
-        data: { label: string };
-      }> = [];
-      for (let i = 0; i < 1000; i++) {
-        nodes.push({
-          id: `star-${i}`,
-          type: "orb",
-          position: {
-            x: (Math.random() - 0.5) * 5000,
-            y: (Math.random() - 0.5) * 5000,
-          },
-          data: { label: `Star ${i}` },
+          const nodes: Array<{
+            id: string;
+            type: string;
+            position: { x: number; y: number };
+            data: { label: string };
+          }> = [];
+          for (let i = 0; i < 1000; i++) {
+            nodes.push({
+              id: `star-${i}`,
+              type: "orb",
+              position: {
+                x: (Math.random() - 0.5) * 5000,
+                y: (Math.random() - 0.5) * 5000,
+              },
+              data: { label: `Star ${i}` },
+            });
+          }
+          store.getState().setNodes(nodes);
         });
-      }
-      store.getState().setNodes(nodes);
-    });
+      },
+      30_000
+    );
+    await screenshots.captureMilestone("nodes-injected");
 
     // Verify nodes exist
-    await expect(page.locator(".react-flow__node")).toHaveCount(1000, {
-      timeout: 30_000,
+    await safeAssert("nodes-rendered", async () => {
+      await expect(page.locator(".react-flow__node")).toHaveCount(1000, {
+        timeout: 30_000,
+      });
     });
+    await screenshots.captureMilestone("completed");
   });
 });

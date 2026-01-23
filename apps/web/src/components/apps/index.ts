@@ -21,6 +21,7 @@ export { CortexApp, CortexAppWindow } from "./cortex";
 export { DockerApp, DockerAppWindow } from "./docker";
 // Knowledge & Integration Apps
 export { FilesApp, FilesAppWindow } from "./files";
+export { FocusApp, FocusAppWindow } from "./focus";
 export { InboxApp, InboxAppWindow } from "./inbox";
 export { KnowledgeApp, KnowledgeAppWindow } from "./knowledge";
 export { LearningApp, LearningAppWindow } from "./learning";

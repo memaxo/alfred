@@ -73,6 +73,41 @@ export type PlanDeps = {
   learnProjectConventions: (projectId: string) => Promise<unknown>;
 };
 
+/** Assistant router dependencies */
+export type AssistantDeps = {
+  generateText: (
+    input: Parameters<typeof import("./ai/generate").generateText>[0]
+  ) => Promise<Awaited<ReturnType<typeof import("./ai/generate").generateText>>>;
+  persistResult: (
+    args: Parameters<typeof import("./ai/generate").persistResult>[0]
+  ) => Promise<string | null>;
+  handoffExecute: (args: {
+    input: {
+      userId: string;
+      requirement: string;
+      auto?: "read" | "low";
+      authz?: string;
+      workspace?: string;
+      repoBase?: string;
+      context?: Record<string, unknown>;
+    };
+    runtimeContext?: unknown;
+  }) => Promise<{
+    ok: boolean;
+    runId: string | null;
+    summary: string | null;
+    ticketId: string | null;
+    ticketUrl: string | null;
+    plan: unknown | null;
+    results: unknown[] | null;
+    next: {
+      kind: "navigate" | "start-workflow";
+      href?: string;
+      reason?: string;
+    } | null;
+  }>;
+};
+
 // ─── Combined Router Dependencies ───────────────────────────────────────────────
 
 /**
@@ -86,6 +121,7 @@ export type RouterDeps = {
   runtime?: Partial<RuntimeDeps>;
   workflow?: Partial<WorkflowDeps>;
   plan?: Partial<PlanDeps>;
+  assistant?: Partial<AssistantDeps>;
 };
 
 // ─── Default Dependencies ───────────────────────────────────────────────────────
@@ -155,6 +191,40 @@ export function createMockDeps(
       extractAntiPatternFromRun: async () => ({}),
       learnProjectConventions: async () => ({}),
       ...overrides.plan,
+    },
+    assistant: {
+      generateText: async (input) => {
+        const [{ generateText }, { MockLanguageModelV3 }] = await Promise.all([
+          import("ai"),
+          import("ai/test"),
+        ]);
+
+        const base = new MockLanguageModelV3({
+          doGenerate: async () => ({
+            finishReason: "stop",
+            usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+            content: [{ type: "text", text: "" }],
+            warnings: [],
+          }),
+        });
+
+        return generateText({
+          ...input,
+          model: base as unknown as Parameters<typeof generateText>[0]["model"],
+        });
+      },
+      persistResult: async () => null,
+      handoffExecute: async () => ({
+        ok: true,
+        runId: null,
+        summary: null,
+        ticketId: null,
+        ticketUrl: null,
+        plan: null,
+        results: null,
+        next: null,
+      }),
+      ...overrides.assistant,
     },
   };
 }

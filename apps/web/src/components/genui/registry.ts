@@ -32,6 +32,28 @@ const importTask = () => import("@/components/task").then((m) => m.Task);
 const importLoading = () =>
   import("@/components/loading").then((m) => m.Loading);
 
+// Form components
+const importGenUIText = () =>
+  import("@/components/genui/components/text").then((m) => m.GenUIText);
+const importGenUISelect = () =>
+  import("@/components/genui/components/select").then((m) => m.GenUISelect);
+const importGenUIDate = () =>
+  import("@/components/genui/components/date").then((m) => m.GenUIDate);
+const importGenUICheckbox = () =>
+  import("@/components/genui/components/checkbox").then((m) => m.GenUICheckbox);
+const importGenUIChoice = () =>
+  import("@/components/genui/components/choice").then((m) => m.GenUIChoice);
+const importGenUIAutocomplete = () =>
+  import("@/components/genui/components/autocomplete").then(
+    (m) => m.GenUIAutocomplete
+  );
+const importGenUIDropdown = () =>
+  import("@/components/genui/components/dropdown").then((m) => m.GenUIDropdown);
+const importGenUIDaterange = () =>
+  import("@/components/genui/components/daterange").then(
+    (m) => m.GenUIDaterange
+  );
+
 // Track initialization state
 let initialized = false;
 
@@ -56,18 +78,43 @@ export async function initGenUIRegistry(): Promise<void> {
   }
 
   // Import core components in parallel for GenUI rendering
-  const [Chart, Grid, List, SlidingNumber, Term, Code, Plan, Task, Loading] =
-    await Promise.all([
-      importChart(),
-      importGrid(),
-      importList(),
-      importNumber(),
-      importTerm(),
-      importCode(),
-      importPlan(),
-      importTask(),
-      importLoading(),
-    ]);
+  const [
+    Chart,
+    Grid,
+    List,
+    SlidingNumber,
+    Term,
+    Code,
+    Plan,
+    Task,
+    Loading,
+    GenUIText,
+    GenUISelect,
+    GenUIDate,
+    GenUICheckbox,
+    GenUIChoice,
+    GenUIAutocomplete,
+    GenUIDropdown,
+    GenUIDaterange,
+  ] = await Promise.all([
+    importChart(),
+    importGrid(),
+    importList(),
+    importNumber(),
+    importTerm(),
+    importCode(),
+    importPlan(),
+    importTask(),
+    importLoading(),
+    importGenUIText(),
+    importGenUISelect(),
+    importGenUIDate(),
+    importGenUICheckbox(),
+    importGenUIChoice(),
+    importGenUIAutocomplete(),
+    importGenUIDropdown(),
+    importGenUIDaterange(),
+  ]);
 
   // Register with genui interpreter
   registerComponents({
@@ -96,6 +143,16 @@ export async function initGenUIRegistry(): Promise<void> {
     "error-panel": ErrorPanel,
     "artifact-browser": ArtifactBrowser,
     "resource-monitor": ResourceMonitor,
+
+    // Form Components
+    text: GenUIText,
+    select: GenUISelect,
+    date: GenUIDate,
+    checkbox: GenUICheckbox,
+    choice: GenUIChoice,
+    autocomplete: GenUIAutocomplete,
+    dropdown: GenUIDropdown,
+    daterange: GenUIDaterange,
   });
 
   initialized = true;

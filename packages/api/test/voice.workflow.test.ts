@@ -54,26 +54,20 @@ describe("voice workflow", () => {
   });
 
   describe("intent classification", () => {
-    it("classifies workflow intent with keywords", async () => {
+    it("degrades safely to conversational when LLM unavailable", async () => {
       const { classifyVoiceIntent } = await import("../src/voice/intent.js");
 
-      // Use a phrase with multiple workflow keywords for reliable heuristic detection
-      const result = await classifyVoiceIntent(
-        "build and create a new api endpoint feature"
-      );
-
-      expect(result.type).toBe("workflow");
-      if (result.type === "workflow") {
-        expect(result.confidence).toBeGreaterThan(0);
-      }
+      const classified = await classifyVoiceIntent("build a new api endpoint");
+      expect(classified.result.type).toBe("conversational");
+      expect(classified.meta.heuristicFallbackUsed).toBe(false);
     });
 
     it("classifies conversational intent", async () => {
       const { classifyVoiceIntent } = await import("../src/voice/intent.js");
 
-      const result = await classifyVoiceIntent("what time is it");
+      const classified = await classifyVoiceIntent("what time is it");
 
-      expect(result.type).toBe("conversational");
+      expect(classified.result.type).toBe("conversational");
     });
 
     it("detects approval in awaiting_approval state", async () => {
@@ -95,15 +89,12 @@ describe("voice workflow", () => {
         updatedAt: new Date(),
       };
 
-      const result = await classifyVoiceIntent(
-        "yes, approve it",
-        sessionContext
-      );
-
-      expect(result.type).toBe("approval");
-      if (result.type === "approval") {
-        expect(result.action).toBe("approve");
+      const classified = await classifyVoiceIntent("approve", sessionContext);
+      expect(classified.result.type).toBe("approval");
+      if (classified.result.type === "approval") {
+        expect(classified.result.action).toBe("approve");
       }
+      expect(classified.meta.heuristicFallbackUsed).toBe(true);
     });
 
     it("detects rejection in awaiting_approval state", async () => {
@@ -125,23 +116,21 @@ describe("voice workflow", () => {
         updatedAt: new Date(),
       };
 
-      const result = await classifyVoiceIntent(
-        "no, cancel that",
-        sessionContext
-      );
-
-      expect(result.type).toBe("approval");
-      if (result.type === "approval") {
-        expect(result.action).toBe("reject");
+      const classified = await classifyVoiceIntent("reject", sessionContext);
+      expect(classified.result.type).toBe("approval");
+      if (classified.result.type === "approval") {
+        expect(classified.result.action).toBe("reject");
       }
+      expect(classified.meta.heuristicFallbackUsed).toBe(true);
     });
 
-    it("detects status query", async () => {
+    it("does not guess status via keywords when LLM unavailable", async () => {
       const { classifyVoiceIntent } = await import("../src/voice/intent.js");
 
-      const result = await classifyVoiceIntent("what's the status");
+      const classified = await classifyVoiceIntent("what's the status");
 
-      expect(result.type).toBe("status_query");
+      expect(classified.result.type).toBe("conversational");
+      expect(classified.meta.heuristicFallbackUsed).toBe(false);
     });
   });
 
@@ -419,81 +408,31 @@ describe("voice workflow", () => {
     });
   });
 
-  describe("heuristic intent classification", () => {
-    it("scores workflow keywords correctly", async () => {
+  describe("minimal heuristic fallback", () => {
+    it("only matches exact approve/reject tokens", async () => {
       const { _internal } = await import("../src/voice/intent.js");
-      const { calculateWorkflowScore } = _internal;
+      const { detectApprovalFallback } = _internal;
 
-      // Strong workflow signals
-      expect(calculateWorkflowScore("build a new feature")).toBeGreaterThan(
-        0.3
-      );
-      expect(calculateWorkflowScore("create an api endpoint")).toBeGreaterThan(
-        0.3
-      );
-      expect(calculateWorkflowScore("fix the bug in auth")).toBeGreaterThan(
-        0.3
-      );
-      expect(
-        calculateWorkflowScore("refactor the database module")
-      ).toBeGreaterThan(0.3);
-
-      // Weak or no workflow signals
-      expect(calculateWorkflowScore("hello how are you")).toBe(0);
-      expect(calculateWorkflowScore("what is the weather")).toBe(0);
-    });
-
-    it("detects approval keywords", async () => {
-      const { _internal } = await import("../src/voice/intent.js");
-      const { detectApprovalIntent } = _internal;
-
-      // Approval
-      expect(detectApprovalIntent("yes")).toEqual({
+      expect(detectApprovalFallback("approve")).toEqual({
         type: "approval",
         action: "approve",
       });
-      expect(detectApprovalIntent("approve")).toEqual({
-        type: "approval",
-        action: "approve",
-      });
-      expect(detectApprovalIntent("go ahead")).toEqual({
-        type: "approval",
-        action: "approve",
-      });
-      expect(detectApprovalIntent("sounds good")).toEqual({
-        type: "approval",
-        action: "approve",
-      });
-
-      // Rejection
-      expect(detectApprovalIntent("no")).toEqual({
+      expect(detectApprovalFallback("reject")).toEqual({
         type: "approval",
         action: "reject",
       });
-      expect(detectApprovalIntent("cancel")).toEqual({
+      expect(detectApprovalFallback("yes")).toEqual({
         type: "approval",
-        action: "reject",
+        action: "approve",
       });
-      expect(detectApprovalIntent("reject")).toEqual({
+      expect(detectApprovalFallback("no")).toEqual({
         type: "approval",
         action: "reject",
       });
 
-      // Neither
-      expect(detectApprovalIntent("tell me more")).toBeNull();
-    });
-
-    it("detects status keywords", async () => {
-      const { _internal } = await import("../src/voice/intent.js");
-      const { isStatusQuery } = _internal;
-
-      expect(isStatusQuery("what's the status")).toBe(true);
-      expect(isStatusQuery("how's the progress")).toBe(true);
-      expect(isStatusQuery("is it done")).toBe(true);
-      expect(isStatusQuery("are you finished")).toBe(true);
-
-      expect(isStatusQuery("build a feature")).toBe(false);
-      expect(isStatusQuery("hello")).toBe(false);
+      expect(detectApprovalFallback("yes, approve it")).toBeNull();
+      expect(detectApprovalFallback("what's the status")).toBeNull();
+      expect(detectApprovalFallback("build a feature")).toBeNull();
     });
   });
 

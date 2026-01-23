@@ -12,12 +12,17 @@ export * from "./cognitive";
 export * from "./cognitive.zod";
 // Work compilation artifacts
 export * from "./compilation";
+// Continuity context types
+export * from "./continuity";
 export * from "./envelope";
 export * from "./envelope.zod";
 export * from "./events";
 export * from "./events.zod";
 // Exa API types
 export * from "./exa";
+// Concierge Focus domain types
+export * from "./focus";
+export * from "./focus.zod";
 // Forms
 export * from "./forms";
 // Generative UI types

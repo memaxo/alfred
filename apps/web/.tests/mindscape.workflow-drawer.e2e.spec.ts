@@ -1,5 +1,5 @@
 import type { Route } from "@playwright/test";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/ai-harness";
 import { signUpTestUser } from "./helpers/auth";
 
 const WORKFLOW_ID = "run-provenance-1";
@@ -38,7 +38,7 @@ async function handleTrpcRequest(
 test.describe("Mindscape workflow drawer loop", () => {
   let feedbackCalled = false;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, screenshots }) => {
     feedbackCalled = false;
     const mocks = {
       "workflow.get": () => ({
@@ -118,78 +118,140 @@ test.describe("Mindscape workflow drawer loop", () => {
     await page.route("**/api/trpc/*", (route) =>
       handleTrpcRequest(route, mocks)
     );
+    await screenshots.captureMilestone("trpc-mocked");
   });
 
-  test("inspect → drawer → full view parity", async ({ page }) => {
-    await signUpTestUser(page);
-
-    await page.evaluate(
-      ({ workflowId }) => {
-        const store = (
-          window as unknown as {
-            __MINDSCAPE_STORE__?: {
-              setState: (updater: (state: any) => any) => void;
-            };
-          }
-        ).__MINDSCAPE_STORE__;
-        if (!store) {
-          throw new Error("Mindscape store is not available");
-        }
-        store.setState((state: any) => {
-          const runtimeNode = {
-            id: "runtime-drawer-node",
-            type: "knowledge",
-            position: { x: 120, y: 80 },
-            data: {
-              type: "knowledge",
-              label: "Runtime Drawer Node",
-              source: "runtime",
-              runId: workflowId,
-              graph: {
-                resource: "user",
-                dbId: "123e4567-e89b-12d3-a456-426614174000",
-              },
-            },
-            selectable: true,
-            draggable: true,
-          };
-          return {
-            ...state,
-            nodes: [
-              ...state.nodes.filter((n: any) => n.id !== runtimeNode.id),
-              runtimeNode,
-            ],
-            focusedNodeId: runtimeNode.id,
-          };
-        });
+  test("inspect → drawer → full view parity", async ({
+    page,
+    screenshots,
+    safeAction,
+    safeAssert,
+  }) => {
+    await safeAction(
+      "signup-test-user",
+      async () => {
+        await signUpTestUser(page);
       },
-      { workflowId: WORKFLOW_ID }
+      60_000
     );
+    await screenshots.captureMilestone("authenticated");
+
+    await safeAction(
+      "inject-runtime-node",
+      async () => {
+        await page.evaluate(
+          ({ workflowId }) => {
+            const store = (
+              window as unknown as {
+                __MINDSCAPE_STORE__?: {
+                  setState: (updater: (state: any) => any) => void;
+                };
+              }
+            ).__MINDSCAPE_STORE__;
+            if (!store) {
+              throw new Error("Mindscape store is not available");
+            }
+            store.setState((state: any) => {
+              const runtimeNode = {
+                id: "runtime-drawer-node",
+                type: "knowledge",
+                position: { x: 120, y: 80 },
+                data: {
+                  type: "knowledge",
+                  label: "Runtime Drawer Node",
+                  source: "runtime",
+                  runId: workflowId,
+                  graph: {
+                    resource: "user",
+                    dbId: "123e4567-e89b-12d3-a456-426614174000",
+                  },
+                },
+                selectable: true,
+                draggable: true,
+              };
+              return {
+                ...state,
+                nodes: [
+                  ...state.nodes.filter((n: any) => n.id !== runtimeNode.id),
+                  runtimeNode,
+                ],
+                focusedNodeId: runtimeNode.id,
+              };
+            });
+          },
+          { workflowId: WORKFLOW_ID }
+        );
+      },
+      20_000
+    );
+    await screenshots.captureMilestone("node-injected");
 
     const inspectButton = page.getByTestId("mindscape-workflow-link").first();
-    await inspectButton.click();
+    await safeAction(
+      "click-inspect",
+      async () => {
+        await inspectButton.click();
+      },
+      15_000
+    );
+    await screenshots.captureMilestone("inspect-clicked");
 
     // Wait for drawer to open (header visible)
-    await expect(page.getByText("Workflow run")).toBeVisible();
+    await safeAssert("drawer-open", async () => {
+      await expect(page.getByText("Workflow run")).toBeVisible();
+    });
+    await screenshots.captureMilestone("drawer-open");
 
-    await page
-      .getByTestId("mindscape-drawer-feedback-positive")
-      .click({ force: true });
-    await expect.poll(() => feedbackCalled, { timeout: 2000 }).toBeTruthy();
+    await safeAction("feedback-positive", async () => {
+      await page
+        .getByTestId("mindscape-drawer-feedback-positive")
+        .click({ force: true });
+    });
+    await safeAssert("feedback-called", async () => {
+      await expect.poll(() => feedbackCalled, { timeout: 2000 }).toBeTruthy();
+    });
+    await screenshots.captureMilestone("feedback-sent");
 
     // Click "Open full view" button in the header
-    await page.getByTestId("mindscape-drawer-open-full").click({ force: true });
-    await page.waitForURL(/\/workflow\/run-provenance-1\?drawer=1/);
+    await safeAction(
+      "open-full-view",
+      async () => {
+        await page
+          .getByTestId("mindscape-drawer-open-full")
+          .click({ force: true });
+        await page.waitForURL(/\/workflow\/run-provenance-1\?drawer=1/);
+      },
+      20_000
+    );
+    await screenshots.captureMilestone("full-view");
 
     const workflowDrawer = page
       .getByRole("dialog")
       .filter({ hasText: "Workflow run" })
       .last();
-    await expect(workflowDrawer).toBeVisible();
-    await workflowDrawer.getByRole("button", { name: "Close" }).click();
-    await expect(page).toHaveURL(/\/workflow\/run-provenance-1$/);
+    await safeAssert("workflow-drawer-visible", async () => {
+      await expect(workflowDrawer).toBeVisible();
+    });
+    await safeAction(
+      "close-drawer",
+      async () => {
+        await workflowDrawer.getByRole("button", { name: "Close" }).click();
+      },
+      15_000
+    );
+    await safeAssert("drawer-closed", async () => {
+      await expect(page).toHaveURL(/\/workflow\/run-provenance-1$/);
+    });
+    await screenshots.captureMilestone("drawer-closed");
 
-    await page.getByRole("button", { name: "← Back to Mindscape" }).click();
-    await page.waitForURL(/\/mindscape$/);
+    await safeAction(
+      "back-to-mindscape",
+      async () => {
+        await page.getByRole("button", { name: "← Back to Mindscape" }).click();
+        await page.waitForURL(/\/mindscape$/);
+      },
+      20_000
+    );
+    await screenshots.captureMilestone("mindscape");
   });
 });

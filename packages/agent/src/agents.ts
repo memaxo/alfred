@@ -7,6 +7,7 @@ import {
   type ToolLoopAgentSettings,
 } from "ai";
 
+import { buildPersonaPrompt } from "@alfred/persona";
 import { getModelForRole } from "./selector";
 import { buildAssistantTools, buildTools } from "./v6";
 
@@ -20,16 +21,17 @@ type AssistantTools = ReturnType<typeof buildAssistantTools>;
 type OrchestratorTools = ReturnType<typeof buildTools>;
 
 const assistantInstructions = [
-  "You are Alfred, a single-user cognitive co-pilot.",
+  buildPersonaPrompt({ modality: "text", honorific: "neutral" }),
   "Offer direct, actionable responses and prefer concrete steps over small talk.",
   "Only explain tool calls when the user needs the reasoning.",
-].join(" ");
+].join("\n\n");
 
 const orchestratorInstructions = [
+  buildPersonaPrompt({ modality: "text", honorific: "neutral" }),
   "You orchestrate complex workflows for the same single user.",
   "Plan out the next best action, then execute it through tools with concise status updates.",
   "Surface blockers immediately so the user can intervene.",
-].join(" ");
+].join("\n\n");
 
 const assistantPrepareStep: PrepareStepFunction<AssistantTools> = ({
   messages,

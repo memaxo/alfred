@@ -9,6 +9,7 @@ import {
   vi,
 } from "bun:test";
 import { Buffer } from "node:buffer";
+import { parsePersonaTelemetry } from "@alfred/persona";
 import {
   mockPolicyAudit,
   resetAllMocks,
@@ -159,7 +160,17 @@ describe("voice.speechToSpeech", () => {
       })
     );
     expect(result.transcript.text).toBe("hello alfred");
-    expect(result.assistant.text).toBe("hi there");
+    expect(result.assistant?.text).toContain("hi there");
+    expect(result.assistant?.text ?? "").not.toContain("personaTelemetry");
+    expect(result.assistant?.text ?? "").not.toContain("speechAct");
+
+    const raw = result.assistant?.raw as
+      | { meta?: { personaTelemetry?: unknown } }
+      | undefined;
+    const telemetry = raw?.meta?.personaTelemetry;
+    expect(telemetry).toBeDefined();
+    const parsed = parsePersonaTelemetry(telemetry);
+    expect(parsed.ok).toBe(true);
     expect(result.audio.audioBase64.length).toBeGreaterThan(0);
     expect(result.durations.totalSeconds).toBeGreaterThan(0);
     expect(result.session?.id).toEqual(expect.any(String));

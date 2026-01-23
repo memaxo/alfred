@@ -890,6 +890,22 @@ export function useVoiceSessionNative(
         installDc(channel);
       });
 
+      // Ensure the audio session and microphone permission are configured before
+      // attempting getUserMedia. If permission prompts appear, the UI layer can
+      // accept them and this will continue.
+      await configureAudioSession(Audio, { background: true });
+      const audioPerms = Audio as unknown as {
+        requestPermissionsAsync?: () => Promise<{ status?: string }>;
+      };
+      if (typeof audioPerms.requestPermissionsAsync === "function") {
+        const res = await audioPerms.requestPermissionsAsync();
+        // Only fail fast on an explicit denial; "undetermined" may still prompt
+        // and be granted by the time getUserMedia runs.
+        if (res.status === "denied") {
+          throw new Error("mic_permission_denied");
+        }
+      }
+
       const localStream = (await mediaDevices.getUserMedia({
         audio: true,
         video: false,
@@ -1098,10 +1114,15 @@ export function useVoiceSessionNative(
   );
 
   const startStreaming = useCallback(async () => {
+    if (transportRef.current) {
+      return;
+    }
+
+    transportRef.current = webrtcEnabled ? "webrtc" : "ws";
     setStreamState((prev) => ({
       ...prev,
       status: "connecting",
-      transport: webrtcEnabled ? "webrtc" : "ws",
+      transport: transportRef.current,
       transcript: "",
       assistantText: "",
       autoStopReason: null,
@@ -1110,13 +1131,25 @@ export function useVoiceSessionNative(
 
     if (webrtcEnabled) {
       try {
-        transportRef.current = "webrtc";
         await startWebrtcStreaming({
           sttChunkSize: options?.sttChunkSize,
         });
         return;
       } catch (error) {
-        // Fall back to WebSocket streaming
+        // Fall back to WebSocket streaming (unless we're explicitly on a local
+        // dev server, where we want failures to be visible and deterministic).
+        const strictLocalWebrtc = (() => {
+          const base = options?.baseUrl;
+          if (!base) {
+            return false;
+          }
+          try {
+            const url = new URL(base);
+            return url.hostname === "127.0.0.1" || url.hostname === "localhost";
+          } catch {
+            return false;
+          }
+        })();
         const errorText =
           error instanceof Error
             ? [error.message, error.stack].filter(Boolean).join("\n")
@@ -1128,10 +1161,14 @@ export function useVoiceSessionNative(
           error: errorText,
         }));
         transportRef.current = null;
+        if (strictLocalWebrtc) {
+          throw error instanceof Error ? error : new Error(errorText);
+        }
       }
     }
 
     if (!streamUrlRef.current) {
+      transportRef.current = null;
       throw new Error("voice_streaming_unavailable");
     }
     setStreamState((prev) => ({
@@ -1151,12 +1188,14 @@ export function useVoiceSessionNative(
       });
       void runStreamCapture(client);
     } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "voice_stream_start_failed";
       setStreamState((prev) => ({
         ...prev,
         status: "error",
-        error:
-          error instanceof Error ? error.message : "voice_stream_start_failed",
+        error: prev.error ? `${prev.error}\n${msg}` : msg,
       }));
+      transportRef.current = null;
       throw error;
     }
   }, [
@@ -1178,6 +1217,19 @@ export function useVoiceSessionNative(
       transportRef.current = null;
       return;
     }
+
+    if (!streamingActiveRef.current) {
+      transportRef.current = null;
+      setStreamState((prev) => ({
+        ...prev,
+        status: "idle",
+        transport: null,
+        autoStopReason: null,
+        error: null,
+        sessionId: null,
+      }));
+      return;
+    }
     setStreamState((prev) => ({
       ...prev,
       status: "processing",
@@ -1186,7 +1238,17 @@ export function useVoiceSessionNative(
     await stopStreamingCapture();
     try {
       await streamClientRef.current?.stop("manual");
+      transportRef.current = null;
+      setStreamState((prev) => ({
+        ...prev,
+        status: "idle",
+        transport: null,
+        autoStopReason: null,
+        error: null,
+        sessionId: null,
+      }));
     } catch (error) {
+      transportRef.current = null;
       setStreamState((prev) => ({
         ...prev,
         status: "error",

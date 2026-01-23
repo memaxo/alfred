@@ -14,6 +14,19 @@ export type NormalizeResult =
   | { ok: true; url: string }
   | { ok: false; error: string };
 
+function isNativeTestModeEnabled(): boolean {
+  if (process.env.EXPO_PUBLIC_TEST_MODE === "1") {
+    return true;
+  }
+  if (Platform.OS !== "ios") {
+    return false;
+  }
+  const settings = (NativeModules as unknown as { SettingsManager?: unknown })
+    .SettingsManager as { settings?: Record<string, unknown> } | undefined;
+  const raw = settings?.settings?.ALFRED_TEST_MODE;
+  return raw === "1" || raw === "true";
+}
+
 export function isLocalServer(urlString: string | null): boolean {
   if (!urlString) {
     return false;
@@ -94,6 +107,17 @@ export async function saveServerUrlOverride(url: string | null): Promise<void> {
 }
 
 export async function resolveServerUrl(): Promise<ServerUrlState> {
+  // In native UI tests, prefer the launch-arg server URL even if a previous run
+  // persisted an AsyncStorage override. This prevents flakiness across runs.
+  if (Platform.OS === "ios" && isNativeTestModeEnabled()) {
+    const settings = (NativeModules as unknown as { SettingsManager?: unknown })
+      .SettingsManager as { settings?: Record<string, unknown> } | undefined;
+    const raw = settings?.settings?.ALFRED_SERVER_URL;
+    if (typeof raw === "string" && raw.trim().length > 0) {
+      return { url: raw.trim(), source: "env" };
+    }
+  }
+
   const override = await loadServerUrlOverride();
   if (override) {
     return { url: override, source: "override" };

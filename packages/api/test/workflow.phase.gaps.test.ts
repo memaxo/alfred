@@ -75,6 +75,7 @@ describe("workflow.phase gap closure", () => {
     mock.module("@alfred/pipeline/observers", () => ({
       CheckpointObserver: class CheckpointObserver {},
       CostCleanupObserver: class CostCleanupObserver {},
+      InMemoryCheckpointStorage: class InMemoryCheckpointStorage {},
       MetricsObserver: class MetricsObserver {},
       LinearSyncObserver: class LinearSyncObserver {},
       PipelineEventQueueObserver: class PipelineEventQueueObserver {},

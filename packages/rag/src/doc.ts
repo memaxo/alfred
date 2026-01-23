@@ -2,6 +2,7 @@ import * as graphRepo from "@alfred/db/repo/graph/index";
 import { findRagDocumentNode } from "@alfred/db/repo/graph/read";
 import { touchNodes } from "@alfred/db/repo/graph/write";
 import * as ragRepo from "@alfred/db/repo/rag";
+import type { ChunkSearchResult } from "@alfred/db/repo/rag";
 import {
   EMBEDDING_DIM,
   type EmbeddingInput,
@@ -245,9 +246,9 @@ export async function retrieveWithOptions(
   // Apply an extra defensive threshold filter client-side to ensure
   // correctness even when the underlying repo does not enforce it.
   const chunks = rows
-    .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
+    .filter((row: ChunkSearchResult) => Number.isFinite(row.score) && row.score >= threshold)
     .slice(0, k)
-    .map((row) => {
+    .map((row: ChunkSearchResult) => {
       const rawMetadata = row.metadata;
       const metadata =
         rawMetadata && typeof rawMetadata === "object"
@@ -272,8 +273,8 @@ export async function retrieveWithOptions(
   const documentIds = Array.from(
     new Set(
       chunks
-        .map((c) => c.metadata?.documentId)
-        .filter((id): id is string => typeof id === "string")
+        .map((c: Chunk) => c.metadata?.documentId)
+        .filter((id: unknown): id is string => typeof id === "string")
     )
   );
 

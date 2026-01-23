@@ -1,7 +1,8 @@
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
-import { normalizeToUiMessages } from "@alfred/agent/utils/normalize";
+import { normalizeToUiMessagesAsync } from "@alfred/agent/utils/normalize-async";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
+import type { SchemaContext } from "@alfred/type/genui";
 import { makeEventId } from "@alfred/type/id";
 import { generateText } from "ai";
 
@@ -11,6 +12,7 @@ type PersistArgs = {
   kind: "assistant" | "orchestrator";
   input: unknown;
   result: unknown;
+  schemaContext?: Partial<SchemaContext>;
 };
 
 export type GenerateTextInput = Parameters<typeof generateText>[0];
@@ -89,7 +91,18 @@ export async function persistResult(args: PersistArgs): Promise<string | null> {
       inputData: args.input,
       stateData: null,
     });
-    const uiMessages = normalizeToUiMessages(coerceGenerateResult(args.result));
+    
+    // Use async normalization with GenUI enrichment
+    const schemaCtx: Partial<SchemaContext> = args.schemaContext ?? {
+      userId: args.userId,
+      projectId,
+      surface: "web",
+      mode: args.kind === "assistant" ? "assistant" : "workflow",
+    };
+    const uiMessages = await normalizeToUiMessagesAsync(
+      coerceGenerateResult(args.result),
+      schemaCtx
+    );
     const eventId = makeEventId({
       runId,
       type: "ui-message",

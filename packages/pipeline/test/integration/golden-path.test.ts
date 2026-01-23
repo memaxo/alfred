@@ -34,7 +34,7 @@ mock.module("@alfred/runtime/orchestrator/summary", () => ({
 }));
 
 // Imports must come after mocks (Bun mock.module).
-type PipelineEvent = typeof import("../../src/events")["PipelineEvent"];
+type PipelineEvent = import("../../src/events").PipelineEvent;
 const { PipelineRunner } = await import("../../src/runner");
 const { registerDefaultStages } = await import("../../src/stages");
 

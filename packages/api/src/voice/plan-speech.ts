@@ -6,6 +6,7 @@
  */
 
 import type { Phase, StructuredPlan } from "@alfred/plan";
+import { renderHonorific, type HonorificPreference } from "@alfred/persona";
 import type { VoiceWorkflowVerbosity } from "./preferences.js";
 
 /**
@@ -24,6 +25,8 @@ export type PlanToSpeechOptions = {
   brief?: boolean;
   /** Verbosity level (overrides brief if set) */
   verbosity?: VoiceWorkflowVerbosity;
+  /** Honorific preference for addressing the user */
+  honorific?: HonorificPreference;
 };
 
 /**
@@ -43,7 +46,8 @@ export function planToSpeech(
   plan: StructuredPlan,
   options: PlanToSpeechOptions = {}
 ): string {
-  const { includeApprovalPrompt = true, verbosity = "standard" } = options;
+  const { includeApprovalPrompt = true, verbosity = "standard", honorific } =
+    options;
 
   // Determine settings based on verbosity level
   const isBrief = verbosity === "brief" || options.brief === true;
@@ -61,9 +65,9 @@ export function planToSpeech(
 
   // Opening
   if (isBrief) {
-    parts.push(formatBriefOpening(plan));
+    parts.push(withHonorific(formatBriefOpening(plan), honorific));
   } else {
-    parts.push(formatOpening(plan));
+    parts.push(withHonorific(formatOpening(plan), honorific));
   }
 
   // Phase details
@@ -96,6 +100,27 @@ export function planToSpeech(
   }
 
   return parts.filter(Boolean).join(" ");
+}
+
+function withHonorific(
+  sentence: string,
+  honorific: HonorificPreference | undefined
+): string {
+  if (!honorific) {
+    return sentence;
+  }
+  const h = renderHonorific(honorific);
+  const s = sentence.trim();
+  if (!s) {
+    return s;
+  }
+  if (s.endsWith(".")) {
+    return `${s.slice(0, -1)}, ${h}.`;
+  }
+  if (s.endsWith("!") || s.endsWith("?")) {
+    return `${s} ${h}.`;
+  }
+  return `${s}, ${h}.`;
 }
 
 /**

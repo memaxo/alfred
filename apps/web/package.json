@@ -19,6 +19,7 @@
     "@alfred/auth": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/pacer": "workspace:*",
+    "@alfred/persona": "workspace:*",
     "@alfred/pipeline": "workspace:*",
     "@alfred/voice": "workspace:*",
     "@elevenlabs/elevenlabs-js": "^2.24.1",

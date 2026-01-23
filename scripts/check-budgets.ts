@@ -14,7 +14,7 @@
  *   // budget: plan-generation
  */
 
-import { BUDGET_DEFAULTS } from "@alfred/test-kit";
+import { BUDGET_DEFAULTS } from "@alfred/test-kit/performance/budget";
 
 type BudgetCategory = keyof typeof BUDGET_DEFAULTS;
 

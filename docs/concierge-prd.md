@@ -1,8 +1,8 @@
-# Concierge Workday PRD
+# Concierge Focus PRD
 
 Owner: product
 
-ALFRED should feel like an “Amex Black concierge” for a single user: it takes 3–5 high-level priorities in the morning, runs heterogeneous work in the background all day, and reliably interrupts the user only when needed—via web/mobile notifications and an immediate voice “call” that resumes context like a human assistant.
+ALFRED should feel like an “Amex Black concierge” for a single user: it maintains continuity across long gaps, runs heterogeneous work in the background, and reliably interrupts the user only when needed—via web/mobile notifications and an immediate voice “call” that resumes context like a human assistant.
 
 ## Scope clarity
 
@@ -13,16 +13,16 @@ ALFRED should feel like an “Amex Black concierge” for a single user: it take
 
 Today, “chat” assistants excel at short interactions, but degrade when asked to:
 
-- Run for an entire workday with multiple concurrent objectives
+- Run continuously across long periods with multiple concurrent objectives
 - Maintain coherent state across long idle periods and frequent interruptions
 - Escalate decisions at the right time and in the right channel
 - Seamlessly resume via voice as if continuing an ongoing relationship
 
-## Vision (what “Concierge Workday” means)
+## Vision (what “Concierge Focus” means)
 
-ALFRED is a persistent day-long collaborator that:
+ALFRED is a persistent collaborator that:
 
-- **Plans the day**: turns a morning brief into a manageable set of active priorities and background runs.
+- **Plans a focus period**: turns a short user brief into a manageable set of active commitments and background runs for a chosen window.
 - **Runs work continuously**: executes and monitors tasks across domains (coding, writing, research, infrastructure, personal admin).
 - **Manages attention**: only interrupts the user for time-sensitive decisions, failures, or truly important incoming messages.
 - **Resumes instantly**: a push notification → tap → voice session starts → ALFRED continues with the same context, status, and next decision.
@@ -31,11 +31,47 @@ ALFRED is a persistent day-long collaborator that:
 
 ### Core objects
 
-- **Priority**: a user-owned, top-level objective for the day (3–5). Example: “Ship auth refactor”, “File taxes”, “Plan weekend trip”.
+- **Focus set**: a collection of commitments the user wants ALFRED to pursue over a chosen period (minutes → hours → days).
+- **Commitment**: the primary unit of user-facing accountability (what you’d ask a teammate “status?” about).
+  - has a single “done” line
+  - has one attention contract
+  - binds to one canonical thread and one canonical run (or a small bounded set of runs)
+  - may decompose into many subtasks/waves internally
+- **Priority**: an ordering/rank within a focus set (1..N). “Priority” is not the unit of execution; it is the user’s ordering of commitments.
+- **WIP limit**: the maximum number of active commitments ALFRED should advance in parallel (default 3, max 5 unless explicitly raised; WIP=1 for “spotlight” mode).
 - **Thread**: a conversational context for a topic. Backed by persisted messages; used for continuity and recall.
 - **Workflow Run**: a long-lived execution unit with persisted events, suspend/resume, and UI progress.
 - **Wave**: a batch of parallelizable subtasks inside a run (multi-agent “waves”).
 - **Agent / Subagent**: an execution worker assigned to a subtask; may spawn subagents for decomposition.
+
+### Briefs (scope correction)
+
+- **Delta brief**: a compact “what changed + what needs review” summary **since the last interaction with the user** (or since a chosen timestamp), focused on:
+  - major changes in background runs
+  - decisions/approvals needed
+  - critical alerts and important incoming messages
+  - proposed next actions (minimal, ranked)
+
+### Focus structuring (how to decide “one commitment” vs “many”)
+
+A branching concept stays **one commitment** when it has:
+
+- one finish line (“done”)
+- one interruption policy
+- one primary stakeholder context
+
+Split into **multiple commitments** when any differ:
+
+- independent “done” outcomes
+- different attention contracts (some parts can be silent; others require frequent review)
+- different risk profiles (privileged vs safe actions)
+- different time horizons (today vs next month)
+
+### Spotlight + lanes (when one commitment dominates)
+
+- **Spotlight**: WIP=1 mode where a single commitment is allowed to interrupt more frequently (still governed by its attention contract).
+- **Background lane**: non-spotlight commitments run with aggressive batching and “notify only on block/complete/critical”.
+- **Maintenance lane**: standing “interests” (e.g., system health, inbox hygiene) that are explicitly low-interrupt unless Critical/Emergency.
 
 ### Attention levels (how/when ALFRED interrupts)
 
@@ -64,26 +100,26 @@ ALFRED is a persistent day-long collaborator that:
 
 ## Jobs-to-be-done (JTBD)
 
-- **Morning briefing**: “Tell me what matters today, what changed overnight, and what you need from me.”
-- **Sustained execution**: “Run my priorities in the background and keep moving without constant check-ins.”
+- **Delta brief**: “Tell me what changed since I last checked in, and what needs my review.”
+- **Sustained execution**: “Run my commitments in the background and keep moving without constant check-ins.”
 - **Interrupt + resume**: “When you need me, get my attention and let me jump into voice instantly with full context.”
 - **Heterogeneous work**: “Switch between coding, writing, research, admin, and operations without losing the thread.”
 
 ## User journeys
 
-### 1) Morning setup (5–10 minutes)
+### 1) Focus set setup (2–10 minutes)
 
-1. User states the day’s priorities (3–5) and constraints (time windows, “deep work until 12”, “don’t interrupt except critical”).
+1. User states commitments and constraints (time windows, “deep work”, DND rules), plus WIP limit (default 3).
 2. ALFRED produces:
-   - a “Day Board” (priorities + suggested next actions),
+   - a “Focus Board” (commitments + suggested next actions),
    - a “Background Queue” (runs it can start now),
    - a “Needs Input” list (questions/approvals required to unblock).
 3. User approves or adjusts.
 4. ALFRED begins execution and monitoring.
 
-### 2) Background execution (hours)
+### 2) Background execution (minutes → hours → days)
 
-1. ALFRED creates/updates workflow runs per priority.
+1. ALFRED creates/updates workflow runs per commitment.
 2. Runs proceed through plan → execute → review → summarize with event streaming to clients.
 3. ALFRED emits periodic progress as FYI, and escalates NeedsDecision/Critical when blocked or failing.
 
@@ -101,6 +137,15 @@ ALFRED is a persistent day-long collaborator that:
 4. Voice session starts; ALFRED restates context and asks the minimum question.
 5. User answers; ALFRED resumes the suspended run and continues in background.
 
+### 4) Delta brief (on demand, not “morning”)
+
+1. User returns after time away (“what did I miss?”) or taps a notification.
+2. ALFRED generates a delta brief since the last touch:
+   - major changes
+   - action items needing review
+   - a short ranked “next decisions” list
+3. User chooses: “talk now” (voice), “answer in text”, or “snooze”.
+
 ## UX principles
 
 - **One-screen truth**: the user should always see “what’s running, what’s blocked, what needs me”.
@@ -111,11 +156,11 @@ ALFRED is a persistent day-long collaborator that:
 
 ## UI/UX surfaces
 
-### Web (desktop) — “Workday” screen
+### Web (desktop) — “Focus Board” screen
 
 Primary components:
 
-- **Day Board**: priorities, status, next decision, progress bars.
+- **Focus Board**: commitments, status, next decision, progress bars.
 - **Inbox / Updates**: “what changed” feed (workflow events, messages, alerts).
 - **Running Workflows**: per-run timeline, stage, current agent/wave.
 - **Attention Queue**: NeedsDecision/Critical items requiring user action.
@@ -124,9 +169,9 @@ Wireframe (conceptual):
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│ Workday (Today)      Deep work: ON   Interrupt: Critical only │
+│ Focus Board          Deep work: ON   Interrupt: Critical only │
 ├───────────────────────────┬───────────────────────────────────┤
-│ Priorities (3–5)          │ Attention Queue                   │
+│ Commitments (WIP=3)       │ Attention Queue                   │
 │ [1] Ship auth refactor    │ (1) Approve deploy plan (Run A)   │
 │     status: executing     │ (2) Clarify tax doc source (Run C)│
 │ [2] File taxes            │                                   │
@@ -176,14 +221,15 @@ Two tiers:
 
 ## Functional requirements (high level)
 
-### Workday orchestration
+### Focus orchestration
 
-- Accept a morning brief that includes:
-  - 3–5 priorities,
+- Accept a focus-set brief that includes:
+  - commitments + priority ordering,
+  - WIP limit (default 3; user-settable),
   - constraints (“deep work”, “commute”, “DND rules”),
   - integrations to check (“calendar”, “messages”, “inbox”).
 - Start/track multiple workflow runs concurrently.
-- Provide a stable mapping: **Priority → Run(s) → Waves → Agents**.
+- Provide a stable mapping: **Commitment → Run(s) → Waves → Agents**.
 
 ### Attention routing
 
@@ -210,6 +256,13 @@ Two tiers:
 - When the client is connected, stream updates via subscriptions.
 - When the user is offline/asleep, send remote push notifications (mobile) for NeedsDecision/Critical/Emergency.
 
+### Delta briefs
+
+- Generate delta briefs keyed by:
+  - last interaction timestamp per thread/focus set, or
+  - explicit “since” timestamp provided by the caller.
+- Delta brief content must be “major changes + action items needing review”, not a generic morning digest.
+
 ## Architecture (high level) and wiring to existing packages
 
 ### Canonical layers (DB → repo → API → app)
@@ -233,7 +286,7 @@ Two tiers:
   - `WorkflowRuntime` / orchestrator: multi-agent waves + suspend/resume semantics
   - policy engine + obligations: safe autonomy boundaries
 - **Apps**
-  - `apps/web`: Workday UI + workflow visualization + chat/voice entry points
+  - `apps/web`: Focus Board UI + workflow visualization + chat/voice entry points
   - `apps/native`: push token registration + “call from Alfred” + drive/voice surfaces
 
 ### Product-level modules (conceptual; built on existing primitives)
@@ -247,6 +300,27 @@ Two tiers:
 - **NotificationDispatcher (API service)**: sends either:
   - in-app subscription events (web/native connected), or
   - remote push notifications (mobile) when disconnected.
+
+## Conceptual scope reframing (to avoid “generic assistant”)
+
+Concierge Focus is not “a chat bot with tools”. It is a **personalized, extensible, composable computer soul**:
+
+- **Identity**: ALFRED has a stable “self” across sessions (voice + text), with a consistent style and boundaries.
+- **Interests**: ALFRED may maintain standing interests (e.g., system health, personal admin hygiene) that surface as suggestions, never as spam.
+- **Commitments**: ALFRED can hold commitments (“I will finish X and notify you when blocked”) tracked as durable artifacts, not ephemeral chat promises.
+- **Teamwork**: ALFRED decomposes work into agents/subagents and reports outcomes like a staff assistant (status, blockers, next decision).
+- **Composability**: new capabilities land as tools/routers/observers and integrate with memory/knowledge/metrics/policy by default.
+
+## Alignment with Linear + waves (conceptual grounding)
+
+Concierge Focus should feel familiar to Linear-minded users while remaining ALFRED-native:
+
+- **Commitment**: “the thing you’d track” (often maps cleanly to a Linear issue or Linear project, but remains ALFRED’s unit of attention + accountability).
+- **Workflow run**: the execution instance for the commitment (status, events, suspend/resume, compilation).
+- **Waves**: ALFRED’s internal parallelization batches for subtasks within a run.
+- **Subtasks/agents**: the executor-level decomposition.
+
+Key rule: **branching lives in waves**, not in the user’s mental model. The user manages commitments; ALFRED manages waves.
 
 ## Existing integration points to leverage (current code)
 
@@ -262,6 +336,55 @@ Two tiers:
   - `apps/native/lib/notifications.ts` registers Expo push tokens
   - `packages/api/src/routers/user.ts` stores push tokens in preferences
 
+## North star package integrations (what this PRD must compose with)
+
+- **Projects**
+  - **Why**: commitments often anchor to a workspace/project (repo, domain, Linear mapping).
+  - **Use**: `packages/api/src/routers/project.ts` (project detect + Linear link), `@alfred/plan` project detection.
+- **Sense (capture → inbox → triage)**
+  - **Why**: concierge value depends on a unified “what changed / what arrived” intake across surfaces.
+  - **Use**: `packages/api/src/routers/capture.ts` (text/voice/photo capture), `packages/api/src/routers/inbox.ts` (in-app stream), `packages/api/src/routers/receipt.ts` + `packages/sense/src/route.ts` (triage + corrections), `packages/api/src/routers/workingset.ts` (user focus context).
+- **RAG + embed + rerank**
+  - **Why**: 8-hour continuity requires retrieval, not raw message replay.
+  - **Use**:
+    - embeddings: `@alfred/embed` (including multimodal embeddings in capture flows)
+    - retrieval: `@alfred/rag` + DB `rag` repos
+    - reranking: `@alfred/rerank` (as used by `packages/runtime/src/engines/knowledge.ts`)
+- **Knowledge + graph (entities, facts, reasoning)**
+  - **Why**: “concierge memory” should land as structured knowledge (not just chat logs).
+  - **Use**: `packages/api/src/routers/knowledge.ts` (extraction + visualization), `packages/runtime/src/engines/knowledge.ts` (retrieveContext + rerank + touchNodes), `packages/db/src/schema/graph.ts` + `packages/db/src/repo/graph/*`.
+- **Learning**
+  - **Why**: daily operation should improve routing, preferences, and recall quality.
+  - **Use**: `packages/agent/src/orchestrator/learning-worker.ts` (learn from runs + memory maintenance), `packages/runtime/src/engines/learning.ts` (runtime learning hooks).
+- **Observability + metrics**
+  - **Why**: long-running background orchestration must be measurable and debuggable.
+  - **Use**: `packages/api/src/metrics.ts` + `packages/pipeline/src/observers/metrics.ts` + `packages/runtime/src/metrics.ts`.
+  - **Pattern**: performance budgets via `withBudget()` (example: `packages/history/src/history-context.ts`).
+- **Persistence (durable completion artifacts)**
+  - **Why**: users need a durable “what happened” view after the run ends; snapshots can be deleted.
+  - **Use**: work compilation (`docs/architecture/work-compilation.md`, `packages/api/src/services/compilation.ts`, `@alfred/type/compilation`).
+- **API (routers as the product boundary)**
+  - **Why**: Focus/Concierge is a composition feature; it should expose minimal, stable endpoints.
+  - **Use**: `packages/api/src/routers/workflow.ts`, `assistant.ts`, `voice.ts`, `notification.ts`, `user.ts`, `project.ts`, `inbox.ts`.
+- **Agent (tools + multi-agent orchestration)**
+  - **Why**: heterogeneous tasks require tool catalogs, policy enforcement, and agent spawning.
+  - **Use**: `packages/agent/src/orchestrator/multi/*` (decompose/spawn/merge patterns), assistant tools under `packages/agent/assistant/src/tool/`.
+- **Protocol**
+  - **Why**: cross-surface continuity benefits from shared “thread/session/event” schemas.
+  - **Use**: `packages/protocol/src/*` (thread events/items/session state) as a candidate home for future “AttentionEvent” / “FocusState” shared contracts.
+- **Summarize**
+  - **Why**: compress long artifacts (threads, run logs, inbox bursts) into minimal briefs and “catch-up” audio scripts.
+  - **Use**: `@alfred/summarize` (LongCodeZip-style summarization with heuristic fallback).
+- **Pacer**
+  - **Why**: attention routing/notification dispatch needs batching/debounce so it doesn’t spam.
+  - **Use**: `@alfred/pacer` (standardized debouncing/throttling/batching).
+- **TUI**
+  - **Why**: a focus dashboard should exist outside the browser; TUI already has panels and a mode system.
+  - **Use**: `packages/tui/src/tui/react/dashboard.tsx` + panel architecture for a future “Focus/Attention” panel.
+- **Mindscape**
+  - **Why**: Focus is not just a list; Mindscape is the spatial “state surface” for runs, knowledge, and focus.
+  - **Use**: `apps/web/src/components/graphs/mindscape/*` (`MindscapeCanvas`) + `apps/web/src/store/mindscape/*` to render “Commitment / Run / Attention” as nodes/overlays.
+
 ## Non-goals (for this PRD)
 
 - Multi-tenant accounts, teams, or shared workspaces
@@ -270,11 +393,11 @@ Two tiers:
 
 ## Success metrics (product)
 
-- **Daily adoption**: user starts a Workday session ≥ 4 days/week.
+- **Daily adoption**: user starts a focus set ≥ 4 days/week (or equivalent cadence).
 - **Interrupt quality**: >80% of interrupts are rated “appropriate timing”.
 - **Time saved**: user reports ≥ 60 minutes/day saved after stabilization.
 - **Resume speed**: time from notification tap → first coherent voice question < 5 seconds (p95).
-- **Completion**: ≥ 70% of priorities have measurable progress by end of day (even if not “done”).
+- **Completion**: ≥ 70% of commitments have measurable progress by end of the focus period (even if not “done”).
 
 ## Risks & open questions
 
@@ -282,4 +405,106 @@ Two tiers:
 - **Integration breadth**: concierge value depends on email/calendar/messages integrations and consistent “inbox” ingestion.
 - **Security & policy**: heterogeneous tasks (deployments, finances, security scans) require strong obligation design and auditability.
 - **Concurrency**: multiple runs/agents must not collide on shared resources; worktree and agentfs isolation must remain reliable.
+
+## PRD appendix — future modules & pattern templates
+
+This section lists the **exact modules** that would be added to implement Concierge Focus, and the **existing files to pattern-match** so new code follows established ALFRED conventions.
+
+### API (routers): product boundary
+
+- **`focusRouter`** (`packages/api/src/routers/focus.ts`)
+  - **Pattern from**: `packages/api/src/routers/workflow.ts` (long-running run lifecycle + streaming) and `packages/api/src/routers/workingset.ts` (lightweight “state set/get” UX context).
+  - **Purpose**: “Focus Board” read model (focus sets, commitments, priority ordering, running runs, attention queue, delta brief cards).
+
+- **`attentionRouter`** (`packages/api/src/routers/attention.ts`)
+  - **Pattern from**: `packages/api/src/routers/inbox.ts` (subscription fanout) and `packages/api/src/routers/voice.ts` (`workflowNotification` subscription heartbeat pattern).
+  - **Purpose**: subscribe/query attention items (FYI/NeedsDecision/Critical/Emergency), ack/snooze/resolve actions.
+
+- **`deltaRouter`** (`packages/api/src/routers/delta.ts`)
+  - **Pattern from**: `packages/api/src/routers/knowledge.ts` (aggregation + persistence) and `packages/api/src/routers/workflow.ts` (paging events / run history access).
+  - **Purpose**: delta brief generation and retrieval (since last touch / since timestamp).
+
+- **`notifyRouter`** (`packages/api/src/routers/notify.ts`)
+  - **Pattern from**: `packages/api/src/routers/notification.ts` (prefs) + `packages/api/src/routers/user.ts` (device token storage).
+  - **Purpose**: product-level dispatch endpoints (test send, preview payload, channel diagnostics).
+
+### API (services): composition logic kept out of routers
+
+- **`BriefingCompiler`** (`packages/api/src/services/briefing.ts`)
+  - **Pattern from**: `packages/api/src/services/compilation.ts` (build compact durable artifacts on lifecycle events).
+  - **Purpose**: build delta-brief cards from workflow events, inbox captures, and (future) external integrations.
+
+- **`AttentionRouterService`** (`packages/api/src/services/attention.ts`)
+  - **Pattern from**: `packages/sense/src/route.ts` (scoring/routing + evidence) and `packages/history/src/history-context.ts` (budgeted selection).
+  - **Purpose**: map heterogeneous events into the attention taxonomy + compute urgency/channel.
+
+- **`NotificationDispatcher`** (`packages/api/src/services/notify.ts`)
+  - **Pattern from**: `packages/api/src/voice/notifier.ts` (subscriber registry + typed events) plus existing token/prefs routers.
+  - **Purpose**: deliver attention events via:
+    - in-app subscriptions (web/native connected)
+    - remote push (native) when disconnected (implementation TBD)
+
+### Runtime/pipeline integrations: persistence, events, observers
+
+- **`AttentionObserver`** (`packages/api/src/services/attention-observer.ts`)
+  - **Pattern from**: `packages/api/src/services/compilation.ts` (API-layer observer that persists derived artifacts).
+  - **Purpose**: consume pipeline/workflow events, update attention state, trigger dispatcher.
+
+- **`FocusReadModelBuilder`** (`packages/api/src/services/focus.ts`)
+  - **Pattern from**: `packages/api/src/services/compilation.ts` (compact view model persisted under `workflow_runs.stateData` conventions).
+  - **Purpose**: build a denormalized “Focus Board” read model for fast UI loads (exact storage TBD).
+
+### DB + repo: new durable state (minimal, versioned)
+
+- **Focus persistence** (new schema + repo)
+  - **Likely files**:
+    - `packages/db/src/schema/focus.ts`
+    - `packages/db/src/repo/focus.ts`
+  - **Pattern from**: `packages/db/src/schema/conversation.ts` + `packages/db/src/repo/conversation.ts` (durable thread state) and `packages/db/src/schema/workflow.ts` + `packages/db/src/repo/workflow.ts` (run/event persistence).
+  - **Purpose**: persist focus sets, commitments, priority ordering, attention items, delta briefs, and user-level session metadata.
+
+### Knowledge / learning: north-star “memory becomes entities”
+
+- **Focus → knowledge ingestion hook**
+  - **Likely file**: `packages/agent/src/orchestrator/learning-worker.ts` extension point
+  - **Pattern from**: `learnDomainCorrection()` and “process completed runs” flow in the learning worker.
+  - **Purpose**: convert repeated focus outcomes into graph entities (preferences, routines, recurring priorities).
+
+### Shared contracts (types/protocol)
+
+- **`AttentionEvent` / `FocusState` schemas**
+  - **Likely files**:
+    - `packages/type/src/focus.ts` (Zod + TS types) and export from `packages/type/src/index.ts`
+    - optional: `packages/protocol/src/events.ts` extension for cross-surface event streaming contracts
+  - **Pattern from**: `packages/type/src/compilation.ts` (versioned durable artifact schema) and `packages/protocol/src/session.ts` (resume-capable session state schema).
+
+### Web UI (desktop): new “Focus” surface
+
+- **Focus app surface**
+  - **Likely files**:
+    - `apps/web/src/components/apps/focus/index.tsx`
+    - `apps/web/src/components/apps/focus/sections/*` (if it grows beyond a single screen)
+  - **Pattern from**: settings desktop-app organization (`apps/web/src/components/apps/settings/*`) and workflow UI (`apps/web/src/routes/_protected/workflow.$runId.tsx`, `apps/web/src/components/workflow-detail-modal.tsx`).
+
+- **Mindscape integration**
+  - **Likely files**:
+    - additions under `apps/web/src/components/graphs/mindscape/*`
+    - store wiring under `apps/web/src/store/mindscape/*`
+  - **Pattern from**: `apps/web/src/components/graphs/mindscape/canvas.tsx` (ReactFlow isolation + canvas patterns).
+
+### Native UI (mobile): interruption → call → resume
+
+- **Focus / Attention screens**
+  - **Likely files**:
+    - `apps/native/app/(drawer)/(tabs)/focus.tsx` (or integrated into an existing tab)
+    - `apps/native/app/(drawer)/call.tsx` enhancements for “Call from Alfred”
+  - **Pattern from**: Drive Mode + voice session patterns (`apps/native/app/(drawer)/(tabs)/drive.tsx`, `apps/native/lib/notifications.ts`).
+
+### TUI: focus in terminal
+
+- **Focus panel**
+  - **Likely files**:
+    - `packages/tui/src/tui/react/panels/focus.tsx`
+    - wire into `packages/tui/src/tui/react/dashboard.tsx`
+  - **Pattern from**: existing panel system in `packages/tui/src/tui/react/dashboard.tsx` (panel layout + mode priority).
 

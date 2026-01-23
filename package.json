@@ -28,6 +28,7 @@
   "scripts": {
     "test": "bun scripts/test-bun.ts",
     "test:failfast": "bun scripts/test-failfast.ts",
+    "test:pipeline:critical": "ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=1 ALFRED_TEST_FILE_TIMEOUT_MS=120000 ALFRED_TEST_RUN_TIMEOUT_MS=300000 bun scripts/test-bun.ts --timeout 60000 packages/pipeline/test/integration/golden-path.test.ts packages/pipeline/test/integration/contracts.test.ts packages/pipeline/test/integration/escalation.test.ts packages/pipeline/test/pipeline-suspend-on-escalate.test.ts packages/pipeline/test/resilience/abort.test.ts packages/pipeline/test/resilience/transitions.test.ts packages/pipeline/test/stages/execute-cleanup.test.ts packages/pipeline/test/integration/resume.test.ts packages/pipeline/test/integration/resume-roundtrip.test.ts packages/api/test/workflow.runner.resume.test.ts packages/api/test/workflow.stream.integration.test.ts packages/api/test/workflow.stream.rate-limit.test.ts",
     "check": "biome check --write .",
     "lint": "bunx biome check .",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --nested",
@@ -61,6 +62,7 @@
     "typecheck:workspace": "turbo typecheck",
     "tune:run": "bun run packages/tune/src/cli.ts",
     "check:budgets": "bun scripts/check-budgets.ts",
+    "check:names": "bun scripts/check-names.ts",
     "test:perf": "bun test packages/cognitive/test/performance-budget.test.ts packages/knowledge/test/extractor.perf.test.ts packages/knowledge/test/hypergraph.perf.test.ts packages/agent/test/multi/performance.test.ts packages/runtime/test/performance.test.ts",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",

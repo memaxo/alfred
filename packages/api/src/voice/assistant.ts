@@ -3,12 +3,19 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
 import { buildHistoryContext } from "@alfred/history/history-context";
 import { logger } from "@alfred/logger";
+import {
+  adaptForVoice,
+  buildPersonaPrompt,
+  formatGreeting,
+  timeOfDayFromHour,
+} from "@alfred/persona";
 import type { CognitiveEffect, CognitiveLoopResult } from "@alfred/runtime";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import type { VoiceAssistantRaw } from "@alfred/type/voice";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
+import { getHonorificPreference } from "../persona/honorific";
 import { sanitizeResult } from "../utils/generate";
 import { classifyVoiceIntent } from "./intent.js";
 import { getVoiceWorkflowContext } from "./session-context.js";
@@ -73,14 +80,6 @@ function parseFocusState(value: unknown): FocusState | null {
   };
 }
 
-function isJarvisPersonaEnabled(): boolean {
-  const raw =
-    typeof process !== "undefined"
-      ? process.env.ENABLE_JARVIS_PERSONA
-      : undefined;
-  return raw === "1" || raw === "true";
-}
-
 function normalizeStart(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
@@ -102,15 +101,84 @@ function applyOpening(opening: string, text: string): string {
   return `${o} ${t}`.trim();
 }
 
-function looksLikeStatusQuery(text: string): boolean {
-  const t = text.toLowerCase();
-  return (
-    t.includes("status") ||
-    t.includes("health") ||
-    t.includes("systems") ||
-    t.includes("diagnostic") ||
-    t.includes("uptime")
-  );
+function coerceString(value: unknown): string | null {
+  return typeof value === "string" && value.length ? value : null;
+}
+
+function extractToolNames(toolCalls: unknown[]): string[] {
+  const out: string[] = [];
+  for (const raw of toolCalls) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const obj = raw as Record<string, unknown>;
+    const name = coerceString(obj.toolName) ?? coerceString(obj.name);
+    if (name) {
+      out.push(name);
+    }
+  }
+  return out;
+}
+
+function withPersonaTelemetry(input: {
+  result: VoiceAssistantResult;
+  speechAct: "greet" | "ack" | "clarify" | "answer" | "tooling" | "recover" | "close";
+  intent: { type: "workflow" | "approval" | "status_query" | "conversational"; confidence: number | null };
+  heuristicFallbackUsed: boolean;
+  focusMode: boolean;
+  honorific: "sir" | "madam" | "neutral";
+  sessionStart: boolean;
+  toolCalls?: unknown[];
+  toolResults?: unknown[];
+}): VoiceAssistantResult {
+  const hour = new Date().getHours();
+  const greeting = input.sessionStart
+    ? formatGreeting({
+        timeOfDay: timeOfDayFromHour(hour),
+        honorific: input.honorific,
+      })
+    : "";
+
+  const toolsUsed = extractToolNames(input.toolCalls ?? []);
+  const hasToolResults = (input.toolResults ?? []).length > 0;
+
+  const ttsText = adaptForVoice(input.result.text);
+  const textWithGreeting = greeting ? applyOpening(greeting, ttsText) : ttsText;
+
+  const uiMessages = input.result.raw.uiMessages.map((m, idx) => {
+    if (idx !== 0 || m.role !== "assistant") {
+      return m;
+    }
+    const nextParts = m.parts.map((p, pidx) => {
+      if (pidx !== 0) {
+        return p;
+      }
+      if (p.type !== "text") {
+        return p;
+      }
+      return { ...p, text: textWithGreeting };
+    });
+    return { ...m, parts: nextParts };
+  });
+
+  const meta = (input.result.raw.meta ?? {}) as Record<string, unknown>;
+  meta.personaTelemetry = {
+    speechAct: input.speechAct,
+    constraints: { focusMode: input.focusMode, ttsSafe: true, maxWords: null },
+    tooling: { toolsUsed, hasToolResults },
+    heuristicFallbackUsed: input.heuristicFallbackUsed,
+    intent: { type: input.intent.type, confidence: input.intent.confidence },
+  };
+
+  return {
+    ...input.result,
+    text: textWithGreeting,
+    raw: {
+      ...input.result.raw,
+      uiMessages,
+      meta,
+    },
+  };
 }
 
 async function getUserFocusState(userId: string): Promise<FocusState | null> {
@@ -209,13 +277,44 @@ export async function runAssistantForVoice(
     });
   }
 
+  const honorific = await getHonorificPreference(input.userId);
+  const focusState = await getUserFocusState(input.userId);
+  const focusMode = focusState?._ === "active";
+  const sessionStart = !ctx.has("voiceAssistantLastRunAt");
+
   // Voice workflow routing (enabled by default, can be disabled via preferences)
   const workflowEnabled = await isVoiceWorkflowEnabled(input.userId);
   if (workflowEnabled) {
     try {
-      const workflowResult = await routeVoiceWorkflow(ctx, input);
-      if (workflowResult) {
-        return workflowResult;
+      const workflowRouted = await routeVoiceWorkflow(ctx, input);
+      if (workflowRouted.handled) {
+        const speechAct = sessionStart
+          ? "greet"
+          : workflowRouted.intent.result.type === "approval"
+            ? "ack"
+            : workflowRouted.intent.result.type === "workflow"
+              ? "clarify"
+              : workflowRouted.intent.result.type === "status_query"
+                ? "answer"
+                : "answer";
+        ctx.set?.("voiceAssistantLastRunAt", new Date().toISOString());
+        return withPersonaTelemetry({
+          result: workflowRouted.handled,
+          speechAct,
+          intent: {
+            type: workflowRouted.intent.result.type,
+            confidence:
+              workflowRouted.intent.result.type === "workflow"
+                ? workflowRouted.intent.result.confidence
+                : null,
+          },
+          heuristicFallbackUsed: workflowRouted.intent.meta.heuristicFallbackUsed,
+          focusMode,
+          honorific,
+          sessionStart,
+          toolCalls: [],
+          toolResults: [],
+        });
       }
     } catch (error) {
       // Log but fall through to conversational assistant
@@ -227,7 +326,11 @@ export async function runAssistantForVoice(
   }
 
   // Continue with conversational assistant
-  return runConversationalAssistant(ctx, input);
+  return runConversationalAssistant(ctx, input, {
+    honorific,
+    focusState,
+    sessionStart,
+  });
 }
 
 /**
@@ -237,39 +340,48 @@ export async function runAssistantForVoice(
 async function routeVoiceWorkflow(
   ctx: RuntimeContext,
   input: VoiceAssistantInput
-): Promise<VoiceAssistantResult | null> {
+): Promise<{
+  handled: VoiceAssistantResult | null;
+  intent: Awaited<ReturnType<typeof classifyVoiceIntent>>;
+}> {
   // Get existing workflow context for the user
   const sessionContext = await getVoiceWorkflowContext(input.userId);
 
   // Classify the intent
-  const intentResult = await classifyVoiceIntent(input.text, sessionContext);
+  const intent = await classifyVoiceIntent(input.text, sessionContext);
 
   logger.debug("voice_intent_classified", {
     userId: input.userId,
-    intentType: intentResult.type,
+    intentType: intent.result.type,
     hasSessionContext: !!sessionContext,
     sessionPhase: sessionContext?.state.phase,
   });
 
   // Route based on intent type
-  switch (intentResult.type) {
+  switch (intent.result.type) {
     case "workflow":
-      return handleWorkflowIntent(ctx, input, sessionContext);
+      return { handled: await handleWorkflowIntent(ctx, input, sessionContext), intent };
 
     case "approval":
-      return handleApprovalIntent(
-        ctx,
-        input,
-        sessionContext,
-        intentResult.action
-      );
+      return {
+        handled: await handleApprovalIntent(
+          ctx,
+          input,
+          sessionContext,
+          intent.result.action
+        ),
+        intent,
+      };
 
     case "status_query":
-      return handleStatusQuery(ctx, input, intentResult.runId);
+      return {
+        handled: await handleStatusQuery(ctx, input, intent.result.runId),
+        intent,
+      };
 
     default:
       // Fall through to conversational assistant
-      return null;
+      return { handled: null, intent };
   }
 }
 
@@ -278,7 +390,12 @@ async function routeVoiceWorkflow(
  */
 async function runConversationalAssistant(
   ctx: RuntimeContext,
-  input: VoiceAssistantInput
+  input: VoiceAssistantInput,
+  persona: {
+    honorific: "sir" | "madam" | "neutral";
+    focusState: FocusState | null;
+    sessionStart: boolean;
+  }
 ): Promise<VoiceAssistantResult> {
   const { getVoiceAgentDefaults } = await import("@alfred/agent/agents");
   const { getModelForRole } = await import("@alfred/agent/selector");
@@ -304,33 +421,13 @@ async function runConversationalAssistant(
     }
   }
 
-  const jarvisEnabled = isJarvisPersonaEnabled();
-  let jarvisOpening = "";
-  let jarvisPersonaBlock: string | null = null;
-  if (jarvisEnabled) {
-    const { buildJarvisOpening, getPersonaInstruction } = await import(
-      "@alfred/agent/assistant/src/adapter"
-    );
-    jarvisPersonaBlock = getPersonaInstruction([]); // gated inside adapter too
-    jarvisOpening = buildJarvisOpening({
-      sessionStart:
-        input.thread && historyMessages.length > 0
-          ? false
-          : !ctx.has("voiceAssistantLastRunAt"),
-      isSystemStatus: looksLikeStatusQuery(input.text),
-      hour: new Date().getHours(),
-    });
-  }
-
   const newMessage: UIMessage = {
     id: `voice-${Date.now()}`,
     role: "user",
     parts: [{ type: "text", text: input.text }],
   };
 
-  // Fetch cognitive state (focus mode)
-  const focusState = await getUserFocusState(input.userId);
-  const cognitiveContext = formatCognitiveContext(focusState);
+  const cognitiveContext = formatCognitiveContext(persona.focusState);
 
   let systemInstructions =
     typeof defaults.instructions === "string"
@@ -339,12 +436,12 @@ async function runConversationalAssistant(
   if (cognitiveContext) {
     systemInstructions += `\n\n${cognitiveContext}`;
   }
-  if (jarvisPersonaBlock) {
-    systemInstructions += `\n\n${jarvisPersonaBlock}`;
-  }
-  if (jarvisOpening) {
-    systemInstructions += `\n\nVoice UX requirement: Begin your reply with exactly: "${jarvisOpening}" (verbatim). Do not repeat this opening later.`;
-  }
+
+  systemInstructions += `\n\n${buildPersonaPrompt({
+    modality: "voice",
+    honorific: persona.honorific,
+    focusMode: persona.focusState?._ === "active",
+  })}`;
 
   // Combine history with the new message
   const allMessages = [...historyMessages, newMessage];
@@ -390,13 +487,7 @@ async function runConversationalAssistant(
   });
   const durationSeconds = (performance.now() - assistantStart) / 1000;
   const sanitized = sanitizeResult(result);
-  const textWithOpening = jarvisOpening
-    ? applyOpening(jarvisOpening, sanitized.text ?? "")
-    : (sanitized.text ?? "");
-  const finalSanitized =
-    textWithOpening === (sanitized.text ?? "")
-      ? sanitized
-      : { ...sanitized, text: textWithOpening };
+  const finalSanitized = sanitized;
   const replayId = await persistResult({
     userId: input.userId,
     projectId: input.projectId,
@@ -436,7 +527,7 @@ async function runConversationalAssistant(
     });
   }
 
-  return {
+  const base: VoiceAssistantResult = {
     text: finalSanitized.text ?? "",
     replayId,
     raw: {
@@ -454,6 +545,18 @@ async function runConversationalAssistant(
     },
     durationSeconds,
   };
+
+  return withPersonaTelemetry({
+    result: base,
+    speechAct: persona.sessionStart ? "greet" : "answer",
+    intent: { type: "conversational", confidence: null },
+    heuristicFallbackUsed: false,
+    focusMode: persona.focusState?._ === "active",
+    honorific: persona.honorific,
+    sessionStart: persona.sessionStart,
+    toolCalls: finalSanitized.toolCalls,
+    toolResults: finalSanitized.toolResults,
+  });
 }
 
 type RunLoopFn = (

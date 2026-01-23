@@ -38,6 +38,7 @@
     "@alfred/embed": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/metrics": "workspace:*",
+    "@alfred/persona": "workspace:*",
     "@alfred/pipeline": "workspace:*",
     "@alfred/plan": "workspace:*",
     "@alfred/policy": "workspace:*",

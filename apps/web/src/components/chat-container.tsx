@@ -68,6 +68,7 @@ export function ChatContainer({
     clear,
     handleEdit,
     handleRegenerate,
+    conversationId,
     addToolApprovalResponse,
   } = useChatLogic({
     initialAgent: agent,
@@ -97,10 +98,13 @@ export function ChatContainer({
 
   const partRenderer = useMemo(
     () =>
-      createPartRenderer({
-        onAddToolApprovalResponse: addToolApprovalResponse,
-      }),
-    [addToolApprovalResponse]
+      createPartRenderer(
+        {
+          onAddToolApprovalResponse: addToolApprovalResponse,
+        },
+        conversationId
+      ),
+    [addToolApprovalResponse, conversationId]
   );
 
   const queueItems = useMemo(

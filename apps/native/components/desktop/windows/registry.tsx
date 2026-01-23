@@ -1,62 +1,85 @@
+import type { ComponentType } from "react";
 import type { WindowType } from "@/store/desktop.types";
 import { AdminWindow } from "./admin";
 import { AgentfsWindow } from "./agentfs";
 import { AgentsWindow } from "./agents";
+import { BookmarksWindow } from "./bookmarks";
 import { ChatWindow } from "./chat";
 import { CodeWindow } from "./code";
 import { CodexWindow } from "./codex";
+import { ComponentsWindow } from "./components";
+import { CortexWindow } from "./cortex";
 import { DockerWindow } from "./docker";
+import { DroidWindow } from "./droid";
 import { ExploreWindow } from "./explore";
 import { FilesWindow } from "./files";
 import { InboxWindow } from "./inbox";
-import { IntelWindow } from "./intel";
-import { PlaceholderWindow } from "./placeholder";
+import { IntegrationsWindow } from "./integrations";
+import { KnowledgeWindow } from "./knowledge";
+import { LearningWindow } from "./learning";
+import { LinearWindow } from "./linear";
+import { MetricsWindow } from "./metrics";
+import { NoteWindow } from "./note";
+import { NotesWindow } from "./notes";
+import { PlanWindow } from "./plan";
+import { PolicyWindow } from "./policy";
 import { PrReviewWindow } from "./pr";
+import { ProjectWindow } from "./project";
+import { RagWindow } from "./rag";
+import { ReminderWindow } from "./reminder";
+import { RemindersWindow } from "./reminders";
+import { SettingsWindow } from "./settings";
 import { TaskmanagerWindow } from "./taskmanager";
 import { TerminalWindow } from "./terminal";
+import { TimersWindow } from "./timers";
+import { TodosWindow } from "./todos";
+import { TuneWindow } from "./tune";
 import type { WindowComponentProps } from "./types";
-import { WorkWindow } from "./work";
+import { VisualWindow } from "./visual";
+import { WorkflowWindow } from "./workflow";
+import { WorkflowlistWindow } from "./workflowlist";
+import { WorkingsetWindow } from "./workingset";
 
-export type WindowComponentType = React.ComponentType<WindowComponentProps>;
+export type WindowComponentType = ComponentType<WindowComponentProps>;
 
 export const windowRegistry: Record<WindowType, WindowComponentType> = {
   admin: AdminWindow,
   agentfs: AgentfsWindow,
   agents: AgentsWindow,
-  bookmarks: IntelWindow,
+  bookmarks: BookmarksWindow,
   chat: ChatWindow,
   code: CodeWindow,
   codex: CodexWindow,
-  components: WorkWindow,
+  components: ComponentsWindow,
   concept: ExploreWindow,
-  cortex: IntelWindow,
+  cortex: CortexWindow,
   docker: DockerWindow,
-  droid: PlaceholderWindow,
+  droid: DroidWindow,
   files: FilesWindow,
   inbox: InboxWindow,
-  integrations: PlaceholderWindow,
-  knowledge: ExploreWindow,
-  learning: IntelWindow,
-  linear: ExploreWindow,
-  metrics: IntelWindow,
-  note: PlaceholderWindow,
-  notes: WorkWindow,
-  plan: IntelWindow,
-  policy: IntelWindow,
+  integrations: IntegrationsWindow,
+  knowledge: KnowledgeWindow,
+  learning: LearningWindow,
+  linear: LinearWindow,
+  metrics: MetricsWindow,
+  note: NoteWindow,
+  notes: NotesWindow,
+  plan: PlanWindow,
+  policy: PolicyWindow,
   "pr-review": PrReviewWindow,
-  project: ExploreWindow,
-  rag: IntelWindow,
-  reminder: PlaceholderWindow,
-  reminders: WorkWindow,
-  settings: WorkWindow,
+  project: ProjectWindow,
+  rag: RagWindow,
+  reminder: ReminderWindow,
+  reminders: RemindersWindow,
+  settings: SettingsWindow,
   taskmanager: TaskmanagerWindow,
   terminal: TerminalWindow,
-  timers: IntelWindow,
-  todo: PlaceholderWindow,
-  todos: WorkWindow,
-  tune: IntelWindow,
-  "visual-builder": IntelWindow,
-  workflow: ExploreWindow,
-  workflowlist: PlaceholderWindow,
-  workingset: WorkWindow,
+  timers: TimersWindow,
+  todo: TodosWindow,
+  todos: TodosWindow,
+  tune: TuneWindow,
+  "visual-builder": VisualWindow,
+  workflow: WorkflowWindow,
+  workflowlist: WorkflowlistWindow,
+  workingset: WorkingsetWindow,
 };

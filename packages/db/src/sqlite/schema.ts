@@ -432,12 +432,81 @@ const statements = [
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  `CREATE TABLE IF NOT EXISTS focus_sets (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL,
+    title TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    wip_limit INTEGER NOT NULL DEFAULT 5,
+    starts_at TEXT,
+    ends_at TEXT,
+    last_touched_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
+  `CREATE TABLE IF NOT EXISTS focus_commitments (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL,
+    focus_set_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    lane TEXT NOT NULL DEFAULT 'background',
+    priority INTEGER NOT NULL DEFAULT 0,
+    workflow_run_id TEXT,
+    conversation_id TEXT,
+    last_touched_at TEXT,
+    metadata TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (focus_set_id) REFERENCES focus_sets(id) ON DELETE CASCADE
+  );`,
+  `CREATE TABLE IF NOT EXISTS attention_items (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL,
+    focus_set_id TEXT,
+    commitment_id TEXT,
+    workflow_run_id TEXT,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open',
+    urgency TEXT NOT NULL DEFAULT 'normal',
+    title TEXT,
+    body TEXT,
+    payload TEXT,
+    resolved_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (focus_set_id) REFERENCES focus_sets(id) ON DELETE CASCADE,
+    FOREIGN KEY (commitment_id) REFERENCES focus_commitments(id) ON DELETE SET NULL,
+    FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(id) ON DELETE SET NULL
+  );`,
+  `CREATE TABLE IF NOT EXISTS delta_briefs (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL,
+    focus_set_id TEXT,
+    commitment_id TEXT,
+    workflow_run_id TEXT,
+    scope TEXT NOT NULL,
+    since_at TEXT,
+    until_at TEXT,
+    summary_text TEXT NOT NULL,
+    data TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (focus_set_id) REFERENCES focus_sets(id) ON DELETE CASCADE,
+    FOREIGN KEY (commitment_id) REFERENCES focus_commitments(id) ON DELETE SET NULL,
+    FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(id) ON DELETE SET NULL
+  );`,
 ];
 
 export function ensureSqliteTestSchema(db: Database): void {
   for (const stmt of statements) {
     try {
-      db.exec(stmt);
+      const normalized = stmt
+        .replace(
+          /gen_random_uuid\(\)/g,
+          "(lower(hex(randomblob(16))))"
+        )
+        .replace(/\bnow\(\)/gi, "CURRENT_TIMESTAMP");
+      db.exec(normalized);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes("duplicate column name")) {

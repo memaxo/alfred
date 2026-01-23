@@ -25,6 +25,10 @@ type DesktopState = {
     bounds?: Partial<Bounds>
   ) => string;
   closeWindow: (windowId: string) => void;
+  updateWindowData: (
+    windowId: string,
+    patch: Partial<Omit<WindowData, "type">> & Record<string, unknown>
+  ) => void;
   focusWindow: (windowId: string) => void;
   blurWindow: () => void;
 
@@ -105,6 +109,14 @@ export const useDesktopStore = create<DesktopState>((set, get) => ({
         focusedWindowId: nextFocused?.id ?? null,
       };
     });
+  },
+
+  updateWindowData: (windowId, patch) => {
+    set((s) => ({
+      windows: s.windows.map((w) =>
+        w.id === windowId ? { ...w, data: { ...w.data, ...patch } } : w
+      ),
+    }));
   },
 
   focusWindow: (windowId) => {

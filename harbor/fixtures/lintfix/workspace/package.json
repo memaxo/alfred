@@ -1,0 +1,8 @@
+{
+  "name": "harbor-lintfix-fixture",
+  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4"
+  }
+}
+

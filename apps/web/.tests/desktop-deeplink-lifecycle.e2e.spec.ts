@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/ai-harness";
 import { signUpTestUser } from "./helpers/auth";
 import {
   countWindows,
@@ -8,55 +8,156 @@ import {
 } from "./helpers/desktop";
 
 test.describe("Desktop Deep Link Lifecycle", () => {
-  test.beforeEach(async ({ page }) => {
-    await signUpTestUser(page);
+  test.beforeEach(async ({ page, screenshots, safeAction }) => {
+    await safeAction(
+      "signup-test-user",
+      async () => {
+        await signUpTestUser(page);
+      },
+      60_000
+    );
+    await screenshots.captureMilestone("authenticated");
   });
 
   test.describe("spawn parameter", () => {
-    test("?spawn=note creates note window on fresh load", async ({ page }) => {
-      await page.goto("/?spawn=note");
-      await expect(getCanvas(page)).toBeVisible();
+    test("?spawn=note creates note window on fresh load", async ({
+      page,
+      screenshots,
+      safeAction,
+      safeAssert,
+    }) => {
+      await safeAction(
+        "goto-spawn-note",
+        async () => {
+          await page.goto("/?spawn=note");
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("spawn-note");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       const noteWindow = getWindow(page, "note");
-      await expect(noteWindow).toBeVisible();
+      await safeAssert("note-visible", async () => {
+        await expect(noteWindow).toBeVisible();
+      });
     });
 
-    test("?spawn=reminder creates reminder window", async ({ page }) => {
-      await page.goto("/?spawn=reminder");
-      await expect(getCanvas(page)).toBeVisible();
+    test("?spawn=reminder creates reminder window", async ({
+      page,
+      screenshots,
+      safeAction,
+      safeAssert,
+    }) => {
+      await safeAction(
+        "goto-spawn-reminder",
+        async () => {
+          await page.goto("/?spawn=reminder");
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("spawn-reminder");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       const reminderWindow = getWindow(page, "reminder");
-      await expect(reminderWindow).toBeVisible();
+      await safeAssert("reminder-visible", async () => {
+        await expect(reminderWindow).toBeVisible();
+      });
     });
 
-    test("?spawn=terminal creates terminal window", async ({ page }) => {
-      await page.goto("/?spawn=terminal");
-      await expect(getCanvas(page)).toBeVisible();
+    test("?spawn=terminal creates terminal window", async ({
+      page,
+      screenshots,
+      safeAction,
+      safeAssert,
+    }) => {
+      await safeAction(
+        "goto-spawn-terminal",
+        async () => {
+          await page.goto("/?spawn=terminal");
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("spawn-terminal");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       const terminalWindow = getWindow(page, "terminal");
-      await expect(terminalWindow).toBeVisible();
+      await safeAssert("terminal-visible", async () => {
+        await expect(terminalWindow).toBeVisible();
+      });
     });
 
-    test("?spawn=todo creates todo window", async ({ page }) => {
-      await page.goto("/?spawn=todo");
-      await expect(getCanvas(page)).toBeVisible();
+    test("?spawn=todo creates todo window", async ({
+      page,
+      screenshots,
+      safeAction,
+      safeAssert,
+    }) => {
+      await safeAction(
+        "goto-spawn-todo",
+        async () => {
+          await page.goto("/?spawn=todo");
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("spawn-todo");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       const todoWindow = getWindow(page, "todo");
-      await expect(todoWindow).toBeVisible();
+      await safeAssert("todo-visible", async () => {
+        await expect(todoWindow).toBeVisible();
+      });
     });
 
-    test("invalid spawn type is ignored gracefully", async ({ page }) => {
-      await page.goto("/?spawn=invalid_window_type");
-      await expect(getCanvas(page)).toBeVisible();
+    test("invalid spawn type is ignored gracefully", async ({
+      page,
+      screenshots,
+      safeAction,
+      safeAssert,
+    }) => {
+      await safeAction(
+        "goto-spawn-invalid",
+        async () => {
+          await page.goto("/?spawn=invalid_window_type");
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("spawn-invalid");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       // Desktop should still load with default windows
       const chatWindow = getWindow(page, "chat");
-      await expect(chatWindow).toBeVisible();
+      await safeAssert("chat-visible", async () => {
+        await expect(chatWindow).toBeVisible();
+      });
     });
 
-    test("spawn creates focused window", async ({ page }) => {
-      await page.goto("/?spawn=note");
-      await expect(getCanvas(page)).toBeVisible();
+    test("spawn creates focused window", async ({
+      page,
+      screenshots,
+      safeAction,
+      safeAssert,
+    }) => {
+      await safeAction(
+        "goto-spawn-note",
+        async () => {
+          await page.goto("/?spawn=note");
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("spawn-note");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       // Check that spawned window is focused
       const isFocused = await page.evaluate(() => {
@@ -77,32 +178,57 @@ test.describe("Desktop Deep Link Lifecycle", () => {
   test.describe("resource parameters", () => {
     test("?resourceType=note&resourceId=X finds existing window", async ({
       page,
+      screenshots,
+      safeAction,
+      safeAssert,
     }) => {
       // First navigate and create a window with resourceRef
-      await navigateToDesktop(page);
+      await safeAction(
+        "navigate-to-desktop",
+        async () => {
+          await navigateToDesktop(page);
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("desktop");
 
-      await page.evaluate(() => {
-        const store = (window as any).__DESKTOP_STORE__;
-        if (!store) {
-          return;
-        }
+      await safeAction(
+        "inject-existing-note",
+        async () => {
+          await page.evaluate(() => {
+            const store = (window as any).__DESKTOP_STORE__;
+            if (!store) {
+              return;
+            }
 
-        store.getState().addWindow({
-          id: "existing-note",
-          type: "note",
-          position: { x: 200, y: 200 },
-          data: {
-            type: "note",
-            label: "Existing Note",
-            viewMode: "full",
-            resourceRef: { type: "note", id: "resource-123" },
-          },
-        });
-      });
+            store.getState().addWindow({
+              id: "existing-note",
+              type: "note",
+              position: { x: 200, y: 200 },
+              data: {
+                type: "note",
+                label: "Existing Note",
+                viewMode: "full",
+                resourceRef: { type: "note", id: "resource-123" },
+              },
+            });
+          });
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("note-injected");
 
       // Navigate with matching resource params
-      await page.goto("/?resourceType=note&resourceId=resource-123");
-      await expect(getCanvas(page)).toBeVisible();
+      await safeAction(
+        "goto-resource-match",
+        async () => {
+          await page.goto("/?resourceType=note&resourceId=resource-123");
+        },
+        20_000
+      );
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       // Should focus existing window, not create new
       const _windowCount = await countWindows(page, "note");
@@ -116,13 +242,27 @@ test.describe("Desktop Deep Link Lifecycle", () => {
 
     test("?resourceType=note&resourceId=X spawns new if not found", async ({
       page,
+      screenshots,
+      safeAction,
+      safeAssert,
     }) => {
-      await page.goto("/?resourceType=note&resourceId=new-resource-456");
-      await expect(getCanvas(page)).toBeVisible();
+      await safeAction(
+        "goto-resource-new",
+        async () => {
+          await page.goto("/?resourceType=note&resourceId=new-resource-456");
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("resource-new");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       // Should create a new note window
       const noteWindow = getWindow(page, "note");
-      await expect(noteWindow).toBeVisible();
+      await safeAssert("note-visible", async () => {
+        await expect(noteWindow).toBeVisible();
+      });
 
       // Verify it has the resourceRef
       const hasResourceRef = await page.evaluate(() => {
@@ -144,9 +284,23 @@ test.describe("Desktop Deep Link Lifecycle", () => {
 
     test("?spawn=note&resourceType=note&resourceId=X creates with resourceRef", async ({
       page,
+      screenshots,
+      safeAction,
+      safeAssert,
     }) => {
-      await page.goto("/?spawn=note&resourceType=note&resourceId=combined-789");
-      await expect(getCanvas(page)).toBeVisible();
+      await safeAction(
+        "goto-spawn-resource",
+        async () => {
+          await page.goto(
+            "/?spawn=note&resourceType=note&resourceId=combined-789"
+          );
+        },
+        20_000
+      );
+      await screenshots.captureMilestone("spawn-resource");
+      await safeAssert("canvas-visible", async () => {
+        await expect(getCanvas(page)).toBeVisible();
+      });
 
       const hasResourceRef = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;

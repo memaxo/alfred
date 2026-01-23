@@ -3,6 +3,7 @@
  */
 
 export { CognitivePanel } from "./cognitive";
+export { FocusPanel } from "./focus";
 export { KnowledgePanel } from "./knowledge";
 export { MetricsPanel } from "./metrics";
 export { ToolCallsPanel } from "./toolcalls";

@@ -116,7 +116,7 @@ function renderPrompt(
 ): string {
   const segments: string[] = [];
 
-  segments.push("You are ALFRED, a personal AI assistant.");
+  segments.push("User preferences (apply as response formatting):");
 
   const verbosity = preferences.get(RESPONSE_VERBOSITY_KEY)?.value;
   if (verbosity) {

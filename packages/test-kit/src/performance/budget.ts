@@ -40,6 +40,12 @@ export const BUDGET_DEFAULTS = {
   "voice-roundtrip": 1000,
   /** State reconstruction from event streams (10k events target) */
   "state-reconstruction": 100,
+  /** E2E navigation operations */
+  "e2e-navigation": 5000,
+  /** E2E user actions (clicks, inputs) */
+  "e2e-action": 2000,
+  /** E2E assertion checks */
+  "e2e-assertion": 1000,
 } as const;
 
 export type BudgetCategory = keyof typeof BUDGET_DEFAULTS;

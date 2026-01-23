@@ -10,11 +10,15 @@ const shouldStartWebServer =
 // Screenshot configuration
 const CAPTURE_SCREENSHOTS = process.env.PLAYWRIGHT_SCREENSHOTS === "1";
 
+// AI-optimized mode configuration (default: enabled)
+const AI_MODE = process.env.PLAYWRIGHT_AI_MODE !== "0";
+const FAIL_FAST = process.env.PLAYWRIGHT_FAIL_FAST !== "0";
+
 export default defineConfig({
   testDir: "./.tests",
-  timeout: 120 * 1000,
+  timeout: AI_MODE ? 60_000 : 120_000,
   expect: {
-    timeout: 15 * 1000,
+    timeout: AI_MODE ? 10_000 : 15_000,
     // Visual comparison thresholds
     toHaveScreenshot: {
       threshold: 0.2,
@@ -27,16 +31,23 @@ export default defineConfig({
   // Output configuration for screenshots and reports
   outputDir: "./test-results",
   snapshotDir: "./test-snapshots",
-  fullyParallel: false,
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  fullyParallel: !FAIL_FAST,
+  retries: FAIL_FAST ? 0 : (process.env.CI ? 1 : 0),
+  workers: FAIL_FAST ? 1 : (process.env.CI ? 2 : undefined),
+  maxFailures: FAIL_FAST ? 1 : undefined,
   // Reporter configuration for comprehensive analysis
-  reporter: [
-    ["list"],
-    // Playwright requires the HTML report folder to be outside `outputDir`.
-    ["html", { outputFolder: "./playwright-report", open: "never" }],
-    ["json", { outputFile: "./test-results/results.json" }],
-  ],
+  reporter: AI_MODE
+    ? [
+        ["dot"],
+        ["./.tests/reporters/ai-compact-reporter.ts"],
+        ["json", { outputFile: "./test-results/results.json" }],
+      ]
+    : [
+        ["list"],
+        // Playwright requires the HTML report folder to be outside `outputDir`.
+        ["html", { outputFolder: "./playwright-report", open: "never" }],
+        ["json", { outputFile: "./test-results/results.json" }],
+      ],
   use: {
     baseURL: BASE_URL,
     trace: "retain-on-failure",

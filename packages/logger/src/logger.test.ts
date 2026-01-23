@@ -64,6 +64,13 @@ describe("logger", () => {
     expect(parsed.apiKey).toBe("[REDACTED]");
   });
 
+  it("does not redact common ID fields", () => {
+    logger.info("voice", { sessionId: "session-123", tokenId: "token-456" });
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.sessionId).toBe("session-123");
+    expect(parsed.tokenId).toBe("token-456");
+  });
+
   it("does not crash on circular references", () => {
     const ctx: Record<string, unknown> = { a: 1 };
     ctx.self = ctx;

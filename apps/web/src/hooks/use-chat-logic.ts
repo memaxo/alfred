@@ -37,6 +37,7 @@ export function useChatLogic({
     clear,
     hydrate,
     setMessages,
+    conversationId,
     addToolApprovalResponse,
   } = useAssistantStream({
     api: apiBase,
@@ -251,6 +252,7 @@ export function useChatLogic({
     toggleVoice,
     clear,
     hydrate,
+    conversationId,
     addToolApprovalResponse,
   };
 }

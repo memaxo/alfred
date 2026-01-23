@@ -44,6 +44,7 @@ export const linking = {
               },
             },
           },
+          focus: "focus",
           call: "call",
         },
       },

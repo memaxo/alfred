@@ -1,30 +1,42 @@
+/**
+ * Model Context Info (Backward Compatibility Layer)
+ *
+ * This module provides backward compatibility with the legacy API.
+ * For new code, prefer using the registry directly:
+ *
+ * @example
+ * import { getModelSpec, calculateBudget } from "@alfred/history";
+ *
+ * const spec = getModelSpec("openai/gpt-4o");
+ * const budget = calculateBudget({ modelId: "openai/gpt-4o" });
+ */
+
+import {
+  getModelSpec,
+  MODEL_REGISTRY,
+  resolveModelId,
+} from "./registry";
+
 export type ModelContextInfo = {
   maxContextTokens: number;
   defaultHistoryRatio?: number;
 };
 
 const DEFAULT_MAX_CONTEXT_TOKENS = 128_000;
-const DEFAULT_HISTORY_RATIO = 0.5;
+const DEFAULT_HISTORY_RATIO = 0.55; // Updated from research
 
-const MODEL_CONTEXT_TABLE: Record<string, ModelContextInfo> = Object.freeze({
-  "openai/gpt-4o": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
-  "openai/gpt-4o-mini": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
-  "openai/gpt-4.1": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
-  "openai/gpt-4.1-mini": {
-    maxContextTokens: 128_000,
-    defaultHistoryRatio: 0.5,
-  },
-  "openai/gpt-4.1-nano": { maxContextTokens: 64_000, defaultHistoryRatio: 0.5 },
-  "openai/o4-mini": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
-  "anthropic/claude-3-5-sonnet": {
-    maxContextTokens: 200_000,
-    defaultHistoryRatio: 0.5,
-  },
-  "anthropic/claude-3-5-haiku": {
-    maxContextTokens: 200_000,
-    defaultHistoryRatio: 0.5,
-  },
-});
+// Build legacy table from registry for backward compatibility
+const MODEL_CONTEXT_TABLE: Record<string, ModelContextInfo> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(MODEL_REGISTRY).map(([id, spec]) => [
+      id,
+      {
+        maxContextTokens: spec.capabilities.maxContextTokens,
+        defaultHistoryRatio: spec.recommendedHistoryRatio,
+      },
+    ])
+  )
+);
 
 let envOverridesCache: Record<string, ModelContextInfo> | null = null;
 
@@ -91,6 +103,8 @@ export function getModelContextInfo(modelId: string): ModelContextInfo {
   const key = normalizeKey(modelId);
   const overrides = loadEnvOverrides();
   const override = overrides[key];
+
+  // Priority 1: Environment variable overrides
   if (override) {
     return {
       maxContextTokens: override.maxContextTokens,
@@ -101,6 +115,17 @@ export function getModelContextInfo(modelId: string): ModelContextInfo {
     };
   }
 
+  // Priority 2: Registry lookup (with alias resolution)
+  const canonicalId = resolveModelId(key);
+  const spec = getModelSpec(canonicalId);
+  if (spec) {
+    return {
+      maxContextTokens: spec.capabilities.maxContextTokens,
+      defaultHistoryRatio: spec.recommendedHistoryRatio,
+    };
+  }
+
+  // Priority 3: Legacy table lookup
   const defaultInfo = MODEL_CONTEXT_TABLE[key];
   if (defaultInfo) {
     return {
@@ -112,6 +137,7 @@ export function getModelContextInfo(modelId: string): ModelContextInfo {
     };
   }
 
+  // Fallback: Default values
   return {
     maxContextTokens: DEFAULT_MAX_CONTEXT_TOKENS,
     defaultHistoryRatio: DEFAULT_HISTORY_RATIO,

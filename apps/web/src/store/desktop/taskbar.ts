@@ -16,6 +16,7 @@ import type {
 
 const DEFAULT_PINNED_APPS: WindowType[] = [
   "chat",
+  "focus",
   "terminal",
   "agents",
   "workflow",

@@ -2,6 +2,48 @@ import { db, graphSchema } from "@alfred/db";
 import { desc, inArray } from "drizzle-orm";
 
 /**
+ * Type guard for JSONB properties object.
+ * Fast path: no allocations, pure type narrowing.
+ */
+function isPropertiesObject(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
+
+/**
+ * Extract title from properties with type safety.
+ * Returns label fallback if title not found.
+ */
+function extractTitle(
+  properties: unknown,
+  label: string
+): string {
+  if (!isPropertiesObject(properties)) {
+    return label;
+  }
+  const title = properties.title;
+  return typeof title === "string" && title.length > 0 ? title : label;
+}
+
+/**
+ * Extract properties object with type safety.
+ * Returns empty object if invalid.
+ */
+function extractProperties(
+  properties: unknown
+): Record<string, unknown> {
+  if (!isPropertiesObject(properties)) {
+    return {};
+  }
+  return properties;
+}
+
+/**
  * Performance-critical graph retrieval for initial render.
  * Returns raw node/edge data optimized for visualization.
  */
@@ -35,19 +77,20 @@ export async function fast_getGraphSnapshot(
   }
 
   return {
-    nodes: nodes.map((n) => ({
-      id: n.id,
-      type: n.kind, // memoryNodes uses 'kind', mapped to 'type' for UI
-      x: Math.random() * 1000 - 500, // Initial random layout
-      y: Math.random() * 1000 - 500,
-      data: {
-        label: n.label, // Use 'label' column directly
-        // biome-ignore lint/suspicious/noExplicitAny: Internal node property mapping
-        title: (n.properties as any)?.title ?? n.label,
-        // biome-ignore lint/suspicious/noExplicitAny: Internal node property mapping
-        ...((n.properties as any) ?? {}),
-      },
-    })),
+    nodes: nodes.map((n) => {
+      const props = extractProperties(n.properties);
+      return {
+        id: n.id,
+        type: n.kind, // memoryNodes uses 'kind', mapped to 'type' for UI
+        x: Math.random() * 1000 - 500, // Initial random layout
+        y: Math.random() * 1000 - 500,
+        data: {
+          label: n.label, // Use 'label' column directly
+          title: extractTitle(n.properties, n.label),
+          ...props,
+        },
+      };
+    }),
     edges: edges.map((e) => ({
       id: e.id,
       source: e.fromId,

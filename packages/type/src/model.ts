@@ -35,6 +35,10 @@ export const MODEL_PROVIDERS = [
   "google",
   "openrouter",
   "cerebras",
+  "deepseek",
+  "mistral",
+  "xai",
+  "local",
 ] as const;
 
 export type ModelProvider = (typeof MODEL_PROVIDERS)[number];

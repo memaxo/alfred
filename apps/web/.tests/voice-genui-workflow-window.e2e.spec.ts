@@ -42,9 +42,11 @@ test("Workflow window renders GenUI timeline from runId", async ({ page }) => {
     `[role="dialog"][data-window-id="${workflowWindowId}"]`
   );
   await expect(workflow).toBeVisible({ timeout: 10_000 });
-
-  // GenUI WorkflowTimeline defaults to "Workflow Execution" title.
-  await expect(workflow.getByText(/Workflow Execution/i)).toBeVisible({
+  // GenUI timeline should render the phases we injected via window data.
+  await expect(workflow.getByText("Plan").first()).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(workflow.getByText("Execute").first()).toBeVisible({
     timeout: 10_000,
   });
 });

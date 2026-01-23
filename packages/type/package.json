@@ -55,6 +55,14 @@
       "types": "./dist/exa.d.ts",
       "default": "./src/exa.ts"
     },
+    "./focus": {
+      "types": "./dist/focus.d.ts",
+      "default": "./src/focus.ts"
+    },
+    "./focus.zod": {
+      "types": "./dist/focus.zod.d.ts",
+      "default": "./src/focus.zod.ts"
+    },
     "./forms": {
       "types": "./dist/forms/index.d.ts",
       "default": "./src/forms/index.ts"

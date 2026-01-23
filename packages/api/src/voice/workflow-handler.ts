@@ -12,6 +12,8 @@ import type { StructuredPlan } from "@alfred/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import type { VoiceAssistantRaw } from "@alfred/type/voice";
+import { SchemaGenerator } from "../services/schema.js";
+import { getHonorificPreference } from "../persona/honorific";
 import type { VoiceAssistantInput, VoiceAssistantResult } from "./assistant.js";
 import {
   clarificationToSpeech,
@@ -111,16 +113,19 @@ export async function handleWorkflowIntent(
 
       // Return auto-approved message
       const autoApproveText = `${planResult.summary.replace(/Say 'approve'.*$/, "")} Auto-approved based on your settings. Agents are now executing.`;
+      const raw = await buildVoiceWorkflowRaw({
+        text: autoApproveText.trim(),
+        runId: planResult.runId,
+        planId: planResult.planId,
+        plan: planResult.structuredPlan,
+        mode: "executing",
+        userId: input.userId,
+        prefs,
+      });
       return createVoiceResult(
         autoApproveText.trim(),
         startTime,
-        buildVoiceWorkflowRaw({
-          text: autoApproveText.trim(),
-          runId: planResult.runId,
-          planId: planResult.planId,
-          plan: planResult.structuredPlan,
-          mode: "executing",
-        })
+        raw
       );
     }
 
@@ -140,16 +145,19 @@ export async function handleWorkflowIntent(
     });
 
     // 7. Return plan summary for TTS
+    const raw = await buildVoiceWorkflowRaw({
+      text: planResult.summary,
+      runId: planResult.runId,
+      planId: planResult.planId,
+      plan: planResult.structuredPlan,
+      mode: "awaiting_approval",
+      userId: input.userId,
+      prefs,
+    });
     return createVoiceResult(
       planResult.summary,
       startTime,
-      buildVoiceWorkflowRaw({
-        text: planResult.summary,
-        runId: planResult.runId,
-        planId: planResult.planId,
-        plan: planResult.structuredPlan,
-        mode: "awaiting_approval",
-      })
+      raw
     );
   } catch (error) {
     logger.error("voice_workflow_intent_failed", {
@@ -210,6 +218,9 @@ export async function handleApprovalIntent(
   const { runId, planId } = sessionContext.state;
 
   try {
+    const prefs = await getVoiceWorkflowPreferences(input.userId).catch(
+      () => undefined
+    );
     if (action === "approve") {
       // Approve the plan
       await planRepo.updatePlanStatus(planId, "approved", input.userId);
@@ -232,16 +243,19 @@ export async function handleApprovalIntent(
       const text =
         "Plan approved. Agents are now executing. I'll let you know when they're done, or ask for status updates anytime.";
       const status = await getWorkflowStatus(runId).catch(() => null);
+      const raw = await buildVoiceWorkflowRaw({
+        text,
+        runId,
+        planId,
+        plan: status?.plan as StructuredPlan | undefined,
+        mode: "executing",
+        userId: input.userId,
+        prefs,
+      });
       return createVoiceResult(
         text,
         startTime,
-        buildVoiceWorkflowRaw({
-          text,
-          runId,
-          planId,
-          plan: status?.plan as StructuredPlan | undefined,
-          mode: "executing",
-        })
+        raw
       );
     }
 
@@ -256,16 +270,19 @@ export async function handleApprovalIntent(
 
     const text =
       "Plan rejected. Let me know if you'd like to try a different approach or refine your requirements.";
+    const raw = await buildVoiceWorkflowRaw({
+      text,
+      runId,
+      planId,
+      plan: undefined,
+      mode: "rejected",
+      userId: input.userId,
+      prefs,
+    });
     return createVoiceResult(
       text,
       startTime,
-      buildVoiceWorkflowRaw({
-        text,
-        runId,
-        planId,
-        plan: undefined,
-        mode: "rejected",
-      })
+      raw
     );
   } catch (error) {
     logger.error("voice_approval_intent_failed", {
@@ -310,6 +327,9 @@ export async function handleStatusQuery(
 
   try {
     const status = await getWorkflowStatus(targetRunId);
+    const prefs = await getVoiceWorkflowPreferences(input.userId).catch(
+      () => undefined
+    );
 
     if (status.status === "completed") {
       // Update session state
@@ -320,16 +340,19 @@ export async function handleStatusQuery(
         status.success,
         status.durationMs
       );
+      const raw = await buildVoiceWorkflowRaw({
+        text,
+        runId: targetRunId,
+        planId: (status.plan as StructuredPlan).id,
+        plan: status.plan as StructuredPlan,
+        mode: "completed",
+        userId: input.userId,
+        prefs,
+      });
       return createVoiceResult(
         text,
         startTime,
-        buildVoiceWorkflowRaw({
-          text,
-          runId: targetRunId,
-          planId: (status.plan as StructuredPlan).id,
-          plan: status.plan as StructuredPlan,
-          mode: "completed",
-        })
+        raw
       );
     }
 
@@ -339,16 +362,19 @@ export async function handleStatusQuery(
         status.completedTasks,
         status.totalTasks
       );
+      const raw = await buildVoiceWorkflowRaw({
+        text,
+        runId: targetRunId,
+        planId: (status.plan as StructuredPlan).id,
+        plan: status.plan as StructuredPlan,
+        mode: "executing",
+        userId: input.userId,
+        prefs,
+      });
       return createVoiceResult(
         text,
         startTime,
-        buildVoiceWorkflowRaw({
-          text,
-          runId: targetRunId,
-          planId: (status.plan as StructuredPlan).id,
-          plan: status.plan as StructuredPlan,
-          mode: "executing",
-        })
+        raw
       );
     }
 
@@ -356,16 +382,19 @@ export async function handleStatusQuery(
       await clearVoiceWorkflowContext(input.userId);
       const text =
         "The workflow encountered an error and stopped. Check the web interface for details on what went wrong.";
+      const raw = await buildVoiceWorkflowRaw({
+        text,
+        runId: targetRunId,
+        planId: (status.plan as StructuredPlan).id,
+        plan: status.plan as StructuredPlan,
+        mode: "failed",
+        userId: input.userId,
+        prefs,
+      });
       return createVoiceResult(
         text,
         startTime,
-        buildVoiceWorkflowRaw({
-          text,
-          runId: targetRunId,
-          planId: (status.plan as StructuredPlan).id,
-          plan: status.plan as StructuredPlan,
-          mode: "failed",
-        })
+        raw
       );
     }
 
@@ -393,6 +422,8 @@ type VoiceWorkflowRawMode =
   | "completed"
   | "failed"
   | "rejected";
+
+const schemaGenerator = new SchemaGenerator({ role: "classify" });
 
 function toWorkflowTimeline(
   plan: StructuredPlan | undefined,
@@ -463,7 +494,10 @@ function toWorkflowTimeline(
   return [planPhase, approvalPhase, ...execPhases];
 }
 
-function toPlanComponent(plan: StructuredPlan | undefined) {
+function toPlanData(plan: StructuredPlan | undefined): {
+  requirement: string;
+  tasks: Array<{ id: string; title: string; status: "pending" }>;
+} {
   const requirement = plan?.intent ?? "";
   const tasks =
     plan?.phases.flatMap((p) =>
@@ -474,47 +508,73 @@ function toPlanComponent(plan: StructuredPlan | undefined) {
       }))
     ) ?? [];
 
-  return {
-    component: "plan",
-    props: { plan: { requirement, tasks } },
-  } as const;
+  return { requirement, tasks };
 }
 
-function buildVoiceWorkflowRaw(input: {
+function toSchemaVerbosity(
+  verbosity: VoiceWorkflowPreferences["verbosity"] | undefined
+): "compact" | "normal" | "verbose" | undefined {
+  if (verbosity === "brief") {
+    return "compact";
+  }
+  if (verbosity === "standard") {
+    return "normal";
+  }
+  if (verbosity === "detailed") {
+    return "verbose";
+  }
+  return;
+}
+
+async function buildVoiceWorkflowRaw(input: {
   text: string;
   runId: string;
   planId: string;
   plan: StructuredPlan | undefined;
   mode: VoiceWorkflowRawMode;
-}): VoiceAssistantRaw {
-  const timelinePart = {
-    type: "data-ui",
+  userId: string;
+  prefs?: VoiceWorkflowPreferences;
+}): Promise<VoiceAssistantRaw> {
+  const ctx = {
+    userId: input.userId,
+    surface: "voice" as const,
+    mode: "workflow" as const,
+    preference: {
+      verbosity: toSchemaVerbosity(input.prefs?.verbosity),
+    },
+  };
+
+  const timelinePart = await schemaGenerator.toDataUiPart({
+    ctx,
+    preferredComponent: "workflow-timeline",
     data: {
       kind: "workflow-timeline",
       runId: input.runId,
       planId: input.planId,
     },
-    ui: {
-      component: "workflow-timeline",
-      props: {
-        workflowId: input.runId,
-        title: input.plan?.title ?? "Workflow",
-        phases: toWorkflowTimeline(input.plan, input.mode),
-        elapsed: 0,
-      },
+    uiData: {
+      workflowId: input.runId,
+      title: input.plan?.title ?? "Workflow",
+      phases: toWorkflowTimeline(input.plan, input.mode),
+      elapsed: 0,
     },
-  } as unknown as UIMessage["parts"][number];
+  });
 
-  const planPart = {
-    type: "data-ui",
+  const planPart = await schemaGenerator.toDataUiPart({
+    ctx,
+    preferredComponent: "plan",
     data: { kind: "plan", runId: input.runId, planId: input.planId },
-    ui: toPlanComponent(input.plan),
-  } as unknown as UIMessage["parts"][number];
+    uiData: { plan: toPlanData(input.plan) },
+  });
 
   const message: UIMessage = {
     id: `voice-workflow-${Date.now()}`,
     role: "assistant",
-    parts: [{ type: "text", text: input.text }, timelinePart, planPart],
+    parts: [
+      { type: "text", text: input.text },
+      ...(timelinePart ? [timelinePart as unknown as UIMessage["parts"][number]] : []),
+      ...(planPart ? [planPart as unknown as UIMessage["parts"][number]] : []),
+    ],
   };
 
   return {
@@ -631,7 +691,11 @@ async function generatePlanViaPipeline(
 
   // Generate voice-optimized summary with verbosity preference
   const structuredPlan = planOutput.structuredPlan as StructuredPlan;
-  const summary = planToSpeech(structuredPlan, { verbosity: prefs.verbosity });
+  const honorific = await getHonorificPreference(userId);
+  const summary = planToSpeech(structuredPlan, {
+    verbosity: prefs.verbosity,
+    honorific,
+  });
 
   return {
     runId,

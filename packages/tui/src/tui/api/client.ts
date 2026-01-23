@@ -176,6 +176,74 @@ export class ApiClient {
     return await fetchJson(url);
   }
 
+  // ─── Focus (Concierge) ─────────────────────────────────────────────────────
+
+  async getFocusActive(): Promise<
+    ApiResult<{
+      id: string;
+      title: string | null;
+      wipLimit: number;
+      status: string;
+    } | null>
+  > {
+    const url = `${this.baseUrl}/api/trpc/focus.active`;
+    return await fetchJson(url);
+  }
+
+  async listFocusCommitments(
+    focusSetId: string,
+    limit = 10
+  ): Promise<
+    ApiResult<
+      Array<{
+        id: string;
+        title: string;
+        lane: string;
+        status: string;
+        priority: number;
+        workflowRunId: string | null;
+      }>
+    >
+  > {
+    const url = `${this.baseUrl}/api/trpc/focus.commitmentList?input=${encodeURIComponent(
+      JSON.stringify({ focusSetId, limit, offset: 0 })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async listAttentionOpen(limit = 10): Promise<
+    ApiResult<
+      Array<{
+        id: string;
+        kind: string;
+        title: string | null;
+        urgency: string;
+        workflowRunId: string | null;
+      }>
+    >
+  > {
+    const url = `${this.baseUrl}/api/trpc/attention.list?input=${encodeURIComponent(
+      JSON.stringify({ status: "open", limit, offset: 0 })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async listDelta(limit = 10): Promise<
+    ApiResult<
+      Array<{
+        id: string;
+        scope: string;
+        summaryText: string;
+        createdAt: string;
+      }>
+    >
+  > {
+    const url = `${this.baseUrl}/api/trpc/delta.list?input=${encodeURIComponent(
+      JSON.stringify({ limit, offset: 0 })
+    )}`;
+    return await fetchJson(url);
+  }
+
   // ─── Admin/Metrics ─────────────────────────────────────────────────────────
 
   async getAdminStats(): Promise<

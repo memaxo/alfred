@@ -98,6 +98,35 @@ describe("book router", () => {
   });
 
   describe("list", () => {
+    it("rejects invalid projectId UUID", async () => {
+      const caller = await createTestCaller();
+
+      await expect(
+        caller.book.list({ projectId: "not-a-uuid" })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("validates limit bounds", async () => {
+      const caller = await createTestCaller();
+
+      await expect(caller.book.list({ limit: 0 })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+      await expect(caller.book.list({ limit: 201 })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("validates offset is non-negative", async () => {
+      const caller = await createTestCaller();
+
+      await expect(caller.book.list({ offset: -1 })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
     it("lists bookmarks with pagination", async () => {
       const mockBookmarks = [
         { id: "bookmark-1", url: "https://example.com" },
@@ -140,6 +169,16 @@ describe("book router", () => {
   });
 
   describe("delete", () => {
+    it("rejects invalid UUID format", async () => {
+      const caller = await createTestCaller();
+
+      await expect(
+        caller.book.delete({ id: "invalid-uuid" })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
     it("deletes a bookmark", async () => {
       deleteBookmarkMock.mockResolvedValue(true);
       const id = "00000000-0000-0000-0000-000000000000";

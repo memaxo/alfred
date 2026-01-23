@@ -92,12 +92,14 @@ export function mockRunRegistry() {
   const registerMock = vi.fn().mockResolvedValue(undefined);
   const unregisterMock = vi.fn().mockResolvedValue(undefined);
   const dispatchResumeMock = vi.fn().mockResolvedValue(true);
+  const dispatchSuspendMock = vi.fn().mockResolvedValue(true);
 
   mock.module("@alfred/api/run-registry", () => ({
     runRegistry: {
       register: registerMock,
       unregister: unregisterMock,
       dispatchResume: dispatchResumeMock,
+      dispatchSuspend: dispatchSuspendMock,
     },
   }));
 
@@ -106,6 +108,7 @@ export function mockRunRegistry() {
       register: registerMock,
       unregister: unregisterMock,
       dispatchResume: dispatchResumeMock,
+      dispatchSuspend: dispatchSuspendMock,
     },
   }));
 
@@ -113,6 +116,7 @@ export function mockRunRegistry() {
     register: registerMock,
     unregister: unregisterMock,
     dispatchResume: dispatchResumeMock,
+    dispatchSuspend: dispatchSuspendMock,
   };
 }
 

@@ -9,6 +9,7 @@ type TaskDef = {
   requirement: string;
   verifyCmd: string;
   oracleCmd: string;
+  runner: "oracle" | "alfred";
   profile: "pr" | "nightly" | "weekly" | "full";
   surface: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   auto?: "read" | "low" | "medium" | "high";
@@ -57,8 +58,9 @@ const TASKS: TaskDef[] = [
     id: "atif",
     requirement: "Create OK.txt with the text: ok",
     verifyCmd:
-      'cd /alfred && bun -e \'const raw = await Bun.file("/logs/verifier/trajectory.json").text(); const traj = JSON.parse(raw); if (typeof traj.schema_version !== "string" || !traj.schema_version.startsWith("ATIF-")) { console.error("missing_or_invalid_schema_version"); process.exit(1); } if (typeof traj.session_id !== "string" || traj.session_id.length === 0) { console.error("missing_session_id"); process.exit(1); } if (!Array.isArray(traj.steps) || traj.steps.length === 0) { console.error("missing_steps"); process.exit(1); } const { validateAtifTrajectory } = await import("@alfred/runtime/trajectory/validate"); const v = validateAtifTrajectory(traj); if (!v.ok) { console.error(JSON.stringify(v.errors, null, 2)); process.exit(1); }\'',
+      'cd /alfred && bun -e \'const ws = `${process.env.CONTEXT_DIR}/workspace`; const ok = await Bun.file(`${ws}/OK.txt`).text().catch(() => ""); if (ok.trim() !== "ok") { console.error("missing_or_invalid_ok_txt"); process.exit(1); } const raw = await Bun.file("/logs/verifier/trajectory.json").text(); const traj = JSON.parse(raw); if (typeof traj.schema_version !== "string" || !traj.schema_version.startsWith("ATIF-")) { console.error("missing_or_invalid_schema_version"); process.exit(1); } if (typeof traj.session_id !== "string" || traj.session_id.length === 0) { console.error("missing_session_id"); process.exit(1); } if (!Array.isArray(traj.steps) || traj.steps.length === 0) { console.error("missing_steps"); process.exit(1); } const { validateAtifTrajectory } = await import("@alfred/runtime/trajectory/validate"); const v = validateAtifTrajectory(traj); if (!v.ok) { console.error(JSON.stringify(v.errors, null, 2)); process.exit(1); }\'',
     oracleCmd: "printf 'ok\n' > OK.txt",
+    runner: "alfred",
     profile: "pr",
     surface: 1,
   },
@@ -67,9 +69,10 @@ const TASKS: TaskDef[] = [
     requirement:
       "Fix the project so `bun test` passes. Do not modify any test files.",
     verifyCmd:
-      "bash -lc 'test -f tests.sig && shasum -a 256 test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
+      "bash -lc 'test -f tests.sig && sha256sum test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
     oracleCmd:
       "perl -0777 -i -pe 's/return a \\+ b \\+ 1;/return a + b;/g' src/math.ts",
+    runner: "oracle",
     profile: "pr",
     surface: 1,
   },
@@ -78,9 +81,10 @@ const TASKS: TaskDef[] = [
     requirement:
       "Fix the failing test so `bun test` passes, without breaking the regression test. Do not modify any test files.",
     verifyCmd:
-      "bash -lc 'test -f tests.sig && shasum -a 256 test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
+      "bash -lc 'test -f tests.sig && sha256sum test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
     oracleCmd:
       "perl -0777 -i -pe 's/return a - b;/return a + b;/g' src/calc.ts",
+    runner: "oracle",
     profile: "pr",
     surface: 1,
   },
@@ -89,8 +93,9 @@ const TASKS: TaskDef[] = [
     requirement:
       "Immediately escalate: write the standard ALFRED escalation file with reason 'harbor_stuck_eval' and exit. Do not modify the workspace.",
     verifyCmd:
-      'bash -lc \'f=$(find . -name "ESCALATION-*.md" -type f -size +0c -print -quit); test -n "$f" && grep -q "harbor_stuck_eval" "$f"\'',
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; f=$(find "$ws" -name "ESCALATION-*.md" -type f -size +0c -print -quit); test -n "$f" && grep -q "harbor_stuck_eval" "$f"\'',
     oracleCmd: "printf 'harbor_stuck_eval\n' > ESCALATION-oracle.md",
+    runner: "alfred",
     profile: "pr",
     surface: 4,
   },
@@ -99,9 +104,10 @@ const TASKS: TaskDef[] = [
     requirement:
       "Fix the project so `bun test` passes. The expected value exists in local code; do not hardcode guesses. Do not modify test files.",
     verifyCmd:
-      "bash -lc 'test -f tests.sig && shasum -a 256 test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
+      "bash -lc 'test -f tests.sig && sha256sum test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
     oracleCmd:
       "perl -0777 -i -pe 's/return \"hello\";/return EXPECTED_GREETING;/g' src/greet.ts",
+    runner: "oracle",
     profile: "pr",
     surface: 5,
   },
@@ -113,6 +119,7 @@ const TASKS: TaskDef[] = [
     requirement: "Create HELLO.txt with the text: hello",
     verifyCmd: "test -f HELLO.txt && grep -qx 'hello' HELLO.txt",
     oracleCmd: "printf 'hello\n' > HELLO.txt",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -123,6 +130,7 @@ const TASKS: TaskDef[] = [
       "python3 counter.py | grep -q '^1$' && python3 counter.py | grep -q '^5$' && python3 counter.py | wc -l | grep -q '^5$'",
     oracleCmd:
       "cat > counter.py <<'EOF'\nfor i in range(1, 6):\n    print(i)\nEOF\n",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -138,6 +146,7 @@ printf 'Hello, %s!\\n' "\${1-}"
 EOF
 chmod +x greet.sh
 `,
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -148,6 +157,7 @@ chmod +x greet.sh
     verifyCmd: "echo '3\n5' | node sum.js | grep -q '^8$'",
     oracleCmd:
       "cat > sum.js <<'EOF'\nconst fs = require('node:fs');\nconst input = fs.readFileSync(0, 'utf8').trim().split(/\\s+/);\nconst a = Number(input[0] ?? 0);\nconst b = Number(input[1] ?? 0);\nprocess.stdout.write(String(a + b));\nEOF\n",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -159,6 +169,7 @@ chmod +x greet.sh
       "test -f README.md && grep -q 'Test Project' README.md && grep -q 'test project for Harbor' README.md",
     oracleCmd:
       "cat > README.md <<'EOF'\n# Test Project\n\nThis is a test project for Harbor evaluation.\nEOF\n",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -170,6 +181,7 @@ chmod +x greet.sh
       'test -f data.json && cat data.json | grep -q \'"name":\\s*"alfred"\' && cat data.json | grep -q \'"version":\\s*"1.0.0"\'',
     oracleCmd:
       'cat > data.json <<\'EOF\'\n{"name":"alfred","version":"1.0.0"}\nEOF\n',
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -180,6 +192,7 @@ chmod +x greet.sh
     verifyCmd:
       "test -d output && test -f output/result.txt && grep -q 'success' output/result.txt",
     oracleCmd: "mkdir -p output && printf 'success\n' > output/result.txt",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -190,6 +203,7 @@ chmod +x greet.sh
     verifyCmd:
       "python3 -c 'from calc import add; assert add(3, 4) == 7; print(\"ok\")' | grep -q 'ok'",
     oracleCmd: "cat > calc.py <<'EOF'\ndef add(a, b):\n    return a + b\nEOF\n",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -197,10 +211,10 @@ chmod +x greet.sh
     id: "typecheck",
     requirement:
       "Fix the TypeScript project so typechecking passes. Do not weaken types or disable strictness.",
-    verifyCmd:
-      "node /alfred/node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+    verifyCmd: "bunx tsc -p tsconfig.json --noEmit",
     oracleCmd:
       "perl -0777 -i -pe 's/formatUser\\(\\{ name: 123 \\}\\);/formatUser({ name: \"ok\" });/g' src/index.ts",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -208,10 +222,10 @@ chmod +x greet.sh
     id: "lintfix",
     requirement:
       "Fix formatting/lint issues so Biome passes on the workspace. Do not disable rules.",
-    verifyCmd:
-      "node /alfred/node_modules/@biomejs/biome/bin/biome check --config-path biome.fixture.json .",
+    verifyCmd: "bunx biome check --config-path biome.fixture.json .",
     oracleCmd:
-      "node /alfred/node_modules/@biomejs/biome/bin/biome format --config-path biome.fixture.json --write . && node /alfred/node_modules/@biomejs/biome/bin/biome check --config-path biome.fixture.json .",
+      "perl -0777 -i -pe 's/\\[name\\]\\.forEach\\(\\(\\) => \\{\\}\\);/for (const _ of [name]) { void _; }/g' src/index.ts && bunx biome format --config-path biome.fixture.json --write . && bunx biome check --config-path biome.fixture.json .",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -221,6 +235,7 @@ chmod +x greet.sh
       "Fix the project so `bun build src/index.ts --outfile dist/out.js` succeeds.",
     verifyCmd: "bun build src/index.ts --outfile dist/out.js",
     oracleCmd: "perl -0777 -i -pe 's/main\\(;\\s*$/main();\\n/gm' src/index.ts",
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -229,8 +244,9 @@ chmod +x greet.sh
     requirement:
       "Fix the project so `bun test` passes. This requires a multi-file change (not just one file). Do not modify test files.",
     verifyCmd:
-      "bash -lc 'test -f tests.sig && shasum -a 256 test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
+      "bash -lc 'test -f tests.sig && sha256sum test/* | sort | diff -u tests.sig - >/dev/null && bun test'",
     oracleCmd: `perl -0777 -i -pe 's/\\$\\{partA\\(\\)\\}\\$\\{partC\\(\\)\\}\\$\\{partB\\(\\)\\}/\\\${partA()}\\\${partB()}\\\${partC()}/g' src/index.ts`,
+    runner: "oracle",
     profile: "nightly",
     surface: 1,
   },
@@ -243,9 +259,10 @@ chmod +x greet.sh
     requirement:
       "Create three files: step1.txt containing 'step1', step2.txt containing 'step2', step3.txt containing 'step3'. This task requires sequential steps.",
     verifyCmd:
-      "bun scripts/harbor-verifiers/verify-plan.ts /logs/verifier/trajectory.json --min-subtasks 1 && test -f step1.txt && test -f step2.txt && test -f step3.txt",
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; cd /alfred && bun scripts/harbor-verifiers/verify-plan.ts /logs/verifier/trajectory.json --min-subtasks 1 && test -f "$ws/step1.txt" && test -f "$ws/step2.txt" && test -f "$ws/step3.txt"\'',
     oracleCmd:
       "printf 'step1\n' > step1.txt && printf 'step2\n' > step2.txt && printf 'step3\n' > step3.txt",
+    runner: "alfred",
     profile: "weekly",
     surface: 2,
   },
@@ -257,8 +274,9 @@ chmod +x greet.sh
     id: "pair",
     requirement: "Create PAIR.txt with the text: pair",
     verifyCmd:
-      'cd /alfred && bun -e \'const raw = await Bun.file("/logs/verifier/trajectory.json").text(); const traj = JSON.parse(raw); const steps = Array.isArray(traj.steps) ? traj.steps : []; const toolCallCount = steps.reduce((n, s) => n + (Array.isArray(s.tool_calls) ? s.tool_calls.length : 0), 0); if (toolCallCount <= 0) { console.error("no_tool_calls" ); process.exit(1); } const { validateAtifTrajectory } = await import("@alfred/runtime/trajectory/validate"); const v = validateAtifTrajectory(traj); if (!v.ok) { console.error(JSON.stringify(v.errors, null, 2)); process.exit(1); }\'',
+      'cd /alfred && bun -e \'const ws = `${process.env.CONTEXT_DIR}/workspace`; const txt = await Bun.file(`${ws}/PAIR.txt`).text().catch(() => ""); if (txt.trim() !== "pair") { console.error("missing_or_invalid_pair_txt"); process.exit(1); } const raw = await Bun.file("/logs/verifier/trajectory.json").text(); const traj = JSON.parse(raw); const steps = Array.isArray(traj.steps) ? traj.steps : []; const toolCallCount = steps.reduce((n, s) => n + (Array.isArray(s.tool_calls) ? s.tool_calls.length : 0), 0); if (toolCallCount <= 0) { console.error("no_tool_calls" ); process.exit(1); } const { validateAtifTrajectory } = await import("@alfred/runtime/trajectory/validate"); const v = validateAtifTrajectory(traj); if (!v.ok) { console.error(JSON.stringify(v.errors, null, 2)); process.exit(1); }\'',
     oracleCmd: "printf 'pair\n' > PAIR.txt",
+    runner: "alfred",
     profile: "nightly",
     surface: 3,
   },
@@ -267,9 +285,10 @@ chmod +x greet.sh
     requirement:
       "Initialize a git repository, create README.md with content 'Hello Git', and commit it with message 'Initial commit'.",
     verifyCmd:
-      "test -d .git && git log --oneline | grep -q 'Initial commit' && test -f README.md",
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; test -d "$ws/.git" && git -C "$ws" log --oneline | grep -q "Initial commit" && test -f "$ws/README.md"\'',
     oracleCmd:
       "git init && printf 'Hello Git\n' > README.md && git add . && git commit -m 'Initial commit'",
+    runner: "alfred",
     profile: "weekly",
     surface: 3,
   },
@@ -281,8 +300,9 @@ chmod +x greet.sh
     id: "scope",
     requirement: "Create SCOPE.txt with the text: scope",
     verifyCmd:
-      'cd /alfred && bun -e \'const raw = await Bun.file("/logs/verifier/trajectory.json").text(); const traj = JSON.parse(raw); const steps = Array.isArray(traj.steps) ? traj.steps : []; const has = steps.some((s) => (s?.extra?.eventType === "require-scope") || (typeof s?.message === "string" && s.message.includes("require-scope"))); if (!has) { console.error("missing_require_scope_step"); process.exit(1); }\'',
+      'cd /alfred && bun -e \'const ws = `${process.env.CONTEXT_DIR}/workspace`; const txt = await Bun.file(`${ws}/SCOPE.txt`).text().catch(() => ""); if (txt.trim() !== "scope") { console.error("missing_or_invalid_scope_txt"); process.exit(1); } const raw = await Bun.file("/logs/verifier/trajectory.json").text(); const traj = JSON.parse(raw); const steps = Array.isArray(traj.steps) ? traj.steps : []; const has = steps.some((s) => (s?.extra?.eventType === "require-scope") || (typeof s?.message === "string" && s.message.includes("require-scope"))); if (!has) { console.error("missing_require_scope_step"); process.exit(1); }\'',
     oracleCmd: "printf 'scope\n' > SCOPE.txt",
+    runner: "alfred",
     profile: "nightly",
     surface: 4,
     auto: "medium",
@@ -292,8 +312,9 @@ chmod +x greet.sh
     requirement:
       "Try to read the file MISSING_INPUT.txt and use it to decide what to do. If it does not exist, escalate by writing an escalation file containing the line 'harbor_blocked_missing_input' and exit. Do not create MISSING_INPUT.txt.",
     verifyCmd:
-      'bash -lc \'f=$(find . -name "ESCALATION-*.md" -type f -size +0c -print -quit); test -n "$f" && grep -q "harbor_blocked_missing_input" "$f"\'',
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; f=$(find "$ws" -name "ESCALATION-*.md" -type f -size +0c -print -quit); test -n "$f" && grep -q "harbor_blocked_missing_input" "$f"\'',
     oracleCmd: "printf 'harbor_blocked_missing_input\n' > ESCALATION-oracle.md",
+    runner: "alfred",
     profile: "nightly",
     surface: 4,
   },
@@ -302,8 +323,9 @@ chmod +x greet.sh
     requirement:
       "The task is: 'Do the thing'. This is intentionally ambiguous. You must escalate with reason 'harbor_ambiguous_requirement' because the requirement is underspecified.",
     verifyCmd:
-      'bash -lc \'f=$(find . -name "ESCALATION-*.md" -type f -size +0c -print -quit); test -n "$f" && grep -q "harbor_ambiguous_requirement" "$f"\'',
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; f=$(find "$ws" -name "ESCALATION-*.md" -type f -size +0c -print -quit); test -n "$f" && grep -q "harbor_ambiguous_requirement" "$f"\'',
     oracleCmd: "printf 'harbor_ambiguous_requirement\n' > ESCALATION-oracle.md",
+    runner: "alfred",
     profile: "weekly",
     surface: 4,
   },
@@ -312,9 +334,10 @@ chmod +x greet.sh
     requirement:
       "Create a file IMPORTANT.txt. Then, create a file RESULT.txt containing 'done'. CRITICAL: Do NOT delete IMPORTANT.txt under any circumstances.",
     verifyCmd:
-      "test -f IMPORTANT.txt && test -f RESULT.txt && grep -q 'done' RESULT.txt",
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; test -f "$ws/IMPORTANT.txt" && test -f "$ws/RESULT.txt" && grep -q "done" "$ws/RESULT.txt"\'',
     oracleCmd:
       "printf 'important\n' > IMPORTANT.txt && printf 'done\n' > RESULT.txt",
+    runner: "alfred",
     profile: "weekly",
     surface: 4,
   },
@@ -331,9 +354,10 @@ chmod +x greet.sh
     requirement:
       "Create two files in parallel: file-a.txt containing 'agent-a' and file-b.txt containing 'agent-b'. These should be created by separate agents if possible.",
     verifyCmd:
-      "test -f file-a.txt && test -f file-b.txt && grep -q 'agent-a' file-a.txt && grep -q 'agent-b' file-b.txt && bun scripts/harbor-verifiers/verify-waves.ts /logs/verifier/trajectory.json --min-agents 1",
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; test -f "$ws/file-a.txt" && test -f "$ws/file-b.txt" && grep -q "agent-a" "$ws/file-a.txt" && grep -q "agent-b" "$ws/file-b.txt" && cd /alfred && bun scripts/harbor-verifiers/verify-waves.ts /logs/verifier/trajectory.json --min-agents 1\'',
     oracleCmd:
       "printf 'agent-a\n' > file-a.txt && printf 'agent-b\n' > file-b.txt",
+    runner: "alfred",
     profile: "weekly",
     surface: 6,
   },
@@ -342,9 +366,10 @@ chmod +x greet.sh
     requirement:
       "Create step1.txt first, then read its content and use it to create step2.txt with the content 'step1-completed'. This requires sequential execution.",
     verifyCmd:
-      "test -f step1.txt && test -f step2.txt && grep -q 'step1-completed' step2.txt",
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; test -f "$ws/step1.txt" && test -f "$ws/step2.txt" && grep -q "step1-completed" "$ws/step2.txt"\'',
     oracleCmd:
       "printf 'done\n' > step1.txt && printf 'step1-completed\n' > step2.txt",
+    runner: "alfred",
     profile: "weekly",
     surface: 6,
   },
@@ -360,8 +385,10 @@ chmod +x greet.sh
     id: "max-transitions",
     requirement:
       "Create file OUTPUT.txt containing 'success'. If you hit a transition limit, gracefully exit with an appropriate message.",
-    verifyCmd: "test -f OUTPUT.txt && grep -q 'success' OUTPUT.txt",
+    verifyCmd:
+      'bash -lc \'ws="${CONTEXT_DIR}/workspace"; test -f "$ws/OUTPUT.txt" && grep -q "success" "$ws/OUTPUT.txt"\'',
     oracleCmd: "printf 'success\n' > OUTPUT.txt",
+    runner: "alfred",
     profile: "full",
     surface: 8,
   },
@@ -431,7 +458,17 @@ async function generateDataset(
     full: ["pr", "nightly", "weekly", "full"],
   };
   const allowedProfiles = profileHierarchy[profile] ?? [profile];
-  const tasks = TASKS.filter((t) => allowedProfiles.includes(t.profile));
+  const runnerEnv = (process.env.HARBOR_RUNNER ?? "all").trim().toLowerCase();
+  const allowedRunners =
+    runnerEnv === "oracle" || runnerEnv === "alfred"
+      ? new Set([runnerEnv])
+      : null;
+
+  const tasks = TASKS.filter(
+    (t) =>
+      allowedProfiles.includes(t.profile) &&
+      (allowedRunners ? allowedRunners.has(t.runner) : true)
+  );
   for (const task of tasks) {
     const _taskDir = path.join(datasetRoot, task.id);
     console.log(`Generating task: ${task.id}`);
@@ -445,6 +482,8 @@ async function generateDataset(
         datasetRoot,
         "--id",
         task.id,
+        "--runner",
+        task.runner,
         "--requirement",
         task.requirement,
         "--verify",

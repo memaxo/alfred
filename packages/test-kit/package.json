@@ -22,10 +22,14 @@
     "./codex/*": "./src/codex/*",
     "./voice": "./src/voice/index.ts",
     "./voice/*": "./src/voice/*",
+    "./voice/registry": "./src/voice/registry.ts",
     "./voice/runtime-fixture": "./src/voice/runtime-fixture.ts",
     "./workflow": "./src/workflow/runtime-fixture.ts",
     "./workflow/*": "./src/workflow/*",
-    "./workflow/runtime-fixture": "./src/workflow/runtime-fixture.ts"
+    "./workflow/runtime-fixture": "./src/workflow/runtime-fixture.ts",
+    "./playwright": "./src/playwright/index.ts",
+    "./playwright/crash": "./src/playwright/crash.ts",
+    "./playwright/timeout": "./src/playwright/timeout.ts"
   },
   "scripts": {
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ./src/bun/preload.ts",

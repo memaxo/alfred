@@ -9,6 +9,7 @@ type GenArgs = {
   requirement: string;
   verifyCmd: string;
   oracleCmd: string;
+  runner: "oracle" | "alfred";
   auto: "" | "read" | "low" | "medium" | "high";
   timeoutSec: number;
   alfredGitUrl: string;
@@ -41,6 +42,7 @@ function parseArgs(argv: string[]): { cmd: string | null; args: GenArgs } {
     requirement: "",
     verifyCmd: "",
     oracleCmd: "",
+    runner: "oracle",
     auto: "",
     timeoutSec: 3600,
     alfredGitUrl: process.env.ALFRED_GIT_URL ?? "",
@@ -75,6 +77,14 @@ function parseArgs(argv: string[]): { cmd: string | null; args: GenArgs } {
     }
     if (a === "--oracle") {
       out.oracleCmd = argv[i + 1] ?? "";
+      i += 1;
+      continue;
+    }
+    if (a === "--runner") {
+      const v = (argv[i + 1] ?? "").trim().toLowerCase();
+      if (v === "oracle" || v === "alfred") {
+        out.runner = v;
+      }
       i += 1;
       continue;
     }
@@ -116,12 +126,23 @@ function dockerfile(_args: GenArgs): string {
   // The oracle agent just runs solve.sh; ALFRED agent would need separate setup.
   // WORKDIR is /workspace - Harbor runs agents and verifiers from this directory.
   // Workspace files are copied from environment/workspace/ to /workspace.
+  if (_args.runner === "alfred") {
+    return [
+      // Built with docker/harbor/alfred-base.Dockerfile
+      "FROM alfred-harbor-base",
+      "",
+      "WORKDIR /workspace",
+      "COPY workspace/ /workspace/",
+      "RUN if [ -f package.json ]; then bun install; fi",
+    ].join("\n");
+  }
   return [
     "FROM oven/bun:1.3.5",
     "RUN apt-get update && apt-get install -y git ca-certificates python3 perl && rm -rf /var/lib/apt/lists/*",
     "",
     "WORKDIR /workspace",
     "COPY workspace/ /workspace/",
+    "RUN if [ -f package.json ]; then bun install; fi",
   ].join("\n");
 }
 
@@ -233,6 +254,52 @@ function testSh(args: GenArgs): string {
   ].join("\n");
 }
 
+function dockerComposeWithDockerSock(): string {
+  // Harbor uses environment/docker-compose.yaml when present.
+  // We mirror Harbor's docker-compose-build.yaml and add /var/run/docker.sock
+  // so ALFRED can create AgentFS workspaces from inside the container.
+  return [
+    "services:",
+    "  main:",
+    "    build:",
+    "      context: ${CONTEXT_DIR}",
+    "    image: ${MAIN_IMAGE_NAME}",
+    '    command: [ "sh", "-c", "sleep infinity" ]',
+    "    network_mode: ${NETWORK_MODE:-bridge}",
+    "    environment:",
+    "      - TEST_DIR=${TEST_DIR}",
+    "      - CONTEXT_DIR=${CONTEXT_DIR}",
+    "      - ORCH_ALLOW_CWD_PREFIXES=${CONTEXT_DIR}",
+    "      - ORCH_SKIP_SECURE_SPAWN=1",
+    "      - ORCH_DOCKER_IMAGE=${ORCH_DOCKER_IMAGE:-alfred-agentfs:codex}",
+    "      - ORCH_EXECUTOR=${ORCH_EXECUTOR:-codex}",
+    "      - ORCH_EXECUTOR_FALLBACK=${ORCH_EXECUTOR_FALLBACK:-1}",
+    "      - ORCH_CODEX_ALLOW_OPENAI_KEY=${ORCH_CODEX_ALLOW_OPENAI_KEY:-1}",
+    "      - ORCH_CODEX_APPROVAL=${ORCH_CODEX_APPROVAL:-on-request}",
+    "      - OPENAI_API_KEY=${OPENAI_API_KEY:-}",
+    "      - CODEX_API_KEY=${CODEX_API_KEY:-}",
+    "      - CODEX_MODEL=${CODEX_MODEL:-}",
+    "      - FACTORY_API_KEY=${FACTORY_API_KEY:-}",
+    "      - AGENT_ED25519_PRIVATE=${AGENT_ED25519_PRIVATE:-}",
+    "      - AGENT_ED25519_PUBLIC_PEM=${AGENT_ED25519_PUBLIC_PEM:-}",
+    "      - AGENT_ISSUER=${AGENT_ISSUER:-alfred}",
+    "      - TOOL_AUDIENCE=${TOOL_AUDIENCE:-alfred:tools}",
+    "    volumes:",
+    "      - ${HOST_VERIFIER_LOGS_PATH}:${ENV_VERIFIER_LOGS_PATH}",
+    "      - ${HOST_AGENT_LOGS_PATH}:${ENV_AGENT_LOGS_PATH}",
+    "      - /var/run/docker.sock:/var/run/docker.sock",
+    // Mount the host workspace directory at the SAME absolute host path, so
+    // Docker launched from inside the container can mount it successfully.
+      "      - ${CONTEXT_DIR}/workspace:${CONTEXT_DIR}/workspace:rw",
+    "    deploy:",
+    "      resources:",
+    "        limits:",
+    "          cpus: ${CPUS}",
+    "          memory: ${MEMORY}",
+    "",
+  ].join("\n");
+}
+
 async function chmodX(filePath: string): Promise<void> {
   await fs.chmod(filePath, 0o755);
 }
@@ -247,6 +314,12 @@ async function genTask(args: GenArgs): Promise<void> {
     `${args.requirement.trim()}\n`
   );
   await writeFile(path.join(root, "environment/Dockerfile"), dockerfile(args));
+  if (args.runner === "alfred") {
+    await writeFile(
+      path.join(root, "environment/docker-compose.yaml"),
+      dockerComposeWithDockerSock()
+    );
+  }
   await writeFile(path.join(root, "solution/solve.sh"), solveSh(args));
   await writeFile(path.join(root, "tests/test.sh"), testSh(args));
   await writeFile(path.join(root, "agents/alfred.sh"), agentSh(args));

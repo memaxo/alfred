@@ -1,10 +1,12 @@
-import { useEffect, useMemo } from "react";
-import { Text } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { AccessibilityInfo, Text } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 import { useDesktopStore } from "@/store/desktop";
@@ -31,38 +33,100 @@ function WindowView({ window }: { window: WindowInstance }) {
   const maximizeWindow = useDesktopStore((s) => s.maximizeWindow);
   const restoreWindow = useDesktopStore((s) => s.restoreWindow);
 
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   const Component = useMemo(() => windowRegistry[window.type], [window.type]);
 
   const x = useSharedValue(window.bounds.x);
   const y = useSharedValue(window.bounds.y);
   const w = useSharedValue(window.bounds.width);
   const h = useSharedValue(window.bounds.height);
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.98);
 
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const startW = useSharedValue(0);
   const startH = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+  const isResizing = useSharedValue(false);
 
   useEffect(() => {
-    x.value = window.bounds.x;
-    y.value = window.bounds.y;
-    w.value = window.bounds.width;
-    h.value = window.bounds.height;
+    let mounted = true;
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((value) => {
+        if (mounted) {
+          setReduceMotion(Boolean(value));
+        }
+      })
+      .catch(() => {});
+
+    // RN typing varies across versions; feature-detect subscription shape.
+    const anyAI = AccessibilityInfo as unknown as {
+      addEventListener?: (
+        event: string,
+        cb: (value: boolean) => void
+      ) => { remove: () => void } | void;
+    };
+    const sub = anyAI.addEventListener?.("reduceMotionChanged", (value) =>
+      setReduceMotion(Boolean(value))
+    );
+    return () => {
+      mounted = false;
+      if (sub && typeof sub === "object" && "remove" in sub) {
+        sub.remove();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const animate = !(reduceMotion || isDragging.value || isResizing.value);
+    if (animate) {
+      x.value = withSpring(window.bounds.x, { damping: 22, stiffness: 260 });
+      y.value = withSpring(window.bounds.y, { damping: 22, stiffness: 260 });
+      w.value = withSpring(window.bounds.width, {
+        damping: 22,
+        stiffness: 260,
+      });
+      h.value = withSpring(window.bounds.height, {
+        damping: 22,
+        stiffness: 260,
+      });
+    } else {
+      x.value = window.bounds.x;
+      y.value = window.bounds.y;
+      w.value = window.bounds.width;
+      h.value = window.bounds.height;
+    }
   }, [
     window.bounds.x,
     window.bounds.y,
     window.bounds.width,
     window.bounds.height,
+    reduceMotion,
     x,
     y,
     w,
     h,
+    isDragging,
+    isResizing,
   ]);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      opacity.value = 1;
+      scale.value = 1;
+      return;
+    }
+    opacity.value = withTiming(1, { duration: 180 });
+    scale.value = withSpring(1, { damping: 18, stiffness: 220 });
+  }, [reduceMotion, opacity, scale]);
 
   const drag = useMemo(
     () =>
       Gesture.Pan()
         .onBegin(() => {
+          isDragging.value = true;
           startX.value = x.value;
           startY.value = y.value;
           runOnJS(focusWindow)(window.id);
@@ -72,15 +136,17 @@ function WindowView({ window }: { window: WindowInstance }) {
           y.value = startY.value + e.translationY;
         })
         .onEnd(() => {
+          isDragging.value = false;
           runOnJS(moveWindow)(window.id, { x: x.value, y: y.value });
         }),
-    [focusWindow, moveWindow, window.id, startX, startY, x, y]
+    [focusWindow, moveWindow, window.id, startX, startY, x, y, isDragging]
   );
 
   const resize = useMemo(
     () =>
       Gesture.Pan()
         .onBegin(() => {
+          isResizing.value = true;
           startW.value = w.value;
           startH.value = h.value;
           runOnJS(focusWindow)(window.id);
@@ -90,9 +156,10 @@ function WindowView({ window }: { window: WindowInstance }) {
           h.value = clamp(startH.value + e.translationY, 240, 900);
         })
         .onEnd(() => {
+          isResizing.value = false;
           runOnJS(resizeWindow)(window.id, { width: w.value, height: h.value });
         }),
-    [focusWindow, resizeWindow, startH, startW, window.id, w, h]
+    [focusWindow, resizeWindow, startH, startW, window.id, w, h, isResizing]
   );
 
   const style = useAnimatedStyle(() => ({
@@ -102,6 +169,8 @@ function WindowView({ window }: { window: WindowInstance }) {
     width: w.value,
     height: h.value,
     zIndex: window.zIndex,
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
   }));
 
   return (

@@ -139,6 +139,12 @@ export function ApiProvider({
 
   useEffect(() => {
     const run = async () => {
+      // UI tests should be deterministic and not depend on persisted storage.
+      if (isNativeTestModeEnabled()) {
+        setServerUrlState("http://127.0.0.1:3155");
+        setServerUrlSource("env");
+        return;
+      }
       const resolved = await resolveServerUrl();
       setServerUrlState(resolved.url);
       setServerUrlSource(resolved.source);

@@ -87,6 +87,7 @@
     "@alfred/learning": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/metrics": "workspace:*",
+    "@alfred/persona": "workspace:*",
     "@alfred/plan": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/type": "workspace:*",

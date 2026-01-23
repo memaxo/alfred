@@ -82,6 +82,17 @@ const DrawerLayout = () => {
         })}
       />
       <Drawer.Screen
+        name="focus"
+        options={() => ({
+          headerTitle: "Focus",
+          drawerLabel: "Focus",
+          drawerIcon: ({ size, color }) => (
+            <Ionicons color={color} name="flash-outline" size={size} />
+          ),
+          drawerItemStyle: isAuthenticated ? undefined : { display: "none" },
+        })}
+      />
+      <Drawer.Screen
         name="desktop"
         options={() => ({
           headerShown: false,

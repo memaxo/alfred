@@ -1,5 +1,4 @@
 import { linkEntities } from "../../services/entity-linker";
-import { JARVIS_SYSTEM_ENHANCEMENT } from "./jarvis-persona";
 
 type TextMessage = {
   role: string;
@@ -39,21 +38,6 @@ You are a News Curator.
 - Summarize facts clearly; distinguish between confirmed reports and speculation.
 `,
 };
-
-function isJarvisPersonaEnabled(): boolean {
-  const raw =
-    typeof process !== "undefined"
-      ? process.env.ENABLE_JARVIS_PERSONA
-      : undefined;
-  return raw === "1" || raw === "true";
-}
-
-function getJarvisEnhancement(): string | null {
-  if (!isJarvisPersonaEnabled()) {
-    return null;
-  }
-  return JARVIS_SYSTEM_ENHANCEMENT.trim();
-}
 
 function extractTextContent(raw: unknown): string | null {
   if (!raw || typeof raw !== "object") {
@@ -132,10 +116,8 @@ export function analyzeContext(
  * Merges instructions if multiple domains are detected.
  */
 export function getPersonaInstruction(domains: string[]): string | null {
-  const jarvisEnhancement = getJarvisEnhancement();
-
   if (domains.length === 0) {
-    return jarvisEnhancement;
+    return null;
   }
 
   const instructions: string[] = [];
@@ -149,17 +131,14 @@ export function getPersonaInstruction(domains: string[]): string | null {
   }
 
   if (instructions.length === 0) {
-    return jarvisEnhancement;
+    return null;
   }
 
   const adaptivePersona = `
 ### ADAPTIVE PERSONA ACTIVE
 ${instructions.join("\n\n")}
 `;
-  if (!jarvisEnhancement) {
-    return adaptivePersona;
-  }
-  return `${adaptivePersona.trim()}\n\n${jarvisEnhancement}`;
+  return adaptivePersona;
 }
 
 export {

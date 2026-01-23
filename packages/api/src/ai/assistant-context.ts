@@ -25,7 +25,6 @@ type AssistantAdapter = {
   analyzeContext: (
     messages: Array<{ role: string; content: string }>
   ) => Promise<{ domains: string[] }> | { domains: string[] };
-  getPersonaInstruction: (domains: string[]) => string | null | undefined;
 };
 
 type KnowledgeEngineCtor = new () => {
@@ -51,16 +50,14 @@ function getLastUserQuery(messages: unknown[]): string {
 export async function buildAssistantContext(
   options: BuildAssistantContextOptions
 ): Promise<BuildAssistantContextResult> {
-  const [{ analyzeContext, getPersonaInstruction }, { KnowledgeEngine }] =
-    await Promise.all([
-      import("@alfred/agent/assistant/src/adapter"),
-      import("@alfred/runtime/engines/knowledge"),
-    ]);
+  const [{ analyzeContext }, { KnowledgeEngine }] = await Promise.all([
+    import("@alfred/agent/assistant/src/adapter"),
+    import("@alfred/runtime/engines/knowledge"),
+  ]);
 
   return buildAssistantContextWithDeps(options, {
     adapter: {
       analyzeContext,
-      getPersonaInstruction,
     },
     KnowledgeEngine,
   });
@@ -87,11 +84,6 @@ export async function buildAssistantContextWithDeps(
     messages as Array<{ role: string; content: string }>
   );
   detectedDomains = analysis.domains;
-
-  const persona = deps.adapter.getPersonaInstruction(detectedDomains);
-  if (persona) {
-    systemInstruction += `\n\n${persona}`;
-  }
 
   const recallOpts = memory?.semanticRecall;
   if (recallOpts) {

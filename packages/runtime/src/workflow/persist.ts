@@ -1,10 +1,12 @@
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
+import { enrichToolResultEvent } from "@alfred/agent/utils/enrich-event";
 import { eventToUiMessages } from "@alfred/agent/utils/normalize";
 import { redactEventData } from "@alfred/agent/utils/redaction";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type { WorkflowEventType } from "@alfred/db/schema/workflow";
 import { logger } from "@alfred/logger";
+import type { SchemaContext } from "@alfred/type/genui";
 import type { WorkflowEvent } from "@alfred/type";
 import { makeEventId } from "@alfred/type/id";
 import type { UIMessage } from "@alfred/type/stream";
@@ -75,6 +77,59 @@ function maybeUiMessages(event: WorkflowEvent): UIMessage[] | null {
   return Array.isArray(msgs) && msgs.length > 0 ? msgs : null;
 }
 
+function isToolResultEvent(event: WorkflowEvent): boolean {
+  return event._ === "tool-result";
+}
+
+/**
+ * Extract SchemaContext from persistStreamEvent arguments.
+ * Infers surface and mode from event type and runtime context.
+ */
+function extractSchemaContext(args: {
+  userId: string;
+  event: WorkflowEvent;
+}): SchemaContext {
+  const { userId, event } = args;
+  
+  // Infer mode from event type
+  let mode: "assistant" | "workflow" | "focus" = "assistant";
+  if (
+    event._ === "progress" ||
+    event._ === "phase-start" ||
+    event._ === "phase-complete" ||
+    event._ === "wave-start" ||
+    event._ === "wave-complete"
+  ) {
+    mode = "workflow";
+  }
+  
+  // Default surface to "web" (can be enhanced later with runtime context)
+  const surface: "web" | "mobile" | "voice" | "tui" = "web";
+  
+  return {
+    userId,
+    surface,
+    mode,
+  };
+}
+
+/**
+ * Async version of maybeUiMessages that enriches tool-result events with GenUI.
+ */
+async function maybeUiMessagesAsync(
+  event: WorkflowEvent,
+  ctx?: Partial<SchemaContext>
+): Promise<UIMessage[] | null> {
+  // Use async enrichment for tool-result events
+  if (isToolResultEvent(event)) {
+    const enriched = await enrichToolResultEvent(event, ctx);
+    return enriched;
+  }
+  
+  // Use synchronous conversion for other event types
+  return maybeUiMessages(event);
+}
+
 export async function persistStreamEvent(args: {
   event: WorkflowEvent;
   runId: string;
@@ -128,7 +183,14 @@ export async function persistStreamEvent(args: {
       _: coerceNonEmptyString(redactedRecord._) ?? eventDiscriminant,
     } as WorkflowEvent;
 
-    const uiMessages = maybeUiMessages(redactedEvent);
+    // Extract schema context for GenUI enrichment
+    const schemaCtx = extractSchemaContext({
+      userId: args.userId,
+      event: redactedEvent,
+    });
+
+    // Use async enrichment for tool-result events
+    const uiMessages = await maybeUiMessagesAsync(redactedEvent, schemaCtx);
     if (uiMessages && uiMessages.length > 0) {
       const uiEventId = makeEventId({
         runId: args.runId,

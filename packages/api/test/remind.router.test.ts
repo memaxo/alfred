@@ -243,18 +243,65 @@ describe("remindRouter", () => {
           title: longTitle,
           due: new Date().toISOString(),
         })
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
 
-    it("validates due date format", async () => {
+    it("rejects invalid projectId UUID", async () => {
       const caller = await createTestCaller({ userId: "test-user" });
 
       await expect(
         caller.remind.create({
           title: "Test Reminder",
-          due: "invalid-date",
+          due: new Date().toISOString(),
+          projectId: "not-a-uuid",
         })
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects invalid datetime for due", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.create({
+          title: "Test Reminder",
+          due: "not-a-datetime",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects description that exceeds max length", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+      const longDescription = "a".repeat(2049);
+
+      await expect(
+        caller.remind.create({
+          title: "Test Reminder",
+          due: new Date().toISOString(),
+          description: longDescription,
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects invalid recurring pattern", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.create({
+          title: "Test Reminder",
+          due: new Date().toISOString(),
+          recurring: "invalid-cron",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
   });
 
@@ -336,8 +383,30 @@ describe("remindRouter", () => {
     it("validates limit bounds", async () => {
       const caller = await createTestCaller({ userId: "test-user" });
 
-      await expect(caller.remind.list({ limit: 0 })).rejects.toThrow();
-      await expect(caller.remind.list({ limit: 201 })).rejects.toThrow();
+      await expect(caller.remind.list({ limit: 0 })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+      await expect(caller.remind.list({ limit: 201 })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("validates offset is non-negative", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(caller.remind.list({ offset: -1 })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects invalid projectId UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.list({ projectId: "not-a-uuid" })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
   });
 
@@ -388,6 +457,26 @@ describe("remindRouter", () => {
       const callArg = getDueRemindersMock.mock.calls[0]?.[1];
       expect(callArg).toBeInstanceOf(Date);
     });
+
+    it("rejects invalid datetime for before", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.due({ before: "not-a-datetime" })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects invalid projectId UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.due({ projectId: "not-a-uuid" })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
   });
 
   describe("fire", () => {
@@ -418,12 +507,14 @@ describe("remindRouter", () => {
       );
     });
 
-    it("validates UUID format", async () => {
+    it("rejects invalid UUID format", async () => {
       const caller = await createTestCaller({ userId: "test-user" });
 
       await expect(
         caller.remind.fire({ id: "invalid-uuid" })
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
   });
 
@@ -455,12 +546,14 @@ describe("remindRouter", () => {
       );
     });
 
-    it("validates UUID format", async () => {
+    it("rejects invalid UUID format", async () => {
       const caller = await createTestCaller({ userId: "test-user" });
 
       await expect(
         caller.remind.delete({ id: "invalid-uuid" })
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
   });
 });

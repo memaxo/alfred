@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
+    "./genui": {
+      "types": "./dist/genui.d.ts",
+      "default": "./src/genui.ts"
+    },
     "./classification": {
       "types": "./dist/classification.d.ts",
       "default": "./src/classification.ts"

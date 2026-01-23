@@ -22,29 +22,43 @@ describe("TUI E2E", () => {
   };
 
   test("Dashboard launches and displays core sections", async () => {
-    const proc = Bun.spawn(["bun", bin, "tui", "--headless"], {
-      cwd: repoRoot,
-      stdin: "pipe",
-      stdout: "pipe",
-      stderr: "pipe",
-      env: commonEnv,
-    });
+    const origOut = process.stdout.write;
+    const origErr = process.stderr.write;
+    let out = "";
+    let err = "";
+
+    const outWrite = ((chunk: unknown) => {
+      out += typeof chunk === "string" ? chunk : String(chunk);
+      return true;
+    }) satisfies typeof process.stdout.write;
+
+    const errWrite = ((chunk: unknown) => {
+      err += typeof chunk === "string" ? chunk : String(chunk);
+      return true;
+    }) satisfies typeof process.stderr.write;
 
     try {
-      const stdoutP = new Response(proc.stdout).text();
-      const stderrP = new Response(proc.stderr).text();
+      // Capture headless dashboard output in-process (spawn piping can be flaky under bun test).
+      process.stdout.write = outWrite;
+      process.stderr.write = errWrite;
 
-      proc.stdin.write("\tq");
-      proc.stdin.end();
+      const prevHeadless = process.env.ALFRED_TUI_HEADLESS_MS;
+      process.env.ALFRED_TUI_HEADLESS_MS = "50";
 
-      const exitCode = await proc.exited;
-      expect(exitCode).toBe(0);
+      try {
+        const { runTui } = await import("../src/tui");
+        await runTui({ skipIntro: true, skipChecks: true, headless: true });
+      } finally {
+        process.env.ALFRED_TUI_HEADLESS_MS = prevHeadless;
+      }
 
-      const stderr = stripAnsi(await stderrP);
-      expect(stderr).not.toContain("tui_cli_failed");
-      await stdoutP;
+      const combined = `${stripAnsi(out)}\n${stripAnsi(err)}`;
+      expect(combined).toContain("ALFRED Dashboard");
+      expect(combined).toContain("Focus");
+      expect(combined).not.toContain("tui_cli_failed");
     } finally {
-      proc.kill();
+      process.stdout.write = origOut;
+      process.stderr.write = origErr;
     }
   });
 

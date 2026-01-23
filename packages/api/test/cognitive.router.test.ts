@@ -1,72 +1,84 @@
-// SKIP: This test uses mock.module() at the top level which causes Bun's module
-// mocking to pollute other test files in the same run. The mocks for @alfred/runtime
-// and @alfred/policy don't properly intercept imports when run alongside other tests.
-// NOTE: Refactor to use dependency injection instead of mock.module().
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
 import { metricsStub } from "./utils/mock-metrics";
-import { setupTestEnv } from "./utils/router-helpers";
+import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 
 setupTestEnv();
 
-const runCognitiveLoopMock = vi.fn();
-const runAssistantGenerationMock = vi.fn();
-const createRuntimeMock = vi.fn();
-const evaluateMock = vi.fn();
-const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
-
-mock.module("@alfred/runtime", () => ({
-  runCognitiveLoop: runCognitiveLoopMock,
-  runAssistantGeneration: runAssistantGenerationMock,
-  createRuntime: createRuntimeMock,
-}));
-
-mock.module("@alfred/embed", () => ({
-  embedMany: async () => [
-    [1, 0, 0],
-    [1, 0, 0],
-  ],
-  cosineSimilarity: () => 1,
-}));
-
-mock.module("@alfred/policy", () => ({
-  evaluate: evaluateMock,
-  registerCacheObs: vi.fn(),
-}));
-
-mock.module("@alfred/db/repo/policy", () => ({
-  createAuditLog: createAuditLogMock,
-}));
-
-beforeAll(() => {
-  evaluateMock.mockResolvedValue({
-    allow: true,
-    obligations: [] as Obligation[],
-  });
-  runCognitiveLoopMock.mockResolvedValue({
-    state: {
-      _: "reflecting",
-      outcome: { _: "success", result: null, duration: 0 },
-      expected: "target",
-      actual: "target",
-      error: 0,
-      physiology: { energy: 1, boredom: 0, frustration: 0 },
-    },
-    effects: [],
-  });
-});
-
-afterEach(() => {
-  vi.clearAllMocks();
-  evaluateMock.mockResolvedValue({
-    allow: true,
-    obligations: [] as Obligation[],
-  });
-});
-
-// biome-ignore lint/suspicious/noSkippedTests: Known test isolation issue with mock.module()
+// Note: This test uses mock.module() which is process-global.
+// Router uses dynamic imports which may bypass mocks.
+// For full isolation, router should use dependency injection.
+// biome-ignore lint/suspicious/noSkippedTests: Requires router DI refactor
 describe.skip("cognitive router", () => {
+  let runCognitiveLoopMock: ReturnType<typeof vi.fn>;
+  let runAssistantGenerationMock: ReturnType<typeof vi.fn>;
+  let createRuntimeMock: ReturnType<typeof vi.fn>;
+  let evaluateMock: ReturnType<typeof vi.fn>;
+  let createAuditLogMock: ReturnType<typeof vi.fn>;
+  let embedManyMock: ReturnType<typeof vi.fn>;
+  let cosineSimilarityMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    // Setup mocks inside beforeEach to avoid module cache pollution
+    runCognitiveLoopMock = vi.fn();
+    runAssistantGenerationMock = vi.fn();
+    createRuntimeMock = vi.fn();
+    evaluateMock = vi.fn();
+    createAuditLogMock = vi.fn().mockResolvedValue(undefined);
+    embedManyMock = vi.fn().mockResolvedValue([
+      [1, 0, 0],
+      [1, 0, 0],
+    ]);
+    cosineSimilarityMock = vi.fn().mockReturnValue(1);
+
+    mock.module("@alfred/runtime", () => ({
+      runCognitiveLoop: runCognitiveLoopMock,
+      runAssistantGeneration: runAssistantGenerationMock,
+      createRuntime: createRuntimeMock,
+    }));
+
+    mock.module("@alfred/embed", () => ({
+      embedMany: embedManyMock,
+      cosineSimilarity: cosineSimilarityMock,
+    }));
+
+    mock.module("@alfred/policy", () => ({
+      evaluate: evaluateMock,
+      registerCacheObs: vi.fn(),
+    }));
+
+    mock.module("@alfred/db/repo/policy", () => ({
+      createAuditLog: createAuditLogMock,
+    }));
+
+    evaluateMock.mockResolvedValue({
+      allow: true,
+      obligations: [] as Obligation[],
+    });
+
+    runCognitiveLoopMock.mockResolvedValue({
+      state: {
+        _: "reflecting",
+        outcome: { _: "success", result: null, duration: 0 },
+        expected: "target",
+        actual: "target",
+        error: 0,
+        physiology: { energy: 1, boredom: 0, frustration: 0 },
+      },
+      effects: [],
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetAllMocks();
+    evaluateMock.mockResolvedValue({
+      allow: true,
+      obligations: [] as Obligation[],
+    });
+  });
+
   it("submits feedback events and returns policy obligations", async () => {
     const mfaObligation: Obligation = {
       type: "mfa",
@@ -115,16 +127,12 @@ describe.skip("cognitive router", () => {
   });
 
   it("executes cognitive effects via assistant generation", async () => {
-    const caller = await createTestCaller({
-      scopes: ["cognitive.write"],
-    });
-
     runCognitiveLoopMock.mockResolvedValueOnce({
       state: {
         _: "thinking",
         about: "Follow up",
         physiology: { energy: 1, boredom: 0, frustration: 0 },
-      } as any,
+      },
       effects: [{ type: "generate_response", input: "Follow up" }],
     });
 
@@ -133,7 +141,7 @@ describe.skip("cognitive router", () => {
         _: "reflecting",
         outcome: { _: "success", result: null, duration: 0 },
         physiology: { energy: 1, boredom: 0, frustration: 0 },
-      } as any,
+      },
       effects: [],
     });
 
@@ -141,6 +149,10 @@ describe.skip("cognitive router", () => {
       _: "success",
       result: { text: "ok" },
       duration: 10,
+    });
+
+    const caller = await createTestCaller({
+      scopes: ["cognitive.write"],
     });
 
     await caller.cognitive.feedback({

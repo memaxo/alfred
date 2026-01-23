@@ -5,7 +5,7 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
   try {
     const loggerPkg = "@alfred/logger";
     const agentPkg = "@alfred/agent";
-    const adapterPkg = "@alfred/agent/assistant/src/adapter";
+    const personaPkg = "@alfred/persona";
 
     const { logger } = await import(/* @vite-ignore */ loggerPkg);
     logger.info("assistant_http_request", {
@@ -18,9 +18,10 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
     const { getAssistantAgentDefaults } = await import(
       /* @vite-ignore */ agentPkg
     );
-    const { analyzeContext, getPersonaInstruction } = await import(
-      /* @vite-ignore */ adapterPkg
+    const { analyzeContext } = await import(
+      /* @vite-ignore */ "@alfred/agent/assistant/src/adapter"
     );
+    const { buildPersonaPrompt } = await import(/* @vite-ignore */ personaPkg);
     const { handleStreamRequest } = await import(
       "../../../lib/api/stream-handler"
     );
@@ -31,9 +32,12 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
       "assistant",
       async (messages: UIMessage[]) => {
         const result = await analyzeContext(messages);
-        const persona = getPersonaInstruction(result.domains);
+        const persona = buildPersonaPrompt({
+          modality: "text",
+          honorific: "neutral",
+        });
         return {
-          system: persona ?? undefined,
+          system: persona,
           activation: {
             domains: result.domains,
             paths: result.paths,

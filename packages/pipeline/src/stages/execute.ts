@@ -1,6 +1,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Workspace } from "@alfred/agent/environment/types";
+import {
+  AGENT_ESCALATION_REASONS,
+  type AgentEscalationReason,
+} from "@alfred/agent/orchestrator/tool/shared/context";
 import { logger } from "@alfred/logger";
 import { RuntimeMcpServer } from "@alfred/mcp";
 import type { WorkflowEvent } from "@alfred/type";
@@ -35,6 +39,18 @@ export class ExecuteStage
     }
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private coerceEscalationReason(value: unknown): AgentEscalationReason {
+    if (typeof value === "string") {
+      const v = value.trim();
+      if (
+        (Object.values(AGENT_ESCALATION_REASONS) as string[]).includes(v)
+      ) {
+        return v as AgentEscalationReason;
+      }
+    }
+    return AGENT_ESCALATION_REASONS.OTHER;
   }
 
   private buildSubtaskTitle(title: string, subTaskId: string): string {
@@ -480,7 +496,7 @@ export class ExecuteStage
                     ctx.emit(
                       createEvent("agent:escalate-request", {
                         agentId: String(payload.agentId ?? agentSpec.agentId),
-                        reason: String(payload.reason ?? "unknown"),
+                        reason: this.coerceEscalationReason(payload.reason),
                         details: String(payload.details ?? ""),
                         suggestions:
                           Array.isArray(payload.suggestions) &&

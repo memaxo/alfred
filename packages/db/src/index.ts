@@ -20,6 +20,7 @@ export * from "./metrics";
 
 // Export repositories as namespaces
 export * as assistantRepo from "./repo/assistant";
+export * as attentionRepo from "./repo/attention";
 export * as clarificationRepo from "./repo/clarification";
 export * as codexLearningRepo from "./repo/codex-learning";
 export * as codexRunRepo from "./repo/codex-run";
@@ -27,8 +28,10 @@ export * as codexSessionRepo from "./repo/codex-session";
 export * as cognitiveRepo from "./repo/cognitive";
 export * as containerRepo from "./repo/container";
 export * as conversationRepo from "./repo/conversation";
+export * as deltaRepo from "./repo/delta";
 export * as deployRepo from "./repo/deploy";
 export * as evalRepo from "./repo/eval";
+export * as focusRepo from "./repo/focus";
 export * as graphRepo from "./repo/graph";
 export * as linearRepo from "./repo/linear";
 export * as mcpRepo from "./repo/mcp";
@@ -46,14 +49,17 @@ export * as workflowRepo from "./repo/workflow";
 // Schemas are exposed under namespaces to avoid duplicate export collisions.
 export * as alertSchema from "./schema/alert";
 export * as assistantSchema from "./schema/assistant";
+export * as attentionSchema from "./schema/attention";
 export * as authSchema from "./schema/auth";
 export * as clarificationSchema from "./schema/clarification";
 export * as codexSchema from "./schema/codex";
 export * from "./schema/cognitive";
 export * as containerSchema from "./schema/container";
 export * as conversationSchema from "./schema/conversation";
+export * as deltaSchema from "./schema/delta";
 export * as deploySchema from "./schema/deploy";
 export * as evalSchema from "./schema/eval";
+export * as focusSchema from "./schema/focus";
 export * as graphSchema from "./schema/graph";
 export * as linearSchema from "./schema/linear";
 export * as mcpSchema from "./schema/mcp";

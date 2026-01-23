@@ -77,3 +77,14 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 3. **Vector columns.** Use the pgvector helper for embedding columns. Always document the expected dimensionality in comments.
 4. **Foreign keys.** Declare relationships explicitly so we can leverage Drizzle relations when needed. Name constraints `<table>_<column>_fkey`.
 5. **Enums.** Prefer Postgres enums defined in migrations and referenced via Drizzle `pgEnum`. Avoid TypeScript-only enums for persisted values.
+
+
+
+<!-- Source: .ruler/sqlite-fallback.md -->
+
+# SQLite Fallback Schema
+
+1. **SQLite-default UUIDs.** SQLite schema must not use Postgres-only functions like `gen_random_uuid()`; use SQLite-compatible defaults.
+2. **Default expressions.** SQLite `DEFAULT` expressions that call functions must be wrapped in parentheses.
+3. **Normalization layer.** Any SQLite schema normalizer must only rewrite known Postgres-only functions and must produce valid SQLite SQL.
+4. **Drift-catcher test.** Add a sqlite-only repo roundtrip test for new tables so schema errors fail immediately.

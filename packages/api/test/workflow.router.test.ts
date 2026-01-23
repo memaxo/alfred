@@ -103,7 +103,7 @@ mock.module("@alfred/api/metrics", () => ({
   workflowStreamEventsTotal: workflowStreamEventsTotalMock,
 }));
 
-const { createTestCaller } = await import("./utils/trpc");
+import { createTestCaller } from "./utils/trpc";
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
@@ -377,6 +377,16 @@ describe("get", () => {
         runId: "missing-run-id",
       })
     ).rejects.toThrow("run_not_found");
+  });
+
+  it("rejects empty runId", async () => {
+    await expect(
+      caller.workflow.get({
+        runId: "",
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
   });
 });
 
@@ -680,5 +690,137 @@ describe("streamPipeline", () => {
     expect(
       receivedEvents.some((event) => event.type === "pipeline:suspend")
     ).toBe(true);
+  });
+});
+
+describe("cancel", () => {
+  it("cancels a running workflow run", async () => {
+    const mockRun = {
+      id: "test-run-id",
+      userId: "test-user",
+      status: "running" as const,
+    };
+
+    workflowRepoMocks.getRun.mockResolvedValue(mockRun as any);
+    runRegistryMocks.runs = new Map([
+      [
+        "test-run-id",
+        {
+          cancel: vi.fn().mockResolvedValue(undefined),
+        },
+      ],
+    ]);
+    workflowRepoMocks.updateRun.mockResolvedValue(undefined);
+
+    const result = await caller.workflow.cancel({
+      runId: "test-run-id",
+    });
+
+    expect(result).toEqual({ cancelled: true });
+    expect(workflowRepoMocks.updateRun).toHaveBeenCalledWith("test-run-id", {
+      status: "cancelled",
+      completedAt: expect.any(Date),
+    });
+  });
+
+  it("returns cancelled false for already finished run", async () => {
+    const mockRun = {
+      id: "test-run-id",
+      userId: "test-user",
+      status: "completed" as const,
+    };
+
+    workflowRepoMocks.getRun.mockResolvedValue(mockRun as any);
+
+    const result = await caller.workflow.cancel({
+      runId: "test-run-id",
+    });
+
+    expect(result).toEqual({ cancelled: false, reason: "already_finished" });
+  });
+
+  it("throws NOT_FOUND when run does not exist", async () => {
+    workflowRepoMocks.getRun.mockResolvedValue(null);
+
+    await expect(
+      caller.workflow.cancel({
+        runId: "missing-run-id",
+      })
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "run_not_found",
+    });
+  });
+
+  it("throws FORBIDDEN when caller is not the owner", async () => {
+    const otherUserCaller = await createTestCaller({
+      userId: "other-user",
+      scopes: ["workflow.write"],
+    });
+
+    const mockRun = {
+      id: "test-run-id",
+      userId: "test-user",
+      status: "running" as const,
+    };
+
+    workflowRepoMocks.getRun.mockResolvedValue(mockRun as any);
+
+    await expect(
+      otherUserCaller.workflow.cancel({
+        runId: "test-run-id",
+      })
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "not_owner",
+    });
+  });
+
+  it("rejects empty runId", async () => {
+    await expect(
+      caller.workflow.cancel({
+        runId: "",
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+});
+
+describe("suspend", () => {
+  it("suspends a running workflow", async () => {
+    runRegistryMocks.dispatchSuspend.mockResolvedValue(true);
+
+    const result = await caller.workflow.suspend({
+      runId: "test-run-id",
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(runRegistryMocks.dispatchSuspend).toHaveBeenCalledWith(
+      "test-run-id"
+    );
+  });
+
+  it("throws NOT_FOUND when run does not exist or not suspendable", async () => {
+    runRegistryMocks.dispatchSuspend.mockResolvedValue(false);
+
+    await expect(
+      caller.workflow.suspend({
+        runId: "missing-run-id",
+      })
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "run_not_found_or_not_suspendable",
+    });
+  });
+
+  it("rejects empty runId", async () => {
+    await expect(
+      caller.workflow.suspend({
+        runId: "",
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
   });
 });

@@ -138,6 +138,7 @@ export default function Home() {
                 accessibilityRole="button"
                 className="mt-4 items-center justify-center rounded-md bg-secondary px-4 py-3"
                 onPress={() => void setServerUrl("http://127.0.0.1:3155")}
+                testID="Use local test server"
               >
                 <Text className="font-medium text-secondary-foreground">
                   Use local test server
@@ -151,6 +152,7 @@ export default function Home() {
                 accessibilityRole="button"
                 className="mt-3 items-center justify-center rounded-md bg-primary px-4 py-3"
                 onPress={() => router.push("/(drawer)/call")}
+                testID="Call Alfred"
               >
                 <Text className="font-medium text-primary-foreground">
                   Call Alfred

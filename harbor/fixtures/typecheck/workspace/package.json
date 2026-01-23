@@ -1,0 +1,8 @@
+{
+  "name": "harbor-typecheck-fixture",
+  "private": true,
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
+

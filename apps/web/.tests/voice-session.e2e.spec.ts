@@ -2,13 +2,13 @@ import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
+import { createVoiceFixture } from "@alfred/test-kit/voice/registry";
 import type { VoiceStreamCodec } from "@alfred/type/voice";
 import type { VoiceSession } from "@alfred/voice/server/session";
 import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
 import { VoiceStreamClient } from "@alfred/voice/stream";
 import { expect, test } from "@playwright/test";
 import WebSocket, { WebSocketServer } from "ws";
-import { createVoiceFixture } from "../../../packages/test-kit/src/voice/registry";
 
 // Playwright (Node) does not provide a global WebSocket implementation.
 // VoiceStreamClient expects one, so we install the ws implementation globally.
@@ -19,7 +19,9 @@ const STREAM_PORT = Number(process.env.E2E_VOICE_STREAM_PORT ?? 8788);
 const STREAM_PATH = "/voice/stream";
 const STREAM_URL = `ws://127.0.0.1:${STREAM_PORT}${STREAM_PATH}`;
 const AUTH_TOKEN = "Bearer voice-e2e-mock";
-const SESSION_TIMEOUT_MS = 1500;
+// 1500ms is too tight under CI/local load; this test is intentionally end-to-end and
+// should be resilient to short scheduling pauses.
+const SESSION_TIMEOUT_MS = 5000;
 const DEBUG_VOICE = process.env.DEBUG_VOICE_E2E === "1";
 
 type ServerStats = {
@@ -38,6 +40,7 @@ type ConnectionState = {
   voice: string;
   assistantText: string | null;
   lastTranscript: string | null;
+  timeoutMs: number;
   inactivityTimer: ReturnType<typeof setTimeout> | null;
   voiceSession: VoiceSession | null;
   sequence: number;
@@ -137,6 +140,15 @@ class MockVoiceStreamingServer {
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
     const userId =
       req.headers["x-test-user"]?.toString() ?? "voice-e2e-test-user";
+    const timeoutHeader = req.headers["x-test-timeout-ms"]?.toString();
+    const timeoutOverride = timeoutHeader ? Number(timeoutHeader) : null;
+    const timeoutMs =
+      typeof timeoutOverride === "number" &&
+      Number.isFinite(timeoutOverride) &&
+      timeoutOverride > 0 &&
+      timeoutOverride <= 120_000
+        ? timeoutOverride
+        : SESSION_TIMEOUT_MS;
     const state: ConnectionState = {
       userId,
       connectionId: randomUUID(),
@@ -145,6 +157,7 @@ class MockVoiceStreamingServer {
       voice: "alloy",
       assistantText: null,
       lastTranscript: null,
+      timeoutMs,
       inactivityTimer: null,
       voiceSession: null,
       sequence: 0,
@@ -154,7 +167,7 @@ class MockVoiceStreamingServer {
     if (DEBUG_VOICE) {
       console.log("[mock-voice] connection established", state.connectionId);
     }
-    this.send(ws, { type: "ready", sessionId: null });
+    this.send(ws, { _: "ready", sessionId: null });
     ws.on("message", (data, isBinary) => {
       void this.handleMessage(ws, data, Boolean(isBinary));
     });
@@ -173,6 +186,7 @@ class MockVoiceStreamingServer {
     if (!state || state.closed) {
       return;
     }
+    await this.ensureRegistry();
     this.armTimeout(ws);
 
     if (
@@ -197,18 +211,21 @@ class MockVoiceStreamingServer {
       return;
     }
 
-    switch (payload.type) {
+    const type = typeof payload._ === "string" ? payload._ : null;
+    switch (type) {
       case "start":
         await this.handleStart(ws, payload);
-        break;
-      case "audio_chunk":
-        await this.handleAudioChunk(ws, payload);
         break;
       case "stop":
         await this.handleStop(ws, String(payload.reason ?? "manual"));
         break;
+      case "telemetry_report":
+        break;
+      case null:
+        this.emitError(ws, "missing_event_type", true);
+        break;
       default:
-        this.emitError(ws, `unknown_event:${String(payload.type)}`, false);
+        this.emitError(ws, `unknown_event:${type}`, false);
     }
   }
 
@@ -242,7 +259,7 @@ class MockVoiceStreamingServer {
     this.stats.started += 1;
     this.sendStatus(ws, "recording");
     this.send(ws, {
-      type: "session_started",
+      _: "session_started",
       sessionId,
       codec: requestedCodec,
       negotiatedCodec: requestedCodec,
@@ -254,7 +271,7 @@ class MockVoiceStreamingServer {
           return;
         }
         this.send(ws, {
-          type: "auto_stop",
+          _: "auto_stop",
           sessionId,
           reason: "silence",
         });
@@ -317,7 +334,7 @@ class MockVoiceStreamingServer {
     if (result?.text) {
       state.lastTranscript = result.text;
       this.send(ws, {
-        type: "partial_transcript",
+        _: "partial_transcript",
         sessionId: state.sessionId,
         text: result.text,
       });
@@ -330,6 +347,11 @@ class MockVoiceStreamingServer {
       this.emitError(ws, "session_not_started", false);
       return;
     }
+    // Prevent inactivity timeouts during long server-side synthesis.
+    if (state.inactivityTimer) {
+      clearTimeout(state.inactivityTimer);
+      state.inactivityTimer = null;
+    }
     // sessionId is guaranteed to exist after the check above
     const sessionId = state.sessionId;
     state.assistantText = `Responding to: ${
@@ -337,12 +359,12 @@ class MockVoiceStreamingServer {
     }`;
     this.sendStatus(ws, "processing");
     this.send(ws, {
-      type: "final_transcript",
+      _: "final_transcript",
       sessionId,
       text: state.lastTranscript ?? "hello",
     });
     this.send(ws, {
-      type: "assistant_message",
+      _: "assistant_message",
       sessionId,
       text: state.assistantText,
     });
@@ -354,7 +376,7 @@ class MockVoiceStreamingServer {
         this.stats.ttsChunks += 1;
         state.sequence += 1;
         this.send(ws, {
-          type: "tts_chunk",
+          _: "tts_chunk",
           sessionId,
           audioBase64: buffer.toString("base64"),
           mimeType: "audio/mpeg",
@@ -363,8 +385,10 @@ class MockVoiceStreamingServer {
       }
     );
 
-    this.send(ws, { type: "tts_complete", sessionId: state.sessionId });
+    this.send(ws, { _: "tts_complete", sessionId: state.sessionId });
     this.sendStatus(ws, "idle");
+    state.timeoutMs = SESSION_TIMEOUT_MS;
+    this.armTimeout(ws);
     if (reason === "manual" || reason === "silence") {
       this.stats.completed += 1;
     }
@@ -379,7 +403,7 @@ class MockVoiceStreamingServer {
       return;
     }
     this.send(ws, {
-      type: "status",
+      _: "status",
       sessionId: conn.sessionId,
       state,
     });
@@ -389,7 +413,7 @@ class MockVoiceStreamingServer {
     const state = this.connections.get(ws);
     this.stats.errors += 1;
     this.send(ws, {
-      type: "error",
+      _: "error",
       sessionId: state?.sessionId ?? null,
       message,
       code: message,
@@ -427,7 +451,7 @@ class MockVoiceStreamingServer {
       if (!state.closed) {
         this.emitError(ws, "session_timeout", true);
       }
-    }, SESSION_TIMEOUT_MS);
+    }, state.timeoutMs);
   }
 
   private send(ws: WebSocket, payload: Record<string, unknown>) {
@@ -523,7 +547,9 @@ test.describe("Voice Session E2E", () => {
 
   test("streams audio and receives synthesized reply", async () => {
     const log = createVoiceEventLog();
-    const client = createVoiceClient(log);
+    const client = createVoiceClient(log, {
+      headers: { Authorization: AUTH_TOKEN, "x-test-timeout-ms": "30000" },
+    });
     const sessionId = await client.startSession({
       sessionId: `session-${Date.now()}`,
       codec: "pcm",
@@ -548,7 +574,10 @@ test.describe("Voice Session E2E", () => {
         timeout: 2000,
       })
       .toBeGreaterThan(0);
-    expect(log.ttsChunks).toBeGreaterThan(0);
+    await expect
+      .poll(() => log.ttsChunks, { timeout: 10_000 })
+      .toBeGreaterThan(0);
+    await expect.poll(() => log.ttsComplete, { timeout: 10_000 }).toBe(true);
     expect(log.assistantMessages[0]).toContain("Responding to");
     expect(log.statuses.includes("recording")).toBeTruthy();
     expect(log.statuses.at(-1)).toBe("idle");

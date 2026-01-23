@@ -6,7 +6,6 @@ import {
   getAuditLogs,
   getPendingApprovals,
 } from "@alfred/db/repo/policy";
-import * as workflowRepo from "@alfred/db/repo/workflow";
 import { session as sessionTable } from "@alfred/db/schema/auth";
 import { metricsRegistry } from "@alfred/metrics/registry";
 import { TRPCError } from "@trpc/server";
@@ -451,83 +450,8 @@ export const adminRouter = router({
 
   processesList: protectedProcedure.query(async ({ ctx }) => {
     await ensureRecentBiometric(ctx.session);
-
-    try {
-      // Get Docker containers as processes
-      const proc = Bun.spawn(
-        ["docker", "stats", "--no-stream", "--format", "{{json .}}"],
-        { stdout: "pipe", stderr: "pipe" }
-      );
-
-      const stdout = await new Response(proc.stdout).text();
-      await proc.exited;
-
-      // Parse docker stats output
-      const containerProcesses = stdout
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => {
-          try {
-            const stats = JSON.parse(line) as {
-              ID?: string;
-              Name?: string;
-              CPUPerc?: string;
-              MemUsage?: string;
-            };
-            return {
-              id: stats.ID ?? "",
-              name: stats.Name ?? "unknown",
-              type: stats.Name?.includes("agent") ? "agent" : "service",
-              status: "running" as const,
-              cpu: Number.parseFloat(stats.CPUPerc?.replace("%", "") ?? "0"),
-              memory: parseMemoryMB(stats.MemUsage ?? "0"),
-              uptime: 0, // Docker doesn't give uptime in stats
-            };
-          } catch {
-            return null;
-          }
-        })
-        .filter(Boolean) as Array<{
-        id: string;
-        name: string;
-        type: string;
-        status: "running" | "idle" | "stopped";
-        cpu: number;
-        memory: number;
-        uptime: number;
-      }>;
-
-      // Add current Node process info
-      const nodeProcess = {
-        id: `node-${process.pid}`,
-        name: "api-server",
-        type: "service" as const,
-        status: "running" as const,
-        cpu: 0, // Would need sampling over time
-        memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        uptime: Math.floor(process.uptime()),
-      };
-
-      return {
-        processes: [nodeProcess, ...containerProcesses],
-      };
-    } catch {
-      // Fallback if Docker is not available
-      return {
-        processes: [
-          {
-            id: `node-${process.pid}`,
-            name: "api-server",
-            type: "service" as const,
-            status: "running" as const,
-            cpu: 0,
-            memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-            uptime: Math.floor(process.uptime()),
-          },
-        ],
-      };
-    }
+    const { listProcesses } = await import("../services/admin");
+    return await listProcesses();
   }),
 
   taskHistory: protectedProcedure
@@ -545,30 +469,8 @@ export const adminRouter = router({
       }
 
       try {
-        // Get recent workflow runs for this user
-        const runs = await workflowRepo.listRuns({
-          userId,
-          projectId: input.projectId,
-          limit: input.limit,
-        });
-
-        const history = runs.map((run) => {
-          const startTime = run.created ?? new Date();
-          const endTime = run.completedAt ?? new Date();
-          const durationMs = endTime.getTime() - startTime.getTime();
-
-          return {
-            id: run.id,
-            type: "agent" as const,
-            name: run.requirement ?? `Run ${run.id.slice(0, 8)}`,
-            status: mapRunStatus(run.status),
-            startTime: startTime.toISOString(),
-            duration: Math.round(durationMs / 1000),
-            tokenUsage: undefined,
-          };
-        });
-
-        return { history };
+        const { getTaskHistory } = await import("../services/admin");
+        return await getTaskHistory(userId, input.projectId, input.limit);
       } catch {
         return { history: [] };
       }
@@ -576,108 +478,8 @@ export const adminRouter = router({
 
   networkConnections: protectedProcedure.query(async ({ ctx }) => {
     await ensureRecentBiometric(ctx.session);
-
-    try {
-      // Use lsof to get network connections (macOS/Linux)
-      const proc = Bun.spawn(["lsof", "-i", "-P", "-n", "-F", "pcn"], {
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-
-      const stdout = await new Response(proc.stdout).text();
-      await proc.exited;
-
-      // Parse lsof output (simplified)
-      const lines = stdout.split("\n");
-      const connections: Array<{
-        id: string;
-        localAddress: string;
-        remoteAddress: string;
-        protocol: "tcp" | "udp";
-        state: "established" | "listening" | "time_wait";
-        process: string;
-      }> = [];
-
-      let currentProcess = "";
-      let currentId = 0;
-
-      for (const line of lines) {
-        if (line.startsWith("c")) {
-          currentProcess = line.slice(1);
-        } else if (line.startsWith("n")) {
-          const addr = line.slice(1);
-          if (addr.includes(":")) {
-            currentId++;
-            const isListening =
-              addr.includes("*:") || addr.includes("0.0.0.0:");
-            connections.push({
-              id: String(currentId),
-              localAddress: addr.split("->")[0] ?? addr,
-              remoteAddress: addr.split("->")[1] ?? "0.0.0.0:*",
-              protocol: "tcp",
-              state: isListening ? "listening" : "established",
-              process: currentProcess,
-            });
-          }
-        }
-      }
-
-      return { connections: connections.slice(0, 50) };
-    } catch {
-      // Fallback with static data
-      return {
-        connections: [
-          {
-            id: "1",
-            localAddress: "127.0.0.1:3000",
-            remoteAddress: "0.0.0.0:*",
-            protocol: "tcp" as const,
-            state: "listening" as const,
-            process: "api-server",
-          },
-        ],
-      };
-    }
+    const { listNetworkConnections } = await import("../services/admin");
+    return await listNetworkConnections();
   }),
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper functions
-// ─────────────────────────────────────────────────────────────────────────────
-
-function parseMemoryMB(memStr: string): number {
-  // Parse strings like "128MiB / 1GiB" or "128MB"
-  const match = /(\d+(?:\.\d+)?)\s*(MiB|MB|GiB|GB|KiB|KB)/i.exec(memStr);
-  if (!(match?.[1] && match[2])) {
-    return 0;
-  }
-
-  const value = Number.parseFloat(match[1]);
-  const unit = match[2].toLowerCase();
-
-  if (unit.includes("g")) {
-    return Math.round(value * 1024);
-  }
-  if (unit.includes("k")) {
-    return Math.round(value / 1024);
-  }
-  return Math.round(value);
-}
-
-function mapRunStatus(
-  status: string | null | undefined
-): "success" | "failure" | "cancelled" {
-  if (!status) {
-    return "success";
-  }
-  if (status === "completed" || status === "done") {
-    return "success";
-  }
-  if (status === "failed" || status === "error") {
-    return "failure";
-  }
-  if (status === "cancelled" || status === "aborted") {
-    return "cancelled";
-  }
-  return "success"; // Default for completed runs
-}

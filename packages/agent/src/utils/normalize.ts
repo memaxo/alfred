@@ -14,7 +14,7 @@ type ToolCallShape = {
   input?: unknown;
 };
 
-type ToolResultShape = ToolCallShape & {
+export type ToolResultShape = ToolCallShape & {
   result?: unknown;
   output?: unknown;
 };
@@ -185,6 +185,8 @@ export function eventToUiMessages(event: WorkflowEvent): UIMessage[] | null {
   }
 
   if (isToolResultEvent(event)) {
+    // Note: enrich() is async but eventToUiMessages is sync
+    // Enrichment will be handled in async contexts (see enrichToolResultEvent)
     return [createAssistantMessage([createToolResultPart(event)])];
   }
 

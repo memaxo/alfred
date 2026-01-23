@@ -7,7 +7,7 @@
 
 import { logger } from "@alfred/logger";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, Stack, useRouter } from "expo-router";
+import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StatusBar,
@@ -36,6 +36,12 @@ import { trpc } from "@/utils/trpc";
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function VoiceCallScreen() {
+  const params = useLocalSearchParams<{
+    runId?: string;
+    thread?: string;
+    resource?: string;
+    prompt?: string;
+  }>();
   const authClient = useAuthClient();
   const trpcClient = useTrpcClient<TRPCAppRouter>();
   const { serverUrl } = useServerUrl();
@@ -59,11 +65,36 @@ export default function VoiceCallScreen() {
     )?.value as "fast" | "low" | "medium" | "accurate" | undefined) ??
     undefined;
 
+  const thread =
+    typeof params.thread === "string" && params.thread.length > 0
+      ? params.thread
+      : undefined;
+  const resource = (() => {
+    if (typeof params.resource === "string" && params.resource.length > 0) {
+      return params.resource;
+    }
+    if (typeof params.runId === "string" && params.runId.length > 0) {
+      return `workflow_run:${params.runId}`;
+    }
+    return;
+  })();
+  const prompt =
+    typeof params.prompt === "string" && params.prompt.length > 0
+      ? params.prompt
+      : typeof params.runId === "string" && params.runId.length > 0
+        ? `Focus on workflow run ${params.runId}. Start by summarizing where it is stuck and what you need from me.`
+        : undefined;
+
   const { stream } = useVoiceSessionNative(trpcClient, {
     surface: "native",
     getCookie: () => getCookieFromAuthClient(authClient),
     baseUrl: serverUrl,
     sttChunkSize,
+    speechDefaults: {
+      thread,
+      resource,
+      prompt,
+    },
   });
 
   // Map voice state to orb props
@@ -92,12 +123,18 @@ export default function VoiceCallScreen() {
       });
   }, [stream, router]);
 
-  const handleToggleVoice = useCallback(async () => {
-    if (stream.isActive) {
-      await stream.stop();
-    } else {
-      await stream.start();
-    }
+  const handleToggleVoice = useCallback(() => {
+    void (async () => {
+      try {
+        if (stream.isActive) {
+          await stream.stop();
+        } else {
+          await stream.start();
+        }
+      } catch (error) {
+        logger.error("voice_toggle_failed", { error });
+      }
+    })();
   }, [stream]);
 
   const handleMuteToggle = useCallback(() => {

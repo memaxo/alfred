@@ -3,7 +3,7 @@ process.env.DISABLE_TRPC_METRICS = "1";
 
 import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { performance } from "node:perf_hooks";
-import type { PipelineEvent } from "@alfred/pipeline";
+import { installPipelineMocks } from "../../packages/api/test/utils/pipeline";
 import { toObservable } from "../../packages/api/test/utils/stream";
 import { createWorkflowCaller } from "../../packages/api/test/utils/workflow-caller";
 
@@ -12,41 +12,13 @@ if (useRealLatencyMode) {
   console.info("[latency] real mode enabled - using live orchestrator");
 }
 
-const pipelineRunnerMock = useRealLatencyMode ? null : vi.fn();
-if (pipelineRunnerMock) {
-  mock.module("@alfred/pipeline", () => {
-    class PipelineRunner {
-      private readonly observers = new Set<{
-        onEvent: (event: PipelineEvent) => void;
-        onComplete?: () => void;
-      }>();
-
-      addObserver(observer: { onEvent: (event: PipelineEvent) => void }) {
-        this.observers.add(observer);
-        return this;
-      }
-
-      *run(input: { runId: string; requirement: string }) {
-        const start: PipelineEvent = {
-          type: "pipeline:start",
-          runId: input.runId,
-          requirement: input.requirement,
-          timestamp: Date.now(),
-        };
-        for (const observer of this.observers) {
-          observer.onEvent(start);
-        }
-        yield start;
-        for (const observer of this.observers) {
-          observer.onComplete?.();
-        }
-      }
-    }
-
-    return {
-      PipelineRunner,
-      registerDefaultStages: () => {},
-    };
+if (!useRealLatencyMode) {
+  installPipelineMocks({
+    dbRepo: true,
+    sessionRecovery: true,
+    linear: true,
+    runtimeLinear: true,
+    preferenceRefresh: true,
   });
 }
 
@@ -60,31 +32,6 @@ if (enforceWorkflowPlanPolicyMock) {
 }
 
 if (!useRealLatencyMode) {
-  mock.module("@alfred/api/preference/refresh", () => ({
-    triggerPreferenceRefresh: vi.fn(),
-  }));
-  mock.module("@alfred/agent/workflow/session-recovery", () => ({
-    registerRunHandle: () => Promise.resolve(),
-    unregisterRunHandle: () => Promise.resolve(),
-  }));
-  mock.module("@alfred/agent/workflow/linear", () => ({
-    ensureLinearTicket: async (params: { linear?: unknown }) => ({
-      linear: params.linear,
-      ticket: undefined,
-    }),
-  }));
-  mock.module("@alfred/runtime/workflow/linear", () => ({
-    bootstrapLinearSession: async () => {},
-  }));
-  mock.module("@alfred/db/repo/workflow", () => ({
-    PostgresCheckpointStorage: class {
-      save() {}
-      load() {
-        return null;
-      }
-      delete() {}
-    },
-  }));
 }
 
 const baseInput = {
@@ -95,7 +42,6 @@ const baseInput = {
 
 describe("workflow stream latency", () => {
   afterEach(() => {
-    pipelineRunnerMock?.mockReset?.();
     enforceWorkflowPlanPolicyMock?.mockClear?.();
   });
 

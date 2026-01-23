@@ -26,9 +26,3 @@ export {
   evaluateWithModel,
   shouldTriggerFallback,
 } from "./evaluator";
-export {
-  type RerankOptions,
-  type RerankResult,
-  type RerankTelemetry,
-  rerank,
-} from "./rerank";

@@ -15,6 +15,7 @@ mock.module("@alfred/api/metrics", () => metricsStub);
 
 const createNoteMock = vi.fn();
 const getNotesMock = vi.fn();
+const getNoteMock = vi.fn();
 const updateNoteMock = vi.fn();
 const deleteNoteMock = vi.fn();
 const ingestMock = vi.fn().mockResolvedValue(undefined);
@@ -51,6 +52,7 @@ mock.module("@alfred/rag", () => ({
 mock.module("@alfred/db/repo/assistant", () => ({
   createNote: createNoteMock,
   getNotes: getNotesMock,
+  getNote: getNoteMock,
   updateNote: updateNoteMock,
   deleteNote: deleteNoteMock,
   createReminder: vi.fn(),
@@ -257,6 +259,46 @@ describe("noteRouter", () => {
         })
       ).rejects.toThrow();
     });
+
+    it("rejects invalid projectId UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.create({
+          content: "Test content",
+          projectId: "not-a-uuid",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects empty tag strings", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.create({
+          content: "Test content",
+          tags: ["valid-tag", ""],
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects title that exceeds max length", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+      const longTitle = "a".repeat(257);
+
+      await expect(
+        caller.note.create({
+          content: "Test content",
+          title: longTitle,
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
   });
 
   describe("list", () => {
@@ -327,6 +369,16 @@ describe("noteRouter", () => {
 
       await expect(caller.note.list({ offset: -1 })).rejects.toThrow();
     });
+
+    it("rejects invalid projectId UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.list({ projectId: "not-a-uuid" })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
   });
 
   describe("update", () => {
@@ -338,6 +390,44 @@ describe("noteRouter", () => {
           content: "Updated content",
         })
       ).rejects.toThrow(TRPCError);
+    });
+
+    it("rejects invalid note ID UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.update({
+          id: "not-a-uuid",
+          content: "Updated content",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects update with no fields", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.update({
+          id: "123e4567-e89b-12d3-a456-426614174000",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects invalid note ID UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.update({
+          id: "not-a-uuid",
+          title: "Updated",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
 
     it("updates note with valid input", async () => {
@@ -418,6 +508,48 @@ describe("noteRouter", () => {
       await expect(
         caller.note.delete({ id: "invalid-uuid" })
       ).rejects.toThrow();
+    });
+  });
+
+  describe("get", () => {
+    it("rejects invalid note ID UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.get({
+          id: "not-a-uuid",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("throws NOT_FOUND when note does not exist", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+      getNoteMock.mockResolvedValue(null);
+
+      await expect(
+        caller.note.get({
+          id: "00000000-0000-0000-0000-000000000000",
+        })
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "note_not_found",
+      });
+    });
+  });
+
+  describe("delete", () => {
+    it("rejects invalid note ID UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.delete({
+          id: "not-a-uuid",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
   });
 });

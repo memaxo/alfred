@@ -1,40 +1,8 @@
-import { patternRepo, planRepo } from "@alfred/db";
+import { planRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { validateIntentUserId, requireUserId } from "../services/plan";
 import { authedProcedure, router } from "../trpc.js";
-
-/**
- * Validates that all userId fields in an intent (including nested intents) match the authenticated user
- */
-function validateIntentUserId(
-  intent: {
-    userId: string;
-    multiIntent?: { intents?: unknown[] } | null;
-  },
-  authenticatedUserId: string
-): void {
-  if (intent.userId !== authenticatedUserId) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "plan_intent_user_mismatch",
-    });
-  }
-  // Validate nested intents if present
-  if (intent.multiIntent?.intents) {
-    for (const nestedIntent of intent.multiIntent.intents) {
-      const candidate = nestedIntent as {
-        userId?: unknown;
-        multiIntent?: { intents?: unknown[] } | null;
-      };
-      if (typeof candidate.userId === "string") {
-        validateIntentUserId(
-          { userId: candidate.userId, multiIntent: candidate.multiIntent },
-          authenticatedUserId
-        );
-      }
-    }
-  }
-}
 
 /**
  * planRouter: Handles AI-native workflow planning requests
@@ -50,13 +18,7 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
         const { parseIntent } = await import("@alfred/plan");
@@ -99,25 +61,16 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
-      const { gatherExternalResearch, workflowIntentSchema } = await import(
-        "@alfred/plan"
-      );
-      const intent = workflowIntentSchema.parse(input.intent);
-
-      // Validate that intent.userId matches authenticated user
-      validateIntentUserId(intent, userId);
-
+      const userId = requireUserId(ctx.session);
       try {
-        const results = await gatherExternalResearch(intent, input.options);
-        return results;
+        const { gatherExternalResearchService } = await import(
+          "../services/plan"
+        );
+        return await gatherExternalResearchService(
+          input.intent,
+          userId,
+          input.options as Record<string, unknown>
+        );
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -139,29 +92,17 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
-      const { gatherInternalResearch, workflowIntentSchema } = await import(
-        "@alfred/plan"
-      );
-      const intent = workflowIntentSchema.parse(input.intent);
-
-      // Validate that intent.userId matches authenticated user
-      validateIntentUserId(intent, userId);
-
+      const userId = requireUserId(ctx.session);
       try {
-        const results = await gatherInternalResearch(
-          intent,
-          input.projectId,
-          input.options as Record<string, unknown>
+        const { gatherInternalResearchService } = await import(
+          "../services/plan"
         );
-        return results;
+        return await gatherInternalResearchService(
+          input.intent,
+          userId,
+          input.projectId,
+          input.options
+        );
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -182,30 +123,14 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
-      const {
-        gatherFullResearch,
-        researchOptionsSchema,
-        workflowIntentSchema,
-      } = await import("@alfred/plan");
-      const intent = workflowIntentSchema.parse(input.intent);
-      const options = input.options
-        ? researchOptionsSchema.parse(input.options)
-        : undefined;
-
-      // Validate that intent.userId matches authenticated user
-      validateIntentUserId(intent, userId);
-
+      const userId = requireUserId(ctx.session);
       try {
-        const results = await gatherFullResearch(intent, options);
-        return results;
+        const { gatherFullResearchService } = await import("../services/plan");
+        return await gatherFullResearchService(
+          input.intent,
+          userId,
+          input.options
+        );
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -233,13 +158,7 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       const {
         agentTypeSchema,
@@ -286,36 +205,16 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
-      const {
-        critiquePlan,
-        researchResultSchema,
-        structuredPlanSchema,
-        workflowIntentSchema,
-      } = await import("@alfred/plan");
-      const plan = structuredPlanSchema.parse(input.plan);
-      const intent = workflowIntentSchema.parse(input.intent);
-      const research = researchResultSchema.parse(input.research);
-      const optionsSchema = z
-        .object({
-          maxRevisions: z.number().int().min(1).max(5).optional(),
-        })
-        .optional();
-      const options = optionsSchema.parse(input.options);
-
-      // Validate that intent.userId matches authenticated user
-      validateIntentUserId(intent, userId);
-
+      const userId = requireUserId(ctx.session);
       try {
-        const result = await critiquePlan(plan, intent, research, options);
-        return result;
+        const { critiquePlanService } = await import("../services/plan");
+        return await critiquePlanService(
+          input.plan,
+          input.intent,
+          input.research,
+          userId,
+          input.options
+        );
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -341,15 +240,7 @@ export const planRouter = router({
           .optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
+    .mutation(async ({ input }) => {
       try {
         const { evaluatePlanDeterministic, structuredPlanSchema } =
           await import("@alfred/plan");
@@ -377,13 +268,7 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
         const { structuredPlanSchema } = await import("@alfred/plan");
@@ -410,13 +295,7 @@ export const planRouter = router({
   approve: authedProcedure
     .input(z.object({ planId: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
         const { approvePlan } = await import("@alfred/plan");
@@ -441,13 +320,7 @@ export const planRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
         const { rejectPlan } = await import("@alfred/plan");
@@ -467,13 +340,7 @@ export const planRouter = router({
   get: authedProcedure
     .input(z.object({ planId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
         const { getPlanRecord } = await import("@alfred/plan");
@@ -514,13 +381,7 @@ export const planRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
         const { listPlans } = await import("@alfred/plan");
@@ -613,41 +474,15 @@ export const planRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
-        const patterns = await patternRepo.listPatternsByUserId(userId);
-
-        // Filter by project if specified
+        const { patternRepo } = await import("@alfred/db");
+        const rows = await patternRepo.listPatternsByUserId(userId);
         const filtered = input.projectId
-          ? patterns.filter((p) => p.projectId === input.projectId)
-          : patterns;
-
-        // Sort by usage count descending
-        const sorted = filtered.sort(
-          (a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0)
-        );
-
-        return {
-          patterns: sorted.slice(0, input.limit).map((p) => ({
-            id: p.id,
-            trigger: p.trigger,
-            planTemplate: p.planTemplate,
-            successRate: p.successRate,
-            avgDurationMs: p.avgDurationMs,
-            usageCount: p.usageCount,
-            projectId: p.projectId,
-            createdAt: p.createdAt?.toISOString() ?? null,
-            updatedAt: p.updatedAt?.toISOString() ?? null,
-          })),
-          total: filtered.length,
-        };
+          ? rows.filter((p) => p.projectId === input.projectId)
+          : rows;
+        return filtered.slice(0, input.limit);
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -671,64 +506,19 @@ export const planRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
+      const userId = requireUserId(ctx.session);
 
       try {
-        const { matchPatterns, categorizePatterns } = await import(
-          "@alfred/plan/pattern"
-        );
-
-        // Match patterns
+        const { categorizePatterns, matchPatterns } = await import("@alfred/plan");
         const matches = await matchPatterns(input.intent, input.projectId, {
           minSimilarity: input.minSimilarity,
           maxResults: input.maxResults,
           requireStructuralMatch: input.requireStructuralMatch,
         });
-
-        // Categorize by confidence
-        const categorized = categorizePatterns(matches);
-
         return {
-          matches: matches.map((m) => ({
-            id: m.id,
-            trigger: m.trigger,
-            planTemplate: m.planTemplate,
-            successRate: m.successRate,
-            avgDurationMs: m.avgDurationMs,
-            usageCount: m.usageCount,
-            similarity: m.similarity,
-            confidence: m.similarity * Number.parseFloat(m.successRate),
-            projectId: m.projectId,
-            createdAt: m.createdAt?.toISOString() ?? null,
-            updatedAt: m.updatedAt?.toISOString() ?? null,
-          })),
-          categories: {
-            autoSuggest: categorized.autoSuggest.map((m) => ({
-              id: m.id,
-              trigger: m.trigger,
-              similarity: m.similarity,
-              confidence: m.similarity * Number.parseFloat(m.successRate),
-            })),
-            requireConfirmation: categorized.requireConfirmation.map((m) => ({
-              id: m.id,
-              trigger: m.trigger,
-              similarity: m.similarity,
-              confidence: m.similarity * Number.parseFloat(m.successRate),
-            })),
-            lowConfidence: categorized.lowConfidence.map((m) => ({
-              id: m.id,
-              trigger: m.trigger,
-              similarity: m.similarity,
-              confidence: m.similarity * Number.parseFloat(m.successRate),
-            })),
-          },
-          total: matches.length,
+          matches,
+          categorized: categorizePatterns(matches),
+          userId,
         };
       } catch (error) {
         throw new TRPCError({
@@ -749,142 +539,16 @@ export const planRouter = router({
         source: z.enum(["voice", "chat", "api"]).default("chat"),
       })
     )
-    .mutation(async ({ ctx, input: requestInput }) => {
-      const userId = ctx.session?.user?.id;
-      if (!userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
-      const startTime = Date.now();
-      const trace: {
-        step: string;
-        durationMs: number;
-        output: unknown;
-      }[] = [];
+    .mutation(async ({ ctx, input }) => {
+      const userId = requireUserId(ctx.session);
 
       try {
         const { parseIntent } = await import("@alfred/plan");
-
-        // Step 1: Tokenize / preprocess
-        const preprocessStart = Date.now();
-        const preprocessed = requestInput.input.trim().toLowerCase();
-        trace.push({
-          step: "preprocess",
-          durationMs: Date.now() - preprocessStart,
-          output: {
-            original: requestInput.input,
-            normalized: preprocessed,
-            wordCount: preprocessed.split(/\s+/).length,
-          },
-        });
-
-        // Step 2: Parse intent
-        const parseStart = Date.now();
-        const result = await parseIntent(requestInput.input, {
-          userId,
-          source: requestInput.source,
-        });
-
-        // Handle discriminated union result
-        let intentData: unknown = null;
-        let confidence = 0;
-        let intentType = "unknown";
-        let hasMultiIntent = false;
-
-        if (result.type === "intent") {
-          intentData = result.intent;
-          intentType = "single";
-          hasMultiIntent = !!result.intent.multiIntent?.split;
-          confidence = result.intent.ambiguity?.score
-            ? 1 - result.intent.ambiguity.score
-            : 0.8;
-        } else if (result.type === "multiIntent") {
-          intentData = result.intents;
-          intentType = "multi";
-          hasMultiIntent = true;
-          confidence = 0.7;
-        } else if (result.type === "clarification") {
-          intentType = "clarification";
-          intentData = { questions: result.questions };
-          confidence = 0.3;
-        }
-
-        trace.push({
-          step: "parseIntent",
-          durationMs: Date.now() - parseStart,
-          output: {
-            resultType: result.type,
-            intentType,
-            confidence,
-            hasMultiIntent,
-          },
-        });
-
-        // Step 3: Extract entities
-        const entityStart = Date.now();
-        const entities: Record<string, unknown>[] = [];
-        if (result.type === "intent") {
-          const intent = result.intent;
-          if (intent.context.projectId) {
-            entities.push({ type: "project", value: intent.context.projectId });
-          }
-          if (intent.context.workspace) {
-            entities.push({
-              type: "workspace",
-              value: intent.context.workspace,
-            });
-          }
-          if (intent.context.codebase) {
-            entities.push({ type: "codebase", value: intent.context.codebase });
-          }
-          for (const constraint of intent.context.constraints) {
-            entities.push({
-              type: `constraint:${constraint.type}`,
-              value: constraint.value,
-            });
-          }
-        }
-        trace.push({
-          step: "extractEntities",
-          durationMs: Date.now() - entityStart,
-          output: { entities, count: entities.length },
-        });
-
-        // Step 4: Classify complexity
-        const classifyStart = Date.now();
-        let complexity = "low";
-        if (result.type === "multiIntent") {
-          complexity = "multi";
-        } else if (result.type === "intent") {
-          const constraintCount = result.intent.context.constraints.length;
-          const patternCount = result.intent.context.existingPatterns.length;
-          if (constraintCount > 2 || patternCount === 0) {
-            complexity = "high";
-          } else if (constraintCount > 0 || hasMultiIntent) {
-            complexity = "medium";
-          }
-        } else if (result.type === "clarification") {
-          complexity = "needs_clarification";
-        }
-        trace.push({
-          step: "classifyComplexity",
-          durationMs: Date.now() - classifyStart,
-          output: { complexity },
-        });
-
-        const totalDurationMs = Date.now() - startTime;
-
-        return {
-          input: requestInput.input,
-          resultType: result.type,
-          intent: intentData,
-          confidence,
-          trace,
-          totalDurationMs,
-        };
+        return await parseIntent(
+          input.input,
+          { userId, source: input.source },
+          { maxClarifications: 5, autoResolve: false }
+        );
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

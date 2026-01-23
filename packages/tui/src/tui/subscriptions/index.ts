@@ -4,6 +4,7 @@
 
 export * from "./agentfs";
 export * from "./cognitive";
+export * from "./focus";
 export * from "./manager";
 export * from "./metrics";
 export * from "./mode";

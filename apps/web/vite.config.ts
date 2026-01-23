@@ -265,6 +265,10 @@ export default defineConfig({
           : {}),
         "@alfred/db/repo": resolve(__dirname, "../../packages/db/src/repo"),
         "@alfred/db/schema": resolve(__dirname, "../../packages/db/src/schema"),
+        "@alfred/db/metrics": resolve(
+          __dirname,
+          "../../packages/db/src/metrics.ts"
+        ),
         "@alfred/db/client": resolve(
           __dirname,
           "../../packages/db/src/client.ts"
@@ -327,6 +331,10 @@ export default defineConfig({
         : {}),
       "@alfred/db/repo": resolve(__dirname, "../../packages/db/src/repo"),
       "@alfred/db/schema": resolve(__dirname, "../../packages/db/src/schema"),
+      "@alfred/db/metrics": resolve(
+        __dirname,
+        "../../packages/db/src/metrics.ts"
+      ),
       "@alfred/db/client": resolve(
         __dirname,
         "../../packages/db/src/client.ts"

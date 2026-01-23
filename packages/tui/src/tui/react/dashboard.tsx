@@ -15,6 +15,7 @@ import { ChatMode, DebugMode, HelpMode, PlanMode } from "./modes";
 import { CommandPalette, Modal } from "./overlays";
 import {
   CognitivePanel,
+  FocusPanel,
   KnowledgePanel,
   MetricsPanel,
   VoicePanel,
@@ -35,10 +36,11 @@ type DashboardProps = {
   initialMode?: ModeId;
 };
 
-type PanelId = "cognitive" | "workflow" | "metrics" | "voice" | "knowledge";
+type PanelId = "focus" | "cognitive" | "workflow" | "metrics" | "voice" | "knowledge";
 type ModeId = "none" | "chat" | "debug" | "plan" | "help";
 
 const PANELS: PanelId[] = [
+  "focus",
   "cognitive",
   "workflow",
   "metrics",
@@ -169,7 +171,7 @@ export function Dashboard({
       }
 
       // Number keys for direct panel access
-      if (/^[1-5]$/.test(event.name)) {
+      if (/^[1-6]$/.test(event.name)) {
         const index = Number.parseInt(event.name, 10) - 1;
         if (index < PANELS.length) {
           setFocusedIndex(index);
@@ -187,6 +189,7 @@ export function Dashboard({
   const contentHeight = height - headerHeight - footerHeight;
   const leftWidth = Math.floor(width * 0.5);
   const rightWidth = width - leftWidth;
+  const thirdHeight = Math.floor(contentHeight / 3);
 
   return (
     <StoresContext.Provider value={stores}>
@@ -208,42 +211,49 @@ export function Dashboard({
         {/* Main content area */}
         <box height={contentHeight} top={headerHeight} width={width}>
           {/* Left column */}
-          <CognitivePanel
-            focused={focusedPanel === "cognitive"}
-            height={Math.floor(contentHeight / 2)}
+          <FocusPanel
+            focused={focusedPanel === "focus"}
+            height={thirdHeight}
             width={leftWidth}
             x={0}
             y={0}
           />
-          <WorkflowPanel
-            focused={focusedPanel === "workflow"}
-            height={Math.floor(contentHeight / 2)}
+          <CognitivePanel
+            focused={focusedPanel === "cognitive"}
+            height={thirdHeight}
             width={leftWidth}
             x={0}
-            y={Math.floor(contentHeight / 2)}
+            y={thirdHeight}
+          />
+          <WorkflowPanel
+            focused={focusedPanel === "workflow"}
+            height={contentHeight - thirdHeight * 2}
+            width={leftWidth}
+            x={0}
+            y={thirdHeight * 2}
           />
 
           {/* Right column */}
           <MetricsPanel
             focused={focusedPanel === "metrics"}
-            height={Math.floor(contentHeight / 3)}
+            height={thirdHeight}
             width={rightWidth}
             x={leftWidth}
             y={0}
           />
           <VoicePanel
             focused={focusedPanel === "voice"}
-            height={Math.floor(contentHeight / 3)}
+            height={thirdHeight}
             width={rightWidth}
             x={leftWidth}
-            y={Math.floor(contentHeight / 3)}
+            y={thirdHeight}
           />
           <KnowledgePanel
             focused={focusedPanel === "knowledge"}
-            height={Math.floor(contentHeight / 3)}
+            height={contentHeight - thirdHeight * 2}
             width={rightWidth}
             x={leftWidth}
-            y={Math.floor((contentHeight / 3) * 2)}
+            y={thirdHeight * 2}
           />
         </box>
 
@@ -255,7 +265,7 @@ export function Dashboard({
           width={width}
         >
           <text
-            content="[Tab] Navigate | [q] Quit | [?] Help | [Ctrl+D] Debug | [Ctrl+T] Chat"
+            content="[Tab] Navigate | [q] Quit | [?] Help | [Ctrl+D] Debug | [Ctrl+T] Chat | [1-6] Panels"
             style={{ fg: "#8A9199" }}
           />
         </box>

@@ -204,6 +204,7 @@ function VoiceToggleButton({
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      testID={isActive ? "Stop listening" : "Start listening"}
     >
       <Animated.View style={[styles.button, animatedStyle]}>
         <Ionicons

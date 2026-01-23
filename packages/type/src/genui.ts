@@ -7,6 +7,21 @@
  */
 
 /**
+ * Schema context for GenUI generation and enrichment.
+ *
+ * Provides context about the user, surface, and mode to guide
+ * schema generation and component selection.
+ */
+export type SchemaContext = {
+  userId?: string;
+  projectId?: string;
+  surface: "web" | "mobile" | "voice" | "tui";
+  mode: "assistant" | "workflow" | "focus";
+  viewport?: { width?: number; height?: number };
+  preference?: { verbosity?: "compact" | "normal" | "verbose" };
+};
+
+/**
  * A single UI component specification.
  *
  * The `component` field references a name from the component manifest.

@@ -190,7 +190,59 @@ describe("timerRouter", () => {
           duration: 60,
           label: longLabel,
         })
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects invalid projectId UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.create({
+          duration: 60,
+          projectId: "not-a-uuid",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects zero duration", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.create({
+          duration: 0,
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects negative duration", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.create({
+          duration: -1,
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
+
+    it("rejects empty label", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.create({
+          duration: 60,
+          label: "",
+        })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
   });
 
@@ -244,6 +296,16 @@ describe("timerRouter", () => {
 
       expect(getActiveTimersMock).toHaveBeenCalledWith("test-user", projectId);
     });
+
+    it("rejects invalid projectId UUID", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.active({ projectId: "not-a-uuid" })
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
+    });
   });
 
   describe("done", () => {
@@ -295,12 +357,14 @@ describe("timerRouter", () => {
       expect(cancelTimerMock).toHaveBeenCalledWith(timerId);
     });
 
-    it("validates UUID format", async () => {
+    it("rejects invalid UUID format", async () => {
       const caller = await createTestCaller({ userId: "test-user" });
 
       await expect(
         caller.timer.cancel({ id: "invalid-uuid" })
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      });
     });
   });
 });

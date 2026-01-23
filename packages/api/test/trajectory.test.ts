@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, beforeEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
   mockPolicyAudit,
   resetAllMocks,
@@ -6,46 +6,17 @@ import {
 } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
 
-const SHOULD_RUN = process.env.RUN_TRAJECTORY_ROUTER_TESTS === "1";
+setupTestEnv();
 
-const getRunMock = vi.fn();
-const listEventsMock = vi.fn();
-
-const getRunEventMarkerMock = vi.fn();
-const getTrajectoryByRunIdMock = vi.fn();
-const upsertTrajectoryMock = vi.fn();
-
-const buildAtifTrajectoryMock = vi.fn();
-const validateAtifTrajectoryMock = vi.fn();
-
-if (SHOULD_RUN) {
-  setupTestEnv();
-  mockPolicyAudit();
-
-  mock.module("@alfred/db/repo/workflow", () => ({
-    getRun: getRunMock,
-    listEvents: listEventsMock,
-  }));
-
-  mock.module("@alfred/db/repo/trajectory", () => ({
-    getRunEventMarker: getRunEventMarkerMock,
-    getTrajectoryByRunId: getTrajectoryByRunIdMock,
-    upsertTrajectory: upsertTrajectoryMock,
-  }));
-
-  mock.module("@alfred/runtime/trajectory/atif", () => ({
-    buildAtifTrajectory: buildAtifTrajectoryMock,
-  }));
-
-  mock.module("@alfred/runtime/trajectory/validate", () => ({
-    validateAtifTrajectory: validateAtifTrajectoryMock,
-  }));
-}
-
-const describeFn = SHOULD_RUN ? describe : describe.skip;
-
-describeFn("trajectory router", () => {
+describe("trajectory router", () => {
   let caller: Awaited<ReturnType<typeof createTestCaller>>;
+  let getRunMock: ReturnType<typeof vi.fn>;
+  let listEventsMock: ReturnType<typeof vi.fn>;
+  let getRunEventMarkerMock: ReturnType<typeof vi.fn>;
+  let getTrajectoryByRunIdMock: ReturnType<typeof vi.fn>;
+  let upsertTrajectoryMock: ReturnType<typeof vi.fn>;
+  let buildAtifTrajectoryMock: ReturnType<typeof vi.fn>;
+  let validateAtifTrajectoryMock: ReturnType<typeof vi.fn>;
 
   beforeAll(async () => {
     caller = await createTestCaller({
@@ -54,8 +25,41 @@ describeFn("trajectory router", () => {
     });
   });
 
+  beforeEach(() => {
+    // Setup mocks inside beforeEach to avoid module cache pollution
+    getRunMock = vi.fn();
+    listEventsMock = vi.fn();
+    getRunEventMarkerMock = vi.fn();
+    getTrajectoryByRunIdMock = vi.fn();
+    upsertTrajectoryMock = vi.fn();
+    buildAtifTrajectoryMock = vi.fn();
+    validateAtifTrajectoryMock = vi.fn();
+
+    mockPolicyAudit();
+
+    mock.module("@alfred/db/repo/workflow", () => ({
+      getRun: getRunMock,
+      listEvents: listEventsMock,
+    }));
+
+    mock.module("@alfred/db/repo/trajectory", () => ({
+      getRunEventMarker: getRunEventMarkerMock,
+      getTrajectoryByRunId: getTrajectoryByRunIdMock,
+      upsertTrajectory: upsertTrajectoryMock,
+    }));
+
+    mock.module("@alfred/runtime/trajectory/atif", () => ({
+      buildAtifTrajectory: buildAtifTrajectoryMock,
+    }));
+
+    mock.module("@alfred/runtime/trajectory/validate", () => ({
+      validateAtifTrajectory: validateAtifTrajectoryMock,
+    }));
+  });
+
   afterEach(() => {
     resetAllMocks();
+    vi.clearAllMocks();
   });
 
   it("denies access when caller is not the run owner", async () => {

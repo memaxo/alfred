@@ -4,11 +4,10 @@ import type { UIMessage } from "ai";
 async function handleAssistantRequest(request: Request): Promise<Response> {
   try {
     const agentPkg = "@alfred/agent";
-    const adapterPkg = "@alfred/agent/assistant/src/adapter";
+    const personaPkg = "@alfred/persona";
 
-    const { analyzeContext, getPersonaInstruction } = await import(
-      /* @vite-ignore */ adapterPkg
-    );
+    const { analyzeContext } = await import(/* @vite-ignore */ "@alfred/agent/assistant/src/adapter");
+    const { buildPersonaPrompt } = await import(/* @vite-ignore */ personaPkg);
     const { getAssistantAgentDefaults } = await import(
       /* @vite-ignore */ agentPkg
     );
@@ -22,9 +21,12 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
       "assistant",
       async (messages: UIMessage[]) => {
         const result = await analyzeContext(messages);
-        const persona = getPersonaInstruction(result.domains);
+        const persona = buildPersonaPrompt({
+          modality: "text",
+          honorific: "neutral",
+        });
         return {
-          system: persona ?? undefined,
+          system: persona,
           activation: {
             domains: result.domains,
             paths: result.paths,

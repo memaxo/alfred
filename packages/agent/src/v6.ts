@@ -54,14 +54,22 @@ import { toolSession } from "./orchestrator/tool/session";
 import { toolTicket } from "./orchestrator/tool/ticket";
 import { toolWeb } from "./orchestrator/tool/web";
 
-// Base type for legacy tools - uses any for execute to maintain compatibility
-// with existing tools that have varying signatures (some wrap input, some don't)
+/**
+ * Base type for legacy tools.
+ *
+ * Uses `any` for execute signature to maintain backward compatibility with
+ * existing tools that have varying signatures (some wrap input in { input }, some don't).
+ *
+ * Type safety is enforced at the wrapper level via `wrapLegacyToolToAISDK()`.
+ * This `any` usage is justified as a migration bridge - new tools should use
+ * the AI SDK Tool type directly.
+ */
 type LegacyTool = {
   name: string;
   description: string;
   inputSchema: ZodTypeAny;
   outputSchema?: ZodTypeAny;
-  // biome-ignore lint/suspicious/noExplicitAny: Legacy tools have varying execute signatures
+  // biome-ignore lint/suspicious/noExplicitAny: Legacy migration bridge - see type comment above
   execute: (args: any) => any;
 };
 

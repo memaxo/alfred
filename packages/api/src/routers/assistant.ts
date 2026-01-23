@@ -1,10 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
+import { buildPersonaPrompt } from "@alfred/persona";
 import { buildAssistantContext } from "../ai/assistant-context";
-import { generateText, persistResult } from "../ai/generate";
+import * as generateModule from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { cloneRuntimeContext } from "../context";
+import { getHonorificPreference } from "../persona/honorific";
 import { requirePolicy } from "../gate";
 import {
   assistantGenerateDurationSeconds,
@@ -123,10 +125,16 @@ export const assistantRouter = router({
             })
           : await getModelForRole("chat", { userId });
 
+        const honorific = await getHonorificPreference(userId);
+        const baseInstructions = [
+          buildPersonaPrompt({ modality: "text", honorific }),
+          "Offer direct, actionable responses and prefer concrete steps over small talk.",
+          "Only explain tool calls when the user needs the reasoning.",
+        ].join("\n\n");
         const { systemInstruction } = await buildAssistantContext({
           messages: input.messages,
           memory: input.memory,
-          baseInstructions: String(defaults.instructions),
+          baseInstructions,
         });
 
         const modelMessages = await prepareModelMessagesForGenerate({
@@ -152,7 +160,10 @@ export const assistantRouter = router({
                 },
               }
             : {};
-        const result = await generateText({
+        // Use injected dependency or fall back to direct import
+        const generateTextFn =
+          ctx.deps?.assistant?.generateText ?? generateModule.generateText;
+        const result = await generateTextFn({
           ...defaults,
           // @ts-expect-error - AI SDK model type needs manual assertion
           model: selection.model as unknown,
@@ -165,13 +176,36 @@ export const assistantRouter = router({
         stopTimer({ status: "success" });
 
         const output = sanitizeResult(result);
-        // Persist for replay
-        const replayId = await persistResult({
+        
+        // Extract SchemaContext for GenUI enrichment
+        // Determine surface from user agent or default to "web"
+        const userAgent = ctx.runtime.userAgent ?? "";
+        let surface: "web" | "mobile" | "voice" | "tui" = "web";
+        if (
+          userAgent.includes("Mobile") ||
+          userAgent.includes("Android") ||
+          userAgent.includes("iPhone")
+        ) {
+          surface = "mobile";
+        }
+        
+        const schemaContext = {
+          userId,
+          projectId: input.projectId,
+          surface,
+          mode: "assistant" as const,
+        };
+        
+        // Persist for replay with async normalization
+        const persistResultFn =
+          ctx.deps?.assistant?.persistResult ?? generateModule.persistResult;
+        const replayId = await persistResultFn({
           userId,
           projectId: input.projectId,
           kind: "assistant",
           input,
           result: output,
+          schemaContext,
         });
         return {
           ...output,
@@ -196,6 +230,34 @@ export const assistantRouter = router({
         });
       }
       try {
+        // Use injected dependency or fall back to direct import
+        const handoffExecuteFn = ctx.deps?.assistant?.handoffExecute;
+        if (handoffExecuteFn) {
+          const runtimeExtras: [string, unknown][] = [
+            ["assistantEscalateRequirement", input.requirement],
+            ["assistantEscalateAuto", input.auto],
+          ];
+          if (input.workspace) {
+            runtimeExtras.push(["assistantEscalateWorkspace", input.workspace]);
+          }
+          if (input.repoBase) {
+            runtimeExtras.push(["assistantEscalateRepoBase", input.repoBase]);
+          }
+          const runtimeContext = cloneRuntimeContext(
+            ctx.runtimeContext,
+            runtimeExtras
+          );
+          const result = await handoffExecuteFn({
+            input: {
+              ...input,
+              userId: ctx.session.user.id,
+            },
+            runtimeContext,
+          });
+          return result;
+        }
+        
+        // Fallback to direct import
         const { toolHandoff } = await import(
           "@alfred/agent/assistant/tool/handoff"
         );

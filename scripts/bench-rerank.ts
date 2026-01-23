@@ -10,6 +10,12 @@
  *   bun scripts/bench-rerank.ts --base-url http://localhost:8200 --concurrency 4 --requests 50 --docs 20 --debug
  */
 
+import type {
+  Qwen3VLRerankDebugBatch,
+  Qwen3VLRerankDebugDoc,
+  Qwen3VLRerankResponse,
+} from "@alfred/rerank";
+
 type Args = {
   baseUrl: string;
   concurrency: number;
@@ -103,7 +109,7 @@ function usage(): string {
     "  --debug             Ask server to include stage timings in response",
     "  --profile-once      Ask server to write one cProfile dump for request #0",
     "  --multimodal-ratio  Fraction of docs with images (0..1, default: 0)",
-    "  --image             Image URL or local path (local path is converted to file://)",
+    "  --image             Image URL or local path (local path uses file://; requires RERANK_ALLOW_FILE_URLS=1 on server)",
     "  --timeout-ms        Hard timeout for the run (default: 120000)",
   ].join("\n");
 }
@@ -138,6 +144,11 @@ type StageSample = {
   multimodal_ms: number;
   sort_ms: number;
   total_ms: number;
+};
+
+type DebugExtra = {
+  textBatches: Qwen3VLRerankDebugBatch[];
+  multimodalDocs: Qwen3VLRerankDebugDoc[];
 };
 
 function toFileUrlMaybe(pathOrUrl: string): string {
@@ -191,6 +202,7 @@ async function main() {
 
   const latenciesMs: number[] = [];
   const stages: StageSample[] = [];
+  const debugExtra: DebugExtra = { textBatches: [], multimodalDocs: [] };
   const errors: string[] = [];
 
   let next = 0;
@@ -222,24 +234,22 @@ async function main() {
           const body = await response.text().catch(() => "");
           throw new Error(`http_${response.status}:${body.slice(0, 200)}`);
         }
-        const body = (await response.json()) as unknown;
+        const body = (await response.json()) as Qwen3VLRerankResponse;
         const elapsed = performance.now() - start;
         latenciesMs.push(elapsed);
 
-        if (args.debug && typeof body === "object" && body !== null) {
-          const dbg = (body as { debug?: unknown }).debug;
-          if (dbg && typeof dbg === "object") {
-            const o = dbg as Record<string, unknown>;
-            const sample: StageSample = {
-              build_query_ms: Number(o.build_query_ms ?? 0),
-              split_docs_ms: Number(o.split_docs_ms ?? 0),
-              text_only_ms: Number(o.text_only_ms ?? 0),
-              multimodal_ms: Number(o.multimodal_ms ?? 0),
-              sort_ms: Number(o.sort_ms ?? 0),
-              total_ms: Number(o.total_ms ?? 0),
-            };
-            stages.push(sample);
-          }
+        if (args.debug && body.debug) {
+          stages.push({
+            build_query_ms: body.debug.build_query_ms,
+            split_docs_ms: body.debug.split_docs_ms,
+            text_only_ms: body.debug.text_only_ms,
+            multimodal_ms: body.debug.multimodal_ms,
+            sort_ms: body.debug.sort_ms,
+            total_ms: body.debug.total_ms,
+          });
+
+          debugExtra.textBatches.push(...body.debug.text_batches);
+          debugExtra.multimodalDocs.push(...body.debug.multimodal_docs);
         }
       } catch (error) {
         const msg =
@@ -340,6 +350,33 @@ async function main() {
     console.log(`- sort_ms: ${fmt(stage("sort_ms"))}`);
     // eslint-disable-next-line no-console
     console.log(`- total_ms: ${fmt(stage("total_ms"))}`);
+
+    // Optional extended summaries if the server returned structured debug detail.
+    if (debugExtra.textBatches.length > 0) {
+      const seqLens = debugExtra.textBatches
+        .map((b) => b.seq_len)
+        .filter((v): v is number => typeof v === "number");
+      if (seqLens.length > 0) {
+        console.log(
+          `- text_batch_seq_len: avg=${mean(seqLens).toFixed(
+            1
+          )} p95=${percentile(seqLens, 0.95).toFixed(1)} max=${percentile(
+            seqLens,
+            1
+          ).toFixed(1)}`
+        );
+      }
+    }
+
+    if (debugExtra.multimodalDocs.length > 0) {
+      const ms = debugExtra.multimodalDocs.map((d) => d.ms);
+      console.log(
+        `- multimodal_doc_ms: avg=${mean(ms).toFixed(1)} p95=${percentile(
+          ms,
+          0.95
+        ).toFixed(1)} max=${percentile(ms, 1).toFixed(1)}`
+      );
+    }
   }
 
   if (failed > 0) {

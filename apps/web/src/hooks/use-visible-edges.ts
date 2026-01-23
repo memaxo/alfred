@@ -24,14 +24,6 @@ export function useEdgeVisibility(): EdgeVisibility {
 }
 
 /**
- * Get filtered edges based on current zoom level.
- * @deprecated Edge functionality removed in new type system
- */
-export function useVisibleEdges(): never[] {
-  return [];
-}
-
-/**
  * Check if edges should be visible at current zoom.
  */
 export function useShowEdges(): boolean {

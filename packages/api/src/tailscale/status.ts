@@ -188,7 +188,7 @@ export function probeTailscaleStatus(opts?: {
 
   const now = Date.now();
   if (cached && now - cached.at <= cacheMs) {
-    return cached.value;
+    return Promise.resolve(cached.value);
   }
 
   if (inFlight) {

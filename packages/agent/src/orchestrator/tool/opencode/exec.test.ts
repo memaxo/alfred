@@ -122,10 +122,12 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
     let argvSeen: string[] | undefined;
 
     const prevCerebras = process.env.CEREBRAS_API_KEY;
+    const prevOpenCodeApiKey = process.env.OPENCODE_API_KEY;
     const prevConfig = process.env.OPENCODE_CONFIG_CONTENT;
     const prevDisableAutoUpdate = process.env.OPENCODE_DISABLE_AUTOUPDATE;
 
     process.env.CEREBRAS_API_KEY = "test-key";
+    process.env.OPENCODE_API_KEY = "opencode-test-key";
     process.env.OPENCODE_CONFIG_CONTENT = '{"enabled_providers":["cerebras"]}';
     process.env.OPENCODE_DISABLE_AUTOUPDATE = "1";
 
@@ -171,6 +173,7 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
       expect(argvSeen).toBeTruthy();
       expect(argvSeen).toContain("-e");
       expect(argvSeen).toContain("CEREBRAS_API_KEY");
+      expect(argvSeen).toContain("OPENCODE_API_KEY");
       expect(argvSeen).toContain("OPENCODE_CONFIG_CONTENT");
       expect(argvSeen).toContain("OPENCODE_DISABLE_AUTOUPDATE");
     } finally {
@@ -178,6 +181,11 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
         process.env.CEREBRAS_API_KEY = undefined;
       } else {
         process.env.CEREBRAS_API_KEY = prevCerebras;
+      }
+      if (prevOpenCodeApiKey === undefined) {
+        process.env.OPENCODE_API_KEY = undefined;
+      } else {
+        process.env.OPENCODE_API_KEY = prevOpenCodeApiKey;
       }
       if (prevConfig === undefined) {
         process.env.OPENCODE_CONFIG_CONTENT = undefined;

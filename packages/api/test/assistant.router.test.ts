@@ -1,7 +1,4 @@
-// SKIP: This test uses mock.module() at the top level which causes Bun's module
-// cache pollution when run with other tests. The test passes in isolation.
-// NOTE: Refactor to use dependency injection instead of mock.module().
-import { afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import {
   getAssistantAgentDefaultsMock,
   resetAgentMocks,
@@ -13,56 +10,28 @@ import {
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
+import { createMockDeps } from "@alfred/api/deps";
 
-const SHOULD_RUN = process.env.RUN_ASSISTANT_ROUTER_TESTS === "1";
-
-if (SHOULD_RUN) {
-  setupTestEnv();
-  mockPolicyAudit();
-}
+setupTestEnv();
+mockPolicyAudit();
 
 const generateTextMock = vi.fn();
-const validateUIMessagesMock = aiStub.validateUIMessages;
-
-if (SHOULD_RUN) {
-  mock.module("@alfred/api/ai/generate", () => ({
-    generateText: generateTextMock,
-    persistResult: vi.fn().mockResolvedValue(null),
-  }));
-}
-
+const persistResultMock = vi.fn();
 const handoffExecuteMock = vi.fn();
-
-if (SHOULD_RUN) {
-  mock.module("@alfred/agent/assistant/tool/handoff", () => ({
-    toolHandoff: {
-      execute: handoffExecuteMock,
-    },
-  }));
-
-  mock.module("node-pty", () => ({
-    spawn: vi.fn(() => ({
-      on: vi.fn(),
-      kill: vi.fn(),
-      resize: vi.fn(),
-      write: vi.fn(),
-    })),
-  }));
-}
+const validateUIMessagesMock = aiStub.validateUIMessages;
 
 afterEach(() => {
   resetAllMocks();
   resetAgentMocks();
   generateTextMock.mockReset();
+  persistResultMock.mockReset();
   handoffExecuteMock.mockReset();
   validateUIMessagesMock.mockClear();
   metricsStub.assistantGenerateRequestsTotal.inc.mockClear();
   metricsStub.assistantGenerateDurationSeconds.startTimer.mockClear();
 });
 
-const describeFn = SHOULD_RUN ? describe : describe.skip;
-
-describeFn("assistant router", () => {
+describe("assistant router", () => {
   it("generates assistant completions via generateText", async () => {
     generateTextMock.mockResolvedValue({
       text: "note created",
@@ -75,6 +44,12 @@ describeFn("assistant router", () => {
 
     const caller = await createTestCaller({
       scopes: ["assistant.write", "assistant.escalate"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+          persistResult: persistResultMock,
+        },
+      }),
     });
     const result = await caller.assistant.generate({
       messages: [
@@ -132,11 +107,21 @@ describeFn("assistant router", () => {
     handoffExecuteMock.mockResolvedValue({
       ok: true,
       runId: null,
+      summary: null,
+      ticketId: null,
+      ticketUrl: null,
+      plan: null,
+      results: null,
       next: { kind: "navigate", href: "/orchestrator/run" },
     });
 
     const caller = await createTestCaller({
       scopes: ["assistant.write", "assistant.escalate"],
+      deps: createMockDeps({
+        assistant: {
+          handoffExecute: handoffExecuteMock,
+        },
+      }),
     });
     const result = await caller.assistant.escalate({
       requirement: "implement feature",
@@ -155,6 +140,11 @@ describeFn("assistant router", () => {
     expect(result).toEqual({
       ok: true,
       runId: null,
+      summary: null,
+      ticketId: null,
+      ticketUrl: null,
+      plan: null,
+      results: null,
       next: { kind: "navigate", href: "/orchestrator/run" },
     });
   });
@@ -164,6 +154,12 @@ describeFn("assistant router", () => {
 
     const caller = await createTestCaller({
       scopes: ["assistant.write", "assistant.escalate"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+          persistResult: persistResultMock,
+        },
+      }),
     });
 
     await expect(
@@ -187,6 +183,276 @@ describeFn("assistant router", () => {
       {
         status: "error",
       }
+    );
+  });
+
+  it("rejects empty messages array", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [],
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+    expect(generateTextMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid projectId UUID", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+        projectId: "not-a-uuid",
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects maxSteps below minimum", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+        maxSteps: 0,
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects maxSteps above maximum", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+        maxSteps: 13,
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects invalid memory.topK below minimum", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+        memory: {
+          semanticRecall: {
+            topK: 0,
+          },
+        },
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects invalid memory.topK above maximum", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+        memory: {
+          semanticRecall: {
+            topK: 11,
+          },
+        },
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects invalid memory.messageRange below minimum", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+        memory: {
+          semanticRecall: {
+            messageRange: -1,
+          },
+        },
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects invalid memory.messageRange above maximum", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+        memory: {
+          semanticRecall: {
+            messageRange: 11,
+          },
+        },
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects empty requirement for escalate", async () => {
+    const caller = await createTestCaller({
+      scopes: ["assistant.write", "assistant.escalate"],
+      deps: createMockDeps({
+        assistant: {
+          handoffExecute: handoffExecuteMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.escalate({
+        requirement: "",
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+    expect(handoffExecuteMock).not.toHaveBeenCalled();
+  });
+
+  it("handles generateText errors gracefully", async () => {
+    generateTextMock.mockRejectedValueOnce(new Error("API error"));
+
+    const caller = await createTestCaller({
+      scopes: ["assistant.write"],
+      deps: createMockDeps({
+        assistant: {
+          generateText: generateTextMock,
+          persistResult: persistResultMock,
+        },
+      }),
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "test" }],
+          },
+        ],
+      })
+    ).rejects.toThrow();
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      { status: "started" }
+    );
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      { status: "error" }
     );
   });
 });

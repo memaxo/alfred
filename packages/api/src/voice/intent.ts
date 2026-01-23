@@ -1,8 +1,8 @@
 /**
  * Voice intent classification for routing voice input to appropriate handlers.
  *
- * Uses LLM-first classification via @alfred/plan/classify with keyword fallback.
- * Context-aware: detects approval commands when a plan is awaiting approval.
+ * Uses LLM-first classification via @alfred/plan/classify with a minimal,
+ * state-gated heuristic fallback for unambiguous approval/rejection only.
  *
  * @see .ruler/55-llm-first-classification.md
  */
@@ -20,6 +20,15 @@ export type VoiceIntentResult =
   | { type: "status_query"; runId?: string }
   | { type: "conversational" };
 
+export type VoiceIntentMeta = {
+  heuristicFallbackUsed: boolean;
+};
+
+export type VoiceIntentClassified = {
+  result: VoiceIntentResult;
+  meta: VoiceIntentMeta;
+};
+
 /**
  * Schema for LLM classification output
  */
@@ -30,141 +39,35 @@ const voiceIntentSchema = z.object({
   workflowRequirement: z.string().optional(),
 });
 
-/**
- * Workflow intent keywords for heuristic fallback
- */
-const WORKFLOW_KEYWORDS = [
-  "build",
-  "create",
-  "implement",
-  "add",
-  "fix",
-  "refactor",
-  "update",
-  "change",
-  "modify",
-  "write",
-  "develop",
-  "make",
-  "setup",
-  "configure",
-  "deploy",
-  "migrate",
-  "upgrade",
-  "integrate",
-  "connect",
-  "enable",
-  "feature",
-  "bug",
-  "issue",
-  "component",
-  "module",
-  "service",
-  "endpoint",
-  "api",
-  "database",
-  "schema",
-  "test",
-  "tests",
-];
-
-/**
- * Approval intent keywords
- */
-const APPROVAL_KEYWORDS = [
-  "approve",
-  "approved",
-  "yes",
-  "yeah",
-  "yep",
-  "go ahead",
-  "proceed",
-  "do it",
-  "execute",
-  "run it",
-  "start",
-  "begin",
-  "let's go",
-  "sounds good",
-  "looks good",
-  "that's fine",
-  "ok",
-  "okay",
-];
-
-const REJECTION_KEYWORDS = [
-  "reject",
-  "rejected",
-  "no",
-  "nope",
-  "cancel",
-  "stop",
-  "don't",
-  "abort",
-  "nevermind",
-  "never mind",
-  "forget it",
-  "scratch that",
-  "not now",
-  "hold on",
-  "wait",
-];
-
-/**
- * Status query keywords
- */
-const STATUS_KEYWORDS = [
-  "status",
-  "progress",
-  "how's it going",
-  "update",
-  "what's happening",
-  "are you done",
-  "is it done",
-  "finished",
-  "complete",
-  "how far",
-];
+const APPROVE_FALLBACK = new Set(["approve", "approved", "yes", "yep", "yeah"]);
+const REJECT_FALLBACK = new Set(["reject", "rejected", "no", "nope", "cancel"]);
 
 /**
  * Classify voice intent using LLM with heuristic fallback.
  *
  * Context-aware classification:
  * - If awaiting approval, prioritize approval/rejection detection
- * - If executing, prioritize status queries
- * - Otherwise, detect workflow vs conversational intent
+ * - Otherwise, defer to LLM classification (or degrade safely if unavailable)
  */
 export async function classifyVoiceIntent(
   transcript: string,
   sessionContext?: VoiceWorkflowContext
-): Promise<VoiceIntentResult> {
+): Promise<VoiceIntentClassified> {
   const normalized = transcript.toLowerCase().trim();
 
-  // Fast path: if awaiting approval, check for approval/rejection first
+  // Minimal heuristic fallback: only for unambiguous approve/reject in awaiting_approval.
   if (sessionContext?.state.phase === "awaiting_approval") {
-    const approvalResult = detectApprovalIntent(normalized);
-    if (approvalResult) {
-      return approvalResult;
+    const approval = detectApprovalFallback(normalized);
+    if (approval) {
+      return { result: approval, meta: { heuristicFallbackUsed: true } };
     }
-  }
-
-  // Fast path: if executing, check for status queries
-  if (
-    sessionContext?.state.phase === "executing" &&
-    isStatusQuery(normalized)
-  ) {
-    const runId =
-      sessionContext.state.phase === "executing"
-        ? sessionContext.state.runId
-        : undefined;
-    return { type: "status_query", runId };
   }
 
   // Try LLM classification
   try {
     const llmResult = await classifyWithLLM(transcript, sessionContext);
     if (llmResult) {
-      return llmResult;
+      return { result: llmResult, meta: { heuristicFallbackUsed: false } };
     }
   } catch (error) {
     logger.warn("voice_intent_llm_failed", {
@@ -172,8 +75,8 @@ export async function classifyVoiceIntent(
     });
   }
 
-  // Fallback to heuristic classification
-  return classifyWithHeuristics(normalized);
+  // Safe degradation: do not guess with keyword forests.
+  return { result: { type: "conversational" }, meta: { heuristicFallbackUsed: false } };
 }
 
 /**
@@ -252,101 +155,21 @@ Provide a confidence score from 0 to 1.`;
 }
 
 /**
- * Detect approval or rejection intent from transcript
+ * Minimal approval/rejection fallback for awaiting_approval.
  */
-function detectApprovalIntent(normalized: string): VoiceIntentResult | null {
-  // Check rejection first (more specific)
-  for (const keyword of REJECTION_KEYWORDS) {
-    if (
-      normalized === keyword ||
-      normalized.startsWith(`${keyword} `) ||
-      normalized.includes(` ${keyword}`)
-    ) {
-      return { type: "approval", action: "reject" };
-    }
+function detectApprovalFallback(normalized: string): VoiceIntentResult | null {
+  if (REJECT_FALLBACK.has(normalized)) {
+    return { type: "approval", action: "reject" };
   }
-
-  // Check approval
-  for (const keyword of APPROVAL_KEYWORDS) {
-    if (
-      normalized === keyword ||
-      normalized.startsWith(`${keyword} `) ||
-      normalized.includes(` ${keyword}`)
-    ) {
-      return { type: "approval", action: "approve" };
-    }
+  if (APPROVE_FALLBACK.has(normalized)) {
+    return { type: "approval", action: "approve" };
   }
-
   return null;
-}
-
-/**
- * Check if transcript is a status query
- */
-function isStatusQuery(normalized: string): boolean {
-  return STATUS_KEYWORDS.some(
-    (keyword) => normalized === keyword || normalized.includes(keyword)
-  );
-}
-
-/**
- * Heuristic-based intent classification fallback
- */
-function classifyWithHeuristics(normalized: string): VoiceIntentResult {
-  // Check for status query
-  if (isStatusQuery(normalized)) {
-    return { type: "status_query" };
-  }
-
-  // Check for workflow keywords
-  // Threshold of 0.5 means: starting with a workflow keyword OR having 1+ keyword
-  const workflowScore = calculateWorkflowScore(normalized);
-  if (workflowScore >= 0.5) {
-    return {
-      type: "workflow",
-      confidence: workflowScore,
-      requirement: normalized,
-    };
-  }
-
-  // Default to conversational
-  return { type: "conversational" };
-}
-
-/**
- * Calculate workflow intent score based on keyword matching
- */
-function calculateWorkflowScore(normalized: string): number {
-  const words = normalized.split(/\s+/);
-  let matchCount = 0;
-
-  for (const word of words) {
-    if (WORKFLOW_KEYWORDS.includes(word)) {
-      matchCount++;
-    }
-  }
-
-  // Strong boost if the sentence starts with a workflow keyword (imperative command)
-  const firstWord = words[0];
-  if (firstWord && WORKFLOW_KEYWORDS.includes(firstWord)) {
-    matchCount += 1.0;
-  }
-
-  // Calculate score: more matches = higher confidence
-  // Max out at 1.0 for 2+ keyword matches (adjusted for voice UX)
-  return Math.min(1.0, matchCount / 2);
 }
 
 /**
  * Export for testing
  */
 export const _internal = {
-  detectApprovalIntent,
-  isStatusQuery,
-  classifyWithHeuristics,
-  calculateWorkflowScore,
-  WORKFLOW_KEYWORDS,
-  APPROVAL_KEYWORDS,
-  REJECTION_KEYWORDS,
-  STATUS_KEYWORDS,
+  detectApprovalFallback,
 };

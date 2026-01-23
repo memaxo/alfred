@@ -23,6 +23,7 @@ import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiOrchestratorRouteImport } from './routes/api/orchestrator'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
+import { Route as ApiGenuiRouteImport } from './routes/api/genui'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
 import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
@@ -118,6 +119,11 @@ const ApiOrchestratorRoute = ApiOrchestratorRouteImport.update({
 const ApiMetricsRoute = ApiMetricsRouteImport.update({
   id: '/api/metrics',
   path: '/api/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenuiRoute = ApiGenuiRouteImport.update({
+  id: '/api/genui',
+  path: '/api/genui',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssistantRoute = ApiAssistantRouteImport.update({
@@ -277,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/assistant': typeof ApiAssistantRouteWithChildren
+  '/api/genui': typeof ApiGenuiRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
@@ -318,6 +325,7 @@ export interface FileRoutesByTo {
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/assistant': typeof ApiAssistantRouteWithChildren
+  '/api/genui': typeof ApiGenuiRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
@@ -362,6 +370,7 @@ export interface FileRoutesById {
   '/_protected/timer': typeof ProtectedTimerRoute
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/assistant': typeof ApiAssistantRouteWithChildren
+  '/api/genui': typeof ApiGenuiRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/timer'
     | '/voice-s2s'
     | '/api/assistant'
+    | '/api/genui'
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/timer'
     | '/voice-s2s'
     | '/api/assistant'
+    | '/api/genui'
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/_protected/timer'
     | '/_protected/voice-s2s'
     | '/api/assistant'
+    | '/api/genui'
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
@@ -527,6 +539,7 @@ export interface RootRouteChildren {
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
   ApiAssistantRoute: typeof ApiAssistantRouteWithChildren
+  ApiGenuiRoute: typeof ApiGenuiRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiOrchestratorRoute: typeof ApiOrchestratorRouteWithChildren
   ApiSearchRoute: typeof ApiSearchRoute
@@ -639,6 +652,13 @@ declare module '@tanstack/react-router' {
       path: '/api/metrics'
       fullPath: '/api/metrics'
       preLoaderRoute: typeof ApiMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/genui': {
+      id: '/api/genui'
+      path: '/api/genui'
+      fullPath: '/api/genui'
+      preLoaderRoute: typeof ApiGenuiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assistant': {
@@ -942,6 +962,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotwellKnownOauthProtectedResourceRoute:
     DotwellKnownOauthProtectedResourceRoute,
   ApiAssistantRoute: ApiAssistantRouteWithChildren,
+  ApiGenuiRoute: ApiGenuiRoute,
   ApiMetricsRoute: ApiMetricsRoute,
   ApiOrchestratorRoute: ApiOrchestratorRouteWithChildren,
   ApiSearchRoute: ApiSearchRoute,

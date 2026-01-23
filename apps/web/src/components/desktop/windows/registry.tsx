@@ -50,6 +50,7 @@ import { ComponentsAppWindow } from "@/components/apps/components";
 import { CortexAppWindow } from "@/components/apps/cortex";
 import { DockerAppWindow } from "@/components/apps/docker";
 import { FilesAppWindow } from "@/components/apps/files";
+import { FocusAppWindow } from "@/components/apps/focus";
 import { InboxAppWindow } from "@/components/apps/inbox";
 import { KnowledgeAppWindow } from "@/components/apps/knowledge";
 import { LearningAppWindow } from "@/components/apps/learning";
@@ -143,6 +144,20 @@ export const windowRegistry: Record<string, WindowRegistryEntry> = {
       icon: Target,
       defaultSize: { width: 650, height: 550 },
       minSize: { width: 450, height: 350 },
+      resizable: true,
+      singleton: true,
+      tier: "primary",
+    },
+    isLegacy: false,
+  },
+  focus: {
+    type: "focus",
+    component: FocusAppWindow,
+    metadata: {
+      label: "Focus",
+      icon: Target,
+      defaultSize: { width: 780, height: 560 },
+      minSize: { width: 500, height: 420 },
       resizable: true,
       singleton: true,
       tier: "primary",

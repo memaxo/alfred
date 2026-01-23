@@ -47,6 +47,7 @@ export type WindowType =
   | "settings"
   | "components"
   | "workingset"
+  | "focus"
   | "notes"
   | "reminders"
   | "todos"
@@ -545,6 +546,10 @@ export const WINDOW_DEFAULTS: Record<
   workingset: {
     minSize: { width: 450, height: 350 },
     defaultBounds: { x: 140, y: 110, width: 650, height: 550 },
+  },
+  focus: {
+    minSize: { width: 500, height: 420 },
+    defaultBounds: { x: 110, y: 80, width: 780, height: 560 },
   },
   notes: {
     minSize: { width: 300, height: 300 },
