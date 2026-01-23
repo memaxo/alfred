@@ -148,6 +148,35 @@ Plans can be approved either:
 
 The voice session stores the `runId` and `planId` so both approval methods work with the same plan.
 
+## GenUI + `assistant_message.raw` contract (lock-in)
+
+Voice can carry rich UI payloads via the existing voice streaming protocol:
+
+- **Carrier**: `VoiceStreamServerEvent` with `_: "assistant_message"` and `raw`
+- **Canonical payload**: `VoiceAssistantRaw`
+  - `uiMessages: UIMessage[]` (AI SDK v6 shape, validated by `uiMessageSchema`)
+  - `meta?: { runId?: string; planId?: string; ... }`
+
+Implementation anchors:
+
+- **Type + schema**: `packages/type/src/voice.ts`, `packages/type/src/voice.zod.ts`
+- **Validation helper**: `parseVoiceAssistantRaw()` in `@alfred/type/voice.zod`
+- **Voice workflow emission**: `packages/api/src/voice/workflow-handler.ts`
+- **Transport forwarding (validated)**:
+  - WS: `packages/voice/src/server/socket.ts`
+  - WebRTC: `packages/api/src/voice/webrtcsession.ts`
+
+### Web UX
+
+- **Parse + expose**: `apps/web/src/hooks/use-voice-protocol.ts` and `use-voice-webrtc-protocol.ts`
+- **Deep link**: `apps/web/src/hooks/use-voice-session-web.ts` opens/focuses the Workflow window when `raw.meta.runId` is present (only when the desktop is in mindscape mode).
+- **Workflow window GenUI**: `apps/web/src/components/windows/workflow/workflow-window.tsx` renders a GenUI timeline/plan panel driven by `runId` + steps/plan.
+
+### Native / Drive
+
+- **Parse + expose**: `apps/native/lib/voice/session.ts` stores `assistantRaw` + `workflow` on `assistant_message`.
+- **Drive card**: `apps/native/app/(drawer)/(tabs)/drive.tsx` shows a minimal “Workflow ready” card and links to the workflow details screen.
+
 ## Technical Details
 
 ### Intent Classification
@@ -198,6 +227,19 @@ Structured plans are converted to natural language optimized for TTS:
 | `packages/api/src/voice/preferences.ts` | Preference types and loader |
 | `packages/api/src/voice/notifier.ts` | WebSocket notifications |
 | `packages/api/src/voice/assistant.ts` | Entry point with routing |
+
+## Debugging
+
+- **No `raw` arriving on clients**: confirm the server validates and forwards `assistant_message.raw`:
+  - WS: `packages/voice/src/server/socket.ts` logs `voice_assistant_raw_invalid` when payload fails validation
+  - WebRTC: `packages/api/src/voice/webrtcsession.ts` logs `voice_assistant_raw_invalid` when payload fails validation
+- **Workflow window not opening from voice (web)**: deep-linking is gated to mindscape (`isSpaceMode`). Ensure the desktop shell is active.
+
+## Tests
+
+- **Contract (fast)**: `packages/type/test/voice.test.ts`
+- **Workflow window GenUI (Playwright)**: `apps/web/.tests/voice-genui-workflow-window.e2e.spec.ts`
+- **Live AI opt-in**: `packages/api/test/integration/workflow-pipeline.live-ai.integration.test.ts` (skipped unless `ALFRED_TEST_LIVE_AI=1`)
 
 ## Limitations
 
