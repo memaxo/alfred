@@ -1,0 +1,30 @@
+name: Pipeline Critical
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *" # daily at 4am
+
+concurrency:
+  group: pipeline-critical-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pipeline-critical:
+    name: Pipeline Critical
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.3.5"
+      - uses: rharkor/caching-for-turbo@v1.7
+      - run: bun install --frozen-lockfile
+      - name: Run pipeline critical suite
+        run: bun run test:pipeline:critical
+
