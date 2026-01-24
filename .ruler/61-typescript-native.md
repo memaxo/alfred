@@ -6,4 +6,4 @@
 4. **Relative paths.** All values in `paths` must be relative paths (starting with `./` or `../`). Non-relative paths are forbidden.
 5. **Wildcard mapping.** When using `paths`, ensure a wildcard mapping `"*": ["./*"]` exists if root resolution is needed.
 6. **Composite projects.** Maintain the composite project structure using `references` in `tsconfig.json`.
-7. **Typecheck command.** The canonical typecheck command is `tsgo -b`.
+7. **Typecheck command.** The canonical typecheck command is `bun run typecheck`.
