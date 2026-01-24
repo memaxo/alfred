@@ -1,6 +1,6 @@
 import "@/test/dom";
-import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 
 // Mocking UI components often fixes complex JSDOM/React-DOM interaction issues in Bun
 mock.module("@/components/ui/button", () => ({

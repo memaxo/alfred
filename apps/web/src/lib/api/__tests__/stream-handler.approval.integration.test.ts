@@ -1,5 +1,5 @@
-import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
+
 import {
   convertToModelMessages,
   parseJsonEventStream,
@@ -8,6 +8,7 @@ import {
   tool,
   uiMessageChunkSchema,
 } from "ai";
+import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import { z } from "zod";
 
 mock.module("@alfred/api/metrics", () => ({

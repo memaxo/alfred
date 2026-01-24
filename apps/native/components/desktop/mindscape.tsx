@@ -10,8 +10,10 @@ import { useMemo, useRef } from "react";
 import { useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated from "react-native-reanimated";
-import { useDesktopStore } from "@/store/desktop";
+
 import type { WindowType } from "@/store/desktop.types";
+
+import { useDesktopStore } from "@/store/desktop";
 import { useMindscapeStore } from "@/store/mindscape";
 
 function clamp(n: number, min: number, max: number) {

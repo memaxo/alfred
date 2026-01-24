@@ -1,5 +1,7 @@
 "use client";
 
+import type { ComponentProps, ReactNode } from "react";
+
 // import type { ToolUIPart } from "ai";
 import {
   CheckCircleIcon,
@@ -9,8 +11,8 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
 import { isValidElement, useEffect } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/collapsible";
 import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
 import { cn } from "@/lib/utils";
+
 import { CodeBlock } from "./code-block";
 
 // Define standard state type internally since AI SDK v6 handles this via hooks

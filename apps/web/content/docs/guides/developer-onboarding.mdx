@@ -37,24 +37,34 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
 2. **Configure environment:**
    \`\`\`bash
    cp config/env.example .env
+
    # Generate auth keys
+
    bun scripts/gen-keys.ts >> .env
+
    # Edit .env and set:
+
    # - OPENAI_API_KEY (required for AI features)
+
    # - DATABASE_URL (default: postgresql://alfred:alfred@localhost:5432/alfred)
+
    \`\`\`
 
 3. **Start database:**
    \`\`\`bash
+
    # Ensure Docker is running (verify with: docker ps)
-   bun run db:start       # Starts Postgres with pgvector
+
+   bun run db:start # Starts Postgres with pgvector
+
    # Wait a few seconds for database to be ready, then:
-   bun run db:migrate     # Applies migrations
+
+   bun run db:migrate # Applies migrations
    \`\`\`
 
 4. **Start development server:**
    \`\`\`bash
-   bun run dev            # Starts web app + API
+   bun run dev # Starts web app + API
    \`\`\`
 
 5. **Verify setup:**
@@ -68,26 +78,34 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
 ### Running Tests
 
 \`\`\`bash
+
 # All tests
+
 bun run test
 
 # Specific package
+
 bun run --filter @alfred/<package> test
 
 # Integration tests (requires Postgres)
+
 bun run test:integration
 
 # SQLite fallback (fast, no DB required)
+
 bun run test:sqlite
 \`\`\`
 
 ### Type Checking
 
 \`\`\`bash
+
 # Solution-style typecheck across all packages
+
 bun run typecheck
 
 # Specific package
+
 cd packages/<package>
 bun run typecheck
 \`\`\`
@@ -95,26 +113,34 @@ bun run typecheck
 ### Database Operations
 
 \`\`\`bash
+
 # Start Postgres
+
 bun run db:start
 
 # Apply migrations
+
 bun run db:migrate
 
 # Open Drizzle Studio
+
 bun run db:studio
 
 # Stop Postgres
+
 bun run db:stop
 \`\`\`
 
 ### Code Quality
 
 \`\`\`bash
+
 # Lint and format (Biome)
+
 bun run check
 
 # Apply fixes automatically
+
 bun run check --write
 \`\`\`
 
@@ -144,6 +170,7 @@ User Request → tRPC Router → WorkflowRuntime → AI SDK → Tools → Events
 ### Cognitive Loop Integration
 
 Voice/chat inputs feed into `runCognitiveLoop` which:
+
 1. Loads state from events/snapshots
 2. Applies pure state transitions
 3. Emits effects (generate_response, etc.)
@@ -157,13 +184,17 @@ When verifying if an ExecPlan is complete:
 
 1. **Search for implementation:**
    \`\`\`bash
+
    # Find files
+
    fd "pattern" packages/
-   
+
    # Search codebase
+
    rg "functionName" packages/
-   
+
    # Semantic search
+
    codebase_search "What does X do?" target_directories: ["packages/"]
    \`\`\`
 
@@ -185,16 +216,21 @@ When verifying if an ExecPlan is complete:
 ### Common Search Patterns
 
 \`\`\`bash
+
 # Find function definitions
+
 rg "export (function|const|class) functionName"
 
 # Find usages
+
 rg "functionName\("
 
 # Find imports
+
 rg "from.*package.*functionName"
 
 # Find tests
+
 fd "*test.ts" packages/
 rg "describe.*featureName"
 \`\`\`
@@ -233,6 +269,7 @@ See `docs/guides/verification-patterns.md` for detailed verification workflow.
 ### Common Issues
 
 **Docker/Database connection errors:**
+
 - Verify Docker is running: `docker ps`
 - Verify Postgres is running: `bun run db:start`
 - Check `DATABASE_URL` in `.env` matches container settings (default: `postgresql://alfred:alfred@localhost:5432/alfred`)
@@ -240,24 +277,29 @@ See `docs/guides/verification-patterns.md` for detailed verification workflow.
 - If Docker is not installed, install Docker Desktop or Docker CLI
 
 **Missing environment variables:**
+
 - Generate `BETTER_AUTH_SECRET`: `bun scripts/gen-keys.ts >> .env`
 - Set `OPENAI_API_KEY` in `.env` (required for AI features)
 - Verify all required keys are set: `grep -E "(BETTER_AUTH_SECRET|OPENAI_API_KEY|DATABASE_URL)" .env`
 
 **Build failures:**
+
 - Run `bun run verify-build` to check for server code leakage
 - Check `apps/web/vite.config.ts` for `ssr.external` entries
 
 **Type errors:**
+
 - Run `bun run typecheck` to see all errors
 - Check `tsconfig.base.json` for path aliases
 
 **Test failures:**
+
 - Check if `DATABASE_URL` is set (for Postgres tests)
 - Verify `RUN_DB_TESTS=1` for DB suites
 - Use `bun run test:sqlite` for fast SQLite fallback
 
 **Voice/embed features not working:**
+
 - Install UV: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - Install voice dependencies: `cd packages/voice && bun run setup`
 - Install embed dependencies: `cd packages/embed && bun run install-deps`
@@ -270,4 +312,3 @@ See `docs/guides/troubleshooting.md` for more detailed troubleshooting.
 - Review [Development Rules](../../.ruler/)
 - Check [PRD](../alfred-prd.md) for feature status
 - Explore [ExecPlans](../execplans/) for implementation details
-

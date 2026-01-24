@@ -116,16 +116,16 @@ jest.mock("@shopify/react-native-skia", () => ({
   LinearGradient: "LinearGradient",
   RadialGradient: "RadialGradient",
   vec: (x: number, y: number) => ({ x, y }),
-  // biome-ignore lint/suspicious/noExplicitAny: mock
+  // oxlint-disable noExplicitAny: mock
   useValue: (v: any) => ({ current: v }),
-  // biome-ignore lint/suspicious/noExplicitAny: mock
+  // oxlint-disable noExplicitAny: mock
   useComputedValue: (f: any) => ({ current: f() }),
   useClock: () => ({ value: 0 }),
   useClockValue: () => ({ current: 0 }),
   runTiming: jest.fn(),
   Easing: {
     linear: (t: number) => t,
-    // biome-ignore lint/suspicious/noExplicitAny: mock
+    // oxlint-disable noExplicitAny: mock
     inOut: (f: any) => f,
   },
   Skia: {

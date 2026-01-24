@@ -3,7 +3,9 @@
  */
 
 import type { SubscriptionEvent, SubscriptionState } from "@alfred/type";
+
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { subscriptionManager } from "./manager";
 
 type UseSubscriptionOptions = {

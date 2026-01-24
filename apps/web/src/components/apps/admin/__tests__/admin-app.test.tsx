@@ -1,12 +1,14 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { fireEvent, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { useDesktopStore } from "@/store/desktop";
 import {
   createTestQueryClient,
   createTestTrpcClient,
   renderRoute,
 } from "@/test/render-route";
+
 import { AdminApp } from "../index";
 
 const mockPerformanceStats = {

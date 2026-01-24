@@ -11,14 +11,18 @@
 "use client";
 
 import { type ComponentType, useCallback } from "react";
-import { useDesktopStore } from "@/store/desktop";
+
 import type { WindowData, WindowInstance } from "@/store/desktop/types.new";
-import { detectZoneFromPosition } from "../tiling/utils";
+
+import { useDesktopStore } from "@/store/desktop";
+
 import type {
   LegacyNodeProps,
   ResizeDirection,
   WindowComponentProps,
 } from "./types";
+
+import { detectZoneFromPosition } from "../tiling/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ADAPTER: Legacy → New Props

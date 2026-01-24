@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { useAuthClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 

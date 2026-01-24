@@ -1,5 +1,6 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import type { ComponentProps } from "react";
+
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Pressable } from "react-native";
 
 const HEADER_ICON_SIZE = 20;

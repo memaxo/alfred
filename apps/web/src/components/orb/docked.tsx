@@ -5,8 +5,10 @@
  */
 
 import { useState } from "react";
+
 import { cn } from "@/lib/utils";
 import { useOrbStore } from "@/store/orb";
+
 import { OrbCore } from "./core";
 import { QuickActions } from "./quick-actions";
 

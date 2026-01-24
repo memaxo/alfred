@@ -4,10 +4,12 @@
  * Shows voice pool processes and latency metrics using the new Table component.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterOutputs } from "@trpc/server";
+
+import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle, Monitor, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Card,

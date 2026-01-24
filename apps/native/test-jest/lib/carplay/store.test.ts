@@ -5,13 +5,15 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
-import { useCarPlayStore } from "../../../lib/carplay/store";
+
 import type {
   Escalation,
   ExecPlan,
   PullRequest,
   WorkflowState,
 } from "../../../lib/carplay/types";
+
+import { useCarPlayStore } from "../../../lib/carplay/store";
 
 describe("CarPlay Store", () => {
   beforeEach(() => {

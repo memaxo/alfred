@@ -1,7 +1,8 @@
-import { describe, expect, it, mock } from "bun:test";
+import { fireEvent, render } from "@testing-library/react";
+
 import "../../test/testing-library";
 import "../../test/reset-mocks";
-import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, it, mock } from "bun:test";
 
 mock.module("@/components/ui/dialog", () => {
   const React = require("react");
@@ -23,8 +24,10 @@ mock.module("@/components/ui/dialog", () => {
 });
 
 import type { inferRouterOutputs } from "@trpc/server";
-import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
+
 import type { TRPCAppRouter } from "@/utils/trpc";
+
+import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
 
 type WorkflowRun =
   inferRouterOutputs<TRPCAppRouter>["workflow"]["listRuns"][number];

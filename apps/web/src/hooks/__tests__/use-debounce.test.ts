@@ -1,6 +1,7 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { describe, expect, it } from "bun:test";
+
 import { useDebounce } from "../use-debounce";
 
 function sleep(ms: number): Promise<void> {

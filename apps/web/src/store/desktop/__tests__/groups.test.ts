@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { create } from "zustand";
+
+import type { DesktopState } from "../types.new";
+
 import { createCacheSlice } from "../cache";
 import { createContextSlice } from "../context";
 import { createGroupSlice } from "../groups";
 import { createKnowledgeSlice } from "../knowledge";
 import { createTaskbarSlice } from "../taskbar";
 import { createTilingSlice } from "../tiling";
-import type { DesktopState } from "../types.new";
 import { createViewportSliceNew } from "../viewport.new";
 import { createWindowSliceNew } from "../windows.new";
 

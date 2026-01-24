@@ -1,7 +1,9 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { fireEvent, render } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import type { TerminalProfile } from "@/store/terminal";
+
 import { ProfileDialog } from "../profile-dialog";
 
 describe("ProfileDialog", () => {

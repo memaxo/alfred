@@ -1,8 +1,11 @@
-import { queryCollectionOptions } from "@tanstack/query-db-collection";
-import { createCollection, createOptimisticAction } from "@tanstack/react-db";
 import type { QueryClient } from "@tanstack/react-query";
 import type { inferRouterClient } from "@trpc/client";
+
+import { queryCollectionOptions } from "@tanstack/query-db-collection";
+import { createCollection, createOptimisticAction } from "@tanstack/react-db";
+
 import type { TRPCAppRouter } from "@/utils/trpc";
+
 import type { TodoResource } from "./schemas";
 
 type TodoInput = {

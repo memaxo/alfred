@@ -5,12 +5,14 @@ import type {
   VoiceStreamServerEvent,
   VoiceStreamSurface,
 } from "@alfred/type/voice";
-import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
 import type {
   VoiceStreamClient,
   VoiceStreamClientHandlers,
 } from "@alfred/voice/stream";
+
+import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { getVoiceStreamUrl } from "@/utils/voice-stream";
 
 export type VoiceProtocolState = {

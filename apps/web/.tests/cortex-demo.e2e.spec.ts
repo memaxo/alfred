@@ -14,6 +14,7 @@
  */
 
 import { test as base, expect } from "@playwright/test";
+
 import { signUpTestUser } from "./helpers/auth";
 import {
   createFlowCapture,

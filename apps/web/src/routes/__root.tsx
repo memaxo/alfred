@@ -1,6 +1,7 @@
+import type { QueryClient } from "@tanstack/react-query";
+
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { formDevtoolsPlugin } from "@tanstack/react-form-devtools";
-import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
   createRootRouteWithContext,
@@ -12,11 +13,13 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
+
 import { AlfredDesktopDevtoolsPanel } from "@/components/desktop/devtools-panel";
 import { type JarvisHUDConfig, JarvisHUDProvider } from "@/components/hud";
 import Loader from "@/components/loader";
 import { Toaster } from "@/components/ui/sonner";
 import { useJarvisTts } from "@/hooks/use-jarvis-tts";
+
 import Header from "../components/header";
 import appCss from "../index.css?url";
 
@@ -123,20 +126,20 @@ function RootDocument() {
         formDevtoolsPlugin(),
         {
           name: "Router",
-          // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires render property with incompatible type
+          // oxlint-disable noExplicitAny: TanStackDevtools requires render property with incompatible type
           render: TanStackRouterDevtoolsPanel as any,
         },
         {
           name: "Query",
-          // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires render property with incompatible type
+          // oxlint-disable noExplicitAny: TanStackDevtools requires render property with incompatible type
           render: ReactQueryDevtoolsPanel as any,
         },
         {
           name: "Desktop",
-          // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires render property with incompatible type
+          // oxlint-disable noExplicitAny: TanStackDevtools requires render property with incompatible type
           render: AlfredDesktopDevtoolsPanel as any,
         },
-        // biome-ignore lint/suspicious/noExplicitAny: TanStackDevtools requires array with incompatible type
+        // oxlint-disable noExplicitAny: TanStackDevtools requires array with incompatible type
       ] as any,
     []
   );

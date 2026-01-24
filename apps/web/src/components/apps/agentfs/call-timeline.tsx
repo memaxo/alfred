@@ -5,9 +5,11 @@
  */
 
 import { File, FolderPlus, Loader2, Pencil, Trash2 } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import type { Workspace } from "./index";
 
 type CallTimelineProps = {

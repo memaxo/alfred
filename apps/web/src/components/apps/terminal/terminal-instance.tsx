@@ -6,11 +6,13 @@
  * Full XTerm integration with backend terminal session support.
  */
 
-import { useEffect, useRef, useState } from "react";
 import type { Terminal } from "xterm";
 import type { FitAddon } from "xterm-addon-fit";
+
+import { useEffect, useRef, useState } from "react";
 import "xterm/css/xterm.css";
 import { toast } from "sonner";
+
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 

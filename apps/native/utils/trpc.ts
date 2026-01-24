@@ -1,4 +1,5 @@
 import type { appRouter } from "@alfred/api/src/routers/index";
+
 import { QueryClient } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";

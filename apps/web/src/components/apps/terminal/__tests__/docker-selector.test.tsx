@@ -1,8 +1,10 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, type Mock, vi } from "bun:test";
+import type { ReactNode } from "react";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, type Mock, vi } from "bun:test";
+
 import { trpc } from "@/utils/trpc";
 
 const mockRefetch = vi.fn();

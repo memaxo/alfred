@@ -6,6 +6,7 @@
 
 import { Maximize2, Pin, PinOff, Plus, Settings } from "lucide-react";
 import { useCallback, useMemo } from "react";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Chart } from "@/components/chart";
 import { Grid } from "@/components/grid";
@@ -15,6 +16,7 @@ import { Toolbar } from "@/components/toolbar";
 import { Button } from "@/components/ui/button";
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
+
 import type { Metric } from "./index";
 
 export function DashboardBuilder() {

@@ -15,6 +15,7 @@ import {
   Image,
   Trash2,
 } from "lucide-react";
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
 import type { FileItem } from "./index";
 
 type FileGridProps = {

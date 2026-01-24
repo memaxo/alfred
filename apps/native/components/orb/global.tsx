@@ -5,9 +5,12 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+
+import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { useTrpcClient } from "@/lib/api";
 import { useVoiceSessionNative } from "@/lib/voice/session";
-import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { ORB_SIZES, ORB_STATES, Orb, type OrbState } from "./index";
 
 type OrbLayout = "docked" | "floating" | "expanded";

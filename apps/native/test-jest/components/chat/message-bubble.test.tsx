@@ -1,4 +1,5 @@
 import { MessageBubble } from "@/components/chat/message-bubble";
+
 import { createMockMessage } from "../../utils/mock-factories";
 import { renderWithProviders } from "../../utils/test-helpers";
 

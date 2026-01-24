@@ -3,6 +3,9 @@
 import { MessageSquare } from "lucide-react";
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { WindowInstance, WindowType } from "@/store/desktop/types.new";
+
 import {
   getWindowIcon,
   getWindowLabel,
@@ -21,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowInstance, WindowType } from "@/store/desktop/types.new";
+
 import { WindowPreview } from "./window-preview";
 
 type TaskbarButtonProps = {

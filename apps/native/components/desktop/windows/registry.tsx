@@ -1,5 +1,9 @@
 import type { ComponentType } from "react";
+
 import type { WindowType } from "@/store/desktop.types";
+
+import type { WindowComponentProps } from "./types";
+
 import { AdminWindow } from "./admin";
 import { AgentfsWindow } from "./agentfs";
 import { AgentsWindow } from "./agents";
@@ -34,7 +38,6 @@ import { TerminalWindow } from "./terminal";
 import { TimersWindow } from "./timers";
 import { TodosWindow } from "./todos";
 import { TuneWindow } from "./tune";
-import type { WindowComponentProps } from "./types";
 import { VisualWindow } from "./visual";
 import { WorkflowWindow } from "./workflow";
 import { WorkflowlistWindow } from "./workflowlist";

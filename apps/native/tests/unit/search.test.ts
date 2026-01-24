@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { fuzzySearch } from "../../lib/search";
 
 describe("search utilities", () => {

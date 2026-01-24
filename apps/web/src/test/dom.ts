@@ -84,7 +84,7 @@ type GlobalWithImage = typeof globalThis & {
   Image?: typeof Image;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: Test stub requires this to mimic browser Image constructor
+// oxlint-disable noExplicitAny: Test stub requires this to mimic browser Image constructor
 const ImageStub = function (this: any) {
   this.src = "";
   this.width = 0;
@@ -123,7 +123,8 @@ type GlobalWithCanvas = typeof globalThis & {
 const CanvasElementCtor =
   (window as unknown as WindowWithCanvas).HTMLCanvasElement ??
   (globalThis as GlobalWithCanvas).HTMLCanvasElement ??
-  (class CanvasElement extends window.HTMLElement {} as typeof HTMLCanvasElement);
+  (class CanvasElement
+    extends window.HTMLElement {} as typeof HTMLCanvasElement);
 
 (globalThis as GlobalWithCanvas).HTMLCanvasElement = CanvasElementCtor;
 (window as unknown as WindowWithCanvas).HTMLCanvasElement = CanvasElementCtor;

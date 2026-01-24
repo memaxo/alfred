@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
+
 import { getLayoutStorageSize } from "@/lib/desktop/performance";
 
 type StorageInfo = {

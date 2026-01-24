@@ -1,7 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { QueryClient } from "@tanstack/react-query";
 import type { inferRouterClient } from "@trpc/client";
+
+import { QueryClient } from "@tanstack/react-query";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+
 import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { createNoteCollection } from "../note";
 
 // Mock tRPC client - typed to match the expected interface

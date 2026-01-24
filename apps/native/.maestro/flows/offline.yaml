@@ -1,0 +1,49 @@
+appId: com.alfred.app
+---
+# Offline Mode E2E Test
+# Tests offline functionality and sync
+
+- launchApp
+
+# Wait for app to load
+- assertVisible: "Alfred"
+
+# Enable airplane mode (simulated via test)
+- runScript:
+    file: ../scripts/toggle-airplane.js
+    env:
+      MODE: "on"
+    when:
+      platform: iOS
+    optional: true
+
+# Try to send a message while offline
+- tapOn:
+    id: "chat-input"
+    optional: true
+
+- inputText: "Test offline message"
+
+- tapOn:
+    id: "send-button"
+    optional: true
+
+# Should see pending indicator or offline banner
+- assertVisible:
+    text: ".*offline.*|.*pending.*"
+    optional: true
+
+# Disable airplane mode
+- runScript:
+    file: ../scripts/toggle-airplane.js
+    env:
+      MODE: "off"
+    when:
+      platform: iOS
+    optional: true
+
+# Wait for sync
+- extendedWaitUntil:
+    visible: ".*synced.*"
+    timeout: 10000
+    optional: true

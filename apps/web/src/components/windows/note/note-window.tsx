@@ -1,12 +1,15 @@
+import type { NodeProps } from "@xyflow/react";
+
 import { useLiveQuery } from "@tanstack/react-db";
 import { useStore } from "@tanstack/react-form";
-import type { NodeProps } from "@xyflow/react";
 import { FileText, Loader2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useNoteCollection } from "@/collections";
+
 import type { NoteResource } from "@/collections/schemas";
+
+import { useNoteCollection } from "@/collections";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,6 +1,7 @@
 "use client";
 
 import type { inferRouterOutputs } from "@trpc/server";
+
 import {
   Activity,
   AlertTriangle,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,8 +1,11 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
 import type { ThreadItem } from "@alfred/protocol";
+
 import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, it } from "bun:test";
+
 import { mockThreadItems } from "@/lib/codex/__tests__/test-harness";
+
 import { ThreadItemList, ThreadItemView } from "../thread-items";
 
 describe("ThreadItemView", () => {

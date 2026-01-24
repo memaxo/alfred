@@ -16,6 +16,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import type { RemindRouterOutputs } from "@/utils/trpc-types";
+
 import { Container } from "@/components/container";
 import { ListSkeleton } from "@/components/loading-skeleton";
 import {
@@ -30,7 +33,6 @@ import {
   type SortOption,
   sortFunctions,
 } from "@/lib/search";
-import type { RemindRouterOutputs } from "@/utils/trpc-types";
 
 type ReminderItem = RemindRouterOutputs["list"][number];
 

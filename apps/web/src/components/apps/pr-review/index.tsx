@@ -16,10 +16,13 @@
 
 import { GitPullRequest, RefreshCw } from "lucide-react";
 import { useCallback, useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import { DiffPanel } from "./diff-panel";
 import { MergeControls } from "./merge-controls";
 import { PRDetail } from "./pr-detail";

@@ -5,8 +5,8 @@
  */
 
 import "@/test/dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 // Mock localStorage
 const localStorageMock = (() => {

@@ -2,6 +2,7 @@
 
 import { Activity, Battery, Flame, type LucideIcon, Zap } from "lucide-react";
 import { useId, useMemo } from "react";
+
 import { Number as SlidingNumber } from "@/components/number";
 import { useCognitivePhysiology } from "@/hooks/use-cognitive-physiology";
 import { cn } from "@/lib/utils";

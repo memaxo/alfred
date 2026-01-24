@@ -131,6 +131,18 @@ const DrawerLayout = () => {
           drawerItemStyle: { display: "none" },
         }}
       />
+      <Drawer.Screen
+        name="library"
+        options={{
+          headerShown: false,
+          drawerLabel: "Library",
+          drawerIcon: ({ size, color }) => (
+            <Ionicons color={color} name="library-outline" size={size} />
+          ),
+          // Hide from drawer - accessed via tabs
+          drawerItemStyle: { display: "none" },
+        }}
+      />
     </Drawer>
   );
 };

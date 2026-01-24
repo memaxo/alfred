@@ -18,10 +18,13 @@
 
 import { PanelLeft, PanelRight } from "lucide-react";
 import { useCallback, useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { cn } from "@/lib/utils";
+
 import { AgentSelector } from "./agent-selector";
 import { ContextPanel } from "./context-panel";
 import { InputArea } from "./input-area";

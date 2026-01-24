@@ -1,4 +1,5 @@
 import type { createAuthClient } from "better-auth/react";
+
 import { useAuthClient as useAuthClientBase } from "@/lib/api";
 
 // Type extension for passkey methods that are expected by the codebase

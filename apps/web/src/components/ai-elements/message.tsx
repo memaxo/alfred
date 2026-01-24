@@ -1,15 +1,17 @@
 "use client";
 
 import type { FileUIPart, UIMessage } from "ai";
+import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
+
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   PaperclipIcon,
   XIcon,
 } from "lucide-react";
-import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
+
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import {

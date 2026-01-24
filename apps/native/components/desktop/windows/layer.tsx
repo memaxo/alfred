@@ -9,8 +9,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { useDesktopStore } from "@/store/desktop";
 import type { WindowInstance } from "@/store/desktop.types";
+
+import { useDesktopStore } from "@/store/desktop";
+
 import { WindowChrome } from "./chrome";
 import { windowRegistry } from "./registry";
 

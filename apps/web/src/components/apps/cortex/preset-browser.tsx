@@ -5,8 +5,10 @@
  */
 
 import { Eye, Sparkles, Wallpaper } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
 import type { CortexPreset } from "./index";
 
 type PresetBrowserProps = {

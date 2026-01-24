@@ -12,6 +12,7 @@ import {
   type Page,
   type TestInfo,
 } from "@playwright/test";
+
 import { signUpTestUser } from "./helpers/auth";
 import { openSettingsWindow } from "./helpers/mindscape";
 import {

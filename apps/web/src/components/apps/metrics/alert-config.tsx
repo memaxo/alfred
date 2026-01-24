@@ -6,6 +6,7 @@
 
 import { Bell, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";

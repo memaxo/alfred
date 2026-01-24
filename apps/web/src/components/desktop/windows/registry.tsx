@@ -41,6 +41,9 @@ import {
   Workflow,
 } from "lucide-react";
 import { type ComponentType, lazy, Suspense } from "react";
+
+import type { WindowType } from "@/store/desktop/types";
+
 import { AdminAppWindow } from "@/components/apps/admin";
 import { AgentFSAppWindow } from "@/components/apps/agentfs";
 import { AgentsAppWindow } from "@/components/apps/agents";
@@ -78,8 +81,6 @@ import { TodoWindow } from "@/components/windows/todo/todo-window";
 import { VisualBuilderWindow } from "@/components/windows/visual-builder/visual-builder-window";
 import { WorkflowListWindow } from "@/components/windows/workflow/workflow-list-window";
 import { WorkflowWindow } from "@/components/windows/workflow/workflow-window";
-
-import type { WindowType } from "@/store/desktop/types";
 
 // Adapter for legacy components
 export { useWindowProps, withWindowAdapter } from "./adapter";

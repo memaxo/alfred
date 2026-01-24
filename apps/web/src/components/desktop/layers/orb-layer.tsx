@@ -15,9 +15,11 @@
  */
 
 import { useEffect } from "react";
+
 import { Orb } from "@/components/orb/index";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 import { useOrbStore } from "@/store/orb";
+
 import { LayerErrorBoundary } from "../error-boundary";
 
 type OrbLayerProps = {

@@ -8,6 +8,7 @@
  */
 
 import { cn } from "@/lib/utils";
+
 import type { ResizeDirection } from "./types";
 
 type ResizeHandlesProps = {

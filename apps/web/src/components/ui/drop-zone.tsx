@@ -1,7 +1,9 @@
 import { logger } from "@alfred/logger";
 import { File, FileImage, FileText, Upload, X } from "lucide-react";
 import * as React from "react";
+
 import { cn } from "@/lib/utils";
+
 import { Button } from "./button";
 
 export type FileWithMeta = {

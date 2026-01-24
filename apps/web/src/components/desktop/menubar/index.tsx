@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { type CSSProperties, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,8 +37,10 @@ import {
 import { useCognitivePhysiology } from "@/hooks/use-cognitive-physiology";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import { Clock } from "./clock";
+
 import type { AppMenuAction, AppMenuCategory, AppMenus } from "./types";
+
+import { Clock } from "./clock";
 
 type MenuBarProps = {
   style?: CSSProperties;

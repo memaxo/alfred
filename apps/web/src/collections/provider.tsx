@@ -1,12 +1,15 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { inferRouterClient } from "@trpc/client";
+
 import {
   createContext,
   type PropsWithChildren,
   useContext,
   useMemo,
 } from "react";
+
 import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { createNoteCollection } from "./note";
 import { createReminderCollection } from "./reminder";
 import { createTodoCollection } from "./todo";

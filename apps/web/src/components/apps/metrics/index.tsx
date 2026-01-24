@@ -10,8 +10,11 @@
 
 import { BarChart3, Bell, Code, LayoutDashboard, Search } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { cn } from "@/lib/utils";
+
 import { AlertConfig } from "./alert-config";
 import { DashboardBuilder } from "./dashboard-builder";
 import { MetricExplorer } from "./metric-explorer";

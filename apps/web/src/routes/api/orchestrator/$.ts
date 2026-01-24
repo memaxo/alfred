@@ -7,9 +7,8 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
     const { getOrchestratorAgentDefaults } = await import(
       /* @vite-ignore */ agentPkg
     );
-    const { handleStreamRequest } = await import(
-      "../../../lib/api/stream-handler"
-    );
+    const { handleStreamRequest } =
+      await import("../../../lib/api/stream-handler");
 
     return await handleStreamRequest(
       request,

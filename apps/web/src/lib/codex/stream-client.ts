@@ -1,11 +1,13 @@
 import type { AppRouter } from "@alfred/api/routers";
+import type { createTRPCProxyClient } from "@trpc/client";
+
 import {
   parseThreadEvent,
   type ThreadEvent,
   type ThreadItem,
 } from "@alfred/protocol";
-import type { createTRPCProxyClient } from "@trpc/client";
 import { toast } from "sonner";
+
 import { formatCodexErrorMessage } from "@/lib/codex-errors";
 
 export type CodexStreamEvent =

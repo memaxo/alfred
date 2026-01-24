@@ -18,6 +18,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import type { TimerRouterOutputs } from "@/utils/trpc-types";
+
 import { Container } from "@/components/container";
 import { useTimerNotifications } from "@/hooks/use-timer-notifications";
 import {
@@ -27,7 +30,6 @@ import {
   useTimerDone,
 } from "@/hooks/use-trpc";
 import { haptics } from "@/lib/haptics";
-import type { TimerRouterOutputs } from "@/utils/trpc-types";
 
 type TimerItem = TimerRouterOutputs["active"][number];
 

@@ -13,10 +13,12 @@ import {
   Search,
 } from "lucide-react";
 import { useState } from "react";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import type { Metric } from "./index";
 
 const typeIcons = {

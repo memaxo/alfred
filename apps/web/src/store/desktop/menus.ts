@@ -9,6 +9,7 @@ import type {
   AppMenus,
   MenuRegistry,
 } from "@/components/desktop/menubar/types";
+
 import type { WindowType } from "./types.new";
 
 export type MenuSlice = {

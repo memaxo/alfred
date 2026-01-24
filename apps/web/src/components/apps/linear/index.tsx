@@ -15,9 +15,12 @@
 
 import { LayoutGrid, List, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
 import { IssueDetail } from "./issue-detail";
 import { IssueList } from "./issue-list";
 import { ProjectBoard } from "./project-board";

@@ -1,7 +1,9 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { useDesktopStore } from "@/store/desktop";
+
 import { useFocusGravity } from "../use-focus-gravity";
 
 // Mock the store

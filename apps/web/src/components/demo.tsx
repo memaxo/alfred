@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+
 import {
   Conversation,
   ConversationContent,
@@ -11,6 +12,9 @@ import { ConversationBar } from "@/components/ui/conversation-bar";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import { Matrix } from "@/components/ui/matrix";
 import { Message, MessageContent } from "@/components/ui/message";
+
+import type { ComponentName } from "./manifest";
+
 import { Actions } from "./actions";
 import { Artifact } from "./artifact";
 import { AudioPlayer } from "./audio";
@@ -40,7 +44,6 @@ import { Grid } from "./grid";
 import { List } from "./list";
 import { Load } from "./load";
 import { Loading } from "./loading";
-import type { ComponentName } from "./manifest";
 import { Mic } from "./mic";
 import { Node } from "./node";
 import { Number as SlidingNumber } from "./number";

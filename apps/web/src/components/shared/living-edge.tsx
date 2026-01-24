@@ -1,4 +1,5 @@
 import type { EdgeProps } from "@xyflow/react";
+
 import { BaseEdge, getSmoothStepPath } from "@xyflow/react";
 
 export function LivingEdge({

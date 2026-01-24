@@ -6,6 +6,7 @@
  */
 
 import type { VisualPreset } from "@alfred/type";
+
 import {
   Battery,
   Check,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 const PRESET_ICONS: Record<string, LucideIcon> = {

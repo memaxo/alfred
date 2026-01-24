@@ -1,6 +1,10 @@
-import { useNavigate } from "@tanstack/react-router";
 import type { inferRouterOutputs } from "@trpc/server";
+
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+
+import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { BiolumBadge } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { WorkflowErrorPanel } from "@/components/workflow-error-panel";
-import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 type WorkflowRun =

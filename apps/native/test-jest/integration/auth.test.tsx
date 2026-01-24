@@ -1,7 +1,10 @@
-import { act, renderHook, waitFor } from "@testing-library/react-native";
 import type React from "react";
+
+import { act, renderHook, waitFor } from "@testing-library/react-native";
+
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { useAuthClient } from "@/lib/auth-client";
+
 import { TestProviders } from "../utils/test-helpers";
 
 // Mock auth client

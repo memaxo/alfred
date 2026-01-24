@@ -3,6 +3,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+
 import { MindscapeCanvas } from "@/components/desktop/mindscape";
 import { WindowLayer } from "@/components/desktop/windows/layer";
 import { GlobalOrb } from "@/components/orb/global";

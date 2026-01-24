@@ -18,7 +18,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useState } from "react";
+
 import { useMindscapeStore } from "@/store/mindscape";
+
 import { EntityNode } from "./entity-node";
 import { RelationEdge } from "./relation-edge";
 

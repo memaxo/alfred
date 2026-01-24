@@ -1,4 +1,7 @@
 import type { phaseSchema, structuredPlanSchema } from "@alfred/plan/schema";
+import type React from "react";
+import type { infer as ZodInfer } from "zod";
+
 import {
   addEdge,
   Background,
@@ -14,10 +17,6 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { infer as ZodInfer } from "zod";
-import "@xyflow/react/dist/style.css";
 import {
   Brain,
   Plus,
@@ -28,6 +27,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import "@xyflow/react/dist/style.css";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";

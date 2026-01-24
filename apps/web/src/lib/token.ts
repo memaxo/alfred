@@ -1,7 +1,10 @@
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { inferRouterInputs } from "@trpc/server";
-import { authClient } from "@/lib/auth-client";
+
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+
 import type { TRPCAppRouter } from "@/utils/trpc";
+
+import { authClient } from "@/lib/auth-client";
 
 const trpc = createTRPCProxyClient<TRPCAppRouter>({
   links: [

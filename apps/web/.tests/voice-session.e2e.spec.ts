@@ -1,13 +1,14 @@
+import type { VoiceStreamCodec } from "@alfred/type/voice";
+import type { VoiceSession } from "@alfred/voice/server/session";
+import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
+
+import { createVoiceFixture } from "@alfred/test-kit/voice/registry";
+import { VoiceStreamClient } from "@alfred/voice/stream";
+import { expect, test } from "@playwright/test";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
-import { createVoiceFixture } from "@alfred/test-kit/voice/registry";
-import type { VoiceStreamCodec } from "@alfred/type/voice";
-import type { VoiceSession } from "@alfred/voice/server/session";
-import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
-import { VoiceStreamClient } from "@alfred/voice/stream";
-import { expect, test } from "@playwright/test";
 import WebSocket, { WebSocketServer } from "ws";
 
 // Playwright (Node) does not provide a global WebSocket implementation.

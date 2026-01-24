@@ -12,6 +12,7 @@
  */
 
 import { type CSSProperties, lazy, Suspense } from "react";
+
 import { LayerErrorBoundary } from "../error-boundary";
 
 // Lazy load the actual ReactFlow canvas to keep main bundle small

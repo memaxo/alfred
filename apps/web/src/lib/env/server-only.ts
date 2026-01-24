@@ -34,6 +34,23 @@ export const getSchedRemind = createServerOnlyFn(
 );
 
 /**
+ * Get SCHED_AGENTFS_CLEANUP environment variable (server-only).
+ * Used to enable/disable AgentFS retention cleanup scheduler.
+ * Throws if called from client code.
+ */
+export const getSchedAgentfsCleanup = createServerOnlyFn(
+  () => process.env.SCHED_AGENTFS_CLEANUP
+);
+
+export const getSchedAgentfsIntegrity = createServerOnlyFn(
+  () => process.env.SCHED_AGENTFS_INTEGRITY
+);
+
+export const getSchedAgentfsCompact = createServerOnlyFn(
+  () => process.env.SCHED_AGENTFS_COMPACT
+);
+
+/**
  * Get SCHED_PREFERENCE_INFERENCE environment variable (server-only).
  * Used to enable/disable preference inference scheduler.
  * Throws if called from client code.

@@ -1,6 +1,7 @@
 {
   "name": "native",
   "version": "1.0.0",
+  "private": true,
   "main": "expo-router/entry",
   "scripts": {
     "test": "jest",
@@ -109,6 +110,5 @@
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.6",
     "typescript": "~5.8.2"
-  },
-  "private": true
+  }
 }

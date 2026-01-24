@@ -1,9 +1,11 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
+
 import { validateUIDataPart } from "@alfred/type/genui.zod";
 import { clearRegistry, registerComponent } from "@alfred/ui/genui";
 import { render } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "bun:test";
+
 import { renderPart } from "../chat-render";
 
 describe("GenUI chat rendering", () => {

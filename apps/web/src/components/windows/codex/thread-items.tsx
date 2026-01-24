@@ -9,6 +9,7 @@ import type {
   TodoListItem,
   WebSearchItem,
 } from "@alfred/protocol";
+
 import {
   AlertCircle,
   CheckCircle,
@@ -26,6 +27,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useState } from "react";
+
 import { cn } from "@/lib/utils";
 
 type ThreadItemProps = {

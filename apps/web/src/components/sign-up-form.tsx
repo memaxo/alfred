@@ -1,8 +1,10 @@
 import { signUpSchema } from "@alfred/type/forms";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+
 import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { authClient } from "@/lib/auth-client";
+
 import Loader from "./loader";
 import { Button } from "./ui/button";
 

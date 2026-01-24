@@ -1,6 +1,6 @@
 import "@/test/dom";
-import { describe, expect, it, mock, vi } from "bun:test";
 import { fireEvent, render, within } from "@testing-library/react";
+import { describe, expect, it, mock, vi } from "bun:test";
 import React from "react";
 
 // Mock the dropdown menu components to avoid Radix UI environment issues in Bun/JSDOM

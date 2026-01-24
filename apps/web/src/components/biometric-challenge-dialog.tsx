@@ -1,7 +1,9 @@
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
+
 import { Fingerprint, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

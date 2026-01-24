@@ -1,7 +1,9 @@
 import type { AppRouter } from "@alfred/api/routers";
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
 import type { createTRPCProxyClient } from "@trpc/client";
+
 import { toast } from "sonner";
+
 import { formatCodexErrorMessage } from "@/lib/codex-errors";
 
 export type DroidStreamEvent =

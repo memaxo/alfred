@@ -1,8 +1,10 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
-import { act, fireEvent, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+
+import { act, fireEvent, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
 import { assistantChatMock } from "@/test/mock-assistant-chat";
 import { createTestTrpcClient, renderRoute } from "@/test/render-route";
 

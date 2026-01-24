@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
+
 import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { authClient } from "@/lib/auth-client";
 

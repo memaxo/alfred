@@ -1,4 +1,5 @@
 import { Badge, type BadgeProps } from "@tremor/react";
+
 import { cn } from "@/lib/utils";
 
 export type BiolumBadgeVariant = "default" | "success" | "warning" | "error";

@@ -30,7 +30,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -227,7 +229,7 @@ function PropertiesPanel({ selectedNode }: { selectedNode: Node | null }) {
     );
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Internal node data
+  // oxlint-disable noExplicitAny: Internal node data
   const data = selectedNode.data as any;
 
   return (

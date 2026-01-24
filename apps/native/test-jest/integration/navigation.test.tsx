@@ -1,6 +1,7 @@
 import { fireEvent } from "@testing-library/react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Text, TouchableOpacity, View } from "react-native";
+
 import { renderWithProviders } from "../utils/test-helpers";
 
 // Mock expo-router

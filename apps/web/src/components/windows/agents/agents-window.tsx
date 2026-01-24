@@ -13,6 +13,7 @@
  */
 
 import type { NodeProps } from "@xyflow/react";
+
 import {
   Activity,
   Bot,
@@ -33,6 +34,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
+
 import { BiolumBadge } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";

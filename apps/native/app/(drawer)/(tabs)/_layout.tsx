@@ -1,5 +1,7 @@
 import { Redirect, Tabs } from "expo-router";
+
 import { TabBarIcon } from "@/components/tabbar-icon";
+import { useReviewCount } from "@/hooks/use-review-count";
 import { useServerUrl } from "@/lib/api";
 import { useAuthClient } from "@/lib/auth-client";
 import { isLocalServer } from "@/lib/server-url";
@@ -10,6 +12,7 @@ export default function TabLayout() {
   const authClient = useAuthClient();
   const { data: session } = authClient.useSession();
   const { serverUrl } = useServerUrl();
+  const { count: reviewCount } = useReviewCount();
 
   // Protect all tabs - redirect to home if not authenticated
   if (!(session?.user || isLocalServer(serverUrl))) {
@@ -73,6 +76,16 @@ export default function TabLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => <TabBarIcon color={color} name="user" />,
+        }}
+      />
+      <Tabs.Screen
+        name="reviews"
+        options={{
+          title: "Reviews",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon color={color} name="check-square" />
+          ),
+          tabBarBadge: reviewCount > 0 ? reviewCount : undefined,
         }}
       />
       <Tabs.Screen

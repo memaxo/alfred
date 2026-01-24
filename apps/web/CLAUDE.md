@@ -1,5 +1,3 @@
-
-
 <!-- Source: .ruler/tanstack-patterns.md -->
 
 # TanStack Start Patterns

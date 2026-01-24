@@ -1,11 +1,14 @@
 "use client";
 
 import type { FileUIPart } from "ai";
+
 import { PaperclipIcon, XIcon } from "lucide-react";
 import { Fragment, type HTMLAttributes, type ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
 import { HoverCardTrigger } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
+
 import { usePromptInputAttachments } from "./context";
 import {
   PromptInputHoverCard,

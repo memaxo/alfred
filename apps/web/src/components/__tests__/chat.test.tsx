@@ -1,9 +1,10 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
+import type { ReactNode } from "react";
+
 import { Chat } from "@alfred/ui";
 import { render } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { describe, expect, it } from "bun:test";
 import { useEffect } from "react";
 
 const StubVirtualList: React.ComponentType<{

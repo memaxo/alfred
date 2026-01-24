@@ -4,6 +4,9 @@ import { Maximize2, Minus, Sparkles, Square, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { WindowInstance } from "@/store/desktop/types.new";
+
 import {
   Tooltip,
   TooltipContent,
@@ -13,11 +16,12 @@ import {
 import { useFocusGravity } from "@/hooks/use-focus-gravity";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowInstance } from "@/store/desktop/types.new";
 import { useMindscapeStore } from "@/store/mindscape";
+
+import type { ResizeDirection } from "./types";
+
 import { detectZoneFromPosition } from "../tiling/utils";
 import { ResizeHandles } from "./resize-handles";
-import type { ResizeDirection } from "./types";
 
 type WindowChromeProps = {
   windowId: string;

@@ -1,7 +1,9 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { useDesktopStore } from "@/store/desktop";
+
 import { useDesktopDeeplinks } from "../use-desktop-deeplinks";
 
 describe("Admin Integration (Deep Linking)", () => {

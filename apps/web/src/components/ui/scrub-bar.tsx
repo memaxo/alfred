@@ -1,4 +1,5 @@
 import type * as React from "react";
+
 import {
   type ComponentProps,
   createContext,
@@ -7,6 +8,7 @@ import {
   useContext,
   useRef,
 } from "react";
+
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 

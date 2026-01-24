@@ -1,13 +1,17 @@
 import type { TRPCClient } from "@trpc/client";
+
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+
 import type { TRPCAppRouter } from "@/utils/trpc";
+
+import type { TestServer } from "./server";
+
 import {
   createTestSession,
   serializeTestSession,
   TEST_SESSION_HEADER,
   type TestSession,
 } from "./auth";
-import type { TestServer } from "./server";
 
 type CreateClientOptions = {
   session?: TestSession;

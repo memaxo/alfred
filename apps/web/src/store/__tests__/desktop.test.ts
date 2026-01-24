@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { useDesktopStore } from "../desktop";
+
 import type { WindowInstance } from "../desktop/types.new";
+
+import { useDesktopStore } from "../desktop";
 
 function createTestWindow(
   id: string,

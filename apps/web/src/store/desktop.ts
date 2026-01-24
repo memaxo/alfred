@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import { type PersistOptions, persist } from "zustand/middleware";
+
+import type { DesktopState } from "./desktop/types.new";
+
 import { createCacheSlice } from "./desktop/cache";
 import { createContextSlice } from "./desktop/context";
 import { createGroupSlice } from "./desktop/groups";
@@ -9,7 +12,6 @@ import { createMenuSlice, type MenuSlice } from "./desktop/menus";
 import { persistOptions } from "./desktop/persist";
 import { createTaskbarSlice } from "./desktop/taskbar";
 import { createTilingSlice } from "./desktop/tiling";
-import type { DesktopState } from "./desktop/types.new";
 import { createViewportSliceNew } from "./desktop/viewport.new";
 import { createWidgetSlice } from "./desktop/widgets";
 import { createWindowSliceNew } from "./desktop/windows.new";
@@ -38,7 +40,7 @@ export const useDesktopStore = create<FullDesktopState>()(
 import { hasWindow } from "@/lib/env/isomorphic";
 
 declare global {
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: declaration merging requires interface
+  // oxlint-disable useConsistentTypeDefinitions: declaration merging requires interface
   interface Window {
     __DESKTOP_STORE__?: typeof useDesktopStore;
   }

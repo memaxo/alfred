@@ -1,6 +1,7 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
 import { render } from "@testing-library/react";
+import { describe, expect, it } from "bun:test";
+
 import { WelcomeStep } from "../welcome-step";
 
 describe("WelcomeStep", () => {

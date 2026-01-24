@@ -11,8 +11,11 @@
 
 import { CheckSquare, FileText, Shield, Sliders } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { cn } from "@/lib/utils";
+
 import { ApprovalQueue } from "./approval-queue";
 import { AutonomyControls } from "./autonomy-controls";
 import { ConstraintList } from "./constraint-list";

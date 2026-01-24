@@ -1,6 +1,8 @@
 import type { VoiceStreamClient } from "@alfred/voice/stream";
+
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { EnergyVAD } from "@/lib/voice/vad";
 
 const getMediaStream = createClientOnlyFn((): Promise<MediaStream> => {

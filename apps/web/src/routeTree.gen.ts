@@ -25,6 +25,10 @@ import { Route as ApiOrchestratorRouteImport } from './routes/api/orchestrator'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ApiGenuiRouteImport } from './routes/api/genui'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
+import { Route as ApiAgentfsDownloadRouteImport } from './routes/api/agentfs/download'
+import { Route as ApiAgentfsExportRouteImport } from './routes/api/agentfs/export'
+import { Route as ApiAgentfsRestoreRouteImport } from './routes/api/agentfs/restore'
+import { Route as ApiAgentfsHandoffRouteImport } from './routes/api/agentfs/handoff'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
 import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
@@ -129,6 +133,26 @@ const ApiGenuiRoute = ApiGenuiRouteImport.update({
 const ApiAssistantRoute = ApiAssistantRouteImport.update({
   id: '/api/assistant',
   path: '/api/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentfsDownloadRoute = ApiAgentfsDownloadRouteImport.update({
+  id: '/api/agentfs/download',
+  path: '/api/agentfs/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentfsExportRoute = ApiAgentfsExportRouteImport.update({
+  id: '/api/agentfs/export',
+  path: '/api/agentfs/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentfsRestoreRoute = ApiAgentfsRestoreRouteImport.update({
+  id: '/api/agentfs/restore',
+  path: '/api/agentfs/restore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentfsHandoffRoute = ApiAgentfsHandoffRouteImport.update({
+  id: '/api/agentfs/handoff',
+  path: '/api/agentfs/handoff',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProtectedVoiceS2sRoute = ProtectedVoiceS2sRouteImport.update({
@@ -287,6 +311,10 @@ export interface FileRoutesByFullPath {
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
+  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
+  '/api/agentfs/export': typeof ApiAgentfsExportRoute
+  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
+  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/healthz/embed': typeof HealthzEmbedRoute
@@ -329,6 +357,10 @@ export interface FileRoutesByTo {
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
+  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
+  '/api/agentfs/export': typeof ApiAgentfsExportRoute
+  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
+  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/healthz/embed': typeof HealthzEmbedRoute
@@ -374,6 +406,10 @@ export interface FileRoutesById {
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
+  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
+  '/api/agentfs/export': typeof ApiAgentfsExportRoute
+  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
+  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/healthz/embed': typeof HealthzEmbedRoute
@@ -419,6 +455,10 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
+    | '/api/agentfs/download'
+    | '/api/agentfs/export'
+    | '/api/agentfs/restore'
+    | '/api/agentfs/handoff'
     | '/docs/$'
     | '/healthz/deps'
     | '/healthz/embed'
@@ -461,6 +501,10 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
+    | '/api/agentfs/download'
+    | '/api/agentfs/export'
+    | '/api/agentfs/restore'
+    | '/api/agentfs/handoff'
     | '/docs/$'
     | '/healthz/deps'
     | '/healthz/embed'
@@ -505,6 +549,10 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
+    | '/api/agentfs/download'
+    | '/api/agentfs/export'
+    | '/api/agentfs/restore'
+    | '/api/agentfs/handoff'
     | '/docs/$'
     | '/healthz/deps'
     | '/healthz/embed'
@@ -543,6 +591,10 @@ export interface RootRouteChildren {
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiOrchestratorRoute: typeof ApiOrchestratorRouteWithChildren
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiAgentfsDownloadRoute: typeof ApiAgentfsDownloadRoute
+  ApiAgentfsExportRoute: typeof ApiAgentfsExportRoute
+  ApiAgentfsRestoreRoute: typeof ApiAgentfsRestoreRoute
+  ApiAgentfsHandoffRoute: typeof ApiAgentfsHandoffRoute
   DocsSplatRoute: typeof DocsSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthIntrospectRoute: typeof ApiAuthIntrospectRoute
@@ -638,6 +690,34 @@ declare module '@tanstack/react-router' {
       path: '/api/search'
       fullPath: '/api/search'
       preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agentfs/download': {
+      id: '/api/agentfs/download'
+      path: '/api/agentfs/download'
+      fullPath: '/api/agentfs/download'
+      preLoaderRoute: typeof ApiAgentfsDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agentfs/export': {
+      id: '/api/agentfs/export'
+      path: '/api/agentfs/export'
+      fullPath: '/api/agentfs/export'
+      preLoaderRoute: typeof ApiAgentfsExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agentfs/restore': {
+      id: '/api/agentfs/restore'
+      path: '/api/agentfs/restore'
+      fullPath: '/api/agentfs/restore'
+      preLoaderRoute: typeof ApiAgentfsRestoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agentfs/handoff': {
+      id: '/api/agentfs/handoff'
+      path: '/api/agentfs/handoff'
+      fullPath: '/api/agentfs/handoff'
+      preLoaderRoute: typeof ApiAgentfsHandoffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/orchestrator': {
@@ -966,6 +1046,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMetricsRoute: ApiMetricsRoute,
   ApiOrchestratorRoute: ApiOrchestratorRouteWithChildren,
   ApiSearchRoute: ApiSearchRoute,
+  ApiAgentfsDownloadRoute: ApiAgentfsDownloadRoute,
+  ApiAgentfsExportRoute: ApiAgentfsExportRoute,
+  ApiAgentfsRestoreRoute: ApiAgentfsRestoreRoute,
+  ApiAgentfsHandoffRoute: ApiAgentfsHandoffRoute,
   DocsSplatRoute: DocsSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthIntrospectRoute: ApiAuthIntrospectRoute,

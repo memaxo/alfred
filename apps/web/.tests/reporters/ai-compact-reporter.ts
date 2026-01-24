@@ -5,10 +5,6 @@
  * Follows ALFRED's naming conventions and integrates with metrics registry.
  */
 
-import {
-  safeRegisterCounter,
-  safeRegisterHistogram,
-} from "@alfred/metrics/registry";
 import type {
   FullConfig,
   FullResult,
@@ -17,6 +13,11 @@ import type {
   TestCase,
   TestResult,
 } from "@playwright/test/reporter";
+
+import {
+  safeRegisterCounter,
+  safeRegisterHistogram,
+} from "@alfred/metrics/registry";
 
 type FailureSummary = {
   test: string;

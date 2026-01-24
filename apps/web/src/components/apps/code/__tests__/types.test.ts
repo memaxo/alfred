@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
+
 import {
   DEFAULT_EDITOR_SETTINGS,
   getLanguageFromPath,

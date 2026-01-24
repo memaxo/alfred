@@ -13,6 +13,7 @@
  */
 
 import { test as base } from "@playwright/test";
+
 import { withStrictTestHarness } from "./helpers/screenshot";
 
 // Use strict test harness that fails fast on errors

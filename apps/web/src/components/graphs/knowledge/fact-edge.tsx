@@ -11,6 +11,7 @@ import {
   type EdgeProps,
   getBezierPath,
 } from "@xyflow/react";
+
 import { cn } from "@/lib/utils";
 
 export type FactEdgeData = {

@@ -17,10 +17,13 @@
 
 import { Bot, Loader2, PanelRight, Pause, Play, Square } from "lucide-react";
 import { useCallback, useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import { AgentCard } from "./agent-card";
 import { ExecutionLog } from "./execution-log";
 import { PlanPreview } from "./plan-preview";

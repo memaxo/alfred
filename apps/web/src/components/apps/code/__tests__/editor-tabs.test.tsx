@@ -3,8 +3,9 @@
  */
 
 import "@/test/dom";
-import { describe, expect, it, vi } from "bun:test";
 import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, it, vi } from "bun:test";
+
 import type { FileTab } from "../types";
 
 const { EditorTabs } = await import("../editor-tabs");

@@ -1,4 +1,5 @@
 import type { NodeProps } from "@xyflow/react";
+
 import {
   ExternalLink,
   FolderKanban,
@@ -10,6 +11,7 @@ import {
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";

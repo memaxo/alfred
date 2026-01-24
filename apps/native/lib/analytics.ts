@@ -25,7 +25,7 @@ type AnalyticsUser = {
 
 class Analytics {
   private enabled = false;
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: used for provider tracking
+  // oxlint-disable noUnusedPrivateClassMembers: used for provider tracking
   private userId: string | null = null;
 
   /**

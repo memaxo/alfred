@@ -3,9 +3,12 @@
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ReactElement, useState } from "react";
+
 import type { AutonomyLevel } from "@/components/autonomy-slider";
+
 import { Button } from "@/components/ui/button";
 import { useDesktopStore } from "@/store/desktop";
+
 import { IntegrationsStep } from "./integrations-step";
 import { PreferencesStep } from "./preferences-step";
 import { TourStep } from "./tour-step";

@@ -8,6 +8,8 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { UIComponent } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
+import type { ReactNode } from "react";
+
 import {
   extractStructuredData,
   getToolInvocationName,
@@ -23,7 +25,7 @@ import {
   type ToolResultPart,
 } from "@alfred/ui/chat/parts";
 import { containsFormComponents } from "@alfred/ui/genui";
-import type { ReactNode } from "react";
+
 import {
   GenUIErrorBoundary,
   isGenUIToolResult,
@@ -31,6 +33,7 @@ import {
   UISchemaRenderer,
 } from "@/components/genui";
 import { GenUIFormWrapper } from "@/components/genui/form-wrapper";
+
 import { Artifact } from "./artifact";
 import { Branch } from "./branch";
 import { Canvas } from "./canvas";

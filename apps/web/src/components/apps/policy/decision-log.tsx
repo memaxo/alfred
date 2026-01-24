@@ -5,6 +5,7 @@
  */
 
 import { AlertTriangle, Check, Loader2, X } from "lucide-react";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";

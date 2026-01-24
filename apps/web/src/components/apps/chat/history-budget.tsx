@@ -9,16 +9,20 @@
  * @see @alfred/history package
  */
 
-import { type BudgetSegment, computeBudgetUsage } from "@alfred/history/budget";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { type BudgetSegment, computeBudgetUsage } from "@alfred/history/budget";
 import { Clock, Settings2, Trash2 } from "lucide-react";
 import { useMemo } from "react";
+
 import { Button } from "@/components/ui/button";
+import { useBudgetStatus } from "@/hooks/use-budget-status";
 import { cn } from "@/lib/utils";
 
 type HistoryBudgetProps = {
   className?: string;
   messages?: readonly UIMessage[];
+  conversationId?: string | null;
   onClearHistory?: () => void;
 };
 
@@ -37,8 +41,12 @@ const SEGMENT_LABELS: Record<BudgetSegment, string> = {
 export function HistoryBudget({
   className,
   messages = [],
+  conversationId,
   onClearHistory,
 }: HistoryBudgetProps) {
+  // Fetch budget status for cost tracking
+  const budgetStatus = useBudgetStatus(conversationId ?? null);
+
   // Compute budget usage from messages
   const budgetUsage = useMemo(
     () => computeBudgetUsage(messages, 128_000),
@@ -134,7 +142,7 @@ export function HistoryBudget({
       </div>
 
       {/* Stats */}
-      <div className="flex gap-4 text-xs">
+      <div className="flex flex-wrap gap-4 text-xs">
         <div>
           <span className="text-biolum-dim">Messages:</span>{" "}
           <span className="text-biolum">{messages.length}</span>
@@ -143,6 +151,30 @@ export function HistoryBudget({
           <div>
             <span className="text-biolum-dim">Oldest:</span>{" "}
             <span className="text-biolum">{formatTimeAgo(oldestMessage)}</span>
+          </div>
+        )}
+        {budgetStatus.data && (
+          <div>
+            <span className="text-biolum-dim">Cost:</span>{" "}
+            <span
+              className={cn(
+                budgetStatus.data.status === "exceeded"
+                  ? "text-red-400"
+                  : budgetStatus.data.status === "critical"
+                    ? "text-orange-400"
+                    : budgetStatus.data.status === "warning"
+                      ? "text-yellow-400"
+                      : "text-biolum"
+              )}
+            >
+              ${budgetStatus.data.usedUsd.toFixed(4)} / $
+              {budgetStatus.data.budgetUsd === Infinity
+                ? "∞"
+                : budgetStatus.data.budgetUsd.toFixed(2)}
+              {budgetStatus.data.budgetUsd !== Infinity && (
+                <> ({budgetStatus.data.percentUsed.toFixed(1)}%)</>
+              )}
+            </span>
           </div>
         )}
       </div>

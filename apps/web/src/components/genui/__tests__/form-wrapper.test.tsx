@@ -5,9 +5,11 @@
  */
 
 import "@/test/dom";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { UIComponent } from "@alfred/type/genui";
+
 import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { GenUIFormWrapper } from "../form-wrapper";
 
 function newId(): string {

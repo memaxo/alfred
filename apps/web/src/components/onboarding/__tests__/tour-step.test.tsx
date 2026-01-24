@@ -1,6 +1,7 @@
 import "@/test/dom";
-import { afterEach, describe, expect, it, vi } from "bun:test";
 import { cleanup, fireEvent, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "bun:test";
+
 import { TourStep } from "../tour-step";
 
 afterEach(() => {

@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+
 import type { AutonomyLevel } from "@/components/autonomy-slider";
+
 import { IntegrationsStep } from "@/components/onboarding/integrations-step";
 import { PreferencesStep } from "@/components/onboarding/preferences-step";
 import { TourStep } from "@/components/onboarding/tour-step";

@@ -13,9 +13,12 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type CSSProperties, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { WindowType } from "@/store/desktop/types.new";
+
 import { WindowErrorBoundary } from "@/components/windows/shared/error-boundary";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowType } from "@/store/desktop/types.new";
+
 import { TileZonePreview } from "../tiling/zone-preview";
 import { WindowChrome } from "../windows/chrome";
 import {

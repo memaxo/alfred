@@ -16,9 +16,12 @@
 
 import { Brain, RefreshCw } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
 import { EntityPanel } from "./entity-panel";
 import { GraphCanvas } from "./graph-canvas";
 import { InsightPanel } from "./insight-panel";

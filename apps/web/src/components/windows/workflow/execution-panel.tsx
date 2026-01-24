@@ -5,12 +5,14 @@
  */
 
 import { CheckCircle, Loader2, Square, X, XCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import type {
   WorkflowEscalation,
   WorkflowStep,
 } from "@/hooks/use-workflow-subscription";
+
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 type ExecutionPanelProps = {

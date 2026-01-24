@@ -6,6 +6,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { Text, View } from "react-native";
+
 import { useNetworkStatus } from "@/lib/offline";
 
 export function OfflineBanner() {

@@ -18,6 +18,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback } from "react";
+
 import { AgentNode, type AgentNodeData, type AgentStatus } from "./agent-node";
 import { DependencyEdge, type DependencyEdgeData } from "./dependency-edge";
 

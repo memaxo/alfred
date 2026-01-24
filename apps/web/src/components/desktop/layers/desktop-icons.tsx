@@ -13,14 +13,16 @@
 import { MessageSquare } from "lucide-react";
 import { type CSSProperties, useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { DesktopIcon } from "@/store/desktop/icons";
+import type { WindowType } from "@/store/desktop/types.new";
+
 import {
   getWindowIcon,
   getWindowLabel,
 } from "@/components/desktop/windows/registry";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { DesktopIcon } from "@/store/desktop/icons";
-import type { WindowType } from "@/store/desktop/types.new";
 
 const ICON_SIZE = 80;
 const GRID_GAP = 8;

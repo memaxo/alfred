@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
+
+import { createFileRoute } from "@tanstack/react-router";
 
 async function handleAssistantRequest(request: Request): Promise<Response> {
   try {
@@ -13,9 +14,8 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
     const { getAssistantAgentDefaults } = await import(
       /* @vite-ignore */ agentPkg
     );
-    const { handleStreamRequest } = await import(
-      "../../lib/api/stream-handler"
-    );
+    const { handleStreamRequest } =
+      await import("../../lib/api/stream-handler");
 
     return await handleStreamRequest(
       request,

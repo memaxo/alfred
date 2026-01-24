@@ -1,6 +1,7 @@
+import type { UIMessage } from "@alfred/type/stream";
+
 import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import { createRequire } from "node:module";
-import type { UIMessage } from "@alfred/type/stream";
 
 mock.module("@alfred/api/utils/sse-connections", () => ({
   createConnection: () => ({ allowed: true, connectionId: "conn-1" }),

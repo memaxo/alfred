@@ -6,6 +6,7 @@
 
 import { Bot, Loader2, Server, Square, Terminal } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

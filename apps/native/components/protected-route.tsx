@@ -7,7 +7,9 @@
 import { Redirect, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
+
 import { useAuthClient } from "@/lib/auth-client";
+
 import { Container } from "./container";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {

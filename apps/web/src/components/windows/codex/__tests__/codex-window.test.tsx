@@ -1,6 +1,6 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
 import { mapAutonomyToAcpMode } from "@alfred/protocol";
+import { describe, expect, it } from "bun:test";
 
 // Focus on testing ACP integration which doesn't require React component rendering
 // Component rendering tests require extensive mocking - keeping unit tests here

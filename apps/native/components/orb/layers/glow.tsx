@@ -5,6 +5,8 @@
  * Breathes with a subtle pulse and intensifies with state changes.
  */
 
+import type { SharedValue } from "react-native-reanimated";
+
 import {
   Blur,
   Circle,
@@ -13,7 +15,6 @@ import {
   RadialGradient,
   type SkPoint,
 } from "@shopify/react-native-skia";
-import type { SharedValue } from "react-native-reanimated";
 import { useDerivedValue } from "react-native-reanimated";
 
 import { ANIMATION, hexToRgba } from "../constants";

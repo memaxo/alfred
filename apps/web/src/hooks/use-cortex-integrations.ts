@@ -6,6 +6,7 @@
  */
 
 import type { CortexEngine, OrbState } from "@alfred/cortex";
+
 import { useEffect, useRef } from "react";
 
 /**

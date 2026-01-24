@@ -1,8 +1,11 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { fireEvent, render, waitFor } from "@testing-library/react";
-import { useDesktopStore } from "@/store/desktop";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import type { WindowInstance } from "@/store/desktop/types.new";
+
+import { useDesktopStore } from "@/store/desktop";
+
 import { WindowChrome } from "../chrome";
 
 describe("WindowChrome", () => {

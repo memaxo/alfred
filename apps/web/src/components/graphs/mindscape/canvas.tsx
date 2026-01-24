@@ -12,9 +12,11 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+
 import { useDesktopStore } from "@/store/desktop";
 import { type MindscapeNode, useMindscapeStore } from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
+
 import { KnowledgeEntityNode } from "../knowledge/entity-node";
 import { FactEdge } from "../knowledge/fact-edge";
 

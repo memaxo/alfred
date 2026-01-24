@@ -11,9 +11,12 @@
 
 import { BarChart3, Database, Play, Settings, Wand2 } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
 import { DatasetBrowser } from "./dataset-browser";
 import { JobList } from "./job-list";
 import { ModelComparison } from "./model-comparison";

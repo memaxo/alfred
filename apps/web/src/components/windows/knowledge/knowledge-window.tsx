@@ -1,6 +1,8 @@
 import type { NodeProps } from "@xyflow/react";
+
 import { Brain, Play, Sparkles } from "lucide-react";
 import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
 import {
   SmallCard,

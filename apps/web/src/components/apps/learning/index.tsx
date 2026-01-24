@@ -10,8 +10,11 @@
 
 import { AlertCircle, BarChart3, Brain, Target } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { cn } from "@/lib/utils";
+
 import { AccuracyChart } from "./accuracy-chart";
 import { ImprovementInsights } from "./improvement-insights";
 import { MistakeLedger } from "./mistake-ledger";

@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+
 import type { DesktopState, WindowInstance } from "./types.new";
 
 export type KnowledgeNode = {

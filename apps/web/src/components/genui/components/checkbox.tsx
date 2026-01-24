@@ -5,9 +5,11 @@
  */
 
 import type { UIComponent } from "@alfred/type/genui";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useFieldContext } from "@/form";
+
 import {
   extractBooleanProp,
   extractFieldName,

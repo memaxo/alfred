@@ -1,4 +1,5 @@
 import { Card, type CardProps } from "@tremor/react";
+
 import { cn } from "@/lib/utils";
 
 export function VoidCard({ className, children, ...props }: CardProps) {

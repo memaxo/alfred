@@ -14,10 +14,13 @@
 
 import { type CSSProperties, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { WindowInstance, WindowType } from "@/store/desktop/types.new";
+
 import { Dock } from "@/components/dock";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowInstance, WindowType } from "@/store/desktop/types.new";
+
 import { AppLauncherButton } from "./app-launcher";
 import { TaskbarButton } from "./taskbar-button";
 

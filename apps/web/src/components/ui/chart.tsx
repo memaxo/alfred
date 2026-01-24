@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+
 import {
   Bar,
   BarChart,
@@ -10,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
 import { cn } from "@/lib/utils";
 
 export type ChartPoint = {

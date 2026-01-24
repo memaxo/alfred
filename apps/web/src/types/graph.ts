@@ -8,6 +8,7 @@
  */
 
 import type { Edge, Node } from "@xyflow/react";
+
 import type { EdgeData } from "@/store/desktop/types.new";
 
 // ─────────────────────────────────────────────────────────────────────────────

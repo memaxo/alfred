@@ -2,11 +2,13 @@
 
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/dropdown";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { getElevatedToolToken } from "@/lib/token";
+
 import { ProfileDropdown } from "./ui/profile";
 
 export function Profile() {

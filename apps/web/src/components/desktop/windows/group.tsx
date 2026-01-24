@@ -3,10 +3,13 @@
 import { X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import { ResizeHandles } from "./resize-handles";
+
 import type { ResizeDirection } from "./types";
+
+import { ResizeHandles } from "./resize-handles";
 
 type WindowGroupChromeProps = {
   groupId: string;

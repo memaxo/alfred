@@ -1,5 +1,7 @@
 import handler from "@tanstack/react-start/server-entry";
+
 import { withRequestTestSession } from "@/lib/test-auth";
+
 import { initServer } from "./server/bootstrap";
 
 // Initialize server-side services before handling requests

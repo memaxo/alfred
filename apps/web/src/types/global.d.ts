@@ -3,7 +3,7 @@
  */
 
 declare global {
-  // biome-ignore lint: Required for TypeScript declaration merging
+  // oxlint-disable lint: Required for TypeScript declaration merging
   interface Window {
     __perf?: Record<string, unknown>;
   }

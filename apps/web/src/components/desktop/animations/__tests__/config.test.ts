@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { ANIMATION_CONFIG } from "../config";
 
 describe("ANIMATION_CONFIG", () => {

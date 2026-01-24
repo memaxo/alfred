@@ -1,5 +1,7 @@
 import * as React from "react";
+
 import { cn } from "@/lib/utils";
+
 import { TabsContext } from "./tabs-context";
 
 export type TabsContentProps = {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
 import { createCacheSlice } from "../cache";
 
 const toastWarning = mock(() => {});
@@ -22,12 +23,13 @@ async function withBudget<T>(
   return { result, durationMs, withinBudget: durationMs <= budgetMs };
 }
 
+import type { DesktopState, WindowInstance } from "../types.new";
+
 import { createContextSlice } from "../context";
 import { createKnowledgeSlice } from "../knowledge";
 import { DESKTOP_STORAGE_ID, persistOptions } from "../persist";
 import { createTaskbarSlice } from "../taskbar";
 import { createTilingSlice } from "../tiling";
-import type { DesktopState, WindowInstance } from "../types.new";
 import { createViewportSliceNew } from "../viewport.new";
 import { createWindowSliceNew } from "../windows.new";
 

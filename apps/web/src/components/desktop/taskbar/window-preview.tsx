@@ -2,12 +2,14 @@
 
 import { MessageSquare } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { WindowInstance } from "@/store/desktop/types.new";
+
 import {
   getWindowIcon,
   getWindowLabel,
 } from "@/components/desktop/windows/registry";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowInstance } from "@/store/desktop/types.new";
 
 type WindowPreviewProps = {
   window: WindowInstance;

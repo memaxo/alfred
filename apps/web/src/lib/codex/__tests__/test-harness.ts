@@ -1,4 +1,5 @@
 import type { ThreadEvent, ThreadItem } from "@alfred/protocol";
+
 import type { CodexStreamOptions } from "../stream-client";
 
 type RawCodexStreamEvent =

@@ -10,8 +10,11 @@
 
 import { BookOpen, Bug, LayoutGrid } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { cn } from "@/lib/utils";
+
 import { IntentDebugger } from "./intent-debugger";
 import { PatternLibrary } from "./pattern-library";
 import { PlanCanvas } from "./plan-canvas";

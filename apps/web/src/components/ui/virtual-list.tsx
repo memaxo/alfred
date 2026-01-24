@@ -4,9 +4,11 @@
  * VirtualList - Reusable virtualized list component
  */
 
-import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+
+import { Loader2 } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
+
 import { cn } from "@/lib/utils";
 
 type VirtualListProps<T> = {

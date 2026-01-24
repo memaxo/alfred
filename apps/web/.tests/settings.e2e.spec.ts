@@ -6,6 +6,7 @@
  */
 
 import { expect, test } from "@playwright/test";
+
 import { signUpTestUser } from "./helpers/auth";
 import { openSettingsWindow } from "./helpers/mindscape";
 

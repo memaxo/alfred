@@ -1,4 +1,5 @@
 import type { ConfigPlugin } from "@expo/config-plugins";
+
 import { withEntitlementsPlist } from "@expo/config-plugins";
 
 type CarPlayConfig = {

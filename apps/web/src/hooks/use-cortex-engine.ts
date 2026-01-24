@@ -5,6 +5,7 @@
  */
 
 import type { CortexConfig, CortexEngine } from "@alfred/cortex";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type RenderingCapability = "webgpu" | "webgl" | "canvas2d";

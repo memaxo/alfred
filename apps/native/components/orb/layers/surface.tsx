@@ -5,6 +5,8 @@
  * with noise-driven distortion that responds to voice input.
  */
 
+import type { SharedValue } from "react-native-reanimated";
+
 import {
   Circle,
   Fill,
@@ -15,7 +17,6 @@ import {
   type SkPoint,
 } from "@shopify/react-native-skia";
 import { useMemo } from "react";
-import type { SharedValue } from "react-native-reanimated";
 import { useDerivedValue } from "react-native-reanimated";
 
 import { ALFRED_COLORS } from "../constants";

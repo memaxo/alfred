@@ -11,13 +11,15 @@ import {
   ListTemplate,
   TabBarTemplate,
 } from "react-native-carplay";
-import { useCarPlayStore } from "../store";
+
 import type {
   Escalation,
   ExecPlan,
   PullRequest,
   WorkflowState,
 } from "../types";
+
+import { useCarPlayStore } from "../store";
 
 // Icon assets (80x80 @3x recommended)
 const ICONS = {

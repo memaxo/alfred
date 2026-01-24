@@ -6,6 +6,7 @@
 
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { FileOutput, Play, Zap } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export type WorkflowNodeType = "trigger" | "action" | "condition" | "output";

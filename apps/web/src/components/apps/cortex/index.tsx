@@ -19,9 +19,12 @@ import {
   Sliders,
 } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
 import { GpuMonitor } from "./gpu-monitor";
 import { ParameterTuner } from "./parameter-tuner";
 import { PhysiologyMonitor } from "./physiology-monitor";

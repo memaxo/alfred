@@ -5,7 +5,9 @@
  */
 
 import { File, FileCode, FileJson, FileText, Image, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+
 import type { FileItem } from "./index";
 
 type QuickLookProps = {

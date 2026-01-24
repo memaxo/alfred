@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
+
+import { createFileRoute } from "@tanstack/react-router";
 
 async function handleAssistantRequest(request: Request): Promise<Response> {
   try {
@@ -22,9 +23,8 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
       /* @vite-ignore */ "@alfred/agent/assistant/src/adapter"
     );
     const { buildPersonaPrompt } = await import(/* @vite-ignore */ personaPkg);
-    const { handleStreamRequest } = await import(
-      "../../../lib/api/stream-handler"
-    );
+    const { handleStreamRequest } =
+      await import("../../../lib/api/stream-handler");
 
     return await handleStreamRequest(
       request,

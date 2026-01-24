@@ -7,6 +7,7 @@
  */
 
 import { Brain, Calendar, FileText, GitBranch, User } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 type GraphCanvasProps = {

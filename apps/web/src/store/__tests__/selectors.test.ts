@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+
+import type { WindowInstance } from "../desktop/types.new";
+
 import { useDesktopStore } from "../desktop";
 import {
   selectFocusedWindow,
@@ -13,7 +16,6 @@ import {
   selectWindowsByType,
   selectWindowWithEdges,
 } from "../desktop/selectors";
-import type { WindowInstance } from "../desktop/types.new";
 
 function createTestWindow(
   id: string,

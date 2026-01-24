@@ -14,6 +14,7 @@ ALFRED is a personal AI assistant designed for deep single-user personalization.
 ### Is ALFRED free?
 
 ALFRED is open-source and free to use. You'll need to provide your own:
+
 - PostgreSQL database
 - AI model API keys (OpenAI, Google, etc.)
 - Optional: Redis for caching
@@ -87,13 +88,17 @@ See [Common Patterns](./guides/common-patterns) for examples.
 ### How do I test my changes?
 
 \`\`\`bash
+
 # All tests
+
 bun run test
 
 # Specific package
+
 bun run --filter @alfred/<package> test
 
 # Integration tests
+
 bun run test:integration
 \`\`\`
 
@@ -125,4 +130,3 @@ All queries must complete in <10ms (p99). Use indexes, batch operations, and avo
 - Check the [Troubleshooting Guide](./guides/troubleshooting)
 - Review [Common Patterns](./guides/common-patterns)
 - See [Architecture Overview](./architecture/overview) for system design
-

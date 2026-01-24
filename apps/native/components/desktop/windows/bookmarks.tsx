@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { trpc } from "@/utils/trpc";
 
 import type { WindowComponentProps } from "./types";

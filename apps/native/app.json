@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#0A0A0F"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
@@ -20,14 +20,43 @@
         "NSMicrophoneUsageDescription": "Alfred needs microphone access for voice interactions.",
         "NSCameraUsageDescription": "Alfred may need camera access for certain features.",
         "NSFaceIDUsageDescription": "Alfred uses Face ID for secure authentication.",
-        "UIBackgroundModes": ["audio", "fetch", "remote-notification"]
+        "NSSpeechRecognitionUsageDescription": "Alfred uses speech recognition for hands-free voice commands.",
+        "UIBackgroundModes": [
+          "audio",
+          "fetch",
+          "remote-notification",
+          "processing"
+        ],
+        "UIApplicationSceneManifest": {
+          "UIApplicationSupportsMultipleScenes": true,
+          "UISceneConfigurations": {
+            "UIWindowSceneSessionRoleApplication": [
+              {
+                "UISceneClassName": "UIWindowScene",
+                "UISceneConfigurationName": "Phone",
+                "UISceneDelegateClassName": "PhoneSceneDelegate"
+              }
+            ],
+            "CPTemplateApplicationSceneSessionRoleApplication": [
+              {
+                "UISceneClassName": "CPTemplateApplicationScene",
+                "UISceneConfigurationName": "CarPlay",
+                "UISceneDelegateClassName": "CarSceneDelegate"
+              }
+            ]
+          }
+        }
+      },
+      "entitlements": {
+        "com.apple.developer.carplay-driving-task": true,
+        "com.apple.security.application-groups": ["group.com.alfred.app"]
       },
       "associatedDomains": ["applinks:alfred.app", "applinks:*.alfred.app"]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#0A0A0F"
       },
       "package": "com.alfred.app",
       "permissions": [

@@ -7,9 +7,11 @@
  */
 
 import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMindscapeStore } from "@/store/mindscape";
+
 import { MindscapeCanvas } from "./index";
 
 export function MindscapeLayer() {

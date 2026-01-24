@@ -1,8 +1,9 @@
+import type { TableRootProps } from "./table-root";
+
 import { TableBody } from "./table-body";
 import { TableCell } from "./table-cell";
 import { TableHead } from "./table-head";
 import { TableHeader } from "./table-header";
-import type { TableRootProps } from "./table-root";
 import { TableRoot } from "./table-root";
 import { TableRow } from "./table-row";
 

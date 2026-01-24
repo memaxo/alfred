@@ -2,10 +2,12 @@
 
 import { Container, Server, Terminal, X } from "lucide-react";
 import { useCallback, useState } from "react";
+
+import type { TerminalProfile } from "@/store/terminal";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { TerminalProfile } from "@/store/terminal";
 
 type ProfileDialogProps = {
   profile?: TerminalProfile;

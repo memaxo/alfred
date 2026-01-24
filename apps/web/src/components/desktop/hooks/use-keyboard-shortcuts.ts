@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
+
 import { useDesktopStore } from "@/store/desktop";
 
 type ShortcutHandler = (e: KeyboardEvent) => void;

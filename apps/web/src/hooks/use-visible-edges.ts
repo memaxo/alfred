@@ -7,6 +7,7 @@
 
 import { useStore } from "@xyflow/react";
 import { useMemo } from "react";
+
 import { getEdgeVisibility } from "@/lib/desktop/performance";
 
 type EdgeVisibility = {

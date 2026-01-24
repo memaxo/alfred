@@ -1,5 +1,6 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { ReactNode } from "react";
+
 import {
   Message as BaseMessage,
   MessageAvatar,

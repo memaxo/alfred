@@ -6,6 +6,7 @@
 
 import { AlertTriangle, Clock, Play } from "lucide-react";
 import { useState } from "react";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";

@@ -23,7 +23,9 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -32,6 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
 import { Breadcrumbs } from "./breadcrumbs";
 import { FileGrid } from "./file-grid";
 import { QuickLook } from "./quick-look";

@@ -15,10 +15,13 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+
+import type { TerminalProfile } from "@/store/terminal";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { TerminalProfile } from "@/store/terminal";
 import { useTerminalProfiles } from "@/store/terminal";
+
 import { DockerSelector } from "./docker-selector";
 import { ProfileDialog } from "./profile-dialog";
 

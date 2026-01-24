@@ -1,14 +1,17 @@
 import type { inferRouterOutputs } from "@trpc/server";
+
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+
+import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { Container } from "@/components/container";
 import { SignIn } from "@/components/sign-in";
 import { useServerUrl } from "@/lib/api";
 import { useAuthClient } from "@/lib/auth-client";
 import { checkHealthz } from "@/lib/health";
 import { isLocalServer } from "@/lib/server-url";
-import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 export default function Home() {

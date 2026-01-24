@@ -1,13 +1,36 @@
 import type { UIMessage } from "@alfred/type/stream";
 import type { TRPCClient } from "@trpc/client";
+
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState, Platform, Pressable, Text, View } from "react-native";
+import { AppState, Platform, Pressable, View, StyleSheet } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+
+import type { PendingItem } from "@/lib/voice/queue";
+import type { TRPCAppRouter } from "@/utils/trpc";
+
+import {
+  BiolumText,
+  CaptionText,
+  TitleText,
+} from "@/components/foundation/BiolumText";
+import { FluidButton } from "@/components/foundation/FluidButton";
+import { HUDSurface } from "@/components/foundation/HUDSurface";
+import { VoidContainer } from "@/components/foundation/VoidContainer";
+import { VADIndicator } from "@/components/voice/VADIndicator";
+import { Waveform } from "@/components/voice/Waveform";
+import { useVoidTheme, useReducedMotion } from "@/hooks/use-void-theme";
 import { useServerUrl, useTrpcClient } from "@/lib/api";
 import { useAuthClient } from "@/lib/auth-client";
 import { setupCarPlay } from "@/lib/carplay";
 import { logError } from "@/lib/devlog";
-import { useColorScheme } from "@/lib/use-color-scheme";
 import {
   drain,
   playBase64,
@@ -16,8 +39,6 @@ import {
 } from "@/lib/voice";
 import { getCookieFromAuthClient } from "@/lib/voice/cookie";
 import { ensureForegroundService } from "@/lib/voice/foreground";
-import type { PendingItem } from "@/lib/voice/queue";
-import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 const THREAD_ID = "drive-mode";
@@ -25,22 +46,6 @@ const THREAD_ID = "drive-mode";
 type Status = "idle" | "holding" | "thinking" | "responding" | "error";
 
 type VoiceSession = ReturnType<typeof useVoiceSessionNative>;
-
-function getDrivePalette(isDarkColorScheme: boolean) {
-  return {
-    background: isDarkColorScheme ? "bg-black" : "bg-white",
-    text: isDarkColorScheme ? "text-white" : "text-black",
-    subtle: isDarkColorScheme ? "text-gray-400" : "text-gray-500",
-    buttonIdle: isDarkColorScheme ? "bg-sky-500" : "bg-blue-500",
-    buttonActive: "bg-emerald-500",
-    buttonError: "bg-rose-500",
-    cardBg: isDarkColorScheme ? "bg-white/5" : "bg-black/5",
-    cardBorder: isDarkColorScheme ? "border-white/10" : "border-black/10",
-    meterTrack: isDarkColorScheme ? "bg-white/20" : "bg-black/10",
-    meterFill: isDarkColorScheme ? "bg-emerald-400" : "bg-emerald-500",
-    streamAccent: isDarkColorScheme ? "text-emerald-300" : "text-emerald-600",
-  };
-}
 
 async function processQueueItem(
   item: PendingItem,
@@ -104,11 +109,8 @@ export default function DriveScreen() {
   const trpcClient = useTrpcClient<TRPCAppRouter>();
   const authClient = useAuthClient();
   const { serverUrl } = useServerUrl();
-  const { isDarkColorScheme } = useColorScheme();
-  const palette = useMemo(
-    () => getDrivePalette(isDarkColorScheme),
-    [isDarkColorScheme]
-  );
+  const theme = useVoidTheme();
+  const reduceMotion = useReducedMotion();
 
   const { data: prefs } = trpc.preference.list.useQuery({
     limit: 100,
@@ -130,6 +132,10 @@ export default function DriveScreen() {
   const [status, setStatus] = useState<Status>("idle");
   const [reply, setReply] = useState("");
   const workflowRunId = voice.stream?.workflow?.runId ?? null;
+
+  // Orb animation values
+  const orbScale = useSharedValue(1);
+  const orbGlow = useSharedValue(0.3);
 
   useEffect(() => {
     if (Platform.OS === "android") {
@@ -158,13 +164,11 @@ export default function DriveScreen() {
   );
 
   useEffect(() => {
-    // Register background task to drain queue
     registerQueueDrain(async () => {
       await drain(processPendingItem);
     });
   }, [processPendingItem]);
 
-  // Drain queue on app resume
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
@@ -173,7 +177,6 @@ export default function DriveScreen() {
         });
       }
     });
-
     return () => {
       subscription.remove();
     };
@@ -191,9 +194,7 @@ export default function DriveScreen() {
   }, [voice]);
 
   useEffect(() => {
-    if (!voice.stream?.supported) {
-      return;
-    }
+    if (!voice.stream?.supported) return;
     switch (voice.stream.status) {
       case "recording":
         setStatus("holding");
@@ -213,14 +214,52 @@ export default function DriveScreen() {
       case "error":
         setStatus("error");
         break;
-      default:
-        break;
     }
   }, [
     voice.stream?.assistantText,
     voice.stream?.status,
     voice.stream?.supported,
   ]);
+
+  // Orb animation effect
+  useEffect(() => {
+    if (reduceMotion) return;
+
+    if (status === "holding") {
+      orbScale.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 500 }),
+          withTiming(1, { duration: 500 })
+        ),
+        -1,
+        true
+      );
+      orbGlow.value = withTiming(0.8, { duration: 300 });
+    } else if (status === "thinking") {
+      orbScale.value = withRepeat(
+        withSequence(
+          withTiming(1.02, { duration: 300 }),
+          withTiming(0.98, { duration: 300 })
+        ),
+        -1,
+        true
+      );
+      orbGlow.value = withRepeat(
+        withSequence(
+          withTiming(0.9, { duration: 300 }),
+          withTiming(0.4, { duration: 300 })
+        ),
+        -1,
+        true
+      );
+    } else if (status === "responding") {
+      orbScale.value = withTiming(1.08, { duration: 200 });
+      orbGlow.value = withTiming(1, { duration: 200 });
+    } else {
+      orbScale.value = withSpring(1);
+      orbGlow.value = withTiming(0.3, { duration: 500 });
+    }
+  }, [status, reduceMotion]);
 
   const handlePressIn = useCallback(async () => {
     setReply("");
@@ -293,7 +332,7 @@ export default function DriveScreen() {
     } finally {
       setStatus(finalStatus);
     }
-  }, [voice]);
+  }, [voice, trpcClient]);
 
   const label = useMemo(() => {
     switch (status) {
@@ -310,27 +349,15 @@ export default function DriveScreen() {
     }
   }, [status]);
 
-  const buttonStyle = (() => {
-    if (status === "error") {
-      return palette.buttonError;
-    }
-    if (status === "holding") {
-      return palette.buttonActive;
-    }
-    return palette.buttonIdle;
-  })();
-
   const transcriptText =
     useStreaming && voice.stream
       ? voice.stream.transcript || voice.state.transcript
       : voice.state.transcript;
 
-  const vadPercent =
+  const vadLevel =
     voice.stream && typeof voice.stream.vadConfidence === "number"
-      ? Math.round(
-          Math.min(1, Math.max(0, voice.stream.vadConfidence ?? 0)) * 100
-        )
-      : null;
+      ? Math.min(1, Math.max(0, voice.stream.vadConfidence ?? 0))
+      : 0;
 
   const handsFreeLabel = useMemo(() => {
     if (!voice.stream?.supported) {
@@ -346,126 +373,287 @@ export default function DriveScreen() {
       case "error":
         return voice.stream.error ?? "Streaming error";
       default:
-        return "Tap mic or say “Hey Alfred” to start";
+        return 'Tap mic or say "Hey Alfred" to start';
     }
   }, [voice.stream?.error, voice.stream?.status, voice.stream?.supported]);
 
+  const orbAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: orbScale.value }],
+    shadowOpacity: orbGlow.value,
+  }));
+
+  const getOrbColor = () => {
+    switch (status) {
+      case "error":
+        return theme.colors.semantic.error;
+      case "holding":
+        return theme.colors.semantic.success;
+      case "thinking":
+        return theme.colors.biolum.bright;
+      case "responding":
+        return theme.colors.biolum.full;
+      default:
+        return theme.colors.biolum.standard;
+    }
+  };
+
   return (
-    <View
-      className={`flex-1 ${palette.background} items-center justify-center px-6`}
-    >
-      <Text
-        accessibilityRole="header"
-        className={`font-semibold text-2xl ${palette.text} mb-8`}
-      >
-        Drive Mode
-      </Text>
-      <Pressable
-        accessibilityHint="Press and hold to talk with Alfred. Release to send."
-        accessibilityRole="button"
-        className={`h-48 w-48 items-center justify-center rounded-full ${buttonStyle} shadow-lg`}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-      >
-        <Text className="font-semibold text-white text-xl">{label}</Text>
-      </Pressable>
-      <View className="mt-10 w-full items-center">
-        <Text className={`text-base ${palette.subtle}`}>Transcript</Text>
-        <Text
-          className={`mt-2 text-lg ${palette.text} text-center`}
+    <VoidContainer gradient="ambient" noise={true} style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TitleText size="medium" color="full">
+          Drive Mode
+        </TitleText>
+        <CaptionText size="medium" color="dim">
+          {handsFreeLabel}
+        </CaptionText>
+      </View>
+
+      {/* Main Orb */}
+      <View style={styles.orbContainer}>
+        <Animated.View
+          style={[
+            styles.orb,
+            {
+              backgroundColor: getOrbColor(),
+              shadowColor: getOrbColor(),
+            },
+            orbAnimatedStyle,
+          ]}
+        >
+          <Pressable
+            accessibilityHint="Press and hold to talk with Alfred. Release to send."
+            accessibilityRole="button"
+            style={styles.orbPressable}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+          >
+            <BiolumText variant="body" size="large" color="full">
+              {label}
+            </BiolumText>
+          </Pressable>
+        </Animated.View>
+
+        {/* VAD Ring */}
+        {voice.stream?.supported && status === "holding" && (
+          <VADIndicator
+            active={true}
+            intensity={vadLevel}
+            size={220}
+            style={styles.vadRing}
+          />
+        )}
+      </View>
+
+      {/* Waveform */}
+      {status === "holding" && (
+        <View style={styles.waveformContainer}>
+          <Waveform
+            audioLevel={vadLevel}
+            active={true}
+            barCount={32}
+            height={60}
+          />
+        </View>
+      )}
+
+      {/* Transcript Section */}
+      <HUDSurface elevation={1} style={styles.card}>
+        <CaptionText size="small" color="faint" style={styles.cardLabel}>
+          Transcript
+        </CaptionText>
+        <BiolumText
+          variant="body"
+          size="medium"
+          color="standard"
           numberOfLines={3}
         >
           {transcriptText || "—"}
-        </Text>
-      </View>
-      <View className="mt-8 w-full items-center">
-        <Text className={`text-base ${palette.subtle}`}>Response</Text>
-        <Text
-          className={`mt-2 text-lg ${palette.text} text-center`}
+        </BiolumText>
+      </HUDSurface>
+
+      {/* Response Section */}
+      <HUDSurface elevation={1} style={styles.card}>
+        <CaptionText size="small" color="faint" style={styles.cardLabel}>
+          Response
+        </CaptionText>
+        <BiolumText
+          variant="body"
+          size="medium"
+          color="bright"
           numberOfLines={3}
         >
           {reply || "Awaiting reply"}
-        </Text>
-      </View>
+        </BiolumText>
+      </HUDSurface>
 
-      {workflowRunId ? (
-        <View
-          className={`mt-6 w-full rounded-2xl border ${palette.cardBorder} ${palette.cardBg} p-4`}
-        >
-          <Text className={`font-semibold text-sm ${palette.text}`}>
-            Workflow ready
-          </Text>
-          <Text className={`mt-1 text-xs ${palette.subtle}`}>
-            Run ID: {workflowRunId.slice(-8)}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            className="mt-3 rounded-xl bg-emerald-600 px-4 py-3"
+      {/* Workflow Card */}
+      {workflowRunId && (
+        <HUDSurface elevation={2} style={styles.card}>
+          <View style={styles.workflowHeader}>
+            <BiolumText variant="body" size="medium" color="full">
+              Workflow ready
+            </BiolumText>
+            <CaptionText size="small" color="dim">
+              Run ID: {workflowRunId.slice(-8)}
+            </CaptionText>
+          </View>
+          <FluidButton
+            label="Open workflow details"
+            variant="primary"
+            size="medium"
             onPress={() => router.push(`/workflows/${workflowRunId}`)}
-          >
-            <Text className="text-center font-semibold text-sm text-white">
-              Open workflow details
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-      {voice.stream?.supported ? (
-        <View
-          className={`mt-8 w-full rounded-2xl border ${palette.cardBorder} ${palette.cardBg} p-4`}
-        >
-          <View className="flex-row items-center justify-between">
-            <Text className={`font-semibold text-sm ${palette.text}`}>
+            style={styles.workflowButton}
+          />
+        </HUDSurface>
+      )}
+
+      {/* Streaming Status Card */}
+      {voice.stream?.supported && (
+        <HUDSurface elevation={1} style={styles.card}>
+          <View style={styles.streamingHeader}>
+            <BiolumText variant="body" size="small" color="standard">
               Hands-free streaming
-            </Text>
-            <Text
-              className={`text-xs ${
-                voice.stream.status === "recording"
-                  ? palette.streamAccent
-                  : palette.subtle
-              }`}
+            </BiolumText>
+            <CaptionText
+              size="small"
+              color={voice.stream.status === "recording" ? "bright" : "dim"}
             >
               {voice.stream.status.toUpperCase()}
-            </Text>
+            </CaptionText>
           </View>
-          <Text className={`mt-2 text-base ${palette.text}`}>
-            {handsFreeLabel}
-          </Text>
+
+          {/* VAD Progress Bar */}
           <View
-            className={`mt-4 h-2 w-full overflow-hidden rounded-full ${palette.meterTrack}`}
+            style={[
+              styles.vadTrack,
+              { backgroundColor: theme.colors.glass.surface },
+            ]}
           >
             <View
-              className={`h-full rounded-full ${palette.meterFill}`}
-              style={{ width: `${vadPercent ?? 0}%` }}
+              style={[
+                styles.vadFill,
+                {
+                  backgroundColor: theme.colors.semantic.success,
+                  width: `${Math.round(vadLevel * 100)}%`,
+                },
+              ]}
             />
           </View>
-          <View className="mt-2 flex-row items-center justify-between">
-            <Text className={`text-xs ${palette.subtle}`}>
-              VAD: {vadPercent === null ? "—" : `${vadPercent}%`}
-            </Text>
-            <Text className={`text-xs ${palette.subtle}`}>
+
+          <View style={styles.vadLabels}>
+            <CaptionText size="small" color="faint">
+              VAD: {Math.round(vadLevel * 100)}%
+            </CaptionText>
+            <CaptionText size="small" color="faint">
               {voice.stream.autoStopReason
                 ? `Auto-stop: ${voice.stream.autoStopReason}`
                 : "Auto-stop arms on silence"}
-            </Text>
+            </CaptionText>
           </View>
-          {voice.session ? (
-            <Text className={`mt-2 text-xs ${palette.subtle}`}>
+
+          {voice.session && (
+            <CaptionText size="small" color="faint" style={styles.sessionInfo}>
               Session: {voice.session.id.slice(-8)} · Updated{" "}
               {new Date(voice.session.updatedAt).toLocaleTimeString()}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-      {voice.state.error ? (
-        <Text className="mt-8 text-center text-rose-500 text-sm">
-          {voice.state.error}
-        </Text>
-      ) : null}
-      {voice.stream?.error ? (
-        <Text className="mt-2 text-center text-rose-500 text-sm">
-          {voice.stream.error}
-        </Text>
-      ) : null}
-    </View>
+            </CaptionText>
+          )}
+        </HUDSurface>
+      )}
+
+      {/* Error Messages */}
+      {(voice.state.error || voice.stream?.error) && (
+        <HUDSurface elevation={1} style={[styles.card, styles.errorCard]}>
+          <BiolumText
+            variant="body"
+            size="small"
+            style={{ color: theme.colors.semantic.error }}
+          >
+            {voice.state.error || voice.stream?.error}
+          </BiolumText>
+        </HUDSurface>
+      )}
+    </VoidContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    alignItems: "center",
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  orbContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 240,
+    marginVertical: 24,
+  },
+  orb: {
+    width: 192,
+    height: 192,
+    borderRadius: 96,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 40,
+    elevation: 8,
+  },
+  orbPressable: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 96,
+  },
+  vadRing: {
+    position: "absolute",
+  },
+  waveformContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  card: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 16,
+  },
+  cardLabel: {
+    marginBottom: 8,
+  },
+  workflowHeader: {
+    marginBottom: 12,
+  },
+  workflowButton: {
+    marginTop: 8,
+  },
+  streamingHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  vadTrack: {
+    height: 8,
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  vadFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  vadLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sessionInfo: {
+    marginTop: 8,
+  },
+  errorCard: {
+    borderColor: "rgba(200, 145, 145, 0.3)",
+  },
+});

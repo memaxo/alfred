@@ -16,10 +16,13 @@
 
 import { GitBranch, Play, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { useWorkflowSubscription } from "@/hooks/use-workflow-subscription";
 import { cn } from "@/lib/utils";
+
 import { ExecutionPanel } from "../../windows/workflow/execution-panel";
 import { NodeCanvas } from "./node-canvas";
 import { NodePalette } from "./node-palette";

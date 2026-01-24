@@ -1,5 +1,7 @@
-import { describe, expect, it } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
+
+import { describe, expect, it } from "bun:test";
+
 import { deriveActions } from "./use-assistant-stream";
 
 type ToolCallPart = {

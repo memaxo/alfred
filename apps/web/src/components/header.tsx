@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+
 import UserMenu from "./user-menu";
 
 const links = [{ to: "/", label: "Mindscape" }] as const;

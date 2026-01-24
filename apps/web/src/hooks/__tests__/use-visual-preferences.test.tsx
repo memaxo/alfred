@@ -6,9 +6,10 @@
  */
 
 import "@/test/dom";
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { VisualConfig } from "@alfred/type";
+
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 // Test presets
 const PRESET_BALANCED: VisualConfig = {

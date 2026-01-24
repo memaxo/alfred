@@ -12,9 +12,11 @@ import {
   Settings,
   Terminal,
 } from "lucide-react";
+
+import type { WindowType } from "@/store/desktop/types.new";
+
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowType } from "@/store/desktop/types.new";
 import { useOrbStore } from "@/store/orb";
 
 type QuickActionsProps = {

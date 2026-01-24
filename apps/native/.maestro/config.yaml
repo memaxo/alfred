@@ -1,0 +1,26 @@
+# Maestro Configuration for ALFRED Native App
+
+appId: com.alfred.app
+
+# Default settings
+executionOrder:
+  continueOnFailure: false
+
+# Test flows to run
+flows:
+  - flows/chat.yaml
+  - flows/library.yaml
+  - flows/offline.yaml
+
+# Environment variables
+env:
+  TEST_MODE: "true"
+
+# Tags for selective test runs
+tags:
+  smoke:
+    - flows/chat.yaml
+  full:
+    - flows/chat.yaml
+    - flows/library.yaml
+    - flows/offline.yaml

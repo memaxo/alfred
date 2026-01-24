@@ -16,11 +16,14 @@
 
 import { Plus, Settings, Terminal as TerminalIcon } from "lucide-react";
 import { useCallback, useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+import type { TerminalProfile } from "@/store/terminal";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { TerminalProfile } from "@/store/terminal";
 import { useTerminalProfiles } from "@/store/terminal";
+
 import { ProfileSelector } from "./profile-selector";
 import { TerminalInstance } from "./terminal-instance";
 import { TerminalTabs } from "./terminal-tabs";

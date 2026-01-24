@@ -1,7 +1,11 @@
 import "../../test/reset-mocks";
-import { describe, expect, it } from "bun:test";
-import { TRPCClientError } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
+
+import { TRPCClientError } from "@trpc/client";
+import { describe, expect, it } from "bun:test";
+
+import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { VoiceAdminView } from "@/routes/_protected/admin/voice";
 import {
   createTestQueryClient,
@@ -9,7 +13,6 @@ import {
   renderRoute,
   type TestTrpcHandlers,
 } from "@/test/render-route";
-import type { TRPCAppRouter } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type VoiceStats = RouterOutputs["admin"]["getVoiceStats"];

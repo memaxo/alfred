@@ -9,7 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
+
 import { cn } from "@/lib/utils";
+
 import { PromptInputButton } from "./layout";
 
 interface SpeechRecognition extends EventTarget {
@@ -56,7 +58,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 }
 
 declare global {
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: Global augmentation requires interface for declaration merging
+  // oxlint-disable useConsistentTypeDefinitions: Global augmentation requires interface for declaration merging
   interface Window {
     SpeechRecognition?: {
       new (): SpeechRecognition;

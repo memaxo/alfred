@@ -3,8 +3,8 @@
  */
 
 import "@/test/dom";
-import { afterEach, describe, expect, it, mock } from "bun:test";
 import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 
 let compilationState:
   | { kind: "loading" }

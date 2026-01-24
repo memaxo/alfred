@@ -15,6 +15,7 @@
 "use client";
 
 import * as React from "react";
+
 import {
   type AmbientConfig,
   type AmbientState,
@@ -24,6 +25,7 @@ import {
   useAmbientAwareness,
 } from "@/hooks/use-ambient-awareness";
 import { cn } from "@/lib/utils";
+
 import {
   type AmbientNotificationProps,
   NotificationStack,

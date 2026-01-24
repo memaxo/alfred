@@ -1,4 +1,5 @@
 import { useShallow } from "zustand/react/shallow";
+
 import { useDesktopStore } from "@/store/desktop";
 
 export function useWindowFocus(windowId: string) {

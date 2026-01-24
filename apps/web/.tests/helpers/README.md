@@ -36,7 +36,10 @@ Comprehensive testing utilities following SOLID automation principles for visual
 
 ```typescript
 import { test as base } from "@playwright/test";
-import { createScreenshotManager, type ScreenshotManager } from "./helpers/screenshot";
+import {
+  createScreenshotManager,
+  type ScreenshotManager,
+} from "./helpers/screenshot";
 
 const test = base.extend<{ screenshots: ScreenshotManager }>({
   screenshots: async ({ page }, use, testInfo) => {
@@ -47,15 +50,15 @@ const test = base.extend<{ screenshots: ScreenshotManager }>({
 
 test("my test", async ({ page, screenshots }) => {
   await page.goto("/my-page");
-  
+
   // Capture page load
   await screenshots.capturePageLoad("my_page");
-  
+
   // Capture before/after action
   await screenshots.captureBeforeAction("click_button");
   await page.click("button");
   await screenshots.captureAfterAction("click_button");
-  
+
   // Capture milestone
   await screenshots.captureMilestone("test_complete");
 });
@@ -68,16 +71,16 @@ import { createFlowCapture } from "./helpers/screenshot";
 
 test("complete flow", async ({ page, screenshots }) => {
   const flow = createFlowCapture(screenshots);
-  
+
   // Automatic before/after screenshots
   await flow.step("login", async () => {
     await page.fill("#email", "test@example.com");
     await page.click("#submit");
   });
-  
+
   // Named milestones
   await flow.milestone("logged_in");
-  
+
   // Checkpoint with assertion
   await flow.checkpoint("dashboard_loaded", async () => {
     await expect(page.getByText("Welcome")).toBeVisible();
@@ -116,9 +119,8 @@ PLAYWRIGHT_SLOW_MO=100
 // playwright.config.ts
 export default defineConfig({
   use: {
-    screenshot: process.env.PLAYWRIGHT_SCREENSHOTS === "1" 
-      ? "on" 
-      : "only-on-failure",
+    screenshot:
+      process.env.PLAYWRIGHT_SCREENSHOTS === "1" ? "on" : "only-on-failure",
   },
   expect: {
     toHaveScreenshot: {
@@ -133,12 +135,12 @@ export default defineConfig({
 
 ```typescript
 type CaptureOptions = {
-  selector?: string;      // Capture specific element
-  fullPage?: boolean;     // Full page screenshot
-  mask?: string[];        // Mask elements (hide dynamic content)
+  selector?: string; // Capture specific element
+  fullPage?: boolean; // Full page screenshot
+  mask?: string[]; // Mask elements (hide dynamic content)
   animations?: "disabled" | "allow";
-  delay?: number;         // Wait before capture
-  clip?: { x, y, width, height };
+  delay?: number; // Wait before capture
+  clip?: { x; y; width; height };
 };
 ```
 
@@ -176,7 +178,7 @@ import { expectVisualMatch } from "./helpers/screenshot";
 
 test("visual match", async ({ page }) => {
   await page.goto("/my-page");
-  
+
   // Compare against baseline
   await expectVisualMatch(page, "my_page_baseline", {
     threshold: 0.1,

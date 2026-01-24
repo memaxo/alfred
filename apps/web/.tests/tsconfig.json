@@ -6,9 +6,9 @@
     "module": "Preserve",
     "target": "ES2022",
     "resolveJsonModule": true,
-    "baseUrl": "..",
     "paths": {
-      "@/*": ["../src/*"]
+      "@/*": ["../src/*"],
+      "*": ["../../*"]
     }
   },
   "include": ["./**/*.ts"],

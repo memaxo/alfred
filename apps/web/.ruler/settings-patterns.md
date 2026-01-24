@@ -35,8 +35,18 @@
 ## Toggle Switch Pattern
 
 ```tsx
-<div className={cn("h-5 w-9 rounded-full transition-colors", enabled ? "bg-biolum" : "bg-white/20")}>
-  <div className={cn("h-4 w-4 translate-y-0.5 rounded-full bg-white transition-transform", enabled ? "translate-x-4" : "translate-x-0.5")} />
+<div
+  className={cn(
+    "h-5 w-9 rounded-full transition-colors",
+    enabled ? "bg-biolum" : "bg-white/20"
+  )}
+>
+  <div
+    className={cn(
+      "h-4 w-4 translate-y-0.5 rounded-full bg-white transition-transform",
+      enabled ? "translate-x-4" : "translate-x-0.5"
+    )}
+  />
 </div>
 ```
 

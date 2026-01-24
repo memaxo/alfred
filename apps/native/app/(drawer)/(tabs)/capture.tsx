@@ -7,15 +7,19 @@
 
 import { Stack } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Platform, View, StyleSheet } from "react-native";
+
+import { TextInput as VoidTextInput } from "@/components/form/TextInput";
 import {
-  ActivityIndicator,
-  Platform,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Container } from "@/components/container";
+  BiolumText,
+  CaptionText,
+  TitleText,
+} from "@/components/foundation/BiolumText";
+import { FluidButton } from "@/components/foundation/FluidButton";
+import { HUDSurface } from "@/components/foundation/HUDSurface";
+import { VoidContainer } from "@/components/foundation/VoidContainer";
+import { Waveform } from "@/components/voice/Waveform";
+import { useVoidTheme } from "@/hooks/use-void-theme";
 import { ExpoCapture } from "@/lib/voice/capture";
 import { trpc } from "@/utils/trpc";
 
@@ -30,6 +34,7 @@ function splitTags(input: string): string[] {
 }
 
 export default function CaptureScreen() {
+  const theme = useVoidTheme();
   const [mode, setMode] = useState<Mode>("text");
   const [text, setText] = useState("");
   const [tags, setTags] = useState("");
@@ -59,9 +64,7 @@ export default function CaptureScreen() {
 
   const sendText = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed) {
-      return;
-    }
+    if (!trimmed) return;
     createMutation.mutate({
       payload: { kind: "text", text: trimmed },
       evidence,
@@ -69,9 +72,7 @@ export default function CaptureScreen() {
   }, [text, createMutation, evidence]);
 
   const toggleVoice = useCallback(async () => {
-    if (createMutation.isPending) {
-      return;
-    }
+    if (createMutation.isPending) return;
 
     if (!captureRef.current) {
       captureRef.current = new ExpoCapture();
@@ -86,9 +87,7 @@ export default function CaptureScreen() {
     try {
       const clip = await captureRef.current.stop();
       setRecording(false);
-      if (!clip?.audioBase64) {
-        return;
-      }
+      if (!clip?.audioBase64) return;
       createMutation.mutate({
         payload: {
           kind: "voice",
@@ -103,104 +102,166 @@ export default function CaptureScreen() {
   }, [recording, createMutation, evidence]);
 
   return (
-    <Container>
-      <Stack.Screen options={{ title: "Capture" }} />
+    <VoidContainer gradient="ambient" noise={true} style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: "Capture",
+          headerStyle: { backgroundColor: theme.colors.void.deep },
+          headerTintColor: theme.colors.biolum.full,
+        }}
+      />
 
-      <View className="flex-1 p-4">
-        <View className="mb-4 flex-row gap-2">
-          <TouchableOpacity
-            className={`flex-1 rounded-lg px-3 py-2 ${
-              mode === "text" ? "bg-primary" : "bg-surface"
-            }`}
-            onPress={() => setMode("text")}
-          >
-            <Text
-              className={`text-center font-semibold ${
-                mode === "text" ? "text-primary-foreground" : "text-foreground"
-              }`}
-            >
-              Text
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 rounded-lg px-3 py-2 ${
-              mode === "voice" ? "bg-primary" : "bg-surface"
-            }`}
-            onPress={() => setMode("voice")}
-          >
-            <Text
-              className={`text-center font-semibold ${
-                mode === "voice" ? "text-primary-foreground" : "text-foreground"
-              }`}
-            >
-              Voice
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.content}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TitleText size="large" color="full">
+            Capture
+          </TitleText>
+          <CaptionText size="medium" color="dim">
+            Capture text or voice to your inbox
+          </CaptionText>
         </View>
 
-        <View className="mb-3">
-          <Text className="mb-2 font-semibold text-foreground">Tags</Text>
-          <TextInput
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-foreground"
-            onChangeText={setTags}
-            placeholder="Optional tags (comma separated)"
-            placeholderTextColor="#5A6B7D"
-            value={tags}
+        {/* Mode Selector */}
+        <View style={styles.modeSelector}>
+          <FluidButton
+            label="Text"
+            variant={mode === "text" ? "primary" : "ghost"}
+            size="medium"
+            onPress={() => setMode("text")}
+            style={styles.modeButton}
+          />
+          <FluidButton
+            label="Voice"
+            variant={mode === "voice" ? "primary" : "ghost"}
+            size="medium"
+            onPress={() => setMode("voice")}
+            style={styles.modeButton}
           />
         </View>
 
+        {/* Tags Input */}
+        <HUDSurface elevation={1} style={styles.card}>
+          <VoidTextInput
+            label="Tags (optional)"
+            value={tags}
+            onChangeText={setTags}
+            placeholder="Comma separated tags..."
+          />
+        </HUDSurface>
+
         {mode === "text" ? (
           <>
-            <Text className="mb-2 font-semibold text-foreground">Text</Text>
-            <TextInput
-              className="min-h-[160px] rounded-lg border border-border bg-surface p-3 text-foreground"
-              multiline
-              onChangeText={setText}
-              placeholder="Capture anything..."
-              placeholderTextColor="#5A6B7D"
-              textAlignVertical="top"
-              value={text}
-            />
+            {/* Text Input */}
+            <HUDSurface elevation={1} style={styles.card}>
+              <VoidTextInput
+                label="Text"
+                value={text}
+                onChangeText={setText}
+                placeholder="Capture anything..."
+                multiline
+                numberOfLines={6}
+                style={styles.textArea}
+              />
+            </HUDSurface>
 
-            <TouchableOpacity
-              className="mt-4 flex-row items-center justify-center rounded-lg bg-primary px-4 py-3"
-              disabled={createMutation.isPending || text.trim().length === 0}
+            {/* Send Button */}
+            <FluidButton
+              label={createMutation.isPending ? "Sending..." : "Send to Inbox"}
+              variant="primary"
+              size="large"
               onPress={sendText}
-            >
-              {createMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text className="font-semibold text-primary-foreground">
-                  Send to Inbox
-                </Text>
-              )}
-            </TouchableOpacity>
+              disabled={createMutation.isPending || text.trim().length === 0}
+              style={styles.sendButton}
+            />
           </>
         ) : (
           <>
-            <Text className="mb-2 font-semibold text-foreground">Voice</Text>
-            <Text className="text-foreground/80 text-sm">
-              Tap to start recording, tap again to stop and send. Raw audio is
-              not persisted server-side in MVP.
-            </Text>
+            {/* Voice Section */}
+            <HUDSurface elevation={1} style={styles.card}>
+              <CaptionText size="small" color="faint" style={styles.label}>
+                Voice
+              </CaptionText>
+              <BiolumText
+                variant="body"
+                size="small"
+                color="dim"
+                style={styles.voiceHint}
+              >
+                Tap to start recording, tap again to stop and send.
+              </BiolumText>
 
-            <TouchableOpacity
-              className={`mt-4 flex-row items-center justify-center rounded-lg px-4 py-3 ${
-                recording ? "bg-red-500" : "bg-primary"
-              }`}
-              onPress={() => void toggleVoice()}
-            >
-              {createMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text className="font-semibold text-primary-foreground">
-                  {recording ? "Stop + Send" : "Start Recording"}
-                </Text>
+              {recording && (
+                <View style={styles.waveformContainer}>
+                  <Waveform
+                    audioLevel={0.5}
+                    active={true}
+                    barCount={24}
+                    height={48}
+                  />
+                </View>
               )}
-            </TouchableOpacity>
+            </HUDSurface>
+
+            {/* Record Button */}
+            <FluidButton
+              label={
+                createMutation.isPending
+                  ? "Processing..."
+                  : recording
+                    ? "Stop + Send"
+                    : "Start Recording"
+              }
+              variant={recording ? "secondary" : "primary"}
+              size="large"
+              onPress={() => void toggleVoice()}
+              disabled={createMutation.isPending}
+              style={styles.sendButton}
+            />
           </>
         )}
       </View>
-    </Container>
+    </VoidContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  modeSelector: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  modeButton: {
+    flex: 1,
+  },
+  card: {
+    marginBottom: 16,
+    padding: 16,
+  },
+  label: {
+    marginBottom: 8,
+  },
+  textArea: {
+    minHeight: 120,
+    textAlignVertical: "top",
+  },
+  voiceHint: {
+    marginBottom: 16,
+  },
+  waveformContainer: {
+    marginTop: 16,
+  },
+  sendButton: {
+    marginTop: 8,
+  },
+});

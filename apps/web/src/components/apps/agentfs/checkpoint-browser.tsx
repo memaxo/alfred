@@ -5,14 +5,17 @@
  */
 
 import { Archive, Calendar, Loader2, RotateCcw } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import type { Workspace } from "./index";
 
 type CheckpointBrowserProps = {
   workspace: Workspace;
+  onSelectWorkspace: (workspace: Workspace) => void;
   className?: string;
 };
 
@@ -25,11 +28,32 @@ type Checkpoint = {
 
 export function CheckpointBrowser({
   workspace,
+  onSelectWorkspace,
   className,
 }: CheckpointBrowserProps) {
+  const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.agentfs.checkpointsList.useQuery({
     runId: workspace.runId,
     dbPath: workspace.dbPath,
+  });
+
+  const cloneCheckpoint = trpc.agentfs.cloneCheckpoint.useMutation({
+    onSuccess: (res) => {
+      onSelectWorkspace({
+        id: res.runId,
+        runId: res.runId,
+        dbPath: res.dbPath,
+        projectId: workspace.projectId,
+        agentType: "unknown",
+        status: "completed",
+        createdAt: new Date().toISOString(),
+        operationCount: 0,
+        checkpointCount: 0,
+        pinned: false,
+        retentionDays: null,
+      });
+      void utils.agentfs.workspacesList.invalidate();
+    },
   });
 
   const checkpoints = data?.checkpoints ?? [];
@@ -60,7 +84,18 @@ export function CheckpointBrowser({
             </div>
           )}
           {checkpoints.map((checkpoint) => (
-            <CheckpointCard checkpoint={checkpoint} key={checkpoint.id} />
+            <CheckpointCard
+              checkpoint={checkpoint}
+              isRestoring={cloneCheckpoint.isPending}
+              key={checkpoint.id}
+              onRestore={() =>
+                cloneCheckpoint.mutate({
+                  runId: workspace.runId,
+                  dbPath: workspace.dbPath,
+                  checkpointId: checkpoint.id,
+                })
+              }
+            />
           ))}
         </div>
       </ScrollArea>
@@ -68,7 +103,15 @@ export function CheckpointBrowser({
   );
 }
 
-function CheckpointCard({ checkpoint }: { checkpoint: Checkpoint }) {
+function CheckpointCard({
+  checkpoint,
+  onRestore,
+  isRestoring,
+}: {
+  checkpoint: Checkpoint;
+  onRestore: () => void;
+  isRestoring: boolean;
+}) {
   const isAutomatic = checkpoint.name.includes("auto");
 
   return (
@@ -85,7 +128,13 @@ function CheckpointCard({ checkpoint }: { checkpoint: Checkpoint }) {
             )}
           </div>
         </div>
-        <Button className="h-7 gap-1 text-xs" size="sm" variant="outline">
+        <Button
+          className="h-7 gap-1 text-xs"
+          disabled={isRestoring}
+          onClick={onRestore}
+          size="sm"
+          variant="outline"
+        >
           <RotateCcw className="h-3 w-3" />
           Restore
         </Button>

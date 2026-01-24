@@ -5,10 +5,12 @@
  */
 
 import { Mic, MicOff, Settings, Volume2, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOrbStore } from "@/store/orb";
 import { useVoiceStore } from "@/store/voice";
+
 import { OrbCore } from "./core";
 import { Waveform } from "./waveform";
 

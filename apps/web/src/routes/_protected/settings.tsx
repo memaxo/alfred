@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Settings2 } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_protected/settings")({

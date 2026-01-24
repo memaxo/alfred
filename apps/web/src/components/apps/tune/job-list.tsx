@@ -5,8 +5,10 @@
  */
 
 import { Check, Clock, Loader2, Pause, X } from "lucide-react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
 import type { TuneJob } from "./index";
 
 type JobListProps = {

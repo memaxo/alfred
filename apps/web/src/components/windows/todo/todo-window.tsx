@@ -1,10 +1,13 @@
-import { useLiveQuery } from "@tanstack/react-db";
 import type { NodeProps } from "@xyflow/react";
+
+import { useLiveQuery } from "@tanstack/react-db";
 import { CheckSquare, Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { useTodoCollection } from "@/collections/provider";
+
 import type { TodoResource } from "@/collections/schemas";
+
+import { useTodoCollection } from "@/collections/provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";

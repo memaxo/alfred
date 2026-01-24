@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { Container } from "@/components/container";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useAuthClient } from "@/lib/auth-client";

@@ -3,6 +3,10 @@
  */
 
 import "@/test/dom";
+import type { ReactNode } from "react";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import {
   afterEach,
   beforeEach,
@@ -12,9 +16,7 @@ import {
   type Mock,
   vi,
 } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render } from "@testing-library/react";
-import type { ReactNode } from "react";
+
 import { trpc } from "@/utils/trpc";
 
 vi.mock("@/utils/trpc", () => ({

@@ -13,8 +13,9 @@
  * wired when the backend escalation/control APIs are finalized.
  */
 
-import { useCarPlayStore } from "../store";
 import type { Escalation } from "../types";
+
+import { useCarPlayStore } from "../store";
 import {
   speakConfirmation,
   speakDecisionQueueSummary,

@@ -5,6 +5,8 @@
  * Uses noise displacement for organic, living movement.
  */
 
+import type { SharedValue } from "react-native-reanimated";
+
 import {
   BlurMask,
   Circle,
@@ -15,7 +17,6 @@ import {
   type SkPoint,
 } from "@shopify/react-native-skia";
 import { useMemo } from "react";
-import type { SharedValue } from "react-native-reanimated";
 import { useDerivedValue } from "react-native-reanimated";
 
 import { ANIMATION, hexToRgba } from "../constants";

@@ -1,8 +1,9 @@
 "use client";
 
+import type React from "react";
+
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
-import type React from "react";
 import { createContext, useContext } from "react";
 
 import { cn } from "@/lib/utils";

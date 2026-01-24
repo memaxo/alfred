@@ -1,10 +1,12 @@
 import type { NodeProps } from "@xyflow/react";
-import { TerminalSquare } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import type { Terminal } from "xterm";
 import type { FitAddon } from "xterm-addon-fit";
+
+import { TerminalSquare } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import "xterm/css/xterm.css";
 import { toast } from "sonner";
+
 import {
   SmallCard,
   TinyDot,

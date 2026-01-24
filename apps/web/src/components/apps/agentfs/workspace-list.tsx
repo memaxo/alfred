@@ -5,9 +5,13 @@
  */
 
 import { Bot, CheckCircle, Clock, Loader2, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import type { Workspace } from "./index";
 
 type WorkspaceListProps = {
@@ -26,7 +30,16 @@ export function WorkspaceList({
     { refetchInterval: 10_000 }
   );
 
+  const [query, setQuery] = useState("");
+
   const workspaces: Workspace[] = data?.workspaces ?? [];
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      return workspaces;
+    }
+    return workspaces.filter((w) => w.runId.toLowerCase().includes(q));
+  }, [query, workspaces]);
 
   return (
     <div className={cn("flex flex-col bg-void", className)}>
@@ -34,6 +47,14 @@ export function WorkspaceList({
         <span className="font-medium text-biolum-dim text-xs uppercase tracking-wider">
           Workspaces
         </span>
+      </div>
+
+      <div className="border-white/5 border-b p-2">
+        <Input
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search runId…"
+          value={query}
+        />
       </div>
 
       <ScrollArea className="flex-1">
@@ -48,12 +69,12 @@ export function WorkspaceList({
               Failed to load workspaces
             </div>
           )}
-          {!isLoading && workspaces.length === 0 && !error && (
+          {!isLoading && filtered.length === 0 && !error && (
             <div className="py-4 text-center text-biolum-dim text-sm">
               No workspaces found
             </div>
           )}
-          {workspaces.map((workspace) => (
+          {filtered.map((workspace) => (
             <WorkspaceItem
               isSelected={workspace.id === selectedId}
               key={workspace.id}
@@ -117,6 +138,9 @@ function WorkspaceItem({
           <div className="mt-1 flex items-center gap-2 text-biolum-faint text-xs">
             <span>{workspace.operationCount} ops</span>
             <span>{workspace.checkpointCount} checkpoints</span>
+            {workspace.retentionDays ? (
+              <span>{workspace.retentionDays}d</span>
+            ) : null}
           </div>
         </div>
       </div>

@@ -1,0 +1,29 @@
+{
+  "name": "ALFRED",
+  "subtitle": "Your Intelligent Personal Assistant",
+  "description": {
+    "short": "ALFRED is an AI-powered personal assistant that helps you capture thoughts, manage tasks, and stay organized.",
+    "full": "ALFRED is your intelligent personal assistant, designed to seamlessly integrate into your daily life.\n\nKEY FEATURES:\n\n• Intelligent Chat - Natural conversations with context-aware AI\n• Voice Input - Hands-free interaction with speech recognition\n• Notes - Capture ideas instantly with automatic organization\n• Reminders - Never forget with smart, timely notifications\n• Timers - Focus sessions and countdown management\n• Bookmarks - Save and organize links with AI summaries\n• Offline Support - Works without internet, syncs when connected\n• Dark Mode - Beautiful void-inspired design for any lighting\n\nPRIVACY FIRST:\nYour data stays on your device with local-first architecture. Sync only when you choose.\n\nDESIGNED FOR iOS:\nOptimized for iPhone with native performance, haptic feedback, and system integration."
+  },
+  "keywords": [
+    "AI assistant",
+    "personal assistant",
+    "productivity",
+    "notes",
+    "reminders",
+    "voice",
+    "chat",
+    "tasks",
+    "organization",
+    "offline"
+  ],
+  "categories": {
+    "primary": "Productivity",
+    "secondary": "Utilities"
+  },
+  "ageRating": "4+",
+  "pricing": "Free",
+  "supportUrl": "https://alfred.app/support",
+  "privacyUrl": "https://alfred.app/privacy",
+  "copyright": "© 2026 Alfred Technologies"
+}

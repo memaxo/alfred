@@ -5,9 +5,11 @@
  */
 
 import { Bot, Check, GitPullRequest, X } from "lucide-react";
+
 import { VirtualList } from "@/components/ui/virtual-list";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import type { PR } from "./index";
 
 type PRListProps = {

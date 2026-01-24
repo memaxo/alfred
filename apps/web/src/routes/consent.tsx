@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+
 import { authClient } from "@/lib/auth-client";
 
 const consentSearchSchema = z.object({

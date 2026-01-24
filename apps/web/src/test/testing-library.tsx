@@ -1,9 +1,11 @@
 import "./dom";
+import type { ReactElement } from "react";
+
 import {
   type RenderOptions,
   render as rtlRender,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+
 import { DialogProvider } from "@/components/ui/dialog";
 
 const render = (ui: ReactElement, options?: RenderOptions) =>

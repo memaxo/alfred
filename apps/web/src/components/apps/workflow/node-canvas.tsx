@@ -7,6 +7,7 @@
  */
 
 import { GitBranch, GitFork, Repeat, Zap } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 type NodeCanvasProps = {

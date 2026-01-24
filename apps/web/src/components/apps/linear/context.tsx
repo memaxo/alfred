@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import { trpc } from "@/utils/trpc";
 
 type Team = { id: string; name: string; key: string };

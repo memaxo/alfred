@@ -1,8 +1,10 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
+
 import { MessageSquare, Mic } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { z } from "zod";
+
 import {
   Conversation,
   ConversationContent,
@@ -13,8 +15,8 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
-import { MessageActions } from "@/components/chat/message-actions";
 import { renderPart } from "@/components/chat-render";
+import { MessageActions } from "@/components/chat/message-actions";
 import { Button } from "@/components/ui/button";
 import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { Textarea } from "@/components/ui/textarea";

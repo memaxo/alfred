@@ -33,9 +33,12 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
 import { PolicySection } from "./policy-section";
 import { EmbeddingsSection } from "./sections/embeddings";
 import { IntegrationsSection } from "./sections/integrations";

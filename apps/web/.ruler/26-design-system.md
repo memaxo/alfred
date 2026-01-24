@@ -1,6 +1,7 @@
 # Design System: Signal in the Void
 
 ## Core Principle
+
 ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a light-absorbent material where UI elements are self-illuminated. The aesthetic is high-contrast, bioluminescent, and technical—avoiding "SaaS" tropes like drop shadows, grey surfaces, and heavy frosted glass.
 
 ## Rules
@@ -13,8 +14,8 @@ ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a
 2.  **Typography: Technical & Tight.**
     - **Font:** Use "Inter Tight", "Geist Sans", or "San Francisco".
     - **Tracking:** Enforce negative tracking.
-        - Headers/Display: `-0.04em` (`tracking-tighter`)
-        - Body: `-0.02em` (`tracking-tight`)
+      - Headers/Display: `-0.04em` (`tracking-tighter`)
+      - Body: `-0.02em` (`tracking-tight`)
     - **Weight:** Prefer lighter weights for large text.
 
 3.  **The Lens (HUD) Pattern.**
@@ -54,4 +55,3 @@ Define colors in `@theme` block: `--color-void` (`oklch(0.05 0 0)`), `--color-vo
 **Standard Container (HUD):** Use `rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl` for containers. Apply `text-biolum tracking-tighter` to headings.
 
 **Primary Action:** Use `rounded-full bg-biolum text-void hover:bg-biolum/90` for primary buttons.
-

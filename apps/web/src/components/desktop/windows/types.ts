@@ -80,7 +80,7 @@ export type LegacyNodeProps = Omit<
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type WindowComponentType = React.ComponentType<WindowComponentProps>;
-// biome-ignore lint/suspicious/noExplicitAny: Legacy components use any during migration
+// oxlint-disable noExplicitAny: Legacy components use any during migration
 export type LegacyWindowComponentType = React.ComponentType<any>;
 
 /**
@@ -90,7 +90,7 @@ export type WindowMetadata = {
   /** Human-readable label */
   label: string;
   /** Icon component or string */
-  // biome-ignore lint/suspicious/noExplicitAny: Icon components from different libraries use various prop types
+  // oxlint-disable noExplicitAny: Icon components from different libraries use various prop types
   icon?: React.ComponentType<any>;
   /** Default window size */
   defaultSize: { width: number; height: number };

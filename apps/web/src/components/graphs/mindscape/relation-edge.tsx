@@ -11,8 +11,10 @@ import {
   type EdgeProps,
   getSmoothStepPath,
 } from "@xyflow/react";
-import { cn } from "@/lib/utils";
+
 import type { MindscapeEdgeData } from "@/store/mindscape";
+
+import { cn } from "@/lib/utils";
 
 const edgeColors: Record<string, string> = {
   relation: "stroke-biolum/60",

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Monitor } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_protected/admin")({

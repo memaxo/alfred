@@ -1,8 +1,10 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
+import type { ReactNode } from "react";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { useTerminalProfiles } from "@/store/terminal";
 
 vi.mock("@/utils/trpc", () => ({

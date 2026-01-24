@@ -1,6 +1,8 @@
 import type { Obligation } from "@alfred/type";
+
 import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
+
 import { authClient } from "@/lib/auth-client";
 
 function isTestRuntime() {

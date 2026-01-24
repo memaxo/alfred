@@ -8,10 +8,12 @@ import {
   SplitSquareVertical,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { TilingLayout } from "@/store/desktop/types.new";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { TilingLayout } from "@/store/desktop/types.new";
 
 const LAYOUTS: Array<{
   id: TilingLayout;

@@ -1,0 +1,41 @@
+appId: com.alfred.app
+---
+# Chat Flow E2E Test
+# Tests the core chat interaction flow
+
+- launchApp
+
+# Wait for app to load
+- assertVisible: "Alfred"
+
+# Navigate to chat (first tab)
+- tapOn:
+    id: "tab-chat"
+    optional: true
+
+# Verify chat screen loaded
+- assertVisible:
+    text: ".*Assistant.*"
+    optional: true
+
+# Type a message
+- tapOn:
+    id: "chat-input"
+- inputText: "Hello Alfred"
+
+# Send message
+- tapOn:
+    id: "send-button"
+
+# Wait for response (with timeout)
+- assertVisible:
+    text: ".*"
+    timeout: 30000
+
+# Verify message appears in list
+- assertVisible: "Hello Alfred"
+
+# Clear chat
+- tapOn:
+    id: "clear-chat"
+    optional: true

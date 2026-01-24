@@ -1,17 +1,20 @@
 import "@/test/dom";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { act, renderHook } from "@testing-library/react";
 import type { Edge } from "@xyflow/react";
-import {
-  dispatchDesktopEvent,
-  useDesktopActivations,
-} from "@/hooks/use-desktop-activations";
-import { useDesktopStore } from "@/store/desktop";
+
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+
 import type {
   EdgeData,
   WindowInstance,
   WindowType,
 } from "@/store/desktop/types.new";
+
+import {
+  dispatchDesktopEvent,
+  useDesktopActivations,
+} from "@/hooks/use-desktop-activations";
+import { useDesktopStore } from "@/store/desktop";
 
 type DesktopEdge = Edge<EdgeData>;
 

@@ -1,6 +1,7 @@
+import type { UIMessage } from "@alfred/type/stream";
+
 import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { createRequire } from "node:module";
-import type { UIMessage } from "@alfred/type/stream";
 
 type HistoryTier = "anchor" | "high" | "medium" | "low";
 

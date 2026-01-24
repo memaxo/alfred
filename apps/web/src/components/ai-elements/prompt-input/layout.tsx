@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChatStatus } from "ai";
+
 import {
   CornerDownLeftIcon,
   Loader2Icon,
@@ -9,6 +10,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { Children, type ComponentProps, type HTMLAttributes } from "react";
+
 import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";

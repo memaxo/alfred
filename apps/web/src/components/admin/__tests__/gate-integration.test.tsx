@@ -1,11 +1,13 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
 import { fireEvent, waitFor } from "@testing-library/react";
+import { describe, expect, it } from "bun:test";
+
 import {
   createTestQueryClient,
   createTestTrpcClient,
   renderRoute,
 } from "@/test/render-route";
+
 import { VoiceAdminView } from "../../apps/admin/voice";
 
 describe("BiometricGate Integration", () => {

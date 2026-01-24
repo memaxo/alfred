@@ -1,7 +1,10 @@
 import type { PipelineEvent } from "@alfred/pipeline";
+
 import { skipToken } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
+
 import type { WindowData } from "@/store/desktop/types.new";
+
 import { trpc } from "@/utils/trpc";
 
 export type WorkflowEscalation = {

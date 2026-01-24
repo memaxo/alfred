@@ -8,7 +8,11 @@ import {
 } from "@alfred/api/utils/sse-connections";
 import { auth } from "@alfred/auth";
 import * as conversationRepo from "@alfred/db/repo/conversation";
-import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
+import {
+  buildHistoryContext,
+  calculateBudget,
+  getOrCreateTracker,
+} from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { classifyAiSdkError } from "@alfred/type/aierror";
 import { routerMessageSchema, uiMessageSchema } from "@alfred/type/stream.zod";
@@ -159,7 +163,7 @@ export async function handleStreamRequest(
   let firstChunkSent = false;
   let closeMcp: (() => Promise<void>) | null = null;
   let sseConnectionsCurrentRef:
-    | typeof import("@alfred/api/metrics")["sseConnectionsCurrent"]
+    | (typeof import("@alfred/api/metrics"))["sseConnectionsCurrent"]
     | null = null;
 
   try {
@@ -381,6 +385,18 @@ export async function handleStreamRequest(
     const role = errorPrefix === "orchestrator" ? "orchestrator" : "chat";
     const selection = await getModelForRole(role, { userId });
     const modelId = selection.modelKey;
+    // Calculate dynamic budget based on model
+    const calculatedBudget = calculateBudget({ modelId });
+
+    // Create tracker for the chat session
+    const chatId =
+      conversationId ?? `stream-${userId ?? "anonymous"}-${Date.now()}`;
+    const tracker = getOrCreateTracker({
+      sessionId: chatId,
+      modelId,
+      budgetUsd: parsed.data.maxCostUsd as number | undefined,
+    });
+
     const stopHistoryTimer = historyContextSelectionDurationSeconds.startTimer({
       source: errorPrefix,
     });
@@ -390,7 +406,13 @@ export async function handleStreamRequest(
       system: combinedSystem,
       tools: mergedTools,
       source: errorPrefix,
-      budget: getHistoryBudgetDefaults(),
+      budget: {
+        maxContextTokens: calculatedBudget.effectiveContextTokens,
+        historyRatio: calculatedBudget.historyRatio,
+        minSystemReserveTokens: calculatedBudget.systemReserveTokens,
+        minHeadroomTokens: calculatedBudget.headroomTokens,
+        reservedToolingTokens: calculatedBudget.toolingReserveTokens,
+      },
     });
     stopHistoryTimer();
 
@@ -448,8 +470,38 @@ export async function handleStreamRequest(
       messages: modelMessages,
       abortSignal,
       system: combinedSystem,
-      onFinish: async () => {
+      onFinish: async (result) => {
         await closeMcp?.();
+
+        // Track token usage and cost
+        try {
+          const usage = result.usage as
+            | {
+                inputTokens?: number;
+                outputTokens?: number;
+                cachedInputTokens?: number;
+                reasoningTokens?: number;
+              }
+            | undefined;
+
+          if (usage && conversationId) {
+            const latencyMs = performance.now() - requestStartTime;
+            tracker.record({
+              modelId,
+              inputTokens: usage.inputTokens ?? 0,
+              outputTokens: usage.outputTokens ?? 0,
+              cachedTokens: usage.cachedInputTokens ?? 0,
+              reasoningTokens: usage.reasoningTokens ?? 0,
+              latencyMs,
+            });
+          }
+        } catch (error) {
+          // Don't fail the request if tracking fails
+          logger.error("stream_cost_tracking_failed", {
+            error: error instanceof Error ? error.message : String(error),
+            conversationId,
+          });
+        }
       },
       onAbort: ({ steps }) => {
         logger.warn("api_stream_aborted", {

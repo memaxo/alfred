@@ -10,8 +10,11 @@
 
 import { Bug, Database, Eye, Network } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { cn } from "@/lib/utils";
+
 import { ChunkBrowser } from "./chunk-browser";
 import { EmbeddingVisualizer } from "./embedding-visualizer";
 import { RetrievalDebugger } from "./retrieval-debugger";

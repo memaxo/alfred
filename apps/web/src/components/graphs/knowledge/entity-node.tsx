@@ -6,6 +6,7 @@
 
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { Brain, Calendar, Lightbulb, Link, MapPin, User } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export type KnowledgeEntityType =

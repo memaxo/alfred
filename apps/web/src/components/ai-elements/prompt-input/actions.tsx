@@ -1,13 +1,16 @@
 "use client";
 
-import { ImageIcon } from "lucide-react";
 import type { ComponentProps } from "react";
+
+import { ImageIcon } from "lucide-react";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
 import { usePromptInputAttachments } from "./context";
 
 export type PromptInputActionMenuProps = ComponentProps<typeof DropdownMenu>;

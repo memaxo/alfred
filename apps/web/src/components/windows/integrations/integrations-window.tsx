@@ -1,8 +1,10 @@
 import type { NodeProps } from "@xyflow/react";
+
 import { ExternalLink, Loader2, PlugZap } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+
 import { BiolumBadge } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
 import {

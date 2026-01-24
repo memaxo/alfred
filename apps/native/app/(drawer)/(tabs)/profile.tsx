@@ -1,19 +1,30 @@
 import type { inferRouterOutputs } from "@trpc/server";
+
+import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
+  StyleSheet,
 } from "react-native";
 
-import { Container } from "@/components/container";
-import { VoiceSelector } from "@/components/voice-selector";
-import { useAuthClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
+
+import { Choice } from "@/components/form/Choice";
+import { TextInput as VoidTextInput } from "@/components/form/TextInput";
+import {
+  BiolumText,
+  CaptionText,
+  TitleText,
+} from "@/components/foundation/BiolumText";
+import { FluidButton } from "@/components/foundation/FluidButton";
+import { HUDSurface } from "@/components/foundation/HUDSurface";
+import { VoidContainer } from "@/components/foundation/VoidContainer";
+import { VoiceSelector } from "@/components/voice-selector";
+import { useVoidTheme } from "@/hooks/use-void-theme";
+import { useAuthClient } from "@/lib/auth-client";
 import { queryClient, trpc } from "@/utils/trpc";
 
 type Passkey = {
@@ -24,6 +35,7 @@ type Passkey = {
 };
 
 export default function ProfileTab() {
+  const theme = useVoidTheme();
   const authClient = useAuthClient();
   const { data: session } = authClient.useSession();
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
@@ -38,11 +50,11 @@ export default function ProfileTab() {
         setPasskeys(result.data as Passkey[]);
       }
     } catch {
-      // Passkeys may not be available on this device
+      // Passkeys may not be available
     } finally {
       setIsLoadingPasskeys(false);
     }
-  }, []);
+  }, [authClient]);
 
   useEffect(() => {
     if (session?.user) {
@@ -104,7 +116,6 @@ export default function ProfileTab() {
   };
   const { data: privateData, isLoading: isPrivateLoading } = privateDataQuery;
 
-  // Preference queries
   const preferenceQuery = trpc.preference.list.useQuery({
     limit: 100,
     offset: 0,
@@ -117,16 +128,14 @@ export default function ProfileTab() {
 
   const currentVoice = (() => {
     const pref = preferenceQuery.data?.find((p) => p.key === "voice.tts");
-    if (!pref?.value) {
-      return;
-    }
+    if (!pref?.value) return;
     if (typeof pref.value === "string") {
       try {
         if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
           return JSON.parse(pref.value);
         }
       } catch {
-        // ignore
+        /* ignore */
       }
       return pref.value;
     }
@@ -137,16 +146,14 @@ export default function ProfileTab() {
     const pref = preferenceQuery.data?.find(
       (p) => p.key === "voice.stt.language"
     );
-    if (!pref?.value) {
-      return;
-    }
+    if (!pref?.value) return;
     if (typeof pref.value === "string") {
       try {
         if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
           return JSON.parse(pref.value);
         }
       } catch {
-        // ignore
+        /* ignore */
       }
       return pref.value;
     }
@@ -165,7 +172,7 @@ export default function ProfileTab() {
           return JSON.parse(raw) as unknown;
         }
       } catch {
-        // ignore
+        /* ignore */
       }
       return raw;
     })();
@@ -195,9 +202,7 @@ export default function ProfileTab() {
     });
   };
 
-  const handleChunkSizeChange = (
-    size: "fast" | "low" | "medium" | "accurate"
-  ) => {
+  const handleChunkSizeChange = (size: string) => {
     setPreference.mutate({
       key: "voice.stt.chunk_size",
       value: size,
@@ -208,178 +213,298 @@ export default function ProfileTab() {
 
   if (!session?.user) {
     return (
-      <Container>
-        <View className="flex-1 items-center justify-center p-6">
-          <Text className="text-center text-muted-foreground">
+      <VoidContainer gradient="ambient" noise={true} style={styles.container}>
+        <View style={styles.emptyState}>
+          <Ionicons
+            name="person-outline"
+            size={48}
+            color={theme.colors.biolum.faint}
+          />
+          <BiolumText
+            variant="body"
+            size="large"
+            color="dim"
+            style={styles.emptyText}
+          >
             Please sign in to view your profile.
-          </Text>
+          </BiolumText>
         </View>
-      </Container>
+      </VoidContainer>
     );
   }
 
+  const chunkSizeOptions = [
+    { value: "fast", label: "Fast" },
+    { value: "low", label: "Low" },
+    { value: "medium", label: "Medium" },
+    { value: "accurate", label: "Accurate" },
+  ];
+
   return (
-    <Container>
-      <ScrollView className="flex-1 p-6">
-        <View className="mb-6">
-          <Text className="mb-2 font-bold text-3xl text-foreground">
+    <VoidContainer gradient="ambient" noise={true} style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TitleText size="large" color="full">
             Profile
-          </Text>
-          <Text className="text-lg text-muted-foreground">
+          </TitleText>
+          <CaptionText size="medium" color="dim">
             Manage your account and settings
-          </Text>
+          </CaptionText>
         </View>
 
-        <View className="mb-6 rounded-lg border border-border bg-card p-4">
-          <View className="mb-2 flex-row items-center justify-between">
-            <Text className="text-base text-foreground">
-              <Text className="font-medium">{session.user.name}</Text>
-            </Text>
+        {/* User Info */}
+        <HUDSurface elevation={2} style={styles.card}>
+          <View style={styles.userHeader}>
+            <View
+              style={[
+                styles.avatar,
+                { backgroundColor: theme.colors.glass.surface },
+              ]}
+            >
+              <Ionicons
+                name="person"
+                size={32}
+                color={theme.colors.biolum.standard}
+              />
+            </View>
+            <View style={styles.userInfo}>
+              <BiolumText variant="title" size="small" color="full">
+                {session.user.name}
+              </BiolumText>
+              <CaptionText size="medium" color="dim">
+                {session.user.email}
+              </CaptionText>
+            </View>
           </View>
-          <Text className="mb-4 text-muted-foreground text-sm">
-            {session.user.email}
-          </Text>
-
-          <TouchableOpacity
-            className="self-start rounded-md bg-destructive px-4 py-2"
+          <FluidButton
+            label="Sign Out"
+            variant="secondary"
+            size="medium"
             onPress={() => {
               authClient.signOut();
               queryClient.invalidateQueries();
             }}
+            style={styles.signOutButton}
+          />
+        </HUDSurface>
+
+        {/* Voice Settings */}
+        <HUDSurface elevation={1} style={styles.card}>
+          <BiolumText
+            variant="body"
+            size="large"
+            color="full"
+            style={styles.sectionTitle}
           >
-            <Text className="font-medium text-white">Sign Out</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View className="mb-6 rounded-lg border border-border p-4">
-          <Text className="mb-3 font-medium text-foreground">
             Voice Settings
-          </Text>
-          <View className="space-y-4">
-            <View>
-              <Text className="mb-2 text-muted-foreground text-sm">
-                TTS Voice
-              </Text>
-              <VoiceSelector
-                onValueChange={handleVoiceChange}
-                value={currentVoice as string | undefined}
-              />
-            </View>
-            <View>
-              <Text className="mb-2 text-muted-foreground text-sm">
-                STT Language
-              </Text>
-              <TextInput
-                className="rounded-md border border-border bg-background px-4 py-3 text-foreground"
-                onChangeText={handleLanguageChange}
-                placeholder="e.g. en, es, fr (Auto if empty)"
-                placeholderTextColor="#666"
-                value={(currentLanguage as string) ?? ""}
-              />
-            </View>
-            <View>
-              <Text className="mb-2 text-muted-foreground text-sm">
-                STT Chunk Size
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {(["fast", "low", "medium", "accurate"] as const).map(
-                  (size) => (
-                    <TouchableOpacity
-                      className={`rounded-md px-3 py-2 ${
-                        currentChunkSize === size ? "bg-primary" : "bg-muted"
-                      }`}
-                      key={size}
-                      onPress={() => handleChunkSizeChange(size)}
-                    >
-                      <Text
-                        className={`text-sm ${
-                          currentChunkSize === size
-                            ? "text-white"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {size}
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                )}
-              </View>
-              <Text className="mt-2 text-muted-foreground text-xs">
-                Smaller chunks reduce latency but may reduce accuracy.
-              </Text>
-            </View>
+          </BiolumText>
+
+          <View style={styles.field}>
+            <CaptionText size="small" color="faint" style={styles.fieldLabel}>
+              TTS Voice
+            </CaptionText>
+            <VoiceSelector
+              onValueChange={handleVoiceChange}
+              value={currentVoice as string | undefined}
+            />
           </View>
-        </View>
 
-        <View className="mb-6 rounded-lg border border-border p-4">
-          <Text className="mb-3 font-medium text-foreground">Private Data</Text>
-          {!isPrivateLoading && privateData && (
-            <View>
-              <Text className="text-muted-foreground">
-                {privateData.message}
-              </Text>
-            </View>
-          )}
-        </View>
+          <View style={styles.field}>
+            <VoidTextInput
+              label="STT Language"
+              value={(currentLanguage as string) ?? ""}
+              onChangeText={handleLanguageChange}
+              placeholder="e.g. en, es, fr (Auto if empty)"
+            />
+          </View>
 
-        <View className="mb-6 rounded-lg border border-border p-4">
-          <Text className="mb-3 font-medium text-foreground">
+          <View style={styles.field}>
+            <CaptionText size="small" color="faint" style={styles.fieldLabel}>
+              STT Chunk Size
+            </CaptionText>
+            <Choice
+              options={chunkSizeOptions}
+              value={currentChunkSize}
+              onChange={(v) =>
+                handleChunkSizeChange(typeof v === "string" ? v : v[0])
+              }
+            />
+            <CaptionText size="small" color="faint" style={styles.hint}>
+              Smaller chunks reduce latency but may reduce accuracy.
+            </CaptionText>
+          </View>
+        </HUDSurface>
+
+        {/* Private Data */}
+        {!isPrivateLoading && privateData && (
+          <HUDSurface elevation={1} style={styles.card}>
+            <BiolumText
+              variant="body"
+              size="large"
+              color="full"
+              style={styles.sectionTitle}
+            >
+              Private Data
+            </BiolumText>
+            <BiolumText variant="body" size="medium" color="dim">
+              {privateData.message}
+            </BiolumText>
+          </HUDSurface>
+        )}
+
+        {/* Passkeys */}
+        <HUDSurface elevation={1} style={styles.card}>
+          <BiolumText
+            variant="body"
+            size="large"
+            color="full"
+            style={styles.sectionTitle}
+          >
             Security - Passkeys
-          </Text>
-          <Text className="mb-4 text-muted-foreground text-sm">
+          </BiolumText>
+          <CaptionText size="medium" color="dim" style={styles.passkeyHint}>
             Passkeys let you sign in with Face ID or Touch ID instead of a
             password.
-          </Text>
+          </CaptionText>
 
           {isLoadingPasskeys ? (
-            <ActivityIndicator size="small" />
+            <ActivityIndicator color={theme.colors.biolum.standard} />
           ) : passkeys.length > 0 ? (
-            <View className="mb-4 space-y-2">
+            <View style={styles.passkeyList}>
               {passkeys.map((pk) => (
                 <View
-                  className="flex-row items-center justify-between rounded-md border border-border bg-background p-3"
                   key={pk.id}
+                  style={[
+                    styles.passkeyItem,
+                    { borderColor: theme.colors.glass.border },
+                  ]}
                 >
-                  <View className="flex-1">
-                    <Text className="font-medium text-foreground">
+                  <View style={styles.passkeyInfo}>
+                    <BiolumText variant="body" size="medium" color="standard">
                       {pk.name || "Unnamed Device"}
-                    </Text>
+                    </BiolumText>
                     {pk.createdAt && (
-                      <Text className="text-muted-foreground text-xs">
+                      <CaptionText size="small" color="faint">
                         Added {new Date(pk.createdAt).toLocaleDateString()}
-                      </Text>
+                      </CaptionText>
                     )}
                   </View>
-                  <TouchableOpacity
-                    className="rounded-md bg-destructive/10 px-3 py-2"
+                  <FluidButton
+                    label="Remove"
+                    variant="ghost"
+                    size="small"
                     onPress={() => handleDeletePasskey(pk.id, pk.name)}
-                  >
-                    <Text className="text-destructive text-sm">Remove</Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               ))}
             </View>
           ) : (
-            <Text className="mb-4 text-muted-foreground text-sm">
+            <CaptionText size="medium" color="dim" style={styles.noPasskeys}>
               No passkeys registered yet.
-            </Text>
+            </CaptionText>
           )}
 
-          <TouchableOpacity
-            className="flex-row items-center justify-center rounded-md bg-primary px-4 py-3"
-            disabled={isAddingPasskey}
+          <FluidButton
+            label={
+              isAddingPasskey ? "Adding..." : "Add Passkey (Face ID / Touch ID)"
+            }
+            variant="primary"
+            size="medium"
             onPress={handleAddPasskey}
-          >
-            {isAddingPasskey ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text className="font-medium text-primary-foreground">
-                Add Passkey (Face ID / Touch ID)
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            disabled={isAddingPasskey}
+            style={styles.addPasskeyButton}
+          />
+        </HUDSurface>
       </ScrollView>
-    </Container>
+    </VoidContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  emptyText: {
+    marginTop: 16,
+    textAlign: "center",
+  },
+  card: {
+    marginBottom: 16,
+    padding: 16,
+  },
+  userHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userInfo: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  signOutButton: {
+    alignSelf: "flex-start",
+  },
+  sectionTitle: {
+    marginBottom: 16,
+  },
+  field: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    marginBottom: 8,
+  },
+  hint: {
+    marginTop: 8,
+  },
+  passkeyHint: {
+    marginBottom: 16,
+  },
+  passkeyList: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  passkeyItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  passkeyInfo: {
+    flex: 1,
+  },
+  noPasskeys: {
+    marginBottom: 16,
+  },
+  addPasskeyButton: {
+    marginTop: 8,
+  },
+});

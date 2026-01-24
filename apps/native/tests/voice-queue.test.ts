@@ -96,9 +96,11 @@ jest.mock("../lib/voice/config", () => ({
 }));
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import type { PendingItem } from "../lib/voice/voice.types";
+
 import * as playModule from "../lib/voice/play";
 import * as queueModule from "../lib/voice/queue";
-import type { PendingItem } from "../lib/voice/voice.types";
 
 const STORAGE_KEY = "voice:queue:v1";
 

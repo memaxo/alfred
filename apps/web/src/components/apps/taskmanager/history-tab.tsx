@@ -12,6 +12,7 @@ import {
   Loader2,
   XCircle,
 } from "lucide-react";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";

@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import { CognitiveFeedbackControls } from "@/components/cognitive-feedback/controls";
 import {
   CognitiveFeedbackDialog,
@@ -36,7 +37,7 @@ type DrawerErrorBoundaryState = {
   error: Error | null;
 };
 
-// biome-ignore lint/nursery/useReactFunctionComponents: Error boundaries must be class components per React API
+// oxlint-disable useReactFunctionComponents: Error boundaries must be class components per React API
 class DrawerErrorBoundary extends React.Component<
   DrawerErrorBoundaryProps,
   DrawerErrorBoundaryState

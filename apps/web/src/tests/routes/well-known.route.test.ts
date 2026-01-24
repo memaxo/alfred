@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { Route as AuthzRoute } from "@/routes/[.]well-known/oauth-authorization-server";
 import { Route as ResourceRoute } from "@/routes/[.]well-known/oauth-protected-resource";
 

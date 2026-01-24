@@ -1,7 +1,9 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
+
 import { act, render, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
 import { assistantChatMock } from "@/test/mock-assistant-chat";
 
 // Mock only external boundaries - voice capture and focused context

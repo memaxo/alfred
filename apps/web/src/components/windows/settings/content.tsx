@@ -6,6 +6,7 @@
  */
 
 import type { inferRouterInputs } from "@trpc/server";
+
 import {
   ChevronRight,
   Palette,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import {
   type AutonomyLevel,
   AutonomySlider,

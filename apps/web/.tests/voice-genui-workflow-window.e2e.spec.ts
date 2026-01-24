@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { signUpTestUser } from "./helpers/auth";
 
 test("Workflow window renders GenUI timeline from runId", async ({ page }) => {

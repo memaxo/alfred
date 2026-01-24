@@ -5,6 +5,7 @@
  */
 
 import type { UIComponent } from "@alfred/type/genui";
+
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -14,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useFieldContext } from "@/form";
+
 import {
   extractArrayProp,
   extractBooleanProp,

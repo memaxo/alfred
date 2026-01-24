@@ -4,11 +4,13 @@
  * Handles local and remote push notifications for reminders and timers.
  */
 
-import { logger } from "@alfred/logger";
 import type { TRPCClient } from "@trpc/client";
+
+import { logger } from "@alfred/logger";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+
 import type { TRPCAppRouter } from "@/utils/trpc";
 
 // Configure notification handler

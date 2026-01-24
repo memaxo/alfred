@@ -1,5 +1,7 @@
 import type * as React from "react";
+
 import { cn } from "@/lib/utils";
+
 import { Skeleton } from "./skeleton";
 
 export type SkeletonAvatarProps = {

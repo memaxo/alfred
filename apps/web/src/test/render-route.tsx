@@ -1,3 +1,5 @@
+import type { ComponentType, ReactElement, ReactNode } from "react";
+
 import {
   QueryClient,
   type QueryClientConfig,
@@ -5,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { createTRPCClient, type TRPCClient, type TRPCLink } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
-import type { ComponentType, ReactElement, ReactNode } from "react";
+
 import { render } from "@/test/testing-library";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 

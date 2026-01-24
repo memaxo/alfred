@@ -7,21 +7,39 @@ import {
 } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "../global.css";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+
+import "../global.css";
 import React, { useEffect, useRef } from "react";
-import { Platform } from "react-native";
+import { InteractionManager, Platform } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { ErrorBoundary } from "@/components/error-boundary";
+import { ScreenErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/offline-banner";
 import { OnboardingScreen } from "@/components/onboarding/onboarding-screen";
+import { SheetProvider } from "@/contexts/sheet";
+import { ToastProvider } from "@/contexts/toast";
+import { useDeepLinkHandler } from "@/hooks/use-deep-link";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { analytics } from "@/lib/analytics";
 import { setAndroidNavigationBar } from "@/lib/android-navigation-bar";
 import { ApiProvider, useAuthClient, useTrpcClient } from "@/lib/api";
 import { NAV_THEME } from "@/lib/constants";
-import { registerForPushNotificationsWithClient } from "@/lib/notifications";
+import { initializeDatabase } from "@/lib/db";
+import {
+  registerForPushNotificationsWithClient,
+  addNotificationReceivedListener,
+  addNotificationResponseReceivedListener,
+} from "@/lib/notifications";
+import {
+  handleNotificationReceived,
+  handleNotificationResponse,
+} from "@/lib/notifications/handlers";
+import { syncEngine } from "@/lib/sync";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import {
   checkForUpdates,
@@ -29,7 +47,6 @@ import {
   promptUpdate,
   reloadApp,
 } from "@/lib/version-check";
-import type { TRPCAppRouter } from "@/utils/trpc";
 import { queryClient } from "@/utils/trpc";
 
 const LIGHT_THEME: Theme = {
@@ -72,6 +89,9 @@ function RootLayoutInner() {
   const { data: session } = authClient.useSession();
   const testNavRef = useRef(false);
 
+  // Handle deep links
+  useDeepLinkHandler();
+
   // Initialize analytics when user is logged in
   useEffect(() => {
     if (session?.user?.id) {
@@ -85,12 +105,40 @@ function RootLayoutInner() {
     }
   }, [session?.user?.id]);
 
-  // Register for push notifications on mount
+  // Initialize local database and sync engine (deferred until after first render)
+  React.useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(async () => {
+      try {
+        await initializeDatabase();
+        if (trpcClient) {
+          await syncEngine.initialize(trpcClient);
+        }
+      } catch (error) {
+        console.error("Failed to initialize database:", error);
+      }
+    });
+    return () => task.cancel();
+  }, [trpcClient]);
+
+  // Register for push notifications and set up handlers
   React.useEffect(() => {
     if (!session?.user) {
       return;
     }
     registerForPushNotificationsWithClient(trpcClient).catch((_error) => {});
+
+    // Set up notification listeners
+    const receivedSub = addNotificationReceivedListener(
+      handleNotificationReceived
+    );
+    const responseSub = addNotificationResponseReceivedListener((response) => {
+      void handleNotificationResponse(response);
+    });
+
+    return () => {
+      receivedSub.remove();
+      responseSub.remove();
+    };
   }, [session?.user, trpcClient]);
 
   // Deterministic UI-test route: start in Call screen when enabled.
@@ -195,15 +243,24 @@ function RootLayoutInner() {
   return (
     <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
       <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-      <OfflineBanner />
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack>
-          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="modal"
-            options={{ title: "Modal", presentation: "modal" }}
-          />
-        </Stack>
+        <ToastProvider>
+          <SheetProvider>
+            <ScreenErrorBoundary>
+              <OfflineBanner />
+              <Stack>
+                <Stack.Screen
+                  name="(drawer)"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="modal"
+                  options={{ title: "Modal", presentation: "modal" }}
+                />
+              </Stack>
+            </ScreenErrorBoundary>
+          </SheetProvider>
+        </ToastProvider>
       </GestureHandlerRootView>
     </ThemeProvider>
   );

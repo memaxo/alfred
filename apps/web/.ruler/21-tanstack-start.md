@@ -23,4 +23,3 @@
 11. **Server Routes and Prerendering.** Use `server.handlers` for raw HTTP endpoints. Enable static prerendering via vite config, excluding dynamic and layout routes.
 
 12. **Request Access.** Use `getRequest()` from `@tanstack/react-start/server` to access the request object in server functions.
-

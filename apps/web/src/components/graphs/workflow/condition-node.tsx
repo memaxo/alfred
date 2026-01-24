@@ -6,7 +6,9 @@
 
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { GitFork } from "lucide-react";
+
 import { cn } from "@/lib/utils";
+
 import type { WorkflowNodeData } from "./action-node";
 
 type ConditionNodeProps = NodeProps<Node<WorkflowNodeData>>;

@@ -3,8 +3,10 @@ import type {
   VoiceAssistantRaw,
   VoiceStreamServerEvent,
 } from "@alfred/type/voice";
+
 import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
 
 export type VoiceWebrtcState = {

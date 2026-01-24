@@ -1,14 +1,17 @@
 import type { VoiceStreamCodec } from "@alfred/type/voice";
-import { createVoiceSession } from "@alfred/voice/session";
 import type {
   SpeechToSpeechResponse,
   VoiceClient,
   VoiceSessionDescriptor,
 } from "@alfred/voice/types";
+
+import { createVoiceSession } from "@alfred/voice/session";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
+
 import { useVoiceAudio } from "./use-voice-audio";
 import { useVoiceProtocol } from "./use-voice-protocol";
 import { useVoiceWebrtcProtocol } from "./use-voice-webrtc-protocol";

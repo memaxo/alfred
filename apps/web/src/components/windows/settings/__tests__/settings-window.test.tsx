@@ -5,8 +5,8 @@
  */
 
 import "@/test/dom";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { cleanup, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 let mockLOD = "full";
 

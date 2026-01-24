@@ -346,8 +346,7 @@ export type AgentState =
   | "speaking"
   | "thinking";
 
-export interface BarVisualizerProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface BarVisualizerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Voice assistant state */
   state?: AgentState;
   /** Number of bars to display */

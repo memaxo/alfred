@@ -1,6 +1,7 @@
 "use client";
 
 import type { CharacterAlignmentResponseModel } from "@elevenlabs/elevenlabs-js/api/types/CharacterAlignmentResponseModel";
+
 import { Pause, Play } from "lucide-react";
 import {
   type ComponentPropsWithoutRef,
@@ -11,6 +12,7 @@ import {
   useContext,
   useMemo,
 } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   ScrubBarContainer,
@@ -142,8 +144,10 @@ function TranscriptViewerContainer({
 }
 
 type TranscriptViewerWordStatus = "spoken" | "unspoken" | "current";
-interface TranscriptViewerWordProps
-  extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
+interface TranscriptViewerWordProps extends Omit<
+  HTMLAttributes<HTMLSpanElement>,
+  "children"
+> {
   word: TranscriptWordType;
   status: TranscriptViewerWordStatus;
   children?: ReactNode;

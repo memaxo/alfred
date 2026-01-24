@@ -7,6 +7,7 @@
  */
 
 import type { VoiceControlState } from "react-native-carplay";
+
 import {
   AlertTemplate,
   CarPlay,
@@ -15,6 +16,7 @@ import {
   ListTemplate,
   VoiceControlTemplate,
 } from "react-native-carplay";
+
 import type {
   Escalation,
   EscalationPriority,

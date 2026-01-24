@@ -1,6 +1,7 @@
 import type { ThreadItem } from "@alfred/protocol";
-import { mapAutonomyToAcpMode } from "@alfred/protocol";
 import type { NodeProps } from "@xyflow/react";
+
+import { mapAutonomyToAcpMode } from "@alfred/protocol";
 import {
   Bot,
   ChevronLeft,
@@ -18,6 +19,7 @@ import { nanoid } from "nanoid";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,14 +39,14 @@ import {
   WindowFrame,
 } from "@/components/windows/shared";
 import {
-  type CodexStreamEvent,
-  subscribeToCodexStream,
-} from "@/lib/codex/stream-client";
-import {
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   TIMEOUT_MINUTES_OPTIONS,
 } from "@/lib/codex-constants";
 import { formatCodexErrorMessage } from "@/lib/codex-errors";
+import {
+  type CodexStreamEvent,
+  subscribeToCodexStream,
+} from "@/lib/codex/stream-client";
 import { getToolToken } from "@/lib/token";
 import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
 import { useDesktopStore } from "@/store/desktop";

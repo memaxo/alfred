@@ -6,6 +6,7 @@
 
 import { logger } from "@alfred/logger";
 import { Bot, Cpu, Sparkles, Terminal, Wand2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

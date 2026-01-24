@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+
 import type { WaveformProps } from "./types";
+
 import { Waveform } from "./visual";
 
 export type StaticWaveformProps = WaveformProps & {

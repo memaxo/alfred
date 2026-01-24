@@ -9,8 +9,10 @@
 
 import { ExternalLink, LayoutGrid } from "lucide-react";
 import { useMemo, useState } from "react";
-import { ComponentDemo } from "@/components/demo";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
+import { ComponentDemo } from "@/components/demo";
 import {
   type ComponentName,
   componentRegistry,

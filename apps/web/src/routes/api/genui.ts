@@ -58,9 +58,8 @@ async function handleGenUiRequest(request: Request): Promise<Response> {
     );
   }
 
-  const { getModelForRole, supportsGenUI } = await import(
-    "@alfred/agent/selector"
-  );
+  const { getModelForRole, supportsGenUI } =
+    await import("@alfred/agent/selector");
   const selection = await getModelForRole("classify", { userId });
   if (!supportsGenUI(selection)) {
     return Response.json(

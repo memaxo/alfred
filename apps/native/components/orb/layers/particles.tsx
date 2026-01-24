@@ -6,6 +6,8 @@
  * and orbit gently when idle.
  */
 
+import type { SharedValue } from "react-native-reanimated";
+
 import {
   Circle,
   Group,
@@ -14,7 +16,6 @@ import {
   vec,
 } from "@shopify/react-native-skia";
 import { useMemo } from "react";
-import type { SharedValue } from "react-native-reanimated";
 import { useDerivedValue } from "react-native-reanimated";
 
 import { ANIMATION, ORB_STATES, type OrbState } from "../constants";

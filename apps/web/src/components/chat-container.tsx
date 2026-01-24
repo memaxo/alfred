@@ -11,10 +11,14 @@
 
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { UIMessage } from "@alfred/type/stream";
+
 import { Chat } from "@alfred/ui";
 import { useCallback, useMemo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
+
+import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
+
 import { MessageActions } from "@/components/chat/message-actions";
 import {
   CognitiveFeedbackDialog,
@@ -25,11 +29,11 @@ import { Button } from "@/components/ui/button";
 import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { Textarea } from "@/components/ui/textarea";
 import { useChatLogic } from "@/hooks/use-chat-logic";
-import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { useFocusedContext } from "@/hooks/use-focused-context";
 import { useMessageEdit } from "@/hooks/use-message-edit";
 import { getMessageText } from "@/utils/message";
+
 import { Actions } from "./actions";
 import { createPartRenderer } from "./chat-render";
 import { Connect } from "./connect";

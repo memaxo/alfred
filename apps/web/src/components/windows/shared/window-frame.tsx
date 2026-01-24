@@ -1,11 +1,15 @@
+import type { ReactNode } from "react";
+
 import { Handle, Position } from "@xyflow/react";
 import { Maximize2, Minimize2, Pin, X } from "lucide-react";
-import type { ReactNode } from "react";
+
+import type { ViewMode, WindowType } from "@/store/desktop/types.new";
+
 import { Toolbar } from "@/components/ai-elements/toolbar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { ViewMode, WindowType } from "@/store/desktop/types.new";
+
 import { useWindowFocus } from "./focus";
 
 export type WindowTier = "primary" | "secondary" | "tertiary";

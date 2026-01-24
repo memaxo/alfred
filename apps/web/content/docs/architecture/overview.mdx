@@ -14,57 +14,63 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 ## Core Principles
 
 ### 1. Integration Over Isolation
+
 Packages are well-separated but must compose seamlessly. The architecture favors clean interfaces between packages while ensuring they work together as a cohesive intelligence system.
 
 ### 2. Learning Over Static Behavior
+
 ALFRED improves through continuous feedback loops. Every interaction informs future behavior through:
+
 - Pattern extraction from successful outcomes
 - Mistake analysis and correction
 - Preference inference from behavior
 - Domain-specific knowledge accumulation
 
 ### 3. Context-Aware Execution
+
 Every action considers:
+
 - User preferences (response style, tool choices)
 - Past outcomes (what worked, what didn't)
 - Domain knowledge (infrastructure topology, code patterns)
 - Cognitive state (attention, focus, overload)
 
 ### 4. Safe Autonomy
+
 Security boundaries with biometric elevation for high-risk operations. The policy engine enforces graduated autonomy levels with appropriate safeguards, enforced consistently across runtime, API routers, and tools.
 
 ## Architecture Layers
 
 \`\`\`
 ┌─────────────────────────────────────────────────────────────┐
-│                    User Interface Layer                      │
-│  apps/web (TanStack Start) | apps/native (React Native)    │
+│ User Interface Layer │
+│ apps/web (TanStack Start) | apps/native (React Native) │
 └─────────────────────────────┬───────────────────────────────┘
-                              │
+│
 ┌─────────────────────────────┴───────────────────────────────┐
-│                    API Layer (tRPC)                          │
-│  packages/api - Routers, Context, Middleware, Metrics       │
+│ API Layer (tRPC) │
+│ packages/api - Routers, Context, Middleware, Metrics │
 └─────────────────────────────┬───────────────────────────────┘
-                              │
+│
 ┌─────────────────────────────┴───────────────────────────────┐
-│              Runtime Integration Layer                      │
-│  packages/runtime - Composes all domain packages            │
-│  - CoreRuntime: Context building, outcome recording         │
-│  - WorkflowRuntime: AI SDK streaming, tool execution        │
-│  - Domain Runtimes: Specialized contexts (Proxmox, Git)     │
+│ Runtime Integration Layer │
+│ packages/runtime - Composes all domain packages │
+│ - CoreRuntime: Context building, outcome recording │
+│ - WorkflowRuntime: AI SDK streaming, tool execution │
+│ - Domain Runtimes: Specialized contexts (Proxmox, Git) │
 └─────────┬───────────────────┬───────────────────┬───────────┘
-          │                   │                   │
+│ │ │
 ┌─────────┴──────────┐ ┌─────┴──────┐ ┌──────────┴──────────┐
-│  Cognitive Layer   │ │ Knowledge │ │   Learning Layer   │
-│  State Machine      │ │  Graph    │ │  Self-Supervision  │
-│  Autonomy Gradient  │ │  RAG      │ │  Preference Inf.  │
+│ Cognitive Layer │ │ Knowledge │ │ Learning Layer │
+│ State Machine │ │ Graph │ │ Self-Supervision │
+│ Autonomy Gradient │ │ RAG │ │ Preference Inf. │
 └─────────┬──────────┘ └─────┬──────┘ └──────────┬──────────┘
-          │                   │                   │
+│ │ │
 ┌─────────┴───────────────────┴───────────────────┴───────────┐
-│                    Infrastructure Layer                     │
-│  packages/db (Drizzle + Postgres + pgvector)              │
-│  packages/auth (Better Auth + Ed25519 tokens)              │
-│  packages/policy (PDP with biometric elevation)            │
+│ Infrastructure Layer │
+│ packages/db (Drizzle + Postgres + pgvector) │
+│ packages/auth (Better Auth + Ed25519 tokens) │
+│ packages/policy (PDP with biometric elevation) │
 └─────────────────────────────────────────────────────────────┘
 \`\`\`
 
@@ -122,6 +128,7 @@ The monorepo is organized into focused packages:
 ### Event Sourcing for Cognitive State
 
 The cognitive state machine uses event sourcing to maintain a complete audit trail. This enables:
+
 - Deterministic replay of conversations
 - Debugging by examining event sequences
 - Learning from historical decisions
@@ -129,6 +136,7 @@ The cognitive state machine uses event sourcing to maintain a complete audit tra
 ### Hypergraph Memory
 
 Knowledge is stored as a hypergraph (nodes + edges) rather than a simple vector database. This enables:
+
 - Relationship-aware retrieval
 - Pattern recognition across domains
 - Emergent intelligence from graph topology
@@ -136,6 +144,7 @@ Knowledge is stored as a hypergraph (nodes + edges) rather than a simple vector 
 ### Local-First Architecture
 
 Core models (embeddings, voice) run locally to ensure:
+
 - Zero-cost privacy
 - No external API dependencies
 - Fast, offline-capable operations
@@ -143,6 +152,7 @@ Core models (embeddings, voice) run locally to ensure:
 ### Single-User Design
 
 ALFRED is designed for a single user, enabling:
+
 - Aggressive personalization
 - No multi-tenancy complexity
 - Direct infrastructure access
@@ -175,4 +185,3 @@ ALFRED is designed for a single user, enabling:
 - **Distributed Execution**: Scale workflows across multiple nodes
 - **Advanced Learning**: Reinforcement learning from user feedback
 - **Extended Voice Capabilities**: Multi-modal interactions, emotion detection
-

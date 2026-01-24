@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
+
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatList } from "@/components/chat/chat-list";
 import { useChatLogic } from "@/hooks/use-chat-logic";

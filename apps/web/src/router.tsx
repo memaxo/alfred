@@ -1,14 +1,13 @@
-import { createRouter as createTanStackRouter } from "@tanstack/react-router";
-import Loader from "./components/loader";
-import { RouteError } from "./components/route-error";
-import "./index.css";
 import {
   MutationCache,
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
+
+import "./index.css";
 import { CollectionsProvider } from "@/collections";
 import { initGenUIRegistry } from "@/components/genui";
 import { handleAuthError } from "@/lib/auth-error-handler";
@@ -16,6 +15,9 @@ import {
   createBrowserTrpcClient,
   createBrowserTrpcProxyClient,
 } from "@/lib/trpc-client";
+
+import Loader from "./components/loader";
+import { RouteError } from "./components/route-error";
 import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
 
@@ -85,7 +87,7 @@ export const getRouter = () => {
 };
 
 declare module "@tanstack/react-router" {
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: Module augmentation requires interface for declaration merging
+  // oxlint-disable useConsistentTypeDefinitions: Module augmentation requires interface for declaration merging
   interface Register {
     router: ReturnType<typeof getRouter>;
   }

@@ -21,8 +21,10 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
+
 import { OnboardingOverlay } from "../onboarding/overlay";
 import { FocusIndicator, SkipLinks } from "./accessibility";
 import { DesktopCommandPalette } from "./command-palette";

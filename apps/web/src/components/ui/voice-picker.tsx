@@ -1,8 +1,10 @@
 "use client";
 
 import type { ElevenLabs } from "@elevenlabs/elevenlabs-js";
+
 import { Check, ChevronsUpDown, Pause, Play } from "lucide-react";
 import * as React from "react";
+
 import {
   AudioPlayerProvider,
   useAudioPlayer,

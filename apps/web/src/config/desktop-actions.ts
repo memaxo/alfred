@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+
 import {
   Activity,
   Copy,
@@ -10,8 +11,10 @@ import {
   RotateCw,
   Trash2,
 } from "lucide-react";
-import { windowRegistry } from "@/components/desktop/windows/registry";
+
 import type { WindowType } from "@/store/desktop/types.new";
+
+import { windowRegistry } from "@/components/desktop/windows/registry";
 
 export type DesktopActionId =
   | "spawn-chat"

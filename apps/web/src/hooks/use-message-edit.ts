@@ -1,5 +1,7 @@
 import type { AssistantUIMessage } from "@alfred/agent";
+
 import { useCallback, useState } from "react";
+
 import { getMessageText } from "@/utils/message";
 
 type UseMessageEditProps = {

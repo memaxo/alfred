@@ -6,13 +6,15 @@
  */
 
 import type { CortexEngine } from "@alfred/cortex";
-import { getDefaultPreset, getPreset } from "@alfred/cortex/presets";
 import type {
   VisualConfig,
   VisualConfigUpdate,
   VisualPreset,
 } from "@alfred/type";
+
+import { getDefaultPreset, getPreset } from "@alfred/cortex/presets";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { trpc } from "@/utils/trpc";
 
 export type UseVisualPreferencesOptions = {
@@ -60,9 +62,8 @@ export function useVisualPreferences(
   const { engine, autoApply = true, optimistic = true } = options;
 
   // Local state for immediate updates
-  const [localConfig, setLocalConfig] = useState<VisualConfig>(
-    getDefaultPreset()
-  );
+  const [localConfig, setLocalConfig] =
+    useState<VisualConfig>(getDefaultPreset());
   const [isDirty, setIsDirty] = useState(false);
 
   // Fetch config from server

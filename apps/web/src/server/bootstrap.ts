@@ -1,5 +1,13 @@
 import { initApiServices, shutdownApiServices } from "@alfred/api/init";
 import {
+  startAgentfsCleanupScheduler,
+  startAgentfsCompactScheduler,
+  startAgentfsIntegrityScheduler,
+  stopAgentfsCleanupScheduler,
+  stopAgentfsCompactScheduler,
+  stopAgentfsIntegrityScheduler,
+} from "@alfred/api/scheduler/agentfs";
+import {
   startPatternLifecycleScheduler,
   stopPatternLifecycleScheduler,
 } from "@alfred/api/scheduler/pattern-lifecycle";
@@ -25,10 +33,14 @@ import {
 } from "@alfred/api/scheduler/remind";
 import { initEmbedding, shutdownEmbedding } from "@alfred/embed";
 import { logger } from "@alfred/logger";
+
 import {
   getEmbedDefaultModel,
   getEmbedEagerInit,
   getSchedPatternLifecycle,
+  getSchedAgentfsCleanup,
+  getSchedAgentfsCompact,
+  getSchedAgentfsIntegrity,
   getSchedPreferenceInference,
   getSchedProjectLifecycle,
   getSchedReembed,
@@ -67,6 +79,57 @@ export function initServer() {
     }
   } catch (error) {
     logger.error("assistant_remind_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    if (getSchedAgentfsCleanup() === "1") {
+      startAgentfsCleanupScheduler({ logger });
+      logger.info("agentfs_cleanup_scheduler_init", {
+        message: "Scheduler init requested (SCHED_AGENTFS_CLEANUP=1)",
+      });
+    } else {
+      logger.info("agentfs_cleanup_scheduler_disabled", {
+        message: "Scheduler disabled (unset SCHED_AGENTFS_CLEANUP)",
+      });
+    }
+  } catch (error) {
+    logger.error("agentfs_cleanup_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    if (getSchedAgentfsIntegrity() === "1") {
+      startAgentfsIntegrityScheduler({ logger });
+      logger.info("agentfs_integrity_scheduler_init", {
+        message: "Scheduler init requested (SCHED_AGENTFS_INTEGRITY=1)",
+      });
+    } else {
+      logger.info("agentfs_integrity_scheduler_disabled", {
+        message: "Scheduler disabled (unset SCHED_AGENTFS_INTEGRITY)",
+      });
+    }
+  } catch (error) {
+    logger.error("agentfs_integrity_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    if (getSchedAgentfsCompact() === "1") {
+      startAgentfsCompactScheduler({ logger });
+      logger.info("agentfs_compact_scheduler_init", {
+        message: "Scheduler init requested (SCHED_AGENTFS_COMPACT=1)",
+      });
+    } else {
+      logger.info("agentfs_compact_scheduler_disabled", {
+        message: "Scheduler disabled (unset SCHED_AGENTFS_COMPACT)",
+      });
+    }
+  } catch (error) {
+    logger.error("agentfs_compact_scheduler_init_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -172,6 +235,9 @@ export function initServer() {
     import.meta.hot.on?.("vite:beforeFullReload", () => {
       try {
         stopReminderScheduler();
+        stopAgentfsCleanupScheduler();
+        stopAgentfsIntegrityScheduler();
+        stopAgentfsCompactScheduler();
         stopPreferenceInferenceScheduler();
         stopPreferenceDecayScheduler();
         stopProjectLifecycleScheduler();
@@ -188,6 +254,9 @@ export function initServer() {
     import.meta.hot.dispose(() => {
       try {
         stopReminderScheduler();
+        stopAgentfsCleanupScheduler();
+        stopAgentfsIntegrityScheduler();
+        stopAgentfsCompactScheduler();
         stopPreferenceInferenceScheduler();
         stopPreferenceDecayScheduler();
         stopProjectLifecycleScheduler();
@@ -221,6 +290,33 @@ export async function shutdown() {
     logger.info("reminder_scheduler_stopped");
   } catch (error) {
     logger.error("reminder_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    stopAgentfsIntegrityScheduler();
+    logger.info("agentfs_integrity_scheduler_stopped");
+  } catch (error) {
+    logger.warn("agentfs_integrity_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    stopAgentfsCompactScheduler();
+    logger.info("agentfs_compact_scheduler_stopped");
+  } catch (error) {
+    logger.warn("agentfs_compact_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    stopAgentfsCleanupScheduler();
+    logger.info("agentfs_cleanup_scheduler_stopped");
+  } catch (error) {
+    logger.error("agentfs_cleanup_scheduler_stop_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

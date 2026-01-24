@@ -1,13 +1,12 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { loggerMocks } from "@alfred/test-kit/logger";
 import { fireEvent, render } from "@testing-library/react";
 import "@alfred/test-kit/logger";
-import { loggerMocks } from "@alfred/test-kit/logger";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Import after the logger mock is installed.
-const { LayerErrorBoundary, ShellErrorBoundary } = await import(
-  "../error-boundary"
-);
+const { LayerErrorBoundary, ShellErrorBoundary } =
+  await import("../error-boundary");
 
 // Component that throws on render
 function ThrowingComponent({ shouldThrow = true }: { shouldThrow?: boolean }) {

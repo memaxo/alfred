@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+
 import { ScrambleText } from "@/components/scramble-text";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

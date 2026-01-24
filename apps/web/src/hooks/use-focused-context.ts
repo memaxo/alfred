@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { useDebounce } from "@/hooks/use-debounce";
 import { useDesktopStore, type WindowData } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
@@ -174,8 +175,8 @@ export function useFocusedContext(): FocusedContext {
 
   const shouldFetchRag = Boolean(
     focusedWindow &&
-      (focusedData?.type === "knowledge" || focusedData?.type === "concept") &&
-      focusedLabel
+    (focusedData?.type === "knowledge" || focusedData?.type === "concept") &&
+    focusedLabel
   );
 
   const queryText = shouldFetchRag

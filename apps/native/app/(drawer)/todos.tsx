@@ -1,5 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+
+import { Ionicons } from "@expo/vector-icons";
 import { Redirect } from "expo-router";
 import { useState } from "react";
 import {
@@ -11,9 +12,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { Container } from "@/components/container";
 import { useAuthClient } from "@/lib/auth-client";
-import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 export default function TodosScreen() {

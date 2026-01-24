@@ -6,12 +6,14 @@
  */
 
 import { describe, expect, it } from "bun:test";
+
 import type {
   Escalation,
   ExecPlan,
   PullRequest,
   WorkflowState,
 } from "../../../lib/carplay/types";
+
 import {
   speakConfirmation,
   speakError,

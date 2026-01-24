@@ -1,5 +1,6 @@
 import { CheckIcon, XIcon } from "lucide-react";
 import * as React from "react";
+
 import { Button } from "@/components/ui/button";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import { cn } from "@/lib/utils";
@@ -11,8 +12,10 @@ export type VoiceButtonState =
   | "success"
   | "error";
 
-export interface VoiceButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onError"> {
+export interface VoiceButtonProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "onError"
+> {
   /**
    * Current state of the voice button
    * @default "idle"

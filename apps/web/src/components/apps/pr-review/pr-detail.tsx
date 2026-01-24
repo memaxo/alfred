@@ -5,6 +5,7 @@
  */
 
 import { Calendar, GitBranch, MessageSquare, User } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 type PRDetailProps = {

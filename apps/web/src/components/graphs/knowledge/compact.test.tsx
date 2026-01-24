@@ -2,8 +2,9 @@
  * Test suite for CompactKnowledgeGraph component
  */
 
-import { describe, expect, it } from "bun:test";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "bun:test";
+
 import { CompactKnowledgeGraph } from "./compact";
 
 describe("CompactKnowledgeGraph", () => {

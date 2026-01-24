@@ -1,6 +1,7 @@
+import type { UIMessage } from "@alfred/type/stream";
+
 import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import { createRequire } from "node:module";
-import type { UIMessage } from "@alfred/type/stream";
 
 const createConversationMock = vi.fn().mockResolvedValue({ id: "conv-1" });
 const createMessageMock = vi.fn().mockResolvedValue(undefined);

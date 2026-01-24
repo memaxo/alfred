@@ -16,10 +16,13 @@
 
 import { Box, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import { ContainerDetail } from "./container-detail";
 import { ContainerList } from "./container-list";
 import { ContainerCreateDialog } from "./create-dialog";

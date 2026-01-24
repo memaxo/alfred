@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { cn } from "@/lib/utils";
+
 import type { WaveformProps } from "./types";
+
 import { Waveform } from "./visual";
 
 export type AudioScrubberProps = WaveformProps & {

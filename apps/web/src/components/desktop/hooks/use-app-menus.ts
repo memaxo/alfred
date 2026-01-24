@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useDesktopStore } from "@/store/desktop";
+
 import type { WindowType } from "@/store/desktop/types.new";
+
+import { useDesktopStore } from "@/store/desktop";
+
 import type { AppMenus } from "../menubar/types";
 
 /**

@@ -5,7 +5,9 @@
  */
 
 import type { PlanPhaseOutput } from "@alfred/pipeline/schemas";
+
 import { usePlanEditor } from "@/hooks/use-plan-editor";
+
 import { DependencyGraph } from "./dependency-graph";
 import { ValidationPanel } from "./validation-panel";
 import { WaveList } from "./wave-list";

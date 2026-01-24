@@ -25,6 +25,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { VoidCard } from "@/components/tremor/void-card";
 import { Skeleton } from "@/components/ui/skeleton";

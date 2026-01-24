@@ -3,6 +3,7 @@
 ## Overview
 
 This directory contains UI components for the ALFRED web application, following the Carmack-Karpathy principles:
+
 - **Simplicity**: Pure functions, zero allocations in hot paths
 - **Composition**: Small, composable components
 - **Performance**: Memoized, optimized rendering
@@ -12,14 +13,18 @@ This directory contains UI components for the ALFRED web application, following 
 ## Component Philosophy
 
 ### Single-Word Naming
+
 All components follow the single-word naming convention from `.ruler/01-naming-conventions.md`:
+
 - ✅ `chat.tsx`, `msg.tsx`, `orb.tsx`
 - ❌ `conversation-bar.tsx`, `message-bubble.tsx`
 
 Exceptions allowed for UI ergonomics (e.g., `voice-btn.tsx`).
 
 ### Composition Pattern
+
 Components are designed for maximum composition:
+
 ```tsx
 // Chat = Msg[] + Chatbar
 <Chat messages={messages} onSend={send} />
@@ -32,14 +37,18 @@ Components are designed for maximum composition:
 ```
 
 ### Pure Functions
+
 Every component is a pure function:
+
 - Deterministic rendering
 - No side effects
 - No object creation in render
 - Stable props
 
 ### Error Isolation
+
 Each component tree has its own error boundary:
+
 ```tsx
 <ErrorBoundary>
   <Chat messages={messages} />
@@ -49,11 +58,13 @@ Each component tree has its own error boundary:
 ## Core Components
 
 ### Conversation
+
 - **ChatContainer**: Integrates streaming hooks with the shared `@alfred/ui` Chat component (virtualized + perf metrics)
 - **Controls**: Agent switcher (Assistant/Orchestrator)
 - **Connect**: Connection status indicator
 
 ### AI SDK Elements
+
 - **Actions**: Tool invocation display
 - **Ctx**: Runtime context display
 - **Think**: Reasoning chain
@@ -67,6 +78,7 @@ Each component tree has its own error boundary:
 - **Code**: Code blocks
 
 ### Voice & Audio
+
 - **Audio**: Audio player
 - **Viz**: Bar visualizer
 - **Voice**: Voice picker
@@ -77,6 +89,7 @@ Each component tree has its own error boundary:
 - **DriveMode**: Full-screen drive mode UI
 
 ### Canvas & Preview
+
 - **Preview**: App preview display
 - **Node**: Workflow node
 - **Artifact**: Droid output artifacts
@@ -88,21 +101,19 @@ Each component tree has its own error boundary:
 ## Hooks
 
 ### Streaming Hooks
+
 - **useAssistantStream**: Assistant-specific streaming
 - **useVoiceCapture**: Voice input/output handling
 
 ### Usage Example
+
 ```tsx
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
 import { ChatContainer } from "@/components/chat-container";
 
 function MyPage() {
   return (
-    <ChatContainer
-      agent="assistant"
-      thread="user-123"
-      resource="user-123"
-    />
+    <ChatContainer agent="assistant" thread="user-123" resource="user-123" />
   );
 }
 ```
@@ -110,6 +121,7 @@ function MyPage() {
 ## Type Safety
 
 All components use shared types from `@alfred/type`:
+
 - **StreamEvent**: Pure event model for streaming
 - **Message**: Message types for conversation
 - **ToolCall**: Tool invocation structure
@@ -117,30 +129,40 @@ All components use shared types from `@alfred/type`:
 ## Performance
 
 ### Memoization
+
 All components are memoized with `React.memo`:
+
 ```tsx
 export const Chat = memo(ChatInner, (prev, next) => {
-  return prev.messages.length === next.messages.length &&
-    prev.messages.every((msg, i) => msg.id === next.messages[i]?.id);
+  return (
+    prev.messages.length === next.messages.length &&
+    prev.messages.every((msg, i) => msg.id === next.messages[i]?.id)
+  );
 });
 ```
 
 ### Stable Callbacks
+
 All callbacks use `useCallback`:
+
 ```tsx
-const handleSubmit = useCallback((e: React.FormEvent) => {
-  e.preventDefault();
-  const trimmed = message.trim();
-  if (trimmed) {
-    onSend(trimmed);
-    setMessage("");
-  }
-}, [message, onSend]);
+const handleSubmit = useCallback(
+  (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = message.trim();
+    if (trimmed) {
+      onSend(trimmed);
+      setMessage("");
+    }
+  },
+  [message, onSend]
+);
 ```
 
 ## Accessibility
 
 All interactive elements have ARIA labels:
+
 ```tsx
 <Button
   onClick={onClick}
@@ -153,6 +175,7 @@ All interactive elements have ARIA labels:
 ```
 
 Live regions for status updates:
+
 ```tsx
 <div role="status" aria-live="polite" aria-label="Loading">
   Loading...
@@ -162,6 +185,7 @@ Live regions for status updates:
 ## Error Handling
 
 Component-level error boundaries:
+
 ```tsx
 <ErrorBoundary
   fallback={<ErrorFallback />}
@@ -174,6 +198,7 @@ Component-level error boundaries:
 ## Testing
 
 Components are tested with Vitest + React Testing Library:
+
 ```tsx
 describe("Chat", () => {
   it("renders messages", () => {

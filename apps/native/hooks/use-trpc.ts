@@ -5,7 +5,6 @@
  * These hooks ensure type safety while working around TypeScript inference limitations.
  */
 
-import { trpc } from "@/utils/trpc";
 import type {
   BookRouterInputs,
   NoteRouterInputs,
@@ -15,6 +14,8 @@ import type {
   RemindRouterInputs,
   WorkflowRouterInputs,
 } from "@/utils/trpc-types";
+
+import { trpc } from "@/utils/trpc";
 
 // Re-export types that components need
 export type { NoteRouterOutputs };

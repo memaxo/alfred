@@ -1,5 +1,6 @@
-import { motion, type UseInViewOptions, useInView } from "motion/react";
 import type React from "react";
+
+import { motion, type UseInViewOptions, useInView } from "motion/react";
 import { useMemo, useRef } from "react";
 
 import { cn } from "@/lib/utils";

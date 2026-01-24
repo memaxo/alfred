@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { Container } from "@/components/container";
 import { useNoteDelete, useNoteGet, useNoteUpdate } from "@/hooks/use-trpc";
 import { generateShareLink } from "@/lib/linking";

@@ -5,6 +5,7 @@
  */
 
 import { Check, Clock, Loader2, X } from "lucide-react";
+
 import { BiometricGate, isBiometricError } from "@/components/admin/gate";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";

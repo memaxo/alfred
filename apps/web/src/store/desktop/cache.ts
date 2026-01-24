@@ -1,5 +1,7 @@
 import type { StateCreator } from "zustand";
+
 import { queueRagCacheMetric } from "@/lib/desktop/telemetry";
+
 import type { DesktopState, WindowData } from "./types.new";
 
 const resolvePositiveNumber = (value: string | undefined, fallback: number) => {

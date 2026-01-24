@@ -34,10 +34,15 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
+import type { FileTab, SplitDirection } from "./types";
+
 import { AISuggestions } from "./ai-suggestions";
 import { Breadcrumbs } from "./breadcrumbs";
 import { DiffViewer } from "./diff-viewer";
@@ -54,7 +59,6 @@ import { MonacoEditor } from "./monaco-editor";
 import { NewFileDialog } from "./new-file-dialog";
 import { SemanticSearch } from "./semantic-search";
 import { SettingsPanel } from "./settings-panel";
-import type { FileTab, SplitDirection } from "./types";
 import { getLanguageFromPath } from "./types";
 import { UnsavedDialog } from "./unsaved-dialog";
 

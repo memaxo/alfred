@@ -1,8 +1,10 @@
 "use client";
 
-import { ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
+
+import { ChevronDownIcon } from "lucide-react";
 import { createContext, useContext, useEffect, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,

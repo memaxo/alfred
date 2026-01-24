@@ -23,6 +23,9 @@ import Animated, {
   SlideInDown,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import type { TRPCAppRouter } from "@/utils/trpc";
+
 import { ALFRED_COLORS, ORB_SIZES, Orb, useOrbState } from "@/components/orb";
 import { ControlBar } from "@/components/orb/control-bar";
 import { useServerUrl, useTrpcClient } from "@/lib/api";
@@ -30,7 +33,6 @@ import { useAuthClient } from "@/lib/auth-client";
 import { isLocalServer } from "@/lib/server-url";
 import { getCookieFromAuthClient } from "@/lib/voice/cookie";
 import { useVoiceSessionNative } from "@/lib/voice/session";
-import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 // ─── Component ───────────────────────────────────────────────────────────────

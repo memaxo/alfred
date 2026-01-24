@@ -1,7 +1,9 @@
 "use client";
 
-import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
 import type { ComponentProps } from "react";
+
+import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,

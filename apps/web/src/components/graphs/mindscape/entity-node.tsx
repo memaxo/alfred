@@ -13,8 +13,10 @@ import {
   MessageSquare,
   Monitor,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 import type { MindscapeNodeData, MindscapeNodeType } from "@/store/mindscape";
+
+import { cn } from "@/lib/utils";
 
 const typeIcons: Record<MindscapeNodeType, typeof Brain> = {
   entity: Brain,

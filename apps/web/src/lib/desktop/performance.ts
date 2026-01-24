@@ -9,6 +9,7 @@
 
 import { logger } from "@alfred/logger";
 import { liteDebounce, liteThrottle } from "@alfred/pacer";
+
 import { DESKTOP_STORAGE_ID } from "@/store/desktop/persist";
 
 /** Max bytes for layout storage (50KB) */

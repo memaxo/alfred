@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";
+
 import type { WaveformProps } from "./types";
+
 import { Waveform } from "./visual";
 
 export type MicrophoneWaveformProps = WaveformProps & {

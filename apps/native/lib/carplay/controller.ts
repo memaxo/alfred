@@ -13,7 +13,11 @@
  */
 
 import type { WindowInformation } from "react-native-carplay";
+
 import { CarPlay } from "react-native-carplay";
+
+import type { Escalation, ExecPlan, PullRequest, WorkflowState } from "./types";
+
 import { setTrpcClient } from "./api";
 import { carPlayAudio } from "./audio";
 import {
@@ -38,7 +42,6 @@ import {
   createVoiceTemplate,
   createWorkflowDetailTemplate,
 } from "./templates";
-import type { Escalation, ExecPlan, PullRequest, WorkflowState } from "./types";
 import {
   playConfirmationCue,
   playErrorCue,
@@ -91,6 +94,8 @@ type CarPlayControllerConfig = {
 class CarPlayController {
   private state: CarPlayState = "disconnected";
   private mode: CarPlayMode = "orchestrator";
+  // Tracks last selected dashboard tab index (0=status, 1=decisions, 2=prs, 3=voice)
+  private currentTab = 0;
   private config: CarPlayControllerConfig = {};
   private readonly voiceTemplate = createVoiceTemplate();
   private currentResponse = "";

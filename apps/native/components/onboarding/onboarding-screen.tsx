@@ -13,6 +13,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+
 import { haptics } from "@/lib/haptics";
 
 const { width } = Dimensions.get("window");

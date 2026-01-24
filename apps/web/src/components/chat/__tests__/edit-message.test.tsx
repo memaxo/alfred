@@ -1,6 +1,7 @@
 import "@/test/dom";
-import { describe, expect, it, vi } from "bun:test";
 import { render } from "@testing-library/react";
+import { describe, expect, it, vi } from "bun:test";
+
 import { EditMessage } from "../edit-message";
 
 describe("EditMessage", () => {

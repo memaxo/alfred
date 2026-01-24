@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+
 import { useTerminalProfiles } from "../index";
 
 describe("useTerminalProfiles store", () => {

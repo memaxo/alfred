@@ -1,4 +1,5 @@
 import type { UIMessage } from "@alfred/type/stream";
+
 import {
   getAgentLabel,
   getTimestamp,

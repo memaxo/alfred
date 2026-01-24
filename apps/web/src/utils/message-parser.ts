@@ -6,6 +6,7 @@
  */
 
 import type { AssistantUIMessage, OrchestratorUIMessage } from "@alfred/agent";
+
 import {
   extractStructuredData,
   isDataPartNamed,

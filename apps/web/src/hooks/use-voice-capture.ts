@@ -1,6 +1,7 @@
 import { arrayBufferToBase64 } from "@alfred/voice/audio";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { trpc } from "@/utils/trpc";
 
 type UseVoiceCaptureOptions = {

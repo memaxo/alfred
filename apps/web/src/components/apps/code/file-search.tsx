@@ -2,6 +2,7 @@
 
 import { FileCode, Loader2, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

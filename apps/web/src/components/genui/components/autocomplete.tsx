@@ -6,9 +6,11 @@
  */
 
 import type { UIComponent } from "@alfred/type/genui";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFieldContext } from "@/form";
+
 import {
   extractArrayProp,
   extractBooleanProp,

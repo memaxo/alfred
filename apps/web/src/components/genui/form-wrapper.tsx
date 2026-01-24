@@ -6,12 +6,15 @@
  */
 
 import type { UIComponent } from "@alfred/type/genui";
-import { UISchemaRenderer } from "@alfred/ui/genui/interpreter";
 import type { ReactNode } from "react";
-import { useMemo } from "react";
 import type { z } from "zod";
+
+import { UISchemaRenderer } from "@alfred/ui/genui/interpreter";
+import { useMemo } from "react";
+
 import { useAppForm } from "@/form";
 import { useSubmit } from "@/hooks/submit";
+
 import { GenUIAutocomplete } from "./components/autocomplete";
 import { GenUICheckbox } from "./components/checkbox";
 import { GenUIChoice } from "./components/choice";

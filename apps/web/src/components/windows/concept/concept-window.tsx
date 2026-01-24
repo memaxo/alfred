@@ -1,6 +1,8 @@
 import type { NodeProps } from "@xyflow/react";
+
 import { Brain, Network } from "lucide-react";
 import { z } from "zod";
+
 import {
   SmallCard,
   TinyDot,

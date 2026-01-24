@@ -18,6 +18,7 @@
 
 import { redirect } from "@tanstack/react-router";
 import { createMiddleware } from "@tanstack/react-start";
+
 import { authClient } from "@/lib/auth-client";
 
 /**

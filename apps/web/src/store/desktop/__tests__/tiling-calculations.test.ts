@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { detectZoneFromPosition } from "../../../components/desktop/tiling/utils";
 
 describe("Tiling System Integration", () => {

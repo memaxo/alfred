@@ -1,4 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
+
 import { layoutSemantic, type SemanticLayoutOptions } from "./layout-semantic";
 
 type NodeData = { type?: string; label?: string; [key: string]: unknown };

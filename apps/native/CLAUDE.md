@@ -1,5 +1,3 @@
-
-
 <!-- Source: .ruler/expo-patterns.md -->
 
 # Expo Patterns

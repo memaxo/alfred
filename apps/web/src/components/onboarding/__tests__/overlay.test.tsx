@@ -7,6 +7,7 @@ import {
   mock,
   vi,
 } from "bun:test";
+
 import { cleanup, fireEvent, render } from "../../../test/testing-library";
 import { OnboardingOverlay } from "../overlay";
 

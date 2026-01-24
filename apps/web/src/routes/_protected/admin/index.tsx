@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Grid, Text, Title } from "@tremor/react";
 import { Activity, Mic, Monitor, Shield } from "lucide-react";
+
 import { VoidCard } from "@/components/tremor/void-card";
 
 export const Route = createFileRoute("/_protected/admin/")({

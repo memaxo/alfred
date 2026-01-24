@@ -1,6 +1,7 @@
 import "@/test/dom";
-import { afterEach, describe, expect, it } from "bun:test";
 import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "bun:test";
+
 import { PreferencesStep } from "../preferences-step";
 
 afterEach(() => {

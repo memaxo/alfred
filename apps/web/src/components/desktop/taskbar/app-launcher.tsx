@@ -3,6 +3,9 @@
 import { MessageSquare, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+
+import type { WindowType } from "@/store/desktop/types.new";
+
 import {
   getSpawnableWindowTypes,
   getWindowIcon,
@@ -23,7 +26,6 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
-import type { WindowType } from "@/store/desktop/types.new";
 
 export function AppLauncherButton() {
   const [open, setOpen] = useState(false);

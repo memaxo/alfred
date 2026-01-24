@@ -1,5 +1,6 @@
-import { useChat } from "@ai-sdk/react";
 import type { AssistantUIMessage } from "@alfred/agent";
+
+import { useChat } from "@ai-sdk/react";
 import {
   getToolInvocationName,
   getToolInvocationState,

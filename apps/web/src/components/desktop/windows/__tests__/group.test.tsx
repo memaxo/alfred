@@ -1,8 +1,11 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it } from "bun:test";
 import { fireEvent, render } from "@testing-library/react";
-import { useDesktopStore } from "@/store/desktop";
+import { beforeEach, describe, expect, it } from "bun:test";
+
 import type { WindowGroup, WindowInstance } from "@/store/desktop/types.new";
+
+import { useDesktopStore } from "@/store/desktop";
+
 import { WindowGroupChrome } from "../group";
 
 describe("WindowGroupChrome", () => {

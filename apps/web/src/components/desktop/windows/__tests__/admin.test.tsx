@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import {
   AdminAppWindow,
   AgentFSAppWindow,
@@ -15,6 +16,7 @@ import {
   TaskManagerAppWindow,
   WorkflowAppWindow,
 } from "@/components/apps";
+
 import { windowRegistry } from "../registry";
 
 describe("Window Registry Registration", () => {

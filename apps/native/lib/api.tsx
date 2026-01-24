@@ -1,7 +1,8 @@
-import { expoClient } from "@better-auth/expo/client";
 import type { QueryClient } from "@tanstack/react-query";
 import type { TRPCClient } from "@trpc/client";
 import type { AnyRouter } from "@trpc/server";
+
+import { expoClient } from "@better-auth/expo/client";
 import { createAuthClient } from "better-auth/react";
 import {
   createContext,
@@ -12,6 +13,7 @@ import {
   useState,
 } from "react";
 import { NativeModules, Platform } from "react-native";
+
 import {
   classifyServerUrl,
   normalizeServerUrl,

@@ -10,6 +10,7 @@
  * and can be called.
  */
 import { describe, expect, it } from "bun:test";
+
 import { getTestMode, hasWindow } from "../isomorphic";
 
 describe("isomorphic environment utilities", () => {

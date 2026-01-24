@@ -7,6 +7,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useReducedMotion } from "motion/react";
+
 import { cn } from "@/lib/utils";
 
 type LoadingProps = {

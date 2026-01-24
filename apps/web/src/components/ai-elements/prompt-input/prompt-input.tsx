@@ -1,6 +1,7 @@
 "use client";
 
 import type { FileUIPart } from "ai";
+
 import { nanoid } from "nanoid";
 import {
   type ChangeEventHandler,
@@ -14,8 +15,10 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+
 import { InputGroup } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
+
 import {
   type AttachmentsContext,
   LocalAttachmentsContext,

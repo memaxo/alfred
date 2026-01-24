@@ -1,5 +1,7 @@
 "use client";
 
+import type { ComponentProps, ReactNode } from "react";
+
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import {
   BrainIcon,
@@ -7,8 +9,8 @@ import {
   DotIcon,
   type LucideIcon,
 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,

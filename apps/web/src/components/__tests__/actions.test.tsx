@@ -1,7 +1,9 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
 import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, it } from "bun:test";
+
 import type { AssistantAction } from "@/hooks/use-assistant-stream";
+
 import { Actions } from "../actions";
 
 describe("Actions", () => {

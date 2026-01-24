@@ -5,9 +5,11 @@
  */
 
 import { AlertCircle, CheckCircle, Circle } from "lucide-react";
+
 import { VirtualList } from "@/components/ui/virtual-list";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
 import { useLinear } from "./context";
 
 type IssueListProps = {

@@ -6,11 +6,13 @@
 
 import { logger } from "@alfred/logger";
 import { useEffect, useRef } from "react";
+
+import type { TimerRouterOutputs } from "@/utils/trpc-types";
+
 import {
   cancelNotification,
   scheduleLocalNotification,
 } from "@/lib/notifications";
-import type { TimerRouterOutputs } from "@/utils/trpc-types";
 
 /**
  * Hook to manage completion notifications for active timers

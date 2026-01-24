@@ -15,6 +15,7 @@ import type {
   OnNodesChange,
   Viewport,
 } from "@xyflow/react";
+
 import type { EdgeData } from "@/store/desktop/types.new";
 
 // ─────────────────────────────────────────────────────────────────────────────

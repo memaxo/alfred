@@ -11,11 +11,13 @@ The application must gracefully handle missing external dependencies (database, 
 **Pattern**: Check database availability before starting DB-dependent services. Use `isDbAvailable()` from `@alfred/api/utils/service-availability`. If unavailable, log warning and skip service initialization. Handle errors in catch block.
 
 **When to use**:
+
 - Background workers (codex cleanup, plan resume, workflow rehydration)
 - Non-critical initialization code
 - Services that can operate without DB
 
 **When NOT to use**:
+
 - Critical user-facing features (use try-catch in handlers instead)
 - Real-time request handling (handle errors per-request)
 
@@ -24,6 +26,7 @@ The application must gracefully handle missing external dependencies (database, 
 **Pattern**: Check for external tools before initializing services. Use `isUvAvailable()` or similar availability checks. If unavailable, log warning and skip initialization. Wrap service initialization in try-catch to handle failures gracefully.
 
 **When to use**:
+
 - Optional features (voice pools, local models)
 - Development-only features
 - Features with clear fallbacks
@@ -33,6 +36,7 @@ The application must gracefully handle missing external dependencies (database, 
 **Pattern**: Use type guards (`isDbConnectionError`, `isTransientError`) to classify errors and handle appropriately. Return graceful fallbacks for connection errors, retry transient errors, re-throw permanent errors.
 
 **Error Types**:
+
 - **Database connection errors**: ECONNREFUSED, password auth failed, connection refused
 - **Transient errors**: Timeouts, temporary failures (retryable)
 - **Permanent errors**: Validation errors, authorization failures (non-retryable)
@@ -42,6 +46,7 @@ The application must gracefully handle missing external dependencies (database, 
 **Pattern**: Wrap handlers with try-catch for SSR. Use `isDbConnectionError()` to detect DB failures and return graceful responses (e.g., `Response.json({ session: null, user: null }, { status: 200 })`) instead of crashing SSR.
 
 **When to use**:
+
 - Route handlers in TanStack Start
 - Server functions that might be called during SSR
 - API endpoints that depend on external services

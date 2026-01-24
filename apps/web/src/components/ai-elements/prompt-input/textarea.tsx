@@ -7,8 +7,10 @@ import {
   type KeyboardEventHandler,
   useState,
 } from "react";
+
 import { InputGroupTextarea } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
+
 import {
   useOptionalPromptInputController,
   usePromptInputAttachments,

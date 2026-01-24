@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { signUpTestUser } from "./helpers/auth";
 import { countWindows, getWindow } from "./helpers/desktop";
 import { openCommandPalette, spawnNode } from "./helpers/mindscape";

@@ -1,8 +1,10 @@
 import "@/test/dom";
-import { beforeEach, describe, expect, it, jest } from "bun:test";
+import type { ReactNode } from "react";
+
 import { QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, jest } from "bun:test";
+
 import { useDesktopStore } from "@/store/desktop";
 import {
   createTestQueryClient,
@@ -10,6 +12,7 @@ import {
   type TestTrpcHandlers,
 } from "@/test/render-route";
 import { trpc } from "@/utils/trpc";
+
 import { useFocusedContext } from "../use-focused-context";
 
 describe("useFocusedContext", () => {

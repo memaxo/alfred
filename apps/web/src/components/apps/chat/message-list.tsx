@@ -7,11 +7,13 @@
  */
 
 import type { AssistantUIMessage } from "@alfred/agent";
+
 import { useCallback } from "react";
 import { Virtuoso } from "react-virtuoso";
+
+import { renderPart } from "@/components/chat-render";
 import { EditMessage } from "@/components/chat/edit-message";
 import { MessageActions } from "@/components/chat/message-actions";
-import { renderPart } from "@/components/chat-render";
 import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { useMessageEdit } from "@/hooks/use-message-edit";
 import { cn } from "@/lib/utils";

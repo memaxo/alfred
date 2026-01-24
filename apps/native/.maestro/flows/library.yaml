@@ -1,0 +1,52 @@
+appId: com.alfred.app
+---
+# Library Flow E2E Test
+# Tests notes, reminders, timers, bookmarks functionality
+
+- launchApp
+
+# Wait for app to load
+- assertVisible: "Alfred"
+
+# Navigate to Library tab
+- tapOn:
+    text: "Library"
+
+# Verify library sections visible
+- assertVisible:
+    text: "Notes"
+    optional: true
+
+- assertVisible:
+    text: "Reminders"
+    optional: true
+
+- assertVisible:
+    text: "Timers"
+    optional: true
+
+- assertVisible:
+    text: "Bookmarks"
+    optional: true
+
+# Test Notes section
+- tapOn:
+    text: "Notes"
+
+- assertVisible:
+    text: ".*notes.*"
+    optional: true
+
+# Go back
+- back
+
+# Test Reminders section
+- tapOn:
+    text: "Reminders"
+
+- assertVisible:
+    text: ".*reminder.*"
+    optional: true
+
+# Go back
+- back

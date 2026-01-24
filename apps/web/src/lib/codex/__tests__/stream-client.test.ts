@@ -1,6 +1,8 @@
-import { describe, expect, it } from "bun:test";
 import type { ThreadItem } from "@alfred/protocol";
+
 import { parseThreadEvent } from "@alfred/protocol";
+import { describe, expect, it } from "bun:test";
+
 import { mockThreadEvents, mockThreadItems } from "./test-harness";
 
 // Test the event normalization and ACP integration directly

@@ -1,8 +1,9 @@
+import type { NodeProps } from "@xyflow/react";
+
 import { structuredPlanSchema } from "@alfred/plan/schema";
 import { useStore } from "@tanstack/react-form";
 import { skipToken } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { NodeProps } from "@xyflow/react";
 import {
   Check,
   LayoutGrid,
@@ -15,6 +16,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+
 import { GenUIErrorBoundary, UISchemaRenderer } from "@/components/genui";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +42,7 @@ import {
 } from "@/hooks/use-workflow-subscription";
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
+
 import { ExecutionPanel } from "./execution-panel";
 import { WorkflowCanvas } from "./workflow-canvas";
 

@@ -14,8 +14,10 @@
  */
 
 import { NowPlayingTemplate } from "react-native-carplay";
-import { useCarPlayStore } from "../store";
+
 import type { WorkflowState } from "../types";
+
+import { useCarPlayStore } from "../store";
 
 export type NowPlayingConfig = {
   onPlayPause?: () => void;

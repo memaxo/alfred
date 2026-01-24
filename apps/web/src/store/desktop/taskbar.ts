@@ -7,6 +7,7 @@
  */
 
 import type { StateCreator } from "zustand";
+
 import type {
   DesktopState,
   ResourceRef,

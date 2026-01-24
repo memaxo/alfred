@@ -1,5 +1,7 @@
-import { toast } from "sonner";
 import type { PersistOptions } from "zustand/middleware";
+
+import { toast } from "sonner";
+
 import type { DesktopState, WindowData, WindowInstance } from "./types.new";
 
 /** Shared storage identifier for desktop layout persistence */

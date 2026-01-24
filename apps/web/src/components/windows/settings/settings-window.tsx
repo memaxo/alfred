@@ -6,10 +6,13 @@
  */
 
 import type { NodeProps } from "@xyflow/react";
+
 import { Settings2 } from "lucide-react";
 import { z } from "zod";
-import { SettingsApp } from "@/components/apps/settings";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
+import { SettingsApp } from "@/components/apps/settings";
 import {
   SmallCard,
   TinyDot,

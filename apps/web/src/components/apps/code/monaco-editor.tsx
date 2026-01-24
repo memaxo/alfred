@@ -8,8 +8,11 @@
 
 import { Editor, type OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
+
 import { cn } from "@/lib/utils";
+
 import type { EditorSettings } from "./types";
+
 import { DEFAULT_EDITOR_SETTINGS } from "./types";
 
 type MonacoEditorProps = {

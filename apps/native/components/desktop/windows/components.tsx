@@ -6,10 +6,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useDesktopStore } from "@/store/desktop";
+
 import type { WindowType } from "@/store/desktop.types";
-import { windowParity } from "./parity";
+
+import { useDesktopStore } from "@/store/desktop";
+
 import type { WindowComponentProps } from "./types";
+
+import { windowParity } from "./parity";
 
 export function ComponentsWindow(_props: WindowComponentProps) {
   const openWindow = useDesktopStore((s) => s.openWindow);

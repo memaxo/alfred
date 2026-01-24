@@ -1,5 +1,6 @@
 import "../../test/reset-mocks";
 import { describe, expect, it } from "bun:test";
+
 import { Route as TimerRoute } from "@/routes/_protected/timer";
 import {
   createTestQueryClient,
@@ -7,6 +8,7 @@ import {
   renderRoute,
   type TestTrpcHandlers,
 } from "@/test/render-route";
+
 import { fireEvent, waitFor } from "../../test/testing-library";
 
 describe("TimerRoute", () => {

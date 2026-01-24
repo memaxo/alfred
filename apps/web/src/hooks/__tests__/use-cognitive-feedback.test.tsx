@@ -1,6 +1,7 @@
 import "@/test/dom";
-import { describe, expect, it, mock } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it, mock } from "bun:test";
+
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 
 describe("useCognitiveFeedback", () => {

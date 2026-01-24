@@ -6,8 +6,7 @@
  */
 
 import NetInfo from "@react-native-community/netinfo";
-import * as carPlayApi from "./api";
-import { useCarPlayStore } from "./store";
+
 import type {
   CarPlayEvent,
   Escalation,
@@ -15,6 +14,9 @@ import type {
   EscalationReason,
   WorkflowState,
 } from "./types";
+
+import * as carPlayApi from "./api";
+import { useCarPlayStore } from "./store";
 
 const POLL_INTERVAL_MS = 30_000; // 30 second fallback polling
 const RECONNECT_BASE_MS = 1000;

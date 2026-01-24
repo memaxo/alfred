@@ -13,8 +13,10 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import type { AssistantAction } from "@/hooks/use-assistant-stream";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type ActionsProps = {

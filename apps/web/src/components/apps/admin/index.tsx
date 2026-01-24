@@ -10,9 +10,12 @@
 
 import { Activity, BarChart3, Cpu, Shield, Users, Zap } from "lucide-react";
 import { useState } from "react";
+
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
+
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
+
 import { SessionsSection } from "../settings/sessions-section";
 import { MetricsDashboardView } from "./perf";
 import { VoiceAdminView } from "./voice";

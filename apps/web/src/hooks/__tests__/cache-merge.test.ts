@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { isMergeableRecord, mergeCacheValue } from "../use-assistant-stream";
 
 describe("isMergeableRecord", () => {

@@ -6,6 +6,7 @@
  */
 
 import type { UIComponent } from "@alfred/type/genui";
+
 import { GenUISelect } from "./select";
 
 export function GenUIDropdown({ schema }: { schema: UIComponent }) {

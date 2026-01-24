@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+
 import {
   type ComponentName,
   componentRegistry,

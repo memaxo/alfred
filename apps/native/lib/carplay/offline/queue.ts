@@ -5,6 +5,8 @@
  * Uses the existing sync queue infrastructure.
  */
 
+import type { OfflineCommand } from "../types";
+
 import {
   enqueue,
   getPendingItems,
@@ -13,7 +15,6 @@ import {
 } from "../../sync/queue";
 import { getClient } from "../api";
 import { useCarPlayStore } from "../store";
-import type { OfflineCommand } from "../types";
 
 const CARPLAY_TABLE = "carplay_commands";
 

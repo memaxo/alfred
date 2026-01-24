@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
+
 import { Chart } from "@/components/chart";
 import { Number as SlidingNumber } from "@/components/number";
 import { useDesktopStore } from "@/store/desktop";

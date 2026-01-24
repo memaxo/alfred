@@ -7,8 +7,10 @@
 
 "use client";
 
-import { AlertTriangle, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
+
+import { AlertTriangle, RefreshCw } from "lucide-react";
+
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

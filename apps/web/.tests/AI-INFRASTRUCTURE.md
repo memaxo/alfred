@@ -11,6 +11,7 @@ Structured JSON output optimized for AI coding agent consumption.
 **Location:** `apps/web/.tests/reporters/ai-compact-reporter.ts`
 
 **Output format:**
+
 ```json
 {
   "status": "failed",
@@ -31,6 +32,7 @@ Structured JSON output optimized for AI coding agent consumption.
 ```
 
 **Features:**
+
 - Token-efficient error messages (truncated to 500 chars)
 - Screenshot path references in failures
 - Single-line failure summaries for quick scanning
@@ -43,8 +45,12 @@ Deterministic timeout handling with hang detection and structured error context.
 **Location:** `packages/test-kit/src/playwright/timeout.ts`
 
 **Usage:**
+
 ```typescript
-import { withTimeout, waitForWithHangDetection } from "@alfred/test-kit/playwright";
+import {
+  withTimeout,
+  waitForWithHangDetection,
+} from "@alfred/test-kit/playwright";
 
 // Wrap action with timeout
 await withTimeout(page, "navigate-home", 5000, async () => {
@@ -54,11 +60,12 @@ await withTimeout(page, "navigate-home", 5000, async () => {
 // Wait for element with hang detection (logs every 5s)
 await waitForWithHangDetection(page, '[data-testid="workflow"]', {
   timeout: 30000,
-  state: "visible"
+  state: "visible",
 });
 ```
 
 **Features:**
+
 - Structured `TimeoutError` with operation context
 - Progress logging every 5s for hang detection
 - Page URL and selector in error messages
@@ -71,6 +78,7 @@ Browser/page crash monitoring with structured reporting.
 **Location:** `packages/test-kit/src/playwright/crash.ts`
 
 **Usage:**
+
 ```typescript
 import { createCrashMonitor } from "@alfred/test-kit/playwright";
 
@@ -87,6 +95,7 @@ test("my test", async ({ page, context }, testInfo) => {
 ```
 
 **Features:**
+
 - Monitors `page.on("crash")`, `context.on("close")`
 - Collects console/network errors for context
 - Attaches structured crash report to test artifacts
@@ -99,10 +108,16 @@ Unified fixture combining all capabilities.
 **Location:** `apps/web/.tests/helpers/ai-harness.ts`
 
 **Usage:**
+
 ```typescript
 import { test, expect } from "./helpers/ai-harness";
 
-test("workflow renders", async ({ page, screenshots, safeAction, safeAssert }) => {
+test("workflow renders", async ({
+  page,
+  screenshots,
+  safeAction,
+  safeAssert,
+}) => {
   // Safe action with timeout and screenshot on failure
   await safeAction("navigate", async () => {
     await page.goto("/");
@@ -118,6 +133,7 @@ test("workflow renders", async ({ page, screenshots, safeAction, safeAssert }) =
 ```
 
 **Fixture Properties:**
+
 - `screenshots` - Screenshot manager for visual captures
 - `errors` - Error monitor for runtime error detection
 - `crashes` - Crash monitor for browser/page crash detection
@@ -131,13 +147,18 @@ E2E-specific performance budget categories.
 **Location:** `packages/test-kit/src/performance/budget.ts`
 
 **Categories:**
+
 - `e2e-navigation`: 5000ms - Page navigation operations
 - `e2e-action`: 2000ms - User actions (clicks, inputs)
 - `e2e-assertion`: 1000ms - Assertion checks
 
 **Usage:**
+
 ```typescript
-import { withDefaultBudget, assertDefaultBudget } from "@alfred/test-kit/performance";
+import {
+  withDefaultBudget,
+  assertDefaultBudget,
+} from "@alfred/test-kit/performance";
 
 const { result, withinBudget } = await withDefaultBudget(
   "e2e-navigation",
@@ -150,22 +171,24 @@ expect(withinBudget).toBe(true);
 
 ### Environment Variables
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `PLAYWRIGHT_AI_MODE` | Enable AI-optimized output | `1` (enabled) |
-| `PLAYWRIGHT_FAIL_FAST` | Stop on first failure | `1` (enabled) |
-| `PLAYWRIGHT_SCREENSHOTS` | Capture all screenshots | `0` |
+| Variable                 | Purpose                    | Default       |
+| ------------------------ | -------------------------- | ------------- |
+| `PLAYWRIGHT_AI_MODE`     | Enable AI-optimized output | `1` (enabled) |
+| `PLAYWRIGHT_FAIL_FAST`   | Stop on first failure      | `1` (enabled) |
+| `PLAYWRIGHT_SCREENSHOTS` | Capture all screenshots    | `0`           |
 
 ### Playwright Config
 
 The `playwright.config.ts` automatically adjusts based on environment variables:
 
 **AI Mode (`PLAYWRIGHT_AI_MODE=1`):**
+
 - Shorter timeouts (60s test, 10s expect)
 - Dot reporter + AI-compact reporter
 - JSON output for programmatic access
 
 **Fail-Fast Mode (`PLAYWRIGHT_FAIL_FAST=1`):**
+
 - Single worker for deterministic output
 - No parallelism
 - Stop on first failure (`maxFailures: 1`)

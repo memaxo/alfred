@@ -1,4 +1,5 @@
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
+
 import { useCallback, useState } from "react";
 
 export type ResumeTarget = "workflow" | "droid";

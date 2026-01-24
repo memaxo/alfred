@@ -1,5 +1,7 @@
 import * as React from "react";
+
 import { cn } from "@/lib/utils";
+
 import { TabsContext, type TabsContextValue } from "./tabs-context";
 
 export type TabsRootProps = {

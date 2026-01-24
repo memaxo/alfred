@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+
 import type { EditorSettings, FileTab } from "./types";
+
 import { DEFAULT_EDITOR_SETTINGS } from "./types";
 
 const SETTINGS_KEY = "alfred-code-editor-settings";

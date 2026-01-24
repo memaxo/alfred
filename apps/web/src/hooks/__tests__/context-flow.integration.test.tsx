@@ -1,16 +1,20 @@
 import "@/test/dom";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import type { ReactNode } from "react";
+
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { useDesktopStore } from "@/store/desktop";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+
 import type { WindowInstance } from "@/store/desktop/types.new";
+
+import { useDesktopStore } from "@/store/desktop";
 import {
   createTestQueryClient,
   createTestTrpcClient,
   type TestTrpcHandlers,
 } from "@/test/render-route";
 import { trpc } from "@/utils/trpc";
+
 import { useFocusedContext } from "../use-focused-context";
 
 // Inline performance helper

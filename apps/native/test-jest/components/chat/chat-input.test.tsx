@@ -1,5 +1,7 @@
 import { fireEvent } from "@testing-library/react-native";
+
 import { ChatInput } from "@/components/chat/chat-input";
+
 import { renderWithProviders } from "../../utils/test-helpers";
 
 describe("ChatInput", () => {
