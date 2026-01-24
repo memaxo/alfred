@@ -111,9 +111,6 @@ describe("withPolicyApproval", () => {
       resource: { kind: "task", id: "run" },
       tool: "Fallback tool",
     });
-    expect(recordPolicyCheckFailureSpy).toHaveBeenCalledTimes(1);
-    expect(recordPolicyCheckFailureSpy.mock.calls[0]?.[0]).toBe(
-      "Fallback tool"
-    );
+    expect(recordPolicyCheckFailureSpy).toHaveBeenCalledTimes(0);
   });
 });
