@@ -57,4 +57,3 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 ALFRED uses explicit `type: "tool-call"` and `type: "tool-result"` discriminants for persistence and validation benefits. These use `input`/`output` properties (matching v6 naming) but separate the call from the result.
 
 Type guards must accept `unknown` and return explicit predicates (use `as unknown as ToolCallPart` after guards). See `@alfred/ui/chat/parts.ts` for reference.
-

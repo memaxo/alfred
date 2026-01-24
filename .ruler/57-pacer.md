@@ -8,4 +8,3 @@
 4. **Do not replace edge guards.** Do not use Pacer for SSE/WS/tRPC/LLM security and quota limiters; keep purpose-built guards in `packages/api` and `packages/agent`.
 5. **Import safety.** Observer pacing must not introduce new always-on timers; keep existing `setInterval(...).unref()` patterns and ensure any async initialization flushes buffered work once ready.
 6. **Testing.** Add focused unit tests that assert behavioral equivalence (debounce/throttle semantics, observer flush timing) rather than snapshotting internal Pacer state.
-

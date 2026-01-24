@@ -12,4 +12,3 @@ Subprocess-based tools must be deterministic, sandboxed, and debuggable under Bu
 4. **Read streams immediately.** Begin reading stdout/stderr before awaiting `proc.exited` so output is not lost.
 5. **Minimal env.** Pass a minimal `env` map, always including `PATH` and `HOME`, and only the tool-prefixed env vars needed for configuration.
 6. **Opt-in integration tests.** Gate external-CLI integration tests behind an explicit env var and set a generous per-test timeout; always cleanup sessions/processes in `finally`.
-

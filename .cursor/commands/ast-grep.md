@@ -28,8 +28,7 @@ When generating an ast-grep rule or command, use this structure:
 ```yaml
 id: <unique-rule-id>
 language: <language>
-rule:
-  <rule-definition>
+rule: <rule-definition>
 ```
 
 **Example Command:**
@@ -38,16 +37,18 @@ rule:
 ## Rule Reference
 
 ### Properties
-| Property | Category | Purpose |
-| :--- | :--- | :--- |
-| `pattern` | Atomic | Matches AST node by code pattern (supports metavariables). |
-| `kind` | Atomic | Matches AST node by its Tree-sitter kind name. |
-| `regex` | Atomic | Matches node's text by Rust regex. |
-| `inside` | Relational | Target node must be inside node matching sub-rule. |
-| `has` | Relational | Target node must have descendant matching sub-rule. |
-| `all`, `any`, `not` | Composite | Logical AND, OR, NOT operations. |
+
+| Property            | Category   | Purpose                                                    |
+| :------------------ | :--------- | :--------------------------------------------------------- |
+| `pattern`           | Atomic     | Matches AST node by code pattern (supports metavariables). |
+| `kind`              | Atomic     | Matches AST node by its Tree-sitter kind name.             |
+| `regex`             | Atomic     | Matches node's text by Rust regex.                         |
+| `inside`            | Relational | Target node must be inside node matching sub-rule.         |
+| `has`               | Relational | Target node must have descendant matching sub-rule.        |
+| `all`, `any`, `not` | Composite  | Logical AND, OR, NOT operations.                           |
 
 ### Metavariables
+
 - `$VAR`: Matches a single named node.
 - `$$VAR`: Matches a single unnamed node (operators, etc).
 - `$$$VAR`: Matches zero or more nodes (arguments, statements).
@@ -56,6 +57,7 @@ rule:
 ## Common Patterns
 
 ### Find Functions with Specific Content
+
 ```yaml
 rule:
   kind: function_declaration
@@ -65,6 +67,7 @@ rule:
 ```
 
 ### Find Code Missing try-catch
+
 ```yaml
 rule:
   all:
@@ -75,6 +78,7 @@ rule:
 ```
 
 ## Troubleshooting
+
 - **No matches**: Use `--debug-query=cst` to verify `kind` names.
 - **Incomplete search**: Ensure `stopBy: end` is present in relational rules.
 - **Shell errors**: Escape `$` as `\$` in inline shell commands or use single quotes.

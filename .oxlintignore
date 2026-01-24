@@ -1,0 +1,15 @@
+node_modules
+dist
+.turbo
+vendor
+tmp
+.agent
+.cursor
+.vscode
+.profiles
+logs
+test-results
+piper_phonemize.data
+piper_phonemize.wasm
+tmp-policy-test
+**/routeTree.gen.ts

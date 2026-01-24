@@ -9,5 +9,3 @@
 5. **Env loading.** Rely on Bun’s built-in `.env` loading; avoid `dotenv`.
 6. **Lockfile.** Commit `bun.lock` and use frozen installs in CI.
 7. **Optional deps.** Wrap heavy/optional deps in dynamic imports with clear failure messages.
-
-

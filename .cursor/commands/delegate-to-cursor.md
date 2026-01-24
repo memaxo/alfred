@@ -1,9 +1,11 @@
 # Delegate Linear Tickets to Cursor Agents
 
 ## Overview
+
 Bulk assign Linear tickets to Cursor agents for automated execution. This command handles delegation, begin prompt creation, and validation of blocking relationships.
 
 ## Prerequisites
+
 - Linear MCP tools configured
 - Cursor delegate ID: `5497cebb-b66c-4675-bd54-fc650cf94d27`
 - Tickets must have clear descriptions and acceptance criteria
@@ -11,14 +13,17 @@ Bulk assign Linear tickets to Cursor agents for automated execution. This comman
 ## Workflow
 
 ### Phase 1: Identify Tickets
+
 Determine which tickets to delegate:
 
 **Option A: Specific Issue IDs**
+
 ```
 Tickets: ALF-308, ALF-309, ALF-310, ALF-311, ALF-312
 ```
 
 **Option B: Query by Label/Project**
+
 ```typescript
 Use Linear MCP: list_issues
 Arguments: {
@@ -30,6 +35,7 @@ Arguments: {
 ```
 
 **Option C: Query by Epic**
+
 ```typescript
 // Get all issues blocked by an epic
 Use Linear MCP: get_issue with includeRelations
@@ -37,7 +43,9 @@ Then filter for issues in the `blocks` array
 ```
 
 ### Phase 2: Validate Tickets
+
 Before delegating, verify each ticket has:
+
 - ✅ Clear description with context
 - ✅ Specific file paths or implementation guidance
 - ✅ Acceptance criteria defined
@@ -47,6 +55,7 @@ Before delegating, verify each ticket has:
 Warn if tickets are missing critical information.
 
 ### Phase 3: Assign Cursor Delegate
+
 For each validated ticket:
 
 ```typescript
@@ -58,6 +67,7 @@ Arguments: {
 ```
 
 ### Phase 4: Add Begin Prompts (Optional)
+
 Create detailed begin prompts as comments:
 
 ```typescript
@@ -69,24 +79,28 @@ Arguments: {
 ```
 
 **Begin Prompt Template:**
-```markdown
-@cursor 
+
+````markdown
+@cursor
 
 ## Begin Prompt
 
 <Brief description of the task>
 
 **Context:**
+
 - Current state: <what exists now>
 - Target state: <what should exist>
 - Reference files: <paths-to-similar-implementations>
 
 **Tasks:**
+
 1. <Specific task with code example if relevant>
 2. <Next task>
 3. <Final task>
 
 **Pattern:**
+
 ```typescript
 // Before
 <current-code-snippet>
@@ -94,17 +108,21 @@ Arguments: {
 // After
 <target-code-snippet>
 ```
+````
 
 **Acceptance:**
+
 - <Criterion 1>
 - <Criterion 2>
 - <Criterion 3>
 
 **Commands:**
+
 ```bash
 cd <relevant-directory>
 bun test <test-path>
 ```
+
 ```
 
 ### Phase 5: Report Summary
@@ -118,23 +136,31 @@ Output:
 
 ### Pattern 1: List of IDs
 ```
+
 Delegate these tickets to Cursor: ALF-308, ALF-309, ALF-310
+
 ```
 
 ### Pattern 2: Epic Children
 ```
+
 Delegate all sub-tasks of ALF-307 to Cursor
+
 ```
 
 ### Pattern 3: Filter Criteria
 ```
+
 Delegate all "infrastructure" tickets in "Backlog" state to Cursor
+
 ```
 
 ### Pattern 4: Priority Range
 ```
+
 Delegate all Urgent and High priority tickets to Cursor
-```
+
+````
 
 ## Begin Prompt Generation
 
@@ -194,20 +220,24 @@ When creating begin prompts, include:
 
 ## Next Steps
 Cursor agents can now pick up these tickets. Monitor progress in Linear.
-```
+````
 
 ## Common Issues
 
 ### Issue: Ticket missing context
+
 **Solution:** Add more detail to description before delegating, or add comprehensive begin prompt
 
 ### Issue: Blocking relationships unclear
+
 **Solution:** Use Linear `blocks` field to enforce execution order
 
 ### Issue: Begin prompt too generic
+
 **Solution:** Include specific file paths, code examples, and validation commands
 
 ## Related Commands
+
 - `/investigate-ticket` - Deep dive into a single ticket before delegation
 - `/update-linear` - Update ticket status after completion
 - `/implement-feature` - Full implementation workflow (complements delegation)
@@ -215,21 +245,25 @@ Cursor agents can now pick up these tickets. Monitor progress in Linear.
 ## Example Usage
 
 ### Example 1: Delegate Epic Children
+
 ```
 /delegate-to-cursor all sub-tasks of ALF-307
 ```
 
 ### Example 2: Delegate Specific Tickets
+
 ```
 /delegate-to-cursor ALF-308, ALF-309, ALF-310 with begin prompts
 ```
 
 ### Example 3: Delegate by Filter
+
 ```
 /delegate-to-cursor all "infrastructure" tickets in "Backlog"
 ```
 
 ### Example 4: Validate Only (Dry Run)
+
 ```
 /delegate-to-cursor --dry-run ALF-308, ALF-309, ALF-310
 ```

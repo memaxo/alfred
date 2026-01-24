@@ -1,14 +1,14 @@
 [features]
 web_search_request = true
-rmcp_client = true  # Enable OAuth support for streamable HTTP MCP servers
+rmcp_client = true # Enable OAuth support for streamable HTTP MCP servers
 
 [mcp_servers.context7]
 command = "npx"
-args = [ "-y", "@upstash/context7-mcp" ]
+args = ["-y", "@upstash/context7-mcp"]
 
 [mcp_servers.shadcn]
 command = "npx"
-args = [ "-y", "shadcn@latest", "mcp" ]
+args = ["-y", "shadcn@latest", "mcp"]
 
 [mcp_servers.better-auth]
 url = "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp"

@@ -1,9 +1,11 @@
 # Add tRPC Router
 
 ## Overview
+
 Add a new tRPC router to the API package following established patterns.
 
 ## File Structure
+
 ```
 packages/api/src/routers/<name>.ts
 ```
@@ -11,6 +13,7 @@ packages/api/src/routers/<name>.ts
 ## Implementation Steps
 
 ### 1. Create Router File
+
 ```typescript
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -76,7 +79,9 @@ export const <name>Router = createTRPCRouter({
 ```
 
 ### 2. Register Router
+
 Add to `packages/api/src/index.ts`:
+
 ```typescript
 import { <name>Router } from "./routers/<name>";
 
@@ -87,7 +92,9 @@ export const appRouter = createTRPCRouter({
 ```
 
 ### 3. Add Tests
+
 Create `packages/api/test/<name>.test.ts`:
+
 - Test each procedure
 - Test authorization (user can only access own data)
 - Test validation (invalid inputs rejected)
@@ -96,26 +103,31 @@ Create `packages/api/test/<name>.test.ts`:
 ## Patterns to Follow
 
 ### Protected vs Public
+
 - `protectedProcedure` - Requires authentication
 - `publicProcedure` - No auth required (rare)
 
 ### Error Handling
+
 ```typescript
 throw new TRPCError({
-  code: "NOT_FOUND",  // or UNAUTHORIZED, BAD_REQUEST, etc.
+  code: "NOT_FOUND", // or UNAUTHORIZED, BAD_REQUEST, etc.
   message: "optional_error_code",
 });
 ```
 
 ### Input Validation
+
 - Always use Zod schemas
 - Add `.default()` for optional fields with defaults
 - Use `.uuid()` for IDs
 
 ### User Scoping
+
 - Always filter by `ctx.session.user.id`
 - Check ownership before update/delete
 - Never expose other users' data
 
 ## Reference
+
 See existing routers: `packages/api/src/routers/note.ts`, `remind.ts`

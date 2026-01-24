@@ -13,7 +13,7 @@
    - Update or add tests
    - Run tests to validate (`bun test <relevant-paths>`)
    - Fix any failures you introduced
-   - Commit with a clear message 
+   - Commit with a clear message
    - Document the change if user-facing
 
 5. **Read between the lines.** If a task implies secondary changes (updating types, fixing downstream consumers, adjusting tests), do them. A real developer wouldn't deliver half-integrated code.
@@ -25,4 +25,3 @@
 8. **Assume concurrent work.** Multiple agents operate on this codebase simultaneously on distinct tasks. Your job is to complete your task cleanly, not to police the entire worktree.
 
 9. **Maintain the ExecPlan.** If the task has an ExecPlan, update it after completing each subtask: mark progress, log decisions, note surprises. Update immediately—before moving to the next subtask—so a newcomer could resume from the plan alone.
-

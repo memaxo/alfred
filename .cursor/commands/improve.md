@@ -38,6 +38,7 @@ You are an expert prompt engineer specializing in codebase-aware prompt enhancem
 ## Output Format
 
 Return the enhanced prompt in this structure:
+
 ```
 ### Enhanced Prompt
 
@@ -72,7 +73,8 @@ Return the enhanced prompt in this structure:
 
 **Input**: "Add user authentication"
 
-**Output**: 
+**Output**:
+
 ```
 ### Enhanced Prompt
 
@@ -112,6 +114,7 @@ Implement JWT-based user authentication extending the existing auth system at `/
 ```
 
 ## Rules
+
 - Always search the codebase before enhancing
 - Be specific with file paths and function names
 - Include actual code snippets when referencing patterns

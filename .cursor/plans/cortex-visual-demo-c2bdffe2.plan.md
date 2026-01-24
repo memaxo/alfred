@@ -1,4 +1,5 @@
 <!-- c2bdffe2-9eee-4d85-be16-cc9208dab16b 00d1c66b-a607-49db-9ffa-1ff92c85125e -->
+
 # Cortex Visual Configuration System
 
 ## Architecture
@@ -17,14 +18,34 @@ Both backed by the existing preference system using keys like `visual.*`.
 Define visual preference schema:
 
 ```typescript
-export const visualPresetSchema = z.enum(["minimal", "balanced", "performance", "maximum", "custom"]);
+export const visualPresetSchema = z.enum([
+  "minimal",
+  "balanced",
+  "performance",
+  "maximum",
+  "custom",
+]);
 
 export const visualConfigSchema = z.object({
   preset: visualPresetSchema,
   particles: z.object({ count: z.number(), spawnRadius: z.number() }),
-  corona: z.object({ fiberCount: z.number(), innerRadius: z.number(), outerRadius: z.number(), rotationSpeed: z.number() }),
-  bloom: z.object({ threshold: z.number(), intensity: z.number(), blurRadius: z.number() }),
-  colors: z.object({ primary: z.string(), secondary: z.string(), accent: z.string(), void: z.string() }),
+  corona: z.object({
+    fiberCount: z.number(),
+    innerRadius: z.number(),
+    outerRadius: z.number(),
+    rotationSpeed: z.number(),
+  }),
+  bloom: z.object({
+    threshold: z.number(),
+    intensity: z.number(),
+    blurRadius: z.number(),
+  }),
+  colors: z.object({
+    primary: z.string(),
+    secondary: z.string(),
+    accent: z.string(),
+    void: z.string(),
+  }),
   atmosphere: z.object({ fogDensity: z.number(), fiberIntensity: z.number() }),
   nodes: z.object({ glowIntensity: z.number(), ringWidth: z.number() }),
   edges: z.object({ particleSpeed: z.number(), curvature: z.number() }),
@@ -66,7 +87,6 @@ Full-featured demo page with:
 
 1. **Live Canvas** - Full Cortex rendering with current config
 2. **Control Panels** (collapsible sections):
-
    - Particle System: count slider, spawn radius, gravity constant
    - Corona: fiber count, inner/outer radius, rotation speed, spiral tightness
    - Post-Processing: bloom threshold/intensity/radius, chromatic aberration
@@ -94,7 +114,6 @@ Simplified user-facing page:
 
 1. **Preset Grid** - Large cards for Minimal/Balanced/Performance/Maximum
 2. **Key Adjustments** (if preset is "custom"):
-
    - Particle density (Low/Medium/High/Ultra)
    - Glow intensity slider
    - Color theme picker (3-4 curated palettes)
@@ -111,9 +130,16 @@ Link from main settings page with "Visual Appearance" card.
 New configuration loader:
 
 ```typescript
-export function applyVisualConfig(engine: CortexEngine, config: VisualConfig): void {
-  engine.getSystem<ParticleSystem>("particles")?.setParticleCount(config.particles.count);
-  engine.getSystem<CoronaSystem>("corona")?.setFiberCount(config.corona.fiberCount);
+export function applyVisualConfig(
+  engine: CortexEngine,
+  config: VisualConfig
+): void {
+  engine
+    .getSystem<ParticleSystem>("particles")
+    ?.setParticleCount(config.particles.count);
+  engine
+    .getSystem<CoronaSystem>("corona")
+    ?.setFiberCount(config.corona.fiberCount);
   // ... etc
 }
 ```

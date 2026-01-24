@@ -11,28 +11,28 @@
 4. **Fail-fast runner.** Use `scripts/test-failfast.ts` for stop-on-first-failure runs with progress output and `ALFRED_FAILED_FILE` resume support.
 
 5. **Deterministic “no-hang” kill-switches.** Tests must never hang indefinitely:
-    - per-test timeout: `bun test --timeout <ms>`
-    - per-process watchdog: `ALFRED_TEST_WATCHDOG_MS` in a preload
-    - hard kill of stuck child process: `ALFRED_TEST_RUN_TIMEOUT_MS` / `ALFRED_TEST_FILE_TIMEOUT_MS` in the wrapper
-    - hard kill of the wrapper itself: `ALFRED_TEST_RUNNER_TIMEOUT_MS` with a "last file" breadcrumb
+   - per-test timeout: `bun test --timeout <ms>`
+   - per-process watchdog: `ALFRED_TEST_WATCHDOG_MS` in a preload
+   - hard kill of stuck child process: `ALFRED_TEST_RUN_TIMEOUT_MS` / `ALFRED_TEST_FILE_TIMEOUT_MS` in the wrapper
+   - hard kill of the wrapper itself: `ALFRED_TEST_RUNNER_TIMEOUT_MS` with a "last file" breadcrumb
 
 6. **`mock.module()` isolation.** Treat `mock.module()` as process-global and **permanent for the process lifetime**. Key limitations:
-    - `mock.module()` cannot be undone or reset; there is no `mock.restoreAllModules()`
-    - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`) for heavy `mock.module()` usage
-    - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock)
-    - avoid relying on "reset" semantics for module mocks across files
+   - `mock.module()` cannot be undone or reset; there is no `mock.restoreAllModules()`
+   - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`) for heavy `mock.module()` usage
+   - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock)
+   - avoid relying on "reset" semantics for module mocks across files
 
 7. **Centralized mock reset registry.** Test-kit modules auto-register reset functions via `registerMockReset()`:
-    - preload's `afterEach` automatically calls all registered reset functions
-    - use `resetAllTestKitMocks()` for manual reset if needed
-    - new test-kit modules should call `registerMockReset(resetFn)` at module load
-    - module-level state should be encapsulated in resettable objects (see `workflow/runtime-fixture.ts`)
+   - preload's `afterEach` automatically calls all registered reset functions
+   - use `resetAllTestKitMocks()` for manual reset if needed
+   - new test-kit modules should call `registerMockReset(resetFn)` at module load
+   - module-level state should be encapsulated in resettable objects (see `workflow/runtime-fixture.ts`)
 
 8. **Dependency injection over mock.module().** Prefer DI via tRPC context for new tests:
-    - define `RouterDeps` interface with injectable dependencies
-    - inject deps via `ctx.deps` in routers instead of direct imports
-    - pass mock deps to `createTestCaller({ deps: mockDeps })` in tests
-    - see `docs/architecture/test-dependency-injection.md` for full pattern
+   - define `RouterDeps` interface with injectable dependencies
+   - inject deps via `ctx.deps` in routers instead of direct imports
+   - pass mock deps to `createTestCaller({ deps: mockDeps })` in tests
+   - see `docs/architecture/test-dependency-injection.md` for full pattern
 
 9. **Database Isolation.** Use ephemeral schemas, transactions, or `createTestDb`/`closeTestDb`. Reset tables between cases; no implicit globals or shared state.
 

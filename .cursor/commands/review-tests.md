@@ -1,10 +1,13 @@
 # Review Tests
 
 ## Overview
+
 Review tests for a specific feature to identify over-mocking, testing gaps, and anti-patterns.
 
 ## Scope
+
 Identify test files for the feature:
+
 ```bash
 # Find test files
 fd "test|spec" --extension ts packages/<package>/
@@ -15,6 +18,7 @@ fd "test|spec" --extension ts packages/<package>/
 ### Over-Mocking Red Flags
 
 #### Mocking Implementation Details
+
 - [ ] Mocking internal functions that aren't boundaries
 - [ ] Mocking the thing being tested
 - [ ] Mocking simple utility functions
@@ -31,6 +35,7 @@ expect(formatDate(new Date("2024-01-01"))).toBe("Jan 1, 2024");
 ```
 
 #### Mock Everything Pattern
+
 - [ ] Every import is mocked
 - [ ] No real code executes in test
 - [ ] Tests pass but code is broken
@@ -50,6 +55,7 @@ mock.module("@alfred/db/repo/rag", () => ({
 ### What SHOULD Be Mocked
 
 #### Appropriate Mocks
+
 - [x] External APIs (`@alfred/auth/token`, Linear, OpenAI)
 - [x] Database connections (for unit tests)
 - [x] File system (for unit tests)
@@ -57,6 +63,7 @@ mock.module("@alfred/db/repo/rag", () => ({
 - [x] Network requests
 
 #### Should NOT Be Mocked
+
 - [ ] Pure functions
 - [ ] Simple transformations
 - [ ] The module under test
@@ -65,12 +72,14 @@ mock.module("@alfred/db/repo/rag", () => ({
 ### Testing Gaps
 
 #### Coverage Gaps
+
 - [ ] Happy path only (no error cases)
 - [ ] No edge cases (empty inputs, nulls, boundaries)
 - [ ] No integration between components
 - [ ] Missing permission/auth tests
 
 #### Behavioral Gaps
+
 - [ ] State changes not verified
 - [ ] Side effects not checked
 - [ ] Return values not asserted
@@ -79,6 +88,7 @@ mock.module("@alfred/db/repo/rag", () => ({
 ### Test Structure Issues
 
 #### Anti-Patterns
+
 - [ ] Tests depend on execution order
 - [ ] Shared mutable state between tests
 - [ ] No `beforeEach` reset of mocks
@@ -86,7 +96,9 @@ mock.module("@alfred/db/repo/rag", () => ({
 - [ ] Magic numbers without explanation
 
 #### Missing Categories
+
 For any feature, tests should cover:
+
 1. **Schema validation** - Invalid inputs rejected
 2. **Policy enforcement** - Auth required, scopes checked
 3. **Successful execution** - Happy path works
@@ -96,24 +108,29 @@ For any feature, tests should cover:
 ## Review Output
 
 ### Format
+
 ```markdown
 ## Test Review: [feature]
 
 ### Over-Mocking Issues
+
 1. **[test file:line]** - [What's over-mocked]
    - Impact: Tests pass but [real issue] not caught
    - Fix: [Use real implementation / integration test]
 
 ### Testing Gaps
+
 1. **Missing: [scenario]**
    - Risk: [What could break undetected]
    - Add test for: [specific case]
 
 ### Anti-Patterns
+
 1. **[test file:line]** - [Pattern]
    - Fix: [Correction]
 
 ### Recommendations
+
 1. Add integration test for [flow]
 2. Remove mock for [module] and test directly
 3. Add error case tests for [scenarios]
@@ -122,6 +139,7 @@ For any feature, tests should cover:
 ## ALFRED-Specific Test Patterns
 
 ### Good Patterns (from codebase)
+
 ```typescript
 // Reset mocks properly
 beforeEach(() => {
@@ -143,5 +161,6 @@ it("enforces policy", async () => {
 ```
 
 ### Reference Files
+
 - `packages/agent/test/rag.test.ts` - Good tool test structure
 - `packages/api/test/*.test.ts` - Router test patterns

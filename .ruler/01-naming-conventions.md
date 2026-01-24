@@ -14,10 +14,10 @@
    - TanStack Start reserved files: `_layout.tsx`, `+not-found.tsx`, route loader/action filenames the framework mandates.
    - React / React Native ergonomics in UI packages: conventional hook/component prefixes or platform hints are allowed (e.g. `use-color-scheme.ts`, `android-navigation-bar.tsx`, `header-button.tsx`, `sign-in.tsx`, `sign-up.tsx`).
    - Generated outputs that land outside `apps/*/src` and `packages/*/src` may follow the generator's naming.
-   Outside these cases, keep names to a single word.
+     Outside these cases, keep names to a single word.
 
 2. **Domain folders.** Group behaviour under domain nouns (`note`, `remind`, `timer`, `book`). Avoid verbs or multi-word folders (`create-note`, `assistant-notes`).
-   
+
    **Cognitive domains (core):**
    - `cognitive` - State machine and transitions
    - `knowledge` - Hypergraph and queries

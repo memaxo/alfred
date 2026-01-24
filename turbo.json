@@ -48,7 +48,13 @@
       "cache": false
     },
     "lint": {
-      "inputs": ["$TURBO_DEFAULT$", "biome.json", "../../biome.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".oxlintrc.json",
+        ".oxfmtrc.jsonc",
+        "../../.oxlintrc.json",
+        "../../.oxfmtrc.jsonc"
+      ],
       "outputs": []
     },
     "typecheck": {

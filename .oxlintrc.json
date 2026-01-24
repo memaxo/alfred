@@ -1,0 +1,44 @@
+{
+  "extends": [
+    "./node_modules/ultracite/config/oxlint/core/.oxlintrc.json",
+    "./node_modules/ultracite/config/oxlint/react/.oxlintrc.json",
+    "./node_modules/ultracite/config/oxlint/next/.oxlintrc.json",
+    "./node_modules/ultracite/config/oxlint/remix/.oxlintrc.json"
+  ],
+  "globals": {
+    "Bun": "readonly",
+    "describe": "readonly",
+    "it": "readonly",
+    "expect": "readonly",
+    "beforeEach": "readonly",
+    "afterEach": "readonly",
+    "beforeAll": "readonly",
+    "afterAll": "readonly",
+    "vi": "readonly",
+    "jest": "readonly",
+    "__DEV__": "readonly",
+    "AudioWorkletProcessor": "readonly",
+    "registerProcessor": "readonly"
+  },
+  "rules": {
+    "no-explicit-any": "warn",
+    "no-unused-vars": "warn"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "**/__tests__/**",
+        "**/*.test.tsx",
+        "scripts/**",
+        "**/*.config.ts",
+        "**/*.config.js"
+      ],
+      "rules": {
+        "no-non-null-assertion": "off"
+      }
+    }
+  ],
+  "$schema": "./node_modules/oxlint/configuration_schema.json"
+}

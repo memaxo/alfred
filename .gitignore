@@ -110,6 +110,9 @@ tmp-policy-test/
 .agent/profiles/**/*.pstats
 .agentfs/
 
+# Codeprint index
+.codeprint.json
+
 # Build profiling artifacts (heap snapshots, diagnostic reports)
 .profiles/
 **/*.heapsnapshot
