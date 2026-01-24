@@ -1,9 +1,10 @@
 ---
 title: Other Social Providers | Better Auth
-url: 
+url:
 description: Other social providers setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,9 +31,9 @@ Better Auth providers out of the box support for the [Generic Oauth Plugin](http
 
 To use a provider that is not supported out of the box, you can use the [Generic Oauth Plugin](https://www.better-auth.com/docs/plugins/generic-oauth).
 
-## [Installation](https://www.better-auth.com/docs/authentication/other-social-providers\#installation)
+## [Installation](https://www.better-auth.com/docs/authentication/other-social-providers#installation)
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/authentication/other-social-providers\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/authentication/other-social-providers#add-the-plugin-to-your-auth-config)
 
 To use the Generic OAuth plugin, add it to your auth config.
 
@@ -61,7 +62,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Add the client plugin](https://www.better-auth.com/docs/authentication/other-social-providers\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/authentication/other-social-providers#add-the-client-plugin)
 
 Include the Generic OAuth client plugin in your authentication client instance.
 
@@ -81,9 +82,9 @@ const authClient = createAuthClient({
 Read more about installation and usage of the Generic Oauth plugin
 [here](https://www.better-auth.com/docs/plugins/generic-oauth#usage).
 
-## [Example usage](https://www.better-auth.com/docs/authentication/other-social-providers\#example-usage)
+## [Example usage](https://www.better-auth.com/docs/authentication/other-social-providers#example-usage)
 
-### [Instagram Example](https://www.better-auth.com/docs/authentication/other-social-providers\#instagram-example)
+### [Instagram Example](https://www.better-auth.com/docs/authentication/other-social-providers#instagram-example)
 
 auth.ts
 
@@ -119,7 +120,7 @@ const response = await authClient.signIn.oauth2({
 });
 ```
 
-### [Coinbase Example](https://www.better-auth.com/docs/authentication/other-social-providers\#coinbase-example)
+### [Coinbase Example](https://www.better-auth.com/docs/authentication/other-social-providers#coinbase-example)
 
 auth.ts
 

@@ -5,29 +5,27 @@ Copy markdown
 # `createIdGenerator()`
 
 Creates a customizable ID generator function. You can configure the alphabet, prefix, separator, and default size of the generated IDs.
-    
-    
+
     import { createIdGenerator } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const generateCustomId = createIdGenerator({
-    
+
       prefix: 'user',
-    
+
       separator: '_',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const id = generateCustomId(); // Example: "user_1a2b3c4d5e6f7g8h"
 
 ## Import
-    
-    
+
     import { createIdGenerator } from "ai"
 
 ## API Signature
@@ -70,34 +68,33 @@ Returns a function that generates IDs based on the configured options.
 
 ### Notes
 
-  * The generator uses non-secure random generation and should not be used for security-critical purposes.
-  * The separator character must not be part of the alphabet to ensure reliable prefix checking.
+- The generator uses non-secure random generation and should not be used for security-critical purposes.
+- The separator character must not be part of the alphabet to ensure reliable prefix checking.
 
 ## Example
-    
-    
+
     // Create a custom ID generator for user IDs
-    
+
     const generateUserId = createIdGenerator({
-    
+
       prefix: 'user',
-    
+
       separator: '_',
-    
+
       size: 8,
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     // Generate IDs
-    
+
     const id1 = generateUserId(); // e.g., "user_1a2b3c4d"
 
 ## See also
 
-  * `generateId()`
+- `generateId()`
 
 Previous
 

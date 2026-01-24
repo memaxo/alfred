@@ -19,6 +19,7 @@ DATABASE_URL="postgresql://alfred:alfred@localhost:5432/alfred"
 ```
 
 **Impact:**
+
 - SQLite: Fast, in-memory, but missing `approvals` table and Postgres-specific features
 - PostgreSQL: Full schema support, but requires Docker container
 
@@ -35,6 +36,7 @@ RUN_DB_TESTS="1"
 ```
 
 **Impact:**
+
 - Phase 3 tests (`schema-validation`, `transaction-wrappers`, `cross-schema-joins`) require this
 - Without it, 25 tests are skipped
 
@@ -53,16 +55,19 @@ BIO_AUTH_BYPASS="false"
 ```
 
 **Why needed:**
+
 - Ed25519 private keys for token signing are not available in test environment
 - Tests cannot generate valid biometric JWT signatures
 - Allows testing token flow without requiring actual biometric hardware
 
 **Tests that use this:**
+
 - `auth-full-integration.test.ts` - All token lifecycle tests
 - `obligation-handling.integration.test.ts` - Biometric obligation tests
 - `policy-full-integration.test.ts` - Policy enforcement tests
 
 **Usage in tests:**
+
 ```typescript
 beforeAll(() => {
   process.env.BIO_AUTH_BYPASS = "true";
@@ -84,10 +89,12 @@ ALFRED_LIVE_PROVIDER_TESTS="1"
 ```
 
 **Impact:**
+
 - Tests may incur real provider cost.
 - Tests must not print secrets; avoid logging outputs beyond small, redacted snippets.
 
 **Cerebras smoke test prerequisites:**
+
 - `ALFRED_LIVE_PROVIDER_TESTS="1"`
 - `CEREBRAS_API_KEY="..."`
 
@@ -114,6 +121,7 @@ DISABLE_TRPC_METRICS="1"
 ```
 
 **Impact:**
+
 - Tests don't increment Prometheus counters
 - Faster test execution
 - No metric side effects between tests
@@ -127,6 +135,7 @@ DISABLE_METRICS_HOOKS="1"
 ```
 
 **Impact:**
+
 - No automatic metric flushing
 - Tests run without monitoring overhead
 
@@ -143,6 +152,7 @@ MEMORY_DECAY_ENABLED="false"
 ```
 
 **Impact:**
+
 - Phase 2 decay scheduler tests depend on this
 - Faster tests when disabled
 
@@ -202,6 +212,7 @@ bun test packages/api/test/integration/schema-validation.integration.test.ts
 The project uses a PostgreSQL container for full schema testing:
 
 **Container details:**
+
 - Name: `alfred-postgres`
 - Image: `pgvector/pgvector:pg16`
 - Host: `localhost`
@@ -211,11 +222,13 @@ The project uses a PostgreSQL container for full schema testing:
 - Database: `alfred`
 
 **Start container:**
+
 ```bash
 bun run db:start
 ```
 
 **Connection string:**
+
 ```
 postgresql://alfred:alfred@localhost:5432/alfred
 ```
@@ -240,14 +253,14 @@ ALFRED_TEST_RUNNER_TIMEOUT_MS=600000
 
 ## Summary Table
 
-| Variable | Purpose | Recommended Value for Local Tests |
-|----------|---------|------------------------------------|
-| `DATABASE_URL` | Database backend | `sqlite::memory:` |
-| `RUN_DB_TESTS` | Enable Postgres tests | (unset) |
-| `BIO_AUTH_BYPASS` | Bypass biometric auth | `true` |
-| `ALFRED_LIVE_PROVIDER_TESTS` | Enable live provider smoke tests | `0` |
-| `DISABLE_TRPC_METRICS` | Disable metrics | `1` |
-| `DISABLE_METRICS_HOOKS` | Disable hooks | `1` |
-| `MEMORY_DECAY_ENABLED` | Enable decay | (unset) |
-| `MEMORY_DECAY_FACTOR` | Decay rate | `0.95` |
-| `MEMORY_DECAY_INTERVAL_MS` | Decay interval | `3600000` |
+| Variable                     | Purpose                          | Recommended Value for Local Tests |
+| ---------------------------- | -------------------------------- | --------------------------------- |
+| `DATABASE_URL`               | Database backend                 | `sqlite::memory:`                 |
+| `RUN_DB_TESTS`               | Enable Postgres tests            | (unset)                           |
+| `BIO_AUTH_BYPASS`            | Bypass biometric auth            | `true`                            |
+| `ALFRED_LIVE_PROVIDER_TESTS` | Enable live provider smoke tests | `0`                               |
+| `DISABLE_TRPC_METRICS`       | Disable metrics                  | `1`                               |
+| `DISABLE_METRICS_HOOKS`      | Disable hooks                    | `1`                               |
+| `MEMORY_DECAY_ENABLED`       | Enable decay                     | (unset)                           |
+| `MEMORY_DECAY_FACTOR`        | Decay rate                       | `0.95`                            |
+| `MEMORY_DECAY_INTERVAL_MS`   | Decay interval                   | `3600000`                         |

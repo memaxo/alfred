@@ -33,6 +33,7 @@ ALFRED uses Bun's built-in debugger, which supports the WebKit Inspector Protoco
 
 **Alternative: Chrome DevTools**
 If VS Code debugging doesn't work, use Chrome DevTools:
+
 1. Start app with `bun --inspect`
 2. Open `chrome://inspect` in Chrome
 3. Click "Open dedicated DevTools for Node"
@@ -40,6 +41,7 @@ If VS Code debugging doesn't work, use Chrome DevTools:
 ### Command Line Debugging
 
 **Start dev server with debugger:**
+
 ```bash
 bun run dev:debug          # All workspaces
 bun run dev:debug:web     # Web app only
@@ -47,16 +49,19 @@ bun run dev:debug:api     # API only
 ```
 
 **Debug a test file:**
+
 ```bash
 bun run debug:test packages/api/test/router.test.ts
 ```
 
 **Debug a script:**
+
 ```bash
 bun run debug:script scripts/migrate.ts
 ```
 
 **Manual inspect flags:**
+
 ```bash
 # Start with inspector (code runs immediately)
 bun --inspect server.ts
@@ -76,11 +81,13 @@ bun --inspect=4000 server.ts
 Bun provides a web-based debugger at [debug.bun.sh](https://debug.bun.sh/).
 
 1. **Start your app with `--inspect`:**
+
    ```bash
    bun --inspect server.ts
    ```
 
 2. **Copy the WebSocket URL** from the output:
+
    ```
    ------------------ Bun Inspector ------------------
    Listening at:
@@ -98,16 +105,19 @@ Bun provides a web-based debugger at [debug.bun.sh](https://debug.bun.sh/).
 Bun can automatically log network requests made with `fetch()` or `node:http`.
 
 **Print requests as curl commands:**
+
 ```bash
 BUN_CONFIG_VERBOSE_FETCH=curl bun run dev
 ```
 
 **Print request/response details:**
+
 ```bash
 BUN_CONFIG_VERBOSE_FETCH=true bun run dev
 ```
 
 **Disable verbose fetch (default):**
+
 ```bash
 BUN_CONFIG_VERBOSE_FETCH=false bun run dev
 ```
@@ -138,6 +148,7 @@ BUN_CONFIG_VERBOSE_FETCH=false bun run dev
 ### Attaching to Running Process
 
 1. **Start your app** with `--inspect`:
+
    ```bash
    bun --inspect run dev
    ```
@@ -153,11 +164,13 @@ BUN_CONFIG_VERBOSE_FETCH=false bun run dev
 Bun automatically generates and serves source maps for TypeScript, JSX, and other transpiled files. Stack traces point to original source code, not transpiled output.
 
 **View source code in stack traces:**
+
 - Click file paths in console output
 - Bun opens the original source file
 
 **Syntax-highlighted error preview:**
 Bun automatically prints source code previews for unhandled exceptions:
+
 ```typescript
 const err = new Error("Something went wrong");
 console.log(Bun.inspect(err, { colors: true }));

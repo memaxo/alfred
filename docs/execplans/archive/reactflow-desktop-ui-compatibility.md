@@ -26,6 +26,7 @@
 - ✅ **Performance optimizations** (`onlyRenderVisibleElements` default in v12)
 
 **Files:**
+
 - `apps/web/src/components/mindscape/canvas.tsx` - Main React Flow wrapper
 - `apps/web/src/store/mindscape/graph.ts` - Store integration
 - `apps/web/src/components/mindscape/registry.tsx` - Node type registry
@@ -34,19 +35,19 @@
 
 ## Compatibility Matrix
 
-| Desktop UI Requirement | React Flow Support | Implementation |
-|------------------------|-------------------|----------------|
-| **Window Positioning** | ✅ Native | Nodes have `position: { x, y }` |
-| **Window Dragging** | ✅ Native | Built-in via `draggable` prop |
-| **Window Resizing** | ✅ Via `NodeResizer` | `<NodeResizer />` component |
-| **Window Focus** | ⚠️ Custom needed | React Flow uses selection; implement separate `focusedWindowId` |
-| **Window Minimize/Maximize** | ⚠️ Custom needed | Use `viewMode` in node data + conditional rendering |
-| **Dock (Fixed Panel)** | ✅ Via `Panel` | `<Panel position="bottom-center">` |
-| **Command Palette** | ⚠️ Custom needed | Build as overlay modal (already exists) |
-| **Edge Connections** | ✅ Native | Edges represent relationships perfectly |
-| **LOD (Level of Detail)** | ⚠️ Custom needed | Use `useViewport().zoom` + conditional rendering |
-| **Viewport Pan/Zoom** | ✅ Native | Built-in with `panOnDrag`, `zoomOnScroll` |
-| **Performance (200+ nodes)** | ✅ Optimized | v12 has viewport culling, memoization |
+| Desktop UI Requirement       | React Flow Support   | Implementation                                                  |
+| ---------------------------- | -------------------- | --------------------------------------------------------------- |
+| **Window Positioning**       | ✅ Native            | Nodes have `position: { x, y }`                                 |
+| **Window Dragging**          | ✅ Native            | Built-in via `draggable` prop                                   |
+| **Window Resizing**          | ✅ Via `NodeResizer` | `<NodeResizer />` component                                     |
+| **Window Focus**             | ⚠️ Custom needed     | React Flow uses selection; implement separate `focusedWindowId` |
+| **Window Minimize/Maximize** | ⚠️ Custom needed     | Use `viewMode` in node data + conditional rendering             |
+| **Dock (Fixed Panel)**       | ✅ Via `Panel`       | `<Panel position="bottom-center">`                              |
+| **Command Palette**          | ⚠️ Custom needed     | Build as overlay modal (already exists)                         |
+| **Edge Connections**         | ✅ Native            | Edges represent relationships perfectly                         |
+| **LOD (Level of Detail)**    | ⚠️ Custom needed     | Use `useViewport().zoom` + conditional rendering                |
+| **Viewport Pan/Zoom**        | ✅ Native            | Built-in with `panOnDrag`, `zoomOnScroll`                       |
+| **Performance (200+ nodes)** | ✅ Optimized         | v12 has viewport culling, memoization                           |
 
 ---
 
@@ -118,13 +119,13 @@ export function NoteWindow({ id, data }: NodeProps<NoteWindowData>) {
 
 ## Potential Conflicts & Solutions
 
-| Conflict | Solution |
-|----------|----------|
+| Conflict                                  | Solution                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **React Flow selection vs Desktop focus** | Use separate `focusedWindowId` in Zustand. React Flow selection for multi-select, focus for single window highlight |
-| **Node dragging vs Window dragging** | Same thing! React Flow handles dragging natively. Window chrome (title bar) is drag handle |
-| **Edge handles vs Window connections** | Edges represent relationships. Hide handles for non-connectable windows (settings, terminal) |
-| **Viewport zoom vs LOD** | Use `useViewport().zoom` to drive LOD. React Flow handles zoom, LOD handles rendering complexity |
-| **Panel positioning vs Dock** | Use `Panel` component for dock positioning. Custom styling for desktop aesthetic |
+| **Node dragging vs Window dragging**      | Same thing! React Flow handles dragging natively. Window chrome (title bar) is drag handle                          |
+| **Edge handles vs Window connections**    | Edges represent relationships. Hide handles for non-connectable windows (settings, terminal)                        |
+| **Viewport zoom vs LOD**                  | Use `useViewport().zoom` to drive LOD. React Flow handles zoom, LOD handles rendering complexity                    |
+| **Panel positioning vs Dock**             | Use `Panel` component for dock positioning. Custom styling for desktop aesthetic                                    |
 
 ---
 
@@ -142,11 +143,11 @@ export function WindowFrame({ id, title, children, ...props }: WindowFrameProps)
   const { zoom } = useViewport();
   const lod = useLOD(zoom); // Custom hook
   const isFocused = useDesktopStore(s => s.focusedWindowId === id);
-  
+
   // LOD-based rendering
   if (lod === 'tiny') return <TinyDot />;
   if (lod === 'small') return <SmallCard title={title} />;
-  
+
   return (
     <div className={cn('window-frame', isFocused && 'focused')}>
       <NodeResizer minWidth={200} minHeight={150} />
@@ -177,8 +178,8 @@ type DesktopState = {
 import { Panel } from '@xyflow/react';
 
 <Panel position="bottom-center">
-  <Dock 
-    dockPins={dockPins} 
+  <Dock
+    dockPins={dockPins}
     onSpawn={spawnWindow}
     runningTypes={runningTypes}
   />
@@ -191,20 +192,20 @@ import { Panel } from '@xyflow/react';
 
 ### React Flow v12 Optimizations
 
-| Feature | Status | Impact |
-|---------|--------|--------|
-| Viewport culling | ✅ Default in v12 | Only visible nodes rendered |
-| Memoized nodes | ✅ Built-in | Prevents unnecessary re-renders |
-| Edge degradation | ⚠️ Custom | Hide edges at zoom < 0.3 |
-| State normalization | ⚠️ Custom | Use Map-based store to prevent array churn |
+| Feature             | Status            | Impact                                     |
+| ------------------- | ----------------- | ------------------------------------------ |
+| Viewport culling    | ✅ Default in v12 | Only visible nodes rendered                |
+| Memoized nodes      | ✅ Built-in       | Prevents unnecessary re-renders            |
+| Edge degradation    | ⚠️ Custom         | Hide edges at zoom < 0.3                   |
+| State normalization | ⚠️ Custom         | Use Map-based store to prevent array churn |
 
 ### Benchmarks
 
-| Metric | React Flow v12 | ALFRED Target | Status |
-|--------|---------------|---------------|--------|
-| Nodes before lag | 500+ | 200+ | ✅ Exceeds target |
-| Edge rendering | 1000+ | 500+ | ✅ Exceeds target |
-| Viewport culling | Automatic | Required | ✅ Native support |
+| Metric           | React Flow v12 | ALFRED Target | Status            |
+| ---------------- | -------------- | ------------- | ----------------- |
+| Nodes before lag | 500+           | 200+          | ✅ Exceeds target |
+| Edge rendering   | 1000+          | 500+          | ✅ Exceeds target |
+| Viewport culling | Automatic      | Required      | ✅ Native support |
 
 ---
 
@@ -266,6 +267,7 @@ import { Panel } from '@xyflow/react';
 **React Flow and Desktop UI are fully compatible.** React Flow provides the canvas infrastructure, while Desktop UI provides the window management layer. The architecture is clean, performant, and requires minimal adaptation from the current Mindscape implementation.
 
 **Next Steps:**
+
 1. Implement `WindowFrame` abstraction component
 2. Add focus system (separate from selection)
 3. Build dock using `Panel` component

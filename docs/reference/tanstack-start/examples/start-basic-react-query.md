@@ -1,95 +1,87 @@
 import {
- ErrorComponent,
- Link,
- rootRouteId,
- useMatch,
- useRouter,
- } from '@tanstack/react-router'
- import type { ErrorComponentProps } from '@tanstack/react-router'
+ErrorComponent,
+Link,
+rootRouteId,
+useMatch,
+useRouter,
+} from '@tanstack/react-router'
+import type { ErrorComponentProps } from '@tanstack/react-router'
 
- export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
- const router = useRouter()
- const isRoot = useMatch({
- strict: false,
- select: (state) => state.id === rootRouteId,
- })
+export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
+const router = useRouter()
+const isRoot = useMatch({
+strict: false,
+select: (state) => state.id === rootRouteId,
+})
 
- console.error(error)
+console.error(error)
 
- return (
+return (
 
+{
+router.invalidate()
+}}
+className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded-sm text-white uppercase font-extrabold`}
 
+> Try Again
 
- {
- router.invalidate()
- }}
- className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded-sm text-white uppercase font-extrabold`}
- >
- Try Again
+{isRoot ? (
 
- {isRoot ? (
+Home
 
- Home
+) : (
+{
+e.preventDefault()
+window.history.back()
+}}
 
- ) : (
- {
- e.preventDefault()
- window.history.back()
- }}
- >
- Go Back
+> Go Back
 
- )}
+)}
 
+)
+}
 
- )
- }
+import {
+ErrorComponent,
+Link,
+rootRouteId,
+useMatch,
+useRouter,
+} from '@tanstack/react-router'
+import type { ErrorComponentProps } from '@tanstack/react-router'
 
+export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
+const router = useRouter()
+const isRoot = useMatch({
+strict: false,
+select: (state) => state.id === rootRouteId,
+})
 
+console.error(error)
 
- import {
- ErrorComponent,
- Link,
- rootRouteId,
- useMatch,
- useRouter,
- } from '@tanstack/react-router'
- import type { ErrorComponentProps } from '@tanstack/react-router'
+return (
 
- export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
- const router = useRouter()
- const isRoot = useMatch({
- strict: false,
- select: (state) => state.id === rootRouteId,
- })
+{
+router.invalidate()
+}}
+className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded-sm text-white uppercase font-extrabold`}
 
- console.error(error)
+> Try Again
 
- return (
+{isRoot ? (
 
+Home
 
+) : (
+{
+e.preventDefault()
+window.history.back()
+}}
 
- {
- router.invalidate()
- }}
- className={`px-2 py-1 bg-gray-600 dark:bg-gray-700 rounded-sm text-white uppercase font-extrabold`}
- >
- Try Again
+> Go Back
 
- {isRoot ? (
+)}
 
- Home
-
- ) : (
- {
- e.preventDefault()
- window.history.back()
- }}
- >
- Go Back
-
- )}
-
-
- )
- }
+)
+}

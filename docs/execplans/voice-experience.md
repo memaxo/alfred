@@ -9,6 +9,7 @@ Reference: `.agent/PLANS.md` must be followed for maintenance of this document.
 This plan focuses on elevating the Voice experience from "functional" to "conversational" and "observable". We will implement low-latency interruptibility (barge-in), integrate real-time voice state into the Mindscape UI, and establish comprehensive telemetry to monitor session quality.
 
 After this change:
+
 1.  **Conversational Feel**: The assistant will stop speaking immediately when the user interrupts.
 2.  **Visual Feedback**: The UI will react to voice activity in real-time.
 3.  **Observability**: We will have visibility into network quality and component latency.
@@ -16,29 +17,31 @@ After this change:
 ## Progress
 
 - [x] Phase 1: VAD-Driven Interruptibility (Barge-In)
-    - [x] Update `@alfred/type` to include `voice_interrupt` event.
-    - [x] Update `VoiceSocketHandler` (Server) to emit `voice_interrupt` when VAD triggers during TTS playback.
-    - [x] Update `VoiceStreamClient` (Client) to handle `voice_interrupt` by clearing audio queues.
-    - [x] Update `useVoiceSessionWeb` to stop local playback on interrupt.
-    - [x] Update `useVoiceSessionNative` to handle interrupt event (clearing queue).
+  - [x] Update `@alfred/type` to include `voice_interrupt` event.
+  - [x] Update `VoiceSocketHandler` (Server) to emit `voice_interrupt` when VAD triggers during TTS playback.
+  - [x] Update `VoiceStreamClient` (Client) to handle `voice_interrupt` by clearing audio queues.
+  - [x] Update `useVoiceSessionWeb` to stop local playback on interrupt.
+  - [x] Update `useVoiceSessionNative` to handle interrupt event (clearing queue).
 - [x] Phase 2: Mindscape Visualization
-    - [x] Expose `vadLevel` (volume/confidence) from `useVoiceSessionWeb`. (Via global store)
-    - [x] Update `OrbNode` or `VoiceNode` in Mindscape to animate based on `vadLevel`.
-    - [x] Connect streaming status (connecting, listening, speaking) to the visualizer.
+  - [x] Expose `vadLevel` (volume/confidence) from `useVoiceSessionWeb`. (Via global store)
+  - [x] Update `OrbNode` or `VoiceNode` in Mindscape to animate based on `vadLevel`.
+  - [x] Connect streaming status (connecting, listening, speaking) to the visualizer.
 - [x] Phase 3: Telemetry & Monitoring
-    - [x] Define telemetry events in `@alfred/type` (packet_loss, jitter, latencies).
-    - [x] Instrument `VoiceStreamClient` to track sequence numbers and report loss (Handled via existing events, added report type).
-    - [x] Instrument `VoiceSession` to record granular component latencies (STT, LLM, TTS).
-    - [x] Create a basic dashboard or log sink for voice metrics. (Admin stats endpoint + Prometheus metrics)
+  - [x] Define telemetry events in `@alfred/type` (packet_loss, jitter, latencies).
+  - [x] Instrument `VoiceStreamClient` to track sequence numbers and report loss (Handled via existing events, added report type).
+  - [x] Instrument `VoiceSession` to record granular component latencies (STT, LLM, TTS).
+  - [x] Create a basic dashboard or log sink for voice metrics. (Admin stats endpoint + Prometheus metrics)
 
 ## Outcomes & Retrospective
 
 Implemented VAD-driven interruptibility across the stack.
+
 - **Protocol**: Added `interrupt` event.
 - **Server**: Logic added to detect barge-in (VAD > threshold + TTS playing) and signal client.
 - **Clients**: Web and Native hooks updated to handle the signal and reset playback state/queues.
 
 Implemented real-time Mindscape visualization.
+
 - **State**: Created `useVoiceVisualizerStore` to share VAD/Analyser state without prop drilling.
 - **Component**: Updated `OrbNode` to visualize VAD energy levels and map stream status (recording/processing/playing) to Orb states (listening/thinking/speaking).
 - **Hook**: `useVoiceSessionWeb` now updates the global store with VAD analyser node and stream status.
@@ -48,6 +51,7 @@ Telemetry: Added `telemetry_report` event type to schema and handlers, plus serv
 Telemetry: Added granular server-side latency instrumentation for STT/TTS (streaming `VoiceSession`) and LLM/orchestrator latency (streaming `VoiceSocketHandler`), surfaced via Prometheus and the existing admin stats endpoint.
 
 **Implementation evidence (Phase 3):**
+
 - `packages/voice/src/server/session.ts` instruments streaming STT/TTS and records Prometheus metrics (`stt_stream_transcribe`, `tts_stream_synthesize`) plus `voice_stt_*` / `voice_tts_*` counters+histograms (see lines 47-120).
 - `packages/voice/src/server/socket.ts` records assistant latency/count on the streaming stop path (see lines 463-510).
 - `packages/voice/src/metrics.ts` adds `voice_assistant_*` metrics and `recordVoiceAssistant()` helper (see lines 70-126).
@@ -68,9 +72,9 @@ The UI is also static regarding voice state, mostly showing text status updates.
 1.  **Protocol**: Add `type: "interrupt"` to server events.
 2.  **Server Logic (`socket.ts`)**:
     - In `handleChunk`, if `vadState.startOfSpeech` is detected AND `ttsInProgress` is true:
-        - Stop TTS stream.
-        - Send `interrupt` event to client.
-        - Clear server-side TTS buffer.
+      - Stop TTS stream.
+      - Send `interrupt` event to client.
+      - Clear server-side TTS buffer.
 3.  **Client Logic (`stream.ts`, `useVoiceSessionWeb.ts`)**:
     - Listen for `interrupt`.
     - On receipt: `audioContext.suspend()` or clear buffer queue immediately.

@@ -1,9 +1,10 @@
 ---
 title: bunx – Package runner | Bun Docs
-url: 
+url:
 description: Use `bunx` to auto-install and run executable packages from npm.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -75,7 +76,7 @@ package.json
 
 ```
 
-These executables are commonly plain JavaScript files marked with a [shebang line](https://en.wikipedia.org/wiki/Shebang_(Unix)) to indicate which program should be used to execute them. The following file indicates that it should be executed with `node`.
+These executables are commonly plain JavaScript files marked with a [shebang line](<https://en.wikipedia.org/wiki/Shebang_(Unix)>) to indicate which program should be used to execute them. The following file indicates that it should be executed with `node`.
 
 dist/index.js
 
@@ -94,7 +95,7 @@ bunx my-cli
 
 As with `npx`, `bunx` will check for a locally installed package first, then fall back to auto-installing the package from `npm`. Installed packages will be stored in Bun's global cache for future use.
 
-## [Arguments and flags](https://bun.com/docs/cli/bunx\#arguments-and-flags)
+## [Arguments and flags](https://bun.com/docs/cli/bunx#arguments-and-flags)
 
 To pass additional command-line flags and arguments through to the executable, place them after the executable name.
 
@@ -102,7 +103,7 @@ To pass additional command-line flags and arguments through to the executable, p
 bunx my-cli --foo bar
 ```
 
-## [Shebangs](https://bun.com/docs/cli/bunx\#shebangs)
+## [Shebangs](https://bun.com/docs/cli/bunx#shebangs)
 
 By default, Bun respects shebangs. If an executable is marked with `#!/usr/bin/env node`, Bun will spin up a `node` process to execute the file. However, in some cases it may be desirable to run executables using Bun's runtime, even if the executable indicates otherwise. To do so, include the `--bun` flag.
 
@@ -133,7 +134,7 @@ DOM testing](https://bun.com/docs/test/dom) [Next\\
 \\
 HTTP server](https://bun.com/docs/api/http)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/bunx.md)
 
@@ -157,7 +158,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

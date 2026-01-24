@@ -1,9 +1,10 @@
 ---
 title: Stripe | Better Auth
-url: 
+url:
 description: Stripe plugin for Better Auth to manage subscriptions and payments.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 The Stripe plugin integrates Stripe's payment and subscription functionality with Better Auth. Since payment and authentication are often tightly coupled, this plugin simplifies the integration of Stripe into your application, handling customer creation, subscription management, and webhook processing.
 
-## [Features](https://www.better-auth.com/docs/plugins/stripe\#features)
+## [Features](https://www.better-auth.com/docs/plugins/stripe#features)
 
 - Create Stripe Customers automatically when users sign up
 - Manage subscription plans and pricing
@@ -40,9 +41,9 @@ The Stripe plugin integrates Stripe's payment and subscription functionality wit
 - Flexible reference system to associate subscriptions with users or organizations
 - Team subscription support with seats management
 
-## [Installation](https://www.better-auth.com/docs/plugins/stripe\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/stripe#installation)
 
-### [Install the plugin](https://www.better-auth.com/docs/plugins/stripe\#install-the-plugin)
+### [Install the plugin](https://www.better-auth.com/docs/plugins/stripe#install-the-plugin)
 
 First, install the plugin:
 
@@ -60,7 +61,7 @@ npm install @better-auth/stripe
 
 If you're using a separate client and server setup, make sure to install the plugin in both parts of your project.
 
-### [Install the Stripe SDK](https://www.better-auth.com/docs/plugins/stripe\#install-the-stripe-sdk)
+### [Install the Stripe SDK](https://www.better-auth.com/docs/plugins/stripe#install-the-stripe-sdk)
 
 Next, install the Stripe SDK on your server:
 
@@ -76,7 +77,7 @@ bun
 npm install stripe@^18.0.0
 ```
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/stripe\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/stripe#add-the-plugin-to-your-auth-config)
 
 auth.ts
 
@@ -101,7 +102,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/stripe\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/stripe#add-the-client-plugin)
 
 auth-client.ts
 
@@ -119,7 +120,7 @@ export const client = createAuthClient({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/stripe\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/stripe#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary tables to the database.
 
@@ -135,7 +136,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/stripe#schema) section to add the tables manually.
 
-### [Set up Stripe webhooks](https://www.better-auth.com/docs/plugins/stripe\#set-up-stripe-webhooks)
+### [Set up Stripe webhooks](https://www.better-auth.com/docs/plugins/stripe#set-up-stripe-webhooks)
 
 Create a webhook endpoint in your Stripe dashboard pointing to:
 
@@ -153,9 +154,9 @@ Make sure to select at least these events:
 
 Save the webhook signing secret provided by Stripe and add it to your environment variables as `STRIPE_WEBHOOK_SECRET`.
 
-## [Usage](https://www.better-auth.com/docs/plugins/stripe\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/stripe#usage)
 
-### [Customer Management](https://www.better-auth.com/docs/plugins/stripe\#customer-management)
+### [Customer Management](https://www.better-auth.com/docs/plugins/stripe#customer-management)
 
 You can use this plugin solely for customer management without enabling subscriptions. This is useful if you just want to link Stripe customers to your users.
 
@@ -183,9 +184,9 @@ stripe({
 })
 ```
 
-### [Subscription Management](https://www.better-auth.com/docs/plugins/stripe\#subscription-management)
+### [Subscription Management](https://www.better-auth.com/docs/plugins/stripe#subscription-management)
 
-#### [Defining Plans](https://www.better-auth.com/docs/plugins/stripe\#defining-plans)
+#### [Defining Plans](https://www.better-auth.com/docs/plugins/stripe#defining-plans)
 
 You can define your subscription plans either statically or dynamically:
 
@@ -235,7 +236,7 @@ subscription: {
 
 see [plan configuration](https://www.better-auth.com/docs/plugins/stripe#plan-configuration) for more.
 
-#### [Creating a Subscription](https://www.better-auth.com/docs/plugins/stripe\#creating-a-subscription)
+#### [Creating a Subscription](https://www.better-auth.com/docs/plugins/stripe#creating-a-subscription)
 
 To create a subscription, use the `subscription.upgrade` method:
 
@@ -260,18 +261,18 @@ const { data, error } = await authClient.subscription.upgrade({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `plan` | The name of the plan to upgrade to. | `string` |
-| `annual?` | Whether to upgrade to an annual plan. | `boolean` |
-| `referenceId?` | Reference id of the subscription to upgrade. | `string` |
-| `subscriptionId?` | The id of the subscription to upgrade. | `string` |
-| `metadata?` |  | `Record<string, any>` |
-| `seats?` | Number of seats to upgrade to (if applicable). | `number` |
-| `successUrl` | Callback URL to redirect back after successful subscription. | `string` |
-| `cancelUrl` | If set, checkout shows a back button and customers will be directed here if they cancel payment. | `string` |
-| `returnUrl?` | URL to take customers to when they click on the billing portal’s link to return to your website. | `string` |
-| `disableRedirect` | Disable redirect after successful subscription. | `boolean` |
+| Prop              | Description                                                                                      | Type                  |
+| ----------------- | ------------------------------------------------------------------------------------------------ | --------------------- |
+| `plan`            | The name of the plan to upgrade to.                                                              | `string`              |
+| `annual?`         | Whether to upgrade to an annual plan.                                                            | `boolean`             |
+| `referenceId?`    | Reference id of the subscription to upgrade.                                                     | `string`              |
+| `subscriptionId?` | The id of the subscription to upgrade.                                                           | `string`              |
+| `metadata?`       |                                                                                                  | `Record<string, any>` |
+| `seats?`          | Number of seats to upgrade to (if applicable).                                                   | `number`              |
+| `successUrl`      | Callback URL to redirect back after successful subscription.                                     | `string`              |
+| `cancelUrl`       | If set, checkout shows a back button and customers will be directed here if they cancel payment. | `string`              |
+| `returnUrl?`      | URL to take customers to when they click on the billing portal’s link to return to your website. | `string`              |
+| `disableRedirect` | Disable redirect after successful subscription.                                                  | `boolean`             |
 
 POST
 
@@ -296,18 +297,18 @@ const data = await auth.api.upgradeSubscription({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `plan` | The name of the plan to upgrade to. | `string` |
-| `annual?` | Whether to upgrade to an annual plan. | `boolean` |
-| `referenceId?` | Reference id of the subscription to upgrade. | `string` |
-| `subscriptionId?` | The id of the subscription to upgrade. | `string` |
-| `metadata?` |  | `Record<string, any>` |
-| `seats?` | Number of seats to upgrade to (if applicable). | `number` |
-| `successUrl` | Callback URL to redirect back after successful subscription. | `string` |
-| `cancelUrl` | If set, checkout shows a back button and customers will be directed here if they cancel payment. | `string` |
-| `returnUrl?` | URL to take customers to when they click on the billing portal’s link to return to your website. | `string` |
-| `disableRedirect` | Disable redirect after successful subscription. | `boolean` |
+| Prop              | Description                                                                                      | Type                  |
+| ----------------- | ------------------------------------------------------------------------------------------------ | --------------------- |
+| `plan`            | The name of the plan to upgrade to.                                                              | `string`              |
+| `annual?`         | Whether to upgrade to an annual plan.                                                            | `boolean`             |
+| `referenceId?`    | Reference id of the subscription to upgrade.                                                     | `string`              |
+| `subscriptionId?` | The id of the subscription to upgrade.                                                           | `string`              |
+| `metadata?`       |                                                                                                  | `Record<string, any>` |
+| `seats?`          | Number of seats to upgrade to (if applicable).                                                   | `number`              |
+| `successUrl`      | Callback URL to redirect back after successful subscription.                                     | `string`              |
+| `cancelUrl`       | If set, checkout shows a back button and customers will be directed here if they cancel payment. | `string`              |
+| `returnUrl?`      | URL to take customers to when they click on the billing portal’s link to return to your website. | `string`              |
+| `disableRedirect` | Disable redirect after successful subscription.                                                  | `boolean`             |
 
 **Simple Example:**
 
@@ -343,7 +344,7 @@ if(error) {
 
 For each reference ID (user or organization), only one active or trialing subscription is supported at a time. The plugin doesn't currently support multiple concurrent active subscriptions for the same reference ID.
 
-#### [Switching Plans](https://www.better-auth.com/docs/plugins/stripe\#switching-plans)
+#### [Switching Plans](https://www.better-auth.com/docs/plugins/stripe#switching-plans)
 
 To switch a subscription to a different plan, use the `subscription.upgrade` method:
 
@@ -360,7 +361,7 @@ await client.subscription.upgrade({
 
 This ensures that the user only pays for the new plan, and not both.
 
-#### [Listing Active Subscriptions](https://www.better-auth.com/docs/plugins/stripe\#listing-active-subscriptions)
+#### [Listing Active Subscriptions](https://www.better-auth.com/docs/plugins/stripe#listing-active-subscriptions)
 
 To get the user's active subscriptions:
 
@@ -384,8 +385,8 @@ const activeSubscription = subscriptions.find(
 const projectLimit = subscriptions?.limits?.projects || 0;
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                               | Type     |
+| -------------- | ----------------------------------------- | -------- |
 | `referenceId?` | Reference id of the subscription to list. | `string` |
 
 GET
@@ -410,11 +411,11 @@ const activeSubscription = subscriptions.find(
 const projectLimit = subscriptions?.limits?.projects || 0;
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                               | Type     |
+| -------------- | ----------------------------------------- | -------- |
 | `referenceId?` | Reference id of the subscription to list. | `string` |
 
-#### [Canceling a Subscription](https://www.better-auth.com/docs/plugins/stripe\#canceling-a-subscription)
+#### [Canceling a Subscription](https://www.better-auth.com/docs/plugins/stripe#canceling-a-subscription)
 
 To cancel a subscription:
 
@@ -432,11 +433,11 @@ const { data, error } = await authClient.subscription.cancel({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `referenceId?` | Reference id of the subscription to cancel. Defaults to the userId. | `string` |
-| `subscriptionId?` | The id of the subscription to cancel. | `string` |
-| `returnUrl` | URL to take customers to when they click on the billing portal’s link to return to your website. | `string` |
+| Prop              | Description                                                                                      | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------------ | -------- |
+| `referenceId?`    | Reference id of the subscription to cancel. Defaults to the userId.                              | `string` |
+| `subscriptionId?` | The id of the subscription to cancel.                                                            | `string` |
+| `returnUrl`       | URL to take customers to when they click on the billing portal’s link to return to your website. | `string` |
 
 POST
 
@@ -454,15 +455,15 @@ const data = await auth.api.cancelSubscription({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `referenceId?` | Reference id of the subscription to cancel. Defaults to the userId. | `string` |
-| `subscriptionId?` | The id of the subscription to cancel. | `string` |
-| `returnUrl` | URL to take customers to when they click on the billing portal’s link to return to your website. | `string` |
+| Prop              | Description                                                                                      | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------------ | -------- |
+| `referenceId?`    | Reference id of the subscription to cancel. Defaults to the userId.                              | `string` |
+| `subscriptionId?` | The id of the subscription to cancel.                                                            | `string` |
+| `returnUrl`       | URL to take customers to when they click on the billing portal’s link to return to your website. | `string` |
 
 This will redirect the user to the Stripe Billing Portal where they can cancel their subscription.
 
-#### [Restoring a Canceled Subscription](https://www.better-auth.com/docs/plugins/stripe\#restoring-a-canceled-subscription)
+#### [Restoring a Canceled Subscription](https://www.better-auth.com/docs/plugins/stripe#restoring-a-canceled-subscription)
 
 If a user changes their mind after canceling a subscription (but before the subscription period ends), you can restore the subscription:
 
@@ -479,10 +480,10 @@ const { data, error } = await authClient.subscription.restore({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `referenceId?` | Reference id of the subscription to restore. Defaults to the userId. | `string` |
-| `subscriptionId?` | The id of the subscription to restore. | `string` |
+| Prop              | Description                                                          | Type     |
+| ----------------- | -------------------------------------------------------------------- | -------- |
+| `referenceId?`    | Reference id of the subscription to restore. Defaults to the userId. | `string` |
+| `subscriptionId?` | The id of the subscription to restore.                               | `string` |
 
 POST
 
@@ -499,16 +500,16 @@ const data = await auth.api.restoreSubscription({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `referenceId?` | Reference id of the subscription to restore. Defaults to the userId. | `string` |
-| `subscriptionId?` | The id of the subscription to restore. | `string` |
+| Prop              | Description                                                          | Type     |
+| ----------------- | -------------------------------------------------------------------- | -------- |
+| `referenceId?`    | Reference id of the subscription to restore. Defaults to the userId. | `string` |
+| `subscriptionId?` | The id of the subscription to restore.                               | `string` |
 
 This will reactivate a subscription that was previously set to cancel at the end of the billing period ( `cancelAtPeriodEnd: true`). The subscription will continue to renew automatically.
 
 > **Note:** This only works for subscriptions that are still active but marked to cancel at the end of the period. It cannot restore subscriptions that have already ended.
 
-#### [Creating Billing Portal Sessions](https://www.better-auth.com/docs/plugins/stripe\#creating-billing-portal-sessions)
+#### [Creating Billing Portal Sessions](https://www.better-auth.com/docs/plugins/stripe#creating-billing-portal-sessions)
 
 To create a [Stripe billing portal session](https://docs.stripe.com/api/customer_portal/sessions/create) where customers can manage their subscriptions, update payment methods, and view billing history:
 
@@ -526,11 +527,11 @@ const { data, error } = await authClient.subscription.billingPortal({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `locale?` | The IETF language tag of the locale customer portal is displayed in. If blank or auto, browser's locale is used. | `string` |
-| `referenceId?` | Reference id of the subscription to upgrade. | `string` |
-| `returnUrl?` | Return URL to redirect back after successful subscription. | `string` |
+| Prop           | Description                                                                                                      | Type     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- | -------- |
+| `locale?`      | The IETF language tag of the locale customer portal is displayed in. If blank or auto, browser's locale is used. | `string` |
+| `referenceId?` | Reference id of the subscription to upgrade.                                                                     | `string` |
+| `returnUrl?`   | Return URL to redirect back after successful subscription.                                                       | `string` |
 
 POST
 
@@ -548,17 +549,17 @@ const data = await auth.api.createBillingPortal({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `locale?` | The IETF language tag of the locale customer portal is displayed in. If blank or auto, browser's locale is used. | `string` |
-| `referenceId?` | Reference id of the subscription to upgrade. | `string` |
-| `returnUrl?` | Return URL to redirect back after successful subscription. | `string` |
+| Prop           | Description                                                                                                      | Type     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- | -------- |
+| `locale?`      | The IETF language tag of the locale customer portal is displayed in. If blank or auto, browser's locale is used. | `string` |
+| `referenceId?` | Reference id of the subscription to upgrade.                                                                     | `string` |
+| `returnUrl?`   | Return URL to redirect back after successful subscription.                                                       | `string` |
 
 For supported locales, see the [IETF language tag documentation](https://docs.stripe.com/js/appendix/supported_locales).
 
 This endpoint creates a Stripe billing portal session and returns a URL in the response as `data.url`. You can redirect users to this URL to allow them to manage their subscription, payment methods, and billing history.
 
-### [Reference System](https://www.better-auth.com/docs/plugins/stripe\#reference-system)
+### [Reference System](https://www.better-auth.com/docs/plugins/stripe#reference-system)
 
 By default, subscriptions are associated with the user ID. However, you can use a custom reference ID to associate subscriptions with other entities, such as organizations:
 
@@ -582,7 +583,7 @@ const { data: subscriptions } = await client.subscription.list({
 });
 ```
 
-#### [Team Subscriptions with Seats](https://www.better-auth.com/docs/plugins/stripe\#team-subscriptions-with-seats)
+#### [Team Subscriptions with Seats](https://www.better-auth.com/docs/plugins/stripe#team-subscriptions-with-seats)
 
 For team or organization plans, you can specify the number of seats:
 
@@ -621,7 +622,7 @@ subscription: {
 }
 ```
 
-### [Webhook Handling](https://www.better-auth.com/docs/plugins/stripe\#webhook-handling)
+### [Webhook Handling](https://www.better-auth.com/docs/plugins/stripe#webhook-handling)
 
 The plugin automatically handles common webhook events:
 
@@ -650,7 +651,7 @@ stripe({
 })
 ```
 
-### [Subscription Lifecycle Hooks](https://www.better-auth.com/docs/plugins/stripe\#subscription-lifecycle-hooks)
+### [Subscription Lifecycle Hooks](https://www.better-auth.com/docs/plugins/stripe#subscription-lifecycle-hooks)
 
 You can hook into various subscription lifecycle events:
 
@@ -678,7 +679,7 @@ subscription: {
 }
 ```
 
-### [Trial Periods](https://www.better-auth.com/docs/plugins/stripe\#trial-periods)
+### [Trial Periods](https://www.better-auth.com/docs/plugins/stripe#trial-periods)
 
 You can configure trial periods for your plans:
 
@@ -706,38 +707,38 @@ auth.ts
 }
 ```
 
-## [Schema](https://www.better-auth.com/docs/plugins/stripe\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/stripe#schema)
 
 The Stripe plugin adds the following tables to your database:
 
-### [User](https://www.better-auth.com/docs/plugins/stripe\#user)
+### [User](https://www.better-auth.com/docs/plugins/stripe#user)
 
 Table Name: `user`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| stripeCustomerId | string | ? | The Stripe customer ID |
+| Field Name       | Type   | Key | Description            |
+| ---------------- | ------ | --- | ---------------------- |
+| stripeCustomerId | string | ?   | The Stripe customer ID |
 
-### [Subscription](https://www.better-auth.com/docs/plugins/stripe\#subscription)
+### [Subscription](https://www.better-auth.com/docs/plugins/stripe#subscription)
 
 Table Name: `subscription`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each subscription |
-| plan | string | - | The name of the subscription plan |
-| referenceId | string | - | The ID this subscription is associated with (user ID by default) |
-| stripeCustomerId | string | ? | The Stripe customer ID |
-| stripeSubscriptionId | string | ? | The Stripe subscription ID |
-| status | string | - | The status of the subscription (active, canceled, etc.) |
-| periodStart | Date | ? | Start date of the current billing period |
-| periodEnd | Date | ? | End date of the current billing period |
-| cancelAtPeriodEnd | boolean | ? | Whether the subscription will be canceled at the end of the period |
-| seats | number | ? | Number of seats for team plans |
-| trialStart | Date | ? | Start date of the trial period |
-| trialEnd | Date | ? | End date of the trial period |
+| Field Name           | Type    | Key | Description                                                        |
+| -------------------- | ------- | --- | ------------------------------------------------------------------ |
+| id                   | string  | PK  | Unique identifier for each subscription                            |
+| plan                 | string  | -   | The name of the subscription plan                                  |
+| referenceId          | string  | -   | The ID this subscription is associated with (user ID by default)   |
+| stripeCustomerId     | string  | ?   | The Stripe customer ID                                             |
+| stripeSubscriptionId | string  | ?   | The Stripe subscription ID                                         |
+| status               | string  | -   | The status of the subscription (active, canceled, etc.)            |
+| periodStart          | Date    | ?   | Start date of the current billing period                           |
+| periodEnd            | Date    | ?   | End date of the current billing period                             |
+| cancelAtPeriodEnd    | boolean | ?   | Whether the subscription will be canceled at the end of the period |
+| seats                | number  | ?   | Number of seats for team plans                                     |
+| trialStart           | Date    | ?   | Start date of the trial period                                     |
+| trialEnd             | Date    | ?   | End date of the trial period                                       |
 
-### [Customizing the Schema](https://www.better-auth.com/docs/plugins/stripe\#customizing-the-schema)
+### [Customizing the Schema](https://www.better-auth.com/docs/plugins/stripe#customizing-the-schema)
 
 To change the schema table names or fields, you can pass a `schema` option to the Stripe plugin:
 
@@ -757,9 +758,9 @@ stripe({
 })
 ```
 
-## [Options](https://www.better-auth.com/docs/plugins/stripe\#options)
+## [Options](https://www.better-auth.com/docs/plugins/stripe#options)
 
-### [Main Options](https://www.better-auth.com/docs/plugins/stripe\#main-options)
+### [Main Options](https://www.better-auth.com/docs/plugins/stripe#main-options)
 
 **stripeClient**: `Stripe` \- The Stripe client instance. Required.
 
@@ -773,7 +774,7 @@ stripe({
 
 **onEvent**: `(event: Stripe.Event) => Promise<void>` \- A function called for any Stripe webhook event.
 
-### [Subscription Options](https://www.better-auth.com/docs/plugins/stripe\#subscription-options)
+### [Subscription Options](https://www.better-auth.com/docs/plugins/stripe#subscription-options)
 
 **enabled**: `boolean` \- Whether to enable subscription functionality. Required.
 
@@ -783,7 +784,7 @@ stripe({
 
 **authorizeReference**: `(data: { user: User, session: Session, referenceId: string, action: "upgrade-subscription" | "list-subscription" | "cancel-subscription" | "restore-subscription"}, request?: Request) => Promise<boolean>` \- A function to authorize reference IDs.
 
-### [Plan Configuration](https://www.better-auth.com/docs/plugins/stripe\#plan-configuration)
+### [Plan Configuration](https://www.better-auth.com/docs/plugins/stripe#plan-configuration)
 
 Each plan can have the following properties:
 
@@ -808,9 +809,9 @@ Each plan can have the following properties:
 - **onTrialEnd**: `(data: { subscription: Subscription, user: User }, request?: Request) => Promise<void>` \- Called when a trial ends.
 - **onTrialExpired**: `(subscription: Subscription) => Promise<void>` \- Called when a trial expires without conversion.
 
-## [Advanced Usage](https://www.better-auth.com/docs/plugins/stripe\#advanced-usage)
+## [Advanced Usage](https://www.better-auth.com/docs/plugins/stripe#advanced-usage)
 
-### [Using with Organizations](https://www.better-auth.com/docs/plugins/stripe\#using-with-organizations)
+### [Using with Organizations](https://www.better-auth.com/docs/plugins/stripe#using-with-organizations)
 
 The Stripe plugin works well with the organization plugin. You can associate subscriptions with organizations instead of individual users:
 
@@ -848,7 +849,7 @@ authorizeReference: async ({ user, referenceId, action }) => {
 }
 ```
 
-### [Custom Checkout Session Parameters](https://www.better-auth.com/docs/plugins/stripe\#custom-checkout-session-parameters)
+### [Custom Checkout Session Parameters](https://www.better-auth.com/docs/plugins/stripe#custom-checkout-session-parameters)
 
 You can customize the Stripe Checkout session with additional parameters:
 
@@ -880,7 +881,7 @@ getCheckoutSessionParams: async ({ user, session, plan, subscription }, request)
 }
 ```
 
-### [Tax Collection](https://www.better-auth.com/docs/plugins/stripe\#tax-collection)
+### [Tax Collection](https://www.better-auth.com/docs/plugins/stripe#tax-collection)
 
 To collect tax IDs from the customer, set `tax_id_collection` to true:
 
@@ -901,7 +902,7 @@ subscription: {
 }
 ```
 
-### [Automatic Tax Calculation](https://www.better-auth.com/docs/plugins/stripe\#automatic-tax-calculation)
+### [Automatic Tax Calculation](https://www.better-auth.com/docs/plugins/stripe#automatic-tax-calculation)
 
 To enable automatic tax calculation using the customer's location, set `automatic_tax` to true. Enabling this parameter causes Checkout to collect any billing address information necessary for tax calculation. You need to have tax registration setup and configured in the Stripe dashboard first for this to work.
 
@@ -922,7 +923,7 @@ subscription: {
 }
 ```
 
-### [Trial Period Management](https://www.better-auth.com/docs/plugins/stripe\#trial-period-management)
+### [Trial Period Management](https://www.better-auth.com/docs/plugins/stripe#trial-period-management)
 
 The Stripe plugin automatically prevents users from getting multiple free trials. Once a user has used a trial period (regardless of which plan), they will not be eligible for additional trials on any plan.
 
@@ -942,9 +943,9 @@ The Stripe plugin automatically prevents users from getting multiple free trials
 
 This behavior is automatic and requires no additional configuration. The trial eligibility is determined at the time of subscription creation and cannot be overridden through configuration.
 
-## [Troubleshooting](https://www.better-auth.com/docs/plugins/stripe\#troubleshooting)
+## [Troubleshooting](https://www.better-auth.com/docs/plugins/stripe#troubleshooting)
 
-### [Webhook Issues](https://www.better-auth.com/docs/plugins/stripe\#webhook-issues)
+### [Webhook Issues](https://www.better-auth.com/docs/plugins/stripe#webhook-issues)
 
 If webhooks aren't being processed correctly:
 
@@ -953,7 +954,7 @@ If webhooks aren't being processed correctly:
 3. Ensure you've selected all the necessary events in the Stripe dashboard
 4. Check your server logs for any errors during webhook processing
 
-### [Subscription Status Issues](https://www.better-auth.com/docs/plugins/stripe\#subscription-status-issues)
+### [Subscription Status Issues](https://www.better-auth.com/docs/plugins/stripe#subscription-status-issues)
 
 If subscription statuses aren't updating correctly:
 
@@ -961,7 +962,7 @@ If subscription statuses aren't updating correctly:
 2. Check that the `stripeCustomerId` and `stripeSubscriptionId` fields are correctly populated
 3. Verify that the reference IDs match between your application and Stripe
 
-### [Testing Webhooks Locally](https://www.better-auth.com/docs/plugins/stripe\#testing-webhooks-locally)
+### [Testing Webhooks Locally](https://www.better-auth.com/docs/plugins/stripe#testing-webhooks-locally)
 
 For local development, you can use the Stripe CLI to forward webhooks to your local environment:
 

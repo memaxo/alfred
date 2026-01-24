@@ -9,6 +9,7 @@ Reference: `.agent/PLANS.md` - this document must be maintained in accordance wi
 ALFRED's terminal UI currently uses a custom rendering engine that manually parses keyboard input, calculates layout, draws borders with ANSI codes, and blits frames at 30fps. OpenTUI React provides all these capabilities natively through a React reconciler with built-in components (`<box>`, `<scrollbox>`, `<input>`, `<select>`, `<diff>`, `<code>`).
 
 After this migration, users will see the same TUI dashboard but powered by OpenTUI React. The primary benefits are:
+
 1. Reduced maintenance burden (delete ~2000 lines of custom rendering code)
 2. Access to OpenTUI's rich widget library (diff views, code highlighting, animations)
 3. Declarative React component model instead of imperative frame rendering
@@ -78,11 +79,13 @@ To verify success: run `bun packages/tui/src/bin/alfred.ts tui` and see the dash
 ### Phase 1 Outcomes (2026-01-09)
 
 Phase 1 successfully completed. The OpenTUI React shell renders the dashboard with:
+
 - Header showing "ALFRED" title, terminal dimensions, and focused panel
 - Cognitive panel with placeholder content
 - Keyboard event handling (quit on `q`, tab navigation, mode switches)
 
 Files created:
+
 - `packages/tui/src/tui/react/index.tsx` - React TUI entry point with `ReactTuiApp` class
 - `packages/tui/src/tui/react/dashboard.tsx` - Dashboard component with panel layout
 - `packages/tui/src/tui/react/hooks/stores.ts` - React context for TUI stores
@@ -99,6 +102,7 @@ Files created:
 - `packages/tui/src/tui/react/overlays/index.tsx` - Overlay exports
 
 Files modified:
+
 - `packages/tui/src/tui/index.ts` - Added `ALFRED_TUI_REACT` feature flag and `runReactTui()` method
 - `packages/tui/tsconfig.json` - Added JSX support, included opentui-jsx.d.ts
 - `packages/tui/src/tui/react/dashboard.tsx` - Integrated CommandPalette overlay, added command palette state and keyboard handling
@@ -130,6 +134,7 @@ The TUI lives in `packages/tui/src/tui/`. Key files:
 - `packages/tui/src/tui/modes/base.ts` - Mode loop renders `string[]` each frame
 
 OpenTUI React components (from `@opentui/react`):
+
 - `createRoot(renderer)` - Creates React root attached to terminal renderer
 - `<box>` - Layout primitive with border, title, flex properties
 - `<scrollbox>` - Scrollable container
@@ -140,6 +145,7 @@ OpenTUI React components (from `@opentui/react`):
 - `useTerminalDimensions()` - Terminal size hook
 
 Dependencies are already installed in `packages/tui/package.json`:
+
 - `@opentui/core`: ^0.1.23
 - `@opentui/react`: ^0.1.63
 
@@ -183,6 +189,7 @@ Replace mode rendering:
 ### Phase 5: Cleanup
 
 After test parity, delete:
+
 - `packages/tui/src/tui/views/dashboard.ts` (manual render loop)
 - `packages/tui/src/tui/layout/engine.ts` (custom layout)
 - `packages/tui/src/tui/input/keys.ts` (custom key parsing)
@@ -196,9 +203,9 @@ Working directory: `/Users/jackmazac/Development/alfred`
 
 1. Create the React app directory structure:
 
-       mkdir -p packages/tui/src/tui/react/panels
-       mkdir -p packages/tui/src/tui/react/hooks
-       mkdir -p packages/tui/src/tui/react/overlays
+   mkdir -p packages/tui/src/tui/react/panels
+   mkdir -p packages/tui/src/tui/react/hooks
+   mkdir -p packages/tui/src/tui/react/overlays
 
 2. Create `packages/tui/src/tui/react/index.tsx`:
 
@@ -214,7 +221,7 @@ Working directory: `/Users/jackmazac/Development/alfred`
 
 5. Run E2E tests to verify old path still works:
 
-       ALFRED_TEST_SCOPE=unit bun test packages/tui
+   ALFRED_TEST_SCOPE=unit bun test packages/tui
 
 ### Phase 2: First Panel Migration (ToolCalls)
 
@@ -233,6 +240,7 @@ Run E2E tests:
     ALFRED_TUI_REACT=1 bun test packages/tui/test/tui-e2e.test.ts
 
 Expected behavior:
+
 - Dashboard renders with key sections visible
 - Tab key cycles focus between panels
 - `q` key quits cleanly

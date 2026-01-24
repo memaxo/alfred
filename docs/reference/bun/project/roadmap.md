@@ -1,9 +1,10 @@
 ---
 title: Roadmap – Project | Bun Docs
-url: 
+url:
 description: Track Bun's near-term and long-term goals.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -58,7 +59,7 @@ Transpiler](https://bun.com/docs/api/transpiler) [Next\\
 \\
 Benchmarking](https://bun.com/docs/project/benchmarking)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/project/roadmap.md)
 
@@ -82,7 +83,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -1,9 +1,10 @@
 ---
 title: .npmrc support – Package manager | Bun Docs
-url: 
+url:
 description: Bun supports loading some configuration options from .npmrc
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,9 +57,9 @@ Bun supports loading configuration options from [`.npmrc`](https://docs.npmjs.co
 
 **NOTE**: We recommend migrating your `.npmrc` file to Bun's [`bunfig.toml`](https://bun.com/docs/runtime/bunfig) format, as it provides more flexible options and can let you configure Bun-specific options.
 
-## [Supported options](https://bun.com/docs/install/npmrc\#supported-options)
+## [Supported options](https://bun.com/docs/install/npmrc#supported-options)
 
-### [`registry`: Set the default registry](https://bun.com/docs/install/npmrc\#registry-set-the-default-registry)
+### [`registry`: Set the default registry](https://bun.com/docs/install/npmrc#registry-set-the-default-registry)
 
 The default registry is used to resolve packages, its default value is `npm`'s official registry ( `https://registry.npmjs.org/`).
 
@@ -76,7 +77,7 @@ install.registry = "http://localhost:4873/"
 
 ```
 
-### [`@<scope>:registry`: Set the registry for a specific scope](https://bun.com/docs/install/npmrc\#scope-registry-set-the-registry-for-a-specific-scope)
+### [`@<scope>:registry`: Set the registry for a specific scope](https://bun.com/docs/install/npmrc#scope-registry-set-the-registry-for-a-specific-scope)
 
 Allows you to set the registry for a specific scope:
 
@@ -93,7 +94,7 @@ myorg = "http://localhost:4873/"
 
 ```
 
-### [`//<registry_url>/:<key>=<value>`: Configure options for a specific registry](https://bun.com/docs/install/npmrc\#registry-url-key-value-configure-options-for-a-specific-registry)
+### [`//<registry_url>/:<key>=<value>`: Configure options for a specific registry](https://bun.com/docs/install/npmrc#registry-url-key-value-configure-options-for-a-specific-registry)
 
 Allows you to set options for a specific registry:
 
@@ -135,7 +136,7 @@ Audit dependencies](https://bun.com/docs/install/audit) [Next\\
 \\
 Security Scanner API](https://bun.com/docs/install/security-scanner-api)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/npmrc.md)
 
@@ -159,7 +160,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

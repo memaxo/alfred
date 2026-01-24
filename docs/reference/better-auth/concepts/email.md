@@ -1,9 +1,10 @@
 ---
 title: Email | Better Auth
-url: 
+url:
 description: Learn how to use email with Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,12 +29,12 @@ Copy MarkdownOpen in
 
 Email is a key part of Better Auth, required for all users regardless of their authentication method. Better Auth provides email and password authentication out of the box, and a lot of utilities to help you manage email verification, password reset, and more.
 
-## [Email Verification](https://www.better-auth.com/docs/concepts/email\#email-verification)
+## [Email Verification](https://www.better-auth.com/docs/concepts/email#email-verification)
 
 Email verification is a security feature that ensures users provide a valid email address. It helps prevent spam and abuse by confirming that the email address belongs to the user. In this guide, you'll get a walk through of how to implement token based email verification in your app.
 To use otp based email verification, check out the [OTP Verification](https://www.better-auth.com/docs/plugins/email-otp) guide.
 
-### [Adding Email Verification to Your App](https://www.better-auth.com/docs/concepts/email\#adding-email-verification-to-your-app)
+### [Adding Email Verification to Your App](https://www.better-auth.com/docs/concepts/email#adding-email-verification-to-your-app)
 
 To enable email verification, you need to pass a function that sends a verification email with a link.
 
@@ -63,11 +64,11 @@ export const auth = betterAuth({
 })
 ```
 
-### [Triggering Email Verification](https://www.better-auth.com/docs/concepts/email\#triggering-email-verification)
+### [Triggering Email Verification](https://www.better-auth.com/docs/concepts/email#triggering-email-verification)
 
 You can initiate email verification in several ways:
 
-#### [1\. During Sign-up](https://www.better-auth.com/docs/concepts/email\#1-during-sign-up)
+#### [1\. During Sign-up](https://www.better-auth.com/docs/concepts/email#1-during-sign-up)
 
 To automatically send a verification email at signup, set `emailVerification.sendOnSignUp` to `true`.
 
@@ -87,7 +88,7 @@ This sends a verification email when a user signs up. For social logins, email v
 
 With `sendOnSignUp` enabled, when the user logs in with an SSO that does not claim the email as verified, Better Auth will dispatch a verification email, but the verification is not required to login even when `requireEmailVerification` is enabled.
 
-#### [2\. Require Email Verification](https://www.better-auth.com/docs/concepts/email\#2-require-email-verification)
+#### [2\. Require Email Verification](https://www.better-auth.com/docs/concepts/email#2-require-email-verification)
 
 If you enable require email verification, users must verify their email before they can log in. And every time a user tries to sign in, `sendVerificationEmail` is called.
 
@@ -123,7 +124,7 @@ await authClient.signIn.email({
 })
 ```
 
-#### [3\. Manually](https://www.better-auth.com/docs/concepts/email\#3-manually)
+#### [3\. Manually](https://www.better-auth.com/docs/concepts/email#3-manually)
 
 You can also manually trigger email verification by calling `sendVerificationEmail`.
 
@@ -134,7 +135,7 @@ await authClient.sendVerificationEmail({
 })
 ```
 
-### [Verifying the Email](https://www.better-auth.com/docs/concepts/email\#verifying-the-email)
+### [Verifying the Email](https://www.better-auth.com/docs/concepts/email#verifying-the-email)
 
 If the user clicks the provided verification URL, their email is automatically verified, and they are redirected to the `callbackURL`.
 
@@ -148,7 +149,7 @@ await authClient.verifyEmail({
 })
 ```
 
-### [Auto Sign In After Verification](https://www.better-auth.com/docs/concepts/email\#auto-sign-in-after-verification)
+### [Auto Sign In After Verification](https://www.better-auth.com/docs/concepts/email#auto-sign-in-after-verification)
 
 To sign in the user automatically after they successfully verify their email, set the `autoSignInAfterVerification` option to `true`:
 
@@ -161,7 +162,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Callback after successful email verification](https://www.better-auth.com/docs/concepts/email\#callback-after-successful-email-verification)
+### [Callback after successful email verification](https://www.better-auth.com/docs/concepts/email#callback-after-successful-email-verification)
 
 You can run custom code immediately after a user verifies their email using the `afterEmailVerification` callback. This is useful for any side-effects you want to trigger, like granting access to special features or logging the event.
 
@@ -184,7 +185,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [Password Reset Email](https://www.better-auth.com/docs/concepts/email\#password-reset-email)
+## [Password Reset Email](https://www.better-auth.com/docs/concepts/email#password-reset-email)
 
 Password reset allows users to reset their password if they forget it. Better Auth provides a simple way to implement password reset functionality.
 

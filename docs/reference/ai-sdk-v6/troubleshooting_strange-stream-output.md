@@ -16,33 +16,33 @@ The AI SDK has switched to the stream data protocol in version `3.0.20`. It send
 
 You have several options:
 
-  1. Use the AI Core `streamText` function to send a raw text stream:
-         
-         export async function POST(req: Request) {
-         
-           const { prompt } = await req.json();
-         
-         
-         
-         
-           const result = streamText({
-         
-             model: openai.completion('gpt-3.5-turbo-instruct'),
-         
-             maxOutputTokens: 2000,
-         
-             prompt,
-         
-           });
-         
-         
-         
-         
-           return result.toTextStreamResponse();
-         
-         }
+1.  Use the AI Core `streamText` function to send a raw text stream:
 
-  2. Pin the AI SDK version to `3.0.19` . This will keep the raw text stream.
+    export async function POST(req: Request) {
+
+         const { prompt } = await req.json();
+
+
+
+
+         const result = streamText({
+
+           model: openai.completion('gpt-3.5-turbo-instruct'),
+
+           maxOutputTokens: 2000,
+
+           prompt,
+
+         });
+
+
+
+
+         return result.toTextStreamResponse();
+
+    }
+
+2.  Pin the AI SDK version to `3.0.19` . This will keep the raw text stream.
 
 Previous
 

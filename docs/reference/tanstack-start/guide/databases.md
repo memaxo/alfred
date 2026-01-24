@@ -10,37 +10,33 @@ Using a database with TanStack Start is as simple as calling into your database'
 
 Here's an abstract example of how you might connect with a database and read/write to it:
 
+import { createServerFn } from '@tanstack/react-start'
 
- import { createServerFn } from '@tanstack/react-start'
+const db = createMyDatabaseClient()
 
- const db = createMyDatabaseClient()
+export const getUser = createServerFn(async ({ ctx }) => {
+const user = await db.getUser(ctx.userId)
+return user
+})
 
- export const getUser = createServerFn(async ({ ctx }) => {
- const user = await db.getUser(ctx.userId)
- return user
- })
+export const createUser = createServerFn(async ({ ctx, input }) => {
+const user = await db.createUser(input)
+return user
+})
 
- export const createUser = createServerFn(async ({ ctx, input }) => {
- const user = await db.createUser(input)
- return user
- })
+import { createServerFn } from '@tanstack/react-start'
 
+const db = createMyDatabaseClient()
 
+export const getUser = createServerFn(async ({ ctx }) => {
+const user = await db.getUser(ctx.userId)
+return user
+})
 
- import { createServerFn } from '@tanstack/react-start'
-
- const db = createMyDatabaseClient()
-
- export const getUser = createServerFn(async ({ ctx }) => {
- const user = await db.getUser(ctx.userId)
- return user
- })
-
- export const createUser = createServerFn(async ({ ctx, input }) => {
- const user = await db.createUser(input)
- return user
- })
-
+export const createUser = createServerFn(async ({ ctx, input }) => {
+const user = await db.createUser(input)
+return user
+})
 
 This is obviously contrived, but it demonstrates that you can use literally any database provider with TanStack Start as long as you can call into it from a server function or server route.
 
@@ -54,16 +50,15 @@ Neon is a fully managed serverless PostgreSQL with a generous free tier. It sepa
 
 Key features that make Neon stand out:
 
- * Serverless PostgreSQL that scales automatically
- * Database branching for development and testing
- * Built-in connection pooling
- * Point-in-time restore
- * Web-based SQL editor
- * Bottomless storage
+- Serverless PostgreSQL that scales automatically
+- Database branching for development and testing
+- Built-in connection pooling
+- Point-in-time restore
+- Web-based SQL editor
+- Bottomless storage
 
-
- * To learn more about Neon, visit the Neon website
- * To sign up, visit the Neon dashboard
+- To learn more about Neon, visit the Neon website
+- To sign up, visit the Neon dashboard
 
 What is Convex?
 
@@ -75,15 +70,14 @@ What is Prisma Postgres?
 
 Instant Postgres, Zero Setup: Get a production-ready Postgres database in seconds, then dive straight back into code. We handle connections, scaling, and turning knobs so your flow never breaks. Blends perfectly with TanStack Start.
 
- * Edge-optimized: Local region routing means lower latency and fewer hops. Even complex queries are one fast round trip.
- * Fits your stack: Works with your frameworks, libraries, and tools for a smooth DX.
- * Web UI: A hosted interface to inspect, manage, and query data with your team.
- * Auto-scaling: Grows from zero to millions of users without cold starts or manual tuning.
- * Unikernel isolation: Each DB runs as its own unikernel for security, speed, and efficiency.
+- Edge-optimized: Local region routing means lower latency and fewer hops. Even complex queries are one fast round trip.
+- Fits your stack: Works with your frameworks, libraries, and tools for a smooth DX.
+- Web UI: A hosted interface to inspect, manage, and query data with your team.
+- Auto-scaling: Grows from zero to millions of users without cold starts or manual tuning.
+- Unikernel isolation: Each DB runs as its own unikernel for security, speed, and efficiency.
 
-
- * To learn more about Prisma Postgres, visit the Prisma website
- * To sign up, visit the Prisma Console
+- To learn more about Prisma Postgres, visit the Prisma website
+- To sign up, visit the Prisma Console
 
 Documentation & APIs
 

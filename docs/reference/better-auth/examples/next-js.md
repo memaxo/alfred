@@ -1,9 +1,10 @@
 ---
 title: Next.js Example | Better Auth
-url: 
+url:
 description: Better Auth Next.js example., The most comprehensive authentication framework for TypeScript
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Examples
@@ -97,9 +98,9 @@ cd better-auth/demo/nextjs
 
 Enter to Rename, Shift+Enter to Preview
 
-Terminal\_1
+Terminal_1
 
-#### Terminal\_1
+#### Terminal_1
 
 Close Preview
 
@@ -168,25 +169,17 @@ zzmiognwxq.github.stackblitz.io
 
 **zzmiognwxq.github.stackblitz.io** refused to connect.
 
-ERR\_BLOCKED\_BY\_RESPONSE
+ERR_BLOCKED_BY_RESPONSE
 
 **zzmiognwxq.github.stackblitz.io** refused to connect.
 
-![](<Base64-Image-Removed>)![](<Base64-Image-Removed>)
+![](Base64-Image-Removed)![](Base64-Image-Removed)
 
-## [How to run](https://www.better-auth.com/docs/examples/next-js\#how-to-run)
+## [How to run](https://www.better-auth.com/docs/examples/next-js#how-to-run)
 
 1. Clone the code sandbox (or the repo) and open it in your code editor
 2. Move .env.example to .env and provide necessary variables
 3. Run the following commands
-
-
-
-
-
-
-
-
 
 ```
 pnpm install

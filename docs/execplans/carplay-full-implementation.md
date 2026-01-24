@@ -7,6 +7,7 @@ Implement the complete ALFRED CarPlay experience as specified in `docs/carplay-d
 ## Current State
 
 Basic CarPlay integration exists with:
+
 - `lib/carplay/templates.ts` - Basic templates (Grid, List, Information, Voice, Alert)
 - `lib/carplay/controller.ts` - Simple controller with connection handling
 - `lib/carplay/audio.ts` - Audio session management
@@ -16,6 +17,7 @@ Basic CarPlay integration exists with:
 ## Target State
 
 Full implementation per design documentation:
+
 - Dashboard widget for glanceable agent status
 - Multi-agent grid with real-time state updates
 - Decision queue with priority sorting
@@ -34,6 +36,7 @@ Full implementation per design documentation:
 ### Phase 1: State Management & API Layer (Foundation)
 
 **1.1 Workflow State Types**
+
 - Create `lib/carplay/types.ts` with:
   - `WorkflowState` interface (id, name, status, progress, currentTask, etc.)
   - `Escalation` interface (id, workflowId, question, options, priority, createdAt)
@@ -42,6 +45,7 @@ Full implementation per design documentation:
   - `CarPlayEvent` union type for all events
 
 **1.2 State Store**
+
 - Create `lib/carplay/store.ts`:
   - Zustand store for CarPlay state
   - `workflows: Map<string, WorkflowState>`
@@ -52,6 +56,7 @@ Full implementation per design documentation:
   - Actions: updateWorkflow, addEscalation, resolveEscalation, etc.
 
 **1.3 WebSocket Sync**
+
 - Create `lib/carplay/sync.ts`:
   - WebSocket connection to backend `/stream`
   - Event handlers for workflow.updated, escalation.created, pr.ready, plan.ready
@@ -59,6 +64,7 @@ Full implementation per design documentation:
   - Fallback polling every 30s when WebSocket unavailable
 
 **1.4 API Client**
+
 - Create `lib/carplay/api.ts`:
   - `pauseWorkflow(id)`, `resumeWorkflow(id)`, `cancelWorkflow(id)`
   - `resolveEscalation(id, decision)`, `deferEscalation(id)`
@@ -68,6 +74,7 @@ Full implementation per design documentation:
 ### Phase 2: Template System Upgrade
 
 **2.1 Dashboard Scene**
+
 - Create `lib/carplay/scenes/dashboard.ts`:
   - `CarPlayDashboard.create()` configuration
   - Shortcut buttons: "Talk to Alfred" + contextual action
@@ -76,6 +83,7 @@ Full implementation per design documentation:
   - State-based icon (running/blocked/complete)
 
 **2.2 Multi-Agent Grid Template**
+
 - Update `lib/carplay/templates.ts`:
   - `createAgentGridTemplate()` - shows up to 8 workflows
   - State-based icons per workflow
@@ -83,6 +91,7 @@ Full implementation per design documentation:
   - "View all" overflow item if >8 workflows
 
 **2.3 Decision Queue Template**
+
 - Add `createDecisionQueueTemplate()`:
   - Priority-sorted list (Critical → High → Normal)
   - List items with priority icon, title, context, time
@@ -90,12 +99,14 @@ Full implementation per design documentation:
   - Empty state: "All caught up"
 
 **2.4 PR List Template**
+
 - Add `createPRListTemplate()`:
   - List of PRs ready for review
   - Shows title, files changed, test status
   - Tap handler → PR summary
 
 **2.5 NowPlaying Template**
+
 - Create `lib/carplay/nowplaying.ts`:
   - `NowPlayingTemplate` configuration
   - Album art: Orb images for each state
@@ -104,6 +115,7 @@ Full implementation per design documentation:
   - Integration with MPNowPlayingInfoCenter
 
 **2.6 TabBar Root Template**
+
 - Add `createTabBarTemplate()`:
   - 4 tabs: Status, Decisions, PRs, Voice
   - Badge counts for Decisions and PRs
@@ -114,6 +126,7 @@ Full implementation per design documentation:
 **CRITICAL**: ALFRED already has a complete voice system. CarPlay must wire to existing infrastructure, NOT create new implementations.
 
 **Existing Voice Infrastructure:**
+
 - `apps/native/lib/voice/session.ts` - `useVoiceSessionNative` hook (1400+ lines)
 - `apps/native/lib/voice/play.ts` - `playBase64()` TTS playback
 - `apps/native/lib/voice/queue.ts` - Offline queue with retry
@@ -123,6 +136,7 @@ Full implementation per design documentation:
 - `packages/api/src/routers/voice.ts` - tRPC voice routers (STT, TTS, S2S, WebRTC)
 
 **3.1 CarPlay Voice Bridge**
+
 - Create `lib/carplay/voice/bridge.ts`:
   - Initialize `useVoiceSessionNative` with CarPlay surface
   - Configure for CarPlay context (background audio, WebRTC preferred)
@@ -132,6 +146,7 @@ Full implementation per design documentation:
   - Handle `stream.status` for UI state transitions
 
 **3.2 Intent Classification Bridge**
+
 - Create `lib/carplay/voice/intent.ts`:
   - Import `classifyVoiceIntent` from `@alfred/api/voice/intent` (via tRPC)
   - Wrap with CarPlay-specific context (current screen, pending decisions)
@@ -142,6 +157,7 @@ Full implementation per design documentation:
     - `conversational` → pass to assistant
 
 **3.3 Speech Generator Bridge**
+
 - Create `lib/carplay/voice/speech.ts`:
   - Import speech generators from `@alfred/api/voice/plan-speech`:
     - `planToSpeech()` - Plan summaries
@@ -155,6 +171,7 @@ Full implementation per design documentation:
     - `speakDecisionQueue(escalations, reviewCount)` → queue summary
 
 **3.4 Workflow Handler Integration**
+
 - Create `lib/carplay/voice/handlers.ts`:
   - Wire to existing handlers via tRPC:
     - `voice.speechToSpeech` - Full STT→LLM→TTS pipeline
@@ -167,6 +184,7 @@ Full implementation per design documentation:
     - `handleWorkflowControl(id, action)` - Pause/resume/cancel
 
 **3.5 Audio Cues (Minimal)**
+
 - Create `lib/carplay/voice/cues.ts`:
   - Use existing `playBase64()` for audio playback
   - Simple cue types: listening, confirmed, error
@@ -175,6 +193,7 @@ Full implementation per design documentation:
 ### Phase 4: Controller Integration
 
 **4.1 Controller Upgrade**
+
 - Refactor `lib/carplay/controller.ts`:
   - Subscribe to state store
   - Template refresh batching (5-second debounce)
@@ -183,6 +202,7 @@ Full implementation per design documentation:
   - Voice command routing
 
 **4.2 Escalation Flow**
+
 - Implement full escalation flow:
   - Push notification → Alert presentation
   - TTS announcement with options
@@ -191,6 +211,7 @@ Full implementation per design documentation:
   - Confirmation TTS
 
 **4.3 PR Approval Flow**
+
 - Implement PR review flow:
   - PR ready notification
   - Summary template with metrics
@@ -198,6 +219,7 @@ Full implementation per design documentation:
   - Request changes → voice input → submit
 
 **4.4 Plan Approval Flow**
+
 - Implement plan review flow:
   - Plan ready notification
   - Summary with steps and estimates
@@ -207,6 +229,7 @@ Full implementation per design documentation:
 ### Phase 5: NowPlaying Integration
 
 **5.1 MPNowPlayingInfoCenter Setup**
+
 - Create `lib/carplay/nowplaying/info.ts`:
   - Configure Now Playing metadata
   - Album art updates by state
@@ -214,6 +237,7 @@ Full implementation per design documentation:
   - Elapsed/remaining time
 
 **5.2 Remote Command Targets**
+
 - Create `lib/carplay/nowplaying/commands.ts`:
   - `.pauseCommand` → pause TTS updates
   - `.playCommand` → resume TTS updates
@@ -221,6 +245,7 @@ Full implementation per design documentation:
   - `.previousTrackCommand` → replay last update
 
 **5.3 Status Streaming**
+
 - Implement streaming updates:
   - Task completion → TTS announcement
   - Phase transition → TTS announcement
@@ -230,17 +255,20 @@ Full implementation per design documentation:
 ### Phase 6: Offline Mode
 
 **6.1 Offline Detection**
+
 - Monitor network state via NetInfo
 - Transition to offline mode when disconnected
 - Show "Last updated: [time]" indicator
 
 **6.2 Command Queue**
+
 - Create `lib/carplay/offline/queue.ts`:
   - Queue voice commands when offline
   - Store in AsyncStorage
   - Execute on reconnect
 
 **6.3 Offline UI**
+
 - Show cached workflow states
 - Disable actions that require connectivity
   - Display "Offline" indicator in templates
@@ -248,6 +276,7 @@ Full implementation per design documentation:
 ### Phase 7: Assets & Polish
 
 **7.1 CarPlay Icons**
+
 - Create state icons (80×80 @3x):
   - `orb-running.png`
   - `orb-thinking.png`
@@ -257,11 +286,13 @@ Full implementation per design documentation:
   - `orb-paused.png`
 
 **7.2 NowPlaying Album Art**
+
 - Create album art (600×600):
   - Same states as icons, larger format
   - ALFRED branding subtle
 
 **7.3 Audio Cue Files**
+
 - Create/source audio cues:
   - `listening.m4a` - soft rising tone
   - `confirmed.m4a` - double tap
@@ -272,23 +303,27 @@ Full implementation per design documentation:
 ### Phase 8: Testing & Documentation
 
 **8.1 Unit Tests**
+
 - Test state store actions
 - Test voice command parser
 - Test TTS script generation
 - Test API client
 
 **8.2 Integration Tests**
+
 - Test escalation flow end-to-end
 - Test PR approval flow
 - Test NowPlaying controls
 
 **8.3 CarPlay Simulator Testing**
+
 - Test all templates render correctly
 - Test voice commands recognized
 - Test transport controls work
 - Test offline mode transitions
 
 **8.4 Documentation**
+
 - Update `lib/carplay/index.ts` exports
 - Add JSDoc to all public functions
 - Create `docs/carplay-usage.md` quick start
@@ -348,14 +383,14 @@ Full implementation per design documentation:
 
 ## Decision Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-01-24 | Use TabBar as root (4 tabs) | Better organization than single grid for orchestrator use case |
-| 2026-01-24 | Zustand for state | Already used in app, simpler than Redux for this scope |
-| 2026-01-24 | WebSocket primary, polling fallback | Real-time updates critical for escalations |
-| 2026-01-24 | Wire to existing voice system | ALFRED has complete STT/TTS/intent/workflow-handler infrastructure - no reimplementation needed |
-| 2026-01-24 | Use `useVoiceSessionNative` for CarPlay voice | Already handles WebRTC/WS transport, streaming, playback queue, mute/unmute |
-| 2026-01-24 | Use `plan-speech.ts` for announcements | Existing speech generators with verbosity, honorifics, pluralization |
+| Date       | Decision                                      | Rationale                                                                                       |
+| ---------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 2026-01-24 | Use TabBar as root (4 tabs)                   | Better organization than single grid for orchestrator use case                                  |
+| 2026-01-24 | Zustand for state                             | Already used in app, simpler than Redux for this scope                                          |
+| 2026-01-24 | WebSocket primary, polling fallback           | Real-time updates critical for escalations                                                      |
+| 2026-01-24 | Wire to existing voice system                 | ALFRED has complete STT/TTS/intent/workflow-handler infrastructure - no reimplementation needed |
+| 2026-01-24 | Use `useVoiceSessionNative` for CarPlay voice | Already handles WebRTC/WS transport, streaming, playback queue, mute/unmute                     |
+| 2026-01-24 | Use `plan-speech.ts` for announcements        | Existing speech generators with verbosity, honorifics, pluralization                            |
 
 ---
 
@@ -411,16 +446,16 @@ apps/native/assets/carplay/
 
 ## Estimated Effort
 
-| Phase | Effort | Priority |
-|-------|--------|----------|
-| Phase 1: State Management | 4 hours | P0 | ✅ DONE |
-| Phase 2: Templates | 6 hours | P0 | ✅ DONE (except NowPlaying) |
-| Phase 3: Voice Integration | 3 hours | P0 | (wiring to existing - reduced from 5h) |
-| Phase 4: Controller | 4 hours | P0 |
-| Phase 5: NowPlaying | 3 hours | P1 |
-| Phase 6: Offline | 1 hour | P2 | (existing queue.ts can be reused) |
-| Phase 7: Assets | 2 hours | P1 |
-| Phase 8: Testing | 4 hours | P1 |
+| Phase                      | Effort  | Priority |
+| -------------------------- | ------- | -------- | -------------------------------------- |
+| Phase 1: State Management  | 4 hours | P0       | ✅ DONE                                |
+| Phase 2: Templates         | 6 hours | P0       | ✅ DONE (except NowPlaying)            |
+| Phase 3: Voice Integration | 3 hours | P0       | (wiring to existing - reduced from 5h) |
+| Phase 4: Controller        | 4 hours | P0       |
+| Phase 5: NowPlaying        | 3 hours | P1       |
+| Phase 6: Offline           | 1 hour  | P2       | (existing queue.ts can be reused)      |
+| Phase 7: Assets            | 2 hours | P1       |
+| Phase 8: Testing           | 4 hours | P1       |
 
 **Total: ~27 hours** (reduced due to voice system reuse)
 **Remaining: ~17 hours**

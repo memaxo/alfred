@@ -1,9 +1,10 @@
 ---
 title: HTMLRewriter – API | Bun Docs
-url: 
+url:
 description: Parse and transform HTML with Bun's native HTMLRewriter API, inspired by Cloudflare Workers.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 HTMLRewriter lets you use CSS selectors to transform HTML documents. It works with `Request`, `Response`, as well as `string`. Bun's implementation is based on Cloudflare's [lol-html](https://github.com/cloudflare/lol-html).
 
-## [Usage](https://bun.com/docs/api/html-rewriter\#usage)
+## [Usage](https://bun.com/docs/api/html-rewriter#usage)
 
 A common usecase is rewriting URLs in HTML content. Here's an example that rewrites image sources and link URLs to use a CDN domain:
 
@@ -119,7 +120,7 @@ This replaces all images with a thumbnail of Rick Astley and wraps each `<img>` 
 
 Now every image on the page will be replaced with a thumbnail of Rick Astley, and clicking any image will lead to [a very famous video](https://www.youtube.com/watch?v=dQw4w9WgXcQ).
 
-### [Input types](https://bun.com/docs/api/html-rewriter\#input-types)
+### [Input types](https://bun.com/docs/api/html-rewriter#input-types)
 
 HTMLRewriter can transform HTML from various sources. The input is automatically handled based on its type:
 
@@ -143,7 +144,7 @@ rewriter.transform(Bun.file("index.html"));
 
 Note that Cloudflare Workers implementation of HTMLRewriter only supports `Response` objects.
 
-### [Element Handlers](https://bun.com/docs/api/html-rewriter\#element-handlers)
+### [Element Handlers](https://bun.com/docs/api/html-rewriter#element-handlers)
 
 The `on(selector, handlers)` method allows you to register handlers for HTML elements that match a CSS selector. The handlers are called for each matching element during parsing:
 
@@ -178,7 +179,7 @@ rewriter.on("div", {
 
 ```
 
-### [CSS Selector Support](https://bun.com/docs/api/html-rewriter\#css-selector-support)
+### [CSS Selector Support](https://bun.com/docs/api/html-rewriter#css-selector-support)
 
 The `on()` method supports a wide range of CSS selectors:
 
@@ -219,7 +220,7 @@ rewriter.on("*", handler);
 
 ```
 
-### [Element Operations](https://bun.com/docs/api/html-rewriter\#element-operations)
+### [Element Operations](https://bun.com/docs/api/html-rewriter#element-operations)
 
 Elements provide various methods for manipulation. All modification methods return the element instance for chaining:
 
@@ -278,7 +279,7 @@ rewriter.on("div", {
 
 ```
 
-### [Text Operations](https://bun.com/docs/api/html-rewriter\#text-operations)
+### [Text Operations](https://bun.com/docs/api/html-rewriter#text-operations)
 
 Text handlers provide methods for text manipulation. Text chunks represent portions of text content and provide information about their position in the text node:
 
@@ -303,7 +304,7 @@ rewriter.on("p", {
 
 ```
 
-### [Comment Operations](https://bun.com/docs/api/html-rewriter\#comment-operations)
+### [Comment Operations](https://bun.com/docs/api/html-rewriter#comment-operations)
 
 Comment handlers allow comment manipulation with similar methods to text nodes:
 
@@ -332,7 +333,7 @@ rewriter.on("*", {
 
 ```
 
-### [Document Handlers](https://bun.com/docs/api/html-rewriter\#document-handlers)
+### [Document Handlers](https://bun.com/docs/api/html-rewriter#document-handlers)
 
 The `onDocument(handlers)` method allows you to handle document-level events. These handlers are called for events that occur at the document level rather than within specific elements:
 
@@ -360,7 +361,7 @@ rewriter.onDocument({
 
 ```
 
-### [Response Handling](https://bun.com/docs/api/html-rewriter\#response-handling)
+### [Response Handling](https://bun.com/docs/api/html-rewriter#response-handling)
 
 When transforming a Response:
 
@@ -370,7 +371,7 @@ When transforming a Response:
 - The original response body is marked as used after transformation
 - Headers are cloned to the new response
 
-## [Error Handling](https://bun.com/docs/api/html-rewriter\#error-handling)
+## [Error Handling](https://bun.com/docs/api/html-rewriter#error-handling)
 
 HTMLRewriter operations can throw errors in several cases:
 
@@ -393,7 +394,7 @@ try {
 
 ```
 
-## [See also](https://bun.com/docs/api/html-rewriter\#see-also)
+## [See also](https://bun.com/docs/api/html-rewriter#see-also)
 
 You can also read the [Cloudflare documentation](https://developers.cloudflare.com/workers/runtime-apis/html-rewriter/), which this API is intended to be compatible with.
 
@@ -403,7 +404,7 @@ YAML](https://bun.com/docs/api/yaml) [Next\\
 \\
 Hashing](https://bun.com/docs/api/hashing)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/html-rewriter.md)
 
@@ -427,7 +428,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

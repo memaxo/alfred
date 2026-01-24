@@ -1,9 +1,10 @@
 ---
 title: Facebook | Better Auth
-url: 
+url:
 description: Facebook provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Facebook credentials](https://www.better-auth.com/docs/authentication/facebook\#get-your-facebook-credentials)
+### [Get your Facebook credentials](https://www.better-auth.com/docs/authentication/facebook#get-your-facebook-credentials)
 
 To use Facebook sign in, you need a client ID and client Secret. You can get them from the [Facebook Developer Portal](https://developers.facebook.com/).
 Select your app, navigate to **App Settings > Basic**, locate the following:
@@ -38,7 +39,7 @@ Avoid exposing the `clientSecret` in client-side code (e.g., frontend apps) beca
 
 Make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/facebook` for local development. For production, you should set it to the URL of your application. If you change the base path of the auth routes, you should update the redirect URL accordingly.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/facebook\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/facebook#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -60,7 +61,7 @@ export const auth = betterAuth({
 BetterAuth also supports Facebook Login for Business, all you need
 to do is provide the `configId` as listed in **Facebook Login For Business > Configurations** alongside your `clientId` and `clientSecret`. Note that the app must be a Business app and, since BetterAuth expects to have an email address and account id, the configuration must be of the "User access token" type. "System-user access token" is not supported.
 
-### [Sign In with Facebook](https://www.better-auth.com/docs/authentication/facebook\#sign-in-with-facebook)
+### [Sign In with Facebook](https://www.better-auth.com/docs/authentication/facebook#sign-in-with-facebook)
 
 To sign in with Facebook, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 
@@ -79,9 +80,9 @@ const signIn = async () => {
 }
 ```
 
-## [Additional Configuration](https://www.better-auth.com/docs/authentication/facebook\#additional-configuration)
+## [Additional Configuration](https://www.better-auth.com/docs/authentication/facebook#additional-configuration)
 
-### [Scopes](https://www.better-auth.com/docs/authentication/facebook\#scopes)
+### [Scopes](https://www.better-auth.com/docs/authentication/facebook#scopes)
 
 By default, Facebook provides basic user information. If you need additional permissions, you can specify scopes in your auth configuration:
 
@@ -107,7 +108,7 @@ Additional options:
 - `fields`: Extend list of fields to retrieve from the Facebook user profile (assignment).
   - Default: `"id", "name", "email", "picture"`
 
-### [Sign In with Facebook With ID or Access Token](https://www.better-auth.com/docs/authentication/facebook\#sign-in-with-facebook-with-id-or-access-token)
+### [Sign In with Facebook With ID or Access Token](https://www.better-auth.com/docs/authentication/facebook#sign-in-with-facebook-with-id-or-access-token)
 
 To sign in with Facebook using the ID Token, you can use the `signIn.social` function to pass the ID Token.
 

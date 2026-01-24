@@ -9,9 +9,11 @@ Use this checklist before implementing any system expected to exceed 500 lines o
 ### 1. Responsibility Contract
 
 **Single-sentence responsibility:**
+
 > This system [does what] for [whom] by [how].
 
 **What this system does NOT do:**
+
 - [ ] List boundaries explicitly
 - [ ] What adjacent concerns are out of scope?
 - [ ] What will callers handle themselves?
@@ -44,6 +46,7 @@ Use this checklist before implementing any system expected to exceed 500 lines o
 | | | |
 
 **What requires modifying core code?**
+
 - [ ] Nothing (ideal)
 - [ ] List exceptions with justification
 
@@ -52,12 +55,14 @@ Use this checklist before implementing any system expected to exceed 500 lines o
 ### 3. State Management
 
 **State container:**
+
 - [ ] **Explicit context object** - `Context.get/set()`
 - [ ] **State machine** - Defined states and transitions
 - [ ] **External store** - Database, cache, etc.
 - [ ] **Stateless** - No state between calls
 
 **State shape:**
+
 ```typescript
 interface SystemState {
   // Define all state explicitly
@@ -70,6 +75,7 @@ interface SystemState {
 | | | | |
 
 **Observability:**
+
 - [ ] State changes emit events
 - [ ] State can be serialized for debugging
 - [ ] State can be reconstructed from events (event sourcing)
@@ -79,6 +85,7 @@ interface SystemState {
 ### 4. File Structure
 
 **Planned structure:**
+
 ```
 package/
 ├── index.ts          - Public exports
@@ -105,16 +112,19 @@ package/
 ### 5. Communication Patterns
 
 **Internal communication:**
+
 - [ ] Function calls with explicit parameters
 - [ ] Events via context/emitter
 - [ ] Shared state (justify if used)
 
 **External communication:**
+
 - [ ] Return values
 - [ ] Events/callbacks
 - [ ] Side effects (list explicitly)
 
 **Error handling:**
+
 - [ ] Errors thrown to caller
 - [ ] Errors emitted as events
 - [ ] Errors logged and swallowed (justify)
@@ -124,15 +134,18 @@ package/
 ### 6. Testing Strategy
 
 **Unit testing:**
+
 - [ ] Each module testable in isolation
 - [ ] Mocks required: [list, should be < 5]
 - [ ] State injectable for testing
 
 **Integration testing:**
+
 - [ ] Key integration points identified
 - [ ] Test fixtures/factories planned
 
 **What makes this system hard to test?**
+
 - [ ] Nothing (ideal)
 - [ ] List concerns and mitigations
 
@@ -141,13 +154,15 @@ package/
 ### 7. Review Triggers
 
 **This system needs architectural review when:**
-- [ ] Total lines exceed: _____ (suggest 1,000)
-- [ ] File count exceeds: _____ (suggest 5)
+
+- [ ] Total lines exceed: **\_** (suggest 1,000)
+- [ ] File count exceeds: **\_** (suggest 5)
 - [ ] A feature requires modifying 3+ files
 - [ ] The extension model proves inadequate
 - [ ] State management becomes unclear
 
 **Scheduled review:**
+
 - [ ] After initial implementation
 - [ ] After first major feature addition
 - [ ] Every [N] months
@@ -157,6 +172,7 @@ package/
 ### 8. Anti-Pattern Watchlist
 
 **Red flags to monitor:**
+
 - [ ] Callback interface growing
 - [ ] Files extracted for size, not abstraction
 - [ ] "Just add it here for now" decisions
@@ -175,6 +191,6 @@ package/
 - [ ] Testing strategy viable
 - [ ] Review triggers set
 
-**Designer:** _______________  
-**Reviewer:** _______________  
-**Date:** _______________
+**Designer:** **\*\***\_\_\_**\*\***  
+**Reviewer:** **\*\***\_\_\_**\*\***  
+**Date:** **\*\***\_\_\_**\*\***

@@ -1,9 +1,10 @@
 ---
 title: Multi Session | Better Auth
-url: 
+url:
 description: Learn how to use multi-session plugin in Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The multi-session plugin allows users to maintain multiple active sessions across different accounts in the same browser. This plugin is useful for applications that require users to switch between multiple accounts without logging out.
 
-## [Installation](https://www.better-auth.com/docs/plugins/multi-session\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/multi-session#installation)
 
-### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/multi-session\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/multi-session#add-the-plugin-to-your-auth-config)
 
 auth.ts
 
@@ -45,7 +46,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Add the client Plugin](https://www.better-auth.com/docs/plugins/multi-session\#add-the-client-plugin)
+### [Add the client Plugin](https://www.better-auth.com/docs/plugins/multi-session#add-the-client-plugin)
 
 Add the client plugin and Specify where the user should be redirected if they need to verify 2nd factor
 
@@ -62,11 +63,11 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/multi-session\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/multi-session#usage)
 
 Whenever a user logs in, the plugin will add additional cookie to the browser. This cookie will be used to maintain multiple sessions across different accounts.
 
-### [List all device sessions](https://www.better-auth.com/docs/plugins/multi-session\#list-all-device-sessions)
+### [List all device sessions](https://www.better-auth.com/docs/plugins/multi-session#list-all-device-sessions)
 
 To list all active sessions for the current user, you can call the `listDeviceSessions` method.
 
@@ -91,7 +92,7 @@ const data = await auth.api.listDeviceSessions({
 });
 ```
 
-### [Set active session](https://www.better-auth.com/docs/plugins/multi-session\#set-active-session)
+### [Set active session](https://www.better-auth.com/docs/plugins/multi-session#set-active-session)
 
 To set the active session, you can call the `setActive` method.
 
@@ -107,8 +108,8 @@ const { data, error } = await authClient.multiSession.setActive({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `sessionToken` | The session token to set as active. | `string` |
 
 POST
@@ -125,11 +126,11 @@ const data = await auth.api.setActiveSession({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `sessionToken` | The session token to set as active. | `string` |
 
-### [Revoke a session](https://www.better-auth.com/docs/plugins/multi-session\#revoke-a-session)
+### [Revoke a session](https://www.better-auth.com/docs/plugins/multi-session#revoke-a-session)
 
 To revoke a session, you can call the `revoke` method.
 
@@ -145,8 +146,8 @@ const { data, error } = await authClient.multiSession.revoke({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                  | Type     |
+| -------------- | ---------------------------- | -------- |
 | `sessionToken` | The session token to revoke. | `string` |
 
 POST
@@ -163,15 +164,15 @@ const data = await auth.api.revokeDeviceSession({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                  | Type     |
+| -------------- | ---------------------------- | -------- |
 | `sessionToken` | The session token to revoke. | `string` |
 
-### [Signout and Revoke all sessions](https://www.better-auth.com/docs/plugins/multi-session\#signout-and-revoke-all-sessions)
+### [Signout and Revoke all sessions](https://www.better-auth.com/docs/plugins/multi-session#signout-and-revoke-all-sessions)
 
 When a user logs out, the plugin will revoke all active sessions for the user. You can do this by calling the existing `signOut` method, which handles revoking all sessions automatically.
 
-### [Max Sessions](https://www.better-auth.com/docs/plugins/multi-session\#max-sessions)
+### [Max Sessions](https://www.better-auth.com/docs/plugins/multi-session#max-sessions)
 
 You can specify the maximum number of sessions a user can have by passing the `maximumSessions` option to the plugin. By default, the plugin allows 5 sessions per device.
 

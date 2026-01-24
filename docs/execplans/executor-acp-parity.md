@@ -26,18 +26,18 @@ You can see it working by running ALFRED’s tests which cover:
 ## Surprises & Discoveries
 
 - Observation: ALFRED currently defines tracker events only as `codex/*`, but OpenCode can emit thought/plan/diff over ACP; mapping these into Codex-shaped events is a hidden coupling that blocks full executor parity.
-Evidence: `packages/agent/src/orchestrator/multi/tracker.ts` only allows `codex/thought`, `codex/command`, `codex/file`.
+  Evidence: `packages/agent/src/orchestrator/multi/tracker.ts` only allows `codex/thought`, `codex/command`, `codex/file`.
 - Observation: There are two Codex tool entrypoints; the orchestrator tool registry likely imports the legacy one.
-Evidence: `packages/agent/src/v6.ts` imports `./orchestrator/tool/codex` while both `packages/agent/src/orchestrator/tool/codex.ts` and `packages/agent/src/orchestrator/tool/codex/index.ts` exist.
+  Evidence: `packages/agent/src/v6.ts` imports `./orchestrator/tool/codex` while both `packages/agent/src/orchestrator/tool/codex.ts` and `packages/agent/src/orchestrator/tool/codex/index.ts` exist.
 
 ## Decision Log
 
 - Decision: Treat OpenCode ACP filesystem operations as part of ALFRED’s executor integration and implement them with the same security constraints as Codex (allowed prefixes + AgentFS container path restrictions).
-Rationale: Upstream OpenCode ACP agents expect filesystem capabilities; advertising them but returning empty content is incorrect and reduces agent quality.
-Date/Author: 2026-01-12 / assistant
+  Rationale: Upstream OpenCode ACP agents expect filesystem capabilities; advertising them but returning empty content is incorrect and reduces agent quality.
+  Date/Author: 2026-01-12 / assistant
 - Decision: Replace Codex-only tracker event types with executor-agnostic tracker event types, and migrate call sites in one pass.
-Rationale: “No technical debt” requires removing codex-shaped coupling and making the tracker correct for any executor, while keeping runtime stuck detection and MAX_TRANSITIONS safeguards intact.
-Date/Author: 2026-01-12 / assistant
+  Rationale: “No technical debt” requires removing codex-shaped coupling and making the tracker correct for any executor, while keeping runtime stuck detection and MAX_TRANSITIONS safeguards intact.
+  Date/Author: 2026-01-12 / assistant
 
 ## Outcomes & Retrospective
 
@@ -50,10 +50,13 @@ Date/Author: 2026-01-12 / assistant
 ALFRED executor work happens in two layers:
 
 1. **Runtime dispatch** chooses an executor per agent and calls the executor tool:
-  - `packages/runtime/src/orchestrator/agent.ts` (`runAgent`) selects `"codex" | "droid" | "opencode"` and threads execution profile (`default|server`) and AgentFS container routing into tool calls.
+
+- `packages/runtime/src/orchestrator/agent.ts` (`runAgent`) selects `"codex" | "droid" | "opencode"` and threads execution profile (`default|server`) and AgentFS container routing into tool calls.
+
 2. **Executor tools** implement execution:
-  - Codex: `packages/agent/src/orchestrator/tool/codex/` (canonical).
-  - OpenCode: `packages/agent/src/orchestrator/tool/opencode/` runs an ACP stdio backend, either host-spawned (default) or container-spawned (server).
+
+- Codex: `packages/agent/src/orchestrator/tool/codex/` (canonical).
+- OpenCode: `packages/agent/src/orchestrator/tool/opencode/` runs an ACP stdio backend, either host-spawned (default) or container-spawned (server).
 
 OpenCode’s ACP client surface is implemented inside `packages/agent/src/orchestrator/tool/opencode/exec.ts` via `ClientSideConnection`. This file currently stubs filesystem calls and only partially handles ACP session update events.
 
@@ -130,21 +133,30 @@ We will fix regressions immediately and update this plan’s `Progress`, `Decisi
 All commands are run from the repository root.
 
 1. Find and remove duplicate Codex tool:
-  - Search for imports of `packages/agent/src/orchestrator/tool/codex.ts` and update them to the canonical path.
-  - Delete the legacy file once unused.
+
+- Search for imports of `packages/agent/src/orchestrator/tool/codex.ts` and update them to the canonical path.
+- Delete the legacy file once unused.
+
 2. Implement ACP filesystem ops:
-  - Add secure path resolution helpers in `packages/agent/src/orchestrator/tool/opencode/exec.ts`.
-  - Implement host mode with Bun-native file I/O.
-  - Implement container mode with `docker exec` and stdin piping (no shell).
+
+- Add secure path resolution helpers in `packages/agent/src/orchestrator/tool/opencode/exec.ts`.
+- Implement host mode with Bun-native file I/O.
+- Implement container mode with `docker exec` and stdin piping (no shell).
+
 3. Integrate thought/plan/diff:
-  - Extend the ACP `sessionUpdate` handler to map those event kinds to ALFRED events.
-  - Refactor tracker event types to be executor-agnostic; update runtime ingestion.
+
+- Extend the ACP `sessionUpdate` handler to map those event kinds to ALFRED events.
+- Refactor tracker event types to be executor-agnostic; update runtime ingestion.
+
 4. Add tests:
-  - Update existing OpenCode exec tests or add new ones for filesystem and event mapping.
-  - Add tests enforcing single Codex tool entrypoint usage.
+
+- Update existing OpenCode exec tests or add new ones for filesystem and event mapping.
+- Add tests enforcing single Codex tool entrypoint usage.
+
 5. Validate:
-  - Run `bun run typecheck`.
-  - Run targeted tests via `bun scripts/test-bun.ts` with appropriate filters.
+
+- Run `bun run typecheck`.
+- Run targeted tests via `bun scripts/test-bun.ts` with appropriate filters.
 
 ## Validation and Acceptance
 
@@ -169,4 +181,3 @@ Acceptance is:
 - ACP library: `@agentclientprotocol/sdk` via `@alfred/protocol/acp.ts`.
 - File I/O: prefer `Bun.file` and `Bun.write` for host mode; for container mode use `Bun.spawn(["docker", "exec", ...])` with stdin piping to avoid shells.
 - Security boundaries: reuse ALFRED’s existing filesystem allowlist logic (`DEFAULT_ALLOW_PREFIXES`, `openDirectorySecure`, and `/workspace` constraints in AgentFS).
-

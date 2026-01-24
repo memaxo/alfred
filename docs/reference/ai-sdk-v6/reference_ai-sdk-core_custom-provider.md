@@ -9,82 +9,80 @@ With a custom provider, you can map ids to any model. This allows you to set up 
 ### Example: custom model settings
 
 You can create a custom provider using `customProvider`.
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { customProvider } from 'ai';
-    
-    
-    
-    
+
+
+
+
     // custom provider with different model settings:
-    
+
     export const myOpenAI = customProvider({
-    
+
       languageModels: {
-    
+
         // replacement model with custom settings:
-    
+
         'gpt-4': wrapLanguageModel({
-    
+
           model: openai('gpt-4'),
-    
+
           middleware: defaultSettingsMiddleware({
-    
+
             settings: {
-    
+
               providerOptions: {
-    
+
                 openai: {
-    
+
                   reasoningEffort: 'high',
-    
+
                 },
-    
+
               },
-    
+
             },
-    
+
           }),
-    
+
         }),
-    
+
         // alias model with custom settings:
-    
+
         'gpt-4o-reasoning-high': wrapLanguageModel({
-    
+
           model: openai('gpt-4o'),
-    
+
           middleware: defaultSettingsMiddleware({
-    
+
             settings: {
-    
+
               providerOptions: {
-    
+
                 openai: {
-    
+
                   reasoningEffort: 'high',
-    
+
                 },
-    
+
               },
-    
+
             },
-    
+
           }),
-    
+
         }),
-    
+
       },
-    
+
       fallbackProvider: openai,
-    
+
     });
 
 ## Import
-    
-    
+
     import {  customProvider } from "ai"
 
 ## API Signature

@@ -7,6 +7,7 @@
 **Document:** `docs/execplans/dual-backend-tts-architecture.md`
 
 Complete technical analysis including:
+
 - Current IPC contract documentation
 - Performance bottleneck analysis
 - ROCm vs vLLM decision rationale
@@ -16,24 +17,28 @@ Complete technical analysis including:
 ### 2. Core Implementation Files
 
 #### Factory Pattern (`packages/voice/python/tts/server_factory.py`)
+
 - Automatic backend detection (MLX → ROCm → MPS → CPU)
 - Environment variable override support
 - Graceful fallback handling
 - Unified entry point for all backends
 
 #### Abstract Base Class (`packages/voice/python/tts/base.py`)
+
 - Shared IPC contract implementation
 - Common caching logic
 - Prompt building utilities
 - Event loop handler
 
 #### ROCm Backend (`packages/voice/python/tts/backend_rocm.py`)
+
 - PyTorch + ROCm optimization
 - 4-bit/8-bit quantization support (bitsandbytes)
 - `torch.compile()` integration
 - SNAC streaming implementation
 
 #### MLX Backend (`packages/voice/python/tts/backend_mlx.py`)
+
 - MLX framework integration
 - Native Apple Silicon optimization
 - SNAC streaming skeleton (decoder port pending)
@@ -44,6 +49,7 @@ Complete technical analysis including:
 **Script:** `packages/voice/scripts/convert_maya1_to_mlx.py`
 
 Converts HuggingFace Maya1 model to MLX format:
+
 - Extracts weights from PyTorch model
 - Converts to MLX arrays
 - Optional quantization (4-bit/8-bit)
@@ -54,6 +60,7 @@ Converts HuggingFace Maya1 model to MLX format:
 **Updated:** `packages/voice/pyproject.toml`
 
 Platform-specific dependencies:
+
 - `bitsandbytes` (Linux only)
 - `mlx` + `mlx-lm` (macOS only)
 - ROCm PyTorch index configuration
@@ -91,17 +98,20 @@ Platform-specific dependencies:
 ## Implementation Status
 
 ### ✅ Phase 1: Foundation (Complete)
+
 - Factory pattern and base classes
 - Backend skeletons
 - Dependency management
 - Conversion scripts
 
 ### ⏳ Phase 2: Backend Completion (In Progress)
+
 - MLX SNAC decoder port (critical for MLX backend)
 - ROCm backend optimization and testing
 - MLX backend optimization and testing
 
 ### 📋 Phase 3: Deployment (Pending)
+
 - Docker container for ROCm
 - Performance benchmarking
 - Integration testing
@@ -147,14 +157,14 @@ Platform-specific dependencies:
 
 ## Key Files Reference
 
-| File | Purpose | Status |
-|------|---------|-------|
-| `server_factory.py` | Entry point, backend detection | ✅ Complete |
-| `base.py` | Abstract base class | ✅ Complete |
-| `backend_rocm.py` | ROCm backend | ✅ Skeleton |
-| `backend_mlx.py` | MLX backend | ⏳ SNAC port pending |
-| `convert_maya1_to_mlx.py` | Weight conversion | ✅ Complete |
-| `pyproject.toml` | Dependencies | ✅ Updated |
+| File                      | Purpose                        | Status               |
+| ------------------------- | ------------------------------ | -------------------- |
+| `server_factory.py`       | Entry point, backend detection | ✅ Complete          |
+| `base.py`                 | Abstract base class            | ✅ Complete          |
+| `backend_rocm.py`         | ROCm backend                   | ✅ Skeleton          |
+| `backend_mlx.py`          | MLX backend                    | ⏳ SNAC port pending |
+| `convert_maya1_to_mlx.py` | Weight conversion              | ✅ Complete          |
+| `pyproject.toml`          | Dependencies                   | ✅ Updated           |
 
 ## Testing Checklist
 
@@ -170,12 +180,12 @@ Platform-specific dependencies:
 
 ## Performance Targets
 
-| Backend | TTFB | Total (short) | Memory |
-|---------|------|--------------|--------|
-| MLX | <500ms | <2s | ~6GB |
-| ROCm (4-bit) | <1s | <5s | <8GB |
-| ROCm (8-bit) | <1s | <4s | ~10GB |
-| MPS (current) | ~24s | ~24s | ~12GB |
+| Backend       | TTFB   | Total (short) | Memory |
+| ------------- | ------ | ------------- | ------ |
+| MLX           | <500ms | <2s           | ~6GB   |
+| ROCm (4-bit)  | <1s    | <5s           | <8GB   |
+| ROCm (8-bit)  | <1s    | <4s           | ~10GB  |
+| MPS (current) | ~24s   | ~24s          | ~12GB  |
 
 ## Known Limitations
 
@@ -204,7 +214,7 @@ A: Requires Linux with AMD GPU and ROCm drivers. Use Docker for isolation.
 ## Contact & Support
 
 For questions or issues:
+
 1. Check `docs/execplans/dual-backend-tts-architecture-quickstart.md`
 2. Review implementation files for inline comments
 3. Check ExecPlan for detailed technical decisions
-

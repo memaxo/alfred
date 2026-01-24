@@ -62,6 +62,7 @@ export type CognitiveState = { ... };
 ```
 
 **Rules**:
+
 - No runtime code, only types
 - No dependencies on other packages
 - Pure contracts
@@ -74,6 +75,7 @@ export type CognitiveState = { ... };
 **Dependencies**: `type`, `drizzle-orm`, `pg`
 
 **Structure**:
+
 ```
 packages/db/
 ├── src/
@@ -100,6 +102,7 @@ packages/db/
 ```
 
 **Key Functions**:
+
 - Schema definitions with Drizzle
 - Type-safe repositories
 - Idempotent migrations
@@ -113,9 +116,16 @@ packages/db/
 **Dependencies**: `type`
 
 **Exports**:
+
 ```typescript
 export type CognitiveState = {
-  state: "idle" | "thinking" | "deciding" | "acting" | "learning" | "reflecting";
+  state:
+    | "idle"
+    | "thinking"
+    | "deciding"
+    | "acting"
+    | "learning"
+    | "reflecting";
   attention: Attention;
   load: number;
   prediction: unknown;
@@ -125,6 +135,7 @@ export function transition(state: CognitiveState, event: Event): CognitiveState;
 ```
 
 **Responsibilities**:
+
 - Pure state machine (no side effects)
 - Cognitive load tracking
 - Attention management
@@ -136,6 +147,7 @@ export function transition(state: CognitiveState, event: Event): CognitiveState;
 **Dependencies**: `type`, `db`
 
 **Exports**:
+
 ```typescript
 export class KnowledgeGraph {
   async query(params: QueryParams): Promise<QueryResult>;
@@ -146,6 +158,7 @@ export class KnowledgeGraph {
 ```
 
 **Responsibilities**:
+
 - Fact storage and retrieval
 - Relation management
 - Pattern recognition
@@ -157,6 +170,7 @@ export class KnowledgeGraph {
 **Dependencies**: `type`, `db`
 
 **Exports**:
+
 ```typescript
 export async function record(outcome: LearningOutcome): Promise<void>;
 export async function getPatterns(params: PatternQuery): Promise<Pattern[]>;
@@ -164,6 +178,7 @@ export async function analyzeError(error: Error): Promise<Analysis>;
 ```
 
 **Responsibilities**:
+
 - Outcome recording (prediction vs. actual)
 - Pattern extraction
 - Mistake analysis
@@ -175,6 +190,7 @@ export async function analyzeError(error: Error): Promise<Analysis>;
 **Dependencies**: `type`, `db`
 
 **Exports**:
+
 ```typescript
 export async function ingest(doc: Document): Promise<void>;
 export async function retrieve(query: string, topK: number): Promise<Chunk[]>;
@@ -182,6 +198,7 @@ export async function embed(text: string): Promise<number[]>;
 ```
 
 **Responsibilities**:
+
 - Document chunking
 - Embedding generation (OpenAI API)
 - pgvector similarity search
@@ -193,12 +210,14 @@ export async function embed(text: string): Promise<number[]>;
 **Dependencies**: `type`
 
 **Exports**:
+
 ```typescript
 export async function evaluate(request: PolicyRequest): Promise<PolicyDecision>;
 export function loadPolicies(yaml: string): Policy[];
 ```
 
 **Responsibilities**:
+
 - YAML policy loading
 - PDP (Policy Decision Point) evaluation
 - Obligation enforcement
@@ -212,11 +231,13 @@ export function loadPolicies(yaml: string): Policy[];
 **Dependencies**: `cognitive`, `knowledge`, `learning`, `policy`, `agent`, `db`
 
 **Workflow orchestration (runtime)**:
+
 - `packages/runtime/src/workflow/orchestrator.ts` is the boundary that streams `WorkflowEvent`s and persists them.
 - Keep orchestration concerns split into focused sibling modules (e.g. `linear.ts`, `history.ts`, `observe.ts`, `persist.ts`, `lifecycle.ts`, `timeout.ts`) so lifecycle, persistence, observability, and integrations do not interleave.
 - Preserve invariants: redaction-first, enveloped persistence, deterministic event IDs, single-shot terminal finalization, always unregister run handles.
 
 **Structure**:
+
 ```
 packages/runtime/
 ├── src/
@@ -248,7 +269,10 @@ packages/runtime/
 // CoreRuntime: Composes domain packages
 export class CoreRuntime {
   async buildContext(input: UserRequest): Promise<ExecutionContext>;
-  async recordOutcome(input: UserRequest, result: ExecutionResult): Promise<void>;
+  async recordOutcome(
+    input: UserRequest,
+    result: ExecutionResult
+  ): Promise<void>;
 }
 
 // WorkflowRuntime: Adds AI SDK streaming
@@ -272,6 +296,7 @@ export class ProxmoxRuntime extends WorkflowRuntime {
 **Dependencies**: `type`, `cognitive`, `knowledge`, `learning`
 
 **Structure** (After Phase 5 restructuring):
+
 ```
 packages/agent/
 ├── src/
@@ -307,6 +332,7 @@ packages/agent/
 ```
 
 **Key Exports**:
+
 ```typescript
 export function buildAssistantTools(): ToolMap;
 export function buildOrchestratorTools(): ToolMap;
@@ -321,6 +347,7 @@ export function buildTools(): ToolMap; // All tools
 **Dependencies**: `runtime`, `agent`, `auth`, `policy`, `db`, `type`
 
 **Structure**:
+
 ```
 packages/api/
 ├── src/
@@ -352,22 +379,21 @@ packages/api/
 ```
 
 **Key Pattern**:
+
 ```typescript
 // Routers are thin wrappers around runtime
 const runtime = new WorkflowRuntime();
 
 export const workflowRouter = router({
-  stream: authedProcedure
-    .input(workflowInput)
-    .subscription(({ input }) =>
-      observable((emit) => {
-        (async () => {
-          for await (const event of runtime.execute(input)) {
-            emit.next(event);
-          }
-        })();
-      })
-    ),
+  stream: authedProcedure.input(workflowInput).subscription(({ input }) =>
+    observable((emit) => {
+      (async () => {
+        for await (const event of runtime.execute(input)) {
+          emit.next(event);
+        }
+      })();
+    })
+  ),
 });
 ```
 
@@ -377,6 +403,7 @@ export const workflowRouter = router({
 **Dependencies**: `type`, `db`, Better Auth
 
 **Exports**:
+
 ```typescript
 export const auth; // Better Auth instance
 export function issueToken(claims: Claims): string;
@@ -390,6 +417,7 @@ export function generateJWKS(): JWKS;
 **Dependencies**: `type`, prom-client
 
 **Exports**:
+
 ```typescript
 export const metricsRegistry;
 export const trpcRequestsTotal;
@@ -405,6 +433,7 @@ export const workflowStreamEventsTotal;
 **Dependencies**: `type`
 
 **Structure**:
+
 ```
 packages/ui/
 ├── src/
@@ -427,6 +456,7 @@ packages/ui/
 **Dependencies**: `api`, `ui`, `type`
 
 **Structure**:
+
 ```
 apps/web/
 ├── src/
@@ -450,6 +480,7 @@ apps/web/
 **Dependencies**: `api`, `ui`, `type`
 
 **Structure**:
+
 ```
 apps/native/
 ├── app/                     # Expo Router
@@ -506,6 +537,7 @@ When adding a new package:
    - Ensure no circular dependencies
 
 3. **Create Package Structure**
+
    ```bash
    mkdir -p packages/new-package/{src,test}
    cd packages/new-package
@@ -513,6 +545,7 @@ When adding a new package:
    ```
 
 4. **Configure TypeScript**
+
    ```json
    {
      "extends": "@alfred/tsconfig/base.json",
@@ -524,12 +557,14 @@ When adding a new package:
    ```
 
 5. **Add to Workspace**
+
    ```json
    // package.json (root)
    "workspaces": ["packages/*", "apps/*"]
    ```
 
 6. **Add to Turbo Config**
+
    ```json
    // turbo.json
    {
@@ -552,6 +587,7 @@ When adding a new package:
 ### When to Split a Package
 
 Split when:
+
 - Package exceeds 5000 lines
 - Multiple unrelated concerns
 - Clear reusable library emerges
@@ -559,6 +595,7 @@ Split when:
 ### When to Merge Packages
 
 Merge when:
+
 - Packages always change together
 - Artificial separation adds complexity
 - No clear boundary between them
@@ -566,6 +603,7 @@ Merge when:
 ### When to Extract to Library
 
 Extract when:
+
 - Zero ALFRED-specific logic
 - Useful to broader community
 - Worth maintaining independently
@@ -575,4 +613,3 @@ Extract when:
 - [Architecture Overview](overview.md)
 - [Decision Log](decisions.md)
 - [PRD](../alfred-prd.md)
-

@@ -15,8 +15,7 @@ Note: Prior to v4, the official OpenAI API SDK does not support the Edge Runtime
 ## Import
 
 ### React
-    
-    
+
     import { OpenAIStream } from "ai"
 
 ## API Signature

@@ -1,9 +1,10 @@
 ---
 title: OAuth | Better Auth
-url: 
+url:
 description: How Better Auth handles OAuth
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,7 +31,7 @@ Better Auth comes with built-in support for OAuth 2.0 and OpenID Connect. This a
 
 If your desired provider isn't directly supported, you can use the [Generic OAuth Plugin](https://www.better-auth.com/docs/plugins/generic-oauth) for custom integrations.
 
-## [Configuring Social Providers](https://www.better-auth.com/docs/concepts/oauth\#configuring-social-providers)
+## [Configuring Social Providers](https://www.better-auth.com/docs/concepts/oauth#configuring-social-providers)
 
 To enable a social provider, you need to provide `clientId` and `clientSecret` for the provider.
 
@@ -52,9 +53,9 @@ export const auth = betterAuth({
 });
 ```
 
-## [Usage](https://www.better-auth.com/docs/concepts/oauth\#usage)
+## [Usage](https://www.better-auth.com/docs/concepts/oauth#usage)
 
-### [Sign In](https://www.better-auth.com/docs/concepts/oauth\#sign-in)
+### [Sign In](https://www.better-auth.com/docs/concepts/oauth#sign-in)
 
 To sign in with a social provider, you can use the `signIn.social` function with the `authClient` or `auth.api` for server-side usage.
 
@@ -74,7 +75,7 @@ await auth.api.signInSocial({
 });
 ```
 
-### [Link account](https://www.better-auth.com/docs/concepts/oauth\#link-account)
+### [Link account](https://www.better-auth.com/docs/concepts/oauth#link-account)
 
 To link an account to a social provider, you can use the `linkAccount` function with the `authClient` or `auth.api` for server-side usage.
 
@@ -95,7 +96,7 @@ await auth.api.linkSocialAccount({
 });
 ```
 
-### [Get Access Token](https://www.better-auth.com/docs/concepts/oauth\#get-access-token)
+### [Get Access Token](https://www.better-auth.com/docs/concepts/oauth#get-access-token)
 
 To get the access token for a social provider, you can use the `getAccessToken` function with the `authClient` or `auth.api` for server-side usage. When you use this endpoint, if the access token is expired, it will be refreshed.
 
@@ -119,7 +120,7 @@ await auth.api.getAccessToken({
 });
 ```
 
-### [Get Account Info Provided by the provider](https://www.better-auth.com/docs/concepts/oauth\#get-account-info-provided-by-the-provider)
+### [Get Account Info Provided by the provider](https://www.better-auth.com/docs/concepts/oauth#get-account-info-provided-by-the-provider)
 
 To get provider specific account info you can use the `accountInfo` function with the `authClient` or `auth.api` for server-side usage.
 
@@ -138,7 +139,7 @@ await auth.api.accountInfo({
 });
 ```
 
-### [Requesting Additional Scopes](https://www.better-auth.com/docs/concepts/oauth\#requesting-additional-scopes)
+### [Requesting Additional Scopes](https://www.better-auth.com/docs/concepts/oauth#requesting-additional-scopes)
 
 Sometimes your application may need additional OAuth scopes after the user has already signed up (e.g., for accessing GitHub repositories or Google Drive). Users may not want to grant extensive permissions initially, preferring to start with minimal permissions and grant additional access as needed.
 
@@ -155,7 +156,7 @@ const requestAdditionalScopes = async () => {
 
 Make sure you're running Better Auth version 1.2.7 or later. Earlier versions (like 1.2.2) may show a "Social account already linked" error when trying to link with an existing provider for additional scopes.
 
-### [Other Provider Configurations](https://www.better-auth.com/docs/concepts/oauth\#other-provider-configurations)
+### [Other Provider Configurations](https://www.better-auth.com/docs/concepts/oauth#other-provider-configurations)
 
 **scope** The scope of the access request. For example, `email` or `profile`.
 
@@ -201,7 +202,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [How OAuth Works in Better Auth](https://www.better-auth.com/docs/concepts/oauth\#how-oauth-works-in-better-auth)
+## [How OAuth Works in Better Auth](https://www.better-auth.com/docs/concepts/oauth#how-oauth-works-in-better-auth)
 
 Here's what happens when a user selects a provider to authenticate with:
 
@@ -213,7 +214,7 @@ Here's what happens when a user selects a provider to authenticate with:
    - If redirection is enabled, users are redirected to the provider's login page.
    - If redirection is disabled, the authorization URL is returned for the client to handle the redirection.
 
-### [Post-Login Flow](https://www.better-auth.com/docs/concepts/oauth\#post-login-flow)
+### [Post-Login Flow](https://www.better-auth.com/docs/concepts/oauth#post-login-flow)
 
 After the user completes the login process, the provider redirects them back to the callback URL with a code and state. Better Auth handles the rest:
 

@@ -8,161 +8,146 @@ Typed Readable Streams
 
 Here's an example for a server function that streams an array of messages to the client in a type-safe manner:
 
+type Message = {
+content: string
+}
 
- type Message = {
- content: string
- }
+/\*_
+This server function returns a `ReadableStream`
+that streams `Message` chunks to the client.
+_/
+const streamingResponseFn = createServerFn().handler(async () => {
+// These are the messages that you want to send as chunks to the client
+const messages: Message[] = generateMessages()
 
- /**
- This server function returns a `ReadableStream`
- that streams `Message` chunks to the client.
- */
- const streamingResponseFn = createServerFn().handler(async () => {
- // These are the messages that you want to send as chunks to the client
- const messages: Message[] = generateMessages()
+// This `ReadableStream` is typed, so each
+// will be of type `Message`.
+const stream = new ReadableStream({
+async start(controller) {
+for (const message of messages) {
+// Send the message
+controller.enqueue(message)
+}
+controller.close()
+},
+})
 
- // This `ReadableStream` is typed, so each
- // will be of type `Message`.
- const stream = new ReadableStream({
- async start(controller) {
- for (const message of messages) {
- // Send the message
- controller.enqueue(message)
- }
- controller.close()
- },
- })
+return stream
+})
 
- return stream
- })
+type Message = {
+content: string
+}
 
+/\*_
+This server function returns a `ReadableStream`
+that streams `Message` chunks to the client.
+_/
+const streamingResponseFn = createServerFn().handler(async () => {
+// These are the messages that you want to send as chunks to the client
+const messages: Message[] = generateMessages()
 
+// This `ReadableStream` is typed, so each
+// will be of type `Message`.
+const stream = new ReadableStream({
+async start(controller) {
+for (const message of messages) {
+// Send the message
+controller.enqueue(message)
+}
+controller.close()
+},
+})
 
- type Message = {
- content: string
- }
-
- /**
- This server function returns a `ReadableStream`
- that streams `Message` chunks to the client.
- */
- const streamingResponseFn = createServerFn().handler(async () => {
- // These are the messages that you want to send as chunks to the client
- const messages: Message[] = generateMessages()
-
- // This `ReadableStream` is typed, so each
- // will be of type `Message`.
- const stream = new ReadableStream({
- async start(controller) {
- for (const message of messages) {
- // Send the message
- controller.enqueue(message)
- }
- controller.close()
- },
- })
-
- return stream
- })
-
+return stream
+})
 
 When you consume this stream from the client, the streamed chunks will be properly typed:
 
+const [message, setMessage] = useState('')
 
- const [message, setMessage] = useState('')
+const getTypedReadableStreamResponse = useCallback(async () => {
+const response = await streamingResponseFn()
 
- const getTypedReadableStreamResponse = useCallback(async () => {
- const response = await streamingResponseFn()
+if (!response) {
+return
+}
 
- if (!response) {
- return
- }
+const reader = response.getReader()
+let done = false
+while (!done) {
+const { value, done: doneReading } = await reader.read()
+done = doneReading
+if (value) {
+// Notice how we know the value of `chunk` (`Message | undefined`)
+// here, because it's coming from the typed `ReadableStream`
+const chunk = value.content
+setMessage((prev) => prev + chunk)
+}
+}
+}, [])
 
- const reader = response.getReader()
- let done = false
- while (!done) {
- const { value, done: doneReading } = await reader.read()
- done = doneReading
- if (value) {
- // Notice how we know the value of `chunk` (`Message | undefined`)
- // here, because it's coming from the typed `ReadableStream`
- const chunk = value.content
- setMessage((prev) => prev + chunk)
- }
- }
- }, [])
+const [message, setMessage] = useState('')
 
+const getTypedReadableStreamResponse = useCallback(async () => {
+const response = await streamingResponseFn()
 
+if (!response) {
+return
+}
 
- const [message, setMessage] = useState('')
-
- const getTypedReadableStreamResponse = useCallback(async () => {
- const response = await streamingResponseFn()
-
- if (!response) {
- return
- }
-
- const reader = response.getReader()
- let done = false
- while (!done) {
- const { value, done: doneReading } = await reader.read()
- done = doneReading
- if (value) {
- // Notice how we know the value of `chunk` (`Message | undefined`)
- // here, because it's coming from the typed `ReadableStream`
- const chunk = value.content
- setMessage((prev) => prev + chunk)
- }
- }
- }, [])
-
+const reader = response.getReader()
+let done = false
+while (!done) {
+const { value, done: doneReading } = await reader.read()
+done = doneReading
+if (value) {
+// Notice how we know the value of `chunk` (`Message | undefined`)
+// here, because it's coming from the typed `ReadableStream`
+const chunk = value.content
+setMessage((prev) => prev + chunk)
+}
+}
+}, [])
 
 Async Generators in Server Functions
 
 A much cleaner approach with the same results is to use an async generator function:
 
+const streamingWithAnAsyncGeneratorFn = createServerFn().handler(
+async function\* () {
+const messages: Message[] = generateMessages()
+for (const msg of messages) {
+await sleep(500)
+// The streamed chunks are still typed as `Message`
+yield msg
+}
+},
+)
 
- const streamingWithAnAsyncGeneratorFn = createServerFn().handler(
- async function* () {
- const messages: Message[] = generateMessages()
- for (const msg of messages) {
- await sleep(500)
- // The streamed chunks are still typed as `Message`
- yield msg
- }
- },
- )
-
-
-
- const streamingWithAnAsyncGeneratorFn = createServerFn().handler(
- async function* () {
- const messages: Message[] = generateMessages()
- for (const msg of messages) {
- await sleep(500)
- // The streamed chunks are still typed as `Message`
- yield msg
- }
- },
- )
-
+const streamingWithAnAsyncGeneratorFn = createServerFn().handler(
+async function\* () {
+const messages: Message[] = generateMessages()
+for (const msg of messages) {
+await sleep(500)
+// The streamed chunks are still typed as `Message`
+yield msg
+}
+},
+)
 
 The client side code will also be leaner:
 
+const getResponseFromTheAsyncGenerator = useCallback(async () => {
+for await (const msg of await streamingWithAnAsyncGeneratorFn()) {
+const chunk = msg.content
+setMessages((prev) => prev + chunk)
+}
+}, [])
 
- const getResponseFromTheAsyncGenerator = useCallback(async () => {
- for await (const msg of await streamingWithAnAsyncGeneratorFn()) {
- const chunk = msg.content
- setMessages((prev) => prev + chunk)
- }
- }, [])
-
-
-
- const getResponseFromTheAsyncGenerator = useCallback(async () => {
- for await (const msg of await streamingWithAnAsyncGeneratorFn()) {
- const chunk = msg.content
- setMessages((prev) => prev + chunk)
- }
- }, [])
+const getResponseFromTheAsyncGenerator = useCallback(async () => {
+for await (const msg of await streamingWithAnAsyncGeneratorFn()) {
+const chunk = msg.content
+setMessages((prev) => prev + chunk)
+}
+}, [])

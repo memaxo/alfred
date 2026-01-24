@@ -1,9 +1,10 @@
 ---
 title: Passkey | Better Auth
-url: 
+url:
 description: Passkey
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,9 +31,9 @@ Passkeys are a secure, passwordless authentication method using cryptographic ke
 
 The passkey plugin implementation is powered by [SimpleWebAuthn](https://simplewebauthn.dev/) behind the scenes.
 
-## [Installation](https://www.better-auth.com/docs/plugins/passkey\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/passkey#installation)
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/passkey\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/passkey#add-the-plugin-to-your-auth-config)
 
 To add the passkey plugin to your auth config, you need to import the plugin and pass it to the `plugins` option of the auth instance.
 
@@ -74,7 +75,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/passkey\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/passkey#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -90,7 +91,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/passkey#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/passkey\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/passkey#add-the-client-plugin)
 
 auth-client.ts
 
@@ -105,9 +106,9 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/passkey\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/passkey#usage)
 
-### [Add/Register a passkey](https://www.better-auth.com/docs/plugins/passkey\#addregister-a-passkey)
+### [Add/Register a passkey](https://www.better-auth.com/docs/plugins/passkey#addregister-a-passkey)
 
 To add or register a passkey make sure a user is authenticated and then call the `passkey.addPasskey` function provided by the client.
 
@@ -124,10 +125,10 @@ const { data, error } = await authClient.passkey.addPasskey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name?` | An optional name to label the authenticator account being registered. If not provided, it will default to the user's email address or user ID | `string` |
-| `authenticatorAttachment?` | You can also specify the type of authenticator you want to register. Default behavior allows both platform and cross-platform passkeys | `"platform" | "cross-platform"` |
+| Prop                       | Description                                                                                                                                   | Type        |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------- |
+| `name?`                    | An optional name to label the authenticator account being registered. If not provided, it will default to the user's email address or user ID | `string`    |
+| `authenticatorAttachment?` | You can also specify the type of authenticator you want to register. Default behavior allows both platform and cross-platform passkeys        | `"platform" | "cross-platform"` |
 
 ```
 const data = await auth.api.addPasskey({
@@ -140,7 +141,7 @@ const data = await auth.api.addPasskey({
 
 This is a client-only endpoint
 
-### [Sign in with a passkey](https://www.better-auth.com/docs/plugins/passkey\#sign-in-with-a-passkey)
+### [Sign in with a passkey](https://www.better-auth.com/docs/plugins/passkey#sign-in-with-a-passkey)
 
 To sign in with a passkey you can use the `signIn.passkey` method. This will prompt the user to sign in with their passkey.
 
@@ -157,9 +158,9 @@ const { data, error } = await authClient.signIn.passkey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email of the user to sign in. | `string` |
+| Prop        | Description                                                                                                                              | Type      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `email`     | The email of the user to sign in.                                                                                                        | `string`  |
 | `autoFill?` | Browser autofill, a.k.a. Conditional UI. Read more: https://simplewebauthn.dev/docs/packages/browser#browser-autofill-aka-conditional-ui | `boolean` |
 
 ```
@@ -173,7 +174,7 @@ const data = await auth.api.signInPasskey({
 
 This is a client-only endpoint
 
-#### [Example Usage](https://www.better-auth.com/docs/plugins/passkey\#example-usage)
+#### [Example Usage](https://www.better-auth.com/docs/plugins/passkey#example-usage)
 
 ```
 // With post authentication redirect
@@ -193,7 +194,7 @@ await authClient.signIn.passkey({
 });
 ```
 
-### [List passkeys](https://www.better-auth.com/docs/plugins/passkey\#list-passkeys)
+### [List passkeys](https://www.better-auth.com/docs/plugins/passkey#list-passkeys)
 
 You can list all of the passkeys for the authenticated user by calling `passkey.listUserPasskeys`:
 
@@ -218,7 +219,7 @@ const passkeys = await auth.api.listPasskeys({
 });
 ```
 
-### [Deleting passkeys](https://www.better-auth.com/docs/plugins/passkey\#deleting-passkeys)
+### [Deleting passkeys](https://www.better-auth.com/docs/plugins/passkey#deleting-passkeys)
 
 You can delete a passkey by calling `passkey.delete` and providing the passkey ID.
 
@@ -234,8 +235,8 @@ const { data, error } = await authClient.passkey.deletePasskey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop | Description                      | Type     |
+| ---- | -------------------------------- | -------- |
 | `id` | The ID of the passkey to delete. | `string` |
 
 POST
@@ -252,11 +253,11 @@ const data = await auth.api.deletePasskey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop | Description                      | Type     |
+| ---- | -------------------------------- | -------- |
 | `id` | The ID of the passkey to delete. | `string` |
 
-### [Updating passkey names](https://www.better-auth.com/docs/plugins/passkey\#updating-passkey-names)
+### [Updating passkey names](https://www.better-auth.com/docs/plugins/passkey#updating-passkey-names)
 
 ClientServer
 
@@ -271,9 +272,9 @@ const { data, error } = await authClient.passkey.updatePasskey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `id` | The ID of the passkey which you want to update. | `string` |
+| Prop   | Description                                        | Type     |
+| ------ | -------------------------------------------------- | -------- |
+| `id`   | The ID of the passkey which you want to update.    | `string` |
 | `name` | The new name which the passkey will be updated to. | `string` |
 
 POST
@@ -291,18 +292,18 @@ const data = await auth.api.updatePasskey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `id` | The ID of the passkey which you want to update. | `string` |
+| Prop   | Description                                        | Type     |
+| ------ | -------------------------------------------------- | -------- |
+| `id`   | The ID of the passkey which you want to update.    | `string` |
 | `name` | The new name which the passkey will be updated to. | `string` |
 
-### [Conditional UI](https://www.better-auth.com/docs/plugins/passkey\#conditional-ui)
+### [Conditional UI](https://www.better-auth.com/docs/plugins/passkey#conditional-ui)
 
 The plugin supports conditional UI, which allows the browser to autofill the passkey if the user has already registered a passkey.
 
 There are two requirements for conditional UI to work:
 
-#### [Update input fields](https://www.better-auth.com/docs/plugins/passkey\#update-input-fields)
+#### [Update input fields](https://www.better-auth.com/docs/plugins/passkey#update-input-fields)
 
 Add the `autocomplete` attribute with the value `webauthn` to your input fields. You can add this attribute to multiple input fields, but at least one is required for conditional UI to work.
 
@@ -315,7 +316,7 @@ The `webauthn` value should also be the last entry of the `autocomplete` attribu
 <input type="password" name="password" autocomplete="current-password webauthn">
 ```
 
-#### [Preload the passkeys](https://www.better-auth.com/docs/plugins/passkey\#preload-the-passkeys)
+#### [Preload the passkeys](https://www.better-auth.com/docs/plugins/passkey#preload-the-passkeys)
 
 When your component mounts, you can preload the user's passkeys by calling the `authClient.signIn.passkey` method with the `autoFill` option set to `true`.
 
@@ -338,31 +339,31 @@ Depending on the browser, a prompt will appear to autofill the passkey. If the u
 
 Some browsers also require the user to first interact with the input field before the autofill prompt appears.
 
-### [Debugging](https://www.better-auth.com/docs/plugins/passkey\#debugging)
+### [Debugging](https://www.better-auth.com/docs/plugins/passkey#debugging)
 
 To test your passkey implementation you can use [emulated authenticators](https://developer.chrome.com/docs/devtools/webauthn). This way you can test the registration and sign-in process without even owning a physical device.
 
-## [Schema](https://www.better-auth.com/docs/plugins/passkey\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/passkey#schema)
 
 The plugin require a new table in the database to store passkey data.
 
 Table Name: `passkey`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each passkey |
-| name | string | ? | The name of the passkey |
-| publicKey | string | - | The public key of the passkey |
-| userId | string | FK | The ID of the user |
-| credentialID | string | - | The unique identifier of the registered credential |
-| counter | number | - | The counter of the passkey |
-| deviceType | string | - | The type of device used to register the passkey |
-| backedUp | boolean | - | Whether the passkey is backed up |
-| transports | string | - | The transports used to register the passkey |
-| createdAt | Date | - | The time when the passkey was created |
-| aaguid | string | ? | Authenticator's Attestation GUID indicating the type of the authenticator |
+| Field Name   | Type    | Key | Description                                                               |
+| ------------ | ------- | --- | ------------------------------------------------------------------------- |
+| id           | string  | PK  | Unique identifier for each passkey                                        |
+| name         | string  | ?   | The name of the passkey                                                   |
+| publicKey    | string  | -   | The public key of the passkey                                             |
+| userId       | string  | FK  | The ID of the user                                                        |
+| credentialID | string  | -   | The unique identifier of the registered credential                        |
+| counter      | number  | -   | The counter of the passkey                                                |
+| deviceType   | string  | -   | The type of device used to register the passkey                           |
+| backedUp     | boolean | -   | Whether the passkey is backed up                                          |
+| transports   | string  | -   | The transports used to register the passkey                               |
+| createdAt    | Date    | -   | The time when the passkey was created                                     |
+| aaguid       | string  | ?   | Authenticator's Attestation GUID indicating the type of the authenticator |
 
-## [Options](https://www.better-auth.com/docs/plugins/passkey\#options)
+## [Options](https://www.better-auth.com/docs/plugins/passkey#options)
 
 **rpID**: A unique identifier for your website. 'localhost' is okay for local dev.
 

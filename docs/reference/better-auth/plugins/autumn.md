@@ -1,9 +1,10 @@
 ---
 title: Autumn Billing | Better Auth
-url: 
+url:
 description: Better Auth Plugin for Autumn Billing
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -32,7 +33,7 @@ Copy MarkdownOpen in
 \\
 We're online to help you with any questions you have.](https://discord.gg/STqxY92zuS)
 
-## [Features](https://www.better-auth.com/docs/plugins/autumn\#features)
+## [Features](https://www.better-auth.com/docs/plugins/autumn#features)
 
 - One function for all checkout, subscription and payment flows
 - No webhooks required: query Autumn for the data you need
@@ -40,11 +41,11 @@ We're online to help you with any questions you have.](https://discord.gg/STqxY9
 - Usage tracking for usage billing and periodic limits
 - Custom plans and pricing changes through Autumn's dashboard
 
-### [Setup Autumn Account](https://www.better-auth.com/docs/plugins/autumn\#setup-autumn-account)
+### [Setup Autumn Account](https://www.better-auth.com/docs/plugins/autumn#setup-autumn-account)
 
 First, create your pricing plans in Autumn's [dashboard](https://app.useautumn.com/), where you define what each plan and product gets access to and how it should be billed. In this example, we're handling the free and pro plans for an AI chatbot, which comes with a number of `messages` per month.
 
-### [Install Autumn SDK](https://www.better-auth.com/docs/plugins/autumn\#install-autumn-sdk)
+### [Install Autumn SDK](https://www.better-auth.com/docs/plugins/autumn#install-autumn-sdk)
 
 npm
 
@@ -60,7 +61,7 @@ npm install autumn-js
 
 If you're using a separate client and server setup, make sure to install the plugin in both parts of your project.
 
-### [Add `AUTUMN_SECRET_KEY` to your environment variables](https://www.better-auth.com/docs/plugins/autumn\#add-autumn_secret_key-to-your-environment-variables)
+### [Add `AUTUMN_SECRET_KEY` to your environment variables](https://www.better-auth.com/docs/plugins/autumn#add-autumn_secret_key-to-your-environment-variables)
 
 You can find it in Autumn's dashboard under " [Developer](https://app.useautumn.com/sandbox/onboarding)".
 
@@ -70,7 +71,7 @@ You can find it in Autumn's dashboard under " [Developer](https://app.useautumn.
 AUTUMN_SECRET_KEY=am_sk_xxxxxxxxxx
 ```
 
-### [Add the Autumn plugin to your `auth` config](https://www.better-auth.com/docs/plugins/autumn\#add-the-autumn-plugin-to-your-auth-config)
+### [Add the Autumn plugin to your `auth` config](https://www.better-auth.com/docs/plugins/autumn#add-the-autumn-plugin-to-your-auth-config)
 
 auth.ts
 
@@ -86,7 +87,7 @@ export const auth = betterAuth({
 Autumn will auto-create your customers when they sign up, and assign them any
 default plans you created (eg your Free plan)
 
-### [Add `<AutumnProvider />`](https://www.better-auth.com/docs/plugins/autumn\#add-autumnprovider-)
+### [Add `<AutumnProvider />`](https://www.better-auth.com/docs/plugins/autumn#add-autumnprovider-)
 
 Client side, wrap your application with the AutumnProvider component, and pass in the `baseUrl` that you define within better-auth's `authClient`.
 
@@ -113,9 +114,9 @@ export default function RootLayout({
 }
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/autumn\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/autumn#usage)
 
-### [Handle payments](https://www.better-auth.com/docs/plugins/autumn\#handle-payments)
+### [Handle payments](https://www.better-auth.com/docs/plugins/autumn#handle-payments)
 
 Call `attach` to redirect the customer to a Stripe checkout page when they want to purchase the Pro plan.
 
@@ -149,7 +150,7 @@ export default function PurchaseButton() {
 The AttachDialog component can be used directly from the `autumn-js/react`
 library (as shown in the example above), or downloaded as a [shadcn/ui component](https://docs.useautumn.com/quickstart/shadcn) to customize.
 
-### [Integrate Pricing Logic](https://www.better-auth.com/docs/plugins/autumn\#integrate-pricing-logic)
+### [Integrate Pricing Logic](https://www.better-auth.com/docs/plugins/autumn#integrate-pricing-logic)
 
 Integrate your client and server pricing tiers logic with the following functions:
 
@@ -212,9 +213,9 @@ await auth.api.track({
 });
 ```
 
-### [Additional Functions](https://www.better-auth.com/docs/plugins/autumn\#additional-functions)
+### [Additional Functions](https://www.better-auth.com/docs/plugins/autumn#additional-functions)
 
-#### [openBillingPortal()](https://www.better-auth.com/docs/plugins/autumn\#openbillingportal)
+#### [openBillingPortal()](https://www.better-auth.com/docs/plugins/autumn#openbillingportal)
 
 Opens a billing portal where the customer can update their payment method or cancel their plan.
 
@@ -238,7 +239,7 @@ export default function BillingSettings() {
 }
 ```
 
-#### [cancel()](https://www.better-auth.com/docs/plugins/autumn\#cancel)
+#### [cancel()](https://www.better-auth.com/docs/plugins/autumn#cancel)
 
 Cancel a product or subscription.
 
@@ -260,7 +261,7 @@ export default function CancelSubscription() {
 }
 ```
 
-#### [Get invoice history](https://www.better-auth.com/docs/plugins/autumn\#get-invoice-history)
+#### [Get invoice history](https://www.better-auth.com/docs/plugins/autumn#get-invoice-history)
 
 Pass in an `expand` param into `useCustomer` to get additional information. You can expand `invoices`, `trials_used`, `payment_method`, or `rewards`.
 

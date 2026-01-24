@@ -1,9 +1,10 @@
 ---
 title: Have I Been Pwned | Better Auth
-url: 
+url:
 description: A plugin to check if a password has been compromised
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The Have I Been Pwned plugin helps protect user accounts by preventing the use of passwords that have been exposed in known data breaches. It uses the [Have I Been Pwned](https://haveibeenpwned.com/) API to check if a password has been compromised.
 
-## [Installation](https://www.better-auth.com/docs/plugins/have-i-been-pwned\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/have-i-been-pwned#installation)
 
-### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/have-i-been-pwned\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/have-i-been-pwned#add-the-plugin-to-your-auth-config)
 
 auth.ts
 
@@ -45,7 +46,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/have-i-been-pwned\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/have-i-been-pwned#usage)
 
 When a user attempts to create an account or update their password with a compromised password, they'll receive the following default error:
 
@@ -56,7 +57,7 @@ When a user attempts to create an account or update their password with a compro
 }
 ```
 
-## [Config](https://www.better-auth.com/docs/plugins/have-i-been-pwned\#config)
+## [Config](https://www.better-auth.com/docs/plugins/have-i-been-pwned#config)
 
 You can customize the error message:
 
@@ -66,7 +67,7 @@ haveIBeenPwned({
 })
 ```
 
-## [Security Notes](https://www.better-auth.com/docs/plugins/have-i-been-pwned\#security-notes)
+## [Security Notes](https://www.better-auth.com/docs/plugins/have-i-been-pwned#security-notes)
 
 - Only the first 5 characters of the password hash are sent to the API
 - The full password is never transmitted

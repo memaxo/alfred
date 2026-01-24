@@ -7,54 +7,53 @@ Copy markdown
 ## Issue
 
 When using `toUIMessageStreamResponse` with an `onFinish` callback, the callback may not execute when the stream is aborted. This happens because the abort handler immediately terminates the response, preventing the `onFinish` callback from being triggered.
-    
-    
+
     // Server-side code where onFinish isn't called on abort
-    
+
     export async function POST(req: Request) {
-    
+
       const { messages } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         abortSignal: req.signal,
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse({
-    
+
         onFinish: async ({ isAborted }) => {
-    
+
           // This isn't called when the stream is aborted!
-    
+
           if (isAborted) {
-    
+
             console.log('Stream was aborted');
-    
+
             // Handle abort-specific cleanup
-    
+
           } else {
-    
+
             console.log('Stream completed normally');
-    
+
             // Handle normal completion
-    
+
           }
-    
+
         },
-    
+
       });
-    
+
     }
 
 ## Background
@@ -64,61 +63,60 @@ When a stream is aborted, the response is immediately terminated. Without proper
 ## Solution
 
 Add `consumeStream` to the `toUIMessageStreamResponse` configuration. This ensures that abort events are properly captured and forwarded to the `onFinish` callback, allowing it to execute even when the stream is aborted.
-    
-    
+
     // other imports...
-    
+
     import { consumeStream } from 'ai';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         abortSignal: req.signal,
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse({
-    
+
         onFinish: async ({ isAborted }) => {
-    
+
           // Now this WILL be called even when aborted!
-    
+
           if (isAborted) {
-    
+
             console.log('Stream was aborted');
-    
+
             // Handle abort-specific cleanup
-    
+
           } else {
-    
+
             console.log('Stream completed normally');
-    
+
             // Handle normal completion
-    
+
           }
-    
+
         },
-    
+
         consumeSseStream: consumeStream, // This enables onFinish to be called on abort
-    
+
       });
-    
+
     }
 
 Previous

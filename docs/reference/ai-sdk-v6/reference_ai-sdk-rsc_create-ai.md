@@ -9,8 +9,7 @@ AI SDK RSC is currently experimental. We recommend using AI SDK UI for productio
 Creates a client-server context provider that can be used to wrap parts of your application tree to easily manage both UI and AI states of your application.
 
 ## Import
-    
-    
+
     import { createAI } from "@ai-sdk/rsc"
 
 ## API Signature

@@ -18,17 +18,16 @@ If the middleware is configured to compress the response, it will cause the stre
 
 You can try the following, the solution only affects the streaming API:
 
-  * add `'Content-Encoding': 'none'` headers
-        
-        return result.toUIMessageStreamResponse({
-        
-          headers: {
-        
-            'Content-Encoding': 'none',
-        
-          },
-        
-        });
+- add `'Content-Encoding': 'none'` headers
+  return result.toUIMessageStreamResponse({
+
+        headers: {
+
+          'Content-Encoding': 'none',
+
+        },
+
+      });
 
 Previous
 

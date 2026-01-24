@@ -1,9 +1,10 @@
 ---
 title: CLI | Better Auth
-url: 
+url:
 description: Built-in CLI for managing your project.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Better Auth comes with a built-in CLI to help you manage the database schemas, initialize your project, generate a secret key for your application, and gather diagnostic information about your setup.
 
-## [Generate](https://www.better-auth.com/docs/concepts/cli\#generate)
+## [Generate](https://www.better-auth.com/docs/concepts/cli#generate)
 
 The `generate` command creates the schema required by Better Auth. If you're using a database adapter like Prisma or Drizzle, this command will generate the right schema for your ORM. If you're using the built-in Kysely adapter, it will generate an SQL file you can run directly on your database.
 
@@ -38,13 +39,13 @@ Terminal
 npx @better-auth/cli@latest generate
 ```
 
-### [Options](https://www.better-auth.com/docs/concepts/cli\#options)
+### [Options](https://www.better-auth.com/docs/concepts/cli#options)
 
 - `--output` \- Where to save the generated schema. For Prisma, it will be saved in prisma/schema.prisma. For Drizzle, it goes to schema.ts in your project root. For Kysely, it's an SQL file saved as schema.sql in your project root.
 - `--config` \- The path to your Better Auth config file. By default, the CLI will search for an auth.ts file in **./**, **./utils**, **./lib**, or any of these directories under the `src` directory.
 - `--yes` \- Skip the confirmation prompt and generate the schema directly.
 
-## [Migrate](https://www.better-auth.com/docs/concepts/cli\#migrate)
+## [Migrate](https://www.better-auth.com/docs/concepts/cli#migrate)
 
 The migrate command applies the Better Auth schema directly to your database. This is available if you're using the built-in Kysely adapter. For other adapters, you'll need to apply the schema using your ORM's migration tool.
 
@@ -54,12 +55,12 @@ Terminal
 npx @better-auth/cli@latest migrate
 ```
 
-### [Options](https://www.better-auth.com/docs/concepts/cli\#options-1)
+### [Options](https://www.better-auth.com/docs/concepts/cli#options-1)
 
 - `--config` \- The path to your Better Auth config file. By default, the CLI will search for an auth.ts file in **./**, **./utils**, **./lib**, or any of these directories under the `src` directory.
 - `--yes` \- Skip the confirmation prompt and apply the schema directly.
 
-## [Init](https://www.better-auth.com/docs/concepts/cli\#init)
+## [Init](https://www.better-auth.com/docs/concepts/cli#init)
 
 The `init` command allows you to initialize Better Auth in your project.
 
@@ -69,7 +70,7 @@ Terminal
 npx @better-auth/cli@latest init
 ```
 
-### [Options](https://www.better-auth.com/docs/concepts/cli\#options-2)
+### [Options](https://www.better-auth.com/docs/concepts/cli#options-2)
 
 - `--name` \- The name of your application. (defaults to the `name` property in your `package.json`).
 - `--framework` \- The framework your codebase is using. Currently, the only supported framework is `Next.js`.
@@ -77,7 +78,7 @@ npx @better-auth/cli@latest init
 - `--database` \- The database you want to use. Currently, the only supported database is `SQLite`.
 - `--package-manager` \- The package manager you want to use. Currently, the only supported package managers are `npm`, `pnpm`, `yarn`, `bun` (defaults to the manager you used to initialize the CLI).
 
-## [Info](https://www.better-auth.com/docs/concepts/cli\#info)
+## [Info](https://www.better-auth.com/docs/concepts/cli#info)
 
 The `info` command provides diagnostic information about your Better Auth setup and environment. Useful for debugging and sharing when seeking support.
 
@@ -87,7 +88,7 @@ Terminal
 npx @better-auth/cli@latest info
 ```
 
-### [Output](https://www.better-auth.com/docs/concepts/cli\#output)
+### [Output](https://www.better-auth.com/docs/concepts/cli#output)
 
 The command displays:
 
@@ -97,12 +98,12 @@ The command displays:
 - **Frameworks**: Detected frameworks (Next.js, React, Vue, etc.)
 - **Databases**: Database clients and ORMs (Prisma, Drizzle, etc.)
 
-### [Options](https://www.better-auth.com/docs/concepts/cli\#options-3)
+### [Options](https://www.better-auth.com/docs/concepts/cli#options-3)
 
 - `--config` \- Path to your Better Auth config file
 - `--json` \- Output as JSON for sharing or programmatic use
 
-### [Examples](https://www.better-auth.com/docs/concepts/cli\#examples)
+### [Examples](https://www.better-auth.com/docs/concepts/cli#examples)
 
 ```
 # Basic usage
@@ -117,7 +118,7 @@ npx @better-auth/cli@latest info --json > auth-info.json
 
 Sensitive data like secrets, API keys, and database URLs are automatically replaced with `[REDACTED]` for safe sharing.
 
-## [Secret](https://www.better-auth.com/docs/concepts/cli\#secret)
+## [Secret](https://www.better-auth.com/docs/concepts/cli#secret)
 
 The CLI also provides a way to generate a secret key for your Better Auth instance.
 
@@ -127,7 +128,7 @@ Terminal
 npx @better-auth/cli@latest secret
 ```
 
-## [Common Issues](https://www.better-auth.com/docs/concepts/cli\#common-issues)
+## [Common Issues](https://www.better-auth.com/docs/concepts/cli#common-issues)
 
 **Error: Cannot find module X**
 

@@ -1,9 +1,10 @@
 ---
 title: UDP sockets – API | Bun Docs
-url: 
+url:
 description: Bun's native API implements fast and flexible UDP sockets.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Use Bun's UDP API to implement services with advanced real-time requirements, such as voice chat.
 
-## [Bind a UDP socket ( `Bun.udpSocket()`)](https://bun.com/docs/api/udp\#bind-a-udp-socket-bun-udpsocket)
+## [Bind a UDP socket ( `Bun.udpSocket()`)](https://bun.com/docs/api/udp#bind-a-udp-socket-bun-udpsocket)
 
 To create a new (bound) UDP socket:
 
@@ -74,7 +75,7 @@ console.log(socket.port); // 41234
 
 ```
 
-### [Send a datagram](https://bun.com/docs/api/udp\#send-a-datagram)
+### [Send a datagram](https://bun.com/docs/api/udp#send-a-datagram)
 
 Specify the data to send, as well as the destination port and address.
 
@@ -85,7 +86,7 @@ socket.send("Hello, world!", 41234, "127.0.0.1");
 
 Note that the address must be a valid IP address - `send` does not performDNS resolution, as it is intended for low-latency operations.
 
-### [Receive datagrams](https://bun.com/docs/api/udp\#receive-datagrams)
+### [Receive datagrams](https://bun.com/docs/api/udp#receive-datagrams)
 
 When creating your socket, add a callback to specify what should be done when packets are received:
 
@@ -104,7 +105,7 @@ client.send("Hello!", server.port, "127.0.0.1");
 
 ```
 
-### [Connections](https://bun.com/docs/api/udp\#connections)
+### [Connections](https://bun.com/docs/api/udp#connections)
 
 While UDP does not have a concept of a connection, many UDP communications (especially as a client) involve only one peer.In such cases it can be beneficial to connect the socket to that peer, which specifies to which address all packets are sentand restricts incoming packets to that peer only.
 
@@ -130,7 +131,7 @@ client.send("Hello");
 
 Because connections are implemented on the operating system level, you can potentially observe performance benefits, too.
 
-### [Send many packets at once using `sendMany()`](https://bun.com/docs/api/udp\#send-many-packets-at-once-using-sendmany)
+### [Send many packets at once using `sendMany()`](https://bun.com/docs/api/udp#send-many-packets-at-once-using-sendmany)
 
 If you want to send a large volume of packets at once, it can make sense to batch them all together to avoid the overheadof making a system call for each. This is made possible by the `sendMany()` API:
 
@@ -158,7 +159,7 @@ socket.sendMany(["foo", "bar", "baz"]);
 
 `sendMany` returns the number of packets that were successfully sent. As with `send`, `sendMany` only takes valid IP addressesas destinations, as it does not perform DNS resolution.
 
-### [Handle backpressure](https://bun.com/docs/api/udp\#handle-backpressure)
+### [Handle backpressure](https://bun.com/docs/api/udp#handle-backpressure)
 
 It may happen that a packet that you're sending does not fit into the operating system's packet buffer. You can detect that thishas happened when:
 
@@ -182,7 +183,7 @@ TCP sockets](https://bun.com/docs/api/tcp) [Next\\
 \\
 Globals](https://bun.com/docs/api/globals)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/udp.md)
 
@@ -206,7 +207,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

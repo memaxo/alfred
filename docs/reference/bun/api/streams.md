@@ -1,9 +1,10 @@
 ---
 title: Streams – API | Bun Docs
-url: 
+url:
 description: Reading, writing, and manipulating streams of data in Bun.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -82,7 +83,7 @@ for await (const chunk of stream) {
 
 ```
 
-## [Direct `ReadableStream`](https://bun.com/docs/api/streams\#direct-readablestream)
+## [Direct `ReadableStream`](https://bun.com/docs/api/streams#direct-readablestream)
 
 Bun implements an optimized version of `ReadableStream` that avoid unnecessary data copying & queue management logic. With a traditional `ReadableStream`, chunks of data are _enqueued_. Each chunk is copied into a queue, where it sits until the stream is ready to send more data.
 
@@ -112,7 +113,7 @@ const stream = new ReadableStream({
 
 When using a direct `ReadableStream`, all chunk queueing is handled by the destination. The consumer of the stream receives exactly what is passed to `controller.write()`, without any encoding or modification.
 
-## [Async generator streams](https://bun.com/docs/api/streams\#async-generator-streams)
+## [Async generator streams](https://bun.com/docs/api/streams#async-generator-streams)
 
 Bun also supports async generator functions as a source for `Response` and `Request`. This is an easy way to create a `ReadableStream` that fetches data from an asynchronous source.
 
@@ -156,7 +157,7 @@ await response.text(); // "hello"
 
 ```
 
-## [`Bun.ArrayBufferSink`](https://bun.com/docs/api/streams\#bun-arraybuffersink)
+## [`Bun.ArrayBufferSink`](https://bun.com/docs/api/streams#bun-arraybuffersink)
 
 The `Bun.ArrayBufferSink` class is a fast incremental writer for constructing an `ArrayBuffer` of unknown size.
 
@@ -283,7 +284,7 @@ Binary data](https://bun.com/docs/api/binary-data) [Next\\
 \\
 SQL](https://bun.com/docs/api/sql)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/streams.md)
 
@@ -307,7 +308,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

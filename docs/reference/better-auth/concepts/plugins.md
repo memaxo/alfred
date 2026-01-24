@@ -1,9 +1,10 @@
 ---
 title: Plugins | Better Auth
-url: 
+url:
 description: Learn how to use plugins with Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,7 +31,7 @@ Plugins are a key part of Better Auth, they let you extend the base functionalit
 
 Better Auth comes with many built-in plugins ready to use. Check the plugins section for details. You can also create your own plugins.
 
-## [Using a Plugin](https://www.better-auth.com/docs/concepts/plugins\#using-a-plugin)
+## [Using a Plugin](https://www.better-auth.com/docs/concepts/plugins#using-a-plugin)
 
 Plugins can be a server-side plugin, a client-side plugin, or both.
 
@@ -71,14 +72,14 @@ server.ts
 
 auth-client.ts
 
-## [Creating a Plugin](https://www.better-auth.com/docs/concepts/plugins\#creating-a-plugin)
+## [Creating a Plugin](https://www.better-auth.com/docs/concepts/plugins#creating-a-plugin)
 
 To get started, you'll need a server plugin.
 Server plugins are the backbone of all plugins, and client plugins are there to provide an interface with frontend APIs to easily work with your server plugins.
 
 If your server plugins has endpoints that needs to be called from the client, you'll also need to create a client plugin.
 
-### [What can a plugin do?](https://www.better-auth.com/docs/concepts/plugins\#what-can-a-plugin-do)
+### [What can a plugin do?](https://www.better-auth.com/docs/concepts/plugins#what-can-a-plugin-do)
 
 - Create custom `endpoint` s to perform any action you want.
 - Extend database tables with custom `schemas`.
@@ -87,7 +88,7 @@ If your server plugins has endpoints that needs to be called from the client, yo
 - Use `onRequest` or `onResponse` if you want to do something that affects all requests or responses.
 - Create custom `rate-limit` rule.
 
-## [Create a Server plugin](https://www.better-auth.com/docs/concepts/plugins\#create-a-server-plugin)
+## [Create a Server plugin](https://www.better-auth.com/docs/concepts/plugins#create-a-server-plugin)
 
 To create a server plugin you need to pass an object that satisfies the `BetterAuthPlugin` interface.
 
@@ -108,7 +109,7 @@ export const myPlugin = ()=>{
 
 You don't have to make the plugin a function, but it's recommended to do so. This way you can pass options to the plugin and it's consistent with the built-in plugins.
 
-### [Endpoints](https://www.better-auth.com/docs/concepts/plugins\#endpoints)
+### [Endpoints](https://www.better-auth.com/docs/concepts/plugins#endpoints)
 
 To add endpoints to the server, you can pass `endpoints` which requires an object with the key being any `string` and the value being an `AuthEndpoint`.
 
@@ -165,7 +166,7 @@ For other properties, you can check the [Better Call](https://github.com/bekacru
 - Make sure to use the `createAuthEndpoint` function to create API endpoints.
 - Make sure your paths are unique to avoid conflicts with other plugins. If you're using a common path, add the plugin name as a prefix to the path. ( `/my-plugin/hello-world` instead of `/hello-world`.)
 
-### [Schema](https://www.better-auth.com/docs/concepts/plugins\#schema)
+### [Schema](https://www.better-auth.com/docs/concepts/plugins#schema)
 
 You can define a database schema for your plugin by passing a `schema` object. The schema object should have the table name as the key and the schema definition as the value.
 
@@ -259,7 +260,7 @@ This will add an `age` field to the `user` table and all `user` returning endpoi
 
 Don't store sensitive information in `user` or `session` table. Crate a new table if you need to store sensitive information.
 
-### [Hooks](https://www.better-auth.com/docs/concepts/plugins\#hooks)
+### [Hooks](https://www.better-auth.com/docs/concepts/plugins#hooks)
 
 Hooks are used to run code before or after an action is performed, either from a client or directly on the server. You can add hooks to the server by passing a `hooks` object, which should contain `before` and `after` properties.
 
@@ -298,7 +299,7 @@ const myPlugin = ()=>{
 }
 ```
 
-### [Middleware](https://www.better-auth.com/docs/concepts/plugins\#middleware)
+### [Middleware](https://www.better-auth.com/docs/concepts/plugins#middleware)
 
 You can add middleware to the server by passing a `middlewares` array. This array should contain middleware objects, each with a `path` and a `middleware` property. Unlike hooks, middleware only runs on `api` requests from a client. If the endpoint is invoked directly, the middleware will not run.
 
@@ -324,11 +325,11 @@ const myPlugin = ()=>{
 }
 ```
 
-### [On Request & On Response](https://www.better-auth.com/docs/concepts/plugins\#on-request--on-response)
+### [On Request & On Response](https://www.better-auth.com/docs/concepts/plugins#on-request--on-response)
 
 Additional to middlewares, you can also hook into right before a request is made and right after a response is returned. This is mostly useful if you want to do something that affects all requests or responses.
 
-#### [On Request](https://www.better-auth.com/docs/concepts/plugins\#on-request)
+#### [On Request](https://www.better-auth.com/docs/concepts/plugins#on-request)
 
 The `onRequest` function is called right before the request is made. It takes two parameters: the `request` and the `context` object.
 
@@ -351,7 +352,7 @@ const myPlugin = ()=> {
 }
 ```
 
-#### [On Response](https://www.better-auth.com/docs/concepts/plugins\#on-response)
+#### [On Response](https://www.better-auth.com/docs/concepts/plugins#on-response)
 
 The `onResponse` function is executed immediately after a response is returned. It takes two parameters: the `response` and the `context` object.
 
@@ -373,7 +374,7 @@ const myPlugin = ()=>{
 }
 ```
 
-### [Rate Limit](https://www.better-auth.com/docs/concepts/plugins\#rate-limit)
+### [Rate Limit](https://www.better-auth.com/docs/concepts/plugins#rate-limit)
 
 You can define custom rate limit rules for your plugin by passing a `rateLimit` array. The rate limit array should contain an array of rate limit objects.
 
@@ -396,11 +397,11 @@ const myPlugin = ()=>{
 }
 ```
 
-### [Server-plugin helper functions](https://www.better-auth.com/docs/concepts/plugins\#server-plugin-helper-functions)
+### [Server-plugin helper functions](https://www.better-auth.com/docs/concepts/plugins#server-plugin-helper-functions)
 
 Some additional helper functions for creating server plugins.
 
-#### [`getSessionFromCtx`](https://www.better-auth.com/docs/concepts/plugins\#getsessionfromctx)
+#### [`getSessionFromCtx`](https://www.better-auth.com/docs/concepts/plugins#getsessionfromctx)
 
 Allows you to get the client's session data by passing the auth middleware's `context`.
 
@@ -429,7 +430,7 @@ const myPlugin = {
 } satisfies BetterAuthPlugin
 ```
 
-#### [`sessionMiddleware`](https://www.better-auth.com/docs/concepts/plugins\#sessionmiddleware)
+#### [`sessionMiddleware`](https://www.better-auth.com/docs/concepts/plugins#sessionmiddleware)
 
 A middleware that checks if the client has a valid session. If the client has a valid session, it'll add the session data to the context object.
 
@@ -457,7 +458,7 @@ const myPlugin = ()=>{
 }
 ```
 
-## [Creating a client plugin](https://www.better-auth.com/docs/concepts/plugins\#creating-a-client-plugin)
+## [Creating a client plugin](https://www.better-auth.com/docs/concepts/plugins#creating-a-client-plugin)
 
 If your endpoints needs to be called from the client, you'll need to also create a client plugin. Better Auth clients can infer the endpoints from the server plugins. You can also add additional client side logic.
 
@@ -473,7 +474,7 @@ export const myPluginClient = ()=>{
 }
 ```
 
-### [Endpoint Interface](https://www.better-auth.com/docs/concepts/plugins\#endpoint-interface)
+### [Endpoint Interface](https://www.better-auth.com/docs/concepts/plugins#endpoint-interface)
 
 Endpoints are inferred from the server plugin by adding a `$InferServerPlugin` key to the client plugin.
 
@@ -493,7 +494,7 @@ const myPluginClient = ()=> {
 }
 ```
 
-### [Get actions](https://www.better-auth.com/docs/concepts/plugins\#get-actions)
+### [Get actions](https://www.better-auth.com/docs/concepts/plugins#get-actions)
 
 If you need to add additional methods or what not to the client you can use the `getActions` function. This function is called with the `fetch` function from the client.
 
@@ -532,7 +533,7 @@ As a general guideline, ensure that each function accepts only one argument, wit
 
 If your use case involves actions beyond API calls, feel free to deviate from this rule.
 
-### [Get Atoms](https://www.better-auth.com/docs/concepts/plugins\#get-atoms)
+### [Get Atoms](https://www.better-auth.com/docs/concepts/plugins#get-atoms)
 
 This is only useful if you want to provide `hooks` like `useSession`.
 
@@ -558,7 +559,7 @@ const myPluginClient = {
 
 See built-in plugins for examples of how to use atoms properly.
 
-### [Path methods](https://www.better-auth.com/docs/concepts/plugins\#path-methods)
+### [Path methods](https://www.better-auth.com/docs/concepts/plugins#path-methods)
 
 By default, inferred paths use `GET` method if they don't require a body and `POST` if they do. You can override this by passing a `pathMethods` object. The key should be the path and the value should be the method ("POST" \| "GET").
 
@@ -577,11 +578,11 @@ const myPluginClient = {
 } satisfies BetterAuthClientPlugin
 ```
 
-### [Fetch plugins](https://www.better-auth.com/docs/concepts/plugins\#fetch-plugins)
+### [Fetch plugins](https://www.better-auth.com/docs/concepts/plugins#fetch-plugins)
 
 If you need to use better fetch plugins you can pass them to the `fetchPlugins` array. You can read more about better fetch plugins in the [better fetch documentation](https://better-fetch.vercel.app/docs/plugins).
 
-### [Atom Listeners](https://www.better-auth.com/docs/concepts/plugins\#atom-listeners)
+### [Atom Listeners](https://www.better-auth.com/docs/concepts/plugins#atom-listeners)
 
 This is only useful if you want to provide `hooks` like `useSession` and you want to listen to atoms and re-evaluate them when they change.
 

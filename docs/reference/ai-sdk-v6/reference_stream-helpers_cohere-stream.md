@@ -13,8 +13,7 @@ The CohereStream function is a utility that transforms the output from Cohere's 
 ## Import
 
 ### React
-    
-    
+
     import { CohereStream } from "ai"
 
 ## API Signature

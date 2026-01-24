@@ -29,6 +29,7 @@ Finalize the user-facing application logic by replacing mock data with real back
 ## Context and Orientation
 
 Relevant files:
+
 - `apps/web/src/components/apps/settings/policy-section.tsx`: Policy management UI.
 - `apps/web/src/components/apps/metrics/dashboard-builder.tsx`: Metrics management.
 - `apps/web/src/components/onboarding/`: Onboarding step components.
@@ -37,17 +38,20 @@ Relevant files:
 ## Plan of Work
 
 ### Subtask 1: ALF-APP-01 - Real Policy Data
+
 1. Replace `mockPreferences` in `PolicySection` with `trpc.policy.list.useQuery`.
 2. Implement mutation for updating policy levels via `trpc.policy.update`.
 3. Add loading and error states to the policy list.
 
 ### Subtask 2: ALF-APP-02 - Metrics Pinning
+
 1. Add `pinnedWidgets` to `DesktopState` in `apps/web/src/store/desktop/types.new.ts`.
 2. Implement `pinWidget` and `unpinWidget` actions in desktop store.
 3. Update `DashboardBuilder` to provide a "Pin to Desktop" action for each chart.
 4. Create `WidgetLayer` in `apps/web/src/components/desktop/shell.tsx` to render pinned charts.
 
 ### Subtask 3: ALF-APP-03 - Onboarding Orchestration
+
 1. Implement `OnboardingOverlay` to guide the user through steps.
 2. Store onboarding completion status in `DesktopState`.
 3. Wire "Finish" buttons in onboarding steps to advance and eventually close the overlay.

@@ -1,9 +1,10 @@
 ---
 title: Nuxt Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Nuxt.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Before you start, make sure you have a Better Auth instance configured. If you haven't done that yet, check out the [installation](https://www.better-auth.com/docs/installation).
 
-### [Create API Route](https://www.better-auth.com/docs/integrations/nuxt\#create-api-route)
+### [Create API Route](https://www.better-auth.com/docs/integrations/nuxt#create-api-route)
 
 We need to mount the handler to an API route. Create a file inside `/server/api/auth` called `[...all].ts` and add the following code:
 
@@ -44,7 +45,7 @@ export default defineEventHandler((event) => {
 
 You can change the path on your better-auth configuration but it's recommended to keep it as `/api/auth/[...all]`
 
-### [Migrate the database](https://www.better-auth.com/docs/integrations/nuxt\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/integrations/nuxt#migrate-the-database)
 
 Run the following command to create the necessary tables in your database:
 
@@ -52,7 +53,7 @@ Run the following command to create the necessary tables in your database:
 npx @better-auth/cli migrate
 ```
 
-## [Create a client](https://www.better-auth.com/docs/integrations/nuxt\#create-a-client)
+## [Create a client](https://www.better-auth.com/docs/integrations/nuxt#create-a-client)
 
 Create a client instance. You can name the file anything you want. Here we are creating `client.ts` file inside the `lib/` directory.
 
@@ -69,7 +70,7 @@ export const authClient = createAuthClient({
 Once you have created the client, you can use it to sign up, sign in, and perform other actions.
 Some of the actions are reactive.
 
-### [Example usage](https://www.better-auth.com/docs/integrations/nuxt\#example-usage)
+### [Example usage](https://www.better-auth.com/docs/integrations/nuxt#example-usage)
 
 index.vue
 
@@ -96,7 +97,7 @@ const session = authClient.useSession()
 </template>
 ```
 
-### [Server Usage](https://www.better-auth.com/docs/integrations/nuxt\#server-usage)
+### [Server Usage](https://www.better-auth.com/docs/integrations/nuxt#server-usage)
 
 The `api` object exported from the auth instance contains all the actions that you can perform on the server. Every endpoint made inside Better Auth is a invocable as a function. Including plugins endpoints.
 
@@ -118,7 +119,7 @@ export default defineEventHandler((event) => {
 });
 ```
 
-### [SSR Usage](https://www.better-auth.com/docs/integrations/nuxt\#ssr-usage)
+### [SSR Usage](https://www.better-auth.com/docs/integrations/nuxt#ssr-usage)
 
 If you are using Nuxt with SSR, you can use the `useSession` function in the `setup` function of your page component and pass `useFetch` to make it work with SSR.
 
@@ -138,7 +139,7 @@ const { data: session } = await authClient.useSession(useFetch);
 </template>
 ```
 
-### [Middleware](https://www.better-auth.com/docs/integrations/nuxt\#middleware)
+### [Middleware](https://www.better-auth.com/docs/integrations/nuxt#middleware)
 
 To add middleware to your Nuxt project, you can use the `useSession` method from the client.
 
@@ -156,7 +157,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 });
 ```
 
-### [Resources & Examples](https://www.better-auth.com/docs/integrations/nuxt\#resources--examples)
+### [Resources & Examples](https://www.better-auth.com/docs/integrations/nuxt#resources--examples)
 
 - [Nuxt and Nuxt Hub example](https://github.com/atinux/nuxthub-better-auth) on GitHub.
 - [NuxtZzle is Nuxt,Drizzle ORM example](https://github.com/leamsigc/nuxt-better-auth-drizzle) on GitHub [preview](https://nuxt-better-auth.giessen.dev/)

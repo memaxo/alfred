@@ -1,9 +1,10 @@
 ---
 title: Notion | Better Auth
-url: 
+url:
 description: Notion provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Notion credentials](https://www.better-auth.com/docs/authentication/notion\#get-your-notion-credentials)
+### [Get your Notion credentials](https://www.better-auth.com/docs/authentication/notion#get-your-notion-credentials)
 
 To use Notion as a social provider, you need to get your Notion OAuth credentials. You can get them by creating a new integration in the [Notion Developers Portal](https://www.notion.so/my-integrations).
 
@@ -34,7 +35,7 @@ In the Notion integration settings > OAuth Domain & URIs, make sure to set the r
 
 Make sure your Notion integration has the appropriate capabilities enabled. For user authentication, you'll need the "Read user information including email addresses" capability.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/notion\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/notion#configure-the-provider)
 
 To configure the provider, you need to pass the `clientId` and `clientSecret` to `socialProviders.notion` in your auth configuration.
 
@@ -53,9 +54,9 @@ export const auth = betterAuth({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/authentication/notion\#usage)
+## [Usage](https://www.better-auth.com/docs/authentication/notion#usage)
 
-### [Sign In with Notion](https://www.better-auth.com/docs/authentication/notion\#sign-in-with-notion)
+### [Sign In with Notion](https://www.better-auth.com/docs/authentication/notion#sign-in-with-notion)
 
 To sign in with Notion, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 
@@ -74,7 +75,7 @@ const signIn = async () => {
 }
 ```
 
-### [Notion Integration Types](https://www.better-auth.com/docs/authentication/notion\#notion-integration-types)
+### [Notion Integration Types](https://www.better-auth.com/docs/authentication/notion#notion-integration-types)
 
 Notion supports different integration types. When creating your integration, you can choose between:
 
@@ -83,7 +84,7 @@ Notion supports different integration types. When creating your integration, you
 
 For most authentication use cases, you'll want to create a public integration to allow users from different workspaces to sign in.
 
-### [Requesting Additional Notion Scopes](https://www.better-auth.com/docs/authentication/notion\#requesting-additional-notion-scopes)
+### [Requesting Additional Notion Scopes](https://www.better-auth.com/docs/authentication/notion#requesting-additional-notion-scopes)
 
 If your application needs additional Notion capabilities after the user has already signed up, you can request them using the `linkSocial` method with the same Notion provider and additional scopes.
 

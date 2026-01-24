@@ -1,9 +1,10 @@
 ---
 title: Overrides and resolutions – Package manager | Bun Docs
-url: 
+url:
 description: Specify version ranges for nested dependencies
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -94,7 +95,7 @@ node_modules
 
 But what if a security vulnerability was introduced in `bar@4.5.6`? We may want a way to pin `bar` to an older version that doesn't have the vulnerability. This is where `"overrides"`/ `"resolutions"` come in.
 
-## [`"overrides"`](https://bun.com/docs/install/overrides\#overrides)
+## [`"overrides"`](https://bun.com/docs/install/overrides#overrides)
 
 Add `bar` to the `"overrides"` field in `package.json`. Bun will defer to the specified version range when determining which version of `bar` to install, whether it's a dependency or a metadependency.
 
@@ -114,7 +115,7 @@ package.json
 }
 ```
 
-## [`"resolutions"`](https://bun.com/docs/install/overrides\#resolutions)
+## [`"resolutions"`](https://bun.com/docs/install/overrides#resolutions)
 
 The syntax is similar for `"resolutions"`, which is Yarn's alternative to `"overrides"`. Bun supports this feature to make migration from Yarn easier.
 
@@ -140,7 +141,7 @@ Scopes and registries](https://bun.com/docs/install/registries) [Next\\
 \\
 Patch dependencies](https://bun.com/docs/install/patch)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/overrides.md)
 
@@ -164,7 +165,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

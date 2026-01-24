@@ -185,13 +185,13 @@ Implementation shape (prescriptive):
 
 In `packages/mcp/src/server.ts`, define:
 
-  - `export type RuntimeMcpServerOptions = { bindHost: string; port: number; }`
-  - `export type RuntimeMcpSession = { runId: string; agentId: string; abort: (reason: string) => void; }`
-  - `export class RuntimeMcpServer {`
-      - `start(): Promise<{ url: string }>`
-      - `stop(): Promise<void>`
-      - `registerSession(session: RuntimeMcpSession): { token: string }`
-      - `unregisterToken(token: string): void`
+- `export type RuntimeMcpServerOptions = { bindHost: string; port: number; }`
+- `export type RuntimeMcpSession = { runId: string; agentId: string; abort: (reason: string) => void; }`
+- `export class RuntimeMcpServer {`
+  - `start(): Promise<{ url: string }>`
+  - `stop(): Promise<void>`
+  - `registerSession(session: RuntimeMcpSession): { token: string }`
+  - `unregisterToken(token: string): void`
     `}`
 
 The server must store `token -> session` in memory and reject unknown tokens.
@@ -244,7 +244,6 @@ Implementation:
   - Host path: `<repo>/.agentfs/<runId>/codex-home/<agentId>/`
   - Container path: `/agentfs/codex-home/<agentId>/`
 - Write `config.toml` into that directory with only one MCP server:
-
   - `[mcp_servers.alfred_runtime]`
     - `url = "<containerUrl>/mcp"`
     - `bearer_token_env_var = "MCP_AUTH_TOKEN"`
@@ -294,17 +293,17 @@ Use these commands while implementing. Update this section with short transcript
 
 From repo root:
 
-  - Create package scaffold:
-      bun --version
-      mkdir -p packages/mcp/src
-      (create package.json/tsconfig.json/README.md/src files following existing packages)
+- Create package scaffold:
+  bun --version
+  mkdir -p packages/mcp/src
+  (create package.json/tsconfig.json/README.md/src files following existing packages)
 
-  - Run typecheck and tests:
-      bun test packages/mcp
-      bun test packages/runtime
+- Run typecheck and tests:
+  bun test packages/mcp
+  bun test packages/runtime
 
-  - Run a focused test:
-      bun test packages/mcp/test/runtime.escalate.test.ts
+- Run a focused test:
+  bun test packages/mcp/test/runtime.escalate.test.ts
 
 ## Validation and Acceptance
 
@@ -329,9 +328,9 @@ If MCP connectivity fails (e.g. container cannot reach the host MCP URL), the to
 
 During implementation, paste short, indented evidence snippets here (no nested code fences), such as:
 
-  - A `curl` transcript of `tools/list` and `tools/call`.
-  - A log line showing the agent was aborted due to escalation.
-  - The test output summary for the new tests.
+- A `curl` transcript of `tools/list` and `tools/call`.
+- A log line showing the agent was aborted due to escalation.
+- The test output summary for the new tests.
 
 - (2026-01-19) `bun test packages/mcp/test/escalate.test.ts` (pass)
 
@@ -352,4 +351,3 @@ Do not depend on `apps/*`. Avoid importing `@alfred/api` to prevent dependency c
 - `@alfred/runtime`: owns orchestrator lifecycle; starts/stops the MCP server and registers per-agent sessions.
 - `@alfred/agent`: owns executor tool wrappers (OpenCode/Codex/Droid); must plumb `mcpServers` and env vars without expanding prompts.
 - `@alfred/pipeline`: consumes emitted events; must remain thin. Do not move MCP server logic into pipeline.
-

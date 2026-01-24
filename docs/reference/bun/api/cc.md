@@ -1,9 +1,10 @@
 ---
 title: C Compiler – API | Bun Docs
-url: 
+url:
 description: Build & run native C from JavaScript with Bun's native C compiler API
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 `bun:ffi` has experimental support for compiling and running C from JavaScript with low overhead.
 
-## [Usage (cc in `bun:ffi`)](https://bun.com/docs/api/cc\#usage-cc-in-bun-ffi)
+## [Usage (cc in `bun:ffi`)](https://bun.com/docs/api/cc#usage-cc-in-bun-ffi)
 
 See the [introduction blog post](https://bun.com/blog/compile-and-run-c-in-js) for more information.
 
@@ -105,33 +106,33 @@ What is the answer to the universe? 42
 
 Under the hood, `cc` uses [TinyCC](https://bellard.org/tcc/) to compile the C code and then link it with the JavaScript runtime, efficiently converting types in-place.
 
-### [Primitive types](https://bun.com/docs/api/cc\#primitive-types)
+### [Primitive types](https://bun.com/docs/api/cc#primitive-types)
 
 The same `FFIType` values in [`dlopen`](https://bun.com/docs/api/ffi) are supported in `cc`.
 
-| `FFIType` | C Type | Aliases |
-| --- | --- | --- |
-| cstring | `char*` |  |
-| function | `(void*)(*)()` | `fn`, `callback` |
-| ptr | `void*` | `pointer`, `void*`, `char*` |
-| i8 | `int8_t` | `int8_t` |
-| i16 | `int16_t` | `int16_t` |
-| i32 | `int32_t` | `int32_t`, `int` |
-| i64 | `int64_t` | `int64_t` |
-| i64\_fast | `int64_t` |  |
-| u8 | `uint8_t` | `uint8_t` |
-| u16 | `uint16_t` | `uint16_t` |
-| u32 | `uint32_t` | `uint32_t` |
-| u64 | `uint64_t` | `uint64_t` |
-| u64\_fast | `uint64_t` |  |
-| f32 | `float` | `float` |
-| f64 | `double` | `double` |
-| bool | `bool` |  |
-| char | `char` |  |
-| napi\_env | `napi_env` |  |
-| napi\_value | `napi_value` |  |
+| `FFIType`  | C Type         | Aliases                     |
+| ---------- | -------------- | --------------------------- |
+| cstring    | `char*`        |                             |
+| function   | `(void*)(*)()` | `fn`, `callback`            |
+| ptr        | `void*`        | `pointer`, `void*`, `char*` |
+| i8         | `int8_t`       | `int8_t`                    |
+| i16        | `int16_t`      | `int16_t`                   |
+| i32        | `int32_t`      | `int32_t`, `int`            |
+| i64        | `int64_t`      | `int64_t`                   |
+| i64_fast   | `int64_t`      |                             |
+| u8         | `uint8_t`      | `uint8_t`                   |
+| u16        | `uint16_t`     | `uint16_t`                  |
+| u32        | `uint32_t`     | `uint32_t`                  |
+| u64        | `uint64_t`     | `uint64_t`                  |
+| u64_fast   | `uint64_t`     |                             |
+| f32        | `float`        | `float`                     |
+| f64        | `double`       | `double`                    |
+| bool       | `bool`         |                             |
+| char       | `char`         |                             |
+| napi_env   | `napi_env`     |                             |
+| napi_value | `napi_value`   |                             |
 
-### [Strings, objects, and non-primitive types](https://bun.com/docs/api/cc\#strings-objects-and-non-primitive-types)
+### [Strings, objects, and non-primitive types](https://bun.com/docs/api/cc#strings-objects-and-non-primitive-types)
 
 To make it easier to work with strings, objects, and other non-primitive types that don't map 1:1 to C types, `cc` supports N-API.
 
@@ -195,7 +196,7 @@ napi_value hello(napi_env env) {
 
 ```
 
-### [`cc` Reference](https://bun.com/docs/api/cc\#cc-reference)
+### [`cc` Reference](https://bun.com/docs/api/cc#cc-reference)
 
 #### `library: string[]`
 
@@ -279,7 +280,7 @@ FFI](https://bun.com/docs/api/ffi) [Next\\
 \\
 Secrets](https://bun.com/docs/api/secrets)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/cc.md)
 
@@ -303,7 +304,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -14,9 +14,9 @@ Vercel allows for automatic deployments on every branch push and merges onto the
 
 To follow along with this guide, you will need:
 
-  * a Vercel account
-  * an account with a Git provider (this tutorial will use Github)
-  * an OpenAI API key
+- a Vercel account
+- an account with a Git provider (this tutorial will use Github)
+- an OpenAI API key
 
 This guide will teach you how to deploy the application you built in the Next.js (App Router) quickstart tutorial to Vercel. If you haven’t completed the quickstart guide, you can start with this repo.
 
@@ -27,10 +27,9 @@ Vercel offers a powerful git-centered workflow that automatically deploys your a
 Before committing your local changes, make sure that you have a `.gitignore`. Within your `.gitignore`, ensure that you are excluding your environment variables (`.env`) and your node modules (`node_modules`).
 
 If you have any local changes, you can commit them by running the following commands:
-    
-    
+
     git add .
-    
+
     git commit -m "init"
 
 ## Create Git Repo
@@ -39,25 +38,24 @@ You can create a GitHub repository from within your terminal, or on github.com. 
 
 To create your GitHub repository:
 
-  1. Navigate to github.com
-  2. In the top right corner, click the "plus" icon and select "New repository"
-  3. Pick a name for your repository (this can be anything)
-  4. Click "Create repository"
+1. Navigate to github.com
+2. In the top right corner, click the "plus" icon and select "New repository"
+3. Pick a name for your repository (this can be anything)
+4. Click "Create repository"
 
 Once you have created your repository, GitHub will redirect you to your new repository.
 
-  1. Scroll down the page and copy the commands under the title "...or push an existing repository from the command line"
-  2. Go back to the terminal, paste and then run the commands
+1. Scroll down the page and copy the commands under the title "...or push an existing repository from the command line"
+2. Go back to the terminal, paste and then run the commands
 
 Note: if you run into the error "error: remote origin already exists.", this is because your local repository is still linked to the repository you cloned. To "unlink", you can run the following command:
-    
-    
+
     rm -rf .git
-    
+
     git init
-    
+
     git add .
-    
+
     git commit -m "init"
 
 Rerun the code snippet from the previous step.
@@ -89,8 +87,7 @@ When deploying an AI application, there are infrastructure-related consideration
 In most cases, you will call the large language model (LLM) on the server. By default, Vercel serverless functions have a maximum duration of 10 seconds on the Hobby Tier. Depending on your prompt, it can take an LLM more than this limit to complete a response. If the response is not resolved within this limit, the server will throw an error.
 
 You can specify the maximum duration of your Vercel function using route segment config. To update your maximum duration, add the following route segment config to the top of your route handler or the page which is calling your server action.
-    
-    
+
     export const maxDuration = 30;
 
 You can increase the max duration to 60 seconds on the Hobby Tier. For other tiers, see the documentation for limits.
@@ -113,8 +110,8 @@ Vercel Firewall is a set of tools and infrastructure, created specifically with 
 
 ## Troubleshooting
 
-  * Streaming not working when proxied
-  * Experiencing Timeouts
+- Streaming not working when proxied
+- Experiencing Timeouts
 
 Previous
 

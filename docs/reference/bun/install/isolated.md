@@ -1,9 +1,10 @@
 ---
 title: Isolated installs – Package manager | Bun Docs
-url: 
+url:
 description: Create strict dependency isolation, preventing phantom dependencies.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,20 +55,20 @@ Project
 
 Bun provides an alternative package installation strategy called **isolated installs** that creates strict dependency isolation similar to pnpm's approach. This mode prevents phantom dependencies and ensures reproducible, deterministic builds.
 
-## [What are isolated installs?](https://bun.com/docs/install/isolated\#what-are-isolated-installs)
+## [What are isolated installs?](https://bun.com/docs/install/isolated#what-are-isolated-installs)
 
 Isolated installs create a non-hoisted dependency structure where packages can only access their explicitly declared dependencies. This differs from the traditional "hoisted" installation strategy used by npm and Yarn, where dependencies are flattened into a shared `node_modules` directory.
 
-### [Key benefits](https://bun.com/docs/install/isolated\#key-benefits)
+### [Key benefits](https://bun.com/docs/install/isolated#key-benefits)
 
 - **Prevents phantom dependencies** — Packages cannot accidentally import dependencies they haven't declared
 - **Deterministic resolution** — Same dependency tree regardless of what else is installed
 - **Better for monorepos** — Workspace isolation prevents cross-contamination between packages
 - **Reproducible builds** — More predictable resolution behavior across environments
 
-## [Using isolated installs](https://bun.com/docs/install/isolated\#using-isolated-installs)
+## [Using isolated installs](https://bun.com/docs/install/isolated#using-isolated-installs)
 
-### [Command line](https://bun.com/docs/install/isolated\#command-line)
+### [Command line](https://bun.com/docs/install/isolated#command-line)
 
 Use the `--linker` flag to specify the installation strategy:
 
@@ -88,7 +89,7 @@ bun install --linker isolated
 bun install --linker hoisted
 ```
 
-### [Configuration file](https://bun.com/docs/install/isolated\#configuration-file)
+### [Configuration file](https://bun.com/docs/install/isolated#configuration-file)
 
 Set the default linker strategy in your `bunfig.toml`:
 
@@ -98,13 +99,13 @@ linker = "isolated"
 
 ```
 
-### [Default behavior](https://bun.com/docs/install/isolated\#default-behavior)
+### [Default behavior](https://bun.com/docs/install/isolated#default-behavior)
 
 By default, Bun uses the **hoisted** installation strategy for all projects. To use isolated installs, you must explicitly specify the `--linker isolated` flag or set it in your configuration file.
 
-## [How isolated installs work](https://bun.com/docs/install/isolated\#how-isolated-installs-work)
+## [How isolated installs work](https://bun.com/docs/install/isolated#how-isolated-installs-work)
 
-### [Directory structure](https://bun.com/docs/install/isolated\#directory-structure)
+### [Directory structure](https://bun.com/docs/install/isolated#directory-structure)
 
 Instead of hoisting dependencies, isolated installs create a two-tier structure:
 
@@ -123,14 +124,14 @@ node_modules/
 
 ```
 
-### [Resolution algorithm](https://bun.com/docs/install/isolated\#resolution-algorithm)
+### [Resolution algorithm](https://bun.com/docs/install/isolated#resolution-algorithm)
 
 1. **Central store** — All packages are installed in `node_modules/.bun/package@version/` directories
 2. **Symlinks** — Top-level `node_modules` contains symlinks pointing to the central store
 3. **Peer resolution** — Complex peer dependencies create specialized directory names
 4. **Deduplication** — Packages with identical package IDs and peer dependency sets are shared
 
-### [Workspace handling](https://bun.com/docs/install/isolated\#workspace-handling)
+### [Workspace handling](https://bun.com/docs/install/isolated#workspace-handling)
 
 In monorepos, workspace dependencies are handled specially:
 
@@ -138,20 +139,20 @@ In monorepos, workspace dependencies are handled specially:
 - **Workspace dependencies** — Can access other workspace packages in the monorepo
 - **External dependencies** — Installed in the isolated store with proper isolation
 
-## [Comparison with hoisted installs](https://bun.com/docs/install/isolated\#comparison-with-hoisted-installs)
+## [Comparison with hoisted installs](https://bun.com/docs/install/isolated#comparison-with-hoisted-installs)
 
-| Aspect | Hoisted (npm/Yarn) | Isolated (pnpm-like) |
-| --- | --- | --- |
-| **Dependency access** | Packages can access any hoisted dependency | Packages only see declared dependencies |
-| **Phantom dependencies** | ❌ Possible | ✅ Prevented |
-| **Disk usage** | ✅ Lower (shared installs) | ✅ Similar (uses symlinks) |
-| **Determinism** | ❌ Less deterministic | ✅ More deterministic |
-| **Node.js compatibility** | ✅ Standard behavior | ✅ Compatible via symlinks |
-| **Best for** | Single projects, legacy code | Monorepos, strict dependency management |
+| Aspect                    | Hoisted (npm/Yarn)                         | Isolated (pnpm-like)                    |
+| ------------------------- | ------------------------------------------ | --------------------------------------- |
+| **Dependency access**     | Packages can access any hoisted dependency | Packages only see declared dependencies |
+| **Phantom dependencies**  | ❌ Possible                                | ✅ Prevented                            |
+| **Disk usage**            | ✅ Lower (shared installs)                 | ✅ Similar (uses symlinks)              |
+| **Determinism**           | ❌ Less deterministic                      | ✅ More deterministic                   |
+| **Node.js compatibility** | ✅ Standard behavior                       | ✅ Compatible via symlinks              |
+| **Best for**              | Single projects, legacy code               | Monorepos, strict dependency management |
 
-## [Advanced features](https://bun.com/docs/install/isolated\#advanced-features)
+## [Advanced features](https://bun.com/docs/install/isolated#advanced-features)
 
-### [Peer dependency handling](https://bun.com/docs/install/isolated\#peer-dependency-handling)
+### [Peer dependency handling](https://bun.com/docs/install/isolated#peer-dependency-handling)
 
 Isolated installs handle peer dependencies through sophisticated resolution:
 
@@ -163,7 +164,7 @@ node_modules/.bun/package@1.0.0_react@18.2.0/
 
 The directory name encodes both the package version and its peer dependency versions, ensuring each unique combination gets its own installation.
 
-### [Backend strategies](https://bun.com/docs/install/isolated\#backend-strategies)
+### [Backend strategies](https://bun.com/docs/install/isolated#backend-strategies)
 
 Bun uses different file operation strategies for performance:
 
@@ -171,7 +172,7 @@ Bun uses different file operation strategies for performance:
 - **Hardlink** (Linux/Windows) — Hardlinks to save disk space
 - **Copyfile** (fallback) — Full file copies when other methods aren't available
 
-### [Debugging isolated installs](https://bun.com/docs/install/isolated\#debugging-isolated-installs)
+### [Debugging isolated installs](https://bun.com/docs/install/isolated#debugging-isolated-installs)
 
 Enable verbose logging to understand the installation process:
 
@@ -186,9 +187,9 @@ This shows:
 - Peer dependency resolution
 - Deduplication decisions
 
-## [Troubleshooting](https://bun.com/docs/install/isolated\#troubleshooting)
+## [Troubleshooting](https://bun.com/docs/install/isolated#troubleshooting)
 
-### [Compatibility issues](https://bun.com/docs/install/isolated\#compatibility-issues)
+### [Compatibility issues](https://bun.com/docs/install/isolated#compatibility-issues)
 
 Some packages may not work correctly with isolated installs due to:
 
@@ -200,28 +201,21 @@ If you encounter issues, you can:
 
 1. **Switch to hoisted mode** for specific projects:
 
-
-
-
-
-
-
 ```
 bun install --linker hoisted
 ```
 
 2. **Report compatibility issues** to help improve isolated install support
 
-
-### [Performance considerations](https://bun.com/docs/install/isolated\#performance-considerations)
+### [Performance considerations](https://bun.com/docs/install/isolated#performance-considerations)
 
 - **Install time** — May be slightly slower due to symlink operations
 - **Disk usage** — Similar to hoisted (uses symlinks, not file copies)
 - **Memory usage** — Higher during install due to complex peer resolution
 
-## [Migration guide](https://bun.com/docs/install/isolated\#migration-guide)
+## [Migration guide](https://bun.com/docs/install/isolated#migration-guide)
 
-### [From npm/Yarn](https://bun.com/docs/install/isolated\#from-npm-yarn)
+### [From npm/Yarn](https://bun.com/docs/install/isolated#from-npm-yarn)
 
 ```
 # Remove existing node_modules and lockfiles
@@ -240,7 +234,7 @@ rm -rf node_modules package-lock.json yarn.lock
 bun install --linker isolated
 ```
 
-### [From pnpm](https://bun.com/docs/install/isolated\#from-pnpm)
+### [From pnpm](https://bun.com/docs/install/isolated#from-pnpm)
 
 Isolated installs are conceptually similar to pnpm, so migration should be straightforward:
 
@@ -263,7 +257,7 @@ bun install --linker isolated
 
 The main difference is that Bun uses symlinks in `node_modules` while pnpm uses a global store with symlinks.
 
-## [When to use isolated installs](https://bun.com/docs/install/isolated\#when-to-use-isolated-installs)
+## [When to use isolated installs](https://bun.com/docs/install/isolated#when-to-use-isolated-installs)
 
 **Use isolated installs when:**
 
@@ -279,7 +273,7 @@ The main difference is that Bun uses symlinks in `node_modules` while pnpm uses 
 - Working in environments where symlinks aren't well supported
 - You prefer the simpler traditional npm behavior
 
-## [Related documentation](https://bun.com/docs/install/isolated\#related-documentation)
+## [Related documentation](https://bun.com/docs/install/isolated#related-documentation)
 
 - [Package manager > Workspaces](https://bun.com/docs/install/workspaces) — Monorepo workspace management
 - [Package manager > Lockfile](https://bun.com/docs/install/lockfile) — Understanding Bun's lockfile format
@@ -291,7 +285,7 @@ Global cache](https://bun.com/docs/install/cache) [Next\\
 \\
 Workspaces](https://bun.com/docs/install/workspaces)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/isolated.md)
 
@@ -315,7 +309,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

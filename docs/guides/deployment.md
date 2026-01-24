@@ -54,17 +54,20 @@ See: `docs/architecture/deployment-proxmox.md` and `docs/architecture/production
 ### Required Variables
 
 **Database:**
+
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/alfred
 ```
 
 **Authentication:**
+
 ```bash
 BETTER_AUTH_SECRET=your-secret-key-min-32-chars
 BETTER_AUTH_URL=https://your-domain.com
 ```
 
 **Application:**
+
 ```bash
 PUBLIC_URL=https://your-domain.com
 NODE_ENV=production
@@ -73,12 +76,14 @@ NODE_ENV=production
 ### Optional Variables
 
 **Redis (for multi-instance deployments):**
+
 ```bash
 REDIS_URL=redis://host:6379
 RUN_REGISTRY_BACKEND=redis
 ```
 
 **Linear Integration:**
+
 ```bash
 LINEAR_CLIENT_ID=your-client-id
 LINEAR_CLIENT_SECRET=your-client-secret
@@ -87,6 +92,7 @@ LINEAR_REDIRECT_URI=https://your-domain.com/api/auth/callback/linear
 ```
 
 **Voice System:**
+
 ```bash
 VOICE_PROVIDER=maya1
 VOICE_STT_POOL_SIZE=2
@@ -96,6 +102,7 @@ PIPER_MODEL_PATH=model-path
 ```
 
 **Memory System:**
+
 ```bash
 MEMORY_DECAY_ENABLED=true
 MEMORY_DECAY_INTERVAL_MS=3600000
@@ -106,6 +113,7 @@ MEMORY_CLEANUP_AGE_MS=2592000000
 ```
 
 **Workflow Schedulers (gate with env flags):**
+
 ```bash
 SCHED_REMIND=1
 SCHED_MEMORY_MAINTENANCE=1
@@ -130,17 +138,20 @@ SCHED_MEMORY_MAINTENANCE=1
 ### Build and Deploy
 
 1. **Build application:**
+
    ```bash
    bun install --frozen-lockfile
    bun run build
    ```
 
 2. **Verify build:**
+
    ```bash
    bun run verify-build
    ```
 
 3. **Run migrations:**
+
    ```bash
    bun run db:migrate
    ```
@@ -166,11 +177,13 @@ SCHED_MEMORY_MAINTENANCE=1
 ### Applying Migrations
 
 **Production:**
+
 ```bash
 bun run db:migrate
 ```
 
 **With plan (dry-run):**
+
 ```bash
 bun run db:migrate --plan
 ```
@@ -188,11 +201,13 @@ bun run db:migrate --plan
 ### Migration Troubleshooting
 
 **"Relation already exists" errors:**
+
 - Check if migration partially applied
 - Manually verify database state
 - Use `IF NOT EXISTS` in migration
 
 **"Column already exists" errors:**
+
 - Check migration status in `_migrations` table
 - Verify column exists before adding
 
@@ -203,6 +218,7 @@ bun run db:migrate --plan
 Metrics exposed on `/api/metrics`:
 
 **Key Metrics to Monitor:**
+
 - `trpc_requests_total` - Request counts
 - `trpc_request_duration_seconds` - Request latency
 - `workflow_stream_events_total` - Workflow activity
@@ -213,28 +229,32 @@ Metrics exposed on `/api/metrics`:
 - `policy_decisions_total` - Security events
 
 **Scrape Configuration:**
+
 ```yaml
 scrape_configs:
-  - job_name: 'alfred'
+  - job_name: "alfred"
     scrape_interval: 15s
-    metrics_path: '/api/metrics'
+    metrics_path: "/api/metrics"
     static_configs:
-      - targets: ['your-domain.com:3000']
+      - targets: ["your-domain.com:3000"]
 ```
 
 ### Health Checks
 
 **Basic Health:**
+
 ```bash
 curl https://your-domain.com/healthz
 ```
 
 **Dependency Health:**
+
 ```bash
 curl https://your-domain.com/healthz/deps
 ```
 
 **Expected Response:**
+
 ```json
 {
   "status": "ok",
@@ -248,12 +268,14 @@ curl https://your-domain.com/healthz/deps
 ### Logging
 
 **Structured Logs:**
+
 - JSON format for machine parsing
 - Context included (runId, userId, etc.)
 - Error logs include stack traces
 - Security events logged separately
 
 **Log Levels:**
+
 - `error` - Errors requiring investigation
 - `warn` - Warnings (budget violations, retries)
 - `info` - Important events (workflow start/complete)
@@ -264,11 +286,13 @@ curl https://your-domain.com/healthz/deps
 ### Database Backups
 
 **PostgreSQL Backup:**
+
 ```bash
 pg_dump -h host -U user -d alfred > backup-$(date +%Y%m%d).sql
 ```
 
 **Automated Backups:**
+
 - Schedule daily backups
 - Retain 7 days of daily backups
 - Retain 4 weeks of weekly backups
@@ -277,11 +301,13 @@ pg_dump -h host -U user -d alfred > backup-$(date +%Y%m%d).sql
 ### Recovery Procedures
 
 **Restore Database:**
+
 ```bash
 psql -h host -U user -d alfred < backup-YYYYMMDD.sql
 ```
 
 **After Restore:**
+
 1. Verify data integrity
 2. Re-run migrations if needed
 3. Restart application
@@ -293,6 +319,7 @@ psql -h host -U user -d alfred < backup-YYYYMMDD.sql
 **RPO (Recovery Point Objective):** < 24 hours
 
 **Recovery Steps:**
+
 1. Restore database from latest backup
 2. Restore Redis (if used)
 3. Restart application
@@ -304,12 +331,14 @@ psql -h host -U user -d alfred < backup-YYYYMMDD.sql
 ### Horizontal Scaling
 
 **Multi-Instance Deployment:**
+
 - Use Redis for run registry (`RUN_REGISTRY_BACKEND=redis`)
 - Use sticky sessions or Redis for state
 - Ensure consistent routing for suspended workflows
 - Gate schedulers behind env flags (`SCHED_REMIND=1`)
 
 **Load Balancing:**
+
 - Use health checks for routing
 - Sticky sessions for WebSocket connections
 - Distribute HTTP requests evenly
@@ -317,6 +346,7 @@ psql -h host -U user -d alfred < backup-YYYYMMDD.sql
 ### Vertical Scaling
 
 **Resource Requirements:**
+
 - **CPU**: 2+ cores recommended
 - **Memory**: 4GB+ recommended (8GB+ for voice models)
 - **Disk**: 20GB+ for models and data
@@ -325,11 +355,13 @@ psql -h host -U user -d alfred < backup-YYYYMMDD.sql
 ### Performance Optimization
 
 **Database:**
+
 - Connection pooling (default: 10 connections)
 - Index optimization
 - Query performance monitoring
 
 **Application:**
+
 - Enable production optimizations
 - Monitor hot path performance
 - Optimize slow queries
@@ -362,18 +394,21 @@ psql -h host -U user -d alfred < backup-YYYYMMDD.sql
 ### Common Issues
 
 **Database Connection Errors:**
+
 - Verify `DATABASE_URL` format
 - Check firewall rules
 - Verify PostgreSQL is running
 - Check connection pool limits
 
 **Migration Failures:**
+
 - Check migration status
 - Verify database permissions
 - Review migration logs
 - Test migrations on staging first
 
 **Performance Issues:**
+
 - Check Prometheus metrics
 - Review slow query logs
 - Monitor resource usage

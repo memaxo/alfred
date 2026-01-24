@@ -4,11 +4,11 @@ Environment functions are utilities designed to define and control function exec
 
 Start provides three core environment functions:
 
- * createIsomorphicFn: Compose a single function that adapts to both client and server environments.
- * createServerOnlyFn: Create a function that can only run on the server.
- * createClientOnlyFn: Create a function that can only run on the client.
+- createIsomorphicFn: Compose a single function that adapts to both client and server environments.
+- createServerOnlyFn: Create a function that can only run on the server.
+- createClientOnlyFn: Create a function that can only run on the client.
 
-* * *
+---
 
 Isomorphic Functions
 
@@ -16,115 +16,95 @@ Use createIsomorphicFn() to define functions that behave differently depending o
 
 Complete Implementation
 
+import { createIsomorphicFn } from '@tanstack/react-start'
 
- import { createIsomorphicFn } from '@tanstack/react-start'
+const getEnv = createIsomorphicFn()
+.server(() => 'server')
+.client(() => 'client')
 
- const getEnv = createIsomorphicFn()
- .server(() => 'server')
- .client(() => 'client')
+const env = getEnv()
+// ℹ️ On the **server**, it returns `'server'`.
+// ℹ️ On the **client**, it returns `'client'`.
 
- const env = getEnv()
- // ℹ️ On the **server**, it returns `'server'`.
- // ℹ️ On the **client**, it returns `'client'`.
+import { createIsomorphicFn } from '@tanstack/react-start'
 
+const getEnv = createIsomorphicFn()
+.server(() => 'server')
+.client(() => 'client')
 
-
- import { createIsomorphicFn } from '@tanstack/react-start'
-
- const getEnv = createIsomorphicFn()
- .server(() => 'server')
- .client(() => 'client')
-
- const env = getEnv()
- // ℹ️ On the **server**, it returns `'server'`.
- // ℹ️ On the **client**, it returns `'client'`.
-
+const env = getEnv()
+// ℹ️ On the **server**, it returns `'server'`.
+// ℹ️ On the **client**, it returns `'client'`.
 
 Partial Implementation (Server)
 
 Here is an example of createIsomorphicFn() with only server implementation:
 
+import { createIsomorphicFn } from '@tanstack/react-start'
 
- import { createIsomorphicFn } from '@tanstack/react-start'
+const serverImplementationOnly = createIsomorphicFn().server(() => 'server')
 
- const serverImplementationOnly = createIsomorphicFn().server(() => 'server')
+const server = serverImplementationOnly()
+// ℹ️ On the **server**, it returns `'server'`.
+// ℹ️ On the **client**, it is no-op (returns `undefined`)
 
- const server = serverImplementationOnly()
- // ℹ️ On the **server**, it returns `'server'`.
- // ℹ️ On the **client**, it is no-op (returns `undefined`)
+import { createIsomorphicFn } from '@tanstack/react-start'
 
+const serverImplementationOnly = createIsomorphicFn().server(() => 'server')
 
-
- import { createIsomorphicFn } from '@tanstack/react-start'
-
- const serverImplementationOnly = createIsomorphicFn().server(() => 'server')
-
- const server = serverImplementationOnly()
- // ℹ️ On the **server**, it returns `'server'`.
- // ℹ️ On the **client**, it is no-op (returns `undefined`)
-
+const server = serverImplementationOnly()
+// ℹ️ On the **server**, it returns `'server'`.
+// ℹ️ On the **client**, it is no-op (returns `undefined`)
 
 Partial Implementation (Client)
 
 Here is an example of createIsomorphicFn() with only client implementation:
 
+import { createIsomorphicFn } from '@tanstack/react-start'
 
- import { createIsomorphicFn } from '@tanstack/react-start'
+const clientImplementationOnly = createIsomorphicFn().client(() => 'client')
 
- const clientImplementationOnly = createIsomorphicFn().client(() => 'client')
+const client = clientImplementationOnly()
+// ℹ️ On the **server**, it is no-op (returns `undefined`)
+// ℹ️ On the **client**, it returns `'client'`.
 
- const client = clientImplementationOnly()
- // ℹ️ On the **server**, it is no-op (returns `undefined`)
- // ℹ️ On the **client**, it returns `'client'`.
+import { createIsomorphicFn } from '@tanstack/react-start'
 
+const clientImplementationOnly = createIsomorphicFn().client(() => 'client')
 
-
- import { createIsomorphicFn } from '@tanstack/react-start'
-
- const clientImplementationOnly = createIsomorphicFn().client(() => 'client')
-
- const client = clientImplementationOnly()
- // ℹ️ On the **server**, it is no-op (returns `undefined`)
- // ℹ️ On the **client**, it returns `'client'`.
-
+const client = clientImplementationOnly()
+// ℹ️ On the **server**, it is no-op (returns `undefined`)
+// ℹ️ On the **client**, it returns `'client'`.
 
 No Implementation
 
 Here is an example of createIsomorphicFn() without any environment specific implementation:
 
+import { createIsomorphicFn } from '@tanstack/react-start'
 
- import { createIsomorphicFn } from '@tanstack/react-start'
+const noImplementation = createIsomorphicFn()
 
- const noImplementation = createIsomorphicFn()
+const noop = noImplementation()
+// ℹ️ On both **client** and **server**, it is no-op (returns `undefined`)
 
- const noop = noImplementation()
- // ℹ️ On both **client** and **server**, it is no-op (returns `undefined`)
+import { createIsomorphicFn } from '@tanstack/react-start'
 
+const noImplementation = createIsomorphicFn()
 
-
- import { createIsomorphicFn } from '@tanstack/react-start'
-
- const noImplementation = createIsomorphicFn()
-
- const noop = noImplementation()
- // ℹ️ On both **client** and **server**, it is no-op (returns `undefined`)
-
+const noop = noImplementation()
+// ℹ️ On both **client** and **server**, it is no-op (returns `undefined`)
 
 What is a no-op?
 
 A no-op (short for "no operation") is a function that does nothing when executed - it simply returns undefined without performing any operations.
 
+// basic no-op implementation
+function noop() {}
 
- // basic no-op implementation
- function noop() {}
+// basic no-op implementation
+function noop() {}
 
-
-
- // basic no-op implementation
- function noop() {}
-
-
-* * *
+---
 
 envOnly Functions
 
@@ -132,43 +112,35 @@ The createServerOnlyFn and createClientOnlyFn helpers enforce strict environment
 
 createServerOnlyFn
 
+import { createServerOnlyFn } from '@tanstack/react-start'
 
- import { createServerOnlyFn } from '@tanstack/react-start'
+const foo = createServerOnlyFn(() => 'bar')
 
- const foo = createServerOnlyFn(() => 'bar')
+foo() // ✅ On server: returns "bar"
+// ❌ On client: throws "createServerOnlyFn() functions can only be called on the server!"
 
- foo() // ✅ On server: returns "bar"
- // ❌ On client: throws "createServerOnlyFn() functions can only be called on the server!"
+import { createServerOnlyFn } from '@tanstack/react-start'
 
+const foo = createServerOnlyFn(() => 'bar')
 
-
- import { createServerOnlyFn } from '@tanstack/react-start'
-
- const foo = createServerOnlyFn(() => 'bar')
-
- foo() // ✅ On server: returns "bar"
- // ❌ On client: throws "createServerOnlyFn() functions can only be called on the server!"
-
+foo() // ✅ On server: returns "bar"
+// ❌ On client: throws "createServerOnlyFn() functions can only be called on the server!"
 
 createClientOnlyFn
 
+import { createClientOnlyFn } from '@tanstack/react-start'
 
- import { createClientOnlyFn } from '@tanstack/react-start'
+const foo = createClientOnlyFn(() => 'bar')
 
- const foo = createClientOnlyFn(() => 'bar')
+foo() // ✅ On client: returns "bar"
+// ❌ On server: throws "createClientOnlyFn() functions can only be called on the client!"
 
- foo() // ✅ On client: returns "bar"
- // ❌ On server: throws "createClientOnlyFn() functions can only be called on the client!"
+import { createClientOnlyFn } from '@tanstack/react-start'
 
+const foo = createClientOnlyFn(() => 'bar')
 
-
- import { createClientOnlyFn } from '@tanstack/react-start'
-
- const foo = createClientOnlyFn(() => 'bar')
-
- foo() // ✅ On client: returns "bar"
- // ❌ On server: throws "createClientOnlyFn() functions can only be called on the client!"
-
+foo() // ✅ On client: returns "bar"
+// ❌ On server: throws "createClientOnlyFn() functions can only be called on the client!"
 
 Note
 

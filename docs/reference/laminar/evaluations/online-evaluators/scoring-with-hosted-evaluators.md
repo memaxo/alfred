@@ -1,9 +1,10 @@
 ---
 title: Scoring with Hosted Evaluators - Laminar documentation
-url: 
+url:
 description: Step-by-step examples of setting up online evaluators in Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-hosted-evaluators#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -26,7 +27,7 @@ On this page
 
 - [Creating a Basic Online Evaluator](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-hosted-evaluators#creating-a-basic-online-evaluator)
 
-## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-hosted-evaluators\#creating-a-basic-online-evaluator)  Creating a Basic Online Evaluator
+## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-hosted-evaluators#creating-a-basic-online-evaluator) Creating a Basic Online Evaluator
 
 This example walks through setting up a simple online evaluator that checks if an LLM response contains specific keywords, useful for content moderation or topic classification.
 

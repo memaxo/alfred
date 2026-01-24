@@ -15,25 +15,24 @@ I am using `streamText` function, and it does not work. It does not throw any er
 ## Solution
 
 To log errors, you can provide an `onError` callback that is triggered when an error occurs.
-    
-    
+
     import { streamText } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const result = streamText({
-    
+
       model: 'openai/gpt-4.1',
-    
+
       prompt: 'Invent a new holiday and describe its traditions.',
-    
+
       onError({ error }) {
-    
+
         console.error(error); // your error logging logic here
-    
+
       },
-    
+
     });
 
 Previous

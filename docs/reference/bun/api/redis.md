@@ -1,9 +1,10 @@
 ---
 title: Redis client – API | Bun Docs
-url: 
+url:
 description: Bun provides a fast, native Redis client with automatic command pipelining for better performance.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -76,7 +77,7 @@ await redis.del("greeting");
 
 ```
 
-## [Getting Started](https://bun.com/docs/api/redis\#getting-started)
+## [Getting Started](https://bun.com/docs/api/redis#getting-started)
 
 To use the Redis client, you first need to create a connection:
 
@@ -100,7 +101,7 @@ By default, the client reads connection information from the following environme
 - `REDIS_URL`
 - If not set, defaults to `"redis://localhost:6379"`
 
-### [Connection Lifecycle](https://bun.com/docs/api/redis\#connection-lifecycle)
+### [Connection Lifecycle](https://bun.com/docs/api/redis#connection-lifecycle)
 
 The Redis client automatically handles connections in the background:
 
@@ -135,9 +136,9 @@ client.close();
 
 ```
 
-## [Basic Operations](https://bun.com/docs/api/redis\#basic-operations)
+## [Basic Operations](https://bun.com/docs/api/redis#basic-operations)
 
-### [String Operations](https://bun.com/docs/api/redis\#string-operations)
+### [String Operations](https://bun.com/docs/api/redis#string-operations)
 
 ```
 // Set a key
@@ -161,7 +162,7 @@ const ttl = await redis.ttl("session:123");
 
 ```
 
-### [Numeric Operations](https://bun.com/docs/api/redis\#numeric-operations)
+### [Numeric Operations](https://bun.com/docs/api/redis#numeric-operations)
 
 ```
 // Set initial value
@@ -175,7 +176,7 @@ await redis.decr("counter");
 
 ```
 
-### [Hash Operations](https://bun.com/docs/api/redis\#hash-operations)
+### [Hash Operations](https://bun.com/docs/api/redis#hash-operations)
 
 ```
 // Set multiple fields in a hash
@@ -200,7 +201,7 @@ await redis.hincrbyfloat("user:123", "score", 1.5);
 
 ```
 
-### [Set Operations](https://bun.com/docs/api/redis\#set-operations)
+### [Set Operations](https://bun.com/docs/api/redis#set-operations)
 
 ```
 // Add member to set
@@ -223,9 +224,9 @@ const poppedTag = await redis.spop("tags");
 
 ```
 
-## [Advanced Usage](https://bun.com/docs/api/redis\#advanced-usage)
+## [Advanced Usage](https://bun.com/docs/api/redis#advanced-usage)
 
-### [Command Execution and Pipelining](https://bun.com/docs/api/redis\#command-execution-and-pipelining)
+### [Command Execution and Pipelining](https://bun.com/docs/api/redis#command-execution-and-pipelining)
 
 The client automatically pipelines commands, improving performance by sending multiple commands in a batch and processing responses as they arrive.
 
@@ -247,7 +248,7 @@ const client = new RedisClient("redis://localhost:6379", {
 
 ```
 
-### [Raw Commands](https://bun.com/docs/api/redis\#raw-commands)
+### [Raw Commands](https://bun.com/docs/api/redis#raw-commands)
 
 When you need to use commands that don't have convenience methods, you can use the `send` method:
 
@@ -265,7 +266,7 @@ const list = await redis.send("LRANGE", ["mylist", "0", "-1"]);
 
 The `send` method allows you to use any Redis command, even ones that don't have dedicated methods in the client. The first argument is the command name, and the second argument is an array of string arguments.
 
-### [Connection Events](https://bun.com/docs/api/redis\#connection-events)
+### [Connection Events](https://bun.com/docs/api/redis#connection-events)
 
 You can register handlers for connection events:
 
@@ -288,7 +289,7 @@ client.close();
 
 ```
 
-### [Connection Status and Monitoring](https://bun.com/docs/api/redis\#connection-status-and-monitoring)
+### [Connection Status and Monitoring](https://bun.com/docs/api/redis#connection-status-and-monitoring)
 
 ```
 // Check if connected
@@ -299,7 +300,7 @@ console.log(client.bufferedAmount);
 
 ```
 
-### [Type Conversion](https://bun.com/docs/api/redis\#type-conversion)
+### [Type Conversion](https://bun.com/docs/api/redis#type-conversion)
 
 The Redis client handles automatic type conversion for Redis responses:
 
@@ -336,7 +337,7 @@ The following commands disable automatic pipelining:
 - `UNSUBSCRIBE`
 - `UNPSUBSCRIBE`
 
-## [Connection Options](https://bun.com/docs/api/redis\#connection-options)
+## [Connection Options](https://bun.com/docs/api/redis#connection-options)
 
 When creating a client, you can pass various options to configure the connection:
 
@@ -373,7 +374,7 @@ const client = new RedisClient("redis://localhost:6379", {
 
 ```
 
-### [Reconnection Behavior](https://bun.com/docs/api/redis\#reconnection-behavior)
+### [Reconnection Behavior](https://bun.com/docs/api/redis#reconnection-behavior)
 
 When a connection is lost, the client automatically attempts to reconnect with exponential backoff:
 
@@ -384,7 +385,7 @@ When a connection is lost, the client automatically attempts to reconnect with e
    - Queued if `enableOfflineQueue` is true (default)
    - Rejected immediately if `enableOfflineQueue` is false
 
-## [Supported URL Formats](https://bun.com/docs/api/redis\#supported-url-formats)
+## [Supported URL Formats](https://bun.com/docs/api/redis#supported-url-formats)
 
 The Redis client supports various URL formats:
 
@@ -415,7 +416,7 @@ new RedisClient("redis+tls+unix:///path/to/socket");
 
 ```
 
-## [Error Handling](https://bun.com/docs/api/redis\#error-handling)
+## [Error Handling](https://bun.com/docs/api/redis#error-handling)
 
 The Redis client throws typed errors for different scenarios:
 
@@ -440,9 +441,9 @@ Common error codes:
 - `ERR_REDIS_AUTHENTICATION_FAILED` \- Failed to authenticate with the server
 - `ERR_REDIS_INVALID_RESPONSE` \- Received an invalid response from the server
 
-## [Example Use Cases](https://bun.com/docs/api/redis\#example-use-cases)
+## [Example Use Cases](https://bun.com/docs/api/redis#example-use-cases)
 
-### [Caching](https://bun.com/docs/api/redis\#caching)
+### [Caching](https://bun.com/docs/api/redis#caching)
 
 ```
 async function getUserWithCache(userId) {
@@ -466,7 +467,7 @@ async function getUserWithCache(userId) {
 
 ```
 
-### [Rate Limiting](https://bun.com/docs/api/redis\#rate-limiting)
+### [Rate Limiting](https://bun.com/docs/api/redis#rate-limiting)
 
 ```
 async function rateLimit(ip, limit = 100, windowSecs = 3600) {
@@ -489,7 +490,7 @@ async function rateLimit(ip, limit = 100, windowSecs = 3600) {
 
 ```
 
-### [Session Storage](https://bun.com/docs/api/redis\#session-storage)
+### [Session Storage](https://bun.com/docs/api/redis#session-storage)
 
 ```
 async function createSession(userId, data) {
@@ -532,13 +533,13 @@ async function getSession(sessionId) {
 
 ```
 
-## [Implementation Notes](https://bun.com/docs/api/redis\#implementation-notes)
+## [Implementation Notes](https://bun.com/docs/api/redis#implementation-notes)
 
 Bun's Redis client is implemented in Zig and uses the Redis Serialization Protocol (RESP3). It manages connections efficiently and provides automatic reconnection with exponential backoff.
 
 The client supports pipelining commands, meaning multiple commands can be sent without waiting for the replies to previous commands. This significantly improves performance when sending multiple commands in succession.
 
-### [RESP3 Protocol Support](https://bun.com/docs/api/redis\#resp3-protocol-support)
+### [RESP3 Protocol Support](https://bun.com/docs/api/redis#resp3-protocol-support)
 
 Bun's Redis client uses the newer RESP3 protocol by default, which provides more data types and features compared to RESP2:
 
@@ -551,7 +552,7 @@ Bun's Redis client uses the newer RESP3 protocol by default, which provides more
 
 When connecting to Redis servers using older versions that don't support RESP3, the client automatically fallbacks to compatible modes.
 
-## [Limitations and Future Plans](https://bun.com/docs/api/redis\#limitations-and-future-plans)
+## [Limitations and Future Plans](https://bun.com/docs/api/redis#limitations-and-future-plans)
 
 Current limitations of the Redis client we are planning to address in future versions:
 
@@ -572,7 +573,7 @@ File I/O](https://bun.com/docs/api/file-io) [Next\\
 \\
 import.meta](https://bun.com/docs/api/import-meta)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/redis.md)
 
@@ -596,7 +597,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

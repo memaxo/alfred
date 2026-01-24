@@ -1,9 +1,10 @@
 ---
 title: $ Shell – API | Bun Docs
-url: 
+url:
 description: Bun's cross-platform shell-scripting API makes shell scripting with JavaScript fun
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -66,7 +67,7 @@ await $`cat < ${response} | wc -c`; // 1256
 
 ```
 
-## [Features:](https://bun.com/docs/runtime/shell\#features)
+## [Features:](https://bun.com/docs/runtime/shell#features)
 
 - **Cross-platform**: works on Windows, Linux & macOS. Instead of `rimraf` or `cross-env`', you can use Bun Shell without installing extra dependencies. Common shell commands like `ls`, `cd`, `rm` are implemented natively.
 - **Familiar**: Bun Shell is a bash-like shell, supporting redirection, pipes, environment variables and more.
@@ -77,7 +78,7 @@ await $`cat < ${response} | wc -c`; // 1256
 - **Shell scripting**: Bun Shell can be used to run shell scripts ( `.bun.sh` files).
 - **Custom interpreter**: Bun Shell is written in Zig, along with its lexer, parser, and interpreter. Bun Shell is a small programming language.
 
-## [Getting started](https://bun.com/docs/runtime/shell\#getting-started)
+## [Getting started](https://bun.com/docs/runtime/shell#getting-started)
 
 The simplest shell command is `echo`. To run it, use the `$` template literal tag:
 
@@ -121,7 +122,7 @@ console.log(stderr); // Buffer(0) []
 
 ```
 
-## [Error handling](https://bun.com/docs/runtime/shell\#error-handling)
+## [Error handling](https://bun.com/docs/runtime/shell#error-handling)
 
 By default, non-zero exit codes will throw an error. This `ShellError` contains information about the command run.
 
@@ -175,7 +176,7 @@ await $`something-that-may-fail`; // No exception thrown
 
 ```
 
-## [Redirection](https://bun.com/docs/runtime/shell\#redirection)
+## [Redirection](https://bun.com/docs/runtime/shell#redirection)
 
 A command's _input_ or _output_ may be _redirected_ using the typical Bash operators:
 
@@ -191,7 +192,7 @@ A command's _input_ or _output_ may be _redirected_ using the typical Bash opera
 
 Bun Shell also supports redirecting from and to JavaScript objects.
 
-### [Example: Redirect output to JavaScript objects ( `>`)](https://bun.com/docs/runtime/shell\#example-redirect-output-to-javascript-objects)
+### [Example: Redirect output to JavaScript objects ( `>`)](https://bun.com/docs/runtime/shell#example-redirect-output-to-javascript-objects)
 
 To redirect stdout to a JavaScript object, use the `>` operator:
 
@@ -210,7 +211,7 @@ The following JavaScript objects are supported for redirection to:
 - `Buffer`, `Uint8Array`, `Uint16Array`, `Uint32Array`, `Int8Array`, `Int16Array`, `Int32Array`, `Float32Array`, `Float64Array`, `ArrayBuffer`, `SharedArrayBuffer` (writes to the underlying buffer)
 - `Bun.file(path)`, `Bun.file(fd)` (writes to the file)
 
-### [Example: Redirect input from JavaScript objects ( `<`)](https://bun.com/docs/runtime/shell\#example-redirect-input-from-javascript-objects)
+### [Example: Redirect input from JavaScript objects ( `<`)](https://bun.com/docs/runtime/shell#example-redirect-input-from-javascript-objects)
 
 To redirect the output from JavaScript objects to stdin, use the `<` operator:
 
@@ -231,7 +232,7 @@ The following JavaScript objects are supported for redirection from:
 - `Bun.file(path)`, `Bun.file(fd)` (reads from the file)
 - `Response` (reads from the body)
 
-### [Example: Redirect stdin -> file](https://bun.com/docs/runtime/shell\#example-redirect-stdin-file)
+### [Example: Redirect stdin -> file](https://bun.com/docs/runtime/shell#example-redirect-stdin-file)
 
 ```
 import { $ } from "bun";
@@ -240,7 +241,7 @@ await $`cat < myfile.txt`;
 
 ```
 
-### [Example: Redirect stdout -> file](https://bun.com/docs/runtime/shell\#example-redirect-stdout-file)
+### [Example: Redirect stdout -> file](https://bun.com/docs/runtime/shell#example-redirect-stdout-file)
 
 ```
 import { $ } from "bun";
@@ -249,7 +250,7 @@ await $`echo bun! > greeting.txt`;
 
 ```
 
-### [Example: Redirect stderr -> file](https://bun.com/docs/runtime/shell\#example-redirect-stderr-file)
+### [Example: Redirect stderr -> file](https://bun.com/docs/runtime/shell#example-redirect-stderr-file)
 
 ```
 import { $ } from "bun";
@@ -258,7 +259,7 @@ await $`bun run index.ts 2> errors.txt`;
 
 ```
 
-### [Example: Redirect stderr -> stdout](https://bun.com/docs/runtime/shell\#example-redirect-stderr-stdout)
+### [Example: Redirect stderr -> stdout](https://bun.com/docs/runtime/shell#example-redirect-stderr-stdout)
 
 ```
 import { $ } from "bun";
@@ -269,7 +270,7 @@ await $`bun run ./index.ts 2>&1`;
 
 ```
 
-### [Example: Redirect stdout -> stderr](https://bun.com/docs/runtime/shell\#example-redirect-stdout-stderr)
+### [Example: Redirect stdout -> stderr](https://bun.com/docs/runtime/shell#example-redirect-stdout-stderr)
 
 ```
 import { $ } from "bun";
@@ -280,7 +281,7 @@ await $`bun run ./index.ts 1>&2`;
 
 ```
 
-## [Piping ( `|`)](https://bun.com/docs/runtime/shell\#piping)
+## [Piping ( `|`)](https://bun.com/docs/runtime/shell#piping)
 
 Like in bash, you can pipe the output of one command to another:
 
@@ -306,7 +307,7 @@ console.log(result); // 6\n
 
 ```
 
-## [Command substitution ( `$(...)`)](https://bun.com/docs/runtime/shell\#command-substitution)
+## [Command substitution ( `$(...)`)](https://bun.com/docs/runtime/shell#command-substitution)
 
 Command substitution allows you to substitute the output of another script into the current script:
 
@@ -356,7 +357,7 @@ echo hi
 
 We instead recommend sticking to the `$(...)` syntax.
 
-## [Environment variables](https://bun.com/docs/runtime/shell\#environment-variables)
+## [Environment variables](https://bun.com/docs/runtime/shell#environment-variables)
 
 Environment variables can be set like in bash:
 
@@ -389,7 +390,7 @@ await $`FOO=${foo} bun -e 'console.log(process.env.FOO)'`; // bar123; rm -rf /tm
 
 ```
 
-### [Changing the environment variables](https://bun.com/docs/runtime/shell\#changing-the-environment-variables)
+### [Changing the environment variables](https://bun.com/docs/runtime/shell#changing-the-environment-variables)
 
 By default, `process.env` is used as the environment variables for all commands.
 
@@ -432,7 +433,7 @@ await $`echo $FOO`.env(undefined); // ""
 
 ```
 
-### [Changing the working directory](https://bun.com/docs/runtime/shell\#changing-the-working-directory)
+### [Changing the working directory](https://bun.com/docs/runtime/shell#changing-the-working-directory)
 
 You can change the working directory of a command by passing a string to `.cwd()`:
 
@@ -458,7 +459,7 @@ await $`pwd`.cwd("/"); // /
 
 ```
 
-## [Reading output](https://bun.com/docs/runtime/shell\#reading-output)
+## [Reading output](https://bun.com/docs/runtime/shell#reading-output)
 
 To read the output of a command as a string, use `.text()`:
 
@@ -471,7 +472,7 @@ console.log(result); // Hello World!\n
 
 ```
 
-### [Reading output as JSON](https://bun.com/docs/runtime/shell\#reading-output-as-json)
+### [Reading output as JSON](https://bun.com/docs/runtime/shell#reading-output-as-json)
 
 To read the output of a command as JSON, use `.json()`:
 
@@ -484,7 +485,7 @@ console.log(result); // { foo: "bar" }
 
 ```
 
-### [Reading output line-by-line](https://bun.com/docs/runtime/shell\#reading-output-line-by-line)
+### [Reading output line-by-line](https://bun.com/docs/runtime/shell#reading-output-line-by-line)
 
 To read the output of a command line-by-line, use `.lines()`:
 
@@ -510,7 +511,7 @@ for await (let line of $`cat list.txt | grep ${search}`.lines()) {
 
 ```
 
-### [Reading output as a Blob](https://bun.com/docs/runtime/shell\#reading-output-as-a-blob)
+### [Reading output as a Blob](https://bun.com/docs/runtime/shell#reading-output-as-a-blob)
 
 To read the output of a command as a Blob, use `.blob()`:
 
@@ -523,7 +524,7 @@ console.log(result); // Blob(13) { size: 13, type: "text/plain" }
 
 ```
 
-## [Builtin Commands](https://bun.com/docs/runtime/shell\#builtin-commands)
+## [Builtin Commands](https://bun.com/docs/runtime/shell#builtin-commands)
 
 For cross-platform compatibility, Bun Shell implements a set of builtin commands, in addition to reading commands from the PATH environment variable.
 
@@ -554,11 +555,11 @@ For cross-platform compatibility, Bun Shell implements a set of builtin commands
 
 - See [Issue #9716](https://github.com/oven-sh/bun/issues/9716) for the full list.
 
-## [Utilities](https://bun.com/docs/runtime/shell\#utilities)
+## [Utilities](https://bun.com/docs/runtime/shell#utilities)
 
 Bun Shell also implements a set of utilities for working with shells.
 
-### [`$.braces` (brace expansion)](https://bun.com/docs/runtime/shell\#braces-brace-expansion)
+### [`$.braces` (brace expansion)](https://bun.com/docs/runtime/shell#braces-brace-expansion)
 
 This function implements simple [brace expansion](https://www.gnu.org/software/bash/manual/html_node/Brace-Expansion.html) for shell commands:
 
@@ -570,7 +571,7 @@ await $.braces(`echo {1,2,3}`);
 
 ```
 
-### [`$.escape` (escape strings)](https://bun.com/docs/runtime/shell\#escape-escape-strings)
+### [`$.escape` (escape strings)](https://bun.com/docs/runtime/shell#escape-escape-strings)
 
 Exposes Bun Shell's escaping logic as a function:
 
@@ -594,7 +595,7 @@ await $`echo ${{ raw: '$(foo) `bar` "baz"' }}`;
 
 ```
 
-## [.sh file loader](https://bun.com/docs/runtime/shell\#sh-file-loader)
+## [.sh file loader](https://bun.com/docs/runtime/shell#sh-file-loader)
 
 For simple shell scripts, instead of `/bin/sh`, you can use Bun Shell to run shell scripts.
 
@@ -625,11 +626,11 @@ bun .\script.sh
 Hello World! pwd=C:\Users\Demo
 ```
 
-## [Implementation notes](https://bun.com/docs/runtime/shell\#implementation-notes)
+## [Implementation notes](https://bun.com/docs/runtime/shell#implementation-notes)
 
 Bun Shell is a small programming language in Bun that is implemented in Zig. It includes a handwritten lexer, parser, and interpreter. Unlike bash, zsh, and other shells, Bun Shell runs operations concurrently.
 
-## [Security in the Bun shell](https://bun.com/docs/runtime/shell\#security-in-the-bun-shell)
+## [Security in the Bun shell](https://bun.com/docs/runtime/shell#security-in-the-bun-shell)
 
 By design, the Bun shell _does not invoke a system shell_ (like `/bin/sh`) andis instead a re-implementation of bash that runs in the same Bun process,designed with security in mind.
 
@@ -649,7 +650,7 @@ await $`ls ${userInput}`;
 
 In the above example, `userInput` is treated as a single string. This causesthe `ls` command to try to read the contents of a single directory named"my-file; rm -rf /".
 
-### [Security considerations](https://bun.com/docs/runtime/shell\#security-considerations)
+### [Security considerations](https://bun.com/docs/runtime/shell#security-considerations)
 
 While command injection is prevented by default, developers are stillresponsible for security in certain scenarios.
 
@@ -669,7 +670,7 @@ await $`bash -c "echo ${userInput}"`;
 
 ```
 
-### [Argument injection](https://bun.com/docs/runtime/shell\#argument-injection)
+### [Argument injection](https://bun.com/docs/runtime/shell#argument-injection)
 
 The Bun shell cannot know how an external command interprets its owncommand-line arguments. An attacker can supply input that the target programrecognizes as one of its own options or flags, leading to unintended behavior.
 
@@ -687,7 +688,7 @@ await $`git ls-remote origin ${branch}`;
 
 **Recommendation** — As is best practice in every language, always sanitizeuser-provided input before passing it as an argument to an external command.The responsibility for validating arguments rests with your application code.
 
-## [Credits](https://bun.com/docs/runtime/shell\#credits)
+## [Credits](https://bun.com/docs/runtime/shell#credits)
 
 Large parts of this API were inspired by [zx](https://github.com/google/zx), [dax](https://github.com/dsherret/dax), and [bnx](https://github.com/wobsoriano/bnx). Thank you to the authors of those projects.
 
@@ -697,7 +698,7 @@ Globals](https://bun.com/docs/api/globals) [Next\\
 \\
 Child processes](https://bun.com/docs/api/spawn)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/shell.md)
 
@@ -721,7 +722,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

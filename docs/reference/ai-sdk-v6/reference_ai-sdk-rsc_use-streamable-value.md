@@ -9,31 +9,29 @@ AI SDK RSC is currently experimental. We recommend using AI SDK UI for productio
 It is a React hook that takes a streamable value created using `createStreamableValue` and returns the current value, error, and pending state.
 
 ## Import
-    
-    
+
     import { useStreamableValue } from "@ai-sdk/rsc"
 
 ## Example
 
 This is useful for consuming streamable values received from a component's props.
-    
-    
+
     function MyComponent({ streamableValue }) {
-    
+
       const [data, error, pending] = useStreamableValue(streamableValue);
-    
-    
-    
-    
+
+
+
+
       if (pending) return Loading...;
-    
+
       if (error) return Error: {error.message};
-    
-    
-    
-    
+
+
+
+
       return Data: {data};
-    
+
     }
 
 ## API Signature

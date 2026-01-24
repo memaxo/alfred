@@ -91,17 +91,17 @@ Milestone 4 handles observability: increment a Prometheus counter (e.g., `cognit
 
 - New hook signature:
 
-    export function useCognitiveFeedback(): {
-        submit(input: { streamId: string; expected: string; actual: string }): Promise<void>;
-        status: "idle" | "pending" | "success" | "error";
-    };
+  export function useCognitiveFeedback(): {
+  submit(input: { streamId: string; expected: string; actual: string }): Promise<void>;
+  status: "idle" | "pending" | "success" | "error";
+  };
 
 - Router metric update: increment `cognitive_feedback_submissions_total` with labels `{ surface: "chat" | "mindscape" | "voice" }` based on an optional query param.
 - Shared modal props:
 
-    type CognitiveFeedbackDialogProps = {
-      defaultExpected: string;
-      defaultActual?: string;
-      streamId: string;
-      surface: "chat" | "mindscape" | "voice";
-    };
+  type CognitiveFeedbackDialogProps = {
+  defaultExpected: string;
+  defaultActual?: string;
+  streamId: string;
+  surface: "chat" | "mindscape" | "voice";
+  };

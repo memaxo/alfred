@@ -20,6 +20,7 @@ Comprehensive testing infrastructure has been implemented with VCR (Video Casset
 - **index.ts** - Module exports
 
 **Features:**
+
 - Supports OpenAI, Anthropic, Google, Cohere
 - Automatic authorization header redaction
 - Request matching by hash
@@ -27,6 +28,7 @@ Comprehensive testing infrastructure has been implemented with VCR (Video Casset
 - Record/replay/passthrough modes
 
 **Usage:**
+
 ```bash
 VCR_RECORD=1 bun test my-test.ts  # Record
 bun test my-test.ts               # Replay (default)
@@ -36,14 +38,15 @@ bun test my-test.ts               # Replay (default)
 
 **Location:** `packages/api/test/integration/`
 
-| File | Tests | Status |
-|------|-------|--------|
-| `openai-vcr.integration.test.ts` | 2 | ✅ Passing, 3 cassettes recorded |
-| `workflow-pipeline.integration.test.ts` | 6 | ⚠️ 3 passing, 3 failing (test bugs) |
-| `voice-pipeline.integration.test.ts` | 6 | ⚠️ 1 passing, 5 skipped (pyarrow issue) |
-| `auth-flow.integration.test.ts` | 19 | ⚠️ 11 passing, 8 failing (SQLite limits) |
+| File                                    | Tests | Status                                   |
+| --------------------------------------- | ----- | ---------------------------------------- |
+| `openai-vcr.integration.test.ts`        | 2     | ✅ Passing, 3 cassettes recorded         |
+| `workflow-pipeline.integration.test.ts` | 6     | ⚠️ 3 passing, 3 failing (test bugs)      |
+| `voice-pipeline.integration.test.ts`    | 6     | ⚠️ 1 passing, 5 skipped (pyarrow issue)  |
+| `auth-flow.integration.test.ts`         | 19    | ⚠️ 11 passing, 8 failing (SQLite limits) |
 
 **Cassettes Recorded:**
+
 - `openai-responses.json` - 3 OpenAI interactions
 - `voice-pipeline.json` - Voice metadata (empty due to deps)
 
@@ -51,11 +54,11 @@ bun test my-test.ts               # Replay (default)
 
 **Location:** `apps/web/tests/`
 
-| File | Tests | Status |
-|------|-------|--------|
-| `auth.e2e.spec.ts` | 15 | ✅ Defined, needs DB setup |
-| `workflow-execution.e2e.spec.ts` | 10 | ✅ Defined |
-| `settings.e2e.spec.ts` | 12 | ✅ Defined |
+| File                             | Tests | Status                     |
+| -------------------------------- | ----- | -------------------------- |
+| `auth.e2e.spec.ts`               | 15    | ✅ Defined, needs DB setup |
+| `workflow-execution.e2e.spec.ts` | 10    | ✅ Defined                 |
+| `settings.e2e.spec.ts`           | 12    | ✅ Defined                 |
 
 **Total:** 37 E2E tests defined
 
@@ -73,11 +76,13 @@ bun test my-test.ts               # Replay (default)
 ### 5. Scripts and Commands ✅
 
 **New npm scripts:**
+
 - `test:integration:full` - Run all integration tests
 - `test:vcr:record` - Run in VCR record mode
 - `test:vcr:validate` - Validate cassettes
 
 **New script:**
+
 - `scripts/validate-cassettes.ts` - Validates cassette structure and security
 
 ### 6. Documentation ✅
@@ -99,11 +104,13 @@ bun test my-test.ts               # Replay (default)
 ### 2. SQLite Limitations ⚠️
 
 Some integration tests fail with SQLite due to:
+
 - PostgreSQL-specific syntax (timers)
 - Missing repo functions (`userRepo.getProfile`)
 - Missing env vars (`AGENT_ED25519_PRIVATE`)
 
 **Solution:** Run with PostgreSQL for full coverage:
+
 ```bash
 bun run db:start
 bun run test:postgres
@@ -112,6 +119,7 @@ bun run test:postgres
 ### 3. Workflow Test Bugs ⚠️
 
 Some workflow tests have bugs:
+
 - Missing `cancel` procedure
 - Context format mismatch (array vs object)
 - Missing status events
@@ -121,33 +129,39 @@ Some workflow tests have bugs:
 ## Test Results
 
 ### Integration Tests
+
 - **Total:** 31 tests across 3 files
 - **Passing:** 15
 - **Skipped:** 5 (voice - dependency issue)
 - **Failing:** 11 (SQLite limitations, test bugs)
 
 ### E2E Tests
+
 - **Total:** 37 tests defined
 - **Status:** Tests execute but need database setup for full functionality
 
 ### VCR Performance
+
 - **Record mode:** ~3.79s (makes real API calls)
 - **Replay mode:** ~365ms (10x faster, no API calls)
 
 ## Next Steps
 
 ### Immediate
+
 1. ✅ Commit all changes - **DONE**
 2. ⏳ Fix workflow test bugs (missing cancel procedure, context format)
 3. ⏳ Run E2E tests with database setup
 4. ⏳ Record more VCR cassettes for additional scenarios
 
 ### Short-term
+
 5. ⏳ Run PostgreSQL integration tests for full coverage
 6. ⏳ Expand VCR coverage (more test scenarios)
 7. ⏳ Fix remaining test failures
 
 ### Medium-term
+
 8. ⏳ Resolve voice pyarrow dependency conflict (upgrade nemo_toolkit or fork)
 9. ⏳ Add contract tests for tRPC routers
 10. ⏳ Add visual regression tests for Mindscape
@@ -155,6 +169,7 @@ Some workflow tests have bugs:
 ## Files Changed
 
 **New Files:** 20+
+
 - VCR module (5 files)
 - Integration tests (4 files)
 - E2E tests (3 files)
@@ -162,6 +177,7 @@ Some workflow tests have bugs:
 - Scripts (1 file)
 
 **Modified Files:** 40+
+
 - Auth system fixes
 - CI pipeline updates
 - Route protection

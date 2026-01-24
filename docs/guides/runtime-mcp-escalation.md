@@ -49,7 +49,7 @@ If `ok: true`, the agent should stop immediately (the orchestrator is aborting t
 
 Streamable HTTP MCP uses an MCP session header. First call creates a session; subsequent calls reuse it.
 
-1) List tools (captures the `mcp-session-id` response header):
+1. List tools (captures the `mcp-session-id` response header):
 
 ```bash
 curl -i \
@@ -59,7 +59,7 @@ curl -i \
   http://127.0.0.1:<PORT>/mcp
 ```
 
-2) Call `escalate` using the session id:
+2. Call `escalate` using the session id:
 
 ```bash
 curl -i \
@@ -93,4 +93,3 @@ Runtime orchestrator environment variables:
 - **ORCH_MCP_ABORT_DELAY_MS**: delay (ms) between receipt and abort (default: `250`)
 - **ALFRED_MCP_AUDIENCE**: JWT audience for MCP session tokens (default: `alfred:mcp`)
 - **ALFRED_MCP_TOKEN_TTL_SEC**: TTL seconds for MCP session tokens (default: `900`)
-

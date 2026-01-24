@@ -11,10 +11,10 @@ Purpose: Keep the iOS native bundle buildable and debuggable under Metro + Expo 
 
 ## Known pitfalls and fixes in this repo
 
-- **`node:buffer` breaks Release bundling via Expo Updates**\n+  - Symptom: iOS Release build fails during “Bundle React Native code and images”.\n+  - Fix: replace `node:buffer` with `buffer` (or avoid Buffer entirely) in modules reachable from native (example: `packages/voice/src/audio/resample.ts`).\n+
-- **`DOMException` does not exist in React Native**\n+  - Symptom: runtime “Property 'DOMException' doesn't exist” in Debug/Metro.\n+  - Fix: detect abort via `error instanceof Error && error.name === \"AbortError\"` (see `apps/native/lib/health.ts`).\n+
-- **Metro mis-resolves `event-target-shim` in some graphs**\n+  - Symptom: Metro error resolving `event-target-shim` from `abort-controller`.\n+  - Fix: force `event-target-shim` to a concrete file path using `resolveRequest` (see `apps/native/metro.config.js`).\n+
+- **`node:buffer` breaks Release bundling via Expo Updates**\n+ - Symptom: iOS Release build fails during “Bundle React Native code and images”.\n+ - Fix: replace `node:buffer` with `buffer` (or avoid Buffer entirely) in modules reachable from native (example: `packages/voice/src/audio/resample.ts`).\n+
+- **`DOMException` does not exist in React Native**\n+ - Symptom: runtime “Property 'DOMException' doesn't exist” in Debug/Metro.\n+ - Fix: detect abort via `error instanceof Error && error.name === \"AbortError\"` (see `apps/native/lib/health.ts`).\n+
+- **Metro mis-resolves `event-target-shim` in some graphs**\n+ - Symptom: Metro error resolving `event-target-shim` from `abort-controller`.\n+ - Fix: force `event-target-shim` to a concrete file path using `resolveRequest` (see `apps/native/metro.config.js`).\n+
+
 ## Simulator discipline (xcodebuildmcp)
 
 - Pin **one simulator UUID** for day-to-day runs (e.g. iPhone 17 Pro iOS 26.2) to avoid churn.\n+- Use **Release** builds for “no Metro required” automation.\n+- Use **Debug + Metro** only for smoke and iterative JS/UI work.
-

@@ -3,7 +3,7 @@
 **Status**: 📋 Proposed (Audit Complete ✅)  
 **Owner**: infra  
 **Priority**: P2  
-**Estimated Effort**: 6-7 weeks  
+**Estimated Effort**: 6-7 weeks
 
 ---
 
@@ -87,6 +87,7 @@ export const alfredCli = createCli({
 ```
 
 **Key Features:**
+
 - **Zero-config type safety**: All procedures become subcommands with validated args
 - **Auto-generated help**: `alfred --help`, `alfred todo --help`
 - **Tab completion** via omelette integration
@@ -98,12 +99,16 @@ Powered by `@opentui/core`, this provides rich terminal experiences:
 
 ```typescript
 // packages/tui/src/tui/dashboard.ts
-import { createCliRenderer, TextRenderable, ASCIIFontRenderable } from "@opentui/core";
+import {
+  createCliRenderer,
+  TextRenderable,
+  ASCIIFontRenderable,
+} from "@opentui/core";
 import { useOnResize } from "@opentui/react";
 
 export async function launchDashboard() {
   const renderer = await createCliRenderer();
-  
+
   // Title banner
   const title = new ASCIIFontRenderable("title", {
     text: "ALFRED",
@@ -113,22 +118,22 @@ export async function launchDashboard() {
     left: 2,
     top: 1,
   });
-  
+
   // Cognitive state panel
   const cognitive = new CognitiveStatePanel(renderer, {
     id: "cognitive",
     streamId: "default",
   });
-  
+
   // Metrics panel
   const metrics = new MetricsPanel(renderer, {
     id: "metrics",
   });
-  
+
   renderer.root.add(title);
   renderer.root.add(cognitive);
   renderer.root.add(metrics);
-  
+
   // Live updates via tRPC subscriptions
   await startLiveUpdates(renderer);
 }
@@ -136,15 +141,15 @@ export async function launchDashboard() {
 
 **Dashboard Views:**
 
-| View | Command | Description |
-|------|---------|-------------|
-| Main Dashboard | `alfred tui` | Overview of all systems |
+| View              | Command                | Description               |
+| ----------------- | ---------------------- | ------------------------- |
+| Main Dashboard    | `alfred tui`           | Overview of all systems   |
 | Cognitive Monitor | `alfred tui cognitive` | Real-time cognitive state |
-| Workflow Manager | `alfred tui workflows` | Active/queued workflows |
-| Knowledge Graph | `alfred tui knowledge` | Graph visualization |
-| Voice Pipeline | `alfred tui voice` | STT/TTS pool status |
-| Metrics | `alfred tui metrics` | Prometheus metrics |
-| Admin Console | `alfred tui admin` | System administration |
+| Workflow Manager  | `alfred tui workflows` | Active/queued workflows   |
+| Knowledge Graph   | `alfred tui knowledge` | Graph visualization       |
+| Voice Pipeline    | `alfred tui voice`     | STT/TTS pool status       |
+| Metrics           | `alfred tui metrics`   | Prometheus metrics        |
+| Admin Console     | `alfred tui admin`     | System administration     |
 
 ### 3. Registry Layer (`src/registry/`)
 
@@ -155,9 +160,9 @@ Auto-discovers and registers package capabilities:
 interface PackageManifest {
   name: string;
   version: string;
-  router?: string;           // Path to tRPC router
+  router?: string; // Path to tRPC router
   tuiPanels?: TuiPanelDef[]; // Custom TUI panels
-  commands?: CommandDef[];   // Direct commands (non-tRPC)
+  commands?: CommandDef[]; // Direct commands (non-tRPC)
   shortcuts?: ShortcutDef[]; // Keyboard shortcuts
 }
 
@@ -269,10 +274,10 @@ export interface CliManifest {
   name: string;
   version: string;
   description: string;
-  
+
   // tRPC router (if any)
   router?: AnyRouter;
-  
+
   // TUI panels (if any)
   panels?: {
     id: string;
@@ -280,7 +285,7 @@ export interface CliManifest {
     component: React.ComponentType | OpenTUIRenderable;
     shortcuts?: string[];
   }[];
-  
+
   // Direct commands (non-tRPC)
   commands?: {
     name: string;
@@ -288,7 +293,7 @@ export interface CliManifest {
     args: z.ZodType<unknown>;
     handler: (args: unknown) => Promise<void>;
   }[];
-  
+
   // Health check for TUI status
   healthCheck?: () => Promise<HealthStatus>;
 }
@@ -432,7 +437,7 @@ export const auth = betterAuth({
     passkey({ ... }),
     expo(),
     tanstackStartCookies(),
-    
+
     // NEW: Device Authorization for CLI
     deviceAuthorization({
       verificationUri: "/device",
@@ -443,7 +448,7 @@ export const auth = betterAuth({
       // Poll every 5 seconds
       interval: 5,
     }),
-    
+
     // NEW: OAuth Provider for MCP and external integrations
     jwt(),
     oauthProvider({
@@ -472,12 +477,14 @@ const authClient = createAuthClient({
 
 export async function deviceLogin(): Promise<Session> {
   // 1. Request device code
-  const { data: deviceCode, error } = await authClient.oauth2.requestDeviceCode({
-    scope: ["openid", "profile", "offline_access"],
-  });
-  
+  const { data: deviceCode, error } = await authClient.oauth2.requestDeviceCode(
+    {
+      scope: ["openid", "profile", "offline_access"],
+    }
+  );
+
   if (error) throw new Error(`device_code_request_failed: ${error.message}`);
-  
+
   // 2. Display verification URI and user code
   console.log("\n");
   console.log("╭────────────────────────────────────────────────╮");
@@ -487,12 +494,14 @@ export async function deviceLogin(): Promise<Session> {
   console.log(`│  Enter code: ${deviceCode.user_code.padEnd(27)}│`);
   console.log("╰────────────────────────────────────────────────╯");
   console.log("\n");
-  
+
   // 3. Optionally open browser automatically
   if (process.env.ALFRED_AUTO_OPEN_BROWSER !== "false") {
-    await openBrowser(deviceCode.verification_uri_complete || deviceCode.verification_uri);
+    await openBrowser(
+      deviceCode.verification_uri_complete || deviceCode.verification_uri
+    );
   }
-  
+
   // 4. Poll for authorization
   const { data: tokens } = await authClient.oauth2.pollDeviceToken({
     device_code: deviceCode.device_code,
@@ -502,14 +511,14 @@ export async function deviceLogin(): Promise<Session> {
       process.stdout.write(".");
     },
   });
-  
+
   // 5. Store credentials
   await storeCredentials({
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token,
-    expiresAt: Date.now() + (tokens.expires_in * 1000),
+    expiresAt: Date.now() + tokens.expires_in * 1000,
   });
-  
+
   console.log("\n✓ Authentication successful!");
   return tokens;
 }
@@ -523,7 +532,9 @@ CLI commands that require biometric (admin operations) use a step-up flow:
 // packages/tui/src/cli/biometric.ts
 import { requireRecentBiometric } from "@alfred/auth/biometric";
 
-export async function ensureBiometricForAdmin(sessionId: string): Promise<void> {
+export async function ensureBiometricForAdmin(
+  sessionId: string
+): Promise<void> {
   try {
     await requireRecentBiometric(sessionId);
   } catch (error) {
@@ -538,7 +549,7 @@ export async function ensureBiometricForAdmin(sessionId: string): Promise<void> 
       console.log("│                                                │");
       console.log("│  Visit: https://alfred.local/elevate           │");
       console.log("╰────────────────────────────────────────────────╯");
-      
+
       // Poll for biometric ticket
       await pollForBiometricTicket(sessionId);
       console.log("\n✓ Biometric verified!");
@@ -549,10 +560,14 @@ export async function ensureBiometricForAdmin(sessionId: string): Promise<void> 
 }
 
 // Auto-wrap admin commands
-const adminCommands = ["admin.getVoiceStats", "admin.restartVoicePool", "admin.clearVoiceSessions"];
+const adminCommands = [
+  "admin.getVoiceStats",
+  "admin.restartVoicePool",
+  "admin.clearVoiceSessions",
+];
 
 export function isAdminCommand(path: string): boolean {
-  return adminCommands.some(cmd => path.startsWith(cmd));
+  return adminCommands.some((cmd) => path.startsWith(cmd));
 }
 ```
 
@@ -582,7 +597,9 @@ export async function loadCredentials(): Promise<StoredCredentials | null> {
   }
 }
 
-export async function storeCredentials(creds: StoredCredentials): Promise<void> {
+export async function storeCredentials(
+  creds: StoredCredentials
+): Promise<void> {
   await Bun.write(CREDENTIALS_PATH, JSON.stringify(creds, null, 2), {
     mode: 0o600, // Owner read/write only
   });
@@ -653,14 +670,14 @@ export async function createTuiContext(commandPath?: string): Promise<Context> {
   if (!creds) {
     throw new Error("Not authenticated. Run: alfred auth login");
   }
-  
+
   const session = await refreshIfNeeded(creds);
-  
+
   // Check biometric for admin commands
   if (commandPath && isAdminCommand(commandPath)) {
     await ensureBiometricForAdmin(session.sessionId);
   }
-  
+
   return apiCreateContext({
     session,
     runtime: {
@@ -677,27 +694,27 @@ export async function createTuiContext(commandPath?: string): Promise<Context> {
 
 ### What TUI Means for Each Package
 
-| Package | Main TUI Purpose | CLI Commands | TUI Panels |
-|---------|-----------------|--------------|------------|
-| **@alfred/agent** | Tool introspection & testing | `alfred agent tools`, `alfred agent test <tool>` | Tool registry, execution history |
-| **@alfred/api** | tRPC router exposure (via trpc-cli) | All router procedures become CLI commands | Request/response inspector |
-| **@alfred/auth** | Session & credential management | `alfred auth login/logout/status/elevate` | Session status, token expiry |
-| **@alfred/cognitive** | State observation & feedback | `alfred cognitive state`, `alfred cognitive feedback` | Real-time state machine |
-| **@alfred/codex** | Memory exploration & maintenance | `alfred codex search`, `alfred codex prune` | Memory graph, decay visualization |
-| **@alfred/cortex** | LLM provider management | `alfred cortex models`, `alfred cortex test` | Model latency, token usage |
-| **@alfred/db** | Migration & maintenance | `alfred db migrate`, `alfred db seed`, `alfred db stats` | Table stats, connection pool |
-| **@alfred/embed** | Embedding diagnostics | `alfred embed test`, `alfred embed stats` | Embedding pool status |
-| **@alfred/graph** | Knowledge graph exploration | `alfred graph query`, `alfred graph visualize` | Graph visualization |
-| **@alfred/history** | Event timeline | `alfred history list`, `alfred history replay` | Event stream viewer |
-| **@alfred/knowledge** | Knowledge CRUD & search | `alfred knowledge search`, `alfred knowledge ingest` | Knowledge explorer |
-| **@alfred/learning** | Learning metrics | `alfred learning errors`, `alfred learning insights` | Error ledger, insights |
-| **@alfred/metrics** | Prometheus exposition | `alfred metrics export`, `alfred metrics query` | Live metrics dashboard |
-| **@alfred/plan** | Plan generation & evaluation | `alfred plan generate`, `alfred plan evaluate` | Plan visualizer |
-| **@alfred/policy** | Policy testing & audit | `alfred policy test`, `alfred policy audit` | Audit log viewer |
-| **@alfred/protocol** | Schema inspection | `alfred protocol schemas` | Protocol inspector |
-| **@alfred/runtime** | Workflow execution | `alfred workflow start/list/cancel` | Active workflows panel |
-| **@alfred/tune** | Model fine-tuning | `alfred tune dataset`, `alfred tune run` | Training progress |
-| **@alfred/voice** | Voice pipeline testing | `alfred voice test-stt`, `alfred voice test-tts` | Voice pool status |
+| Package               | Main TUI Purpose                    | CLI Commands                                             | TUI Panels                        |
+| --------------------- | ----------------------------------- | -------------------------------------------------------- | --------------------------------- |
+| **@alfred/agent**     | Tool introspection & testing        | `alfred agent tools`, `alfred agent test <tool>`         | Tool registry, execution history  |
+| **@alfred/api**       | tRPC router exposure (via trpc-cli) | All router procedures become CLI commands                | Request/response inspector        |
+| **@alfred/auth**      | Session & credential management     | `alfred auth login/logout/status/elevate`                | Session status, token expiry      |
+| **@alfred/cognitive** | State observation & feedback        | `alfred cognitive state`, `alfred cognitive feedback`    | Real-time state machine           |
+| **@alfred/codex**     | Memory exploration & maintenance    | `alfred codex search`, `alfred codex prune`              | Memory graph, decay visualization |
+| **@alfred/cortex**    | LLM provider management             | `alfred cortex models`, `alfred cortex test`             | Model latency, token usage        |
+| **@alfred/db**        | Migration & maintenance             | `alfred db migrate`, `alfred db seed`, `alfred db stats` | Table stats, connection pool      |
+| **@alfred/embed**     | Embedding diagnostics               | `alfred embed test`, `alfred embed stats`                | Embedding pool status             |
+| **@alfred/graph**     | Knowledge graph exploration         | `alfred graph query`, `alfred graph visualize`           | Graph visualization               |
+| **@alfred/history**   | Event timeline                      | `alfred history list`, `alfred history replay`           | Event stream viewer               |
+| **@alfred/knowledge** | Knowledge CRUD & search             | `alfred knowledge search`, `alfred knowledge ingest`     | Knowledge explorer                |
+| **@alfred/learning**  | Learning metrics                    | `alfred learning errors`, `alfred learning insights`     | Error ledger, insights            |
+| **@alfred/metrics**   | Prometheus exposition               | `alfred metrics export`, `alfred metrics query`          | Live metrics dashboard            |
+| **@alfred/plan**      | Plan generation & evaluation        | `alfred plan generate`, `alfred plan evaluate`           | Plan visualizer                   |
+| **@alfred/policy**    | Policy testing & audit              | `alfred policy test`, `alfred policy audit`              | Audit log viewer                  |
+| **@alfred/protocol**  | Schema inspection                   | `alfred protocol schemas`                                | Protocol inspector                |
+| **@alfred/runtime**   | Workflow execution                  | `alfred workflow start/list/cancel`                      | Active workflows panel            |
+| **@alfred/tune**      | Model fine-tuning                   | `alfred tune dataset`, `alfred tune run`                 | Training progress                 |
+| **@alfred/voice**     | Voice pipeline testing              | `alfred voice test-stt`, `alfred voice test-tts`         | Voice pool status                 |
 
 ---
 
@@ -730,6 +747,7 @@ export async function createTuiContext(commandPath?: string): Promise<Context> {
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred cognitive state                    # Show current state
 alfred cognitive feedback --streamId abc --expected "better response"
@@ -768,6 +786,7 @@ alfred cognitive physiology               # Energy/frustration/boredom
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred voice test-stt --file audio.wav    # Test STT pipeline
 alfred voice test-tts --text "Hello"      # Test TTS pipeline
@@ -808,6 +827,7 @@ alfred admin.restartVoicePool --pool stt  # Restart pool (biometric)
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred workflow start --intent "Deploy to staging"
 alfred workflow list --status running
@@ -846,6 +866,7 @@ alfred workflow logs --runId abc123 --follow
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred db migrate --plan               # Show pending migrations
 alfred db migrate --apply              # Apply migrations
@@ -888,6 +909,7 @@ alfred db backup                       # Create backup
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred knowledge search --text "deployment patterns"
 alfred knowledge ingest --uri ./docs/
@@ -931,6 +953,7 @@ alfred knowledge visualize --node concept:coding
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred agent tools                     # List all tools
 alfred agent tools --filter git        # Filter tools
@@ -971,6 +994,7 @@ alfred agent history --last 20
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred metrics                         # Live dashboard
 alfred metrics export                  # Prometheus format
@@ -1010,6 +1034,7 @@ alfred metrics reset                   # Reset counters (dev)
 ```
 
 **CLI Commands**:
+
 ```bash
 alfred policy audit --last 100        # View audit log
 alfred policy test --action deploy.prod --resource staging
@@ -1026,6 +1051,7 @@ alfred policy explain --decision dec_123
 **Main Point**: View learning insights, error patterns, and autonomy updates.
 
 **CLI Commands**:
+
 ```bash
 alfred learning errors --last 50       # Error ledger
 alfred learning insights               # Generated insights
@@ -1040,6 +1066,7 @@ alfred learning dream                  # Trigger dreaming cycle
 **Main Point**: Generate, evaluate, and visualize execution plans.
 
 **CLI Commands**:
+
 ```bash
 alfred plan generate --intent "Deploy to prod with rollback"
 alfred plan evaluate --planId plan_123
@@ -1054,6 +1081,7 @@ alfred plan patterns                   # Learned patterns
 **Main Point**: Memory maintenance—decay, pruning, summarization.
 
 **CLI Commands**:
+
 ```bash
 alfred codex search --text "previous deployments"
 alfred codex stats                     # Memory stats
@@ -1069,6 +1097,7 @@ alfred codex summarize --nodeId node_123
 **Main Point**: Dataset generation and fine-tuning orchestration.
 
 **CLI Commands**:
+
 ```bash
 alfred tune dataset create --name "assistant-v2"
 alfred tune dataset export --format jsonl
@@ -1081,26 +1110,31 @@ alfred tune eval --model model_v2 --dataset test
 ### Package Categories by TUI Priority
 
 **Tier 1: Essential TUI Panels (Always Visible)**
+
 - `@alfred/cognitive` — Core state machine
 - `@alfred/runtime` — Active workflows
 - `@alfred/metrics` — System health
 
 **Tier 2: Admin Operations (On-Demand)**
+
 - `@alfred/db` — Migrations, stats
 - `@alfred/voice` — Voice pool management
 - `@alfred/policy` — Audit log
 
 **Tier 3: Data Exploration (Interactive)**
+
 - `@alfred/knowledge` — Graph exploration
 - `@alfred/agent` — Tool inspection
 
 **Tier 4: Background Operations (CLI-Primary)**
+
 - `@alfred/learning` — Error ledger
 - `@alfred/plan` — Plan generation
 - `@alfred/codex` — Memory maintenance
 - `@alfred/tune` — Training
 
 **Tier 5: Infrastructure (CLI-Only)**
+
 - `@alfred/embed` — Embedding pool
 - `@alfred/cortex` — LLM providers
 - `@alfred/protocol` — Schema inspection
@@ -1246,7 +1280,7 @@ Decision Tree:
 ├─ Policy: ALLOW (autonomy 0.72 > threshold 0.5)
 └─ Tool: deploy.staging selected
 
-debug> 
+debug>
 ```
 
 #### 3. **STEP Mode** — Step-by-Step Execution
@@ -1269,7 +1303,7 @@ Context sources:
   - rag:deploy-guide (score: 0.89)
   - memory:deploy-staging-2024-12-25 (score: 0.82)
   - memory:deploy-failure-2024-12-20 (score: 0.71)
-  
+
 debug> next
 
 [BREAKPOINT] cognitive.transition: capturing → thinking
@@ -1296,58 +1330,63 @@ Resuming workflow...
 ### Debug Commands (REPL)
 
 #### Navigation
-| Command | Description |
-|---------|-------------|
-| `attach <runId>` | Attach to live workflow |
-| `replay <runId>` | Replay historical workflow |
-| `step <intent>` | Start workflow in step mode |
-| `next` / `n` | Advance to next event |
-| `continue` / `c` | Continue execution |
-| `pause` | Pause live workflow |
-| `goto <n>` | Jump to event N |
-| `back` | Go to previous event |
+
+| Command          | Description                 |
+| ---------------- | --------------------------- |
+| `attach <runId>` | Attach to live workflow     |
+| `replay <runId>` | Replay historical workflow  |
+| `step <intent>`  | Start workflow in step mode |
+| `next` / `n`     | Advance to next event       |
+| `continue` / `c` | Continue execution          |
+| `pause`          | Pause live workflow         |
+| `goto <n>`       | Jump to event N             |
+| `back`           | Go to previous event        |
 
 #### Inspection
-| Command | Description |
-|---------|-------------|
-| `inspect` / `i` | Inspect current event |
-| `inspect context` | Show context (RAG chunks, tokens) |
-| `inspect state` | Show cognitive state |
-| `inspect plan` | Show current execution plan |
-| `inspect tool <name>` | Show tool definition & history |
-| `inspect memory <query>` | Search knowledge graph |
-| `inspect policy` | Show policy decision |
+
+| Command                  | Description                       |
+| ------------------------ | --------------------------------- |
+| `inspect` / `i`          | Inspect current event             |
+| `inspect context`        | Show context (RAG chunks, tokens) |
+| `inspect state`          | Show cognitive state              |
+| `inspect plan`           | Show current execution plan       |
+| `inspect tool <name>`    | Show tool definition & history    |
+| `inspect memory <query>` | Search knowledge graph            |
+| `inspect policy`         | Show policy decision              |
 
 #### Breakpoints
-| Command | Description |
-|---------|-------------|
-| `break <event>` | Set breakpoint on event type |
-| `break tool <name>` | Break before tool execution |
-| `break transition <from> <to>` | Break on state transition |
-| `break policy deny` | Break on policy denial |
-| `break error` | Break on any error |
-| `breakpoints` | List all breakpoints |
-| `delete <n>` | Delete breakpoint N |
-| `disable <n>` | Disable breakpoint N |
+
+| Command                        | Description                  |
+| ------------------------------ | ---------------------------- |
+| `break <event>`                | Set breakpoint on event type |
+| `break tool <name>`            | Break before tool execution  |
+| `break transition <from> <to>` | Break on state transition    |
+| `break policy deny`            | Break on policy denial       |
+| `break error`                  | Break on any error           |
+| `breakpoints`                  | List all breakpoints         |
+| `delete <n>`                   | Delete breakpoint N          |
+| `disable <n>`                  | Disable breakpoint N         |
 
 #### Analysis
-| Command | Description |
-|---------|-------------|
-| `why` | Explain current decision |
-| `trace` | Show execution trace |
-| `timeline` | Show event timeline |
-| `diff <runId>` | Compare with another run |
+
+| Command         | Description              |
+| --------------- | ------------------------ |
+| `why`           | Explain current decision |
+| `trace`         | Show execution trace     |
+| `timeline`      | Show event timeline      |
+| `diff <runId>`  | Compare with another run |
 | `blame <event>` | Find root cause of event |
-| `profile` | Show timing breakdown |
+| `profile`       | Show timing breakdown    |
 
 #### Control
-| Command | Description |
-|---------|-------------|
-| `skip <tool>` | Skip next tool execution |
-| `inject <event>` | Inject synthetic event |
-| `mutate <path> <value>` | Modify state (dev only) |
-| `abort` | Abort current workflow |
-| `export` | Export debug session |
+
+| Command                 | Description              |
+| ----------------------- | ------------------------ |
+| `skip <tool>`           | Skip next tool execution |
+| `inject <event>`        | Inject synthetic event   |
+| `mutate <path> <value>` | Modify state (dev only)  |
+| `abort`                 | Abort current workflow   |
+| `export`                | Export debug session     |
 
 ### Breakpoint Types
 
@@ -1428,7 +1467,7 @@ Simulating feedback event...
 Autonomy update: 0.72 → 0.68 (confidence: 0.87)
 Frustration: 0.12 → 0.18
 
-cognitive> 
+cognitive>
 ```
 
 #### Knowledge Graph Debugging
@@ -1627,31 +1666,31 @@ import { DebugREPL } from "./repl";
 
 export async function launchDebugger(options: DebugOptions) {
   const renderer = await createCliRenderer();
-  
+
   const session = await createDebugSession({
     mode: options.mode,
     target: options.runId || options.intent,
   });
-  
+
   const inspector = new EventInspector(session);
   const breakpoints = new BreakpointManager();
-  
+
   const repl = new DebugREPL({
     session,
     inspector,
     breakpoints,
     renderer,
   });
-  
+
   // Set up panels
   const eventStreamPanel = new EventStreamPanel(session);
   const inspectorPanel = new InspectorPanel(inspector);
   const replPanel = new REPLPanel(repl);
-  
+
   renderer.root.add(eventStreamPanel);
   renderer.root.add(inspectorPanel);
   renderer.root.add(replPanel);
-  
+
   // Start debug loop
   await repl.run();
 }
@@ -1768,6 +1807,7 @@ ALFRED has dozens of concepts that the debugger must understand:
 ```
 
 **The Problem**: Without a unified ontology, the debugger can't:
+
 - Correlate events across domains
 - Understand cause-effect relationships
 - Provide meaningful explanations
@@ -1784,29 +1824,29 @@ import type { EventEnvelope } from "./envelope";
 
 /**
  * Debug-Enhanced Event Envelope
- * 
+ *
  * Extends the existing EventEnvelope with fields required for debugging:
  * - parentId: Causal linking (like TraceSpan.parent)
  * - seq: Intra-run ordering (like codex_events.seq)
  * - source: Provenance tracking
- * 
+ *
  * Backwards compatible — all new fields are optional.
  */
 export type DebugEventEnvelope<T> = EventEnvelope<T> & {
   // ─── CAUSALITY ──────────────────────────────────────────────────────
   /** Parent event that caused this (null for genesis events) */
   parentId?: string | null;
-  
+
   /** Root workflow/session this event belongs to */
   rootId?: string;
-  
+
   // ─── ORDERING ───────────────────────────────────────────────────────
   /** Monotonic sequence within the run (like codex_events.seq) */
   seq?: number;
-  
+
   /** Lamport timestamp for cross-run ordering (optional) */
   lamport?: number;
-  
+
   // ─── PROVENANCE ─────────────────────────────────────────────────────
   /** What entity produced this event */
   source?: EventSource;
@@ -1835,7 +1875,7 @@ ALFRED currently uses UUIDs (`randomUUID()`) and nanoid for IDs. The debugger ca
  * - Events: makeEventId() — SHA256 hash (when DETERMINISTIC_EVENT_IDS=1) or UUID
  * - Tokens: nanoid() — For JTI claims
  * - Spans: `${runId}-span-${counter}` — Tracer format
- * 
+ *
  * For type safety, we add branded types without changing the underlying format.
  */
 
@@ -1874,7 +1914,8 @@ function stableStringify(value: unknown): string {
     if (Array.isArray(v)) return v.map(encode);
     if (isPlainObject(v)) {
       const out: Record<string, unknown> = {};
-      for (const key of Object.keys(v).sort()) {  // ← Sorted keys!
+      for (const key of Object.keys(v).sort()) {
+        // ← Sorted keys!
         out[key] = encode((v as Record<string, unknown>)[key]);
       }
       return out;
@@ -1890,6 +1931,7 @@ return createHash("sha256").update(s).digest("hex");
 ```
 
 **Canonical Serialization Rules** (already implemented):
+
 1. ✅ Key ordering: lexicographic (sorted)
 2. ✅ Circular refs: Returns `"[circular]"`
 3. ❌ Missing: BigInt, NaN/Infinity handling (edge cases)
@@ -1905,13 +1947,13 @@ ALFRED's event types are currently scattered across multiple files. The debugger
 
 /**
  * Unified Event Catalog
- * 
+ *
  * Consolidates existing event types from:
  * - @alfred/cognitive/state/types.ts (Event: input, timeout, feedback, interrupt, complete)
  * - @alfred/type/plan.ts (WorkflowEvent: 20+ types)
  * - @alfred/type/stream.ts (StreamEvent: AI SDK events)
  * - @alfred/type/voice.ts (VoiceStreamServerEvent: voice pipeline events)
- * 
+ *
  * Note: Cognitive events use `_` discriminant; WorkflowEvent uses `type`.
  * Future work: Standardize on `_` for consistency.
  */
@@ -1931,6 +1973,7 @@ export type DomainEvent =
 ```
 
 **Existing Event Locations**:
+
 - Cognitive: `packages/cognitive/src/state/types.ts` (uses `_` discriminant)
 - Workflow: `packages/type/src/plan.ts` (uses `type` discriminant)
 - Stream: `packages/type/src/stream.ts` (AI SDK v6 events)
@@ -1947,18 +1990,19 @@ export type TraceSpan = {
   name: string;
   startNs: bigint;
   endNs?: bigint;
-  parent?: string;  // ← Causal link exists for spans
+  parent?: string; // ← Causal link exists for spans
   tags: Record<string, string | number>;
 };
 
 // NEW: Add parentId to events (following same pattern)
 export type DebugEventEnvelope<T> = EventEnvelope<T> & {
-  parentId?: string | null;  // ← Same pattern as TraceSpan.parent
+  parentId?: string | null; // ← Same pattern as TraceSpan.parent
   // ...
 };
 ```
 
 **Causal Graph enables**:
+
 - "Why did X happen?" → trace parent chain
 - "What did X cause?" → find children
 - "What happened between A and B?" → path finding
@@ -1974,39 +2018,39 @@ ALFRED already implements event sourcing for cognitive state. The debugger gener
 
 /**
  * State Reconstruction Interface
- * 
+ *
  * Extracted from packages/runtime/src/loops/cognitive.ts which already implements:
  * - Snapshot-first optimization
  * - Event replay from snapshot point
  * - Pure applyTransition() reducer
- * 
+ *
  * See: runCognitiveLoop() for reference implementation.
  */
 
 export interface StateReconstructor<S, E> {
   /** Initial state before any events */
   readonly initialState: S;
-  
+
   /** Reduce single event into state (must be pure) */
   reduce(state: S, event: E): S;
-  
+
   /** Reconstruct state from event stream */
   reconstruct(events: Iterable<E>): S;
-  
+
   /** Reconstruct state at specific event */
   reconstructAt(events: E[], eventId: string): S;
 }
 
 /**
  * Existing implementation in cognitive loop:
- * 
+ *
  * // packages/runtime/src/loops/cognitive.ts
  * const snapshot = await cognitiveRepo.getLatestSnapshot(streamId);
  * let state = snapshot?.state ?? idle(Date.now());
- * const events = snapshot 
+ * const events = snapshot
  *   ? await cognitiveRepo.getEventsSince(streamId, snapshot.createdAt)
  *   : await cognitiveRepo.getAllEvents(streamId);
- * 
+ *
  * for (const record of events) {
  *   state = applyTransition(state, autonomy, unwrappedEvent).state;
  * }
@@ -2014,6 +2058,7 @@ export interface StateReconstructor<S, E> {
 ```
 
 **Existing Patterns**:
+
 - `cognitiveSnapshots` table stores snapshots with `lastEventId`
 - `runCognitiveLoop()` implements snapshot + replay
 - `applyTransition()` is the pure reducer function
@@ -2034,7 +2079,11 @@ export const cognitiveSnapshots = pgTable("cognitive_snapshots", {
 
 // Existing: packages/db/src/repo/cognitive.ts
 export async function getLatestSnapshot(streamId: string);
-export async function saveSnapshot(streamId: string, state: unknown, lastEventId: string);
+export async function saveSnapshot(
+  streamId: string,
+  state: unknown,
+  lastEventId: string
+);
 
 // NEW: Generalized snapshot interface for debugger
 interface Snapshot<S> {
@@ -2049,7 +2098,9 @@ interface Snapshot<S> {
 // Migration: 0055_workflow_snapshots.sql
 export const workflowSnapshots = pgTable("workflow_snapshots", {
   id: uuid("id").primaryKey().defaultRandom(),
-  runId: uuid("run_id").notNull().references(() => workflowRuns.id),
+  runId: uuid("run_id")
+    .notNull()
+    .references(() => workflowRuns.id),
   state: jsonb("state").notNull(),
   lastEventId: uuid("last_event_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -2057,6 +2108,7 @@ export const workflowSnapshots = pgTable("workflow_snapshots", {
 ```
 
 **Snapshot Strategy**:
+
 - Snapshot every N events (e.g., 1000)
 - Snapshot on significant milestones (`run.completed`)
 - Keep last K snapshots, garbage collect old ones
@@ -2069,7 +2121,7 @@ ALFRED already has a version field in `EventEnvelope`:
 ```typescript
 // Existing: packages/type/src/envelope.ts
 export type EventEnvelope<T> = {
-  v: 1;  // ← Version field exists but is static
+  v: 1; // ← Version field exists but is static
   id: string;
   type: string;
   createdAt: string;
@@ -2081,11 +2133,13 @@ export type EventEnvelope<T> = {
 **Current state**: The `v` field is always `1` — no migration system exists.
 
 **Future enhancement** (Phase 5 of debugger):
+
 - Increment `v` when schema changes
 - Implement migration registry for old events
 - Add `deserializeWithMigration()` function
 
 **Schema Evolution Rules**:
+
 1. Add fields: allowed (old events lack field, use default)
 2. Remove fields: forbidden (breaks old code)
 3. Change types: forbidden (breaks serialization)
@@ -2095,15 +2149,16 @@ export type EventEnvelope<T> = {
 
 The debugger requires these invariants to function correctly:
 
-| Invariant | Description | Test Strategy |
-|-----------|-------------|---------------|
-| **Deterministic Replay** | Same events → same state | `reconstruct(events)` produces identical state on multiple runs |
-| **Causal Completeness** | Every event has valid parent | All `parentId` values exist in event set (except genesis) |
-| **Temporal Ordering** | Events ordered by seq/lamport | `events[i].seq < events[i+1].seq` within run |
-| **Serialization Round-Trip** | serialize → deserialize = identity | `deepEqual(event, deserialize(serialize(event)))` |
-| **Content Addressability** | ID = hash(content) | `makeEventId(event) === event.id` when deterministic |
+| Invariant                    | Description                        | Test Strategy                                                   |
+| ---------------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| **Deterministic Replay**     | Same events → same state           | `reconstruct(events)` produces identical state on multiple runs |
+| **Causal Completeness**      | Every event has valid parent       | All `parentId` values exist in event set (except genesis)       |
+| **Temporal Ordering**        | Events ordered by seq/lamport      | `events[i].seq < events[i+1].seq` within run                    |
+| **Serialization Round-Trip** | serialize → deserialize = identity | `deepEqual(event, deserialize(serialize(event)))`               |
+| **Content Addressability**   | ID = hash(content)                 | `makeEventId(event) === event.id` when deterministic            |
 
 **Existing support**:
+
 - ✅ Deterministic replay: `runCognitiveLoop()` already implements
 - ✅ Serialization: `stableStringify()` handles sorted keys
 - ⚠️ Causal completeness: Needs `parentId` on events
@@ -2118,19 +2173,19 @@ This section maps the proposed debugger foundations to **existing ALFRED code**.
 
 ### Audit Checklist
 
-| Proposed Concept | Existing Code | Status | Gap Analysis |
-|-----------------|---------------|--------|--------------|
-| Event Atom | `EventEnvelope<T>` in `@alfred/type/envelope.ts` | ⚠️ Partial | Missing: `parentId`, `lamport`, `source`, `version` |
-| Event Type Catalog | Scattered across 5+ files | ❌ Gap | No unified catalog; types in `plan.ts`, `stream.ts`, `voice.ts`, `cognitive/state/types.ts` |
-| ULID Prefixed IDs | `randomUUID()` / `nanoid` | ❌ Gap | Currently UUIDs without prefixes; no time-sortable IDs |
-| Deterministic IDs | `makeEventId()` in `@alfred/api/utils/event-id.ts` | ✅ Exists | Opt-in via `DETERMINISTIC_EVENT_IDS` env var |
-| Canonical Serialization | `stableStringify()` in `event-id.ts` | ⚠️ Partial | Exists for ID generation; not standardized for all serialization |
-| Causal Links (parentId) | `TraceSpan.parent` in `@alfred/runtime/tracing.ts` | ⚠️ Partial | Exists for spans; not on events |
-| Lamport Timestamps | N/A | ❌ Gap | No logical clock; ordering via `createdAt` wall-clock |
-| State Reconstruction | `runCognitiveLoop()` in `@alfred/runtime/loops/cognitive.ts` | ✅ Exists | Snapshot + replay pattern implemented for cognitive |
-| Snapshots | `cognitiveSnapshots` table | ✅ Exists | Only for cognitive; pattern proven, needs generalization |
-| Schema Versioning | `v: 1` in `EventEnvelope` | ⚠️ Partial | Version field exists but no migration system |
-| Sequence Numbers | `seq` column in `codex_events` | ✅ Exists | Per-run ordering; proven pattern |
+| Proposed Concept        | Existing Code                                                | Status     | Gap Analysis                                                                                |
+| ----------------------- | ------------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------- |
+| Event Atom              | `EventEnvelope<T>` in `@alfred/type/envelope.ts`             | ⚠️ Partial | Missing: `parentId`, `lamport`, `source`, `version`                                         |
+| Event Type Catalog      | Scattered across 5+ files                                    | ❌ Gap     | No unified catalog; types in `plan.ts`, `stream.ts`, `voice.ts`, `cognitive/state/types.ts` |
+| ULID Prefixed IDs       | `randomUUID()` / `nanoid`                                    | ❌ Gap     | Currently UUIDs without prefixes; no time-sortable IDs                                      |
+| Deterministic IDs       | `makeEventId()` in `@alfred/api/utils/event-id.ts`           | ✅ Exists  | Opt-in via `DETERMINISTIC_EVENT_IDS` env var                                                |
+| Canonical Serialization | `stableStringify()` in `event-id.ts`                         | ⚠️ Partial | Exists for ID generation; not standardized for all serialization                            |
+| Causal Links (parentId) | `TraceSpan.parent` in `@alfred/runtime/tracing.ts`           | ⚠️ Partial | Exists for spans; not on events                                                             |
+| Lamport Timestamps      | N/A                                                          | ❌ Gap     | No logical clock; ordering via `createdAt` wall-clock                                       |
+| State Reconstruction    | `runCognitiveLoop()` in `@alfred/runtime/loops/cognitive.ts` | ✅ Exists  | Snapshot + replay pattern implemented for cognitive                                         |
+| Snapshots               | `cognitiveSnapshots` table                                   | ✅ Exists  | Only for cognitive; pattern proven, needs generalization                                    |
+| Schema Versioning       | `v: 1` in `EventEnvelope`                                    | ⚠️ Partial | Version field exists but no migration system                                                |
+| Sequence Numbers        | `seq` column in `codex_events`                               | ✅ Exists  | Per-run ordering; proven pattern                                                            |
 
 ### Audit Findings & Inaccuracies
 
@@ -2174,44 +2229,46 @@ This section maps the proposed debugger foundations to **existing ALFRED code**.
 
 The `appRouter` aggregates **30 routers** (not 24+):
 
-| Router | Package | Purpose |
-|--------|---------|---------|
-| `admin` | `@alfred/api` | Admin operations, stats, health |
-| `assistant` | `@alfred/api` | Assistant chat interface |
-| `book` | `@alfred/api` | Book management |
-| `codex` | `@alfred/api` | Codex execution runtime |
-| `codexIntent` | `@alfred/api` | Codex intent parsing |
-| `cognitive` | `@alfred/api` | Cognitive state machine |
-| `deploy` | `@alfred/api` | Deployment operations |
-| `droid` | `@alfred/api` | Droid agent management |
-| `eval` | `@alfred/api` | Code evaluation |
-| `fs` | `@alfred/api` | File system operations |
-| `graph` | `@alfred/api` | Knowledge graph queries |
-| `jwks` | `@alfred/api` | JWKS key management |
-| `knowledge` | `@alfred/api` | Knowledge CRUD operations |
-| `linear` | `@alfred/api` | Linear integration |
-| `note` | `@alfred/api` | Note management |
-| `orchestrator` | `@alfred/api` | Workflow orchestration |
-| `plan` | `@alfred/api` | Plan generation |
-| `preference` | `@alfred/api` | User preferences |
-| `privacy` | `@alfred/api` | Privacy controls |
-| `profile` | `@alfred/api` | User profile |
-| `project` | `@alfred/api` | Project management |
-| `remind` | `@alfred/api` | Reminder system |
-| `terminal` | `@alfred/api` | Terminal/shell execution |
-| `timer` | `@alfred/api` | Timer management |
-| `todo` | `@alfred/api` | Todo list operations |
-| `token` | `@alfred/api` | Token management |
-| `tune` | `@alfred/api` | Model fine-tuning |
-| `user` | `@alfred/api` | User management |
-| `visual` | `@alfred/api` | Visual/UI operations |
-| `voice` | `@alfred/api` | Voice pipeline |
-| `workflow` | `@alfred/api` | Workflow execution |
+| Router         | Package       | Purpose                         |
+| -------------- | ------------- | ------------------------------- |
+| `admin`        | `@alfred/api` | Admin operations, stats, health |
+| `assistant`    | `@alfred/api` | Assistant chat interface        |
+| `book`         | `@alfred/api` | Book management                 |
+| `codex`        | `@alfred/api` | Codex execution runtime         |
+| `codexIntent`  | `@alfred/api` | Codex intent parsing            |
+| `cognitive`    | `@alfred/api` | Cognitive state machine         |
+| `deploy`       | `@alfred/api` | Deployment operations           |
+| `droid`        | `@alfred/api` | Droid agent management          |
+| `eval`         | `@alfred/api` | Code evaluation                 |
+| `fs`           | `@alfred/api` | File system operations          |
+| `graph`        | `@alfred/api` | Knowledge graph queries         |
+| `jwks`         | `@alfred/api` | JWKS key management             |
+| `knowledge`    | `@alfred/api` | Knowledge CRUD operations       |
+| `linear`       | `@alfred/api` | Linear integration              |
+| `note`         | `@alfred/api` | Note management                 |
+| `orchestrator` | `@alfred/api` | Workflow orchestration          |
+| `plan`         | `@alfred/api` | Plan generation                 |
+| `preference`   | `@alfred/api` | User preferences                |
+| `privacy`      | `@alfred/api` | Privacy controls                |
+| `profile`      | `@alfred/api` | User profile                    |
+| `project`      | `@alfred/api` | Project management              |
+| `remind`       | `@alfred/api` | Reminder system                 |
+| `terminal`     | `@alfred/api` | Terminal/shell execution        |
+| `timer`        | `@alfred/api` | Timer management                |
+| `todo`         | `@alfred/api` | Todo list operations            |
+| `token`        | `@alfred/api` | Token management                |
+| `tune`         | `@alfred/api` | Model fine-tuning               |
+| `user`         | `@alfred/api` | User management                 |
+| `visual`       | `@alfred/api` | Visual/UI operations            |
+| `voice`        | `@alfred/api` | Voice pipeline                  |
+| `workflow`     | `@alfred/api` | Workflow execution              |
 
 **Orphaned Router** (not in appRouter):
+
 - `home` (`packages/api/src/routers/home.ts`) — Contains TODOs, incomplete implementation
 
 **Incorrectly Mentioned** (does not exist):
+
 - `rag` — No router exists; `@alfred/rag` package exists but has no router exposed
 
 ### Existing Code References
@@ -2230,6 +2287,7 @@ export type EventEnvelope<T> = {
 ```
 
 **Analysis**: This is the existing "event atom" pattern. It has:
+
 - ✅ `id` (string, not typed)
 - ✅ `type` (string, not discriminated union)
 - ✅ `createdAt` (ISO timestamp)
@@ -2266,6 +2324,7 @@ export function makeEventId(payload: {
 **⚠️ Duplicate Implementation**: Identical function exists in `packages/agent/src/utils/event-id.ts`. Consolidation required before extending.
 
 **Analysis**: Content-addressable ID generation already exists!
+
 - ✅ Stable stringification with sorted keys
 - ✅ SHA256 hashing
 - ✅ Environment-controlled toggle
@@ -2321,6 +2380,7 @@ export type CognitiveState =
 ```
 
 **Analysis**: This is the canonical ADT pattern ALFRED uses.
+
 - ✅ Uses `_` as discriminant (not `type`)
 - ✅ Each variant has specific fields
 - ✅ Branded types (`Timestamp`, `Confidence`)
@@ -2351,6 +2411,7 @@ export type Event =
 ```
 
 **Analysis**: Cognitive events use the same ADT pattern.
+
 - ✅ `_` discriminant
 - ✅ `ts` timestamp on most variants
 - ❌ No `parentId` linking
@@ -2380,6 +2441,7 @@ export type WorkflowEvent =
 ```
 
 **Analysis**: Uses `type` discriminant (not `_`), with escape hatch.
+
 - ⚠️ Uses `type` instead of `_` (inconsistent with cognitive)
 - ⚠️ Final variant is open-ended (breaks exhaustive matching)
 - ✅ `eventId` in base (optional)
@@ -2398,6 +2460,7 @@ export type TraceSpan = {
 ```
 
 **Analysis**: Tracing already has parent-child relationships!
+
 - ✅ `parent?: string` for causal linking
 - ✅ Nanosecond precision timing (`startNs`, `endNs`)
 - ✅ Tags for metadata
@@ -2422,6 +2485,7 @@ export const cognitiveSnapshots = pgTable(
 ```
 
 **Analysis**: Snapshot pattern is proven!
+
 - ✅ `lastEventId` links to event stream
 - ✅ `state` stores full state as JSONB
 - ✅ Indexed for efficient lookup
@@ -2464,6 +2528,7 @@ for (const record of events) {
 ```
 
 **Analysis**: This is exactly the reconstruction pattern we need!
+
 - ✅ Snapshot-first optimization
 - ✅ Event replay from snapshot point
 - ✅ Pure `applyTransition()` function
@@ -2483,6 +2548,7 @@ runSeqUnique: uniqueIndex("codex_events_run_seq_idx").on(
 ```
 
 **Analysis**: Per-run sequence numbers exist!
+
 - ✅ Integer sequence per run
 - ✅ Unique constraint ensures ordering
 - ❌ Not a global Lamport clock
@@ -2511,6 +2577,7 @@ export type Knowledge =
 ```
 
 **Analysis**: Follows same ADT pattern as cognitive state.
+
 - ✅ `_` discriminant
 - ✅ Branded types (`NodeId`, `Confidence`, `Timestamp`)
 - ✅ Domain-specific variants
@@ -2560,18 +2627,18 @@ export type Knowledge =
 
 Based on the audit, the debugger requires these changes to existing code:
 
-| Change | Location | Risk | Effort |
-|--------|----------|------|--------|
-| Add `parentId`, `seq`, `source` to `EventEnvelope` | `@alfred/type/envelope.ts` | Low | 1 day |
-| Create unified event catalog | `@alfred/type/events.ts` | Low | 1 day |
-| Add `parentId` column to event tables | Migrations | Medium | 2 days |
-| Add `seq` column to `workflow_events` table | Migration | Medium | 1 day |
-| Extract `StateReconstructor` interface | `@alfred/type/reconstruct.ts` | Low | 1 day |
-| Add `workflow_snapshots` table | Migration | Low | 1 day |
-| Bridge tracer to event system | `@alfred/runtime/tracing.ts` | Low | 1 day |
-| Export `stableStringify` | `@alfred/type/serialize.ts` | Low | 0.5 day |
-| Consolidate duplicate `makeEventId` | Move to `@alfred/type` | Low | 0.5 day |
-| Migrate discriminants `type` → `_` | `plan.ts`, `stream.ts`, `voice.ts` | Medium | 2 days |
+| Change                                             | Location                           | Risk   | Effort  |
+| -------------------------------------------------- | ---------------------------------- | ------ | ------- |
+| Add `parentId`, `seq`, `source` to `EventEnvelope` | `@alfred/type/envelope.ts`         | Low    | 1 day   |
+| Create unified event catalog                       | `@alfred/type/events.ts`           | Low    | 1 day   |
+| Add `parentId` column to event tables              | Migrations                         | Medium | 2 days  |
+| Add `seq` column to `workflow_events` table        | Migration                          | Medium | 1 day   |
+| Extract `StateReconstructor` interface             | `@alfred/type/reconstruct.ts`      | Low    | 1 day   |
+| Add `workflow_snapshots` table                     | Migration                          | Low    | 1 day   |
+| Bridge tracer to event system                      | `@alfred/runtime/tracing.ts`       | Low    | 1 day   |
+| Export `stableStringify`                           | `@alfred/type/serialize.ts`        | Low    | 0.5 day |
+| Consolidate duplicate `makeEventId`                | Move to `@alfred/type`             | Low    | 0.5 day |
+| Migrate discriminants `type` → `_`                 | `plan.ts`, `stream.ts`, `voice.ts` | Medium | 2 days  |
 
 **Total debugger foundation effort**: ~1.5 weeks
 
@@ -2642,13 +2709,13 @@ Based on the audit, the debugger requires these changes to existing code:
 
 These foundations belong in core packages, not `@alfred/tui`:
 
-| Foundation | Owner Package | Reason |
-|------------|---------------|--------|
-| `DebugEventEnvelope` | `@alfred/type` | Shared type definitions |
-| `stableStringify` | `@alfred/type` | Shared serialization |
-| `StateReconstructor` | `@alfred/type` | Interface definition |
-| Event tables + migrations | `@alfred/db` | Database schema |
-| Cognitive reconstruction | `@alfred/runtime` | Already implemented |
+| Foundation                | Owner Package     | Reason                  |
+| ------------------------- | ----------------- | ----------------------- |
+| `DebugEventEnvelope`      | `@alfred/type`    | Shared type definitions |
+| `stableStringify`         | `@alfred/type`    | Shared serialization    |
+| `StateReconstructor`      | `@alfred/type`    | Interface definition    |
+| Event tables + migrations | `@alfred/db`      | Database schema         |
+| Cognitive reconstruction  | `@alfred/runtime` | Already implemented     |
 
 **The TUI debugger is a consumer of this infrastructure, not the owner.**
 
@@ -2738,12 +2805,14 @@ Extends core packages to enable debugger (can run in parallel with Phase 1):
 **Research**: See `docs/research/mcp-oauth-integration.md` for detailed findings.
 
 **Phase 6.1: Scope Definition** (Day 1) ✅
+
 - [x] Create `packages/type/src/scopes.ts` with scope constants and hierarchy
 - [x] Define granular scopes: `read:todos`, `read:notes`, `write:*`, `admin:voice`, etc.
 - [x] Add `requireScopes` middleware to tRPC (`packages/api/src/middleware/scopes.ts`)
 - [ ] Update router procedures with scope requirements (deferred - optional for MCP)
 
 **Phase 6.2: Trusted Client Registration** (Day 2) ✅
+
 - [x] Add `CURSOR_CLIENT_SECRET` and `CLAUDE_CLIENT_SECRET` to `config/env.example`
 - [x] Configure trusted clients in OIDC Provider (`packages/auth/src/index.ts`)
   - Cursor IDE: `clientId: "cursor-mcp-client"`, trusted, env-configured
@@ -2752,6 +2821,7 @@ Extends core packages to enable debugger (can run in parallel with Phase 1):
 - [x] Updated scopes_supported in OIDC metadata with all granular scopes
 
 **Phase 6.3: Resource Server Verification** (Day 3)
+
 - [x] `/.well-known/oauth-protected-resource` exists (Already implemented)
 - [x] `/.well-known/oauth-authorization-server` exists (Already implemented)
 - [⚠️] `/api/auth/oauth2/introspect` - NOT implemented in Better Auth OIDC Provider
@@ -2760,6 +2830,7 @@ Extends core packages to enable debugger (can run in parallel with Phase 1):
   - Use `/api/auth/sign-out` or `/api/auth/revoke-session` instead
 
 **Phase 6.4: Integration Testing** (Day 4-5) ✅
+
 - [x] Create `scripts/verify-mcp-auth.ts` test script
 - [ ] Test Device Authorization flow end-to-end (requires running server)
 - [ ] Test Authorization Code + PKCE flow (requires running server)
@@ -2768,6 +2839,7 @@ Extends core packages to enable debugger (can run in parallel with Phase 1):
 - [ ] Test trusted client consent bypass (requires running server)
 
 **Phase 6.5: Documentation** (Day 5) ✅
+
 - [x] Document MCP client registration in `docs/guides/mcp-integration.md`
 - [x] Add Cursor IDE integration example
 - [x] Add Claude Desktop integration example
@@ -2972,46 +3044,47 @@ alfred workflow.start --intent "Plan today's priorities"
 4. **Streaming**: How to display streaming responses in TUI? (OpenTUI supports?)
 5. **Performance**: OpenTUI performance with many panels? (Need benchmarks)
 6. **Theming**: Should TUI respect terminal theme? (Or ALFRED-branded?)
-8. **Credential encryption**: Should `~/.alfred/credentials.json` be encrypted at rest?
-9. **Multi-device**: How to handle credential sync across machines?
-10. **Discriminant migration**: How to migrate WorkflowEvent, StreamEvent, and VoiceStreamServerEvent from `type` to `_` discriminant? (See Audit Findings)
-11. **Duplicate makeEventId**: Consolidate `packages/api/src/utils/event-id.ts` and `packages/agent/src/utils/event-id.ts` before extending
-12. **Orphaned homeRouter**: Integrate `packages/api/src/routers/home.ts` into appRouter or remove?
+7. **Credential encryption**: Should `~/.alfred/credentials.json` be encrypted at rest?
+8. **Multi-device**: How to handle credential sync across machines?
+9. **Discriminant migration**: How to migrate WorkflowEvent, StreamEvent, and VoiceStreamServerEvent from `type` to `_` discriminant? (See Audit Findings)
+10. **Duplicate makeEventId**: Consolidate `packages/api/src/utils/event-id.ts` and `packages/agent/src/utils/event-id.ts` before extending
+11. **Orphaned homeRouter**: Integrate `packages/api/src/routers/home.ts` into appRouter or remove?
 
 ---
 
 ## Decision Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2025-12-26 | Use trpc-cli over custom CLI | Zero-config, type-safe, maintained |
-| 2025-12-26 | Use @opentui/core for TUI | Modern, TypeScript-first, SST-backed |
-| 2025-12-26 | Require CliManifest from packages | Enforces CLI surface as contract |
-| 2025-12-26 | Use Device Authorization (RFC 8628) | Terminal-friendly, no local server, Better Auth native |
-| 2025-12-26 | Add OAuth Provider for MCP | Enables AI agent authentication, OIDC-compliant |
-| 2025-12-26 | Browser-based biometric elevation | Passkeys require browser context; TUI polls for ticket |
-| 2025-12-26 | Store credentials in `~/.alfred/` | Standard pattern for CLI tools, mode 0o600 for security |
-| 2025-12-26 | Extend EventEnvelope, don't replace | Backwards compatible; existing code continues to work |
-| 2025-12-26 | Use `_` discriminant for ADTs | Consistent with CognitiveState, Knowledge patterns |
-| 2025-12-26 | Generalize cognitive snapshot pattern | Proven pattern; apply to workflows and other domains |
+| Date       | Decision                              | Rationale                                               |
+| ---------- | ------------------------------------- | ------------------------------------------------------- |
+| 2025-12-26 | Use trpc-cli over custom CLI          | Zero-config, type-safe, maintained                      |
+| 2025-12-26 | Use @opentui/core for TUI             | Modern, TypeScript-first, SST-backed                    |
+| 2025-12-26 | Require CliManifest from packages     | Enforces CLI surface as contract                        |
+| 2025-12-26 | Use Device Authorization (RFC 8628)   | Terminal-friendly, no local server, Better Auth native  |
+| 2025-12-26 | Add OAuth Provider for MCP            | Enables AI agent authentication, OIDC-compliant         |
+| 2025-12-26 | Browser-based biometric elevation     | Passkeys require browser context; TUI polls for ticket  |
+| 2025-12-26 | Store credentials in `~/.alfred/`     | Standard pattern for CLI tools, mode 0o600 for security |
+| 2025-12-26 | Extend EventEnvelope, don't replace   | Backwards compatible; existing code continues to work   |
+| 2025-12-26 | Use `_` discriminant for ADTs         | Consistent with CognitiveState, Knowledge patterns      |
+| 2025-12-26 | Generalize cognitive snapshot pattern | Proven pattern; apply to workflows and other domains    |
 
 ---
 
 ## Progress
 
-| Phase | Status | Notes |
-|-------|--------|-------|
-| **Audit** | ✅ Complete | Codebase audit completed 2025-01-XX; all inaccuracies documented and fixed |
-| Phase 0: Debugger Foundations | ✅ Complete | EventEnvelope extended, migrations created (0062, 0063), StateReconstructor interface extracted |
-| Phase 0.5: Better Auth Setup | ✅ Complete | OIDC Provider added, consent page created, well-known endpoints added |
-| Phase 1: Type Consolidation | ✅ Complete | trpc-cli integration, Bun.secrets, device auth flow |
-| Phase 2: Causal Linking | ✅ Complete | parentId added to envelopes and tables, RuntimeTracer extended, CausalGraph built |
-| Phase 3: State Reconstruction | ✅ Complete | Reconstructor interfaces defined, Cognitive/Workflow implementations, performance verified |
-| Phase 4: Ordering & Identity | ✅ Complete | Branded IDs, deterministic hashing, stableStringify |
-| Phase 5: Versioning | ✅ Complete | Event migration registry and versioned envelopes |
-| Phase 6: MCP Integration | ✅ Core Complete | Scopes, middleware, trusted clients, docs. Introspect/revoke not in Better Auth - use JWT/JWKS |
+| Phase                         | Status           | Notes                                                                                           |
+| ----------------------------- | ---------------- | ----------------------------------------------------------------------------------------------- |
+| **Audit**                     | ✅ Complete      | Codebase audit completed 2025-01-XX; all inaccuracies documented and fixed                      |
+| Phase 0: Debugger Foundations | ✅ Complete      | EventEnvelope extended, migrations created (0062, 0063), StateReconstructor interface extracted |
+| Phase 0.5: Better Auth Setup  | ✅ Complete      | OIDC Provider added, consent page created, well-known endpoints added                           |
+| Phase 1: Type Consolidation   | ✅ Complete      | trpc-cli integration, Bun.secrets, device auth flow                                             |
+| Phase 2: Causal Linking       | ✅ Complete      | parentId added to envelopes and tables, RuntimeTracer extended, CausalGraph built               |
+| Phase 3: State Reconstruction | ✅ Complete      | Reconstructor interfaces defined, Cognitive/Workflow implementations, performance verified      |
+| Phase 4: Ordering & Identity  | ✅ Complete      | Branded IDs, deterministic hashing, stableStringify                                             |
+| Phase 5: Versioning           | ✅ Complete      | Event migration registry and versioned envelopes                                                |
+| Phase 6: MCP Integration      | ✅ Core Complete | Scopes, middleware, trusted clients, docs. Introspect/revoke not in Better Auth - use JWT/JWKS  |
 
 **Audit Summary (2025-01-XX)**:
+
 - ✅ Fixed package count: "24+" → "23 functional packages" (clarified: 26 total, excluding infrastructure)
 - ✅ Fixed router count: "24+" → "30 routers" (complete list documented in Complete Router Reference section)
 - ✅ Removed incorrect `@alfred/rag` router references (package exists but no router exposed)
@@ -3027,6 +3100,7 @@ alfred workflow.start --intent "Plan today's priorities"
 ## Surprises & Discoveries
 
 **Phase 0 & 1 Implementation (2025-12-27)**:
+
 - ✅ `makeEventId` consolidation: Found duplicate implementations in `@alfred/api` and `@alfred/agent` - successfully consolidated to `@alfred/type/id`
 - ✅ Database migrations: Created migrations 0062 and 0063 following existing `codex_events` and `cognitive_snapshots` patterns
 - ✅ StateReconstructor interface: Extracted from cognitive loop pattern - provides generic interface for any event-sourced state
@@ -3039,22 +3113,26 @@ alfred workflow.start --intent "Plan today's priorities"
 - ⚠️ Migration execution: Database migrations need to be applied manually via `bun scripts/migrate.ts --plan` then `--apply`
 
 **Phase 2 Implementation (2025-12-27)**:
+
 - ✅ **Causal Linking**: Added `parentId` and `seq` to `cognitive_events` (Migration 0064) and updated schemas/repositories.
 - ✅ **Distributed Tracing**: Extended `RuntimeTracer` with `toEvents()` to emit linked trace events.
 - ✅ **Causal Graph**: Built `CausalGraph` utility in `@alfred/type/causal` for DAG traversal of system events.
 
 **Phase 3 Implementation (2025-12-27)**:
+
 - ✅ **State Reconstruction**: Formalized `StateReconstructor` and `SnapshotReconstructor` interfaces in `@alfred/type`.
 - ✅ **Domain Implementations**: Implemented `CognitiveReconstructor` and `WorkflowReconstructor`.
 - ✅ **Performance Benchmarks**: Verified reconstruction performance - 10k events processed in ~0.4ms (budget: 100ms).
 
 **Phase 4 & 5 Implementation (2025-12-27)**:
+
 - ✅ **Ordering & Identity**: Added `lamport` clocks, verified branded IDs, and enhanced `makeEventId` with deterministic hashing.
 - ✅ **Zod Consolidation**: Created Zod schemas for all system events (`DomainEvent` union).
 - ✅ **Versioning**: Implemented migration registry and versioned envelopes.
 - ✅ **Backward Compatibility**: Documented versioning rules in `.ruler/40-versioning.md`.
 
 **Phase 6 Research (2025-12-28)**:
+
 - ✅ **MCP Specification**: MCP uses OAuth 2.1 with mandatory PKCE, RFC 9728 (Protected Resource Metadata), and RFC 8414 (Authorization Server Metadata).
 - ✅ **Better Auth Coverage**: OIDC Provider plugin already supports trusted clients, dynamic registration, and consent pages. The `oidcProvider` plugin is the recommended approach (MCP plugin deprecated).
 - ✅ **Existing Infrastructure**: ALFRED already has both `.well-known/oauth-protected-resource` and `.well-known/oauth-authorization-server` endpoints implemented.
@@ -3067,6 +3145,7 @@ alfred workflow.start --intent "Plan today's priorities"
 ## Outcomes & Retrospective
 
 **Phase 0, 0.5, 1, 2, 3, 4 & 5 Completion (2025-12-27)**:
+
 - ✅ All Phase 5 (Versioning) items completed: Migration registry, versioned envelopes, and ruler documentation.
 - ✅ All Phase 4 (Ordering & Identity) items completed: Branded IDs, deterministic hashing, and Lamport clocks.
 - ✅ All Phase 3 (State Reconstruction) checklist items completed: Reconstructor interfaces defined, domain implementations created, performance benchmarks verified.

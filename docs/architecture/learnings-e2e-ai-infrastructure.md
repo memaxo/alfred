@@ -7,6 +7,7 @@
 **Pattern:** Design test infrastructure with AI agent consumption as the primary use case, human debugging as secondary.
 
 **Implementation:**
+
 - Default to compact, structured output
 - Truncate errors at token-efficient boundaries (500 chars)
 - Include direct paths to artifacts (screenshots, traces)
@@ -20,16 +21,21 @@
 **Pattern:** Every error must include complete operational context for root cause analysis without additional queries.
 
 **Implementation:**
+
 ```typescript
 class TimeoutError extends Error {
-  constructor(public readonly context: {
-    operation: string;
-    selector?: string;
-    timeout: number;
-    elapsed: number;
-    pageUrl: string;
-    lastActivity?: string;
-  }) { /* ... */ }
+  constructor(
+    public readonly context: {
+      operation: string;
+      selector?: string;
+      timeout: number;
+      elapsed: number;
+      pageUrl: string;
+      lastActivity?: string;
+    }
+  ) {
+    /* ... */
+  }
 }
 ```
 
@@ -40,6 +46,7 @@ class TimeoutError extends Error {
 **Pattern:** Core utilities in `packages/test-kit`, app-specific integration in `apps/*`.
 
 **Implementation:**
+
 - Test-kit exports generic utilities (timeout, crash detection)
 - Test-kit uses generic interfaces for cross-boundary types
 - App test helpers import from test-kit, not vice versa
@@ -52,6 +59,7 @@ class TimeoutError extends Error {
 **Pattern:** Test utilities return handle objects with cleanup methods, following workflow/voice fixture patterns.
 
 **Implementation:**
+
 ```typescript
 export type CrashMonitorHandle = {
   getCrashes: () => CrashReport[];
@@ -68,6 +76,7 @@ export type CrashMonitorHandle = {
 **Pattern:** Default to single worker, stop on first failure for fastest feedback.
 
 **Implementation:**
+
 - `maxFailures: 1` stops immediately
 - `workers: 1` ensures deterministic output
 - `fullyParallel: false` disables concurrent tests
@@ -160,16 +169,20 @@ export type CrashMonitorHandle = {
 ## Documentation Created
 
 ### Rules (`.ruler/`)
+
 - `apps/web/.ruler/e2e-testing.md` - 12 rules for E2E test patterns
 
 ### Architecture (`docs/architecture/`)
+
 - `e2e-test-infrastructure.md` - Complete architecture documentation
 
 ### Implementation Guide
+
 - `apps/web/.tests/AI-INFRASTRUCTURE.md` - Usage guide with examples
 - `apps/web/.tests/ai-harness-example.e2e.spec.ts` - Reference implementation
 
 ### Applied Changes
+
 - Ran `bun run ruler:apply` to regenerate `AGENTS.md` files
 
 ## Key Learnings

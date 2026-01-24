@@ -1,9 +1,10 @@
 ---
 title: Building Windows – Project | Bun Docs
-url: 
+url:
 description: Learn how to setup a development environment for contributing to the Windows build of Bun.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,9 +57,9 @@ This document describes the build process for Windows. If you run into problems,
 
 It is strongly recommended to use [PowerShell 7 ( `pwsh.exe`)](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.4) instead of the default `powershell.exe`.
 
-## [Prerequisites](https://bun.com/docs/project/building-windows\#prerequisites)
+## [Prerequisites](https://bun.com/docs/project/building-windows#prerequisites)
 
-### [Enable Scripts](https://bun.com/docs/project/building-windows\#enable-scripts)
+### [Enable Scripts](https://bun.com/docs/project/building-windows#enable-scripts)
 
 By default, running unverified scripts are blocked.
 
@@ -66,7 +67,7 @@ By default, running unverified scripts are blocked.
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted
 ```
 
-### [System Dependencies](https://bun.com/docs/project/building-windows\#system-dependencies)
+### [System Dependencies](https://bun.com/docs/project/building-windows#system-dependencies)
 
 Bun v1.1 or later. We use Bun to run it's own code generators.
 
@@ -141,7 +142,7 @@ Get-Command mt
 
 It is not recommended to install `ninja` / `cmake` into your global path, because you may run into a situation where you try to build bun without .\\scripts\\vs-shell.ps1 sourced.
 
-## [Building](https://bun.com/docs/project/building-windows\#building)
+## [Building](https://bun.com/docs/project/building-windows#building)
 
 ```
 bun run build
@@ -164,12 +165,12 @@ If this was successful, you should have a `bun-debug.exe` in the `build/debug` f
 
 You should add this to `$Env:PATH`. The simplest way to do so is to open the start menu, type "Path", and then navigate the environment variables menu to add `C:\.....\bun\build\debug` to the user environment variable `PATH`. You should then restart your editor (if it does not update still, log out and log back in).
 
-## [Extra paths](https://bun.com/docs/project/building-windows\#extra-paths)
+## [Extra paths](https://bun.com/docs/project/building-windows#extra-paths)
 
 - WebKit is extracted to `build/debug/cache/webkit/`
 - Zig is extracted to `build/debug/cache/zig/bin/zig.exe`
 
-## [Tests](https://bun.com/docs/project/building-windows\#tests)
+## [Tests](https://bun.com/docs/project/building-windows#tests)
 
 You can run the test suite either using `bun test <path>` or by using the wrapper script `bun node:test <path>`. The `bun node:test` command runs every test file in a separate instance of bun.exe, to prevent a crash in the test runner from stopping the entire suite.
 
@@ -204,13 +205,13 @@ bun-debug test node\fs
 bun-debug test "C:\bun\test\js\bun\resolve\import-meta.test.js"
 ```
 
-## [Troubleshooting](https://bun.com/docs/project/building-windows\#troubleshooting)
+## [Troubleshooting](https://bun.com/docs/project/building-windows#troubleshooting)
 
-### [.rc file fails to build](https://bun.com/docs/project/building-windows\#rc-file-fails-to-build)
+### [.rc file fails to build](https://bun.com/docs/project/building-windows#rc-file-fails-to-build)
 
 `llvm-rc.exe` is odd. don't use it. use `rc.exe`, to do this make sure you are in a visual studio dev terminal, check `rc /?` to ensure it is `Microsoft Resource Compiler`
 
-### [failed to write output 'bun-debug.exe': permission denied](https://bun.com/docs/project/building-windows\#failed-to-write-output-bun-debug-exe-permission-denied)
+### [failed to write output 'bun-debug.exe': permission denied](https://bun.com/docs/project/building-windows#failed-to-write-output-bun-debug-exe-permission-denied)
 
 you cannot overwrite `bun-debug.exe` if it is already open. you likely have a running instance, maybe in the vscode debugger?
 
@@ -220,7 +221,7 @@ Contributing](https://bun.com/docs/project/contributing) [Next\\
 \\
 Bindgen](https://bun.com/docs/project/bindgen)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/project/building-windows.md)
 
@@ -244,7 +245,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

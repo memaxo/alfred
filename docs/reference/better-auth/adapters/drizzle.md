@@ -1,9 +1,10 @@
 ---
 title: Drizzle ORM Adapter | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Drizzle ORM.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -29,7 +30,7 @@ Copy MarkdownOpen in
 Drizzle ORM is a powerful and flexible ORM for Node.js and TypeScript. It provides a simple and intuitive API for working with databases, and supports a wide range of databases including MySQL, PostgreSQL, SQLite, and more.
 Read more here: [Drizzle ORM](https://orm.drizzle.team/).
 
-## [Example Usage](https://www.better-auth.com/docs/adapters/drizzle\#example-usage)
+## [Example Usage](https://www.better-auth.com/docs/adapters/drizzle#example-usage)
 
 Make sure you have Drizzle installed and configured.
 Then, you can use the Drizzle adapter to connect to your database.
@@ -49,7 +50,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [Schema generation & migration](https://www.better-auth.com/docs/adapters/drizzle\#schema-generation--migration)
+## [Schema generation & migration](https://www.better-auth.com/docs/adapters/drizzle#schema-generation--migration)
 
 The [Better Auth CLI](https://www.better-auth.com/docs/concepts/cli) allows you to generate or migrate
 your database schema based on your Better Auth configuration and plugins.
@@ -71,7 +72,7 @@ npx drizzle-kit generate # generate the migration file
 npx drizzle-kit migrate # apply the migration
 ```
 
-## [Additional Information](https://www.better-auth.com/docs/adapters/drizzle\#additional-information)
+## [Additional Information](https://www.better-auth.com/docs/adapters/drizzle#additional-information)
 
 The Drizzle adapter expects the schema you define to match the table names. For example, if your Drizzle schema maps the `user` table to `users`, you need to manually pass the schema and map it to the user table.
 

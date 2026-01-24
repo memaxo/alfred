@@ -20,6 +20,7 @@ The pipeline consists of 8 sequential stages:
 ### PipelineRunner
 
 The core orchestrator that:
+
 - Registers stages
 - Manages observers
 - Executes stages in sequence
@@ -70,8 +71,8 @@ interface PipelineObserver {
 ## Usage
 
 ```typescript
-import { PipelineRunner, registerDefaultStages } from '@alfred/pipeline';
-import { ConsoleObserver, MetricsObserver } from '@alfred/pipeline/observers';
+import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
+import { ConsoleObserver, MetricsObserver } from "@alfred/pipeline/observers";
 
 const runner = new PipelineRunner({ maxParallel: 1 });
 registerDefaultStages(runner);
@@ -79,9 +80,9 @@ runner.addObserver(new ConsoleObserver());
 
 for await (const event of runner.run({
   runId: crypto.randomUUID(),
-  requirement: 'Create a todo list app',
-  workspace: '/path/to/repo',
-  userId: 'user-123',
+  requirement: "Create a todo list app",
+  workspace: "/path/to/repo",
+  userId: "user-123",
 })) {
   console.log(event);
 }
@@ -100,12 +101,12 @@ The pipeline emits typed events that observers can consume:
 
 ```typescript
 const config: PipelineConfig = {
-  maxParallel: 1,           // Sequential by default
-  maxAgentAttempts: 3,      // Retries per agent
-  maxReviewAttempts: 3,     // Review fix attempts
-  maxTransitions: 50_000,   // Safety cap on total emitted events
-  enableLearning: true,     // Enable learning stage
-  enableLinearSync: false,  // Linear integration
+  maxParallel: 1, // Sequential by default
+  maxAgentAttempts: 3, // Retries per agent
+  maxReviewAttempts: 3, // Review fix attempts
+  maxTransitions: 50_000, // Safety cap on total emitted events
+  enableLearning: true, // Enable learning stage
+  enableLinearSync: false, // Linear integration
   linearSyncInterval: 30_000, // Batch interval
 };
 ```
@@ -113,15 +114,18 @@ const config: PipelineConfig = {
 ## Reliability & Safeguards
 
 ### Abort propagation
+
 - The pipeline respects `AbortSignal` end-to-end.
 - If the provided signal is already aborted, the run fails before any `stage:enter` events are emitted.
 - If the signal aborts mid-stage, the stage is interrupted (stages should check `ctx.signal` for cooperative cancellation) and the pipeline emits `stage:error` then `pipeline:failed`.
 
 ### Timeouts
+
 - Each stage is guarded by a per-stage timeout (`phaseTimeouts[stage]`).
 - Timeout guards are cancellable to avoid timer leaks.
 
 ### MAX_TRANSITIONS (`maxTransitions`)
+
 - `maxTransitions` is a safety limit on the **total number of pipeline events emitted**.
 - It counts both:
   - runner-generated stage lifecycle events (`pipeline:start`, `stage:enter`, `stage:exit`, `pipeline:complete`, etc.)
@@ -129,10 +133,12 @@ const config: PipelineConfig = {
 - When exceeded, the pipeline fails deterministically with a `pipeline_max_transitions_exceeded` error and emits `pipeline:failed`.
 
 ### Observer lifecycle
+
 - Observers are best-effort and must not crash the runner (observer exceptions are caught and logged).
 - `PipelineObserver.onComplete()` is treated as a **finally-style cleanup hook** and is called on success, failure, and abort.
 
 ### Budget events + cleanup
+
 - The pipeline can emit:
   - `budget:warning` when approaching budget (≥ 90%)
   - `budget:exceeded` when budget is reached
@@ -149,6 +155,7 @@ Input → init → context → plan → schedule → execute → review → lear
 ```
 
 Each stage:
+
 1. Receives typed input from previous stage
 2. Emits progress events via context
 3. Returns typed output for next stage
@@ -157,53 +164,62 @@ Each stage:
 ## Stage Details
 
 ### Init Stage
+
 - Detects or creates project
 - Links Linear issue if configured
 - Stores project metadata in context
 
 ### Context Stage
+
 - Gathers code context from workspace
 - Optionally fetches web context
 - Retrieves RAG chunks
 - Returns ContextBundle with total token count
 
 ### Plan Stage
+
 - Decomposes requirement into subtasks
 - Generates ExecPlan skeletons
 - Creates root plan and subtask plans
 - Stores plan metadata in context
 
 ### Schedule Stage
+
 - Plans wave execution based on dependencies
 - Determines sequential vs parallel execution
 - Estimates total duration
 - Returns WavePlan array
 
 ### Execute Stage
+
 - Spawns agents for each wave
 - Runs agents in sequence (POC)
 - Collects outcomes and file changes
 - Emits agent progress events
 
 ### Review Stage
+
 - Checks agent outcomes
 - Validates file changes
 - Runs quality checks (future: lint, test, security)
 - Returns pass/fail status
 
 ### Learn Stage
+
 - Triggers learning worker
 - Extracts knowledge from run
 - Updates hypergraph (asynchronous)
 - Returns insights (empty for async processing)
 
 ### Summarize Stage
+
 - Generates wave summary
 - Builds ATIF trajectory
 - Updates Linear if configured
 - Returns final summary
 
 ### Work compilation (post-run)
+
 - Do not rely on pipeline checkpoints for post-run UI: snapshots may be deleted on completion.
 - Persist a versioned “work compilation” artifact on completion via an API-layer observer.
 - See: `docs/architecture/work-compilation.md`
@@ -234,6 +250,7 @@ bun test packages/pipeline/test/integration  # Integration tests
 **Symptom:** Workflows still use legacy orchestrator
 
 **Solution:** Verify environment variable is set:
+
 ```bash
 echo $ALFRED_USE_PIPELINE  # Should output: 1
 ```
@@ -243,10 +260,11 @@ echo $ALFRED_USE_PIPELINE  # Should output: 1
 **Symptom:** `Stage {name} timed out after {ms}ms`
 
 **Solution:** Increase timeout for specific stage:
+
 ```typescript
 const runner = new PipelineRunner({
   phaseTimeouts: {
-    execute: 1200_000,  // Increase to 20 minutes
+    execute: 1200_000, // Increase to 20 minutes
   },
 });
 ```
@@ -272,8 +290,9 @@ const runner = new PipelineRunner({ maxTransitions: 200_000 });
 **Symptom:** Observer not receiving events
 
 **Solution:** Ensure observer is added before running pipeline:
+
 ```typescript
-runner.addObserver(observer);  // Must come before runner.run()
+runner.addObserver(observer); // Must come before runner.run()
 ```
 
 ### Agent Execution Failures
@@ -281,6 +300,7 @@ runner.addObserver(observer);  // Must come before runner.run()
 **Symptom:** All agents fail with "unauthorized" or "agentfs_workspace_not_initialized"
 
 **Solution:** This is expected in test environments without Docker/auth. For production:
+
 1. Ensure Docker is running
 2. Verify auth credentials are configured
 3. Check `LINEAR_API_KEY` if using Linear sync
@@ -290,11 +310,13 @@ runner.addObserver(observer);  // Must come before runner.run()
 **Symptom:** `Cannot find module '@alfred/pipeline'`
 
 **Solution:** Install dependencies:
+
 ```bash
 bun install
 ```
 
 Ensure package is in workspace:
+
 ```bash
 grep -r "@alfred/pipeline" package.json
 ```
@@ -304,30 +326,32 @@ grep -r "@alfred/pipeline" package.json
 **Symptom:** Module resolution failures at runtime
 
 **Solution:** Stages use dynamic imports internally. If you see circular dependency errors, ensure you're importing from the package root:
+
 ```typescript
 // ✅ Correct
-import { PipelineRunner } from '@alfred/pipeline';
+import { PipelineRunner } from "@alfred/pipeline";
 
 // ❌ Avoid
-import { PipelineRunner } from '@alfred/pipeline/src/runner';
+import { PipelineRunner } from "@alfred/pipeline/src/runner";
 ```
 
 ## Performance Benchmarks
 
 **Typical Stage Durations (Sequential Mode):**
 
-| Stage     | p50    | p95     | p99      |
-|-----------|--------|---------|----------|
-| init      | 50ms   | 200ms   | 500ms    |
-| context   | 2s     | 10s     | 30s      |
-| plan      | 100ms  | 1s      | 5s       |
-| schedule  | 10ms   | 100ms   | 500ms    |
-| execute   | 60s    | 300s    | 600s     |
-| review    | 1s     | 10s     | 60s      |
-| learn     | 10ms   | 100ms   | 1s       |
-| summarize | 2s     | 10s     | 30s      |
+| Stage     | p50   | p95   | p99   |
+| --------- | ----- | ----- | ----- |
+| init      | 50ms  | 200ms | 500ms |
+| context   | 2s    | 10s   | 30s   |
+| plan      | 100ms | 1s    | 5s    |
+| schedule  | 10ms  | 100ms | 500ms |
+| execute   | 60s   | 300s  | 600s  |
+| review    | 1s    | 10s   | 60s   |
+| learn     | 10ms  | 100ms | 1s    |
+| summarize | 2s    | 10s   | 30s   |
 
 **Total Pipeline Duration:**
+
 - Simple tasks: 1-2 minutes
 - Medium tasks: 3-5 minutes
 - Complex tasks: 10-15 minutes

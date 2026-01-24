@@ -7,9 +7,9 @@ Historical log of major architectural decisions and their rationale.
 ```
 ## [ADR-NNNN] Title
 
-**Date**: YYYY-MM-DD  
-**Status**: Proposed | Accepted | Deprecated | Superseded  
-**Deciders**: Names  
+**Date**: YYYY-MM-DD
+**Status**: Proposed | Accepted | Deprecated | Superseded
+**Deciders**: Names
 
 ### Context
 What situation led to this decision?
@@ -52,6 +52,7 @@ API routers become thin wrappers that call `runtime.execute()` and stream events
 ### Consequences
 
 **Positive**:
+
 - ✅ All packages actually work together
 - ✅ Clear place for integration logic
 - ✅ Testable composition in isolation
@@ -59,12 +60,14 @@ API routers become thin wrappers that call `runtime.execute()` and stream events
 - ✅ Maintains clean package boundaries
 
 **Negative**:
+
 - ❌ Adds another package (11 → 12)
 - ❌ Requires restructuring agent package
 - ❌ 6-week implementation timeline
 - ❌ All future work blocks on this
 
 **Trade-offs Accepted**:
+
 - Slower short-term velocity for correct long-term architecture
 - More abstraction before full feature set proves value
 - Commitment to specific composition pattern
@@ -72,22 +75,26 @@ API routers become thin wrappers that call `runtime.execute()` and stream events
 ### Alternatives Considered
 
 **Alternative 1: Merge domain packages into single "core" package**
+
 - ❌ Violates single responsibility principle
 - ❌ Creates tight coupling
 - ❌ Harder to test individual pieces
 - ❌ Loses extensibility
 
 **Alternative 2: Keep integration in API layer**
+
 - ❌ Wrong abstraction level (HTTP concerns mixed with domain logic)
 - ❌ Duplicates integration logic across routers
 - ❌ Hard to test without HTTP layer
 
 **Alternative 3: Add integration to each domain package**
+
 - ❌ Circular dependencies (cognitive needs knowledge needs learning needs cognitive)
 - ❌ Violates dependency inversion principle
 - ❌ No single source of truth for composition
 
 **Why Runtime Package Wins**:
+
 - Proper abstraction layer (between domain and API)
 - Single responsibility: compose packages
 - Testable without HTTP or AI SDK
@@ -104,6 +111,7 @@ API routers become thin wrappers that call `runtime.execute()` and stream events
 ### Context
 
 Current structure has confusing naming:
+
 - `packages/agent/orchestrator/tool/` contains **tools**, not **orchestration logic**
 - Orchestration logic lives in `packages/api/src/workflow/runner.ts` (wrong place)
 - "Orchestrator" means both "tool collection" and "workflow execution"
@@ -115,6 +123,7 @@ After creating runtime package, orchestration logic moves there. Agent package s
 Restructure agent package:
 
 **Before**:
+
 ```
 packages/agent/
 ├── src/orchestrator/
@@ -124,6 +133,7 @@ packages/agent/
 ```
 
 **After**:
+
 ```
 packages/agent/
 ├── src/
@@ -138,17 +148,20 @@ packages/agent/
 ### Consequences
 
 **Positive**:
+
 - ✅ Clear naming (tools are in `tools/`)
 - ✅ No confusion about where orchestration logic lives
 - ✅ Easier to find tools
 - ✅ Better package documentation
 
 **Negative**:
+
 - ❌ Breaks all imports across codebase
 - ❌ Requires updating ~50 import statements
 - ❌ Risk of missing imports in manual migration
 
 **Mitigation**:
+
 - Use `sed` or global find/replace for mechanical changes
 - Run full test suite to catch broken imports
 - Do in Phase 5 (after runtime is stable)
@@ -156,10 +169,12 @@ packages/agent/
 ### Alternatives Considered
 
 **Alternative 1: Keep current structure**
+
 - ❌ Perpetuates naming confusion
 - ❌ Doesn't reflect actual purpose after runtime addition
 
 **Alternative 2: Create separate packages for assistant and orchestrator tools**
+
 - ❌ Over-fragmentation (2 packages that always change together)
 - ❌ More complexity for little benefit
 
@@ -174,6 +189,7 @@ packages/agent/
 ### Context
 
 Most AI assistant products target multi-tenant SaaS with thousands of users. This requires:
+
 - Rate limiting per user
 - Data isolation
 - Multi-tenancy patterns
@@ -194,6 +210,7 @@ Design for single-user from the ground up:
 ### Consequences
 
 **Positive**:
+
 - ✅ Simpler architecture (no tenant isolation)
 - ✅ Better performance (no rate limit checks)
 - ✅ Deeper personalization (learn everything about Jack's context)
@@ -201,11 +218,13 @@ Design for single-user from the ground up:
 - ✅ Faster iteration (no need to generalize early)
 
 **Negative**:
+
 - ❌ Not a SaaS product (can't sell to others)
 - ❌ Hard to extract and open-source (too personalized)
 - ❌ Some design patterns not applicable to multi-user systems
 
 **Trade-offs Accepted**:
+
 - Not building a product for the market
 - Optimizing for Jack's specific needs
 - Willing to hardcode Jack's infrastructure details
@@ -213,6 +232,7 @@ Design for single-user from the ground up:
 ### Alternatives Considered
 
 **Alternative: Build multi-tenant from the start**
+
 - ❌ Premature generalization
 - ❌ Slows down iteration
 - ❌ Compromises on personalization depth
@@ -229,6 +249,7 @@ Design for single-user from the ground up:
 ### Context
 
 Need a memory system that can store:
+
 - Facts (Jack's Proxmox cluster has 3 nodes)
 - Relations (Node 1 runs the Postgres database)
 - Patterns (Deployments to preview environment usually succeed)
@@ -244,6 +265,7 @@ Use hypergraph (nodes + edges + patterns) backed by PostgreSQL with pgvector:
 4. **Vectors**: Embeddings for semantic search (pgvector)
 
 Query interface supports both:
+
 - **Structural queries**: "Find all nodes connected to X via relation Y"
 - **Semantic queries**: "Find facts similar to this query"
 - **Hybrid queries**: Combine both for best results
@@ -251,12 +273,14 @@ Query interface supports both:
 ### Consequences
 
 **Positive**:
+
 - ✅ Relations are first-class (not just vector similarity)
 - ✅ Patterns can be queried explicitly
 - ✅ Native to Postgres (no additional infrastructure)
 - ✅ Flexible schema (can evolve with learning)
 
 **Negative**:
+
 - ❌ More complex than pure vector DB
 - ❌ Requires careful index management
 - ❌ Query optimization is harder
@@ -264,16 +288,19 @@ Query interface supports both:
 ### Alternatives Considered
 
 **Alternative 1: Pure vector database (Pinecone, Weaviate)**
+
 - ❌ Loses structural information
 - ❌ Everything becomes "find similar vectors"
 - ❌ Hard to represent "X caused Y" or "A always follows B"
 
 **Alternative 2: Graph database (Neo4j)**
+
 - ❌ Additional infrastructure to maintain
 - ❌ No native vector support
 - ❌ Overkill for single-user use case
 
 **Alternative 3: Relational DB only**
+
 - ❌ Semantic search requires complex joins
 - ❌ Hard to represent arbitrary relations
 - ❌ Doesn't leverage modern LLM capabilities
@@ -289,6 +316,7 @@ Query interface supports both:
 ### Context
 
 Need to execute tools based on LLM reasoning. Options:
+
 1. Custom tool execution loop
 2. LangChain/LangGraph
 3. Mastra
@@ -314,6 +342,7 @@ for await (const event of result.fullStream) {
 ### Consequences
 
 **Positive**:
+
 - ✅ Production-ready, well-maintained
 - ✅ Native TypeScript support
 - ✅ Streaming by default
@@ -321,22 +350,26 @@ for await (const event of result.fullStream) {
 - ✅ Provider-agnostic (easy to switch models)
 
 **Negative**:
+
 - ❌ Opinionated patterns (can't customize deeply)
 - ❌ Framework coupling (hard to extract)
 
 ### Alternatives Considered
 
 **Alternative 1: Custom loop**
+
 - ❌ Reinventing the wheel
 - ❌ Weeks of work for basic functionality
 - ❌ Hard to maintain
 
 **Alternative 2: LangChain**
+
 - ❌ Python-first (Node.js support is second-class)
 - ❌ Heavy abstraction layer
 - ❌ Complex API
 
 **Alternative 3: Mastra**
+
 - ❌ Early-stage (less mature than AI SDK)
 - ❌ More opinionated about workflow patterns
 - ❌ Removed after evaluation (see ADR-0006)
@@ -352,6 +385,7 @@ for await (const event of result.fullStream) {
 ### Context
 
 Initially used Mastra for workflow orchestration. After evaluation, found:
+
 - Too opinionated about workflow structure
 - AI SDK v6 provides same functionality with less abstraction
 - Added complexity without clear benefit
@@ -365,11 +399,13 @@ See: `.agent/plans/mastra-removal-plan.md` for migration details.
 ### Consequences
 
 **Positive**:
+
 - ✅ Simpler dependency tree
 - ✅ More direct control over workflows
 - ✅ Easier to reason about execution
 
 **Negative**:
+
 - ❌ Lost some workflow abstractions (need to rebuild)
 
 ---
@@ -383,6 +419,7 @@ See: `.agent/plans/mastra-removal-plan.md` for migration details.
 ### Context
 
 Need a modern React framework for the web interface. Requirements:
+
 - File-based routing
 - SSR support
 - tRPC integration
@@ -395,18 +432,21 @@ Use TanStack Start (successor to TanStack Router).
 ### Consequences
 
 **Positive**:
+
 - ✅ Type-safe routing
 - ✅ Excellent tRPC integration
 - ✅ Loader/action patterns for data fetching
 - ✅ SSR with streaming
 
 **Negative**:
+
 - ❌ Newer framework (less ecosystem)
 - ❌ Some rough edges (beta software)
 
 ### Alternatives Considered
 
 **Alternative: Next.js**
+
 - ❌ App Router complexity
 - ❌ Vercel lock-in
 - ❌ Less type-safe routing
@@ -432,23 +472,28 @@ Use TanStack Start (successor to TanStack Router).
 ### Consequences
 
 **Positive**:
+
 - ✅ Benefit 1
 - ✅ Benefit 2
 
 **Negative**:
+
 - ❌ Cost 1
 - ❌ Cost 2
 
 **Trade-offs Accepted**:
+
 - Thing we're giving up for this benefit
 
 ### Alternatives Considered
 
 **Alternative 1: [Name]**
+
 - ❌ Why rejected
 - ❌ Why rejected
 
 **Alternative 2: [Name]**
+
 - ❌ Why rejected
 
 ---
@@ -469,4 +514,3 @@ When making architectural decisions:
 - [Architecture Overview](overview.md)
 - [Package Organization](packages.md)
 - [PRD](../alfred-prd.md)
-

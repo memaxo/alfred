@@ -14,19 +14,19 @@ flowchart TD
         precommit[pre-commit hook]
         prepush[pre-push hook]
     end
-    
+
     subgraph ci [GitHub Actions CI]
         lint[Lint Job]
         typecheck[Typecheck Job]
         tests[Tests Job]
         boundaries[Boundaries Job]
     end
-    
+
     subgraph automation [Automation]
         cursor[Cursor CLI]
         linear[Linear Sync]
     end
-    
+
     commit --> precommit
     precommit --> push
     push --> prepush
@@ -39,11 +39,13 @@ flowchart TD
 ### Local Git Hooks (Lefthook)
 
 **Pre-commit hook:**
+
 - Auto-formats staged files with Ultracite
 - Stages fixed files automatically
 - Runs on all staged files matching glob patterns
 
 **Pre-push hook:**
+
 - Typecheck: Blocks push on type errors
 - Lint: Warns but doesn't block (allows dirty lint)
 - Tests: Blocks push on test failures
@@ -63,6 +65,7 @@ Four parallel jobs:
 4. **Boundaries** - Checks package boundaries (warns only)
 
 **Key features:**
+
 - Turbo caching via `rharkor/caching-for-turbo@v1.7`
 - Test exclusions: `--filter='!@alfred/voice' --filter='!@alfred/embed'`
 - Concurrency control: Cancels duplicate runs
@@ -93,11 +96,13 @@ Three automation jobs:
 ### Turbo Filter Patterns
 
 **Git-based filter (for hooks):**
+
 ```bash
 bunx turbo typecheck --filter='[origin/main...HEAD]'
 ```
 
 **Package exclusion (for CI):**
+
 ```bash
 bunx turbo test --filter='!@alfred/voice' --filter='!@alfred/embed'
 ```
@@ -105,6 +110,7 @@ bunx turbo test --filter='!@alfred/voice' --filter='!@alfred/embed'
 ### Lefthook Hook Patterns
 
 **Blocking hook:**
+
 ```yaml
 typecheck:
   run: bunx turbo typecheck --filter='[origin/main...HEAD]'
@@ -112,6 +118,7 @@ typecheck:
 ```
 
 **Warning-only hook:**
+
 ```yaml
 lint:
   run: bun x ultracite check {push_files} || true
@@ -120,6 +127,7 @@ lint:
 ```
 
 **Auto-format hook:**
+
 ```yaml
 format:
   glob: "*.{ts,tsx,js,jsx,json,jsonc}"
@@ -130,6 +138,7 @@ format:
 ### GitHub Actions Patterns
 
 **Turbo caching:**
+
 ```yaml
 - uses: rharkor/caching-for-turbo@v1.7
 - run: bun install --frozen-lockfile
@@ -137,6 +146,7 @@ format:
 ```
 
 **Concurrency control:**
+
 ```yaml
 concurrency:
   group: ci-${{ github.ref }}
@@ -144,6 +154,7 @@ concurrency:
 ```
 
 **Warning-only job:**
+
 ```yaml
 boundaries:
   continue-on-error: true
@@ -154,11 +165,13 @@ boundaries:
 ## Test Exclusion Strategy
 
 **Excluded from main CI:**
+
 - `@alfred/voice` - Hardware/Python dependent
 - `@alfred/embed` - Model download required
 - `**/*.perf.test.ts` - Performance benchmarks
 
 **Run locally:**
+
 ```bash
 bun test packages/voice
 bun run test:perf
@@ -166,10 +179,10 @@ bun run test:perf
 
 ## Secrets Required
 
-| Secret | Purpose | Workflow |
-|--------|---------|----------|
+| Secret           | Purpose               | Workflow              |
+| ---------------- | --------------------- | --------------------- |
 | `CURSOR_API_KEY` | Cursor CLI automation | cursor-automation.yml |
-| `LINEAR_API_KEY` | Linear status sync | linear-sync.yml |
+| `LINEAR_API_KEY` | Linear status sync    | linear-sync.yml       |
 
 ## Performance Targets
 
@@ -182,12 +195,14 @@ bun run test:perf
 ## Migration Notes
 
 **From Husky to Lefthook:**
+
 - Removed `husky` and `lint-staged` packages
 - Added `lefthook` package
 - Created `lefthook.yml` configuration
 - Added `prepare` script to install hooks
 
 **From complex CI to streamlined:**
+
 - Reduced from 11 jobs to 4 parallel jobs
 - Removed nightly workflows
 - Removed Poof isolation tests (deprecated)

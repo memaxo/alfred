@@ -1,9 +1,10 @@
 ---
 title: Two-Factor Authentication (2FA) | Better Auth
-url: 
+url:
 description: Enhance your app's security with two-factor authentication.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -41,9 +42,9 @@ This plugin offers two main methods to do a second factor verification:
 - Enabling/disabling 2FA
 - Managing trusted devices
 
-## [Installation](https://www.better-auth.com/docs/plugins/2fa\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/2fa#installation)
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/2fa\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/2fa#add-the-plugin-to-your-auth-config)
 
 Add the two-factor plugin to your auth configuration and specify your app name as the issuer.
 
@@ -62,7 +63,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/2fa\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/2fa#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -78,7 +79,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/2fa#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/2fa\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/2fa#add-the-client-plugin)
 
 Add the client plugin and Specify where the user should be redirected if they need to verify 2nd factor
 
@@ -95,9 +96,9 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/2fa\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/2fa#usage)
 
-### [Enabling 2FA](https://www.better-auth.com/docs/plugins/2fa\#enabling-2fa)
+### [Enabling 2FA](https://www.better-auth.com/docs/plugins/2fa#enabling-2fa)
 
 To enable two-factor authentication, call `twoFactor.enable` with the user's password and issuer (optional):
 
@@ -114,10 +115,10 @@ const { data, error } = await authClient.twoFactor.enable({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `password` | The user's password | `string` |
-| `issuer?` | An optional custom issuer for the TOTP URI. Defaults to app-name defined in your auth config. | `string` |
+| Prop       | Description                                                                                   | Type     |
+| ---------- | --------------------------------------------------------------------------------------------- | -------- |
+| `password` | The user's password                                                                           | `string` |
+| `issuer?`  | An optional custom issuer for the TOTP URI. Defaults to app-name defined in your auth config. | `string` |
 
 POST
 
@@ -134,10 +135,10 @@ const data = await auth.api.enableTwoFactor({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `password` | The user's password | `string` |
-| `issuer?` | An optional custom issuer for the TOTP URI. Defaults to app-name defined in your auth config. | `string` |
+| Prop       | Description                                                                                   | Type     |
+| ---------- | --------------------------------------------------------------------------------------------- | -------- |
+| `password` | The user's password                                                                           | `string` |
+| `issuer?`  | An optional custom issuer for the TOTP URI. Defaults to app-name defined in your auth config. | `string` |
 
 When 2FA is enabled:
 
@@ -148,7 +149,7 @@ Note: `twoFactorEnabled` won’t be set to `true` until the user verifies their 
 
 Two Factor can only be enabled for credential accounts at the moment. For social accounts, it's assumed the provider already handles 2FA.
 
-### [Sign In with 2FA](https://www.better-auth.com/docs/plugins/2fa\#sign-in-with-2fa)
+### [Sign In with 2FA](https://www.better-auth.com/docs/plugins/2fa#sign-in-with-2fa)
 
 When a user with 2FA enabled tries to sign in via email, the response object will contain `twoFactorRedirect` set to `true`. This indicates that the user needs to verify their 2FA code.
 
@@ -207,7 +208,7 @@ if ("twoFactorRedirect" in response) {
 }
 ```
 
-### [Disabling 2FA](https://www.better-auth.com/docs/plugins/2fa\#disabling-2fa)
+### [Disabling 2FA](https://www.better-auth.com/docs/plugins/2fa#disabling-2fa)
 
 To disable two-factor authentication, call `twoFactor.disable` with the user's password:
 
@@ -223,8 +224,8 @@ const { data, error } = await authClient.twoFactor.disable({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description         | Type     |
+| ---------- | ------------------- | -------- |
 | `password` | The user's password | `string` |
 
 POST
@@ -241,17 +242,17 @@ const data = await auth.api.disableTwoFactor({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description         | Type     |
+| ---------- | ------------------- | -------- |
 | `password` | The user's password | `string` |
 
-### [TOTP](https://www.better-auth.com/docs/plugins/2fa\#totp)
+### [TOTP](https://www.better-auth.com/docs/plugins/2fa#totp)
 
 TOTP (Time-Based One-Time Password) is an algorithm that generates a unique password for each login attempt using time as a counter. Every fixed interval (Better Auth defaults to 30 seconds), a new password is generated. This addresses several issues with traditional passwords: they can be forgotten, stolen, or guessed. OTPs solve some of these problems, but their delivery via SMS or email can be unreliable (or even risky, considering it opens new attack vectors).
 
 TOTP, however, generates codes offline, making it both secure and convenient. You just need an authenticator app on your phone.
 
-#### [Getting TOTP URI](https://www.better-auth.com/docs/plugins/2fa\#getting-totp-uri)
+#### [Getting TOTP URI](https://www.better-auth.com/docs/plugins/2fa#getting-totp-uri)
 
 After enabling 2FA, you can get the TOTP URI to display to the user. This URI is generated by the server using the `secret` and `issuer` and can be used to generate a QR code for the user to scan with their authenticator app.
 
@@ -267,8 +268,8 @@ const { data, error } = await authClient.twoFactor.getTotpUri({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description         | Type     |
+| ---------- | ------------------- | -------- |
 | `password` | The user's password | `string` |
 
 POST
@@ -285,8 +286,8 @@ const data = await auth.api.getTOTPURI({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description         | Type     |
+| ---------- | ------------------- | -------- |
 | `password` | The user's password | `string` |
 
 **Example: Using React**
@@ -316,7 +317,7 @@ export default function UserCard({ password }: { password: string }){
 
 By default the issuer for TOTP is set to the app name provided in the auth config or if not provided it will be set to `Better Auth`. You can override this by passing `issuer` to the plugin config.
 
-#### [Verifying TOTP](https://www.better-auth.com/docs/plugins/2fa\#verifying-totp)
+#### [Verifying TOTP](https://www.better-auth.com/docs/plugins/2fa#verifying-totp)
 
 After the user has entered their 2FA code, you can verify it using `twoFactor.verifyTotp` method. `Better Auth` follows standard practice by accepting TOTP codes from one period before and one after the current code, ensuring users can authenticate even with minor time delays on their end.
 
@@ -333,9 +334,9 @@ const { data, error } = await authClient.twoFactor.verifyTotp({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `code` | The otp code to verify. | `string` |
+| Prop           | Description                                                                                                    | Type      |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
+| `code`         | The otp code to verify.                                                                                        | `string`  |
 | `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
 POST
@@ -351,12 +352,12 @@ const data = await auth.api.verifyTOTP({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `code` | The otp code to verify. | `string` |
+| Prop           | Description                                                                                                    | Type      |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
+| `code`         | The otp code to verify.                                                                                        | `string`  |
 | `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
-### [OTP](https://www.better-auth.com/docs/plugins/2fa\#otp)
+### [OTP](https://www.better-auth.com/docs/plugins/2fa#otp)
 
 OTP (One-Time Password) is similar to TOTP but a random code is generated and sent to the user's email or phone.
 
@@ -381,7 +382,7 @@ export const auth = betterAuth({
 })
 ```
 
-#### [Sending OTP](https://www.better-auth.com/docs/plugins/2fa\#sending-otp)
+#### [Sending OTP](https://www.better-auth.com/docs/plugins/2fa#sending-otp)
 
 Sending an OTP is done by calling the `twoFactor.sendOtp` function. This function will trigger your sendOTP implementation that you provided in the Better Auth configuration.
 
@@ -401,8 +402,8 @@ if (data) {
 }
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                                                                                                    | Type      |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
 | `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
 POST
@@ -421,11 +422,11 @@ if (data) {
 }
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                                                                                                    | Type      |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
 | `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
-#### [Verifying OTP](https://www.better-auth.com/docs/plugins/2fa\#verifying-otp)
+#### [Verifying OTP](https://www.better-auth.com/docs/plugins/2fa#verifying-otp)
 
 After the user has entered their OTP code, you can verify it
 
@@ -442,9 +443,9 @@ const { data, error } = await authClient.twoFactor.verifyOtp({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `code` | The otp code to verify. | `string` |
+| Prop           | Description                                                                                                    | Type      |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
+| `code`         | The otp code to verify.                                                                                        | `string`  |
 | `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
 POST
@@ -460,16 +461,16 @@ const data = await auth.api.verifyOTP({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `code` | The otp code to verify. | `string` |
+| Prop           | Description                                                                                                    | Type      |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
+| `code`         | The otp code to verify.                                                                                        | `string`  |
 | `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
-### [Backup Codes](https://www.better-auth.com/docs/plugins/2fa\#backup-codes)
+### [Backup Codes](https://www.better-auth.com/docs/plugins/2fa#backup-codes)
 
 Backup codes are generated and stored in the database. This can be used to recover access to the account if the user loses access to their phone or email.
 
-#### [Generating Backup Codes](https://www.better-auth.com/docs/plugins/2fa\#generating-backup-codes)
+#### [Generating Backup Codes](https://www.better-auth.com/docs/plugins/2fa#generating-backup-codes)
 
 Generate backup codes for account recovery:
 
@@ -489,8 +490,8 @@ if (data) {
 }
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description         | Type     |
+| ---------- | ------------------- | -------- |
 | `password` | The users password. | `string` |
 
 POST
@@ -511,13 +512,13 @@ if (data) {
 }
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description         | Type     |
+| ---------- | ------------------- | -------- |
 | `password` | The users password. | `string` |
 
 When you generate backup codes, the old backup codes will be deleted and new ones will be generated.
 
-#### [Using Backup Codes](https://www.better-auth.com/docs/plugins/2fa\#using-backup-codes)
+#### [Using Backup Codes](https://www.better-auth.com/docs/plugins/2fa#using-backup-codes)
 
 You can now allow users to provider backup code as account recover method.
 
@@ -535,11 +536,11 @@ const { data, error } = await authClient.twoFactor.verifyBackupCode({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `code` | A backup code to verify. | `string` |
-| `disableSession?` | If true, the session cookie will not be set. | `boolean` |
-| `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
+| Prop              | Description                                                                                                    | Type      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
+| `code`            | A backup code to verify.                                                                                       | `string`  |
+| `disableSession?` | If true, the session cookie will not be set.                                                                   | `boolean` |
+| `trustDevice?`    | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
 POST
 
@@ -555,15 +556,15 @@ const data = await auth.api.verifyBackupCode({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `code` | A backup code to verify. | `string` |
-| `disableSession?` | If true, the session cookie will not be set. | `boolean` |
-| `trustDevice?` | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
+| Prop              | Description                                                                                                    | Type      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
+| `code`            | A backup code to verify.                                                                                       | `string`  |
+| `disableSession?` | If true, the session cookie will not be set.                                                                   | `boolean` |
+| `trustDevice?`    | If true, the device will be trusted for 30 days. It'll be refreshed on every sign in request within this time. | `boolean` |
 
 Once a backup code is used, it will be removed from the database and can't be used again.
 
-#### [Viewing Backup Codes](https://www.better-auth.com/docs/plugins/2fa\#viewing-backup-codes)
+#### [Viewing Backup Codes](https://www.better-auth.com/docs/plugins/2fa#viewing-backup-codes)
 
 To display the backup codes to the user, you can call `viewBackupCodes` on the server. This will return the backup codes in the response. You should only this if the user has a fresh session - a session that was just created.
 
@@ -589,11 +590,11 @@ const data = await auth.api.viewBackupCodes({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop      | Description                           | Type    |
+| --------- | ------------------------------------- | ------- | ----- |
 | `userId?` | The user ID to view all backup codes. | `string | null` |
 
-### [Trusted Devices](https://www.better-auth.com/docs/plugins/2fa\#trusted-devices)
+### [Trusted Devices](https://www.better-auth.com/docs/plugins/2fa#trusted-devices)
 
 You can mark a device as trusted by passing `trustDevice` to `verifyTotp` or `verifyOtp`.
 
@@ -612,7 +613,7 @@ const verify2FA = async (code: string) => {
 
 When `trustDevice` is set to `true`, the current device will be remembered for 60 days. During this period, the user won't be prompted for 2FA on subsequent sign-ins from this device. The trust period is refreshed each time the user signs in successfully.
 
-### [Issuer](https://www.better-auth.com/docs/plugins/2fa\#issuer)
+### [Issuer](https://www.better-auth.com/docs/plugins/2fa#issuer)
 
 By adding an `issuer` you can set your application name for the 2fa application.
 
@@ -624,30 +625,30 @@ twoFactor({
 })
 ```
 
-* * *
+---
 
-## [Schema](https://www.better-auth.com/docs/plugins/2fa\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/2fa#schema)
 
 The plugin requires 1 additional fields in the `user` table and 1 additional table to store the two factor authentication data.
 
 Table: `user`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| twoFactorEnabled | boolean | ? | Whether two factor authentication is enabled for the user. |
+| Field Name       | Type    | Key | Description                                                |
+| ---------------- | ------- | --- | ---------------------------------------------------------- |
+| twoFactorEnabled | boolean | ?   | Whether two factor authentication is enabled for the user. |
 
 Table: `twoFactor`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | The ID of the two factor authentication. |
-| userId | string | FK | The ID of the user |
-| secret | string | ? | The secret used to generate the TOTP code. |
-| backupCodes | string | ? | The backup codes used to recover access to the account if the user loses access to their phone or email. |
+| Field Name  | Type   | Key | Description                                                                                              |
+| ----------- | ------ | --- | -------------------------------------------------------------------------------------------------------- |
+| id          | string | PK  | The ID of the two factor authentication.                                                                 |
+| userId      | string | FK  | The ID of the user                                                                                       |
+| secret      | string | ?   | The secret used to generate the TOTP code.                                                               |
+| backupCodes | string | ?   | The backup codes used to recover access to the account if the user loses access to their phone or email. |
 
-## [Options](https://www.better-auth.com/docs/plugins/2fa\#options)
+## [Options](https://www.better-auth.com/docs/plugins/2fa#options)
 
-### [Server](https://www.better-auth.com/docs/plugins/2fa\#server)
+### [Server](https://www.better-auth.com/docs/plugins/2fa#server)
 
 **twoFactorTable**: The name of the table that stores the two factor authentication data. Default: `twoFactor`.
 
@@ -659,33 +660,33 @@ Table: `twoFactor`
 
 these are options for TOTP.
 
-| Prop | Type | Default |
-| --- | --- | --- |
-| `digits?` | `number` | `6` |
-| `period?` | `number` | `30` |
+| Prop      | Type     | Default |
+| --------- | -------- | ------- |
+| `digits?` | `number` | `6`     |
+| `period?` | `number` | `30`    |
 
 **OTP options**
 
 these are options for OTP.
 
-| Prop | Type | Default |
-| --- | --- | --- |
-| `sendOTP?` | `function` | - |
-| `period?` | `number` | `3` |
-| `storeOTP?` | `string` | `plain` |
+| Prop        | Type       | Default |
+| ----------- | ---------- | ------- |
+| `sendOTP?`  | `function` | -       |
+| `period?`   | `number`   | `3`     |
+| `storeOTP?` | `string`   | `plain` |
 
 **Backup Code Options**
 
 backup codes are generated and stored in the database when the user enabled two factor authentication. This can be used to recover access to the account if the user loses access to their phone or email.
 
-| Prop | Type | Default |
-| --- | --- | --- |
-| `amount?` | `number` | `10` |
-| `length?` | `number` | `10` |
-| `customBackupCodesGenerate?` | `function` | - |
-| `storeBackupCodes?` | `string` | `plain` |
+| Prop                         | Type       | Default |
+| ---------------------------- | ---------- | ------- |
+| `amount?`                    | `number`   | `10`    |
+| `length?`                    | `number`   | `10`    |
+| `customBackupCodesGenerate?` | `function` | -       |
+| `storeBackupCodes?`          | `string`   | `plain` |
 
-### [Client](https://www.better-auth.com/docs/plugins/2fa\#client)
+### [Client](https://www.better-auth.com/docs/plugins/2fa#client)
 
 To use the two factor plugin in the client, you need to add it on your plugins list.
 

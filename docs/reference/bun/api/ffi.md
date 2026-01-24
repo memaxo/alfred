@@ -1,9 +1,10 @@
 ---
 title: FFI – API | Bun Docs
-url: 
+url:
 description: Call native code from JavaScript with Bun's foreign function interface (FFI) API.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Project
 
 Use the built-in `bun:ffi` module to efficiently call native libraries from JavaScript. It works with languages that support the C ABI (Zig, Rust, C/C++, C#, Nim, Kotlin, etc).
 
-## [dlopen usage ( `bun:ffi`)](https://bun.com/docs/api/ffi\#dlopen-usage-bun-ffi)
+## [dlopen usage ( `bun:ffi`)](https://bun.com/docs/api/ffi#dlopen-usage-bun-ffi)
 
 To print the version number of `sqlite3`:
 
@@ -86,7 +87,7 @@ console.log(`SQLite 3 version: ${sqlite3_libversion()}`);
 
 ```
 
-## [Performance](https://bun.com/docs/api/ffi\#performance)
+## [Performance](https://bun.com/docs/api/ffi#performance)
 
 According to [our benchmark](https://github.com/oven-sh/bun/tree/main/bench/ffi), `bun:ffi` is roughly 2-6x faster than Node.js FFI via `Node-API`.
 
@@ -94,9 +95,9 @@ According to [our benchmark](https://github.com/oven-sh/bun/tree/main/bench/ffi)
 
 Bun generates & just-in-time compiles C bindings that efficiently convert values between JavaScript types and native types. To compile C, Bun embeds [TinyCC](https://github.com/TinyCC/tinycc), a small and fast C compiler.
 
-## [Usage](https://bun.com/docs/api/ffi\#usage)
+## [Usage](https://bun.com/docs/api/ffi#usage)
 
-### [Zig](https://bun.com/docs/api/ffi\#zig)
+### [Zig](https://bun.com/docs/api/ffi#zig)
 
 ```
 // add.zig
@@ -131,7 +132,7 @@ console.log(lib.symbols.add(1, 2));
 
 ```
 
-### [Rust](https://bun.com/docs/api/ffi\#rust)
+### [Rust](https://bun.com/docs/api/ffi#rust)
 
 ```
 // add.rs
@@ -148,7 +149,7 @@ To compile:
 rustc --crate-type cdylib add.rs
 ```
 
-### [C++](https://bun.com/docs/api/ffi\#c)
+### [C++](https://bun.com/docs/api/ffi#c)
 
 ```
 #include <cstdint>
@@ -165,36 +166,36 @@ To compile:
 zig build-lib add.cpp -dynamic -lc -lc++
 ```
 
-## [FFI types](https://bun.com/docs/api/ffi\#ffi-types)
+## [FFI types](https://bun.com/docs/api/ffi#ffi-types)
 
 The following `FFIType` values are supported.
 
-| `FFIType` | C Type | Aliases |
-| --- | --- | --- |
-| buffer | `char*` |  |
-| cstring | `char*` |  |
-| function | `(void*)(*)()` | `fn`, `callback` |
-| ptr | `void*` | `pointer`, `void*`, `char*` |
-| i8 | `int8_t` | `int8_t` |
-| i16 | `int16_t` | `int16_t` |
-| i32 | `int32_t` | `int32_t`, `int` |
-| i64 | `int64_t` | `int64_t` |
-| i64\_fast | `int64_t` |  |
-| u8 | `uint8_t` | `uint8_t` |
-| u16 | `uint16_t` | `uint16_t` |
-| u32 | `uint32_t` | `uint32_t` |
-| u64 | `uint64_t` | `uint64_t` |
-| u64\_fast | `uint64_t` |  |
-| f32 | `float` | `float` |
-| f64 | `double` | `double` |
-| bool | `bool` |  |
-| char | `char` |  |
-| napi\_env | `napi_env` |  |
-| napi\_value | `napi_value` |  |
+| `FFIType`  | C Type         | Aliases                     |
+| ---------- | -------------- | --------------------------- |
+| buffer     | `char*`        |                             |
+| cstring    | `char*`        |                             |
+| function   | `(void*)(*)()` | `fn`, `callback`            |
+| ptr        | `void*`        | `pointer`, `void*`, `char*` |
+| i8         | `int8_t`       | `int8_t`                    |
+| i16        | `int16_t`      | `int16_t`                   |
+| i32        | `int32_t`      | `int32_t`, `int`            |
+| i64        | `int64_t`      | `int64_t`                   |
+| i64_fast   | `int64_t`      |                             |
+| u8         | `uint8_t`      | `uint8_t`                   |
+| u16        | `uint16_t`     | `uint16_t`                  |
+| u32        | `uint32_t`     | `uint32_t`                  |
+| u64        | `uint64_t`     | `uint64_t`                  |
+| u64_fast   | `uint64_t`     |                             |
+| f32        | `float`        | `float`                     |
+| f64        | `double`       | `double`                    |
+| bool       | `bool`         |                             |
+| char       | `char`         |                             |
+| napi_env   | `napi_env`     |                             |
+| napi_value | `napi_value`   |                             |
 
 Note: `buffer` arguments must be a `TypedArray` or `DataView`.
 
-## [Strings](https://bun.com/docs/api/ffi\#strings)
+## [Strings](https://bun.com/docs/api/ffi#strings)
 
 JavaScript strings and C-like strings are different, and that complicates using strings with native libraries.
 
@@ -261,7 +262,7 @@ console.log(myString);
 
 When used in `returns`, `FFIType.cstring` coerces the pointer to a JavaScript `string`. When used in `args`, `FFIType.cstring` is identical to `ptr`.
 
-## [Function pointers](https://bun.com/docs/api/ffi\#function-pointers)
+## [Function pointers](https://bun.com/docs/api/ffi#function-pointers)
 
 **Note** — Async functions are not yet supported.
 
@@ -320,7 +321,7 @@ const [major, minor, patch] = [\
 
 ```
 
-## [Callbacks](https://bun.com/docs/api/ffi\#callbacks)
+## [Callbacks](https://bun.com/docs/api/ffi#callbacks)
 
 Use `JSCallback` to create JavaScript callback functions that can be passed to C/FFI functions. The C/FFI function can call into the JavaScript/TypeScript code. This is useful for asynchronous code or whenever you want to call into JavaScript code from C.
 
@@ -360,7 +361,7 @@ setTimeout(() => {
 
 When you're done with a JSCallback, you should call `close()` to free the memory.
 
-### [Experimental thread-safe callbacks](https://bun.com/docs/api/ffi\#experimental-thread-safe-callbacks)
+### [Experimental thread-safe callbacks](https://bun.com/docs/api/ffi#experimental-thread-safe-callbacks)
 
 `JSCallback` has experimental support for thread-safe callbacks. This will be needed if you pass a callback function into a different thread from its instantiation context. You can enable it with the optional `threadsafe` parameter.
 
@@ -399,9 +400,9 @@ setOnResolve(onResolve);
 
 ```
 
-## [Pointers](https://bun.com/docs/api/ffi\#pointers)
+## [Pointers](https://bun.com/docs/api/ffi#pointers)
 
-Bun represents [pointers](https://en.wikipedia.org/wiki/Pointer_(computer_programming)) as a `number` in JavaScript.
+Bun represents [pointers](<https://en.wikipedia.org/wiki/Pointer_(computer_programming)>) as a `number` in JavaScript.
 
 How does a 64 bit pointer fit in a JavaScript number?
 
@@ -464,20 +465,20 @@ console.log(
 The `read` function behaves similarly to `DataView`, but it's usually faster because it doesn't need to create a `DataView` or `ArrayBuffer`.
 
 | `FFIType` | `read` function |
-| --- | --- |
-| ptr | `read.ptr` |
-| i8 | `read.i8` |
-| i16 | `read.i16` |
-| i32 | `read.i32` |
-| i64 | `read.i64` |
-| u8 | `read.u8` |
-| u16 | `read.u16` |
-| u32 | `read.u32` |
-| u64 | `read.u64` |
-| f32 | `read.f32` |
-| f64 | `read.f64` |
+| --------- | --------------- |
+| ptr       | `read.ptr`      |
+| i8        | `read.i8`       |
+| i16       | `read.i16`      |
+| i32       | `read.i32`      |
+| i64       | `read.i64`      |
+| u8        | `read.u8`       |
+| u16       | `read.u16`      |
+| u32       | `read.u32`      |
+| u64       | `read.u64`      |
+| f32       | `read.f32`      |
+| f64       | `read.f64`      |
 
-### [Memory management](https://bun.com/docs/api/ffi\#memory-management)
+### [Memory management](https://bun.com/docs/api/ffi#memory-management)
 
 `bun:ffi` does not manage memory for you. You must free the memory when you're done with it.
 
@@ -526,15 +527,15 @@ toArrayBuffer(
 
 ```
 
-### [Memory safety](https://bun.com/docs/api/ffi\#memory-safety)
+### [Memory safety](https://bun.com/docs/api/ffi#memory-safety)
 
 Using raw pointers outside of FFI is extremely not recommended. A future version of Bun may add a CLI flag to disable `bun:ffi`.
 
-### [Pointer alignment](https://bun.com/docs/api/ffi\#pointer-alignment)
+### [Pointer alignment](https://bun.com/docs/api/ffi#pointer-alignment)
 
 If an API expects a pointer sized to something other than `char` or `u8`, make sure the `TypedArray` is also that size. A `u64*` is not exactly the same as `[8]u8*` due to alignment.
 
-### [Passing a pointer](https://bun.com/docs/api/ffi\#passing-a-pointer)
+### [Passing a pointer](https://bun.com/docs/api/ffi#passing-a-pointer)
 
 Where FFI functions expect a pointer, pass a `TypedArray` of equivalent size:
 
@@ -600,7 +601,7 @@ const out = encode_png(
 
 ```
 
-### [Reading pointers](https://bun.com/docs/api/ffi\#reading-pointers)
+### [Reading pointers](https://bun.com/docs/api/ffi#reading-pointers)
 
 ```
 const out = encode_png(
@@ -626,7 +627,7 @@ Cookie](https://bun.com/docs/api/cookie) [Next\\
 \\
 C Compiler](https://bun.com/docs/api/cc)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/ffi.md)
 
@@ -650,7 +651,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

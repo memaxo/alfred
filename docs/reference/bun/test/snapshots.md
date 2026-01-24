@@ -1,9 +1,10 @@
 ---
 title: Snapshots – Test runner | Bun Docs
-url: 
+url:
 description: Add lifecycle hooks to your tests that run before/after each test or test run
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Snapshot testing saves the output of a value and compares it against future test runs. This is particularly useful for UI components, complex objects, or any output that needs to remain consistent.
 
-## [Basic snapshots](https://bun.com/docs/test/snapshots\#basic-snapshots)
+## [Basic snapshots](https://bun.com/docs/test/snapshots#basic-snapshots)
 
 Snapshot tests are written using the `.toMatchSnapshot()` matcher:
 
@@ -73,7 +74,7 @@ The first time this test is run, the argument to `expect` will be serialized and
 bun test --update-snapshots
 ```
 
-## [Inline snapshots](https://bun.com/docs/test/snapshots\#inline-snapshots)
+## [Inline snapshots](https://bun.com/docs/test/snapshots#inline-snapshots)
 
 For smaller values, you can use inline snapshots with `.toMatchInlineSnapshot()`. These snapshots are stored directly in your test file:
 
@@ -96,7 +97,7 @@ test("inline snapshot", () => {
 
 When you run the test, Bun automatically updates the test file itself with the generated snapshot string. This makes the tests more portable and easier to understand, since the expected output is right next to the test.
 
-### [Using inline snapshots](https://bun.com/docs/test/snapshots\#using-inline-snapshots)
+### [Using inline snapshots](https://bun.com/docs/test/snapshots#using-inline-snapshots)
 
 1. Write your test with `.toMatchInlineSnapshot()`
 2. Run the test once
@@ -105,7 +106,7 @@ When you run the test, Bun automatically updates the test file itself with the g
 
 Inline snapshots are particularly useful for small, simple values where it's helpful to see the expected output right in the test file.
 
-## [Error snapshots](https://bun.com/docs/test/snapshots\#error-snapshots)
+## [Error snapshots](https://bun.com/docs/test/snapshots#error-snapshots)
 
 You can also snapshot error messages using `.toThrowErrorMatchingSnapshot()` and `.toThrowErrorMatchingInlineSnapshot()`:
 
@@ -130,7 +131,7 @@ Mocks](https://bun.com/docs/test/mocks) [Next\\
 \\
 Dates and times](https://bun.com/docs/test/time)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/snapshots.md)
 
@@ -154,7 +155,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

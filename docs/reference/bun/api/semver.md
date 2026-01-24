@@ -1,9 +1,10 @@
 ---
 title: Semver – API | Bun Docs
-url: 
+url:
 description: Bun's native Semver implementation is 20x faster than the popular `node-semver` package.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -109,7 +110,7 @@ DNS](https://bun.com/docs/api/dns) [Next\\
 \\
 Color](https://bun.com/docs/api/color)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/semver.md)
 
@@ -133,7 +134,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

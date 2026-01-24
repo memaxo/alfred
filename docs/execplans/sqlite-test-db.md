@@ -51,6 +51,7 @@ Developers need the real Postgres connection string for runtime behavior (`confi
 ## Context and Orientation
 
 `packages/db/src/client.ts` exports the singleton `db` plus factory helpers. It currently throws when `DATABASE_URL` is unset, breaking unrelated packages during `bun test`. The real Postgres connection string lives in `config/env.example` (`postgresql://alfred:alfred@localhost:5432/alfred`) and `config/env.test` (test database). We will add a SQLite fallback that activates only when:
+
 1. `process.env.DATABASE_URL` is explicitly set to a `sqlite:` or `file:` URI, or
 2. `process.env.DATABASE_URL` is absent but `BUN_TEST=1` (Bun’s default when running `bun test`).
 

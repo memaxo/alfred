@@ -14,12 +14,14 @@ Redis is used as an **optional** caching and coordination layer across multiple 
 **Purpose:** Prevent JWT token replay attacks using JTI (JWT ID) tracking.
 
 **Implementation:**
+
 - Key pattern: `jti:{jti}`
 - TTL: Matches token expiration (default 300s)
 - Operation: `SET` with `NX` flag (only set if not exists)
 - Fallback: In-memory `Map` with `setTimeout` cleanup
 
 **Code Reference:**
+
 ```209:241:packages/auth/src/token.ts
 export async function cacheJTI(jti: string, ttlSec: number) {
   const redis = getRedis();
@@ -65,6 +67,7 @@ export async function cacheJTI(jti: string, ttlSec: number) {
 **Purpose:** Distributed run registry for multi-instance deployments. Enables workflow resume across different API instances.
 
 **Implementation:**
+
 - Key patterns:
   - `rr:run:{runId}` - Owner instance ID (TTL: 120s)
   - `rr:ack:{corrId}` - Acknowledgment status (TTL: 60s)
@@ -73,6 +76,7 @@ export async function cacheJTI(jti: string, ttlSec: number) {
 - Heartbeat: Periodic `EXPIRE` refresh (default 30s interval)
 
 **Code Reference:**
+
 ```163:431:packages/agent/src/workflow/registry.ts
 export class RedisRunRegistry implements RunRegistry {
   private readonly runs = new Map<string, RunHandle>();
@@ -104,6 +108,7 @@ export class RedisRunRegistry implements RunRegistry {
 ```
 
 **Configuration:**
+
 - `RUN_REGISTRY_BACKEND=redis` to enable
 - `RUN_REGISTRY_ACK_TIMEOUT_MS` (default: 2000ms)
 - `RUN_REGISTRY_OWNER_TTL_SEC` (default: 120s)
@@ -118,6 +123,7 @@ export class RedisRunRegistry implements RunRegistry {
 **Purpose:** Track active voice sessions across instances for multi-device coordination.
 
 **Implementation:**
+
 - Key patterns:
   - `voice:session:{sessionId}` - Session data (TTL: 3600s)
   - `voice:user:{userId}:sessions` - Set of session IDs (TTL: 3600s)
@@ -125,6 +131,7 @@ export class RedisRunRegistry implements RunRegistry {
 - Fallback: In-memory `Map` and `Set` structures
 
 **Code Reference:**
+
 ```78:172:packages/api/src/voice/session-registry.ts
 export async function claimVoiceSession(params: {
   userId: string;
@@ -196,12 +203,14 @@ export async function claimVoiceSession(params: {
 **Purpose:** Two-tier cache (L1: LRU in-memory, L2: Redis) with pub/sub invalidation.
 
 **Implementation:**
+
 - Key pattern: `pref:{userId}`
 - TTL: 600s (10 minutes)
 - Pub/Sub channel: `preference:invalidate`
 - Operations: `GET`, `SET`, `DEL`, `PUBLISH`, `SUBSCRIBE`
 
 **Code Reference:**
+
 ```107:191:packages/agent/src/preference/loader.ts
 export async function loadPreferences(
   userId: string
@@ -299,6 +308,7 @@ export async function loadPreferences(
 **Purpose:** Persist pending droid execution runs for resume after biometric authorization.
 
 **Implementation:**
+
 - Key patterns:
   - `droid:pending:{runId}` - Pending run record (TTL: 1800s)
   - `droid:resume:{runId}:result` - Resume result (TTL: 900s)
@@ -306,6 +316,7 @@ export async function loadPreferences(
 - Fallback: In-memory `Map` with expiration tracking
 
 **Code Reference:**
+
 ```139:242:packages/api/src/routers/droids.ts
 async function persistPendingRecord(runId: string, record: PendingRunRecord) {
   const redis = getRedis();
@@ -340,11 +351,13 @@ async function persistPendingRecord(runId: string, record: PendingRunRecord) {
 **Purpose:** Periodic cleanup of stale pending droid runs using `SCAN`.
 
 **Implementation:**
+
 - Uses `SCAN` with pattern matching: `droid:pending:*`
 - Configurable scan count (default: 200)
 - Max age: 30 minutes (configurable via `DROID_PENDING_MAX_AGE_MS`)
 
 **Code Reference:**
+
 ```19:36:packages/api/src/workers/droid-pending-cleanup.ts
 async function scanKeys(redis: ReturnType<typeof getRedis>): Promise<string[]> {
   if (!redis) {
@@ -387,6 +400,7 @@ async function scanKeys(redis: ReturnType<typeof getRedis>): Promise<string[]> {
 4. **Type Suppression:** Uses `@ts-expect-error` for Bun-specific options, but the types may be incomplete.
 
 **Code Reference:**
+
 ```6:61:packages/auth/src/redis.ts
 export function getRedis(): RedisClient | null {
   const url = process.env.REDIS_URL;
@@ -447,6 +461,7 @@ export function getRedis(): RedisClient | null {
 ```
 
 **Recommendations:**
+
 - Implement exponential backoff retry on `status === "err"`
 - Await `connect()` before returning client (or use `ready` promise pattern)
 - Uncomment and properly implement `onerror` handler with structured logging
@@ -475,6 +490,7 @@ export function getRedis(): RedisClient | null {
 **Location:** `apps/web/src/routes/healthz/deps.ts`
 
 **Implementation:**
+
 - Checks Redis availability via `ping()` if client exists
 - Non-blocking: Redis failure doesn't fail health check (optional dependency)
 
@@ -485,6 +501,7 @@ export function getRedis(): RedisClient | null {
 ## Configuration
 
 **Environment Variables:**
+
 - `REDIS_URL` - Connection string (default: none, falls back to in-memory)
 - `RUN_REGISTRY_BACKEND` - `memory` (default) or `redis`
 - `RUN_REGISTRY_ACK_TIMEOUT_MS` - Default: 2000ms
@@ -499,14 +516,14 @@ export function getRedis(): RedisClient | null {
 
 ## Key Patterns Summary
 
-| Use Case | Key Pattern | TTL | Operations | Fallback |
-|----------|------------|-----|------------|----------|
-| Token Replay | `jti:{jti}` | Token TTL | SET NX | In-memory Map |
-| Run Registry | `rr:run:{runId}`, `rr:ack:{corrId}` | 120s, 60s | SET, GET, DEL, EXPIRE, PUBLISH, SUBSCRIBE | Memory registry |
-| Voice Sessions | `voice:session:{id}`, `voice:user:{userId}:sessions` | 3600s | SET, GET, DEL, SADD, SREM, SMEMBERS | In-memory Map/Set |
-| Preferences | `pref:{userId}` | 600s | GET, SET, DEL, PUBLISH, SUBSCRIBE | LRU cache + DB |
-| Droid Pending | `droid:pending:{runId}`, `droid:resume:{runId}:result` | 1800s, 900s | SET, GET, DEL | In-memory Map |
-| Droid Cleanup | `droid:pending:*` | N/A | SCAN | N/A (skips if no Redis) |
+| Use Case       | Key Pattern                                            | TTL         | Operations                                | Fallback                |
+| -------------- | ------------------------------------------------------ | ----------- | ----------------------------------------- | ----------------------- |
+| Token Replay   | `jti:{jti}`                                            | Token TTL   | SET NX                                    | In-memory Map           |
+| Run Registry   | `rr:run:{runId}`, `rr:ack:{corrId}`                    | 120s, 60s   | SET, GET, DEL, EXPIRE, PUBLISH, SUBSCRIBE | Memory registry         |
+| Voice Sessions | `voice:session:{id}`, `voice:user:{userId}:sessions`   | 3600s       | SET, GET, DEL, SADD, SREM, SMEMBERS       | In-memory Map/Set       |
+| Preferences    | `pref:{userId}`                                        | 600s        | GET, SET, DEL, PUBLISH, SUBSCRIBE         | LRU cache + DB          |
+| Droid Pending  | `droid:pending:{runId}`, `droid:resume:{runId}:result` | 1800s, 900s | SET, GET, DEL                             | In-memory Map           |
+| Droid Cleanup  | `droid:pending:*`                                      | N/A         | SCAN                                      | N/A (skips if no Redis) |
 
 ---
 
@@ -562,7 +579,7 @@ export function getRedis(): RedisClient | null {
 ✅ **Pub/Sub Pattern:** Correct use of Redis pub/sub for cache invalidation  
 ✅ **SCAN Usage:** Proper use of `SCAN` instead of `KEYS` for production safety  
 ✅ **Error Handling:** Most operations wrap Redis calls in try/catch with fallbacks  
-✅ **Structured Logging:** Errors are logged with context using structured logger  
+✅ **Structured Logging:** Errors are logged with context using structured logger
 
 ---
 
@@ -601,4 +618,3 @@ Redis usage in ALFRED is **well-architected** with proper fallbacks and error ha
 3. **Error logging** should be enabled for better observability
 
 The codebase demonstrates good understanding of Redis best practices (TTL, SCAN, pub/sub) and maintains operational flexibility through graceful degradation patterns.
-

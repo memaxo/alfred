@@ -1,9 +1,10 @@
 ---
 title: Express Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Express.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -32,7 +33,7 @@ Before you start, make sure you have a Better Auth instance configured. If you h
 
 Note that CommonJS (cjs) isn't supported. Use ECMAScript Modules (ESM) by setting `"type": "module"` in your `package.json` or configuring your `tsconfig.json` to use ES modules.
 
-### [Mount the handler](https://www.better-auth.com/docs/integrations/express\#mount-the-handler)
+### [Mount the handler](https://www.better-auth.com/docs/integrations/express#mount-the-handler)
 
 To enable Better Auth to handle requests, we need to mount the handler to an API route. Create a catch-all route to manage all requests to `/api/auth/*` in case of ExpressJS v4 or `/api/auth/*splat` in case of ExpressJS v5 (or any other path specified in your Better Auth options).
 
@@ -62,7 +63,7 @@ app.listen(port, () => {
 
 After completing the setup, start your server. Better Auth will be ready to use. You can send a `GET` request to the `/ok` endpoint ( `/api/auth/ok`) to verify that the server is running.
 
-### [Cors Configuration](https://www.better-auth.com/docs/integrations/express\#cors-configuration)
+### [Cors Configuration](https://www.better-auth.com/docs/integrations/express#cors-configuration)
 
 To add CORS (Cross-Origin Resource Sharing) support to your Express server when integrating Better Auth, you can use the `cors` middleware. Below is an updated example showing how to configure CORS for your server:
 
@@ -85,7 +86,7 @@ app.use(
 );
 ```
 
-### [Getting the User Session](https://www.better-auth.com/docs/integrations/express\#getting-the-user-session)
+### [Getting the User Session](https://www.better-auth.com/docs/integrations/express#getting-the-user-session)
 
 To retrieve the user's session, you can use the `getSession` method provided by the `auth` object. This method requires the request headers to be passed in a specific format. To simplify this process, Better Auth provides a `fromNodeHeaders` helper function that converts Node.js request headers to the format expected by Better Auth (a `Headers` object).
 

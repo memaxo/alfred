@@ -11,8 +11,7 @@ It is a hook that enables you to read and update the AI state. The AI state is s
 The AI state is intended to contain context and information shared with the AI model, such as system messages, function responses, and other relevant data.
 
 ## Import
-    
-    
+
     import { useAIState } from "@ai-sdk/rsc"
 
 ## API Signature

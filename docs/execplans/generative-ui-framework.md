@@ -76,28 +76,29 @@ Observable outcome: After completing this work, a user can ask ALFRED a question
 ## Surprises & Discoveries
 
 - Observation: The codebase already has 50 integrated components in `apps/web/src/components/manifest.ts`, providing a rich palette for generative UI without new component development.
-Evidence: `componentStatus` shows all 50 components as "integrated" with verified usage sites.
+  Evidence: `componentStatus` shows all 50 components as "integrated" with verified usage sites.
 - Observation: AI SDK RSC (`streamUI`) is marked experimental and Vercel recommends AI SDK UI hooks for production.
-Evidence: `docs/reference/ai-sdk-v6/ai-sdk-rsc_streaming-react-components.md` states "AI SDK RSC is currently experimental. We recommend using AI SDK UI for production."
+  Evidence: `docs/reference/ai-sdk-v6/ai-sdk-rsc_streaming-react-components.md` states "AI SDK RSC is currently experimental. We recommend using AI SDK UI for production."
 - Observation: ALFRED uses explicit `tool-call` and `tool-result` part types rather than AI SDK's `tool-${toolName}` pattern for better persistence.
-Evidence: `packages/ui/src/chat/parts.ts` defines custom `ToolCallPart` and `ToolResultPart` types.
+  Evidence: `packages/ui/src/chat/parts.ts` defines custom `ToolCallPart` and `ToolResultPart` types.
 - Observation: Zod v4 has breaking changes from v3. `z.record()` requires explicit key schema (e.g., `z.record(z.string(), z.unknown())`), and `.default()` behavior changed.
-Evidence: Initial schema using `z.record(z.unknown()).default({})` failed type checking. Fixed by using `z.record(z.string(), z.unknown()).optional().transform(val => val ?? {})`.
+  Evidence: Initial schema using `z.record(z.unknown()).default({})` failed type checking. Fixed by using `z.record(z.string(), z.unknown()).optional().transform(val => val ?? {})`.
 
 ## Decision Log
 
 - Decision: Evaluate three architectural options before implementation.
-Rationale: Generative UI has multiple valid approaches; premature commitment risks rework.
-Date/Author: 2026-01-17 / Codex
+  Rationale: Generative UI has multiple valid approaches; premature commitment risks rework.
+  Date/Author: 2026-01-17 / Codex
 - Decision: Selected Option B (Schema-Based Component Generation) with Option A fallback.
-Rationale: Option B provides maximum flexibility for model-selected components while maintaining type safety through Zod validation. Option A patterns preserved for existing tools with fixed UI bindings. Option C (RSC streamUI) deferred due to experimental status and TanStack Start compatibility concerns.
-Date/Author: 2026-01-17 / Codex
+  Rationale: Option B provides maximum flexibility for model-selected components while maintaining type safety through Zod validation. Option A patterns preserved for existing tools with fixed UI bindings. Option C (RSC streamUI) deferred due to experimental status and TanStack Start compatibility concerns.
+  Date/Author: 2026-01-17 / Codex
 
 ## Outcomes & Retrospective
 
 ### Completed (2026-01-17)
 
 **Core Framework Delivered:**
+
 - UIComponent schema system with Zod v4 validation
 - Dynamic component registry with lazy loading
 - Schema interpreter with recursive rendering support
@@ -110,12 +111,14 @@ Date/Author: 2026-01-17 / Codex
 - Web integration tests for GenUI chat rendering
 
 **Test Coverage:**
+
 - 111 passing tests across 3 test files (200 assertions)
 - Registry, interpreter, validation, type guards, boundary, tool integration, streaming
 - Web integration: data-ui rendering, unknown component placeholder, malformed data-ui handling, error boundary fallback, tool-result GenUI output rendering, nested components, schema validation, non-GenUI tool results
 - Validation: schema edge cases (null/undefined, unicode, deep nesting), tool result validation (helpers produce valid schemas), orchestrator components
 
 **Files Created:**
+
 - `packages/type/src/genui.ts` - Core types
 - `packages/type/src/genui.zod.ts` - Validation schemas
 - `packages/ui/src/genui/*` - Registry, interpreter, boundary, tool, streaming, index
@@ -123,6 +126,7 @@ Date/Author: 2026-01-17 / Codex
 - `.ruler/genui-patterns.md` - Documentation
 
 **Files Modified:**
+
 - `packages/type/package.json` - Added genui exports
 - `packages/type/src/index.ts` - Added genui re-exports
 - `apps/web/src/router.tsx` - Added registry initialization
@@ -131,6 +135,7 @@ Date/Author: 2026-01-17 / Codex
 ### Additional Work Completed (2026-01-17)
 
 **Model Capability System:**
+
 - Added `ModelCapability` type to `@alfred/type/model.ts`
 - Implemented capability detection by model ID pattern
 - Added `hasCapability()` and `supportsGenUI()` helper functions
@@ -138,6 +143,7 @@ Date/Author: 2026-01-17 / Codex
 - Added 7 tests for capability detection
 
 **Orchestrator UI Components:**
+
 - Created `packages/ui/src/genui/orchestrator.tsx` with:
   - `StreamingTerminal` - Real-time log streaming
   - `ProgressWindow` - Long-running operation tracking
@@ -148,6 +154,7 @@ Date/Author: 2026-01-17 / Codex
   - `ResourceMonitor` - Container/VM resource monitoring
 
 **Test Quality Review (2026-01-17):**
+
 - Fixed structural issues: `beforeEach` placement in streaming tests
 - Added 21 new tests covering edge cases and validation:
   - Schema edge cases (null, deep nesting, unicode, special chars)
@@ -158,6 +165,7 @@ Date/Author: 2026-01-17 / Codex
 - Final: 111 tests, 200 assertions across genui (80), web integration (8), selector (23)
 
 ### Remaining Work
+
 None - all milestones and test review complete.
 
 ## Context and Orientation
@@ -167,7 +175,7 @@ This plan applies to the ALFRED monorepo, specifically the web application under
 Key terms used in this plan:
 
 - **Generative UI**: The ability for an LLM to select and configure UI components dynamically based on conversation context, rather than returning only text.
-- **Part**: A structured segment of an AI SDK message (text, reasoning, tool-call, tool-result, data-*).
+- **Part**: A structured segment of an AI SDK message (text, reasoning, tool-call, tool-result, data-\*).
 - **Tool**: A function the model can invoke to perform actions or retrieve data; tools have schemas and return structured outputs.
 - **Component Manifest**: The registry at `apps/web/src/components/manifest.ts` that defines all available UI components.
 - **Part Renderer**: A function that converts a message part into a React component for display.
@@ -215,23 +223,23 @@ How it works:
 1. Each tool definition includes a `uiComponent` field naming the manifest component.
 2. Tool execution returns structured data matching the component's props.
 3. A dynamic renderer looks up the component by name and renders with the output data.
-  // Tool definition with UI binding
-    export const weatherTool = createTool({
-      description: 'Get weather for a location',
-      inputSchema: z.object({ location: z.string() }),
-      uiComponent: 'chart', // References manifest component
-      execute: async ({ location }) => ({
-        type: 'line',
-        data: [{ hour: '9am', temp: 52 }, { hour: '10am', temp: 54 }],
-        title: `Weather in ${location}`,
-      }),
-    });
-    // Dynamic renderer
-    function renderToolWithUI(part: ToolResultPart) {
-      const tool = getToolDefinition(part.toolName);
-      const Component = resolveComponent(tool.uiComponent);
-      return <Component {...part.output} />;
-    }
+   // Tool definition with UI binding
+   export const weatherTool = createTool({
+   description: 'Get weather for a location',
+   inputSchema: z.object({ location: z.string() }),
+   uiComponent: 'chart', // References manifest component
+   execute: async ({ location }) => ({
+   type: 'line',
+   data: [{ hour: '9am', temp: 52 }, { hour: '10am', temp: 54 }],
+   title: `Weather in ${location}`,
+   }),
+   });
+   // Dynamic renderer
+   function renderToolWithUI(part: ToolResultPart) {
+   const tool = getToolDefinition(part.toolName);
+   const Component = resolveComponent(tool.uiComponent);
+   return <Component {...part.output} />;
+   }
 
 Pros:
 
@@ -261,27 +269,29 @@ How it works:
 1. Define a `UISchema` Zod type that describes component trees.
 2. Tools (or the model directly via `generateObject`) return `UISchema` objects.
 3. A schema interpreter renders the component tree recursively.
-  // UI Schema type
-    const UIComponentSchema = z.object({
-      component: z.enum(['chart', 'number', 'grid', 'task', 'plan', ...]),
-      props: z.record(z.unknown()),
-      children: z.array(z.lazy(() => UIComponentSchema)).optional(),
-    });
-    // Model returns schema
-    const result = await generateObject({
-      model: openai('gpt-4o'),
-      schema: UIComponentSchema,
-      prompt: 'Generate a dashboard showing task progress',
-    });
-    // Schema interpreter
-    function renderUISchema(schema: UIComponent): ReactNode {
-      const Component = resolveComponent(schema.component);
-      return (
-        <Component {...schema.props}>
-          {schema.children?.map(renderUISchema)}
-  ```
-  );
-  ```
+   // UI Schema type
+   const UIComponentSchema = z.object({
+   component: z.enum(['chart', 'number', 'grid', 'task', 'plan', ...]),
+   props: z.record(z.unknown()),
+   children: z.array(z.lazy(() => UIComponentSchema)).optional(),
+   });
+   // Model returns schema
+   const result = await generateObject({
+   model: openai('gpt-4o'),
+   schema: UIComponentSchema,
+   prompt: 'Generate a dashboard showing task progress',
+   });
+   // Schema interpreter
+   function renderUISchema(schema: UIComponent): ReactNode {
+   const Component = resolveComponent(schema.component);
+   return (
+   <Component {...schema.props}>
+   {schema.children?.map(renderUISchema)}
+
+```
+);
+```
+
     }
 
 Pros:
@@ -314,29 +324,31 @@ How it works:
 1. Server Actions call `streamUI` with tools that return React components.
 2. Components stream progressively as the model generates.
 3. State is split into AI State (serializable) and UI State (React elements).
-  // Server Action
-    export async function generateUI(prompt: string) {
-      'use server';
-  ```
-  const result = await streamUI({
-    model: openai('gpt-4o'),
-    prompt,
-    text: ({ content }) => <Markdown>{content}</Markdown>,
-    tools: {
-      showWeather: {
-        description: 'Show weather for a location',
-        inputSchema: z.object({ location: z.string() }),
-        generate: async function* ({ location }) {
-          yield <Loading />;
-          const weather = await getWeather(location);
-          return <WeatherCard {...weather} />;
-        },
+   // Server Action
+   export async function generateUI(prompt: string) {
+   'use server';
+
+```
+const result = await streamUI({
+  model: openai('gpt-4o'),
+  prompt,
+  text: ({ content }) => <Markdown>{content}</Markdown>,
+  tools: {
+    showWeather: {
+      description: 'Show weather for a location',
+      inputSchema: z.object({ location: z.string() }),
+      generate: async function* ({ location }) {
+        yield <Loading />;
+        const weather = await getWeather(location);
+        return <WeatherCard {...weather} />;
       },
     },
-  });
+  },
+});
 
-  return result.value;
-  ```
+return result.value;
+```
+
     }
     // Client
     const [ui, setUI] = useState(null);
@@ -662,4 +674,3 @@ const dataPartRenderers: PartRenderer[] = [
 ## Revision Notes
 
 - 2026-01-17: Initial plan created with architecture comparison of options A, B, C. Recommended Option B (schema-based) with Option A fallback. Defined 7 milestones for implementation.
-

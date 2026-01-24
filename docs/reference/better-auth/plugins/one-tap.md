@@ -1,9 +1,10 @@
 ---
 title: One Tap | Better Auth
-url: 
+url:
 description: One Tap plugin for Better Auth
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -29,9 +30,9 @@ Copy MarkdownOpen in
 The One Tap plugin allows users to log in with a single tap using Google's One Tap API. The plugin
 provides a simple way to integrate One Tap into your application, handling the client-side and server-side logic for you.
 
-## [Installation](https://www.better-auth.com/docs/plugins/one-tap\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/one-tap#installation)
 
-### [Add the Server Plugin](https://www.better-auth.com/docs/plugins/one-tap\#add-the-server-plugin)
+### [Add the Server Plugin](https://www.better-auth.com/docs/plugins/one-tap#add-the-server-plugin)
 
 Add the One Tap plugin to your auth configuration:
 
@@ -48,7 +49,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Add the Client Plugin](https://www.better-auth.com/docs/plugins/one-tap\#add-the-client-plugin)
+### [Add the Client Plugin](https://www.better-auth.com/docs/plugins/one-tap#add-the-client-plugin)
 
 Add the client plugin and specify where the user should be redirected after sign-in or if additional verification (like 2FA) is needed.
 
@@ -77,7 +78,7 @@ export const authClient = createAuthClient({
 });
 ```
 
-### [Usage](https://www.better-auth.com/docs/plugins/one-tap\#usage)
+### [Usage](https://www.better-auth.com/docs/plugins/one-tap#usage)
 
 To display the One Tap popup, simply call the oneTap method on your auth client:
 
@@ -85,11 +86,11 @@ To display the One Tap popup, simply call the oneTap method on your auth client:
 await authClient.oneTap();
 ```
 
-### [Customizing Redirect Behavior](https://www.better-auth.com/docs/plugins/one-tap\#customizing-redirect-behavior)
+### [Customizing Redirect Behavior](https://www.better-auth.com/docs/plugins/one-tap#customizing-redirect-behavior)
 
 By default, after a successful login the plugin will hard redirect the user to `/`. You can customize this behavior as follows:
 
-#### [Avoiding a Hard Redirect](https://www.better-auth.com/docs/plugins/one-tap\#avoiding-a-hard-redirect)
+#### [Avoiding a Hard Redirect](https://www.better-auth.com/docs/plugins/one-tap#avoiding-a-hard-redirect)
 
 Pass fetchOptions with an onSuccess callback to handle the login response without a page reload:
 
@@ -104,7 +105,7 @@ await authClient.oneTap({
 });
 ```
 
-#### [Specifying a Custom Callback URL](https://www.better-auth.com/docs/plugins/one-tap\#specifying-a-custom-callback-url)
+#### [Specifying a Custom Callback URL](https://www.better-auth.com/docs/plugins/one-tap#specifying-a-custom-callback-url)
 
 To perform a hard redirect to a different page after login, use the callbackURL option:
 
@@ -114,7 +115,7 @@ await authClient.oneTap({
 });
 ```
 
-#### [Handling Prompt Dismissals with Exponential Backoff](https://www.better-auth.com/docs/plugins/one-tap\#handling-prompt-dismissals-with-exponential-backoff)
+#### [Handling Prompt Dismissals with Exponential Backoff](https://www.better-auth.com/docs/plugins/one-tap#handling-prompt-dismissals-with-exponential-backoff)
 
 If the user dismisses or skips the prompt, the plugin will retry showing the One Tap prompt using exponential backoff based on your configured promptOptions.
 
@@ -129,7 +130,7 @@ await authClient.oneTap({
 });
 ```
 
-### [Client Options](https://www.better-auth.com/docs/plugins/one-tap\#client-options)
+### [Client Options](https://www.better-auth.com/docs/plugins/one-tap#client-options)
 
 - **clientId**: The client ID for your Google One Tap API.
 - **autoSelect**: Automatically select the account if the user is already signed in. Default is false.
@@ -140,7 +141,7 @@ await authClient.oneTap({
 - **baseDelay**: Base delay in milliseconds for retries. Default is 1000.
 - **maxAttempts**: Maximum number of prompt attempts before invoking the onPromptNotification callback. Default is 5.
 
-### [Server Options](https://www.better-auth.com/docs/plugins/one-tap\#server-options)
+### [Server Options](https://www.better-auth.com/docs/plugins/one-tap#server-options)
 
 - **disableSignUp**: Disable the sign-up option, allowing only existing users to sign in. Default is `false`.
 - **ClientId**: Optionally, pass a client ID here if it is not provided in your social provider configuration.

@@ -1,8 +1,9 @@
 ---
 title: Introduction to Laminar Playground - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/playground/introduction#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -27,7 +28,7 @@ On this page
 
 Playground is an interactive environment that allows you to experiment with AI models, test prompts, and analyze responses.
 
-## [​](https://docs.lmnr.ai/playground/introduction\#what-is-the-playground%3F)  What is the Playground?
+## [​](https://docs.lmnr.ai/playground/introduction#what-is-the-playground%3F) What is the Playground?
 
 The Playground serves as a sandbox environment where you can:
 

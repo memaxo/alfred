@@ -1,9 +1,10 @@
 ---
 title: Evaluating LLM Tool Calls with Laminar - Laminar documentation
-url: 
+url:
 description: A comprehensive guide to evaluating AI agent tool calls using a Data Analysis Assistant example - from production tracing to systematic evaluation
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/guides/evaluating-tool-calls#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -47,15 +48,15 @@ On this page
 - [Viewing Results and Iteration](https://docs.lmnr.ai/guides/evaluating-tool-calls#viewing-results-and-iteration)
 - [Learn More](https://docs.lmnr.ai/guides/evaluating-tool-calls#learn-more)
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#overview)  Overview
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#overview) Overview
 
 In this guide, we’ll follow the complete journey of building and improving a **Data Analysis Assistant** \- an AI agent that helps users analyze their data, create visualizations, and generate insights. This example showcases how Laminar’s end-to-end platform helps you build reliable tool-calling agents.
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#why-this-guide-matters)  **Why This Guide Matters**
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#why-this-guide-matters) **Why This Guide Matters**
 
 Tool-calling agents are powerful but complex - they need to select the right tools, use correct parameters, and handle multi-step workflows. Unlike simple text generation, evaluating these agents requires understanding their decision-making process and systematic improvement based on real user interactions.
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#what-you%E2%80%99ll-learn)  **What You’ll Learn**
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#what-you%E2%80%99ll-learn) **What You’ll Learn**
 
 **Step 1: Tracing agent in production**
 
@@ -69,7 +70,7 @@ Label the problematic cases and create an evaluation dataset using Laminar’s l
 
 Experiment with the agent prompt to see whether the agent is improving with the new prompt.This end-to-end approach ensures our Data Analysis Assistant continuously improves based on real user interactions rather than hypothetical test cases.
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#the-data-analysis-assistant)  The Data Analysis Assistant
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#the-data-analysis-assistant) The Data Analysis Assistant
 
 Our assistant helps users analyze data through natural language queries like:
 
@@ -77,7 +78,7 @@ Our assistant helps users analyze data through natural language queries like:
 - _“Show me user engagement trends over time”_
 - _“Find any anomalies in our conversion rates”_
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#available-tools)  Available Tools
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#available-tools) Available Tools
 
 Copy
 
@@ -164,11 +165,11 @@ tools = [\
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#step-1%3A-production-tracing-with-laminar)  Step 1: Production Tracing with Laminar
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#step-1%3A-production-tracing-with-laminar) Step 1: Production Tracing with Laminar
 
 First, let’s set up automatic tracing for our Data Analysis Assistant in production:
 
-production\_agent.py
+production_agent.py
 
 Copy
 
@@ -286,7 +287,7 @@ if __name__ == "__main__":
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#how-laminar-tracing-works)  How Laminar Tracing Works
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#how-laminar-tracing-works) How Laminar Tracing Works
 
 This agent demonstrates several key tracing concepts:
 
@@ -321,11 +322,11 @@ Here’s a screenshot of the traced interactions in Laminar:
 
 Traced interactions in Laminar
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#step-2%3A-capturing-user-feedback)  Step 2: Capturing User Feedback
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#step-2%3A-capturing-user-feedback) Step 2: Capturing User Feedback
 
 Now let’s add user feedback collection using Laminar’s tagging system. The key is to save the trace ID during execution and tag the trace later when you receive user feedback.
 
-production\_agent\_with\_feedback.py
+production_agent_with_feedback.py
 
 Copy
 
@@ -365,7 +366,7 @@ def add_negative_feedback(trace_id: str):
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#key-points-about-tagging)  Key Points About Tagging
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#key-points-about-tagging) Key Points About Tagging
 
 1. **Get Trace ID in span context**: Call `Laminar.get_trace_id()` inside the `@observe` function or inside manually created span to capture the trace ID
 2. **Store for Later**: Save the trace ID along with your session data so you can tag it when feedback arrives
@@ -374,7 +375,7 @@ def add_negative_feedback(trace_id: str):
 
 This approach allows you to collect feedback asynchronously - users can provide feedback minutes or hours after the interaction, and you can still associate it with the correct trace.
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#step-3%3A-analyzing-problematic-cases-with-sql-editor)  Step 3: Analyzing Problematic Cases with SQL Editor
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#step-3%3A-analyzing-problematic-cases-with-sql-editor) Step 3: Analyzing Problematic Cases with SQL Editor
 
 After collecting feedback in production, use Laminar’s SQL Editor to identify patterns in unsuccessful interactions.
 SQL editor is available from any page in Laminar and can be accessed by clicking the “console” button in the top right corner in the navigation bar.
@@ -405,7 +406,7 @@ Then click on the `create dataset` button to create new dataset.
 
 Exporting query results to dataset for labeling
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#push-dataset-to-labeling-queue)  Push dataset to labeling queue
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#push-dataset-to-labeling-queue) Push dataset to labeling queue
 
 Now navigate to the newly created dataset from the previous step. In the dataset view:
 
@@ -414,12 +415,12 @@ Now navigate to the newly created dataset from the previous step. In the dataset
 
 This process moves your problematic cases from the dataset into a structured labeling workflow where human annotators can provide the correct expected outputs for tool calls.
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#step-4%3A-label-data-and-create-evaluation-dataset)  Step 4: Label data and create evaluation dataset
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#step-4%3A-label-data-and-create-evaluation-dataset) Step 4: Label data and create evaluation dataset
 
 Laminar provides a convenient split-screen labeling interface that makes it easy to quickly label your data and build evaluation datasets.
 In this step, we will use labeling queue from the previous step to label the data and create an evaluation dataset.
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#the-labeling-interface)  The Labeling Interface
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#the-labeling-interface) The Labeling Interface
 
 When you open your labeling queue, you’ll see an efficient split-screen interface:**Left Panel - Payload View**: Shows the full JSON structure of the current item, including the user’s original query in the `data` field and the agent’s problematic response in the `target` field.**Right Panel - Target Editor**: This is where you provide the correct expected output. You can:
 
@@ -431,7 +432,7 @@ When you open your labeling queue, you’ll see an efficient split-screen interf
 
 Laminar's labeling interface for tool call evaluation
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#labeling-workflow)  Labeling Workflow
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#labeling-workflow) Labeling Workflow
 
 For each problematic tool call case:
 
@@ -444,12 +445,12 @@ For each problematic tool call case:
 Each `completed` datapoint will be automatically added to the target dataset.
 This dataset will be used for evaluation in the next step.As you type in the target editor, the left panel updates in real-time, showing exactly what will be saved to your evaluation dataset. This immediate feedback helps ensure accuracy in your labeling.Once your dataset is created, we can reference it in evaluations using `LaminarDataset("eval_dataset")`.
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#step-5%3A-running-tool-call-evaluations)  Step 5: Running Tool Call Evaluations
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#step-5%3A-running-tool-call-evaluations) Step 5: Running Tool Call Evaluations
 
 With our labeled dataset ready, we can now run systematic evaluations.
 The key insight is that our dataset contains the original conversation messages in the OpenAI format, which allows us to test different system prompts while keeping the user queries consistent.
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#understanding-the-dataset-structure)  Understanding the Dataset Structure
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#understanding-the-dataset-structure) Understanding the Dataset Structure
 
 From the labeling process, each datapoint in our evaluation dataset has this structure:
 
@@ -488,7 +489,7 @@ This structure allows us to:
 2. **Keep user queries consistent** for fair comparison
 3. **Compare against expected tool calls** from human labeling
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#create-evaluation-directory-structure)  Create evaluation directory structure
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#create-evaluation-directory-structure) Create evaluation directory structure
 
 Copy
 
@@ -499,9 +500,9 @@ Copy
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#main-evaluation-file)  Main evaluation file
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#main-evaluation-file) Main evaluation file
 
-evals/eval\_tool\_selection.py
+evals/eval_tool_selection.py
 
 Copy
 
@@ -659,7 +660,7 @@ evaluate(
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#testing-different-system-prompts)  Testing Different System Prompts
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#testing-different-system-prompts) Testing Different System Prompts
 
 The power of this approach is that you can easily test different system prompts:
 
@@ -687,11 +688,11 @@ system_prompt_v3 = """You are a data analysis assistant. CRITICAL: Always follow
 
 Simply swap the `content` field in the system message to test different versions and see which performs better on your real production failure cases.
 
-### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#running-the-evaluation)  Running the evaluation
+### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#running-the-evaluation) Running the evaluation
 
 You can run this evaluation in two ways:
 
-#### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#using-the-cli)  Using the CLI
+#### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#using-the-cli) Using the CLI
 
 Copy
 
@@ -707,7 +708,7 @@ lmnr eval
 
 ```
 
-#### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#running-as-a-standalone-script)  Running as a standalone script
+#### [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#running-as-a-standalone-script) Running as a standalone script
 
 Copy
 
@@ -716,7 +717,7 @@ python evals/eval_tool_selection.py
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#viewing-results-and-iteration)  Viewing Results and Iteration
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#viewing-results-and-iteration) Viewing Results and Iteration
 
 ![Evaluation results in Laminar](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/guides/eval-tools/eval_1.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=b6bbfda32688e3db5d9a1e01ef14dbc2)
 
@@ -737,7 +738,7 @@ Use these insights to:
 
 This approach ensures the Data Analysis Assistant continuously improves based on real user interactions and systematic evaluation, leading to more reliable and useful AI agents.
 
-## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls\#learn-more)  Learn More
+## [​](https://docs.lmnr.ai/guides/evaluating-tool-calls#learn-more) Learn More
 
 To dive deeper into the concepts covered in this guide:
 

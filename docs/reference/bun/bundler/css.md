@@ -1,9 +1,10 @@
 ---
 title: CSS – Bundler | Bun Docs
-url: 
+url:
 description: Production ready CSS bundler with support for modern CSS features, CSS modules, and more.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -59,7 +60,7 @@ Bun's bundler has built-in support for CSS with the following features:
 - CSS Modules
 - Tailwind (via a native bundler plugin)
 
-## [Transpiling](https://bun.com/docs/bundler/css\#transpiling)
+## [Transpiling](https://bun.com/docs/bundler/css#transpiling)
 
 Bun's CSS bundler lets you use modern/future CSS features without having to worry about browser compatibility — all thanks to its transpiling and vendor prefixing features which are enabled by default.
 
@@ -67,7 +68,7 @@ Bun's CSS parser and bundler is a direct Rust → Zig port of [LightningCSS](htt
 
 A huge thanks goes to the amazing work from the authors of [LightningCSS](https://lightningcss.dev/) and [esbuild](https://esbuild.github.io/).
 
-### [Browser Compatibility](https://bun.com/docs/bundler/css\#browser-compatibility)
+### [Browser Compatibility](https://bun.com/docs/bundler/css#browser-compatibility)
 
 By default, Bun's CSS bundler targets the following browsers:
 
@@ -77,7 +78,7 @@ By default, Bun's CSS bundler targets the following browsers:
 - Chrome 87+
 - Safari 14+
 
-### [Syntax Lowering](https://bun.com/docs/bundler/css\#syntax-lowering)
+### [Syntax Lowering](https://bun.com/docs/bundler/css#syntax-lowering)
 
 #### Nesting
 
@@ -974,7 +975,7 @@ For browsers that don't support `system-ui`, Bun's CSS bundler automatically exp
 
 This approach gives you the simplicity of writing just `system-ui` in your source code while ensuring your interface adapts correctly to all operating systems and browsers. The expanded font stack includes appropriate system fonts for macOS/iOS, Windows, Android, Linux, and fallbacks for older browsers.
 
-## [CSS Modules](https://bun.com/docs/bundler/css\#css-modules)
+## [CSS Modules](https://bun.com/docs/bundler/css#css-modules)
 
 Bun's bundler also supports bundling [CSS modules](https://css-tricks.com/css-modules-part-1-need/) in addition to [regular CSS](https://bun.com/docs/bundler/css) with support for the following features:
 
@@ -987,7 +988,7 @@ A CSS module is a CSS file (with the `.module.css` extension) where are all clas
 
 Under the hood, Bun's bundler transforms locally scoped class names into unique identifiers.
 
-## [Getting started](https://bun.com/docs/bundler/css\#getting-started)
+## [Getting started](https://bun.com/docs/bundler/css#getting-started)
 
 Create a CSS file with the `.module.css` extension:
 
@@ -1047,7 +1048,7 @@ This will output:
 
 As you can see, the class names are unique to each file, avoiding any collisions!
 
-### [Composition](https://bun.com/docs/bundler/css\#composition)
+### [Composition](https://bun.com/docs/bundler/css#composition)
 
 CSS modules allow you to _compose_ class selectors together. This lets you reuse style rules across multiple classes.
 
@@ -1099,7 +1100,7 @@ There are a couple rules to keep in mind when using `composes`:
 
 ```
 
-### [Composing from a separate CSS module file](https://bun.com/docs/bundler/css\#composing-from-a-separate-css-module-file)
+### [Composing from a separate CSS module file](https://bun.com/docs/bundler/css#composing-from-a-separate-css-module-file)
 
 You can also compose from a separate CSS module file:
 
@@ -1127,7 +1128,7 @@ HTML & static sites](https://bun.com/docs/bundler/html) [Next\\
 \\
 Fullstack Dev Server](https://bun.com/docs/bundler/fullstack)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/css.md)
 
@@ -1151,7 +1152,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

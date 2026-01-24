@@ -7,12 +7,14 @@
 ## Phase 4 — Personalization & Memory Enhancement
 
 ### 4.1 RAG Integration ✅ COMPLETE
+
 - ✅ Note/reminder embedding pipeline (`packages/rag/`, `packages/api/src/routers/note.ts`)
 - ✅ HNSW indexes (`packages/db/src/migrations/`)
 - ✅ Hybrid search (vector + full-text) (`packages/knowledge/src/engine.ts`)
 - ✅ Deduplication (`packages/db/src/repos/rag.ts`)
 
 ### 4.2 Preference-Driven Adaptation ✅ MOSTLY COMPLETE
+
 - ✅ **Preference inference from past interactions** (`packages/api/src/scheduler/preference-inference.ts`, `packages/agent/src/preference/inference.ts`)
 - ✅ **Response style adaptation (verbosity, tone)** (`packages/agent/src/preference/inference.ts`)
 - ✅ **Domain-specific preference learning** (`packages/agent/src/preference/inference.ts` - `inferDomainPreferences`)
@@ -20,6 +22,7 @@
 - ✅ **Preference update API based on feedback** (`packages/api/src/routers/preference.ts` - `inferFromCorrection`)
 
 ### 4.3 Complete Personal Assistant Tools ✅ COMPLETE
+
 - ✅ **`focus.ts` tool with drive mode integration** (`packages/agent/assistant/src/tool/focus.ts`, `apps/web/src/routes/drive.tsx`, `apps/native/app/(drawer)/(tabs)/drive.tsx`)
 - ✅ **`web.ts` tool for research** (`packages/agent/assistant/src/tool/web.ts`)
 - ✅ **`home.ts` tool for Home Assistant** (`packages/agent/assistant/src/tool/home.ts`)
@@ -29,9 +32,11 @@
 ## Phase 5 — Workflow Capabilities
 
 ### 5.1 Linear Integration Completion ✅ COMPLETE
+
 - ✅ All items marked complete in PRD
 
 ### 5.2 Suspend/Resume for Biometric Obligations ✅ COMPLETE
+
 - ✅ **Workflow suspension on PDP `requireBio` obligation** (`packages/api/src/workflow/suspension.ts` line 183-340)
 - ✅ **Resume endpoint in workflow router** (`packages/api/src/routers/workflow.ts` line 320-350)
 - ✅ **Biometric challenge UI flow** (`apps/web/src/components/biometric-challenge-dialog.tsx`)
@@ -40,6 +45,7 @@
 - ⚠️ **Test end-to-end suspend/resume flow** - Infrastructure exists, needs manual validation
 
 ### 5.3 Tool Chaining & Dependencies ✅ IMPLEMENTED
+
 - ✅ **Tool output passing to subsequent tools** (`packages/runtime/src/chain.ts` - `$ref` resolution)
 - ✅ **Tool dependency resolution** (`packages/runtime/src/chain.ts` - inferred deps from `$ref` + `dependsOn`)
 - ✅ **Parallel execution for independent tools** (`packages/runtime/src/chain.ts` - `maxParallel` batching)
@@ -50,6 +56,7 @@
 ## Phase 6 — User Interface
 
 ### 6.1 Core Chat UI ✅ COMPLETE
+
 - ✅ AI SDK v6 integration (`apps/web/src/components/chat-container.tsx`)
 - ✅ Streaming support (`apps/web/src/hooks/use-assistant-stream.ts`)
 - ✅ Tool execution visualization (`apps/web/src/components/chat-render.tsx`, `apps/web/src/components/mindscape/nodes/workflow-node.tsx`)
@@ -57,22 +64,26 @@
 - ⚠️ **Message history with infinite scroll** - Uses Virtuoso but no infinite scroll pagination found
 
 ### 6.2 Pane Layouts ✅ COMPLETE
+
 - ✅ Note pane (`apps/web/src/routes/note.tsx`, `packages/ui/src/pane/note.tsx`)
 - ✅ Reminder pane (`apps/web/src/routes/remind.tsx`, `packages/ui/src/pane/remind.tsx`)
 - ✅ **Timer pane** (`apps/web/src/routes/_protected/timer.tsx`)
 - ✅ **Bookmark pane** (`apps/web/src/routes/_protected/book.tsx`)
 
 ### 6.3 Settings & Preferences ✅ COMPLETE
+
 - ✅ Autonomy slider (`apps/web/src/components/autonomy-slider.tsx`)
 - ✅ Privacy controls (`apps/web/src/components/privacy-controls.tsx`)
 - ✅ Linear connection management (`apps/web/src/components/mindscape/nodes/integrations-node.tsx`)
 
 ### 6.4 Workflow Visualization ✅ COMPLETE
+
 - ✅ Workflow history with filtering (`packages/api/src/routers/workflow.ts` line 519 `listRuns`, `apps/web/src/components/mindscape/nodes/workflow-list-node.tsx`)
 - ✅ Tool execution visualization (`apps/web/src/components/mindscape/nodes/workflow-node.tsx`)
 - ✅ Error analysis UI (`apps/web/src/components/mindscape/workflow-drawer.tsx` - error tab)
 
 ### 6.5 Performance Metrics ✅ COMPLETE
+
 - ✅ Metrics collection (`packages/api/src/metrics.ts`, `packages/runtime/src/metrics.ts`)
 - ✅ Prometheus endpoint (`apps/web/src/routes/api/metrics.ts`)
 - ✅ **Performance metrics dashboard UI** (`apps/web/src/routes/_protected/admin/metrics.tsx`)
@@ -80,23 +91,28 @@
 ## Phase 7 — Voice & Mobile
 
 ### 7.1 Voice Integration ✅ COMPLETE
+
 - ✅ All items marked complete in PRD
 
 ### 7.2 Mobile App ✅ COMPLETE
+
 - ✅ Drive Mode (`apps/native/app/(drawer)/(tabs)/drive.tsx`)
 - ✅ **Chat interface** (`apps/native/app/(drawer)/(tabs)/index.tsx`)
 
 ## Phase 8 — Hardening & Observability
 
 ### 8.1 Testing Infrastructure ✅ COMPLETE
+
 - ✅ Test suites (`packages/*/test/`, `apps/web/tests/`)
 - ✅ E2E tests (`apps/web/tests/`, Playwright)
 - ✅ CI/CD workflows (`.github/workflows/ci.yml`)
 
 ### 8.2 Load Testing ✅ IMPLEMENTED
+
 - ✅ **Load testing script** (`scripts/load-workflow.ts`) for concurrent `workflow.start` calls with latency/RPS reporting
 
 ### 8.3 Observability ✅ COMPLETE
+
 - ✅ Prometheus metrics (`packages/api/src/metrics.ts`)
 - ✅ Structured logging (`packages/logger/`)
 - ✅ Health checks (`apps/web/src/routes/healthz.ts`)
@@ -104,6 +120,7 @@
 ## Summary
 
 ### Fully Implemented ✅
+
 - RAG Integration (Phase 4.1)
 - Preference-Driven Adaptation (Phase 4.2)
 - Focus tool with drive mode (Phase 4.3)
@@ -123,9 +140,11 @@
 - Observability (Phase 8.3)
 
 ### Partially Implemented ⚠️
+
 - Core Chat UI (Phase 6.1) - Missing infinite scroll pagination
 
 ### Not Implemented ❌
+
 - (none identified beyond the partial items above)
 
 ## Recommendations

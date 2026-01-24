@@ -59,26 +59,26 @@ The canonical pipeline is fully implemented, tested, documented, and ready for P
 ## Decision Log
 
 - **Decision:** Create new `packages/pipeline/` rather than extending `packages/runtime/src/pipeline/`
-**Rationale:** The existing pipeline in runtime is tightly coupled to the current phase model (scan/plan/act/report). The new pipeline has 8 stages with different boundaries. Creating a new package allows clean evolution without breaking existing code paths.
-**Date:** 2026-01-12
+  **Rationale:** The existing pipeline in runtime is tightly coupled to the current phase model (scan/plan/act/report). The new pipeline has 8 stages with different boundaries. Creating a new package allows clean evolution without breaking existing code paths.
+  **Date:** 2026-01-12
 - **Decision:** Use AsyncGenerator for event emission rather than EventEmitter
-**Rationale:** AsyncGenerator provides backpressure, natural composition with for-await-of, and aligns with existing WorkflowRuntime patterns. The existing `PipelineRunner` already uses this pattern successfully.
-**Date:** 2026-01-12
+  **Rationale:** AsyncGenerator provides backpressure, natural composition with for-await-of, and aligns with existing WorkflowRuntime patterns. The existing `PipelineRunner` already uses this pattern successfully.
+  **Date:** 2026-01-12
 - **Decision:** Sequential execution (maxParallel: 1) as POC default
-**Rationale:** Sequential execution is simpler to debug, test, and reason about. Parallel execution can be enabled via configuration once the sequential path is proven.
-**Date:** 2026-01-12
+  **Rationale:** Sequential execution is simpler to debug, test, and reason about. Parallel execution can be enabled via configuration once the sequential path is proven.
+  **Date:** 2026-01-12
 - **Decision:** Observer pattern for Linear sync with internal batching
-**Rationale:** Observers are decoupled from the pipeline core, enabling rate-limited updates (55 req/min) without blocking stage execution. The existing `LinearRateLimiter` class can be reused.
-**Date:** 2026-01-12
+  **Rationale:** Observers are decoupled from the pipeline core, enabling rate-limited updates (55 req/min) without blocking stage execution. The existing `LinearRateLimiter` class can be reused.
+  **Date:** 2026-01-12
 - **Decision:** Use dynamic imports (`await import()`) in stage execute methods
-**Rationale:** The pipeline package depends on `@alfred/agent`, `@alfred/runtime`, and `@alfred/plan`, which have complex interdependencies. Static imports would create circular dependency errors. Dynamic imports allow clean compilation while still accessing necessary functions at runtime.
-**Date:** 2026-01-12
+  **Rationale:** The pipeline package depends on `@alfred/agent`, `@alfred/runtime`, and `@alfred/plan`, which have complex interdependencies. Static imports would create circular dependency errors. Dynamic imports allow clean compilation while still accessing necessary functions at runtime.
+  **Date:** 2026-01-12
 - **Decision:** Feature flag (`ALFRED_USE_PIPELINE=1`) for gradual rollout
-**Rationale:** Allows testing new pipeline in production alongside legacy orchestrator. Teams can opt-in selectively, reducing risk. The bridge maintains full backwards compatibility by converting PipelineEvent to WorkflowEvent.
-**Date:** 2026-01-12
+  **Rationale:** Allows testing new pipeline in production alongside legacy orchestrator. Teams can opt-in selectively, reducing risk. The bridge maintains full backwards compatibility by converting PipelineEvent to WorkflowEvent.
+  **Date:** 2026-01-12
 - **Decision:** Create bridge module (`pipeline-bridge.ts`) rather than modifying orchestrator directly
-**Rationale:** Keeps integration code isolated and testable. The bridge handles event conversion and observer wiring, making it easy to remove once migration is complete.
-**Date:** 2026-01-12
+  **Rationale:** Keeps integration code isolated and testable. The bridge handles event conversion and observer wiring, making it easy to remove once migration is complete.
+  **Date:** 2026-01-12
 
 ## Outcomes & Retrospective
 
@@ -181,11 +181,11 @@ Successfully implemented Milestones 0-4 of the canonical pipeline plan:
 ### Final Metrics
 
 - **Total Implementation Time:** ~3 hours (all 7 milestones)
-- **Lines of Code:** 
+- **Lines of Code:**
   - Source: ~1,600 LOC (`packages/pipeline/src/`)
   - Tests: ~350 LOC (`packages/pipeline/test/`)
   - Docs: ~1,200 LOC (4 documentation files)
-- **Test Coverage:** 
+- **Test Coverage:**
   - 6 integration tests (all passing)
   - 1 unit test (passing)
   - Coverage: ~60% (stage implementations tested via integration)
@@ -244,7 +244,6 @@ ALFRED's workflow execution is currently fragmented:
 
 ### Key Functions Being Consolidated
 
-
 | Function              | Current Location                                         | Purpose                                 |
 | --------------------- | -------------------------------------------------------- | --------------------------------------- |
 | `executeScanPhase()`  | `packages/runtime/src/phases/scan.ts:73`                 | Gathers code/web context                |
@@ -257,7 +256,6 @@ ALFRED's workflow execution is currently fragmented:
 | `planWaves()`         | `packages/agent/src/orchestrator/multi/spawn.ts:145`     | Dependency-aware wave planning          |
 | `runRalphLoop()`      | `packages/agent/src/orchestrator/loops/ralph.ts:393`     | Iterative agent execution               |
 | `learnFromRun()`      | `packages/agent/src/orchestrator/learning-worker.ts:575` | Knowledge extraction                    |
-
 
 ### Existing Pipeline Infrastructure
 
@@ -1450,7 +1448,7 @@ export class SummarizeStage implements PipelineStage<LearnOutput, SummarizeOutpu
     // Get outcomes and file changes from context
     const executeOutput = ctx.get<{ outcomes: Map<string, AgentOutcome>; fileChanges: FileChange[] }>('executeOutput');
     const outcomes: AgentOutcome[] = executeOutput ? Array.from(executeOutput.outcomes.values()) : [];
-    
+
     const fileChanges: FileChanges = executeOutput ? {
       modified: executeOutput.fileChanges.filter(fc => fc.action === 'modify').map(fc => fc.path),
       created: executeOutput.fileChanges.filter(fc => fc.action === 'create').map(fc => fc.path),
@@ -2309,4 +2307,3 @@ export class PipelineRunner {
   run(input: PipelineInput): AsyncGenerator<PipelineEvent, PipelineResult, void>;
 }
 ```
-

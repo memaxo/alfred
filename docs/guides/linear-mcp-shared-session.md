@@ -103,18 +103,21 @@ Since Cursor doesn't support OAuth login, you need to set up an API token for Cu
    - Copy the token (format: `lin_api_...`)
 
 2. **Set Environment Variable:**
+
    ```bash
    # Just the token, without "Bearer " prefix
    export LINEAR_MCP_TOKEN="lin_api_..."
    ```
 
 3. **Add to Shell Profile (for persistence):**
+
    ```bash
    echo 'export LINEAR_MCP_TOKEN="lin_api_..."' >> ~/.zshrc
    source ~/.zshrc
    ```
 
 4. **Or Update `.codex/mcp.env`:**
+
    ```bash
    export LINEAR_MCP_TOKEN="lin_api_..."
    ```
@@ -125,7 +128,8 @@ Since Cursor doesn't support OAuth login, you need to set up an API token for Cu
    open -a Cursor
    ```
 
-**Note:** 
+**Note:**
+
 - Codex can use OAuth (Option 1) OR bearer token (Option 2)
 - Cursor requires bearer token (Option 2) since it doesn't support OAuth
 - Both tools can use the same `LINEAR_MCP_TOKEN` if you want to share sessions
@@ -143,6 +147,7 @@ Since Cursor doesn't support OAuth login, you need to set up an API token for Cu
 ### Codex Failing Quickly / Timeouts
 
 1. **Increase Timeouts:**
+
    ```toml
    [mcp_servers.linear]
    startup_timeout_sec = 30  # Increase from default 20
@@ -150,6 +155,7 @@ Since Cursor doesn't support OAuth login, you need to set up an API token for Cu
    ```
 
 2. **Check OAuth Status:**
+
    ```bash
    codex mcp get linear
    # Should show "Auth: OAuth"
@@ -164,11 +170,13 @@ Since Cursor doesn't support OAuth login, you need to set up an API token for Cu
 ### Cursor Not Connecting
 
 1. **Check Environment Variable:**
+
    ```bash
    echo $LINEAR_MCP_TOKEN
    ```
 
 2. **Launch Cursor from Terminal:**
+
    ```bash
    source ~/.codex/mcp.env
    open -a Cursor
@@ -187,6 +195,7 @@ Since Cursor doesn't support OAuth login, you need to set up an API token for Cu
 ### MCP Server Not Connecting
 
 1. **Check Environment Variable:**
+
    ```bash
    echo $LINEAR_MCP_TOKEN
    ```

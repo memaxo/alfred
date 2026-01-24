@@ -9,33 +9,31 @@ Copy markdown
 Generates images based on a given prompt using an image model.
 
 It is ideal for use cases where you need to generate images programmatically, such as creating visual content or generating images for data augmentation.
-    
-    
+
     import { experimental_generateImage as generateImage } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { images } = await generateImage({
-    
+
       model: openai.image('dall-e-3'),
-    
+
       prompt: 'A futuristic cityscape at sunset',
-    
+
       n: 3,
-    
+
       size: '1024x1024',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(images);
 
 ## Import
-    
-    
+
     import { experimental_generateImage as generateImage } from "ai"
 
 ## API Signature

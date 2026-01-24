@@ -1,9 +1,10 @@
 ---
 title: Loaders – Bundler | Bun Docs
-url: 
+url:
 description: Bun's built-in loaders for the bundler and runtime
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -65,31 +66,31 @@ import my_toml from "./my_file" with { loader: "toml" };
 
 ```
 
-## [Built-in loaders](https://bun.com/docs/bundler/loaders\#built-in-loaders)
+## [Built-in loaders](https://bun.com/docs/bundler/loaders#built-in-loaders)
 
-### [`js`](https://bun.com/docs/bundler/loaders\#js)
+### [`js`](https://bun.com/docs/bundler/loaders#js)
 
 **JavaScript**. Default for `.cjs` and `.mjs`.
 
 Parses the code and applies a set of default transforms like dead-code elimination and tree shaking. Note that Bun does not attempt to down-convert syntax at the moment.
 
-### [`jsx`](https://bun.com/docs/bundler/loaders\#jsx)
+### [`jsx`](https://bun.com/docs/bundler/loaders#jsx)
 
 **JavaScript + JSX.**. Default for `.js` and `.jsx`.
 
 Same as the `js` loader, but JSX syntax is supported. By default, JSX is down-converted to plain JavaScript; the details of how this is done depends on the `jsx*` compiler options in your `tsconfig.json`. Refer to the TypeScript documentation [on JSX](https://www.typescriptlang.org/docs/handbook/jsx.html) for more information.
 
-### [`ts`](https://bun.com/docs/bundler/loaders\#ts)
+### [`ts`](https://bun.com/docs/bundler/loaders#ts)
 
 **TypeScript loader**. Default for `.ts`, `.mts`, and `.cts`.
 
 Strips out all TypeScript syntax, then behaves identically to the `js` loader. Bun does not perform typechecking.
 
-### [`tsx`](https://bun.com/docs/bundler/loaders\#tsx)
+### [`tsx`](https://bun.com/docs/bundler/loaders#tsx)
 
 **TypeScript + JSX loader**. Default for `.tsx`. Transpiles both TypeScript and JSX to vanilla JavaScript.
 
-### [`json`](https://bun.com/docs/bundler/loaders\#json)
+### [`json`](https://bun.com/docs/bundler/loaders#json)
 
 **JSON loader**. Default for `.json`.
 
@@ -140,7 +141,7 @@ export default {
 
 ```
 
-### [`toml`](https://bun.com/docs/bundler/loaders\#toml)
+### [`toml`](https://bun.com/docs/bundler/loaders#toml)
 
 **TOML loader**. Default for `.toml`.
 
@@ -192,7 +193,7 @@ export default {
 
 ```
 
-### [`yaml`](https://bun.com/docs/bundler/loaders\#yaml)
+### [`yaml`](https://bun.com/docs/bundler/loaders#yaml)
 
 **YAML loader**. Default for `.yaml` and `.yml`.
 
@@ -249,7 +250,7 @@ export default {
 
 For more details on YAML support including the runtime API `Bun.YAML.parse()`, see the [YAML API documentation](https://bun.com/docs/api/yaml).
 
-### [`text`](https://bun.com/docs/bundler/loaders\#text)
+### [`text`](https://bun.com/docs/bundler/loaders#text)
 
 **Text loader**. Default for `.txt`.
 
@@ -293,7 +294,7 @@ export default "Hello, world!";
 
 ```
 
-### [`napi`](https://bun.com/docs/bundler/loaders\#napi)
+### [`napi`](https://bun.com/docs/bundler/loaders#napi)
 
 **Native addon loader**. Default for `.node`.
 
@@ -307,7 +308,7 @@ console.log(addon);
 
 In the bundler, `.node` files are handled using the [`file`](https://bun.com/docs/bundler/loaders#file) loader.
 
-### [`sqlite`](https://bun.com/docs/bundler/loaders\#sqlite)
+### [`sqlite`](https://bun.com/docs/bundler/loaders#sqlite)
 
 **SQLite loader**. `with { "type": "sqlite" }` import attribute
 
@@ -334,7 +335,7 @@ When using a [standalone executable](https://bun.com/docs/bundler/executables), 
 
 Otherwise, the database to embed is copied into the `outdir` with a hashed filename.
 
-### [`html`](https://bun.com/docs/bundler/loaders\#html)
+### [`html`](https://bun.com/docs/bundler/loaders#html)
 
 The html loader processes HTML files and bundles any referenced assets. It will:
 
@@ -412,8 +413,7 @@ The `html` loader behaves differently depending on how it's used:
 
 3. **Full-stack Build:** When you run `bun build --target=bun server.ts` (where `server.ts` imports an HTML file), the import resolves to a manifest object that `Bun.serve` uses to efficiently serve pre-bundled assets in production.
 
-
-### [`sh` loader](https://bun.com/docs/bundler/loaders\#sh-loader)
+### [`sh` loader](https://bun.com/docs/bundler/loaders#sh-loader)
 
 **Bun Shell loader**. Default for `.sh` files
 
@@ -423,7 +423,7 @@ This loader is used to parse [Bun Shell](https://bun.com/docs/runtime/shell) scr
 bun run ./script.sh
 ```
 
-### [`file`](https://bun.com/docs/bundler/loaders\#file)
+### [`file`](https://bun.com/docs/bundler/loaders#file)
 
 **File loader**. Default for all unrecognized file types.
 
@@ -459,10 +459,10 @@ console.log(logo);
 
 If a value is specified for `publicPath`, the import will use value as a prefix to construct an absolute path/URL.
 
-| Public path | Resolved import |
-| --- | --- |
-| `""` (default) | `/logo.svg` |
-| `"/assets"` | `/assets/logo.svg` |
+| Public path                  | Resolved import                    |
+| ---------------------------- | ---------------------------------- |
+| `""` (default)               | `/logo.svg`                        |
+| `"/assets"`                  | `/assets/logo.svg`                 |
 | `"https://cdn.example.com/"` | `https://cdn.example.com/logo.svg` |
 
 The location and file name of the copied file is determined by the value of [`naming.asset`](https://bun.com/docs/bundler#naming).
@@ -497,7 +497,7 @@ Hot reloading](https://bun.com/docs/bundler/hmr) [Next\\
 \\
 Plugins](https://bun.com/docs/bundler/plugins)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/loaders.md)
 
@@ -521,7 +521,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

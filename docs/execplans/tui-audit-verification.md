@@ -18,6 +18,7 @@ Comprehensive codebase verification confirms **all critical audit findings are a
 **Verification**: ✅ **ACCURATE**
 
 **Actual routers in `packages/api/src/routers/index.ts`**:
+
 1. `admin` ✅
 2. `assistant` ✅
 3. `book` ✅
@@ -64,6 +65,7 @@ Comprehensive codebase verification confirms **all critical audit findings are a
 **Actual packages in `packages/` directory**: **26 packages**
 
 **Full list**:
+
 1. `agent` ✅
 2. `api` ✅
 3. `auth` ✅
@@ -103,10 +105,13 @@ Comprehensive codebase verification confirms **all critical audit findings are a
 **Verification**: ✅ **ACCURATE**
 
 **Evidence** (`packages/db/src/schema/workflow.ts:37-47`):
+
 ```typescript
 export const workflowEvents = pgTable("workflow_events", {
   id: uuid("id").defaultRandom().primaryKey(),
-  runId: uuid("run_id").notNull().references(() => workflowRuns.id, { onDelete: "cascade" }),
+  runId: uuid("run_id")
+    .notNull()
+    .references(() => workflowRuns.id, { onDelete: "cascade" }),
   eventId: uuid("event_id").defaultRandom().notNull().unique(),
   eventType: text("event_type").notNull(),
   eventData: jsonb("event_data"),
@@ -119,6 +124,7 @@ export const workflowEvents = pgTable("workflow_events", {
 **Columns missing**: `seq` ❌
 
 **Comparison**: `codex_events` table (`packages/db/src/schema/codex.ts:123`) **does have** `seq`:
+
 ```typescript
 seq: integer("seq").notNull(),
 ```
@@ -133,6 +139,7 @@ seq: integer("seq").notNull(),
 **Verification**: ✅ **ACCURATE**
 
 **Evidence** (`packages/db/src/schema/codex.ts:123`):
+
 ```typescript
 seq: integer("seq").notNull(),
 ```
@@ -147,10 +154,12 @@ seq: integer("seq").notNull(),
 **Verification**: ✅ **ACCURATE**
 
 **Locations**:
+
 1. `packages/api/src/utils/event-id.ts:37` ✅
 2. `packages/agent/src/utils/event-id.ts:37` ✅
 
 **Difference**: Only type annotation differs:
+
 - `packages/api`: `encode = (v: unknown): any =>`
 - `packages/agent`: `encode = (v: unknown): unknown =>`
 
@@ -164,6 +173,7 @@ seq: integer("seq").notNull(),
 **Verification**: ✅ **ACCURATE**
 
 **Evidence**:
+
 - File exists: `packages/api/src/routers/home.ts` ✅
 - Exports: `export const homeRouter = router({...})` ✅
 - Contains TODOs: Lines 30, 37, 44 ✅
@@ -179,6 +189,7 @@ seq: integer("seq").notNull(),
 **Verification**: ✅ **ACCURATE**
 
 **Evidence**:
+
 - Package exists: `packages/rag/` ✅
 - Package exports functions: `ingest`, `embed`, `retrieve`, etc. ✅
 - **No router file**: `packages/api/src/routers/rag.ts` does NOT exist ❌
@@ -197,11 +208,13 @@ seq: integer("seq").notNull(),
 **Evidence**:
 
 **Uses `_` discriminant** ✅:
+
 - `CognitiveState` (`packages/cognitive/src/state/types.ts:15`): `{ _: "idle" }`
 - `Knowledge` (`packages/knowledge/src/hypergraph.ts:23`): `{ _: "fact" }`
 - `Event` (cognitive) (`packages/cognitive/src/state/types.ts:60`): `{ _: "input" }`
 
 **Uses `type` discriminant** ❌:
+
 - `WorkflowEvent` (`packages/type/src/plan.ts:382`): `{ type: "progress" }`
 - `StreamEvent` (`packages/type/src/stream.ts:52`): `{ type: "text-delta" }`
 - `VoiceStreamServerEvent` (`packages/type/src/voice.ts:49`): `{ type: "ready" }`
@@ -216,6 +229,7 @@ seq: integer("seq").notNull(),
 **Verification**: ✅ **ACCURATE**
 
 **Evidence** (`packages/type/src/envelope.ts:1-8`):
+
 ```typescript
 export type EventEnvelope<T> = {
   v: 1;
@@ -237,13 +251,14 @@ export type EventEnvelope<T> = {
 **Verification**: ✅ **ACCURATE**
 
 **Evidence** (`packages/runtime/src/tracing.ts:13-20`):
+
 ```typescript
 export type TraceSpan = {
   id: string;
   name: string;
   startNs: bigint;
   endNs?: bigint;
-  parent?: string;  // ← Causal link
+  parent?: string; // ← Causal link
   tags: Record<string, string | number>;
 };
 ```
@@ -258,6 +273,7 @@ export type TraceSpan = {
 **Verification**: ✅ **ACCURATE**
 
 **Evidence** (`packages/db/src/schema/cognitive.ts:30-48`):
+
 ```typescript
 export const cognitiveSnapshots = pgTable(
   "cognitive_snapshots",
@@ -267,7 +283,7 @@ export const cognitiveSnapshots = pgTable(
     state: jsonb("state").notNull(),
     lastEventId: uuid("last_event_id").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
+  }
   // ... indexes
 );
 ```
@@ -293,6 +309,7 @@ export const cognitiveSnapshots = pgTable(
 **Verification**: ✅ **ACCURATE**
 
 **Evidence** (`packages/runtime/src/loops/cognitive.ts:59-88`):
+
 ```typescript
 // Try to load from snapshot first
 const snapshot = await cognitiveRepo.getLatestSnapshot(streamId);
@@ -331,6 +348,7 @@ for (const record of events) {
 **Verification**: ✅ **ACCURATE**
 
 **Evidence**: Found in both:
+
 - `packages/api/src/utils/event-id.ts:11-35` ✅
 - `packages/agent/src/utils/event-id.ts:11-35` ✅
 
@@ -342,19 +360,19 @@ for (const record of events) {
 
 ## Summary Statistics
 
-| Category | Claimed | Verified | Status |
-|----------|---------|----------|--------|
-| Routers in appRouter | 30 | 30 | ✅ Accurate |
-| Packages (functional) | 23 | 23* | ⚠️ Terminology |
-| Packages (total) | N/A | 26 | N/A |
-| workflow_events.seq | Missing | Missing | ✅ Accurate |
-| codex_events.seq | Exists | Exists | ✅ Accurate |
-| makeEventId duplicates | 2 | 2 | ✅ Accurate |
-| homeRouter orphaned | Yes | Yes | ✅ Accurate |
-| rag router | Missing | Missing | ✅ Accurate |
-| Discriminant inconsistency | Yes | Yes | ✅ Accurate |
+| Category                   | Claimed | Verified | Status         |
+| -------------------------- | ------- | -------- | -------------- |
+| Routers in appRouter       | 30      | 30       | ✅ Accurate    |
+| Packages (functional)      | 23      | 23\*     | ⚠️ Terminology |
+| Packages (total)           | N/A     | 26       | N/A            |
+| workflow_events.seq        | Missing | Missing  | ✅ Accurate    |
+| codex_events.seq           | Exists  | Exists   | ✅ Accurate    |
+| makeEventId duplicates     | 2       | 2        | ✅ Accurate    |
+| homeRouter orphaned        | Yes     | Yes      | ✅ Accurate    |
+| rag router                 | Missing | Missing  | ✅ Accurate    |
+| Discriminant inconsistency | Yes     | Yes      | ✅ Accurate    |
 
-*Excludes `test-kit`, `tsconfig`, `util` as infrastructure
+\*Excludes `test-kit`, `tsconfig`, `util` as infrastructure
 
 ---
 
@@ -377,6 +395,7 @@ for (const record of events) {
 ## Conclusion
 
 **All critical audit findings are verified and accurate.** The document correctly identifies:
+
 - Router count (30)
 - Missing `seq` column in `workflow_events`
 - Duplicate `makeEventId` implementations

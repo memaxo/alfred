@@ -29,6 +29,7 @@ Ensure ALFRED remains functional and responsive under adverse conditions, such a
 ## Context and Orientation
 
 Relevant files:
+
 - `apps/web/src/components/connect.tsx`: Connection status indicator.
 - `apps/web/src/collections/`: Data collections for Tier 4 apps.
 - `apps/web/src/store/desktop/persist.ts`: Layout persistence logic.
@@ -36,15 +37,18 @@ Relevant files:
 ## Plan of Work
 
 ### Subtask 1: ALF-CORE-01 - Connectivity States
+
 1. Update `Connect` component to include `degraded` and `offline` statuses.
 2. Add global network state listener to trigger these states.
 3. Enhance `MenuBar` or `Taskbar` with a persistent connectivity warning when offline.
 
 ### Subtask 2: ALF-CORE-02 - Optimistic UI
+
 1. Implement `useOptimistic` (or TanStack Query `onMutate` patterns) for Notes, Reminders, and Todos.
 2. Ensure data is written to local collections immediately before network confirmation.
 
 ### Subtask 3: ALF-CORE-03 - Storage Budget
+
 1. Implement `calculateStorageSize` helper in `persist.ts`.
 2. Add a check during persistence to warn or prune if size exceeds 50KB.
 3. Implement basic pruning strategy (e.g., clear old context caches).

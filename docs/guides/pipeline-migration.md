@@ -15,6 +15,7 @@ The migration follows a three-phase approach:
 **Steps:**
 
 1. Enable pipeline for development testing:
+
    ```bash
    export ALFRED_USE_PIPELINE=1
    bun run dev
@@ -33,6 +34,7 @@ The migration follows a three-phase approach:
    - Memory usage
 
 **Validation Criteria:**
+
 - ✅ All 8 stages execute successfully
 - ✅ Events map correctly to WorkflowEvent format
 - ✅ Linear integration maintains rate limits
@@ -48,6 +50,7 @@ The migration follows a three-phase approach:
 **Steps:**
 
 1. Enable for specific workflows:
+
    ```typescript
    // In router or orchestrator entry point
    if (shouldUsePipeline(input)) {
@@ -68,6 +71,7 @@ The migration follows a three-phase approach:
    - Learning insights generated
 
 **Rollback Criteria:**
+
 - Error rate > 5%
 - p95 latency increases > 20%
 - Agent success rate drops > 10%
@@ -100,18 +104,24 @@ The migration follows a three-phase approach:
 ### Router Updates
 
 **Before:**
+
 ```typescript
 export async function* workflowStream(
   input: WorkflowInputPayload,
   session: Session
 ) {
-  for await (const event of orchestrateWorkflowStream(input, session, callbacks)) {
+  for await (const event of orchestrateWorkflowStream(
+    input,
+    session,
+    callbacks
+  )) {
     yield event;
   }
 }
 ```
 
 **After Phase 3:**
+
 ```typescript
 export async function* workflowStream(
   input: WorkflowInputPayload,
@@ -129,17 +139,17 @@ export async function* workflowStream(
 **Adding Custom Observers:**
 
 ```typescript
-import { PipelineRunner, registerDefaultStages } from '@alfred/pipeline';
-import type { PipelineObserver, PipelineEvent } from '@alfred/pipeline';
+import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
+import type { PipelineObserver, PipelineEvent } from "@alfred/pipeline";
 
 class CustomObserver implements PipelineObserver {
   onEvent(event: PipelineEvent): void {
-    if (event.type === 'agent:complete') {
+    if (event.type === "agent:complete") {
       // Custom logic for agent completion
       notifySlack(event.agentId, event.outcome);
     }
   }
-  
+
   onComplete(): void {
     // Cleanup logic
   }
@@ -153,16 +163,18 @@ runner.addObserver(new CustomObserver());
 ### Event Handling Migration
 
 **Before (WorkflowEvent):**
+
 ```typescript
-if (event._ === 'step-start') {
-  console.log('Phase started:', event.phase);
+if (event._ === "step-start") {
+  console.log("Phase started:", event.phase);
 }
 ```
 
 **After (PipelineEvent):**
+
 ```typescript
-if (event.type === 'stage:enter') {
-  console.log('Stage started:', event.stage);
+if (event.type === "stage:enter") {
+  console.log("Stage started:", event.stage);
 }
 ```
 
@@ -213,15 +225,17 @@ compareEventStreams(legacyEvents, pipelineEvents);
 ### Unit Test Migration
 
 **Before:**
+
 ```typescript
 const events = await collectWorkflowEvents(input);
-expect(events.some(e => e._ === 'step-start')).toBe(true);
+expect(events.some((e) => e._ === "step-start")).toBe(true);
 ```
 
 **After:**
+
 ```typescript
 const events = await collectPipelineEvents(input);
-expect(events.some(e => e.type === 'stage:enter')).toBe(true);
+expect(events.some((e) => e.type === "stage:enter")).toBe(true);
 ```
 
 ## Rollback Plan
@@ -229,6 +243,7 @@ expect(events.some(e => e.type === 'stage:enter')).toBe(true);
 If issues arise during rollout:
 
 1. **Immediate rollback:**
+
    ```bash
    unset ALFRED_USE_PIPELINE
    # or
@@ -236,6 +251,7 @@ If issues arise during rollout:
    ```
 
 2. **Revert code changes:**
+
    ```bash
    git revert <commit-hash>
    bun install
@@ -270,12 +286,14 @@ A: No. The bridge maintains full backwards compatibility with WorkflowEvent API.
 
 **Q: How do I debug pipeline issues?**  
 A: Enable ConsoleObserver in development:
+
 ```typescript
 runner.addObserver(new ConsoleObserver());
 ```
 
 **Q: What if a stage times out?**  
 A: Increase timeout in config:
+
 ```typescript
 phaseTimeouts: {
   execute: 1200_000,  // 20 minutes

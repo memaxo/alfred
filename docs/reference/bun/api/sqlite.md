@@ -1,9 +1,10 @@
 ---
 title: SQLite – API | Bun Docs
-url: 
+url:
 description: The fastest SQLite driver for JavaScript is baked directly into Bun.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -80,7 +81,7 @@ The `bun:sqlite` module is roughly 3-6x faster than `better-sqlite3` and 8-9x fa
 
 [![SQLite benchmarks for Bun, better-sqlite3, and deno.land/x/sqlite](https://user-images.githubusercontent.com/709451/168459263-8cd51ca3-a924-41e9-908d-cf3478a3b7f3.png)](https://user-images.githubusercontent.com/709451/168459263-8cd51ca3-a924-41e9-908d-cf3478a3b7f3.png) Benchmarked on an M1 MacBook Pro (64GB) running macOS 12.3.1
 
-## [Database](https://bun.com/docs/api/sqlite\#database)
+## [Database](https://bun.com/docs/api/sqlite#database)
 
 To open or create a SQLite3 database:
 
@@ -119,7 +120,7 @@ const db = new Database("mydb.sqlite", { create: true });
 
 ```
 
-### [Strict mode](https://bun.com/docs/api/sqlite\#strict-mode)
+### [Strict mode](https://bun.com/docs/api/sqlite#strict-mode)
 
 Added in Bun v1.1.14
 
@@ -150,7 +151,7 @@ notStrict
 
 ```
 
-### [Load via ES module import](https://bun.com/docs/api/sqlite\#load-via-es-module-import)
+### [Load via ES module import](https://bun.com/docs/api/sqlite#load-via-es-module-import)
 
 You can also use an import attribute to load a database.
 
@@ -169,7 +170,7 @@ const db = new Database("./mydb.sqlite");
 
 ```
 
-### [`.close(throwOnError: boolean = false)`](https://bun.com/docs/api/sqlite\#close-throwonerror-boolean-false)
+### [`.close(throwOnError: boolean = false)`](https://bun.com/docs/api/sqlite#close-throwonerror-boolean-false)
 
 To close a database connection, but allow existing queries to finish, call `.close(false)`:
 
@@ -191,7 +192,7 @@ db.close(true);
 
 Note: `close(false)` is called automatically when the database is garbage collected. It is safe to call multiple times but has no effect after the first.
 
-### [`using` statement](https://bun.com/docs/api/sqlite\#using-statement)
+### [`using` statement](https://bun.com/docs/api/sqlite#using-statement)
 
 You can use the `using` statement to ensure that a database connection is closed when the `using` block is exited.
 
@@ -206,7 +207,7 @@ import { Database } from "bun:sqlite";
 
 ```
 
-### [`.serialize()`](https://bun.com/docs/api/sqlite\#serialize)
+### [`.serialize()`](https://bun.com/docs/api/sqlite#serialize)
 
 `bun:sqlite` supports SQLite's built-in mechanism for [serializing](https://www.sqlite.org/c3ref/serialize.html) and [deserializing](https://www.sqlite.org/c3ref/deserialize.html) databases to and from memory.
 
@@ -219,7 +220,7 @@ const newdb = Database.deserialize(contents);
 
 Internally, `.serialize()` calls [`sqlite3_serialize`](https://www.sqlite.org/c3ref/serialize.html).
 
-### [`.query()`](https://bun.com/docs/api/sqlite\#query)
+### [`.query()`](https://bun.com/docs/api/sqlite#query)
 
 Use the `db.query()` method on your `Database` instance to [prepare](https://www.sqlite.org/c3ref/prepare.html) a SQL query. The result is a `Statement` instance that will be cached on the `Database` instance. _The query will not be executed._
 
@@ -236,7 +237,7 @@ const query = db.prepare("SELECT * FROM foo WHERE bar = ?");
 
 ```
 
-## [WAL mode](https://bun.com/docs/api/sqlite\#wal-mode)
+## [WAL mode](https://bun.com/docs/api/sqlite#wal-mode)
 
 SQLite supports [write-ahead log mode](https://www.sqlite.org/wal.html) (WAL) which dramatically improves performance, especially in situations with many concurrent readers and a single writer. It's broadly recommended to enable WAL mode for most typical applications.
 
@@ -253,7 +254,7 @@ In WAL mode, writes to the database are written directly to a separate file call
 
 On macOS, WAL files may be persistent by default. This is not a bug, it is how macOS configured the system version of SQLite.
 
-## [Statements](https://bun.com/docs/api/sqlite\#statements)
+## [Statements](https://bun.com/docs/api/sqlite#statements)
 
 A `Statement` is a _prepared query_, which means it's been parsed and compiled into an efficient binary form. It can be executed multiple times in a performant way.
 
@@ -274,7 +275,7 @@ const query = db.query(`SELECT $param1, $param2;`);
 
 Values are bound to these parameters when the query is executed. A `Statement` can be executed with several different methods, each returning the results in a different form.
 
-### [Binding values](https://bun.com/docs/api/sqlite\#binding-values)
+### [Binding values](https://bun.com/docs/api/sqlite#binding-values)
 
 To bind values to a statement, pass an object to the `.all()`, `.get()`, `.run()`, or `.values()` method.
 
@@ -316,7 +317,7 @@ query.all({ message: "Hello world" });
 
 ```
 
-### [`.all()`](https://bun.com/docs/api/sqlite\#all)
+### [`.all()`](https://bun.com/docs/api/sqlite#all)
 
 Use `.all()` to run a query and get back the results as an array of objects.
 
@@ -329,7 +330,7 @@ query.all({ $message: "Hello world" });
 
 Internally, this calls [`sqlite3_reset`](https://www.sqlite.org/capi3ref.html#sqlite3_reset) and repeatedly calls [`sqlite3_step`](https://www.sqlite.org/capi3ref.html#sqlite3_step) until it returns `SQLITE_DONE`.
 
-### [`.get()`](https://bun.com/docs/api/sqlite\#get)
+### [`.get()`](https://bun.com/docs/api/sqlite#get)
 
 Use `.get()` to run a query and get back the first result as an object.
 
@@ -342,7 +343,7 @@ query.get({ $message: "Hello world" });
 
 Internally, this calls [`sqlite3_reset`](https://www.sqlite.org/capi3ref.html#sqlite3_reset) followed by [`sqlite3_step`](https://www.sqlite.org/capi3ref.html#sqlite3_step) until it no longer returns `SQLITE_ROW`. If the query returns no rows, `undefined` is returned.
 
-### [`.run()`](https://bun.com/docs/api/sqlite\#run)
+### [`.run()`](https://bun.com/docs/api/sqlite#run)
 
 Use `.run()` to run a query and get back `undefined`. This is useful for schema-modifying queries (e.g. `CREATE TABLE`) or bulk write operations.
 
@@ -362,7 +363,7 @@ Since Bun v1.1.14, `.run()` returns an object with two properties: `lastInsertRo
 
 The `lastInsertRowid` property returns the ID of the last row inserted into the database. The `changes` property is the number of rows affected by the query.
 
-### [`.as(Class)` \- Map query results to a class](https://bun.com/docs/api/sqlite\#as-class-map-query-results-to-a-class)
+### [`.as(Class)` \- Map query results to a class](https://bun.com/docs/api/sqlite#as-class-map-query-results-to-a-class)
 
 Added in Bun v1.1.14
 
@@ -390,7 +391,7 @@ As a performance optimization, the class constructor is not called, default init
 
 The database columns are set as properties on the class instance.
 
-### [`.iterate()` ( `@@iterator`)](https://bun.com/docs/api/sqlite\#iterate-iterator)
+### [`.iterate()` ( `@@iterator`)](https://bun.com/docs/api/sqlite#iterate-iterator)
 
 Use `.iterate()` to run a query and incrementally return results. This is useful for large result sets that you want to process one row at a time without loading all the results into memory.
 
@@ -414,7 +415,7 @@ for (const row of query) {
 
 This feature was added in Bun v1.1.31.
 
-### [`.values()`](https://bun.com/docs/api/sqlite\#values)
+### [`.values()`](https://bun.com/docs/api/sqlite#values)
 
 Use `values()` to run a query and get back all results as an array of arrays.
 
@@ -433,7 +434,7 @@ query.values(2);
 
 Internally, this calls [`sqlite3_reset`](https://www.sqlite.org/capi3ref.html#sqlite3_reset) and repeatedly calls [`sqlite3_step`](https://www.sqlite.org/capi3ref.html#sqlite3_step) until it returns `SQLITE_DONE`.
 
-### [`.finalize()`](https://bun.com/docs/api/sqlite\#finalize)
+### [`.finalize()`](https://bun.com/docs/api/sqlite#finalize)
 
 Use `.finalize()` to destroy a `Statement` and free any resources associated with it. Once finalized, a `Statement` cannot be executed again. Typically, the garbage collector will do this for you, but explicit finalization may be useful in performance-sensitive applications.
 
@@ -444,7 +445,7 @@ query.finalize();
 
 ```
 
-### [`.toString()`](https://bun.com/docs/api/sqlite\#tostring)
+### [`.toString()`](https://bun.com/docs/api/sqlite#tostring)
 
 Calling `toString()` on a `Statement` instance prints the expanded SQL query. This is useful for debugging.
 
@@ -466,7 +467,7 @@ console.log(query.toString()); // => "SELECT 365"
 
 Internally, this calls [`sqlite3_expanded_sql`](https://www.sqlite.org/capi3ref.html#sqlite3_expanded_sql). The parameters are expanded using the most recently bound values.
 
-## [Parameters](https://bun.com/docs/api/sqlite\#parameters)
+## [Parameters](https://bun.com/docs/api/sqlite#parameters)
 
 Queries can contain parameters. These can be numerical ( `?1`) or named ( `$param` or `:param` or `@param`). Bind values to these parameters when executing the query:
 
@@ -519,7 +520,7 @@ Results
 
 ```
 
-## [Integers](https://bun.com/docs/api/sqlite\#integers)
+## [Integers](https://bun.com/docs/api/sqlite#integers)
 
 sqlite supports signed 64 bit integers, but JavaScript only supports signed 52 bit integers or arbitrary precision integers with `bigint`.
 
@@ -527,7 +528,7 @@ sqlite supports signed 64 bit integers, but JavaScript only supports signed 52 b
 
 By default, `bun:sqlite` returns integers as `number` types. If you need to handle integers larger than 2^53, you can use the `bigint` type.
 
-### [`safeIntegers: true`](https://bun.com/docs/api/sqlite\#safeintegers-true)
+### [`safeIntegers: true`](https://bun.com/docs/api/sqlite#safeintegers-true)
 
 Added in Bun v1.1.14
 
@@ -563,7 +564,7 @@ try {
 
 ```
 
-### [`safeIntegers: false` (default)](https://bun.com/docs/api/sqlite\#safeintegers-false-default)
+### [`safeIntegers: false` (default)](https://bun.com/docs/api/sqlite#safeintegers-false-default)
 
 When `safeIntegers` is `false`, `bun:sqlite` will return integers as `number` types and truncate any bits beyond 53:
 
@@ -579,7 +580,7 @@ console.log(result.max_int); // => 9007199254741092
 
 ```
 
-## [Transactions](https://bun.com/docs/api/sqlite\#transactions)
+## [Transactions](https://bun.com/docs/api/sqlite#transactions)
 
 Transactions are a mechanism for executing multiple queries in an _atomic_ way; that is, either all of the queries succeed or none of them do. Create a transaction with the `db.transaction()` method:
 
@@ -659,7 +660,7 @@ insertCats.exclusive(cats); // uses "BEGIN EXCLUSIVE"
 
 ```
 
-### [`.loadExtension()`](https://bun.com/docs/api/sqlite\#loadextension)
+### [`.loadExtension()`](https://bun.com/docs/api/sqlite#loadextension)
 
 To load a [SQLite extension](https://www.sqlite.org/loadext.html), call `.loadExtension(name)` on your `Database` instance
 
@@ -695,7 +696,7 @@ db.loadExtension("myext");
 
 ```
 
-### [.fileControl(cmd: number, value: any)](https://bun.com/docs/api/sqlite\#filecontrol-cmd-number-value-any)
+### [.fileControl(cmd: number, value: any)](https://bun.com/docs/api/sqlite#filecontrol-cmd-number-value-any)
 
 To use the advanced `sqlite3_file_control` API, call `.fileControl(cmd, value)` on your `Database` instance.
 
@@ -715,7 +716,7 @@ db.fileControl(constants.SQLITE_FCNTL_PERSIST_WAL, 0);
 - `TypedArray`
 - `undefined` or `null`
 
-## [Reference](https://bun.com/docs/api/sqlite\#reference)
+## [Reference](https://bun.com/docs/api/sqlite#reference)
 
 ```
 class Database {
@@ -768,17 +769,17 @@ type SQLQueryBindings =
 
 ```
 
-### [Datatypes](https://bun.com/docs/api/sqlite\#datatypes)
+### [Datatypes](https://bun.com/docs/api/sqlite#datatypes)
 
-| JavaScript type | SQLite type |
-| --- | --- |
-| `string` | `TEXT` |
-| `number` | `INTEGER` or `DECIMAL` |
-| `boolean` | `INTEGER` (1 or 0) |
-| `Uint8Array` | `BLOB` |
-| `Buffer` | `BLOB` |
-| `bigint` | `INTEGER` |
-| `null` | `NULL` |
+| JavaScript type | SQLite type            |
+| --------------- | ---------------------- |
+| `string`        | `TEXT`                 |
+| `number`        | `INTEGER` or `DECIMAL` |
+| `boolean`       | `INTEGER` (1 or 0)     |
+| `Uint8Array`    | `BLOB`                 |
+| `Buffer`        | `BLOB`                 |
+| `bigint`        | `INTEGER`              |
+| `null`          | `NULL`                 |
 
 [Previous\\
 \\
@@ -786,7 +787,7 @@ import.meta](https://bun.com/docs/api/import-meta) [Next\\
 \\
 FileSystemRouter](https://bun.com/docs/api/file-system-router)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/sqlite.md)
 
@@ -810,7 +811,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

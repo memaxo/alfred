@@ -9,23 +9,29 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 ## Core Principles
 
 ### 1. Integration Over Isolation
+
 Packages are well-separated but must compose seamlessly. The architecture favors clean interfaces between packages while ensuring they work together as a cohesive intelligence system.
 
 ### 2. Learning Over Static Behavior
+
 ALFRED improves through continuous feedback loops. Every interaction informs future behavior through:
+
 - Pattern extraction from successful outcomes
 - Mistake analysis and correction
 - Preference inference from behavior
 - Domain-specific knowledge accumulation
 
 ### 3. Context-Aware Execution
+
 Every action considers:
+
 - User preferences (response style, tool choices)
 - Past outcomes (what worked, what didn't)
 - Domain knowledge (infrastructure topology, code patterns)
 - Cognitive state (attention, focus, overload)
 
 ### 4. Safe Autonomy
+
 Security boundaries with biometric elevation for high-risk operations. The policy engine enforces graduated autonomy levels with appropriate safeguards, enforced consistently across runtime, API routers, and tools.
 
 ## Architecture Layers
@@ -74,6 +80,7 @@ This is the **integration layer** that makes all other packages work together.
 ### Domain Packages
 
 **`packages/cognitive/`** - Cognitive state management
+
 - Event-sourced state machine (idle, thinking, deciding, acting, learning, reflecting)
 - Pure state transitions (<100µs budget)
 - Physiology system (energy, boredom, frustration) regulating autonomy
@@ -83,6 +90,7 @@ This is the **integration layer** that makes all other packages work together.
 - Runtime loop integration (`runCognitiveLoop`) for voice/chat inputs
 
 **`packages/knowledge/`** - Hypergraph memory
+
 - Facts, relations, insights, patterns
 - HAMT/interval/B-tree indices
 - Semantic queries
@@ -92,18 +100,21 @@ This is the **integration layer** that makes all other packages work together.
 - Prometheus metrics for observability
 
 **`packages/learning/`** - Self-supervision and improvement
+
 - Outcome recording (prediction vs. actual)
 - Pattern extraction from successful workflows
 - Mistake analysis and correction
 - Confidence scoring
 
 **`packages/rag/`** - Semantic search and retrieval
+
 - Document ingestion and chunking
 - Embedding generation (OpenAI)
 - pgvector similarity search
 - Hybrid search with knowledge graph
 
 **`packages/policy/`** - Security and access control
+
 - YAML-based policy definitions
 - PDP (Policy Decision Point) evaluation
 - Obligation enforcement (biometric, approval)
@@ -112,6 +123,7 @@ This is the **integration layer** that makes all other packages work together.
 ### Tool Packages
 
 **`packages/agent/`** - AI SDK tool definitions and registries
+
 - Assistant tools (note, remind, timer, book, focus, web, handoff, home, preference_get, preference_set)
 - Orchestrator tools (codex, docker, droid, git, proxmox, router, ticket, web)
 - Tool registry wiring for AI SDK v6 and shared helpers (including Linear integration).
@@ -119,27 +131,32 @@ This is the **integration layer** that makes all other packages work together.
 ### Infrastructure Packages
 
 **`packages/db/`** - Database layer
+
 - Drizzle schemas for all domains
 - Repositories (type-safe queries)
 - Migrations
 - Test harness
 
 **`packages/auth/`** - Authentication and authorization
+
 - Better Auth integration
 - Passkey support
 - Ed25519 token signing/verification
 - JWKS endpoint
 
 **`packages/metrics/`** - Observability
+
 - Prometheus metrics registry
 - Performance budgets
 - Structured logging
 
 **`packages/type/`** - Shared types
+
 - DTOs for cross-layer communication
 - No dependencies (pure contracts)
 
 **`packages/ui/`** - Shared UI components
+
 - Chat component
 - Panes (notes, reminders, timers, bookmarks)
 - Reusable primitives
@@ -147,6 +164,7 @@ This is the **integration layer** that makes all other packages work together.
 ### API Layer
 
 **`packages/api/`** - HTTP/tRPC and streaming surface
+
 - Router definitions for all domains (assistant, orchestrator, workflow, voice, graph, cognitive, etc.)
 - Context creation (session + runtime metadata)
 - Policy enforcement middleware and autonomy band checks
@@ -253,6 +271,7 @@ ExecutionContext
 ### 1. Runtime ↔ Domain Packages
 
 The runtime layer is responsible for:
+
 - **Querying** cognitive, knowledge, learning before execution
 - **Updating** them during and after execution
 - **Composing** their outputs into coherent context
@@ -292,6 +311,7 @@ Mindscape and graph APIs consume the resulting graph:
 ### 2. API ↔ Runtime
 
 API routers are thin wrappers:
+
 - Create durable run in DB
 - Call runtime.execute()
 - Stream events to client
@@ -300,6 +320,7 @@ API routers are thin wrappers:
 ### 3. Tools ↔ Runtime
 
 Tools are registered with AI SDK:
+
 - Runtime provides them to streamText()
 - AI SDK decides when to call them
 - Runtime normalizes results back to workflow events
@@ -307,6 +328,7 @@ Tools are registered with AI SDK:
 ### 4. Learning ↔ Knowledge
 
 Learning system feeds the knowledge graph:
+
 - Successful patterns become edges
 - Mistakes are marked as anti-patterns
 - Confidence scores inform queries
@@ -320,10 +342,12 @@ Learning system feeds the knowledge graph:
 **Solution**: Create a dedicated runtime package that orchestrates them.
 
 **Alternatives Considered**:
+
 - Merge packages (rejected - violates single responsibility)
 - Keep orchestration in API layer (rejected - wrong abstraction level)
 
 **Benefits**:
+
 - Clean composition without tight coupling
 - Testable in isolation
 - Clear place for integration logic
@@ -331,12 +355,14 @@ Learning system feeds the knowledge graph:
 ### Why Single-User Focus?
 
 **Simplifications**:
+
 - No multi-tenancy complexity
 - No rate limiting (user is the only user)
 - Aggressive personalization (all data belongs to one person)
 - Direct infrastructure access (Jack's Proxmox cluster)
 
 **Enables**:
+
 - Deep learning of user's specific context
 - Tight integration with personal infrastructure
 - No compromise on privacy (data stays local)
@@ -348,6 +374,7 @@ Learning system feeds the knowledge graph:
 **Chosen**: Hypergraph (nodes + edges + patterns) with pgvector
 
 **Rationale**:
+
 - Relations matter as much as facts
 - Patterns are first-class citizens
 - Hybrid search (semantic + structural)
@@ -381,6 +408,7 @@ Learning system feeds the knowledge graph:
 - `full` (0.9-1.0): Unrestricted (rarely used)
 
 Higher autonomy requires:
+
 - Elevated token (`elevated: true`)
 - MFA via passkey (`mfa: "passkey"`)
 - Recent biometric (TTL ≤ 2 minutes)
@@ -431,16 +459,19 @@ Higher autonomy requires:
 ## Testing Strategy
 
 ### Unit Tests
+
 - Individual package logic
 - Pure functions (no side effects)
 - Mock external dependencies
 
 ### Integration Tests
+
 - API routers with real tRPC client
 - Database operations with test DB
 - Runtime composition with mocked AI SDK
 
 ### End-to-End Tests
+
 - Full workflow execution
 - Multi-tool scenarios
 - Suspend/resume flows
@@ -451,11 +482,13 @@ Higher autonomy requires:
 ### When to Extract Packages
 
 Extract when:
+
 - Package exceeds 10 files or 5000 lines
 - Clear external value (publishable library)
 - Multiple unrelated responsibilities
 
 Don't extract:
+
 - For "clean architecture" alone
 - Before proving value
 - When it slows iteration
@@ -463,11 +496,13 @@ Don't extract:
 ### When to Add Abstraction
 
 Add when:
+
 - Pattern repeats 3+ times
 - Clear extension point needed
 - Testability improves significantly
 
 Don't add:
+
 - For hypothetical future needs
 - Before understanding the domain
 - When it obscures intent
@@ -475,11 +510,13 @@ Don't add:
 ### When to Optimize
 
 Optimize when:
+
 - Measurements show budget violations
 - User-perceivable latency
 - Resource exhaustion risks
 
 Don't optimize:
+
 - Before measuring
 - For micro-benchmarks
 - At expense of clarity

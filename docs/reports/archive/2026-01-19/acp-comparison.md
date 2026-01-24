@@ -37,23 +37,24 @@ The Agent Client Protocol (ACP) is an open standard designed to standardize comm
 ### What is ACP?
 
 ACP is a JSON-RPC 2.0 based protocol that enables bidirectional communication between:
+
 - **Clients**: Code editors/IDEs (e.g., Zed, Cursor, VS Code)
 - **Agents**: AI coding tools (e.g., Gemini CLI, Codex CLI, Claude Code, Goose)
 
 ### Supported Agents (as of Dec 2025)
 
-| Agent | Vendor | ACP Support |
-|-------|--------|-------------|
-| Gemini CLI | Google | Native |
-| Codex CLI | OpenAI | Via adapter |
-| Claude Code | Anthropic | Via Zed adapter |
-| Augment Code | Augment | Native |
-| Goose | Block | Native |
-| OpenHands | All Hands AI | Native |
-| JetBrains Junie | JetBrains | Coming soon |
-| Kimi CLI | Moonshot AI | Native |
-| Mistral Vibe | Mistral | Native |
-| Qwen Code | Alibaba | Native |
+| Agent           | Vendor       | ACP Support     |
+| --------------- | ------------ | --------------- |
+| Gemini CLI      | Google       | Native          |
+| Codex CLI       | OpenAI       | Via adapter     |
+| Claude Code     | Anthropic    | Via Zed adapter |
+| Augment Code    | Augment      | Native          |
+| Goose           | Block        | Native          |
+| OpenHands       | All Hands AI | Native          |
+| JetBrains Junie | JetBrains    | Coming soon     |
+| Kimi CLI        | Moonshot AI  | Native          |
+| Mistral Vibe    | Mistral      | Native          |
+| Qwen Code       | Alibaba      | Native          |
 
 ### Core Architecture
 
@@ -79,14 +80,14 @@ ACP is a JSON-RPC 2.0 based protocol that enables bidirectional communication be
 
 ### Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Session Modes** | `ask`, `architect`, `code` - different approval/tool behaviors |
-| **Permission System** | `allow_once`, `allow_always`, `reject_once`, `reject_always` |
-| **Tool Call Types** | `read`, `edit`, `delete`, `move`, `search`, `execute`, `think`, `fetch` |
-| **Terminal Support** | Create, output, wait, kill, release lifecycle |
-| **MCP Integration** | Supports MCP servers via stdio, HTTP, SSE |
-| **Extensibility** | `_meta` fields + custom methods prefixed with `_` |
+| Feature               | Description                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| **Session Modes**     | `ask`, `architect`, `code` - different approval/tool behaviors          |
+| **Permission System** | `allow_once`, `allow_always`, `reject_once`, `reject_always`            |
+| **Tool Call Types**   | `read`, `edit`, `delete`, `move`, `search`, `execute`, `think`, `fetch` |
+| **Terminal Support**  | Create, output, wait, kill, release lifecycle                           |
+| **MCP Integration**   | Supports MCP servers via stdio, HTTP, SSE                               |
+| **Extensibility**     | `_meta` fields + custom methods prefixed with `_`                       |
 
 ---
 
@@ -117,6 +118,7 @@ ALFRED wraps coding agents as orchestrator tools that spawn subprocesses:
 ### Codex Tool Implementation (`packages/agent/src/orchestrator/tool/codex.ts`)
 
 **Input Schema:**
+
 ```typescript
 {
   action: "exec",
@@ -138,11 +140,13 @@ ALFRED wraps coding agents as orchestrator tools that spawn subprocesses:
 ```
 
 **Event Parsing:**
+
 - `turn.started`, `turn.completed`, `turn.failed`
 - `item.completed` with types: `reasoning`, `command_execution`, `agent_message`
 - `error` events
 
 **Key Features:**
+
 - Policy enforcement via `requireToolScopesAndPolicy`
 - Biometric elevation for medium/high autonomy
 - Sandbox modes: `read-only`, `workspace-write`
@@ -153,6 +157,7 @@ ALFRED wraps coding agents as orchestrator tools that spawn subprocesses:
 ### Droid Tool Implementation (`packages/agent/src/orchestrator/tool/droid.ts`)
 
 **Similar to Codex but:**
+
 - Uses `spawnWithSecureCwd()` with file descriptor handles (TOCTOU protection)
 - Different env allowlist (`FACTORY_API_KEY`, `DROID_*`)
 - No reasoning trace extraction (simpler output)
@@ -163,39 +168,38 @@ ALFRED has a dedicated Zod-validated protocol layer for Codex events:
 
 ```typescript
 // Thread Items
-- ReasoningItem
-- AgentMessageItem  
-- CommandExecutionItem
-- FileChangeItem
-- McpToolCallItem
-- WebSearchItem
-- TodoListItem
-- ErrorItem
-
-// Thread Events
-- thread.started
-- turn.started / turn.completed / turn.failed
-- item.started / item.updated / item.completed
-- error
+-ReasoningItem -
+  AgentMessageItem -
+  CommandExecutionItem -
+  FileChangeItem -
+  McpToolCallItem -
+  WebSearchItem -
+  TodoListItem -
+  ErrorItem -
+  // Thread Events
+  thread.started -
+  turn.started / turn.completed / turn.failed -
+  item.started / item.updated / item.completed -
+  error;
 ```
 
 ---
 
 ## Comparison Matrix
 
-| Aspect | ACP | ALFRED |
-|--------|-----|--------|
-| **Communication** | JSON-RPC 2.0 over stdio | Subprocess spawn + NDJSON parsing |
-| **Session Management** | Explicit sessions with IDs | Implicit per-execution |
-| **State Persistence** | `session/load` capability | None (stateless tool calls) |
-| **Permission Model** | Interactive prompts to client | Policy-based (`requireToolScopesAndPolicy`) |
-| **Autonomy Levels** | Session modes (`ask`/`architect`/`code`) | `read`/`low`/`medium`/`high` with biometric gates |
-| **Tool Reporting** | Real-time `session/update` notifications | Streaming via `ToolWriter` interface |
-| **File Operations** | Client-side (`fs/*` methods) | Agent-side (agent manages files) |
-| **Terminal Support** | Rich lifecycle (`create`/`output`/`wait`/`kill`/`release`) | Direct subprocess, stderr streaming |
-| **MCP Support** | Built-in (client provides servers) | N/A |
-| **Extensibility** | `_meta` fields, custom methods | Env allowlists, context objects |
-| **Security** | Client-controlled permissions | Server-side policy + biometric elevation |
+| Aspect                 | ACP                                                        | ALFRED                                            |
+| ---------------------- | ---------------------------------------------------------- | ------------------------------------------------- |
+| **Communication**      | JSON-RPC 2.0 over stdio                                    | Subprocess spawn + NDJSON parsing                 |
+| **Session Management** | Explicit sessions with IDs                                 | Implicit per-execution                            |
+| **State Persistence**  | `session/load` capability                                  | None (stateless tool calls)                       |
+| **Permission Model**   | Interactive prompts to client                              | Policy-based (`requireToolScopesAndPolicy`)       |
+| **Autonomy Levels**    | Session modes (`ask`/`architect`/`code`)                   | `read`/`low`/`medium`/`high` with biometric gates |
+| **Tool Reporting**     | Real-time `session/update` notifications                   | Streaming via `ToolWriter` interface              |
+| **File Operations**    | Client-side (`fs/*` methods)                               | Agent-side (agent manages files)                  |
+| **Terminal Support**   | Rich lifecycle (`create`/`output`/`wait`/`kill`/`release`) | Direct subprocess, stderr streaming               |
+| **MCP Support**        | Built-in (client provides servers)                         | N/A                                               |
+| **Extensibility**      | `_meta` fields, custom methods                             | Env allowlists, context objects                   |
+| **Security**           | Client-controlled permissions                              | Server-side policy + biometric elevation          |
 
 ---
 
@@ -204,6 +208,7 @@ ALFRED has a dedicated Zod-validated protocol layer for Codex events:
 ### 1. Control Flow Direction
 
 **ACP**: Agent → Client (agent requests capabilities)
+
 ```
 Agent: "I need to write a file"
   → session/request_permission
@@ -212,6 +217,7 @@ Client: "User approved"
 ```
 
 **ALFRED**: Orchestrator → Agent (orchestrator delegates)
+
 ```
 Orchestrator: "Execute this prompt with these constraints"
   → Policy pre-check
@@ -222,11 +228,13 @@ Orchestrator: "Execute this prompt with these constraints"
 ### 2. Session Model
 
 **ACP**: Long-lived sessions
+
 - Create once, use for multiple prompts
 - Can persist and reload (`session/load`)
 - Modes can change mid-session
 
 **ALFRED**: Transient executions
+
 - Each tool call is independent
 - No explicit session state between calls
 - Autonomy level set per-call
@@ -234,11 +242,13 @@ Orchestrator: "Execute this prompt with these constraints"
 ### 3. Permission Handling
 
 **ACP**: Interactive, user-facing
+
 - Client presents approval dialogs
 - User can allow always/once, reject always/once
 - Agent waits for permission before proceeding
 
 **ALFRED**: Pre-flight policy checks
+
 - `requireToolScopesAndPolicy()` validates before spawn
 - Biometric elevation for sensitive operations
 - No mid-execution permission prompts
@@ -246,6 +256,7 @@ Orchestrator: "Execute this prompt with these constraints"
 ### 4. Output Streaming
 
 **ACP**: Typed session updates
+
 ```json
 {
   "method": "session/update",
@@ -260,10 +271,11 @@ Orchestrator: "Execute this prompt with these constraints"
 ```
 
 **ALFRED**: Tool writer interface
+
 ```typescript
-writer?.write?.({ type: "stdout", text: "..." })
-writer?.write?.({ type: "reasoning", text: "..." })
-writer?.write?.({ type: "notice", message: "..." })
+writer?.write?.({ type: "stdout", text: "..." });
+writer?.write?.({ type: "reasoning", text: "..." });
+writer?.write?.({ type: "notice", message: "..." });
 ```
 
 ---
@@ -295,11 +307,13 @@ writer?.write?.({ type: "notice", message: "..." })
 ### Option 1: ALFRED as ACP Client
 
 ALFRED could act as an ACP client, enabling:
+
 - Support for any ACP-compatible agent
 - Leverage ACP's session management
 - Use ACP's permission system (with policy overlay)
 
 **Challenges:**
+
 - ACP assumes interactive client (IDE)
 - Permission prompts would need automation via policy
 - Session persistence adds complexity
@@ -307,17 +321,20 @@ ALFRED could act as an ACP client, enabling:
 ### Option 2: ACP-Compatible ALFRED Agent
 
 Expose ALFRED's orchestrator as an ACP agent:
+
 - Zed/Cursor could use ALFRED as their agent
 - ALFRED's policy system → ACP permission responses
 - Linear integration as ACP tool calls
 
 **Challenges:**
+
 - ALFRED is designed as a personal assistant, not IDE tool
 - Would require significant architectural changes
 
 ### Option 3: Protocol Translation Layer
 
 Create an adapter that:
+
 - Speaks ACP to upstream agents (Gemini CLI, etc.)
 - Wraps in ALFRED's policy/auth layer
 - Maintains ALFRED's tool abstraction
@@ -351,12 +368,13 @@ Create an adapter that:
 ### Medium-term (Moderate effort)
 
 4. **ACP Adapter Tool**: Create a `toolAcp` that can invoke any ACP-compatible agent:
+
    ```typescript
    toolAcp.execute({
-     agent: "gemini-cli",  // or any ACP agent
+     agent: "gemini-cli", // or any ACP agent
      prompt: "...",
-     auto: "medium"
-   })
+     auto: "medium",
+   });
    ```
 
 5. **Unified Event Schema**: Align ALFRED's internal events with ACP's `session/update` format for consistency.
@@ -377,31 +395,32 @@ Create an adapter that:
 
 **Re-exported from `@alfred/protocol`:**
 
-| Category | Exports |
-|----------|---------|
-| **Connection Classes** | `AgentSideConnection`, `ClientSideConnection`, `TerminalHandle`, `RequestError` |
-| **Protocol Constants** | `AGENT_METHODS`, `CLIENT_METHODS`, `PROTOCOL_VERSION` (v1) |
-| **Session Types** | `SessionId`, `SessionInfo`, `SessionNotification`, `SessionUpdate`, `SessionCapabilities` |
-| **Content Types** | `ContentBlock`, `ContentChunk`, `TextContent`, `ImageContent`, `AudioContent`, `EmbeddedResource` |
-| **Tool Types** | `ToolCall`, `ToolCallContent`, `ToolCallId`, `AcpToolKind`, `AcpToolCallStatus`, `ToolCallUpdate` |
-| **Plan Types** | `Plan`, `PlanEntry`, `PlanEntryPriority`, `PlanEntryStatus` |
-| **Terminal Types** | `CreateTerminalRequest/Response`, `TerminalOutputRequest/Response`, etc. |
-| **File System Types** | `ReadTextFileRequest/Response`, `WriteTextFileRequest/Response` |
-| **MCP Types** | `McpServer`, `McpServerStdio`, `McpServerHttp`, `McpServerSse`, `McpCapabilities` |
+| Category               | Exports                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| **Connection Classes** | `AgentSideConnection`, `ClientSideConnection`, `TerminalHandle`, `RequestError`                   |
+| **Protocol Constants** | `AGENT_METHODS`, `CLIENT_METHODS`, `PROTOCOL_VERSION` (v1)                                        |
+| **Session Types**      | `SessionId`, `SessionInfo`, `SessionNotification`, `SessionUpdate`, `SessionCapabilities`         |
+| **Content Types**      | `ContentBlock`, `ContentChunk`, `TextContent`, `ImageContent`, `AudioContent`, `EmbeddedResource` |
+| **Tool Types**         | `ToolCall`, `ToolCallContent`, `ToolCallId`, `AcpToolKind`, `AcpToolCallStatus`, `ToolCallUpdate` |
+| **Plan Types**         | `Plan`, `PlanEntry`, `PlanEntryPriority`, `PlanEntryStatus`                                       |
+| **Terminal Types**     | `CreateTerminalRequest/Response`, `TerminalOutputRequest/Response`, etc.                          |
+| **File System Types**  | `ReadTextFileRequest/Response`, `WriteTextFileRequest/Response`                                   |
+| **MCP Types**          | `McpServer`, `McpServerStdio`, `McpServerHttp`, `McpServerSse`, `McpCapabilities`                 |
 
 **ALFRED Adapters:**
 
 ```typescript
 // Convert ALFRED autonomy to ACP mode
-mapAutonomyToAcpMode("high") // → { id: "code", name: "Code", ... }
+mapAutonomyToAcpMode("high"); // → { id: "code", name: "Code", ... }
 
 // Convert ACP mode back to ALFRED autonomy
-mapAcpModeToAutonomy("code") // → "high"
+mapAcpModeToAutonomy("code"); // → "high"
 ```
 
 **Legacy Schemas (Deprecated):**
 
 The following are still exported for backwards compatibility but marked deprecated:
+
 - `toolCallStatusSchema` → Use `AcpToolCallStatus`
 - `toolKindSchema` → Use `AcpToolKind`
 - `permissionOptionKindSchema` → Use `AcpPermissionOptionKind`
@@ -418,17 +437,17 @@ The following are still exported for backwards compatibility but marked deprecat
 
 ## Appendix: ACP vs ALFRED Event Mapping
 
-| ACP Event | ALFRED Equivalent |
-|-----------|-------------------|
-| `session/update.agent_message_chunk` | `{ type: "stdout", text }` |
-| `session/update.tool_call` | Tool execution metrics |
-| `session/update.plan` | ExecPlan system |
-| `session/request_permission` | `requireToolScopesAndPolicy()` |
-| `turn.started` | `startToolTimer()` |
-| `turn.completed` | Tool return value |
-| `turn.failed` | Thrown error |
-| `terminal/create` | `Bun.spawn()` |
-| `fs/write_text_file` | Agent manages directly |
+| ACP Event                            | ALFRED Equivalent              |
+| ------------------------------------ | ------------------------------ |
+| `session/update.agent_message_chunk` | `{ type: "stdout", text }`     |
+| `session/update.tool_call`           | Tool execution metrics         |
+| `session/update.plan`                | ExecPlan system                |
+| `session/request_permission`         | `requireToolScopesAndPolicy()` |
+| `turn.started`                       | `startToolTimer()`             |
+| `turn.completed`                     | Tool return value              |
+| `turn.failed`                        | Thrown error                   |
+| `terminal/create`                    | `Bun.spawn()`                  |
+| `fs/write_text_file`                 | Agent manages directly         |
 
 ---
 

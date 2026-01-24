@@ -113,20 +113,20 @@ A **cognitive architecture for self-improvement** that:
 
 ### 4.2 New Files
 
-| File | Purpose | Exports | Depends On | Budget |
-|------|---------|---------|------------|--------|
-| `packages/type/src/personality.ts` | Type definitions | `Personality`, `Purpose`, `Curiosity`, etc. | `@alfred/type/cognitive` | N/A |
-| `packages/cognitive/src/personality.ts` | Trait state & updates | `defaultPersonality`, `updatePersonality`, `computeEffective` | `@alfred/type/personality` | <100µs |
-| `packages/cognitive/src/evolution.ts` | Solution population | `SolutionPopulation`, `EvaluationCascade` | `@alfred/type/personality` | <5ms |
-| `packages/cognitive/src/strategy.ts` | Strategy evolution | `StrategyEvolver`, `selectStrategy`, `mutateStrategy` | `@alfred/type/personality` | <1ms |
-| `packages/cognitive/src/calibration.ts` | Confidence tracking | `updateCalibration`, `getCalibrationError` | `@alfred/type/personality` | <100µs |
-| `packages/cognitive/src/queue.ts` | Task queue processor | `processQueue`, `selectNextTask`, `executeIntent` | `@alfred/type/personality` | <10ms |
-| `packages/db/src/schema/personality.ts` | DB schema | `personality`, `strategies`, `solutions`, `skills`, `calibration` | drizzle-orm | N/A |
-| `packages/db/src/schema/queue.ts` | Task queue schema | `taskQueue` | drizzle-orm | N/A |
-| `packages/db/src/repo/personality.ts` | CRUD operations | `getPersonality`, `setPersonality`, `addSolution`, etc. | schema/personality | <10ms |
-| `packages/db/src/repo/queue.ts` | Queue CRUD | `addTask`, `getReady`, `updateStatus`, `unblockDependents` | schema/queue | <10ms |
-| `packages/api/src/routers/personality.ts` | tRPC procedures | `get`, `set`, `calibrationStats`, `triggerImprove` | repo/personality | N/A |
-| `packages/api/src/routers/queue.ts` | Queue tRPC procedures | `add`, `list`, `cancel`, `status` | repo/queue | N/A |
+| File                                      | Purpose               | Exports                                                           | Depends On                 | Budget |
+| ----------------------------------------- | --------------------- | ----------------------------------------------------------------- | -------------------------- | ------ |
+| `packages/type/src/personality.ts`        | Type definitions      | `Personality`, `Purpose`, `Curiosity`, etc.                       | `@alfred/type/cognitive`   | N/A    |
+| `packages/cognitive/src/personality.ts`   | Trait state & updates | `defaultPersonality`, `updatePersonality`, `computeEffective`     | `@alfred/type/personality` | <100µs |
+| `packages/cognitive/src/evolution.ts`     | Solution population   | `SolutionPopulation`, `EvaluationCascade`                         | `@alfred/type/personality` | <5ms   |
+| `packages/cognitive/src/strategy.ts`      | Strategy evolution    | `StrategyEvolver`, `selectStrategy`, `mutateStrategy`             | `@alfred/type/personality` | <1ms   |
+| `packages/cognitive/src/calibration.ts`   | Confidence tracking   | `updateCalibration`, `getCalibrationError`                        | `@alfred/type/personality` | <100µs |
+| `packages/cognitive/src/queue.ts`         | Task queue processor  | `processQueue`, `selectNextTask`, `executeIntent`                 | `@alfred/type/personality` | <10ms  |
+| `packages/db/src/schema/personality.ts`   | DB schema             | `personality`, `strategies`, `solutions`, `skills`, `calibration` | drizzle-orm                | N/A    |
+| `packages/db/src/schema/queue.ts`         | Task queue schema     | `taskQueue`                                                       | drizzle-orm                | N/A    |
+| `packages/db/src/repo/personality.ts`     | CRUD operations       | `getPersonality`, `setPersonality`, `addSolution`, etc.           | schema/personality         | <10ms  |
+| `packages/db/src/repo/queue.ts`           | Queue CRUD            | `addTask`, `getReady`, `updateStatus`, `unblockDependents`        | schema/queue               | <10ms  |
+| `packages/api/src/routers/personality.ts` | tRPC procedures       | `get`, `set`, `calibrationStats`, `triggerImprove`                | repo/personality           | N/A    |
+| `packages/api/src/routers/queue.ts`       | Queue tRPC procedures | `add`, `list`, `cancel`, `status`                                 | repo/queue                 | N/A    |
 
 ### 4.3 Type Hierarchy
 
@@ -249,15 +249,15 @@ export interface Personality {
   confidence: Confidence;
   metaLearning: MetaLearning;
   solutionDiversity: SolutionDiversity;
-  
+
   // Capability
   skillAcquisition: SkillAcquisition;
   aesthetics: Aesthetics;
-  
+
   // Improvement modes
   backgroundImprovement: BackgroundImprovement;
   activeImprovement: ActiveImprovement;
-  
+
   // Metadata
   lastUpdate: Timestamp;
   version: number;
@@ -295,7 +295,11 @@ export interface BudgetAllocation {
   exploration: number;
 }
 
-export type AbstractionLevel = "direct" | "constructor" | "search" | "metasearch";
+export type AbstractionLevel =
+  | "direct"
+  | "constructor"
+  | "search"
+  | "metasearch";
 
 export interface AbstractionAttempt {
   level: AbstractionLevel;
@@ -332,14 +336,14 @@ export interface ImprovementTriggers {
   idleTime: number;
   lowConfidenceDomain: number;
   staleSkill: number;
-  taskQueueDepth: number;  // Process queue when depth exceeds threshold
+  taskQueueDepth: number; // Process queue when depth exceeds threshold
 }
 
 // ═══════════════════════════════════════════════════════════════
 // TASK QUEUING TYPES
 // ═══════════════════════════════════════════════════════════════
 
-export type TaskTrigger = 
+export type TaskTrigger =
   | { _: "time"; due: Timestamp }
   | { _: "idle"; minIdleMs: number }
   | { _: "completion"; blockedBy: string }
@@ -356,11 +360,11 @@ export interface QueuedTask {
   title: string;
   trigger: TaskTrigger;
   intent: TaskIntent;
-  priority: number;         // Higher = more urgent
+  priority: number; // Higher = more urgent
   status: "pending" | "blocked" | "ready" | "running" | "completed" | "failed";
-  blockedBy?: string;       // Task ID this depends on
+  blockedBy?: string; // Task ID this depends on
   created: Timestamp;
-  scheduled?: Timestamp;    // When task became ready
+  scheduled?: Timestamp; // When task became ready
 }
 
 export interface ImprovementActivities {
@@ -514,6 +518,7 @@ Task queuing extends idle detection to process user-queued work alongside self-i
 **Integration with Background Improvement:**
 
 When cognitive state enters idle and `idleTime` threshold is met:
+
 1. Check task queue for ready tasks (priority-ordered)
 2. If tasks exist → process highest priority task
 3. If no tasks → proceed to background improvement activities
@@ -532,12 +537,12 @@ export const personalityRouter = router({
   // ═══════════════════════════════════════════════════════════
   // TRAIT MANAGEMENT
   // ═══════════════════════════════════════════════════════════
-  
+
   get: authedProcedure
     .query(async ({ ctx }) => {
       // Returns full personality config for user
     }),
-  
+
   set: authedProcedure
     .input(z.object({
       trait: z.enum([
@@ -552,7 +557,7 @@ export const personalityRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Updates specific trait parameter
     }),
-  
+
   reset: authedProcedure
     .input(z.object({
       trait: z.enum([...]).optional(), // Omit = reset all
@@ -560,16 +565,16 @@ export const personalityRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Resets to defaults
     }),
-  
+
   // ═══════════════════════════════════════════════════════════
   // CALIBRATION
   // ═══════════════════════════════════════════════════════════
-  
+
   calibration: authedProcedure
     .query(async ({ ctx }) => {
       // Returns domain calibration stats
     }),
-  
+
   recordPrediction: authedProcedure
     .input(z.object({
       domain: z.string(),
@@ -579,11 +584,11 @@ export const personalityRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Updates calibration for domain
     }),
-  
+
   // ═══════════════════════════════════════════════════════════
   // IMPROVEMENT
   // ═══════════════════════════════════════════════════════════
-  
+
   triggerImprove: authedProcedure
     .input(z.object({
       type: z.enum(["optimize", "learn", "diversify", "calibrate"]),
@@ -594,21 +599,21 @@ export const personalityRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Starts active improvement session
     }),
-  
+
   improvementStatus: authedProcedure
     .query(async ({ ctx }) => {
       // Returns current improvement progress
     }),
-  
+
   cancelImprovement: authedProcedure
     .mutation(async ({ ctx }) => {
       // Stops active improvement
     }),
-  
+
   // ═══════════════════════════════════════════════════════════
   // SOLUTION ARCHIVE
   // ═══════════════════════════════════════════════════════════
-  
+
   solutions: authedProcedure
     .input(z.object({
       taskId: z.string().optional(),
@@ -617,20 +622,20 @@ export const personalityRouter = router({
     .query(async ({ ctx, input }) => {
       // Returns solution archive
     }),
-  
+
   // ═══════════════════════════════════════════════════════════
   // STRATEGIES
   // ═══════════════════════════════════════════════════════════
-  
+
   strategies: authedProcedure
     .query(async ({ ctx }) => {
       // Returns strategy population with fitness
     }),
-  
+
   // ═══════════════════════════════════════════════════════════
   // SKILLS
   // ═══════════════════════════════════════════════════════════
-  
+
   skills: authedProcedure
     .query(async ({ ctx }) => {
       // Returns skill inventory
@@ -652,13 +657,13 @@ export const personalityRouter = router({
 CREATE TABLE IF NOT EXISTS user_personality (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL UNIQUE,
-  
+
   -- Purpose
   purpose_alignment_threshold REAL DEFAULT 0.3,
   purpose_decay_rate REAL DEFAULT 0.02,
   purpose_active_optimization BOOLEAN DEFAULT false,
   purpose_optimization_budget INTEGER DEFAULT 300,
-  
+
   -- Curiosity
   curiosity_threshold REAL DEFAULT 0.4,
   curiosity_alpha REAL DEFAULT 3.0,
@@ -666,14 +671,14 @@ CREATE TABLE IF NOT EXISTS user_personality (
   curiosity_diversity_pressure REAL DEFAULT 0.5,
   curiosity_exploration_temp REAL DEFAULT 1.0,
   curiosity_context_depth TEXT DEFAULT 'explicit',
-  
+
   -- Deliberation
   deliberation_threshold REAL DEFAULT 0.5,
   deliberation_total_budget INTEGER DEFAULT 60,
   deliberation_generation_pct REAL DEFAULT 0.4,
   deliberation_evaluation_pct REAL DEFAULT 0.4,
   deliberation_exploration_pct REAL DEFAULT 0.2,
-  
+
   -- Tenacity
   tenacity_decay_resistance REAL DEFAULT 0.5,
   tenacity_retry_threshold INTEGER DEFAULT 3,
@@ -681,44 +686,44 @@ CREATE TABLE IF NOT EXISTS user_personality (
   tenacity_beta REAL DEFAULT 4.0,
   tenacity_abstraction_switch INTEGER DEFAULT 5,
   tenacity_backtrack_probability REAL DEFAULT 0.1,
-  
+
   -- Confidence
   confidence_calibration_bias REAL DEFAULT 0.0,
   confidence_uncertainty_threshold REAL DEFAULT 0.7,
-  
+
   -- MetaLearning
   metalearning_rate REAL DEFAULT 0.1,
   metalearning_selection_pressure REAL DEFAULT 0.5,
   metalearning_mutation_rate REAL DEFAULT 0.1,
   metalearning_crossover BOOLEAN DEFAULT true,
   metalearning_elite INTEGER DEFAULT 3,
-  
+
   -- SolutionDiversity
   diversity_niche_size INTEGER DEFAULT 5,
   diversity_island_count INTEGER DEFAULT 3,
   diversity_migration_rate REAL DEFAULT 0.1,
   diversity_novelty_weight REAL DEFAULT 0.3,
   diversity_elite_fraction REAL DEFAULT 0.1,
-  
+
   -- SkillAcquisition
   skill_acquisition_drive REAL DEFAULT 0.5,
   skill_adjacency_bonus REAL DEFAULT 0.3,
   skill_practice_mode TEXT DEFAULT 'opportunistic',
   skill_daily_budget INTEGER DEFAULT 30,
-  
+
   -- Aesthetics
   aesthetics_quality_bias REAL DEFAULT 0.5,
   aesthetics_complexity TEXT DEFAULT 'moderate',
   aesthetics_abstraction TEXT DEFAULT 'balanced',
   aesthetics_verbosity TEXT DEFAULT 'balanced',
   aesthetics_llm_feedback_weight REAL DEFAULT 0.5,
-  
+
   -- BackgroundImprovement
   background_enabled BOOLEAN DEFAULT true,
   background_idle_trigger INTEGER DEFAULT 300,
   background_budget INTEGER DEFAULT 120,
   background_interruptible BOOLEAN DEFAULT true,
-  
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -855,14 +860,14 @@ CREATE TABLE IF NOT EXISTS task_queue (
   user_id TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
-  
+
   -- Trigger configuration (discriminated union via trigger_type)
   trigger_type TEXT NOT NULL,  -- 'time' | 'idle' | 'completion' | 'recurring'
   trigger_due TIMESTAMPTZ,     -- For 'time' trigger
   trigger_idle_ms INTEGER,     -- For 'idle' trigger (min idle duration)
   trigger_blocked_by UUID REFERENCES task_queue(id),  -- For 'completion' trigger
   trigger_cron TEXT,           -- For 'recurring' trigger
-  
+
   -- Intent configuration (discriminated union via intent_type)
   intent_type TEXT NOT NULL,   -- 'workflow' | 'notification' | 'improvement'
   intent_workflow_id TEXT,     -- For 'workflow' intent
@@ -870,12 +875,12 @@ CREATE TABLE IF NOT EXISTS task_queue (
   intent_channel TEXT,         -- For 'notification' intent ('push' | 'email' | 'in-app')
   intent_improve_type TEXT,    -- For 'improvement' intent
   intent_improve_target TEXT,  -- For 'improvement' intent
-  
+
   -- Execution state
   priority INTEGER DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'blocked' | 'ready' | 'running' | 'completed' | 'failed'
   error_message TEXT,
-  
+
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   scheduled_at TIMESTAMPTZ,    -- When task became ready
@@ -939,43 +944,43 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 
 ### 8.1 Functional Metrics
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Trait update latency | <100 µs p99 | Performance tests |
-| Solution archive query | <10 ms p99 | Query benchmarks |
-| Calibration error | <0.15 avg | Per-domain |predicted - observed| |
-| Background improvement yield | >10% best solutions improved | Archive delta |
-| Strategy evolution diversity | >5 active strategies | Population size |
+| Metric                       | Target                       | Measurement       |
+| ---------------------------- | ---------------------------- | ----------------- | -------------------- | --- |
+| Trait update latency         | <100 µs p99                  | Performance tests |
+| Solution archive query       | <10 ms p99                   | Query benchmarks  |
+| Calibration error            | <0.15 avg                    | Per-domain        | predicted - observed |     |
+| Background improvement yield | >10% best solutions improved | Archive delta     |
+| Strategy evolution diversity | >5 active strategies         | Population size   |
 
 ### 8.2 Quality Metrics
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Code quality improvement | +15% elegance score | Before/after LLM assessment |
-| Task success rate | +10% over baseline | Success/total tasks |
-| User satisfaction | 4.0+ / 5.0 | Feedback on personality settings |
-| Skill coverage | 80% domains practiced monthly | Skill table staleness |
+| Metric                   | Target                        | Measurement                      |
+| ------------------------ | ----------------------------- | -------------------------------- |
+| Code quality improvement | +15% elegance score           | Before/after LLM assessment      |
+| Task success rate        | +10% over baseline            | Success/total tasks              |
+| User satisfaction        | 4.0+ / 5.0                    | Feedback on personality settings |
+| Skill coverage           | 80% domains practiced monthly | Skill table staleness            |
 
 ### 8.3 Operational Metrics
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Background improvement CPU | <5% idle usage | Process monitoring |
-| Solution archive growth | <100 MB/month/user | Storage metrics |
-| Strategy population stability | <20% churn/week | Generation tracking |
+| Metric                        | Target             | Measurement         |
+| ----------------------------- | ------------------ | ------------------- |
+| Background improvement CPU    | <5% idle usage     | Process monitoring  |
+| Solution archive growth       | <100 MB/month/user | Storage metrics     |
+| Strategy population stability | <20% churn/week    | Generation tracking |
 
 ---
 
 ## 9. Risks & Mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| Performance regression | Medium | High | Strict budget enforcement, performance tests per trait |
-| Over-engineering solutions | Medium | Medium | Aesthetics trait bounds, user feedback integration |
-| Background improvement resource drain | Medium | Medium | Interruptible flag, strict budget limits, idle detection |
-| Strategy population collapse | Low | High | Elite preservation, crossover diversity |
-| Calibration drift | Low | Medium | Periodic recalibration triggers, confidence decay |
-| User confusion with many traits | Medium | Low | Presets, sensible defaults, progressive disclosure UI |
+| Risk                                  | Likelihood | Impact | Mitigation                                               |
+| ------------------------------------- | ---------- | ------ | -------------------------------------------------------- |
+| Performance regression                | Medium     | High   | Strict budget enforcement, performance tests per trait   |
+| Over-engineering solutions            | Medium     | Medium | Aesthetics trait bounds, user feedback integration       |
+| Background improvement resource drain | Medium     | Medium | Interruptible flag, strict budget limits, idle detection |
+| Strategy population collapse          | Low        | High   | Elite preservation, crossover diversity                  |
+| Calibration drift                     | Low        | Medium | Periodic recalibration triggers, confidence decay        |
+| User confusion with many traits       | Medium     | Low    | Presets, sensible defaults, progressive disclosure UI    |
 
 ---
 
@@ -1017,13 +1022,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-1.1]** As ALFRED, I have a typed personality structure so that trait values are validated at compile time
-  
+
   **Acceptance Criteria**:
   - All 9 trait interfaces defined in `@alfred/type/personality`
   - Branded `TraitValue` type with [0,1] validation
   - Complete `Personality` composite type
   - Type guards for runtime validation
-  
+
   **Tasks**:
   - [TASK-1.1.1] Create `packages/type/src/personality.ts` with core trait types
   - [TASK-1.1.2] Add supporting types (Goal, Objective, EvaluationStage, etc.)
@@ -1031,12 +1036,12 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-1.1.4] Write type tests validating branded types
 
 - **[STORY-1.2]** As ALFRED, I can create default personality state so that new users start with sensible trait values
-  
+
   **Acceptance Criteria**:
   - `defaultPersonality(now)` factory function
   - All traits have documented default values
   - Defaults match PRD specifications
-  
+
   **Tasks**:
   - [TASK-1.2.1] Create `packages/cognitive/src/personality.ts` with defaults
   - [TASK-1.2.2] Add unit tests for default creation
@@ -1055,13 +1060,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-2.1]** As ALFRED, I persist personality configuration so that trait values survive across sessions
-  
+
   **Acceptance Criteria**:
   - `user_personality` table with all trait columns
   - Supporting tables: `user_goals`, `user_objectives`, `confidence_calibration`
   - Drizzle schema mirrors DB exactly
   - Repository with CRUD operations
-  
+
   **Tasks**:
   - [TASK-2.1.1] Create migration `NNNN_personality.sql` with all tables
   - [TASK-2.1.2] Create `packages/db/src/schema/personality.ts` with Drizzle schema
@@ -1069,12 +1074,12 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-2.1.4] Write repo integration tests
 
 - **[STORY-2.2]** As ALFRED, I store solution archive for MAP-Elites so that diverse solutions persist across sessions
-  
+
   **Acceptance Criteria**:
   - `solution_archive` table with behavioral cell indexing
   - `strategy_templates` table with fitness tracking
   - Efficient queries for cell-based sampling
-  
+
   **Tasks**:
   - [TASK-2.2.1] Add `solution_archive` and `strategy_templates` to migration
   - [TASK-2.2.2] Add to Drizzle schema
@@ -1094,13 +1099,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-3.1]** As ALFRED, I can update individual traits so that personality evolves based on events
-  
+
   **Acceptance Criteria**:
   - `updatePersonality(now, current, event)` pure function
   - Event types for each trait update scenario
   - All updates <100µs
   - Updates are deterministic
-  
+
   **Tasks**:
   - [TASK-3.1.1] Define `PersonalityEvent` discriminated union
   - [TASK-3.1.2] Implement `updatePersonality` switch on event type
@@ -1109,12 +1114,12 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-3.1.5] Write performance budget tests
 
 - **[STORY-3.2]** As ALFRED, trait interactions regulate behavior so that high frustration dampens exploration
-  
+
   **Acceptance Criteria**:
   - `computeEffectiveTraits(personality, physiology)` function
   - 7 documented trait interactions
   - Effective values derived, not mutated
-  
+
   **Tasks**:
   - [TASK-3.2.1] Implement trait interaction matrix
   - [TASK-3.2.2] Implement `computeEffectiveTraits` applying interactions
@@ -1122,12 +1127,12 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-3.2.4] Document interaction effects
 
 - **[STORY-3.3]** As ALFRED, I can track domain confidence so that I know where I'm calibrated vs uncertain
-  
+
   **Acceptance Criteria**:
   - `updateCalibration(domain, predicted, actual)` function
   - Calibration error computed as |predicted - observed|
   - Domain-specific accuracy tracking
-  
+
   **Tasks**:
   - [TASK-3.3.1] Create `packages/cognitive/src/calibration.ts`
   - [TASK-3.3.2] Implement Bayesian accuracy update
@@ -1147,13 +1152,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-4.1]** As ALFRED, I maintain diverse solutions via MAP-Elites so that I don't converge to local optima
-  
+
   **Acceptance Criteria**:
   - `SolutionPopulation` class with add/sample/prune
   - Behavioral cell computation from solution
   - Niche-based archiving (best per cell)
   - Island populations with migration
-  
+
   **Tasks**:
   - [TASK-4.1.1] Create `packages/cognitive/src/evolution.ts`
   - [TASK-4.1.2] Implement behavioral descriptor extraction
@@ -1162,13 +1167,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-4.1.5] Write evolution unit tests
 
 - **[STORY-4.2]** As ALFRED, I evaluate solutions progressively so that bad solutions fail fast
-  
+
   **Acceptance Criteria**:
   - `EvaluationCascade` with configurable stages
   - Stage-specific compute budgets
   - Early termination on stage failure
   - Result includes failed stage name
-  
+
   **Tasks**:
   - [TASK-4.2.1] Define `EvaluationStage` interface
   - [TASK-4.2.2] Implement `EvaluationCascade` runner
@@ -1188,13 +1193,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-5.1]** As ALFRED, I evolve prompting strategies so that effective approaches are reinforced
-  
+
   **Acceptance Criteria**:
   - `StrategyEvolver` class with select/mutate/crossover
   - Fitness-weighted selection (selection pressure tunable)
   - Template mutation via LLM
   - Elite preservation
-  
+
   **Tasks**:
   - [TASK-5.1.1] Create `packages/cognitive/src/strategy.ts`
   - [TASK-5.1.2] Implement fitness-proportionate selection
@@ -1215,13 +1220,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-6.1]** As ALFRED, I improve solutions during idle time so that I get better without user prompting
-  
+
   **Acceptance Criteria**:
   - Idle detection hooks into cognitive state machine
   - Activity selection based on trait priorities
   - Compute budget enforcement
   - Interruptible on user input
-  
+
   **Tasks**:
   - [TASK-6.1.1] Add idle detection to cognitive transition handler
   - [TASK-6.1.2] Implement activity selector
@@ -1230,13 +1235,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-6.1.5] Write background improvement integration tests
 
 - **[STORY-6.2]** As a user, I can trigger active improvement so that ALFRED optimizes specific targets on demand
-  
+
   **Acceptance Criteria**:
   - tRPC procedure to start improvement session
   - Progress tracking with breakthrough detection
   - Cancel capability
   - Results returned on completion
-  
+
   **Tasks**:
   - [TASK-6.2.1] Implement `triggerImprove` tRPC mutation
   - [TASK-6.2.2] Implement progress tracking
@@ -1257,13 +1262,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-7.1]** As a user, I can read and update personality traits via API so that UI can configure ALFRED
-  
+
   **Acceptance Criteria**:
   - `personality.get` returns full config
   - `personality.set` updates specific trait paths
   - `personality.reset` restores defaults
   - All procedures require authentication
-  
+
   **Tasks**:
   - [TASK-7.1.1] Create `packages/api/src/routers/personality.ts`
   - [TASK-7.1.2] Implement CRUD procedures
@@ -1272,12 +1277,12 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-7.1.5] Write router integration tests
 
 - **[STORY-7.2]** As a user, I can view calibration and skill stats so that I understand ALFRED's competence
-  
+
   **Acceptance Criteria**:
   - `personality.calibration` returns domain stats
   - `personality.skills` returns skill inventory
   - `personality.strategies` returns strategy population
-  
+
   **Tasks**:
   - [TASK-7.2.1] Implement calibration query procedure
   - [TASK-7.2.2] Implement skills query procedure
@@ -1297,13 +1302,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-8.1]** As a user, I can view and adjust personality traits so that I customize ALFRED's behavior
-  
+
   **Acceptance Criteria**:
   - Settings panel at `/settings/personality`
   - Grouped trait sections
   - TraitSlider components for [0,1] values
   - Real-time persistence
-  
+
   **Tasks**:
   - [TASK-8.1.1] Create `/settings/personality` route
   - [TASK-8.1.2] Create TraitSlider component
@@ -1312,12 +1317,12 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-8.1.5] Write UI component tests
 
 - **[STORY-8.2]** As a user, I can select personality presets so that I quickly configure common profiles
-  
+
   **Acceptance Criteria**:
   - Preset definitions: Balanced, Explorer, Expert, Speed
   - One-click apply
   - Preview before apply
-  
+
   **Tasks**:
   - [TASK-8.2.1] Define preset configurations
   - [TASK-8.2.2] Create PresetSelector component
@@ -1326,12 +1331,12 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-8.2.5] Write preset UI tests
 
 - **[STORY-8.3]** As a user, I can view calibration and improvement stats so that I understand ALFRED's learning
-  
+
   **Acceptance Criteria**:
   - CalibrationChart showing accuracy vs predicted
   - ImprovementProgress real-time display
   - StrategyPopulation table with lineage
-  
+
   **Tasks**:
   - [TASK-8.3.1] Create CalibrationChart component
   - [TASK-8.3.2] Create ImprovementProgress component
@@ -1352,13 +1357,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
 **Stories**:
 
 - **[STORY-9.1]** As a user, I can set reminders that trigger workflows so that scheduled tasks execute automatically
-  
+
   **Acceptance Criteria**:
   - Reminder fires → workflow starts automatically
   - Intent parsed from reminder metadata (`intent_type`, `intent_data`)
   - Notification fallback if workflow execution fails
   - Metrics tracked for reminder-to-workflow conversions
-  
+
   **Tasks**:
   - [TASK-9.1.1] Add `intent_type`, `intent_data` columns to `assistant_reminders` (migration)
   - [TASK-9.1.2] Create `parseIntent()` in `packages/api/src/scheduler/remind.ts`
@@ -1367,13 +1372,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-9.1.5] Write reminder-to-workflow integration tests
 
 - **[STORY-9.2]** As ALFRED, I process queued tasks during idle time so that deferred work completes automatically
-  
+
   **Acceptance Criteria**:
   - Idle detection triggers task queue check before improvement activities
   - Tasks processed in priority order (highest first)
   - Budget shared between task processing and improvement
   - Interruptible on user input
-  
+
   **Tasks**:
   - [TASK-9.2.1] Create `task_queue` table (migration)
   - [TASK-9.2.2] Create `packages/db/src/repo/queue.ts` with CRUD operations
@@ -1382,13 +1387,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-9.2.5] Write idle-time queue processing tests
 
 - **[STORY-9.3]** As a user, I can queue tasks with dependencies so that sequential workflows execute in order
-  
+
   **Acceptance Criteria**:
   - Task can specify `blockedBy` referencing another task
   - Blocked tasks have status `blocked` until dependency completes
   - Completion of a task triggers status update of dependents to `ready`
   - Circular dependency detection on task creation
-  
+
   **Tasks**:
   - [TASK-9.3.1] Add `trigger_blocked_by` FK and dependency validation to repo
   - [TASK-9.3.2] Implement `unblockDependents()` called on task completion
@@ -1397,13 +1402,13 @@ ALTER TABLE assistant_reminders ADD COLUMN IF NOT EXISTS intent_data JSONB;
   - [TASK-9.3.5] Write dependency chain integration tests
 
 - **[STORY-9.4]** As a user, I can set recurring tasks so that periodic workflows execute automatically
-  
+
   **Acceptance Criteria**:
   - Task can specify `trigger_cron` for recurring schedule
   - After task completes, next occurrence is scheduled automatically
   - Cron parsing supports: daily, weekly, monthly, custom expressions
   - Skip if previous occurrence still running
-  
+
   **Tasks**:
   - [TASK-9.4.1] Add `parseCron()` utility using cron-parser library
   - [TASK-9.4.2] Implement `scheduleNext()` called on recurring task completion
@@ -1441,15 +1446,15 @@ EPIC-4    EPIC-5          EPIC-3 complete
 
 ## Milestone Timeline
 
-| Milestone | Epics | Target | Deliverable |
-|-----------|-------|--------|-------------|
-| M1: Foundation | EPIC-1, EPIC-2 | Week 2 | Types defined, DB schema migrated |
-| M2: Trait Engine | EPIC-3 | Week 4 | Trait updates working, calibration tracked |
-| M3: Evolution | EPIC-4, EPIC-5 | Week 6 | MAP-Elites + strategy evolution functional |
-| M4: Improvement | EPIC-6 | Week 8 | Background + active improvement working |
-| M5: Integration | EPIC-7, EPIC-9 | Week 10 | Full API + task queue operational |
-| M6: UI | EPIC-8 | Week 12 | Settings panel + queue UI complete |
-| M7: Polish | - | Week 13 | Performance optimization, documentation |
+| Milestone        | Epics          | Target  | Deliverable                                |
+| ---------------- | -------------- | ------- | ------------------------------------------ |
+| M1: Foundation   | EPIC-1, EPIC-2 | Week 2  | Types defined, DB schema migrated          |
+| M2: Trait Engine | EPIC-3         | Week 4  | Trait updates working, calibration tracked |
+| M3: Evolution    | EPIC-4, EPIC-5 | Week 6  | MAP-Elites + strategy evolution functional |
+| M4: Improvement  | EPIC-6         | Week 8  | Background + active improvement working    |
+| M5: Integration  | EPIC-7, EPIC-9 | Week 10 | Full API + task queue operational          |
+| M6: UI           | EPIC-8         | Week 12 | Settings panel + queue UI complete         |
+| M7: Polish       | -              | Week 13 | Performance optimization, documentation    |
 
 ---
 
@@ -1469,23 +1474,23 @@ EPIC-4    EPIC-5          EPIC-3 complete
 
 ## Surprises & Discoveries
 
-*To be filled during implementation*
+_To be filled during implementation_
 
 ---
 
 ## Decision Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2025-12-13 | Remove Amicability, Passion traits | No self-improvement value per AlphaEvolve analysis |
-| 2025-12-13 | Rename Willpower → Deliberation | Remove psychological framing, focus on compute allocation |
-| 2025-12-13 | Keep evolution inline in cognitive package | Not enough scope for separate package yet |
-| 2025-12-13 | Single-word file names | Per .ruler/01-naming-conventions.md |
-| 2025-12-13 | Add EPIC-9 Task Queuing | Capability analysis identified 4 gaps: reminder→workflow, idle processing, dependencies, recurring. Extends ImprovementTriggers infrastructure. |
-| 2025-12-13 | Separate task_queue table from assistant_reminders | Clean separation: reminders are notifications, tasks are executable intents. Allows complex dependency graphs. |
+| Date       | Decision                                           | Rationale                                                                                                                                       |
+| ---------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2025-12-13 | Remove Amicability, Passion traits                 | No self-improvement value per AlphaEvolve analysis                                                                                              |
+| 2025-12-13 | Rename Willpower → Deliberation                    | Remove psychological framing, focus on compute allocation                                                                                       |
+| 2025-12-13 | Keep evolution inline in cognitive package         | Not enough scope for separate package yet                                                                                                       |
+| 2025-12-13 | Single-word file names                             | Per .ruler/01-naming-conventions.md                                                                                                             |
+| 2025-12-13 | Add EPIC-9 Task Queuing                            | Capability analysis identified 4 gaps: reminder→workflow, idle processing, dependencies, recurring. Extends ImprovementTriggers infrastructure. |
+| 2025-12-13 | Separate task_queue table from assistant_reminders | Clean separation: reminders are notifications, tasks are executable intents. Allows complex dependency graphs.                                  |
 
 ---
 
 ## Outcomes & Retrospective
 
-*To be filled on completion*
+_To be filled on completion_

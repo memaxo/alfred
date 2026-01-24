@@ -9,72 +9,70 @@ Copy markdown
 You can use it to generate structured data and in tools.
 
 `jsonSchema` is an alternative to using Zod schemas that provides you with flexibility in dynamic situations (e.g. when using OpenAPI definitions) or for using other validation libraries.
-    
-    
+
     import { jsonSchema } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const mySchema = jsonSchema({
-    
+
       type: 'object',
-    
+
       properties: {
-    
+
         recipe: {
-    
+
           type: 'object',
-    
+
           properties: {
-    
+
             name: { type: 'string' },
-    
+
             ingredients: {
-    
+
               type: 'array',
-    
+
               items: {
-    
+
                 type: 'object',
-    
+
                 properties: {
-    
+
                   name: { type: 'string' },
-    
+
                   amount: { type: 'string' },
-    
+
                 },
-    
+
                 required: ['name', 'amount'],
-    
+
               },
-    
+
             },
-    
+
             steps: {
-    
+
               type: 'array',
-    
+
               items: { type: 'string' },
-    
+
             },
-    
+
           },
-    
+
           required: ['name', 'ingredients', 'steps'],
-    
+
         },
-    
+
       },
-    
+
       required: ['recipe'],
-    
+
     });
 
 ## Import
-    
-    
+
     import { jsonSchema } from "ai"
 
 ## API Signature

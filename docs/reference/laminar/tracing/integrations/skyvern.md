@@ -1,9 +1,10 @@
 ---
 title: Observability for Skyvern - Laminar documentation
-url: 
+url:
 description: Trace Skyvern's browser automation workflows and LLM calls with Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/skyvern#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -28,13 +29,13 @@ On this page
 - [Quickstart](https://docs.lmnr.ai/tracing/integrations/skyvern#quickstart)
 - [Viewing Traces](https://docs.lmnr.ai/tracing/integrations/skyvern#viewing-traces)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/skyvern\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/skyvern#overview) Overview
 
 [Skyvern](https://github.com/Skyvern-AI/skyvern) is an open-source browser automation framework that uses LLMs and Computer Vision to automate browser-based workflows.Laminar provides comprehensive instrumentation of Skyvern with all core functions being traced automatically. This includes full browser session recordings that capture every interaction, making it immensely valuable for debugging failed workflows and evaluating automation performance.
 
 Laminar excels at tracing AI-powered browser automation by providing visibility into LLM decision-making processes, browser interaction outcomes, and complete session recordings synchronized with execution steps.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/skyvern\#quickstart)  Quickstart
+## [​](https://docs.lmnr.ai/tracing/integrations/skyvern#quickstart) Quickstart
 
 To trace Skyvern workflows with Laminar, **initialize Laminar and configure LiteLLM callbacks at the top of your project**. This will automatically capture all LLM calls, browser session recordings, and workflow execution details.
 
@@ -70,7 +71,7 @@ if __name__ == "__main__":
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/integrations/skyvern\#viewing-traces)  Viewing Traces
+## [​](https://docs.lmnr.ai/tracing/integrations/skyvern#viewing-traces) Viewing Traces
 
 You can view traces in the Laminar UI by navigating to the traces tab in your project. When you select a trace, you can see:
 

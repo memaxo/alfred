@@ -1,9 +1,10 @@
 ---
 title: Finding tests – Test runner | Bun Docs
-url: 
+url:
 description: Learn how the test runner discovers tests
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 bun test's file discovery mechanism determines which files to run as tests. Understanding how it works helps you structure your test files effectively.
 
-## [Default Discovery Logic](https://bun.com/docs/test/discovery\#default-discovery-logic)
+## [Default Discovery Logic](https://bun.com/docs/test/discovery#default-discovery-logic)
 
 By default, `bun test` recursively searches the project directory for files that match specific patterns:
 
@@ -63,7 +64,7 @@ By default, `bun test` recursively searches the project directory for files that
 - `*.spec.{js|jsx|ts|tsx}` \- Files ending with `.spec.js`, `.spec.jsx`, `.spec.ts`, or `.spec.tsx`
 - `*_spec.{js|jsx|ts|tsx}` \- Files ending with `_spec.js`, `_spec.jsx`, `_spec.ts`, or `_spec.tsx`
 
-## [Exclusions](https://bun.com/docs/test/discovery\#exclusions)
+## [Exclusions](https://bun.com/docs/test/discovery#exclusions)
 
 By default, Bun test ignores:
 
@@ -71,9 +72,9 @@ By default, Bun test ignores:
 - Hidden directories (those starting with a period `.`)
 - Files that don't have JavaScript-like extensions (based on available loaders)
 
-## [Customizing Test Discovery](https://bun.com/docs/test/discovery\#customizing-test-discovery)
+## [Customizing Test Discovery](https://bun.com/docs/test/discovery#customizing-test-discovery)
 
-### [Position Arguments as Filters](https://bun.com/docs/test/discovery\#position-arguments-as-filters)
+### [Position Arguments as Filters](https://bun.com/docs/test/discovery#position-arguments-as-filters)
 
 You can filter which test files run by passing additional positional arguments to `bun test`:
 
@@ -91,7 +92,7 @@ bun test utils
 
 This would match files like `src/utils/string.test.ts` and `lib/utils/array_test.js`.
 
-### [Specifying Exact File Paths](https://bun.com/docs/test/discovery\#specifying-exact-file-paths)
+### [Specifying Exact File Paths](https://bun.com/docs/test/discovery#specifying-exact-file-paths)
 
 To run a specific file in the test runner, make sure the path starts with `./` or `/` to distinguish it from a filter name:
 
@@ -99,7 +100,7 @@ To run a specific file in the test runner, make sure the path starts with `./` o
 bun test ./test/specific-file.test.ts
 ```
 
-### [Filter by Test Name](https://bun.com/docs/test/discovery\#filter-by-test-name)
+### [Filter by Test Name](https://bun.com/docs/test/discovery#filter-by-test-name)
 
 To filter tests by name rather than file path, use the `-t`/ `--test-name-pattern` flag with a regex pattern:
 
@@ -126,7 +127,7 @@ describe("Math", () => {
 
 Would be matched against the string "Math operations should add correctly".
 
-### [Changing the Root Directory](https://bun.com/docs/test/discovery\#changing-the-root-directory)
+### [Changing the Root Directory](https://bun.com/docs/test/discovery#changing-the-root-directory)
 
 By default, Bun looks for test files starting from the current working directory. You can change this with the `root` option in your `bunfig.toml`:
 
@@ -136,7 +137,7 @@ root = "src"  # Only scan for tests in the src directory
 
 ```
 
-## [Execution Order](https://bun.com/docs/test/discovery\#execution-order)
+## [Execution Order](https://bun.com/docs/test/discovery#execution-order)
 
 Tests are run in the following order:
 
@@ -149,7 +150,7 @@ Runtime behavior](https://bun.com/docs/test/runtime-behavior) [Next\\
 \\
 DOM testing](https://bun.com/docs/test/dom)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/discovery.md)
 
@@ -173,7 +174,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

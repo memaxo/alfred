@@ -1,9 +1,10 @@
 ---
 title: Grouping traces together using sessions - Laminar documentation
-url: 
+url:
 description: Group related traces together using sessions
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/session#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -32,7 +33,7 @@ On this page
 - [Chatbot Conversations](https://docs.lmnr.ai/tracing/structure/session#chatbot-conversations)
 - [Multi-step Workflows](https://docs.lmnr.ai/tracing/structure/session#multi-step-workflows)
 
-## [​](https://docs.lmnr.ai/tracing/structure/session\#what-are-sessions%3F)  What Are Sessions?
+## [​](https://docs.lmnr.ai/tracing/structure/session#what-are-sessions%3F) What Are Sessions?
 
 Sessions in Laminar provide a way to group related traces together. This is particularly useful for:
 
@@ -43,14 +44,13 @@ Sessions in Laminar provide a way to group related traces together. This is part
 
 For example, in a conversational agent, each turn in the conversation might be represented as a trace, while the entire conversation would be a session.
 
-## [​](https://docs.lmnr.ai/tracing/structure/session\#creating-sessions)  Creating Sessions
+## [​](https://docs.lmnr.ai/tracing/structure/session#creating-sessions) Creating Sessions
 
 You can associate a trace with a session using the following methods:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Use the `Laminar.setTraceSessionId` function inside a span context:
 
@@ -73,14 +73,13 @@ await observe({ name: "myFunction" }, async () => {
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/session\#alternative%3A-setting-session-id-with-observe)  Alternative: Setting Session ID with Observe
+## [​](https://docs.lmnr.ai/tracing/structure/session#alternative%3A-setting-session-id-with-observe) Alternative: Setting Session ID with Observe
 
 You can also set the session ID directly when using the `observe` decorator/wrapper:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -100,7 +99,7 @@ await observe(
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/session\#viewing-sessions)  Viewing Sessions
+## [​](https://docs.lmnr.ai/tracing/structure/session#viewing-sessions) Viewing Sessions
 
 To view sessions in the Laminar UI:
 
@@ -114,9 +113,9 @@ Each trace within a session contains the same information as a standalone trace:
 
 ![A trace in a session](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/images/traces/trace-in-session.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=74a2f70cd5af4e0733f50d0a32deae89)
 
-## [​](https://docs.lmnr.ai/tracing/structure/session\#use-cases)  Use Cases
+## [​](https://docs.lmnr.ai/tracing/structure/session#use-cases) Use Cases
 
-### [​](https://docs.lmnr.ai/tracing/structure/session\#chatbot-conversations)  Chatbot Conversations
+### [​](https://docs.lmnr.ai/tracing/structure/session#chatbot-conversations) Chatbot Conversations
 
 For a chatbot, each user message and response can be a separate trace, with the entire conversation as a session:
 
@@ -132,7 +131,7 @@ def handle_turn(user_message, conversation_id):
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/session\#multi-step-workflows)  Multi-step Workflows
+### [​](https://docs.lmnr.ai/tracing/structure/session#multi-step-workflows) Multi-step Workflows
 
 For complex workflows spanning multiple API calls:
 

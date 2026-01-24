@@ -56,12 +56,14 @@
 ### Final Statistics
 
 **Priority Distribution**:
+
 - Urgent: 2 tickets
 - High: 4 tickets
 - Medium: 197 tickets
 - Low: 13 tickets
 
 **Size Distribution**:
+
 - 1 point: 1 ticket
 - 2 points: 74 tickets
 - 3 points: 72 tickets
@@ -70,23 +72,27 @@
 - 13 points: 13 tickets (epics - should be broken down)
 
 **Status Corrections**:
+
 - 2 tickets updated to Done (ALF-12, ALF-72)
 
 ## Implementation Details
 
 ### Script Used
+
 - `scripts/size-linear-tickets.ts`
 - GraphQL API integration
 - Batch processing with rate limiting
 - Automatic stateId lookup for status updates
 
 ### API Integration
+
 - Used Linear GraphQL API directly
 - Loaded API key from `.env` file
 - Applied updates in batches of 50
 - Rate limiting: 2-second delay between batches
 
 ### Verification
+
 - ALF-12: Verified escalation handling in `packages/runtime/src/orchestrator/index.ts:43-51`
 - ALF-72: Verified home tool in `packages/agent/assistant/src/tool/home.ts` (307 lines)
 

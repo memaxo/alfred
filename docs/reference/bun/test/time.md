@@ -1,9 +1,10 @@
 ---
 title: Dates and times – Test runner | Bun Docs
-url: 
+url:
 description: Control the date & time in your tests for more reliable and deterministic tests
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -62,7 +63,7 @@ This works with any of the following:
 
 Timers are not impacted yet, but may be in a future release of Bun.
 
-## [`setSystemTime`](https://bun.com/docs/test/time\#setsystemtime)
+## [`setSystemTime`](https://bun.com/docs/test/time#setsystemtime)
 
 To change the system time, use `setSystemTime`:
 
@@ -109,7 +110,7 @@ test("unlike in jest", () => {
 
 **Timers** — Note that we have not implemented builtin support for mocking timers yet, but this is on the roadmap.
 
-### [Reset the system time](https://bun.com/docs/test/time\#reset-the-system-time)
+### [Reset the system time](https://bun.com/docs/test/time#reset-the-system-time)
 
 To reset the system time, pass no arguments to `setSystemTime`:
 
@@ -129,7 +130,7 @@ test("it was 2020, for a moment.", () => {
 
 ```
 
-## [Get mocked time with `jest.now()`](https://bun.com/docs/test/time\#get-mocked-time-with-jest-now)
+## [Get mocked time with `jest.now()`](https://bun.com/docs/test/time#get-mocked-time-with-jest-now)
 
 When you're using mocked time (with `setSystemTime` or `useFakeTimers`), you can use `jest.now()` to get the current mocked timestamp:
 
@@ -150,7 +151,7 @@ test("get the current mocked time", () => {
 
 This is useful when you need to access the mocked time directly without creating a new Date object.
 
-## [Set the time zone](https://bun.com/docs/test/time\#set-the-time-zone)
+## [Set the time zone](https://bun.com/docs/test/time#set-the-time-zone)
 
 By default, the time zone for all `bun test` runs is set to UTC ( `Etc/UTC`) unless overridden. To change the time zone, either pass the `$TZ` environment variable to `bun test`.
 
@@ -189,7 +190,7 @@ Snapshots](https://bun.com/docs/test/snapshots) [Next\\
 \\
 Code coverage](https://bun.com/docs/test/coverage)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/time.md)
 
@@ -213,7 +214,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

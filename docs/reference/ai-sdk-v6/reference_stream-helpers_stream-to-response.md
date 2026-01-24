@@ -13,71 +13,69 @@ This is useful to create data stream responses in environments that use `ServerR
 The status code and headers can be configured using the `options` parameter. By default, the status code is set to 200 and the Content-Type header is set to `text/plain; charset=utf-8`.
 
 ## Import
-    
-    
+
     import { streamToResponse } from "ai"
 
 ## Example
 
 You can e.g. use `streamToResponse` to pipe a data stream to a Node.js HTTP server response:
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { StreamData, streamText, streamToResponse } from 'ai';
-    
+
     import { createServer } from 'http';
-    
-    
-    
-    
+
+
+
+
     createServer(async (req, res) => {
-    
+
       const result = streamText({
-    
+
         model: openai('gpt-4.1'),
-    
+
         prompt: 'What is the weather in San Francisco?',
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       // use stream data
-    
+
       const data = new StreamData();
-    
-    
-    
-    
+
+
+
+
       data.append('initialized call');
-    
-    
-    
-    
+
+
+
+
       streamToResponse(
-    
+
         result.toAIStream({
-    
+
           onFinal() {
-    
+
             data.append('call completed');
-    
+
             data.close();
-    
+
           },
-    
+
         }),
-    
+
         res,
-    
+
         {},
-    
+
         data,
-    
+
       );
-    
+
     }).listen(8080);
 
 ## API Signature

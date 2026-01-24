@@ -89,10 +89,10 @@ Abstract base class for all TUI panels:
 export abstract class BasePanel {
   abstract id: string;
   abstract label: string;
-  
+
   abstract render(ctx: RenderContext): Renderable;
   abstract subscribe(): Unsubscriber;
-  
+
   init?(): void;
   onFocus?(): void;
   onBlur?(): void;
@@ -105,13 +105,13 @@ export abstract class BasePanel {
 
 Each major ALFRED domain has a dedicated panel module:
 
-| Domain | Files | Purpose |
-|--------|-------|---------|
+| Domain        | Files                                                    | Purpose                                 |
+| ------------- | -------------------------------------------------------- | --------------------------------------- |
 | **Cognitive** | `phase.ts`, `autonomy.ts`, `physiology.ts`, `history.ts` | Real-time cognitive state visualization |
-| **Workflow** | `active.ts`, `queue.ts`, `history.ts`, `controls.ts` | Workflow execution monitoring |
-| **Metrics** | `sparklines.ts`, `latency.ts`, `throughput.ts` | Performance metrics display |
-| **Voice** | `pools.ts`, `sessions.ts`, `latency.ts` | Voice pipeline status |
-| **Knowledge** | `stats.ts`, `search.ts`, `recent.ts` | Knowledge graph overview |
+| **Workflow**  | `active.ts`, `queue.ts`, `history.ts`, `controls.ts`     | Workflow execution monitoring           |
+| **Metrics**   | `sparklines.ts`, `latency.ts`, `throughput.ts`           | Performance metrics display             |
+| **Voice**     | `pools.ts`, `sessions.ts`, `latency.ts`                  | Voice pipeline status                   |
+| **Knowledge** | `stats.ts`, `search.ts`, `recent.ts`                     | Knowledge graph overview                |
 
 ### 5. Subscription Management (`src/tui/subscriptions/`)
 
@@ -128,6 +128,7 @@ export interface SubscriptionManager {
 ```
 
 Each domain gets:
+
 - **Store**: `create<Domain>Store()` - Local state cache
 - **Setup**: `setup<Domain>Subscription()` - Subscription configuration
 
@@ -135,11 +136,11 @@ Each domain gets:
 
 Supports three modes based on terminal width:
 
-| Mode | Width | Description |
-|------|-------|-------------|
-| **Focus** | < 80 cols | Single panel, full screen |
-| **Split** | 80-120 cols | Two panels side-by-side |
-| **Dashboard** | > 120 cols | Multi-panel grid layout |
+| Mode          | Width       | Description               |
+| ------------- | ----------- | ------------------------- |
+| **Focus**     | < 80 cols   | Single panel, full screen |
+| **Split**     | 80-120 cols | Two panels side-by-side   |
+| **Dashboard** | > 120 cols  | Multi-panel grid layout   |
 
 Layout engine in `src/tui/layout/engine.ts` implements flexbox-like sizing.
 
@@ -147,17 +148,17 @@ Layout engine in `src/tui/layout/engine.ts` implements flexbox-like sizing.
 
 Standard keybindings:
 
-| Key | Action | Context |
-|-----|--------|---------|
-| `q` | Quit | Global |
-| `ESC` | Back/Cancel | Modal, focus |
-| `Tab` | Next panel | Navigation |
-| `Shift+Tab` | Previous panel | Navigation |
-| `Enter` | Confirm | Input, selection |
-| `?` | Help | Global |
-| `/` | Search | Panels |
-| `:` | Command mode | Global |
-| `j/k` | Up/Down | Vim mode |
+| Key         | Action         | Context          |
+| ----------- | -------------- | ---------------- |
+| `q`         | Quit           | Global           |
+| `ESC`       | Back/Cancel    | Modal, focus     |
+| `Tab`       | Next panel     | Navigation       |
+| `Shift+Tab` | Previous panel | Navigation       |
+| `Enter`     | Confirm        | Input, selection |
+| `?`         | Help           | Global           |
+| `/`         | Search         | Panels           |
+| `:`         | Command mode   | Global           |
+| `j/k`       | Up/Down        | Vim mode         |
 
 Vim motions (`j`, `k`, `gg`, `G`) supported in scrollable panels.
 
@@ -179,12 +180,12 @@ knowledge: {
 
 ## Performance Targets
 
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Panel render | < 16ms | ✅ |
-| Full dashboard | < 100ms | ✅ |
-| Subscription update | < 50ms | ✅ |
-| Intro sequence | < 3s | ✅ |
+| Metric              | Target  | Actual |
+| ------------------- | ------- | ------ |
+| Panel render        | < 16ms  | ✅     |
+| Full dashboard      | < 100ms | ✅     |
+| Subscription update | < 50ms  | ✅     |
+| Intro sequence      | < 3s    | ✅     |
 
 ## File Structure
 
@@ -273,6 +274,32 @@ No automated E2E tests for TUI (terminal automation unreliable).
 3. **Live chat mode**: Terminal chat interface
 4. **Plugin system**: Third-party panels
 
+## Interactive Modes
+
+Beyond the dashboard, the TUI supports full-screen interactive modes:
+
+| Mode      | Context           | Keybinding | Purpose                            |
+| --------- | ----------------- | ---------- | ---------------------------------- |
+| **Chat**  | `modes/chat.tsx`  | `Ctrl+T`   | Real-time conversation with ALFRED |
+| **Debug** | `modes/debug.tsx` | `Ctrl+D`   | System diagnostics and logs        |
+| **Plan**  | `modes/plan.tsx`  | `Ctrl+P`   | Workflow plan review and execution |
+| **Help**  | `modes/help.tsx`  | `?`        | Keyboard shortcut reference        |
+
+### Chat Mode & MLX Integration
+
+Chat mode supports both cloud-based providers (via SSE) and local model execution (via MLX).
+
+- **Cloud Mode**: Connects to `/api/assistant` via Server-Sent Events (SSE). Supports GenUI and complex tool interactions.
+- **Local MLX Mode**: Connects directly to a `vllm-mlx` server running on the host machine. Leverages AI SDK `streamText` for optimized local inference on Apple Silicon.
+
+**Model Selection**: Press `Ctrl+M` in chat mode to open the model picker. Selection is saved across sessions.
+
+**MLX Setup**:
+
+1. Run `vllm-mlx serve` on the host.
+2. Set `VLLM_MLX_BASE_URL` (default: `http://localhost:8000/v1`).
+3. Select an MLX model in the TUI model picker.
+
 ## Related Documentation
 
 - [TUI Package Ideation](../execplans/tui-package-ideation.md) - Full implementation plan
@@ -309,16 +336,19 @@ react/
 ### Component Patterns
 
 **Text Elements**: Use `content` prop, not children:
+
 ```tsx
 <text content={dim("Loading...")} />
 ```
 
 **Layout Props**: Components accept `x`, `y`, `width`, `height` directly:
+
 ```tsx
 <box width={50} height={10} x={0} y={0} border title="Panel" />
 ```
 
 **Scrollable Content**: Wrap in `<scrollbox>`:
+
 ```tsx
 <scrollbox focused={focused}>
   <text content="Line 1" />
@@ -327,6 +357,7 @@ react/
 ```
 
 **Keyboard Handling**: Use `useKeyboard()` hook:
+
 ```tsx
 useKeyboard((event) => {
   if (event.name === "q") quit();
@@ -334,6 +365,7 @@ useKeyboard((event) => {
 ```
 
 **Store Integration**: Access via React hooks:
+
 ```tsx
 const store = useCognitiveStore();
 useEffect(() => {

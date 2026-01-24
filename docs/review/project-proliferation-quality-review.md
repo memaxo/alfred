@@ -15,6 +15,7 @@
 ### ✅ Critical Issues: None
 
 All files pass type checking:
+
 - No `any` types (except documented JSONB `as any` patterns)
 - No `@ts-ignore` or `@ts-expect-error` suppressions
 - Explicit return types on public functions
@@ -31,11 +32,13 @@ All files pass type checking:
 ### ✅ Structure
 
 **Functions:**
+
 - `project-lifecycle.ts`: `tick()` = 32 lines, `startProjectLifecycleScheduler()` = 38 lines ✓
 - `pattern-lifecycle.ts`: `tick()` = 18 lines, `startPatternLifecycleScheduler()` = 36 lines ✓
 - Router procedures: All under 50 lines ✓
 
 **Files:**
+
 - All files under 500 lines ✓
 - Single responsibility per function ✓
 - Nesting depth ≤ 3 levels ✓
@@ -49,15 +52,18 @@ All files pass type checking:
 ### ✅ Error Handling
 
 **Error Codes:**
+
 - `project_not_found`, `project_access_denied`, `linear_not_connected` ✓
 - Format: `<domain>_<reason>` ✓
 
 **Error Propagation:**
+
 - Async errors caught and wrapped appropriately ✓
 - No swallowed errors (empty catch blocks) ✓
 - User-facing errors don't expose internals ✓
 
 **Example from `project.ts`:**
+
 ```typescript
 try {
   const { linkLinearProject } = await import("@alfred/plan");
@@ -67,8 +73,7 @@ try {
 } catch (error) {
   throw new TRPCError({
     code: "BAD_REQUEST",
-    message:
-      error instanceof Error ? error.message : "linear_link_failed",
+    message: error instanceof Error ? error.message : "linear_link_failed",
   });
 }
 ```
@@ -172,5 +177,6 @@ function assertLinearSpaceId(space: string | null | undefined): string {
 - ✅ No blocking issues
 
 **Recommendations:**
+
 - Consider adding exponential backoff to scheduler error recovery (low priority)
 - Extract type guards for repeated validation patterns (low priority)

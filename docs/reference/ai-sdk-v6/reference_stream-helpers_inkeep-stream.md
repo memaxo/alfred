@@ -15,8 +15,7 @@ This works with the official Inkeep API, and it's supported in both Node.js, the
 ## Import
 
 ### React
-    
-    
+
     import { InkeepStream } from "ai"
 
 ## API Signature

@@ -1,9 +1,10 @@
 ---
 title: Transpiler – API | Bun Docs
-url: 
+url:
 description: Bun exposes its internal transpiler as a pluggable API.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -59,7 +60,7 @@ const transpiler = new Bun.Transpiler({
 
 ```
 
-## [`.transformSync()`](https://bun.com/docs/api/transpiler\#transformsync)
+## [`.transformSync()`](https://bun.com/docs/api/transpiler#transformsync)
 
 Transpile code synchronously with the `.transformSync()` method. Modules are not resolved and the code is not executed. The result is a string of vanilla JavaScript code.
 
@@ -117,7 +118,7 @@ When `.transformSync` is called, the transpiler is run in the same thread as the
 
 If a macro is used, it will be run in the same thread as the transpiler, but in a separate event loop from the rest of your application. Currently, globals between macros and regular code are shared, which means it is possible (but not recommended) to share states between macros and regular code. Attempting to use AST nodes outside of a macro is undefined behavior.
 
-## [`.transform()`](https://bun.com/docs/api/transpiler\#transform)
+## [`.transform()`](https://bun.com/docs/api/transpiler#transform)
 
 The `transform()` method is an async version of `.transformSync()` that returns a `Promise<string>`.
 
@@ -141,7 +142,7 @@ The `.transform()` method runs the transpiler in Bun's worker threadpool, so if 
 
 If your code uses a macro, it will potentially spawn a new copy of Bun's JavaScript runtime environment in that new thread.
 
-## [`.scan()`](https://bun.com/docs/api/transpiler\#scan)
+## [`.scan()`](https://bun.com/docs/api/transpiler#scan)
 
 The `Transpiler` instance can also scan some source code and return a list of its imports and exports, plus additional metadata about each one. [Type-only](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-8.html#type-only-imports-and-export) imports and exports are ignored.
 
@@ -203,7 +204,7 @@ Each import in the `imports` array has a `path` and `kind`. Bun categories impor
 - `import-rule`: `@import 'foo.css'`
 - `url-token`: `url('./foo.png')`
 
-## [`.scanImports()`](https://bun.com/docs/api/transpiler\#scanimports)
+## [`.scanImports()`](https://bun.com/docs/api/transpiler#scanimports)
 
 For performance-sensitive code, you can use the `.scanImports()` method to get a list of imports. It's faster than `.scan()` (especially for large files) but marginally less accurate due to some performance optimizations.
 
@@ -249,7 +250,7 @@ Results
 
 ```
 
-## [Reference](https://bun.com/docs/api/transpiler\#reference)
+## [Reference](https://bun.com/docs/api/transpiler#reference)
 
 ```
 type Loader = "jsx" | "js" | "ts" | "tsx";
@@ -351,7 +352,7 @@ Color](https://bun.com/docs/api/color) [Next\\
 \\
 Roadmap](https://bun.com/docs/project/roadmap)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/transpiler.md)
 
@@ -375,7 +376,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

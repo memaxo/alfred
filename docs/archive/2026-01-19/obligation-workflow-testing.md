@@ -106,31 +106,28 @@ it("triggers biometric obligation in workflow", async () => {
 **Note:** Requires PostgreSQL (`RUN_DB_TESTS=1`)
 
 ```typescript
-it.skipIf(!isUsingPostgres)(
-  "stores approval request in database",
-  async () => {
-    const { createApproval, getPendingApprovals } =
-      await import("@alfred/db/repo/policy");
+it.skipIf(!isUsingPostgres)("stores approval request in database", async () => {
+  const { createApproval, getPendingApprovals } =
+    await import("@alfred/db/repo/policy");
 
-    // Create an approval
-    const approval = await createApproval({
-      userId: "user-123",
-      action: "workflow.delete",
-      resource: { kind: "workflow", id: "123" },
-      traceId: "test-trace",
-      expiresAt: new Date(Date.now() + 300000), // 5 minutes
-    });
+  // Create an approval
+  const approval = await createApproval({
+    userId: "user-123",
+    action: "workflow.delete",
+    resource: { kind: "workflow", id: "123" },
+    traceId: "test-trace",
+    expiresAt: new Date(Date.now() + 300000), // 5 minutes
+  });
 
-    // Verify it was stored
-    expect(approval.status).toBe("pending");
-    expect(approval.id).toBeDefined();
+  // Verify it was stored
+  expect(approval.status).toBe("pending");
+  expect(approval.id).toBeDefined();
 
-    // Retrieve pending approvals
-    const pending = await getPendingApprovals("user-123");
-    expect(pending.length).toBeGreaterThanOrEqual(1);
-    expect(pending[0]?.id).toBe(approval.id);
-  }
-);
+  // Retrieve pending approvals
+  const pending = await getPendingApprovals("user-123");
+  expect(pending.length).toBeGreaterThanOrEqual(1);
+  expect(pending[0]?.id).toBe(approval.id);
+});
 ```
 
 ### Pattern 3: Test approval/deny actions
@@ -138,25 +135,23 @@ it.skipIf(!isUsingPostgres)(
 **Note:** Requires PostgreSQL (`RUN_DB_TESTS=1`)
 
 ```typescript
-it.skipIf(!isUsingPostgres)(
-  "approves pending request",
-  async () => {
-    const { createApproval, approveApproval } = await import("@alfred/db/repo/policy");
+it.skipIf(!isUsingPostgres)("approves pending request", async () => {
+  const { createApproval, approveApproval } =
+    await import("@alfred/db/repo/policy");
 
-    // Create approval
-    const approval = await createApproval({
-      userId: "user-123",
-      action: "workflow.delete",
-      resource: { kind: "workflow", id: "123" },
-      traceId: "approve-trace",
-    });
+  // Create approval
+  const approval = await createApproval({
+    userId: "user-123",
+    action: "workflow.delete",
+    resource: { kind: "workflow", id: "123" },
+    traceId: "approve-trace",
+  });
 
-    // Approve it
-    const approved = await approveApproval(approval.id, "admin-456");
-    expect(approved?.status).toBe("approved");
-    expect(approved?.approvedBy).toBe("admin-456");
-  }
-);
+  // Approve it
+  const approved = await approveApproval(approval.id, "admin-456");
+  expect(approved?.status).toBe("approved");
+  expect(approved?.approvedBy).toBe("admin-456");
+});
 ```
 
 ### Pattern 4: Test timeout handling
@@ -164,34 +159,32 @@ it.skipIf(!isUsingPostgres)(
 **Note:** Requires PostgreSQL (`RUN_DB_TESTS=1`)
 
 ```typescript
-it.skipIf(!isUsingPostgres)(
-  "expires obligations after timeout",
-  async () => {
-    const { createApproval, expireApprovals } = await import("@alfred/db/repo/policy");
+it.skipIf(!isUsingPostgres)("expires obligations after timeout", async () => {
+  const { createApproval, expireApprovals } =
+    await import("@alfred/db/repo/policy");
 
-    // Create approval that expires soon
-    const approval = await createApproval({
-      userId: "timeout-user",
-      action: "workflow.delete",
-      resource: { kind: "workflow", id: "123" },
-      traceId: "timeout-trace",
-      // Expired 1 second ago
-      expiresAt: new Date(Date.now() - 1000),
-    });
+  // Create approval that expires soon
+  const approval = await createApproval({
+    userId: "timeout-user",
+    action: "workflow.delete",
+    resource: { kind: "workflow", id: "123" },
+    traceId: "timeout-trace",
+    // Expired 1 second ago
+    expiresAt: new Date(Date.now() - 1000),
+  });
 
-    // Run expiration worker
-    const expired = await expireApprovals();
+  // Run expiration worker
+  const expired = await expireApprovals();
 
-    // Verify approval was expired
-    expect(expired.some((e) => e.id === approval.id)).toBe(true);
+  // Verify approval was expired
+  expect(expired.some((e) => e.id === approval.id)).toBe(true);
 
-    // Check final status
-    const { getApproval } = await import("@alfred/db/repo/policy");
-    const retrieved = await getApproval(approval.id);
-    expect(retrieved?.status).toBe("expired");
-    expect(retrieved?.approvedBy).toBe("system");
-  }
-);
+  // Check final status
+  const { getApproval } = await import("@alfred/db/repo/policy");
+  const retrieved = await getApproval(approval.id);
+  expect(retrieved?.status).toBe("expired");
+  expect(retrieved?.approvedBy).toBe("system");
+});
 ```
 
 ## Obligation Error Structure
@@ -218,6 +211,7 @@ When an obligation blocks an operation, the error includes:
 ```
 
 Required fields for good error messages:
+
 - **type**: The obligation type (`"biometric"`, `"human"`, custom)
 - **reason**: Why the obligation exists
 - **metadata**: Context about when/why needed

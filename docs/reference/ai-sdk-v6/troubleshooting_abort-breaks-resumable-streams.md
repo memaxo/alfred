@@ -7,21 +7,20 @@ Copy markdown
 ## Issue
 
 When using `useChat` with `resume: true` for stream resumption, the abort functionality breaks. Closing a tab, refreshing the page, or calling the `stop()` function will trigger an abort signal that interferes with the resumption mechanism, preventing streams from being properly resumed.
-    
-    
+
     // This configuration will cause conflicts
-    
+
     const { messages, stop } = useChat({
-    
+
       id: chatId,
-    
+
       resume: true, // Stream resumption enabled
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     // Closing the tab will trigger abort and stop resumption
 
 ## Background
@@ -35,33 +34,31 @@ We're aware of this incompatibility and are exploring solutions. **In the meanti
 ### Option 1: Use stream resumption without abort
 
 If you need to support long-running generations that persist across page reloads:
-    
-    
+
     const { messages, sendMessage } = useChat({
-    
+
       id: chatId,
-    
+
       resume: true,
-    
+
     });
 
 ### Option 2: Use abort without stream resumption
 
 If you need to allow users to stop streams manually:
-    
-    
+
     const { messages, sendMessage, stop } = useChat({
-    
+
       id: chatId,
-    
+
       resume: false, // Disable stream resumption (default behaviour)
-    
+
     });
 
 ## Related
 
-  * Chatbot Resume Streams
-  * Stopping Streams
+- Chatbot Resume Streams
+- Stopping Streams
 
 Previous
 

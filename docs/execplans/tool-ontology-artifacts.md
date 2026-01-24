@@ -41,7 +41,7 @@ Run any workflow execution that creates an AgentFS workspace and has a `userId`.
 This plan’s main “surprise” is that most of what we wanted is already present, just not surfaced as a readable file:
 
 - Observation: MCP tools are already loaded via `packages/agent/src/mcp.ts` and merged into tool maps in `apps/web/src/lib/api/stream-handler.ts`.
-  Implication: We should reuse this loader and add a *status report* export rather than inventing a new MCP subsystem.
+  Implication: We should reuse this loader and add a _status report_ export rather than inventing a new MCP subsystem.
 
 - Observation: Workflow runs already create an AgentFS workspace (`packages/runtime/src/orchestrator/agent.ts` via `WorkspaceFactory.create(...)`) that can write files and record tool calls.
   Implication: If we write a status file, do it where we already have `workspaceEnv` + `userId` (the workflow boundary), not inside individual tools.
@@ -166,6 +166,7 @@ Run:
     bun test packages/agent/
 
 Expected:
+
 - New tests pass.
 - Existing MCP tests still pass (because `loadMcpTools` behavior is preserved).
 

@@ -1,9 +1,10 @@
 ---
 title: Better Auth Fastify Integration Guide | Better Auth
-url: 
+url:
 description: Learn how to seamlessly integrate Better Auth with your Fastify application.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,7 +31,7 @@ This guide provides step-by-step instructions for configuring both essential han
 
 A configured Better Auth instance is required before proceeding. If you haven't set this up yet, please consult our [Installation Guide](https://www.better-auth.com/docs/installation).
 
-### [Prerequisites](https://www.better-auth.com/docs/integrations/fastify\#prerequisites)
+### [Prerequisites](https://www.better-auth.com/docs/integrations/fastify#prerequisites)
 
 Verify the following requirements before integration:
 
@@ -40,11 +41,6 @@ Verify the following requirements before integration:
   - TypeScript `tsconfig.json`: `{ "module": "ESNext" }`
 - **Fastify Dependencies**:
 
-
-
-
-
-
 npm
 
 pnpm
@@ -53,26 +49,13 @@ yarn
 
 bun
 
-
-
-
-
-
-
-
-
-
-
-
-
 ```
 npm install fastify @fastify/cors
 ```
 
-
 For TypeScript: Ensure your `tsconfig.json` includes `"esModuleInterop": true` for optimal compatibility.
 
-### [Authentication Handler Setup](https://www.better-auth.com/docs/integrations/fastify\#authentication-handler-setup)
+### [Authentication Handler Setup](https://www.better-auth.com/docs/integrations/fastify#authentication-handler-setup)
 
 Configure Better Auth to process authentication requests by creating a catch-all route:
 
@@ -134,7 +117,7 @@ fastify.listen({ port: 4000 }, (err) => {
 });
 ```
 
-### [Trusted origins](https://www.better-auth.com/docs/integrations/fastify\#trusted-origins)
+### [Trusted origins](https://www.better-auth.com/docs/integrations/fastify#trusted-origins)
 
 When a request is made from a different origin, the request will be blocked by default. You can add trusted origins to the `auth` instance.
 
@@ -144,7 +127,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Configuring CORS](https://www.better-auth.com/docs/integrations/fastify\#configuring-cors)
+### [Configuring CORS](https://www.better-auth.com/docs/integrations/fastify#configuring-cors)
 
 Secure your API endpoints with proper CORS configuration:
 

@@ -1,9 +1,10 @@
 ---
 title: Global cache – Package manager | Bun Docs
-url: 
+url:
 description: Bun's package manager installs all packages into a shared global cache to avoid redundant re-downloads.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -70,7 +71,7 @@ disableManifest = false
 
 ```
 
-## [Minimizing re-downloads](https://bun.com/docs/install/cache\#minimizing-re-downloads)
+## [Minimizing re-downloads](https://bun.com/docs/install/cache#minimizing-re-downloads)
 
 Bun strives to avoid re-downloading packages multiple times. When installing a package, if the cache already contains a version in the range specified by `package.json`, Bun will use the cached package instead of downloading it again.
 
@@ -82,11 +83,11 @@ When the `node_modules` folder exists, before installing, Bun checks that `node_
 
 If a package is missing or has a version incompatible with the `package.json`, Bun checks for a compatible module in the cache. If found, it is installed into `node_modules`. Otherwise, the package will be downloaded from the registry then installed.
 
-## [Fast copying](https://bun.com/docs/install/cache\#fast-copying)
+## [Fast copying](https://bun.com/docs/install/cache#fast-copying)
 
 Once a package is downloaded into the cache, Bun still needs to copy those files into `node_modules`. Bun uses the fastest syscalls available to perform this task. On Linux, it uses hardlinks; on macOS, it uses `clonefile`.
 
-## [Saving disk space](https://bun.com/docs/install/cache\#saving-disk-space)
+## [Saving disk space](https://bun.com/docs/install/cache#saving-disk-space)
 
 Since Bun uses hardlinks to "copy" a module into a project's `node_modules` directory on Linux and Windows, the contents of the package only exist in a single location on disk, greatly reducing the amount of disk space dedicated to `node_modules`.
 
@@ -102,7 +103,7 @@ This behavior is configurable with the `--backend` flag, which is respected by a
 - **`copyfile`**: The fallback used when any of the above fail. It is the slowest option. On macOS, it uses `fcopyfile()`; on Linux it uses `copy_file_range()`.
 - **`symlink`**: Currently used only `file:` (and eventually `link:`) dependencies. To prevent infinite loops, it skips symlinking the `node_modules` folder.
 
-If you install with `--backend=symlink`, Node.js won't resolve node\_modules of dependencies unless each dependency has its own `node_modules` folder or you pass `--preserve-symlinks` to `node` or `bun`. See [Node.js documentation on `--preserve-symlinks`](https://nodejs.org/api/cli.html#--preserve-symlinks).
+If you install with `--backend=symlink`, Node.js won't resolve node_modules of dependencies unless each dependency has its own `node_modules` folder or you pass `--preserve-symlinks` to `node` or `bun`. See [Node.js documentation on `--preserve-symlinks`](https://nodejs.org/api/cli.html#--preserve-symlinks).
 
 ```
 bun install --backend symlink
@@ -122,7 +123,7 @@ bun --preserve-symlinks ./foo.js
 \\
 Isolated installs](https://bun.com/docs/install/isolated)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/cache.md)
 
@@ -146,7 +147,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

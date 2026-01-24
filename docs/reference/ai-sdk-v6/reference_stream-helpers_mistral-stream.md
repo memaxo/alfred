@@ -15,8 +15,7 @@ This works with the official Mistral API, and it's supported in both Node.js, th
 ## Import
 
 ### React
-    
-    
+
     import { MistralStream } from "ai"
 
 ## API Signature

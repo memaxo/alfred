@@ -17,6 +17,7 @@ This report maps integration points and architecture boundaries for implementing
 ### Capture
 
 **Existing Code Matches:**
+
 - ✅ **Native iOS voice capture**: `apps/native/lib/voice/capture.ts` - `ExpoCapture` class with `start()`/`stop()` methods
 - ✅ **Native iOS voice session**: `apps/native/lib/voice/session.ts` - `useVoiceSessionNative` hook with streaming support
 - ✅ **Web voice capture**: `apps/web/src/hooks/use-voice-capture.ts` - Web-based capture utilities
@@ -24,6 +25,7 @@ This report maps integration points and architecture boundaries for implementing
 - ✅ **Photo capture infrastructure**: Native app has camera permissions; no explicit photo capture utility found yet
 
 **Gaps:**
+
 - ❌ No unified capture API/router (`capture.create`, `capture.list`)
 - ❌ No capture entity schema in DB (`captures` table)
 - ❌ No blob storage integration for audio/photo payloads
@@ -31,6 +33,7 @@ This report maps integration points and architecture boundaries for implementing
 - ❌ No capture-to-inbox routing logic
 
 **Integration Points:**
+
 - `apps/native/lib/voice/capture.ts` → extend for photo capture
 - `apps/native/lib/voice/session.ts` → add capture metadata (evidence) collection
 - New: `packages/db/src/schema/capture.ts` (schema)
@@ -42,18 +45,21 @@ This report maps integration points and architecture boundaries for implementing
 ### Bundle
 
 **Existing Code Matches:**
+
 - ✅ **Context bundle type**: `packages/type/src/plan.ts` - `ContextBundle` type with `files`, `estimatedTokens`
 - ✅ **Pipeline context stage**: `packages/pipeline/src/stages/context.ts` - `ContextStage` builds bundles with receipts
 - ✅ **Transcript/OCR infrastructure**: Voice transcription exists via `packages/api/src/voice/assistant.ts`
 - ✅ **Entity extraction**: No explicit entity extraction found, but `@alfred/plan` has intent parsing
 
 **Gaps:**
+
 - ❌ No `Bundle` entity schema (transcript/OCR/entities stored separately)
 - ❌ No bundle-to-capture linking
 - ❌ No route candidate generation logic
 - ❌ No OCR pipeline (photo → text)
 
 **Integration Points:**
+
 - `packages/pipeline/src/stages/context.ts` → extract bundle-building logic for reuse
 - New: `packages/sense/src/bundle.ts` - Pure bundle transformation functions
 - New: `packages/db/src/schema/bundle.ts` (schema)
@@ -64,6 +70,7 @@ This report maps integration points and architecture boundaries for implementing
 ### Receipt
 
 **Existing Code Matches:**
+
 - ✅ **SearchReceipt type**: `packages/type/src/plan.ts` - `SearchReceipt` with `code`, `web`, `created`, `summary`
 - ✅ **Context receipts in desktop**: `apps/web/src/store/desktop/context.ts` - `ContextCacheEntry` with `receipt?: SearchReceipt`
 - ✅ **Cache handoff events**: `packages/type/src/plan.ts` - `data-cache-handoff` event type with receipts
@@ -72,6 +79,7 @@ This report maps integration points and architecture boundaries for implementing
 - ✅ **Pipeline receipt emission**: `packages/agent/src/orchestrator/flow/context.ts` - `emitCacheHandoffEvent()` emits receipts
 
 **Gaps:**
+
 - ❌ No `Receipt` entity schema (receipts are ephemeral in Zustand, not persisted)
 - ❌ No receipt correction API (`receipt.correct`)
 - ❌ No receipt-to-capture linking
@@ -79,6 +87,7 @@ This report maps integration points and architecture boundaries for implementing
 - ❌ No receipt learning from corrections
 
 **Integration Points:**
+
 - `packages/type/src/plan.ts` → extend `SearchReceipt` for Sense-specific fields (evidence, corrections)
 - `apps/web/src/store/desktop/context.ts` → extend for capture receipts (not just window context)
 - New: `packages/db/src/schema/receipt.ts` (schema)
@@ -90,12 +99,14 @@ This report maps integration points and architecture boundaries for implementing
 ### WorkingSet/Focus
 
 **Existing Code Matches:**
+
 - ✅ **Desktop focus state**: `apps/web/src/store/desktop/viewport.new.ts` - `focusedWindowId` state
 - ✅ **Desktop pinned apps**: `apps/web/src/store/desktop/types.new.ts` - `pinnedApps: string[]`
 - ✅ **Project linking**: `packages/db/src/schema/assistant.ts` - Tasks/notes/events have `projectId` foreign key
 - ✅ **Active project context**: `packages/api/src/routers/assistant.ts` - `projectId` parameter in generate calls
 
 **Gaps:**
+
 - ❌ No `WorkingSet` entity schema (no synced "top objects" list)
 - ❌ No working set API (`workingset.get`, `workingset.set`, `workingset.propose`)
 - ❌ No focus pointer (current active project/conversation/note)
@@ -103,6 +114,7 @@ This report maps integration points and architecture boundaries for implementing
 - ❌ No cross-device sync for working set
 
 **Integration Points:**
+
 - `apps/web/src/store/desktop/types.new.ts` → extend for working set (or move to DB-backed)
 - New: `packages/db/src/schema/workingset.ts` (schema)
 - New: `packages/db/src/repo/workingset.ts` (repos)
@@ -117,12 +129,14 @@ This report maps integration points and architecture boundaries for implementing
 ### Database Layer (`packages/db`)
 
 **Existing Schemas:**
+
 - `schema/assistant.ts`: `tasks`, `notes`, `events`, `reminders` (lines 29-85)
 - `schema/conversation.ts`: `conversations`, `messages` (lines 6-31)
 - `schema/workflow.ts`: `workflowRuns`, `workflowEvents` (lines 30-216)
 - `schema/project.ts`: `projects` table (referenced by assistant entities)
 
 **Patterns:**
+
 - UUID primary keys (`uuid().defaultRandom().primaryKey()`)
 - User-scoped (`userId: text("user_id").notNull()`)
 - Project linking (`projectId: uuid("project_id").references(...)`)
@@ -130,6 +144,7 @@ This report maps integration points and architecture boundaries for implementing
 - Timestamps (`created`, `updated` with `defaultNow()`)
 
 **Missing for Sense:**
+
 - `captures` table
 - `bundles` table
 - `receipts` table
@@ -141,16 +156,19 @@ This report maps integration points and architecture boundaries for implementing
 ### Repository Layer (`packages/db/src/repo`)
 
 **Existing Repos:**
+
 - `repo/assistant.ts`: CRUD for tasks, notes, events, reminders
 - `repo/workflow.ts`: Workflow run/event persistence
 - `repo/graph/write.ts`: Knowledge graph operations
 
 **Patterns:**
+
 - Synchronous helpers for simple queries (`.ruler/45-infrastructure-standardization.md` rule 10)
 - User-scoped queries (`eq(tasks.userId, userId)`)
 - Type-safe Drizzle queries with inferred types
 
 **Missing for Sense:**
+
 - `repo/capture.ts`
 - `repo/bundle.ts`
 - `repo/receipt.ts`
@@ -161,12 +179,14 @@ This report maps integration points and architecture boundaries for implementing
 ### API Layer (`packages/api/src/routers`)
 
 **Existing Routers:**
+
 - `routers/assistant.ts`: `generate`, `escalate` procedures (lines 77-229)
 - `routers/workflow.ts`: `start`, `subscribe`, `resume` with `observable()` streaming (lines 131-925)
 - `routers/remind.ts`: Reminder CRUD
 - `routers/todo.ts`: Todo CRUD
 
 **Patterns:**
+
 - tRPC routers with `authedProcedure`
 - Rate limiting (`use(rateLimit)`)
 - Policy checks (`use(requirePolicy(...))`)
@@ -174,6 +194,7 @@ This report maps integration points and architecture boundaries for implementing
 - Input validation with Zod schemas
 
 **Missing for Sense:**
+
 - `routers/capture.ts`: `create`, `list`, `get`, `triage`
 - `routers/receipt.ts`: `correct`, `get`
 - `routers/workingset.ts`: `get`, `set`, `propose`
@@ -184,6 +205,7 @@ This report maps integration points and architecture boundaries for implementing
 ### App Layer (`apps/web`, `apps/native`)
 
 **Web (`apps/web`):**
+
 - **Desktop state**: `src/store/desktop/` - Zustand slices (windows, context, cache, knowledge)
 - **Context receipts**: `src/store/desktop/context.ts` - `ContextCacheEntry` with receipts
 - **Focus context**: `src/hooks/use-focused-context.ts` - Reads context cache, fetches RAG
@@ -191,12 +213,14 @@ This report maps integration points and architecture boundaries for implementing
 - **Collections**: `src/collections/` - TanStack Query collections for notes, reminders, todos
 
 **Native (`apps/native`):**
+
 - **Voice capture**: `lib/voice/capture.ts` - `ExpoCapture` class
 - **Voice session**: `lib/voice/session.ts` - `useVoiceSessionNative` hook
 - **Screens**: `app/(drawer)/(tabs)/` - Notes, reminders, todos screens
 - **Permissions**: `app.json` - Microphone, camera permissions
 
 **Missing for Sense:**
+
 - `apps/web/src/components/apps/inbox/` - Inbox window component
 - `apps/web/src/components/apps/workingset/` - Working Set panel
 - `apps/web/src/hooks/use-capture.ts` - Capture subscription hook
@@ -216,6 +240,7 @@ This report maps integration points and architecture boundaries for implementing
 ### Scope Boundaries
 
 **IN SCOPE:**
+
 - Capture ingestion (voice/photo/text) with sensor evidence
 - Bundle generation (transcript/OCR/entities) and route candidate scoring
 - Receipt generation (explainable routing decisions) and correction learning
@@ -224,6 +249,7 @@ This report maps integration points and architecture boundaries for implementing
 - Cross-device sync (capture → inbox, working set updates)
 
 **OUT OF SCOPE:**
+
 - Full desktop layout sync (window geometry, z-index) - belongs to desktop store
 - Agent execution details (codex, opencode) - belongs to `@alfred/agent`
 - Workflow orchestration - belongs to `@alfred/pipeline`
@@ -236,12 +262,14 @@ This report maps integration points and architecture boundaries for implementing
 ### State Model + Storage Ownership
 
 **Persistent State (DB):**
+
 - `captures` table: Immutable capture records with payload refs, evidence, status
 - `bundles` table: Transcript/OCR/entities linked to captures
 - `receipts` table: Routing decisions with evidence, corrections, learning signals
 - `workingset` table: Synced top objects (project/conversation/note IDs) with focus pointer
 
 **Ephemeral State (Zustand/React):**
+
 - Desktop Inbox UI state (filter, sort, selection) - `apps/web/src/store/desktop/inbox.ts`
 - Working Set UI state (pinned items, focus indicator) - `apps/web/src/store/desktop/workingset.ts`
 - Native capture UI state (recording, photo preview) - `apps/native/lib/capture/state.ts`
@@ -255,6 +283,7 @@ This report maps integration points and architecture boundaries for implementing
 **Events/Observers (Not Callbacks):**
 
 Sense emits events via pipeline-style observers:
+
 - `capture:created` - New capture ingested
 - `bundle:generated` - Bundle created from capture
 - `receipt:generated` - Receipt created with routing decision
@@ -262,6 +291,7 @@ Sense emits events via pipeline-style observers:
 - `workingset:updated` - Working set changed
 
 **Observer Pattern:**
+
 - `packages/sense/src/observers/persistence.ts` - Persists captures/bundles/receipts to DB
 - `packages/sense/src/observers/inbox.ts` - Emits inbox update events for UI subscriptions
 - `packages/sense/src/observers/learning.ts` - Learns from receipt corrections
@@ -273,12 +303,14 @@ Sense emits events via pipeline-style observers:
 ### APIs Crossing Boundaries
 
 **Domain Package (`packages/sense`):**
+
 - `sense/capture.ts`: `createCapture()`, `ingestEvidence()`, `getCapture()`
 - `sense/bundle.ts`: `generateBundle()`, `extractEntities()`, `scoreRoutes()`
 - `sense/receipt.ts`: `generateReceipt()`, `correctReceipt()`, `learnFromCorrection()`
 - `sense/workingset.ts`: `getWorkingSet()`, `updateWorkingSet()`, `proposeItems()`
 
 **API Routers (`packages/api/src/routers`):**
+
 - `capture.create`: Validates input, calls `sense/capture.createCapture()`, persists via observer
 - `capture.list`: Queries DB via repo, returns captures
 - `capture.triage`: Validates conversion, calls `sense/bundle.scoreRoutes()`, creates note/task/reminder
@@ -288,6 +320,7 @@ Sense emits events via pipeline-style observers:
 - `inbox.subscribe`: tRPC `observable()` stream of inbox updates (new captures, bundle updates)
 
 **Boundary Enforcement:**
+
 - Routers never call DB repos directly; they call Sense domain functions
 - Sense domain functions never import `@alfred/db`; they return data, observers persist
 - Observers import `@alfred/db` and handle persistence
@@ -311,6 +344,7 @@ Sense emits events via pipeline-style observers:
 ### Database Layer (`packages/db`)
 
 **New Files:**
+
 - `src/schema/capture.ts` - `captures` table schema
   - Fields: `id`, `userId`, `sourceDevice`, `payloadType`, `payloadRef`, `status`, `evidence` (JSONB), `created`, `updated`
   - Indexes: `captures_user_status_idx`, `captures_user_created_idx`
@@ -325,12 +359,14 @@ Sense emits events via pipeline-style observers:
   - Index: `workingset_user_id_idx` (unique)
 
 **New Repos:**
+
 - `src/repo/capture.ts` - `createCapture()`, `getCapture()`, `listCaptures()`, `updateCaptureStatus()`
 - `src/repo/bundle.ts` - `createBundle()`, `getBundleByCaptureId()`, `updateBundle()`
 - `src/repo/receipt.ts` - `createReceipt()`, `getReceiptByCaptureId()`, `updateReceipt()`, `getCorrections()`
 - `src/repo/workingset.ts` - `getWorkingSet()`, `updateWorkingSet()`, `setFocusPointer()`
 
 **Migration:**
+
 - `src/migrations/NNNN_capture.sql` - Create capture/bundle/receipt/workingset tables
 
 ---
@@ -338,11 +374,13 @@ Sense emits events via pipeline-style observers:
 ### Domain Package (`packages/sense`) - **NEW PACKAGE**
 
 **Why New Package:**
+
 - Sense exceeds 500 LOC and spans 3+ files (requires architecture contract per `.ruler/47-system-architecture.md`)
 - Sense has distinct responsibility (capture-to-execution flows) separate from existing packages
 - Sense needs pure transformation functions (bundle generation, receipt scoring) that are import-safe
 
 **Structure:**
+
 ```
 packages/sense/
 ├── package.json
@@ -366,12 +404,14 @@ packages/sense/
 ```
 
 **Key Functions:**
+
 - `capture.ts`: `createCapture(payload, evidence) => Capture`, `ingestEvidence(captureId, evidence) => void`
 - `bundle.ts`: `generateBundle(captureId, payload) => Bundle`, `extractEntities(text) => Entity[]`, `scoreRoutes(bundle, workingSet) => RouteCandidate[]`
 - `receipt.ts`: `generateReceipt(bundleId, routeCandidates) => Receipt`, `correctReceipt(receiptId, correction) => void`, `learnFromCorrection(correction) => void`
 - `workingset.ts`: `getWorkingSet(userId) => WorkingSet`, `updateWorkingSet(userId, items) => void`, `proposeItems(userId, candidates) => Proposal[]`
 
 **Boundary Rules:**
+
 - No imports from `@alfred/db` (pure functions only)
 - No imports from `@alfred/api` (domain logic only)
 - No imports from `apps/*` (package-level only)
@@ -382,6 +422,7 @@ packages/sense/
 ### API Layer (`packages/api`)
 
 **New Routers:**
+
 - `src/routers/capture.ts` - `create`, `list`, `get`, `triage` procedures
   - `create`: Accepts payload (base64 audio/photo or text), evidence (JSONB), calls `sense/capture.createCapture()`
   - `list`: Queries `repo/capture.listCaptures()`, filters by status, returns captures
@@ -399,6 +440,7 @@ packages/sense/
   - `subscribe`: tRPC `observable()` stream of inbox updates (new captures, bundle updates, receipt updates)
 
 **Router Registration:**
+
 - `src/routers/index.ts` - Add `capture`, `receipt`, `workingset`, `inbox` routers to main router
 
 ---
@@ -406,6 +448,7 @@ packages/sense/
 ### Web App (`apps/web`)
 
 **New Components:**
+
 - `src/components/apps/inbox/index.tsx` - Inbox window component
   - Lists captures with status (new/triaged/converted)
   - Shows bundle (transcript/OCR), receipt (routing explanation), one-tap conversions
@@ -421,16 +464,19 @@ packages/sense/
   - Displays item preview, pin/unpin, focus indicator
 
 **New Hooks:**
+
 - `src/hooks/use-capture.ts` - Capture subscription hook
   - Wraps `trpc.inbox.subscribe.useSubscription()`, returns capture updates
 - `src/hooks/use-workingset.ts` - Working Set hook
   - Wraps `trpc.workingset.get.useQuery()`, `trpc.workingset.set.useMutation()`
 
 **Store Extensions:**
+
 - `src/store/desktop/inbox.ts` - Inbox UI state slice (filter, sort, selection)
 - `src/store/desktop/workingset.ts` - Working Set UI state slice (pinned items, focus indicator)
 
 **Window Registry:**
+
 - `src/components/desktop/windows/registry.tsx` - Add `inbox` and `workingset` window types
 
 ---
@@ -438,6 +484,7 @@ packages/sense/
 ### Native App (`apps/native`)
 
 **New Screens:**
+
 - `app/(drawer)/(tabs)/capture.tsx` - Capture screen
   - Voice/photo/text capture buttons, evidence toggle, send button
   - Uses `ExpoCapture` from `lib/voice/capture.ts`, extends for photo capture
@@ -445,6 +492,7 @@ packages/sense/
   - Lists captures, shows status, allows triage
 
 **New Libraries:**
+
 - `lib/capture/photo.ts` - Photo capture utility (extends `ExpoCapture` pattern)
   - `ExpoPhotoCapture` class with `capturePhoto()`, `captureMultiple()` methods
 - `lib/sensors/evidence.ts` - Sensor evidence collection
@@ -456,10 +504,12 @@ packages/sense/
   - `readNFCTag()` - Reads NFC tag, returns tag ID and label
 
 **Hooks:**
+
 - `hooks/use-capture.ts` - Capture hook for native
   - Wraps `ExpoCapture`, `ExpoPhotoCapture`, `collectEvidence()`, calls `trpc.capture.create.mutate()`
 
 **Permissions:**
+
 - `app.json` - Add NFC, Bluetooth, location permissions (opt-in)
 
 ---
@@ -471,6 +521,7 @@ packages/sense/
 **Goal**: Prove capture-to-inbox flow works end-to-end.
 
 **Implementation Order:**
+
 1. **DB Schema** (`packages/db`):
    - Create `captures` table (minimal: id, userId, payloadType, payloadRef, status, created)
    - Create `bundles` table (minimal: id, captureId, transcript, created)
@@ -503,6 +554,7 @@ packages/sense/
 **Goal**: Add routing receipts and one-tap conversions.
 
 **Implementation Order:**
+
 1. **DB Schema** (`packages/db`):
    - Create `receipts` table (minimal: id, captureId, decisionType, outcome, confidence, created)
    - Migration: `NNNN_receipt_mvp.sql`
@@ -529,6 +581,7 @@ packages/sense/
 **Goal**: Use working set to improve routing accuracy.
 
 **Implementation Order:**
+
 1. **DB Schema** (`packages/db`):
    - Create `workingset` table (minimal: id, userId, items, updated)
    - Migration: `NNNN_workingset_mvp.sql`
@@ -553,6 +606,7 @@ packages/sense/
 **Goal**: Allow users to correct receipts and learn from corrections.
 
 **Implementation Order:**
+
 1. **Domain Package** (`packages/sense`):
    - `src/receipt.ts`: `correctReceipt()` - Records correction
    - `src/receipt.ts`: `learnFromCorrection()` - Learns patterns from corrections
@@ -612,23 +666,27 @@ packages/sense/
 ### Test Coverage Requirements
 
 **Unit Tests (`packages/sense/src/__tests__`):**
+
 - `capture.test.ts`: `createCapture()` creates capture with payload ref, `ingestEvidence()` adds evidence
 - `bundle.test.ts`: `generateBundle()` creates bundle from capture, `scoreRoutes()` returns candidates sorted by confidence
 - `receipt.test.ts`: `generateReceipt()` creates receipt with evidence, `correctReceipt()` records correction, `learnFromCorrection()` updates patterns
 - `workingset.test.ts`: `getWorkingSet()` returns working set, `updateWorkingSet()` updates items, `proposeItems()` returns proposals
 
 **Integration Tests (`packages/api/test`):**
+
 - `capture.router.test.ts`: `capture.create` creates capture, `capture.list` returns captures, `capture.triage` creates note/task/reminder
 - `receipt.router.test.ts`: `receipt.get` returns receipt, `receipt.correct` records correction
 - `workingset.router.test.ts`: `workingset.get` returns working set, `workingset.set` updates working set
 - `inbox.router.test.ts`: `inbox.subscribe` emits capture updates
 
 **E2E Tests (`apps/web/.tests`, `apps/native/e2e`):**
+
 - `capture-to-inbox.e2e.spec.ts`: Voice capture on iOS → appears in desktop Inbox
 - `receipt-correction.e2e.spec.ts`: Correct receipt → future routing uses correction
 - `workingset-sync.e2e.spec.ts`: Update working set on desktop → syncs to iOS
 
 **Boundary Tests (`packages/sense/test`):**
+
 - `boundaries.test.ts`: Sense domain functions don't import `@alfred/db`, `@alfred/api`, `apps/*`
 - `observers.test.ts`: Observers import `@alfred/db` and persist correctly
 
@@ -637,6 +695,7 @@ packages/sense/
 ## Conclusion
 
 ALFRED Sense can be implemented as a **dedicated domain package** (`packages/sense`) with clear boundaries:
+
 - **DB layer**: New schemas/repos for captures, bundles, receipts, working set
 - **Domain layer**: Pure transformation functions in `packages/sense`
 - **API layer**: Thin routers that call domain functions and persist via observers
@@ -645,6 +704,7 @@ ALFRED Sense can be implemented as a **dedicated domain package** (`packages/sen
 The architecture follows `.ruler/47-system-architecture.md` (single responsibility, explicit boundaries, events/observers) and `.ruler/48-pipeline-boundaries.md` (domain logic in packages, persistence via observers).
 
 **Next Steps:**
+
 1. Create architecture contract document (this report)
 2. Implement Phase 1 MVP (Capture → Inbox)
 3. Add tests (unit, integration, E2E, boundary)

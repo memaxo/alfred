@@ -87,6 +87,7 @@ alfred_classification_batch_size{type="phase"}
 ```
 
 Notes:
+
 - `type` is a **stable classification kind**: `intent|phase|path|relevance|domain|other`
 - `model` is the selected `modelKey` (for example: `cerebras/gpt-oss-120b`)
 
@@ -123,7 +124,7 @@ const prioritySchema = z.object({
 
 async function classifyTaskPriority(description: string) {
   const model = getClassificationModel();
-  
+
   return classify(
     prioritySchema,
     `Classify the priority of this task: "${description}"`,
@@ -145,6 +146,7 @@ async function classifyTaskPriority(description: string) {
 ### High Fallback Rate
 
 Check:
+
 1. `CEREBRAS_API_KEY` is set correctly
 2. API quota is not exceeded
 3. Network connectivity to Cerebras API
@@ -152,6 +154,7 @@ Check:
 ### Slow Classification
 
 Check:
+
 1. Model selection (Cerebras is fastest)
 2. Network latency to API endpoint
 3. Token budget (keep prompts under 300 tokens)

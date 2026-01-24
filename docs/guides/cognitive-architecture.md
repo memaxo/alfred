@@ -25,6 +25,7 @@ The state machine has these states:
 - **`reflecting`** - Learning from outcomes
 
 **Key Files:**
+
 - `packages/cognitive/src/state.ts` - State type definitions
 - `packages/cognitive/src/transition.ts` - Pure transition functions
 
@@ -39,10 +40,12 @@ All cognitive state changes are driven by events:
 - **`outcome`** - Execution result (success/failure)
 
 **Storage:**
+
 - `cognitive_events` table - Immutable event log
 - `cognitive_snapshots` table - Periodic state checkpoints for fast hydration
 
 **Key Files:**
+
 - `packages/db/src/schema/cognitive.ts` - Event/snapshot schemas
 - `packages/db/src/repo/cognitive.ts` - Repository for events/snapshots
 - `packages/runtime/src/loops/cognitive.ts` - Runtime loop implementation
@@ -56,11 +59,13 @@ Tracks cognitive "health" metrics:
 - **Frustration** (0..1) - Increases with errors
 
 Physiology regulates autonomy:
+
 - High frustration → Lower autonomy (more cautious)
 - High boredom → May trigger interrupt
 - Low energy → May gate execution
 
 **Key Files:**
+
 - `packages/cognitive/src/state.ts` - `Physiology` type, `updatePhysiology` function
 - `packages/cognitive/src/logic/autonomy.ts` - `meetsConstraints` uses physiology
 
@@ -74,12 +79,14 @@ Bayesian system for autonomous decision-making:
 - **Constraints** - Temporal, scope, confidence, approval gates
 
 Autonomy updates:
+
 - On success → Increase `alpha`
 - On failure → Increase `beta`
 - On feedback → Weighted update based on `strength`
 - Reliability weighting → Evidence with `reliability=0` is ignored
 
 **Key Files:**
+
 - `packages/cognitive/src/state.ts` - `AutonomyGradient` type, `updateAutonomy` function
 - `packages/cognitive/src/logic/autonomy.ts` - Autonomy logic and constraints
 
@@ -92,6 +99,7 @@ Monitors cognitive health and interrupts loops:
 - **Physiology Checks** - Monitors frustration/boredom thresholds
 
 **Key Files:**
+
 - `packages/cognitive/src/brainstem.ts` - `BrainstemSupervisor` class
 - `packages/cognitive/src/loop.ts` - `LoopDetector` (COUNT → TIME → HASH → QUANTIZED)
 - `packages/runtime/src/core.ts` - Integration into `WorkflowRuntime`
@@ -133,23 +141,23 @@ export async function runCognitiveLoop(
   const events = await cognitiveRepo.getAllEvents(streamId);
   let state = idle(Date.now());
   let autonomy = createInitialAutonomy();
-  
+
   // Replay history
   for (const record of events) {
     const result = applyTransition(state, autonomy, record.payload);
     state = result.state;
     autonomy = result.autonomy;
   }
-  
+
   // 2. Apply new event
   const transition = applyTransition(state, autonomy, incomingEvent);
-  
+
   // 3. Persist event
   await cognitiveRepo.appendEvent(streamId, incomingEvent._, incomingEvent);
-  
+
   // 4. Compute effects
   const effects = computeEffects(transition.state);
-  
+
   return { state: transition.state, effects };
 }
 ```
@@ -212,4 +220,3 @@ All hot paths are instrumented with Prometheus metrics.
 - [Cognitive Runtime Architecture](../architecture/cognitive-runtime.md) - Detailed runtime loop documentation
 - [ExecPlan: Cognitive Runtime Loop](../execplans/cognitive-runtime-loop.md) - Implementation plan
 - [ExecPlan: Cognitive Architecture Maturity](../execplans/cognitive-architecture-maturity.md) - Maturity improvements
-

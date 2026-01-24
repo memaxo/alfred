@@ -1,9 +1,10 @@
 ---
 title: Code coverage – Test runner | Bun Docs
-url: 
+url:
 description: Generate code coverage reports with `bun test --coverage`
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Bun's test runner now supports built-in _code coverage reporting_. This makes it easy to see how much of the codebase is covered by tests, and find areas that are not currently well-tested.
 
-## [Enabling coverage](https://bun.com/docs/test/coverage\#enabling-coverage)
+## [Enabling coverage](https://bun.com/docs/test/coverage#enabling-coverage)
 
 `bun:test` supports seeing which lines of code are covered by tests. To use this feature, pass `--coverage` to the CLI. It will print out a coverage report to the console:
 
@@ -98,7 +99,7 @@ coverageSkipTestFiles = true       # default false
 
 ```
 
-### [Coverage thresholds](https://bun.com/docs/test/coverage\#coverage-thresholds)
+### [Coverage thresholds](https://bun.com/docs/test/coverage#coverage-thresholds)
 
 It is possible to specify a coverage threshold in `bunfig.toml`. If your test suite does not meet or exceed this threshold, `bun test` will exit with a non-zero exit code to indicate the failure.
 
@@ -115,7 +116,7 @@ coverageThreshold = { lines = 0.9, functions = 0.9, statements = 0.9 }
 
 Setting any of these thresholds enables `fail_on_low_coverage`, causing the test run to fail if coverage is below the threshold.
 
-### [Sourcemaps](https://bun.com/docs/test/coverage\#sourcemaps)
+### [Sourcemaps](https://bun.com/docs/test/coverage#sourcemaps)
 
 Internally, Bun transpiles all files by default, so Bun automatically generates an internal [source map](https://web.dev/source-maps/) that maps lines of your original source code onto Bun's internal representation. If for any reason you want to disable this, set `test.coverageIgnoreSourcemaps` to `true`; this will rarely be desirable outside of advanced use cases.
 
@@ -125,7 +126,7 @@ coverageIgnoreSourcemaps = true   # default false
 
 ```
 
-### [Exclude files from coverage](https://bun.com/docs/test/coverage\#exclude-files-from-coverage)
+### [Exclude files from coverage](https://bun.com/docs/test/coverage#exclude-files-from-coverage)
 
 #### Skip test files
 
@@ -167,7 +168,7 @@ Common use cases:
 - Exclude specific test patterns: `"**/*.spec.ts"`
 - Exclude build artifacts: `"dist/**"`
 
-### [Coverage defaults](https://bun.com/docs/test/coverage\#coverage-defaults)
+### [Coverage defaults](https://bun.com/docs/test/coverage#coverage-defaults)
 
 By default, coverage reports:
 
@@ -176,7 +177,7 @@ By default, coverage reports:
 3. Include test files themselves (can be disabled with `coverageSkipTestFiles = true` as shown above)
 4. Can exclude additional files with `coveragePathIgnorePatterns` as shown above
 
-### [Coverage reporters](https://bun.com/docs/test/coverage\#coverage-reporters)
+### [Coverage reporters](https://bun.com/docs/test/coverage#coverage-reporters)
 
 By default, coverage reports will be printed to the console.
 
@@ -189,10 +190,10 @@ coverageDir = "path/to/somewhere"  # default "coverage"
 
 ```
 
-| Reporter | Description |
-| --- | --- |
-| `text` | Prints a text summary of the coverage to the console. |
-| `lcov` | Save coverage in [lcov](https://github.com/linux-test-project/lcov) format. |
+| Reporter | Description                                                                 |
+| -------- | --------------------------------------------------------------------------- |
+| `text`   | Prints a text summary of the coverage to the console.                       |
+| `lcov`   | Save coverage in [lcov](https://github.com/linux-test-project/lcov) format. |
 
 #### lcov coverage reporter
 
@@ -210,7 +211,7 @@ Dates and times](https://bun.com/docs/test/time) [Next\\
 \\
 Test reporters](https://bun.com/docs/test/reporters)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/coverage.md)
 
@@ -234,7 +235,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -1,9 +1,10 @@
 ---
 title: Reddit | Better Auth
-url: 
+url:
 description: Reddit provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Reddit Credentials](https://www.better-auth.com/docs/authentication/reddit\#get-your-reddit-credentials)
+### [Get your Reddit Credentials](https://www.better-auth.com/docs/authentication/reddit#get-your-reddit-credentials)
 
 To use Reddit sign in, you need a client ID and client secret. You can get them from the [Reddit Developer Portal](https://www.reddit.com/prefs/apps).
 
@@ -38,7 +39,7 @@ To use Reddit sign in, you need a client ID and client secret. You can get them 
 
 If you change the base path of the auth routes, make sure to update the redirect URL accordingly.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/reddit\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/reddit#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -57,7 +58,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Sign In with Reddit](https://www.better-auth.com/docs/authentication/reddit\#sign-in-with-reddit)
+### [Sign In with Reddit](https://www.better-auth.com/docs/authentication/reddit#sign-in-with-reddit)
 
 To sign in with Reddit, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 
@@ -76,9 +77,9 @@ const signIn = async () => {
 }
 ```
 
-## [Additional Configuration](https://www.better-auth.com/docs/authentication/reddit\#additional-configuration)
+## [Additional Configuration](https://www.better-auth.com/docs/authentication/reddit#additional-configuration)
 
-### [Scopes](https://www.better-auth.com/docs/authentication/reddit\#scopes)
+### [Scopes](https://www.better-auth.com/docs/authentication/reddit#scopes)
 
 By default, Reddit provides basic user information. If you need additional permissions, you can specify scopes in your auth configuration:
 

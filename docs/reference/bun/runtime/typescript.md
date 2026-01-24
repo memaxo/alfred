@@ -1,9 +1,10 @@
 ---
 title: TypeScript – Runtime | Bun Docs
-url: 
+url:
 description: Bun can directly execute TypeScript files without additional configuration.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Bun treats TypeScript as a first-class citizen.
 
 **Note** — To add type declarations for Bun APIs like the `Bun` global, follow the instructions at [Intro > TypeScript](https://bun.com/docs/typescript). This page describes how the Bun runtime runs TypeScript code.
 
-## [Running `.ts` files](https://bun.com/docs/runtime/typescript\#running-ts-files)
+## [Running `.ts` files](https://bun.com/docs/runtime/typescript#running-ts-files)
 
 Bun can directly execute `.ts` and `.tsx` files just like vanilla JavaScript, with no extra configuration. If you import a `.ts` or `.tsx` file (or an `npm` module that exports these files), Bun internally transpiles it into JavaScript then executes the file.
 
@@ -66,7 +67,7 @@ Bun can directly execute `.ts` and `.tsx` files just like vanilla JavaScript, wi
 
 That said, if you are using Bun as a development tool but still targeting Node.js or browsers in production, you'll still need to transpile.
 
-## [Path mapping](https://bun.com/docs/runtime/typescript\#path-mapping)
+## [Path mapping](https://bun.com/docs/runtime/typescript#path-mapping)
 
 When resolving modules, Bun's runtime respects path mappings defined in [`compilerOptions.paths`](https://www.typescriptlang.org/tsconfig#paths) in your `tsconfig.json`. No other runtime does this.
 
@@ -113,7 +114,7 @@ export const foo = "Hello world!"
 
 ```
 
-## [Experimental Decorators](https://bun.com/docs/runtime/typescript\#experimental-decorators)
+## [Experimental Decorators](https://bun.com/docs/runtime/typescript#experimental-decorators)
 
 Bun supports the pre-TypeScript 5.0 experimental decorators syntax.
 
@@ -159,7 +160,7 @@ tsconfig.json
 
 We generally don't recommend using this in new codebases, but plenty of existing codebases have come to rely on it.
 
-### [emitDecoratorMetadata](https://bun.com/docs/runtime/typescript\#emitdecoratormetadata)
+### [emitDecoratorMetadata](https://bun.com/docs/runtime/typescript#emitdecoratormetadata)
 
 Bun supports `emitDecoratorMetadata` in your `tsconfig.json`. This enables emitting design-time type metadata for decorated declarations in source files.
 
@@ -210,7 +211,7 @@ File types](https://bun.com/docs/runtime/loaders) [Next\\
 \\
 JSX](https://bun.com/docs/runtime/jsx)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/typescript.md)
 
@@ -234,7 +235,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

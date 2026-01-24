@@ -10,10 +10,10 @@ Enable ALFRED Sense MVP: create captures on iOS (text/voice) that arrive in the 
 
 You can see this working by:
 
-  - starting the API + web app
-  - creating a capture on native (Capture tab) or by calling `capture.create`
-  - opening the `Inbox` window in web and watching items appear live
-  - pinning a `Working Set` focus and observing new capture receipts include that evidence
+- starting the API + web app
+- creating a capture on native (Capture tab) or by calling `capture.create`
+- opening the `Inbox` window in web and watching items appear live
+- pinning a `Working Set` focus and observing new capture receipts include that evidence
 
 ## Progress
 
@@ -52,55 +52,55 @@ ALFRED Sense MVP wiring exists end-to-end across type → domain → DB → API 
 
 ALFRED Sense is a capture-to-execution system with four primitives:
 
-  - Capture: immutable record of an inbound capture (kind, status, evidence).
-  - Bundle: derived interpretation; MVP stores only derived text.
-  - Receipt: explainable decision (route + evidence + corrections).
-  - Working Set: user-controlled list + focus pointer that influences routing.
+- Capture: immutable record of an inbound capture (kind, status, evidence).
+- Bundle: derived interpretation; MVP stores only derived text.
+- Receipt: explainable decision (route + evidence + corrections).
+- Working Set: user-controlled list + focus pointer that influences routing.
 
 Key locations:
 
-  - Types: `packages/type/src/sense.ts`, `packages/type/src/sense.zod.ts`
-  - Domain scoring: `packages/sense/src/route.ts`
-  - DB: `packages/db/src/schema/sense.ts`, `packages/db/src/repo/sense.ts`, migration `packages/db/src/migrations/0084_sense.sql`
-  - API: `packages/api/src/routers/capture.ts`, `packages/api/src/routers/inbox.ts`, `packages/api/src/routers/receipt.ts`, `packages/api/src/routers/workingset.ts`
-  - Web: `apps/web/src/components/apps/inbox/index.tsx`, `apps/web/src/components/apps/workingset/index.tsx`
-  - Native: `apps/native/app/(drawer)/(tabs)/capture.tsx`
+- Types: `packages/type/src/sense.ts`, `packages/type/src/sense.zod.ts`
+- Domain scoring: `packages/sense/src/route.ts`
+- DB: `packages/db/src/schema/sense.ts`, `packages/db/src/repo/sense.ts`, migration `packages/db/src/migrations/0084_sense.sql`
+- API: `packages/api/src/routers/capture.ts`, `packages/api/src/routers/inbox.ts`, `packages/api/src/routers/receipt.ts`, `packages/api/src/routers/workingset.ts`
+- Web: `apps/web/src/components/apps/inbox/index.tsx`, `apps/web/src/components/apps/workingset/index.tsx`
+- Native: `apps/native/app/(drawer)/(tabs)/capture.tsx`
 
 ## Plan of Work
 
 This plan is now largely implemented. Future work should continue incrementally:
 
-  - Add photo/OCR bundle creation for `payload.kind = "photo"`.
-  - Add durable inbox streaming with cursors (likely via the existing subscription manager and a DB-backed event stream).
-  - Add “one-tap convert” controls to the Inbox UI and route-specific fields (e.g., reminder due date).
-  - Add entity extraction and project/link suggestions using existing knowledge/graph tooling.
+- Add photo/OCR bundle creation for `payload.kind = "photo"`.
+- Add durable inbox streaming with cursors (likely via the existing subscription manager and a DB-backed event stream).
+- Add “one-tap convert” controls to the Inbox UI and route-specific fields (e.g., reminder due date).
+- Add entity extraction and project/link suggestions using existing knowledge/graph tooling.
 
 ## Concrete Steps
 
 From repository root:
 
-  - Run Sense domain tests:
-      bun scripts/test-bun.ts packages/sense/test/boundary.test.ts packages/sense/test/route.test.ts
+- Run Sense domain tests:
+  bun scripts/test-bun.ts packages/sense/test/boundary.test.ts packages/sense/test/route.test.ts
 
-  - Run API router tests:
-      bun scripts/test-bun.ts --timeout 60000 --preload packages/test-kit/src/bun/preload.ts --preload packages/api/test/utils/sandbox.ts --preload packages/api/test/utils/mock-metrics.ts --preload packages/api/test/utils/mock-db-client.ts --preload packages/api/test/utils/mock-voice.ts packages/api/test/sense.router.test.ts
+- Run API router tests:
+  bun scripts/test-bun.ts --timeout 60000 --preload packages/test-kit/src/bun/preload.ts --preload packages/api/test/utils/sandbox.ts --preload packages/api/test/utils/mock-metrics.ts --preload packages/api/test/utils/mock-db-client.ts --preload packages/api/test/utils/mock-voice.ts packages/api/test/sense.router.test.ts
 
-  - Run DB repo tests (sqlite forced):
-      bun scripts/test-bun.ts packages/db/test/repo.sense.test.ts
+- Run DB repo tests (sqlite forced):
+  bun scripts/test-bun.ts packages/db/test/repo.sense.test.ts
 
 To apply Postgres migration in a real dev DB:
 
-  - Ensure Postgres is running, then:
-      bun run db:migrate
+- Ensure Postgres is running, then:
+  bun run db:migrate
 
 ## Validation and Acceptance
 
 Acceptance (manual):
 
-  - Start ALFRED web + API.
-  - In native, open the `Capture` tab and submit a text capture.
-  - In web, open the `Inbox` window and verify the capture appears.
-  - Open the `Working Set` window, pin a project focus, then submit another capture and verify its receipt includes working-set evidence.
+- Start ALFRED web + API.
+- In native, open the `Capture` tab and submit a text capture.
+- In web, open the `Inbox` window and verify the capture appears.
+- Open the `Working Set` window, pin a project focus, then submit another capture and verify its receipt includes working-set evidence.
 
 ## Idempotence and Recovery
 
@@ -110,6 +110,5 @@ Most steps are additive and safe to rerun. If the Postgres migration fails, fix 
 
 New tests to rely on:
 
-  - `packages/api/test/sense.router.test.ts` validates router wiring via mocks.
-  - `packages/db/test/repo.sense.test.ts` validates sqlite schema parity and repo correctness.
-
+- `packages/api/test/sense.router.test.ts` validates router wiring via mocks.
+- `packages/db/test/repo.sense.test.ts` validates sqlite schema parity and repo correctness.

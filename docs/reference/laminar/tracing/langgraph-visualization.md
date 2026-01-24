@@ -1,9 +1,10 @@
 ---
 title: LangGraph Visualization - Laminar documentation
-url: 
+url:
 description: View LangGraph structure in trace view
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/langgraph-visualization#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -34,7 +35,7 @@ On this page
 
 When you trace a LangGraph graph execution, Laminar automatically captures the graph structure and workflow, allowing you to visualize the entire graph flow directly in the trace view.
 
-## [​](https://docs.lmnr.ai/tracing/langgraph-visualization\#prerequisites)  Prerequisites
+## [​](https://docs.lmnr.ai/tracing/langgraph-visualization#prerequisites) Prerequisites
 
 You’ll need to install LangChain to work with LangGraph:
 
@@ -45,16 +46,16 @@ pip install langchain langchain-openai langgraph
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/langgraph-visualization\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/langgraph-visualization#overview) Overview
 
 LangGraph creates complex, stateful, multi-actor applications with Large Language Models.
 When these graphs are traced with Laminar, you can see complete graph structure and node relationships.
 
-## [​](https://docs.lmnr.ai/tracing/langgraph-visualization\#example%3A-multi-step-research-workflow)  Example: Multi-Step Research Workflow
+## [​](https://docs.lmnr.ai/tracing/langgraph-visualization#example%3A-multi-step-research-workflow) Example: Multi-Step Research Workflow
 
 Here’s how to set up a LangGraph workflow with Laminar tracing:
 
-### [​](https://docs.lmnr.ai/tracing/langgraph-visualization\#1-initialize-laminar)  1\. Initialize Laminar
+### [​](https://docs.lmnr.ai/tracing/langgraph-visualization#1-initialize-laminar) 1\. Initialize Laminar
 
 Copy
 
@@ -65,7 +66,7 @@ Laminar.initialize(project_api_key="your-project-api-key")
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/langgraph-visualization\#2-define-your-graph-state)  2\. Define Your Graph State
+### [​](https://docs.lmnr.ai/tracing/langgraph-visualization#2-define-your-graph-state) 2\. Define Your Graph State
 
 Copy
 
@@ -88,7 +89,7 @@ llm = ChatOpenAI(
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/langgraph-visualization\#3-create-traced-graph-nodes)  3\. Create Traced Graph Nodes
+### [​](https://docs.lmnr.ai/tracing/langgraph-visualization#3-create-traced-graph-nodes) 3\. Create Traced Graph Nodes
 
 Copy
 
@@ -113,7 +114,7 @@ async def recommendation_step(state: AgentState) -> AgentState:
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/langgraph-visualization\#4-build-the-graph-workflow)  4\. Build the Graph Workflow
+### [​](https://docs.lmnr.ai/tracing/langgraph-visualization#4-build-the-graph-workflow) 4\. Build the Graph Workflow
 
 Copy
 

@@ -12,12 +12,14 @@ ALFRED demonstrates **strong architectural foundations** with clean package boun
 **Overall Assessment:** **Maintainable with systematic cleanup required**
 
 **Key Strengths:**
+
 - Clean package boundaries (`apps/* → packages/* → packages/type`)
 - Comprehensive test infrastructure
 - Strong type safety foundation (strict TypeScript)
 - Consistent error handling patterns
 
 **Key Weaknesses:**
+
 - Over-mocking in tests (694 `mock.module()` calls across 221 files)
 - Large files exceed architectural budgets (11,500+ lines in orchestrator)
 - Performance budgets documented but not enforced
@@ -32,6 +34,7 @@ ALFRED demonstrates **strong architectural foundations** with clean package boun
 **Severity:** ⚠️ **Significant**
 
 **Evidence:**
+
 - **694 `mock.module()` calls** across 221 test files
 - Many tests mock implementation details rather than boundaries
 - Test isolation problems documented in multiple files
@@ -81,6 +84,7 @@ mock.module("@alfred/db", () => ({
 **Location:** Multiple test files with top-level `mock.module()`
 
 **Evidence:**
+
 - `packages/api/test/assistant.router.test.ts:2-3` - Comment: "causes Bun's module cache pollution"
 - `packages/api/test/voice.streaming.integration.test.ts:2-4` - Comment: "fails or hangs when run alongside other tests"
 
@@ -97,12 +101,14 @@ mock.module("@alfred/db", () => ({
 **1. Error Handling Coverage**
 
 **Gap:** Many routers test happy path only, missing:
+
 - Invalid input rejection
 - Permission failures
 - Network timeout handling
 - Partial failure recovery
 
 **Example:** `packages/api/test/assistant.router.test.ts` has 1 error case (`UNAUTHORIZED`) but missing:
+
 - Invalid message format
 - Tool execution failures
 - Escalation failures
@@ -111,6 +117,7 @@ mock.module("@alfred/db", () => ({
 **2. Integration Test Coverage**
 
 **Gap:** Heavy reliance on mocks means integration boundaries aren't tested:
+
 - Router → Repo → DB flow
 - Pipeline → Observer → Persistence flow
 - Agent → Workspace → Docker flow
@@ -120,6 +127,7 @@ mock.module("@alfred/db", () => ({
 **3. Edge Cases**
 
 **Gap:** Missing tests for:
+
 - Empty/null inputs
 - Boundary conditions (max tokens, max steps)
 - Concurrent operations
@@ -134,6 +142,7 @@ mock.module("@alfred/db", () => ({
 **Pattern:** Tests depend on execution order or shared state
 
 **Evidence:**
+
 - `packages/api/test/assistant.router.test.ts` - Requires `RUN_ASSISTANT_ROUTER_TESTS=1` flag
 - `packages/api/test/voice.streaming.integration.test.ts` - Comment: "fails when run alongside other tests"
 
@@ -144,6 +153,7 @@ mock.module("@alfred/db", () => ({
 **Pattern:** Complex `afterEach` cleanup suggests tight coupling
 
 **Example:** `packages/api/test/assistant.router.test.ts:53-61`
+
 ```typescript
 afterEach(() => {
   resetAllMocks();
@@ -161,16 +171,19 @@ afterEach(() => {
 ### 1.4 Recommendations
 
 **Priority 1: Refactor Over-Mocked Tests**
+
 1. Migrate `packages/api/test/assistant.router.test.ts` to dependency injection
 2. Replace `mock-db-client.ts` with real DB fixtures for integration tests
 3. Remove top-level `mock.module()` calls that cause cache pollution
 
 **Priority 2: Add Missing Test Coverage**
+
 1. Add error case tests for all routers (invalid input, permissions, failures)
 2. Add integration tests for critical flows (workflow execution, voice pipeline)
 3. Add edge case tests (boundaries, nulls, concurrency)
 
 **Priority 3: Improve Test Infrastructure**
+
 1. Document when to use `mock.module()` vs DI vs real fixtures
 2. Add test coverage reporting (target: 80% for repos, 60% for routers)
 3. Fix flaky tests by removing shared state
@@ -190,6 +203,7 @@ afterEach(() => {
 **Location:** `packages/runtime/src/orchestrator/`, `packages/runtime/src/workflow/`
 
 **Numbers:**
+
 ```
 orchestrator/     19 files    7,870 lines
 workflow/         12 files    2,500+ lines
@@ -199,11 +213,13 @@ Total             35+ files   11,500+ lines
 ```
 
 **Violations:**
+
 - `packages/runtime/src/orchestrator/agent.ts` - **1,231 lines** (exceeds 500-line budget)
 - `packages/runtime/src/orchestrator/waves.ts` - **609 lines**
 - `packages/runtime/src/workflow/orchestrator.ts` - **549 lines**
 
-**Impact:** 
+**Impact:**
+
 - Hard to understand (35+ files to navigate)
 - Hard to test (integration tests required)
 - Hard to modify (changes risk breaking behavior)
@@ -216,8 +232,9 @@ Total             35+ files   11,500+ lines
 **Location:** `packages/api/src/routers/`
 
 **Current Budgets (from `packages/api/test/architecture.godfiles.test.ts`):**
+
 - `workflow.ts` - max 500 lines
-- `voice.ts` - max 750 lines  
+- `voice.ts` - max 750 lines
 - `plan.ts` - max 950 lines
 - `agentfs.ts` - max 950 lines
 - `codex.ts` - max 900 lines
@@ -231,6 +248,7 @@ Total             35+ files   11,500+ lines
 **Evidence:** Multiple functions exceed 50-line limit (hot paths: 30 lines)
 
 **Examples:**
+
 - `packages/agent/src/orchestrator/tool/codex/definition.ts:67-155` - `exceedsComplexityLimits()` = 88 lines
 - `packages/api/src/routers/plan.ts:752-895` - Procedure = 143 lines
 - `packages/runtime/src/orchestrator/index.ts:32-213` - `runOrchestrator()` = 181 lines
@@ -284,16 +302,19 @@ Initial:     orchestrate() → execute()
 ### 2.4 Recommendations
 
 **Priority 1: Complete Orchestrator Refactoring**
+
 1. Migrate to canonical pipeline (`packages/pipeline/`) - already in progress
 2. Extract domain services from routers (per `.ruler/02-architecture.md` rule 10)
 3. Reduce router files to ≤500 lines (Concierge Focus ExecPlan)
 
 **Priority 2: Enforce Architectural Budgets**
+
 1. Implement `scripts/check-budgets.ts` (currently TODO stub)
 2. Add CI gate: fail on files >500 lines (or >1000 lines for systems)
 3. Require architectural review before adding features to large systems
 
 **Priority 3: Consolidate Small Files**
+
 1. Merge related small files in `packages/runtime/src/orchestrator/`
 2. Extract only when abstraction is stable (≥100 lines or complete abstraction)
 3. Document file purpose in directory READMEs
@@ -309,6 +330,7 @@ Initial:     orchestrate() → execute()
 **Evidence:** Only 21 `@ts-expect-error`/`@ts-ignore` instances across 6 files
 
 **Justified Cases:**
+
 - Vite type definitions (`apps/web/vite.config.ts`)
 - Test mocks (`packages/api/test/**/*.test.ts`)
 - Generated code (`apps/web/src/routeTree.gen.ts`)
@@ -322,11 +344,13 @@ Initial:     orchestrate() → execute()
 **Analysis:** From `docs/archive/2026-01-19/architecture-code-quality-review.md:100-124`
 
 **Justified Cases:**
+
 - Drizzle JSONB: `packages/db/src/schema/assistant.ts:28` (`export const tasks: any`)
 - Test mocks: `packages/api/test/**/*.test.ts`
 - Legacy tool interface: `packages/agent/src/v6.ts:44` (`execute: (...args: any[])`)
 
 **Questionable Cases:**
+
 - `packages/api/src/routers/workflow.ts:99` - `coerceRecord(val: unknown): Record<string, unknown>` - could use Zod
 - `packages/knowledge/src/query.hot.ts` - some `any` in hot paths could be narrowed
 - Tool execution: Legacy interface uses `any[]` - could use generics
@@ -334,6 +358,7 @@ Initial:     orchestrate() → execute()
 **Impact:** Reduces type safety benefits, makes refactoring riskier
 
 **Recommendation:**
+
 1. Audit `any` usages: categorize as "justified" vs "fixable"
 2. Fix fixable cases: use `unknown` + type guards, Zod validation, generics
 3. Document justified cases: add comments explaining necessity
@@ -342,11 +367,13 @@ Initial:     orchestrate() → execute()
 ### 3.3 Recommendations
 
 **Priority 1: Audit and Document `any` Usage**
+
 1. Categorize 704 `any` usages: justified (JSONB, mocks) vs fixable
 2. Add comments to justified cases explaining necessity
 3. Create tracking issue for fixable cases
 
 **Priority 2: Fix Fixable Cases**
+
 1. Replace `coerceRecord()` with Zod schema validation
 2. Narrow `any` in hot paths (`packages/knowledge/src/query.hot.ts`)
 3. Migrate legacy tool interface to generics
@@ -362,11 +389,13 @@ Initial:     orchestrate() → execute()
 **Evidence:** `docs/archive/2026-01-19/architecture-code-quality-review.md:69-96`
 
 **Problem:**
+
 - Budget checker is TODO stub (`scripts/check-budgets.ts:86-94`)
 - Rules state "Budget breaches are defects" but CI doesn't enforce
 - Hot paths (`.hot.ts` files) have instrumentation but no automated validation
 
 **Code Evidence:**
+
 ```typescript
 // scripts/check-budgets.ts:86-94
 function checkBudgets(): Violation[] {
@@ -377,11 +406,13 @@ function checkBudgets(): Violation[] {
 ```
 
 **Impact:**
+
 - Performance regressions can slip in unnoticed
 - `.hot.ts` files may not actually meet budgets
 - Rules document expectations that aren't verified
 
 **Hot Path Budgets (from `.ruler/09-purity-and-performance.md`):**
+
 - `<100 µs`: State transitions, normalizations
 - `<1 ms`: Graph lookups, redaction, validation
 - `<10 ms`: Fact extraction, context building
@@ -393,12 +424,14 @@ function checkBudgets(): Violation[] {
 ### 4.2 Recommendations
 
 **Priority 1: Implement Budget Enforcement**
+
 1. Implement `scripts/check-budgets.ts` using `@alfred/test-kit/src/performance/budget.ts`
 2. Add warmup-based tests for hot paths (per `.ruler/09-purity-and-performance.md` rule 16)
 3. Gate CI: `bun run check:budgets` fails on violations
 4. Verify existing `.hot.ts` files meet budgets
 
 **Priority 2: Add Budget Tests**
+
 1. Add deterministic warmup-based tests for:
    - `packages/cognitive/src/transition.ts` (state transitions)
    - `packages/knowledge/src/query.hot.ts` (graph lookups)
@@ -416,11 +449,13 @@ function checkBudgets(): Violation[] {
 **Evidence:** `docs/archive/2026-01-19/architecture-code-quality-review.md:44-66`
 
 **Violations:**
+
 - Multi-word filenames: `workflow-server.ts`, `runtime-fixture.ts`, `ai-adapter.ts`
 - Snake_case scripts: `stt_server.py`, `download_models.py`
 - Compound exports: `MayaTTSProcess`, `STTPool`, `TTSPool`
 
 **Impact:**
+
 - Violates core rule `.ruler/01-naming-conventions.md` ("single lowercase word")
 - Creates cognitive dissonance between rules and reality
 - `scripts/check-names.ts` exists but is unimplemented (TODO comments)
@@ -430,11 +465,13 @@ function checkBudgets(): Violation[] {
 ### 5.2 Recommendations
 
 **Priority 1: Implement Naming Checker**
+
 1. Implement `scripts/check-names.ts` with AST parsing
 2. Add CI gate: `bun run check:names` fails on violations
 3. Document exceptions: clarify when multi-word is acceptable (e.g., `.integration.test.ts`)
 
 **Priority 2: Systematic Cleanup**
+
 1. Phase 1: Fix voice scripts (already documented in ExecPlan)
 2. Phase 2: Fix test utilities (`test-kit`, `api/test/utils`)
 3. Phase 3: Fix core packages (prioritize hot paths)
@@ -443,13 +480,13 @@ function checkBudgets(): Violation[] {
 
 ## 6. Code Quality Metrics Summary
 
-| Category | Status | Violations | Priority |
-|----------|--------|------------|----------|
-| **Test Quality** | ⚠️ Moderate | 694 `mock.module()` calls, missing error cases | High |
+| Category         | Status      | Violations                                      | Priority |
+| ---------------- | ----------- | ----------------------------------------------- | -------- |
+| **Test Quality** | ⚠️ Moderate | 694 `mock.module()` calls, missing error cases  | High     |
 | **Architecture** | 🔴 Critical | 11,500+ lines in orchestrator, files >500 lines | Critical |
-| **Type Safety** | ✅ Good | 704 `any` (many justified), 21 suppressions | Medium |
-| **Performance** | 🔴 Critical | Budgets not enforced, checker unimplemented | Critical |
-| **Naming** | ⚠️ Moderate | 158+ files violate single-word rule | Medium |
+| **Type Safety**  | ✅ Good     | 704 `any` (many justified), 21 suppressions     | Medium   |
+| **Performance**  | 🔴 Critical | Budgets not enforced, checker unimplemented     | Critical |
+| **Naming**       | ⚠️ Moderate | 158+ files violate single-word rule             | Medium   |
 
 ---
 
@@ -507,12 +544,14 @@ function checkBudgets(): Violation[] {
 ALFRED's **architectural foundation is strong** with clean boundaries and consistent patterns. However, **technical debt has accumulated** in testing (over-mocking), architecture (large files), and enforcement (missing tooling).
 
 **Key Strengths to Preserve:**
+
 - Clean package boundaries (`apps/* → packages/* → packages/type`)
 - Comprehensive test infrastructure
 - Strong type safety foundation
 - Consistent error handling patterns
 
 **Key Weaknesses to Address:**
+
 - Over-mocking in tests (694 `mock.module()` calls)
 - Large files violating budgets (11,500+ lines in orchestrator)
 - Performance budgets not enforced

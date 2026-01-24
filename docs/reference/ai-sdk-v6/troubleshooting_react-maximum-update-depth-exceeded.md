@@ -19,27 +19,25 @@ Use the `experimental_throttle` option to throttle the UI updates:
 ### `useChat`
 
 page.tsx
-    
-    
+
     const { messages, ... } = useChat({
-    
+
       // Throttle the messages and data updates to 50ms:
-    
+
       experimental_throttle: 50
-    
+
     })
 
 ### `useCompletion`
 
 page.tsx
-    
-    
+
     const { completion, ... } = useCompletion({
-    
+
       // Throttle the completion and data updates to 50ms:
-    
+
       experimental_throttle: 50
-    
+
     })
 
 Previous

@@ -11,6 +11,7 @@ Owner: api
 This document outlines what needs to be done to complete two remaining GenUI gaps mentioned in `docs/genui-prd.md` and `docs/execplans/genui-llm-schema.md`.
 
 **Naming Conventions**: This plan follows ALFRED naming rules:
+
 - Single-word file names: `enrich.ts`, `submit.ts`, `form.ts`
 - Single-word function names: `enrich()`, `inject()`, `useSubmit()`
 - Domain folders: `packages/api/src/services/`, `packages/agent/src/utils/`
@@ -35,24 +36,26 @@ This document outlines what needs to be done to complete two remaining GenUI gap
 **Location**: `packages/agent/src/utils/enrich.ts` (new file)
 
 **Implementation**:
+
 - Intercept tool results before they become message parts
 - Detect if a tool result contains visualizable data (arrays, records, structured objects)
 - Use `SchemaGenerator` to automatically generate `data-ui` parts
 - Preserve original `tool-result` part for backward compatibility
 
 **Key Functions to Add**:
+
 ```typescript
 async function enrich(
   toolResult: ToolResultShape,
   ctx: SchemaContext
 ): Promise<MessagePart[]> {
   const output = getToolOutput(toolResult);
-  
+
   // Skip if already a GenUIToolResult
   if (isGenUIToolResult(output)) {
     return [createToolResultPart(toolResult)];
   }
-  
+
   // Use SchemaGenerator to create data-ui part
   const schemaGenerator = new SchemaGenerator({ role: "classify" });
   const dataUiPart = await schemaGenerator.toDataUiPart({
@@ -60,20 +63,18 @@ async function enrich(
     ctx,
     preferredComponent: null,
   });
-  
+
   if (dataUiPart) {
     // Return both tool-result (for compatibility) and data-ui (for visualization)
-    return [
-      createToolResultPart(toolResult),
-      dataUiPart,
-    ];
+    return [createToolResultPart(toolResult), dataUiPart];
   }
-  
+
   return [createToolResultPart(toolResult)];
 }
 ```
 
 **Integration Points**:
+
 - `createToolResultPart()` in `packages/agent/src/utils/normalize.ts` (line 370)
 - `collectAssistantParts()` in same file (line 314-318)
 - Tool execution wrappers in `packages/agent/src/orchestrator/tool/`
@@ -83,6 +84,7 @@ async function enrich(
 **Requirement**: Some tools should skip automatic GenUI (e.g., tools that return text, errors, or already-structured GenUI)
 
 **Implementation**:
+
 - Add tool annotation: `genui: "auto" | "manual" | "skip"`
 - Check annotation before auto-enrichment
 - Default to `"auto"` for backward compatibility
@@ -94,6 +96,7 @@ async function enrich(
 **Requirement**: Auto-enrichment must not block tool execution
 
 **Implementation**:
+
 - Use deterministic fast paths (<10ms) when possible
 - For LLM path, make async and non-blocking (fire-and-forget or background queue)
 - Add metrics: `genui_auto_enrichment_total{outcome, tool_name}`
@@ -102,6 +105,7 @@ async function enrich(
 #### 1.4: Testing
 
 **Test Cases**:
+
 - Tool returning array of numbers → auto-generates `chart` component
 - Tool returning key-value record → auto-generates `grid` component
 - Tool returning `GenUIToolResult` → skips auto-enrichment (no duplicate)
@@ -109,6 +113,7 @@ async function enrich(
 - Tool returning plain text → no GenUI (falls back to text rendering)
 
 **Test Files**:
+
 - `packages/agent/test/utils/enrich.test.ts` (new)
 - `packages/api/test/tool.integration.test.ts` (new)
 
@@ -117,7 +122,7 @@ async function enrich(
 - [x] Tools can opt out via annotation (implemented via SKIP_GENUI_TOOLS set)
 - [x] No duplicate GenUI when tools already return `GenUIToolResult` (checked in enrich())
 - [x] Tests cover 10+ tool result shapes (test file created with 10+ test cases)
-- [ ] >60% of tool results automatically render as GenUI (not JSON code blocks) - requires integration testing
+- [ ] > 60% of tool results automatically render as GenUI (not JSON code blocks) - requires integration testing
 - [ ] Auto-enrichment adds <50ms latency (p95) to tool execution - requires performance testing
 
 ---
@@ -138,12 +143,14 @@ async function enrich(
 **Location**: `apps/web/src/components/genui/components/form/*.tsx` (form components)
 
 **Implementation**:
+
 - Integrate GenUI form components with TanStack Form using `useAppForm` pattern
 - Form components accept `formId`, `conversationId`, `toolCallId` props
 - Use TanStack Form's `onSubmit` handler to emit submission events
 - Form data structure matches GenUI schema props
 
 **Pattern** (following `apps/web/src/form/index.tsx`):
+
 ```typescript
 // In GenUI form component wrapper
 import { useAppForm } from "@/form";
@@ -164,7 +171,7 @@ function GenUIForm({ formId, conversationId, toolCallId, schema, onSubmit }) {
       });
     },
   });
-  
+
   return <form.AppForm>{/* render form fields */}</form.AppForm>;
 }
 ```
@@ -174,6 +181,7 @@ function GenUIForm({ formId, conversationId, toolCallId, schema, onSubmit }) {
 **Location**: `packages/api/src/routers/genui.ts` (new router)
 
 **Implementation**:
+
 - Create tRPC procedure: `genui.submit`
 - Accept: `formId`, `conversationId`, `toolCallId?`, `data: Record<string, unknown>`
 - Validate form data against original schema (if available)
@@ -181,6 +189,7 @@ function GenUIForm({ formId, conversationId, toolCallId, schema, onSubmit }) {
 - Return confirmation message
 
 **Schema**:
+
 ```typescript
 export const submitSchema = z.object({
   formId: z.string(),
@@ -205,12 +214,14 @@ export const genuiRouter = router({
 **Location**: `packages/api/src/services/form.ts` (new service)
 
 **Implementation**:
+
 - Create `form` service with single responsibility: inject form submissions into conversations
 - Inject form submission as `tool-result` part into conversation
 - Associate with original `tool-call` if `toolCallId` provided
 - Update conversation history in database
 
 **Key Function**:
+
 ```typescript
 async function inject(
   conversationId: string,
@@ -228,11 +239,13 @@ async function inject(
 **Requirement**: To validate submissions, we need to store the original form schema
 
 **Implementation**:
+
 - Store form schema in `data-ui` part metadata when form is rendered
 - Retrieve schema when form is submitted
 - Validate submission against schema using Zod
 
 **Storage**:
+
 - Option A: Store in `data-ui` part's `data` field as `{ schema: {...}, ... }`
 - Option B: Store in conversation metadata/context
 - Option C: Store in separate form registry (overkill for Phase 1)
@@ -244,6 +257,7 @@ async function inject(
 **Location**: `apps/web/src/hooks/submit.ts` (new hook)
 
 **Implementation**:
+
 - Create `useSubmit` hook (single-word name)
 - Connect form components to submission handler
 - Call tRPC `genui.submit` mutation
@@ -251,12 +265,17 @@ async function inject(
 - Update conversation UI after submission
 
 **Example**:
+
 ```typescript
 function useSubmit(conversationId: string) {
   const submitMutation = trpc.genui.submit.useMutation();
-  
+
   return {
-    submit: async (formId: string, data: Record<string, unknown>, toolCallId?: string) => {
+    submit: async (
+      formId: string,
+      data: Record<string, unknown>,
+      toolCallId?: string
+    ) => {
       await submitMutation.mutateAsync({
         formId,
         conversationId,
@@ -271,6 +290,7 @@ function useSubmit(conversationId: string) {
 ```
 
 **Integration with TanStack Form**:
+
 ```typescript
 // In GenUI form component
 const { submit } = useSubmit(conversationId);
@@ -284,12 +304,14 @@ const form = useAppForm({
 #### 2.6: Validation & Error Handling
 
 **Implementation**:
+
 - Validate form data against schema before submission
 - Return validation errors to form component
 - Display inline errors in form fields
 - Prevent submission if validation fails
 
 **Error Types**:
+
 - Schema validation errors (Zod)
 - Conversation not found
 - Form ID mismatch
@@ -298,6 +320,7 @@ const form = useAppForm({
 #### 2.7: Testing
 
 **Test Cases**:
+
 - Form submission creates `tool-result` part in conversation
 - Validation errors prevent submission
 - Form submission associates with original `tool-call` when `toolCallId` provided
@@ -305,6 +328,7 @@ const form = useAppForm({
 - Form submission updates conversation UI immediately
 
 **Test Files**:
+
 - `packages/api/test/routers/genui.test.ts` (new)
 - `packages/api/test/services/form.test.ts` (new)
 - `apps/web/src/tests/components/genui/submit.test.tsx` (new)
@@ -351,12 +375,14 @@ const form = useAppForm({
 ## Dependencies
 
 ### For Gap 1 (Auto GenUI):
+
 - ✅ `SchemaGenerator` service (Phase 1 complete)
 - ✅ `uiComponentSchema` validation (Phase 1 complete)
 - ⚠️ Tool execution context (needs `SchemaContext` - userId, surface, mode)
 - ⚠️ Performance monitoring (needs metrics registry)
 
 ### For Gap 2 (Form Submission):
+
 - ✅ Form components exist (GenUI framework complete)
 - ✅ TanStack Form infrastructure (`useAppForm`, `apps/web/src/form/index.tsx`)
 - ⚠️ Conversation persistence (needs DB access)
@@ -404,6 +430,7 @@ const form = useAppForm({
 ### Phase 2A: Automatic Tool GenUI (Gap 1) - ✅ COMPLETED
 
 **Completed:**
+
 - ✅ Created `packages/agent/src/utils/enrich.ts` with `enrich()` function
 - ✅ Created `packages/agent/src/utils/enrich-event.ts` for async event enrichment
 - ✅ Created `packages/agent/src/utils/normalize-async.ts` for async normalization
@@ -413,6 +440,7 @@ const form = useAppForm({
 - ✅ Exported `ToolResultShape` type from `normalize.ts` for reuse
 
 **Pending:**
+
 - Integration into actual tool execution paths (requires async context with userId/surface)
 - Performance testing to verify <50ms latency
 - Integration testing to verify >60% auto-enrichment rate
@@ -420,6 +448,7 @@ const form = useAppForm({
 ### Phase 2B: Form Submission Loop (Gap 2) - ✅ COMPLETED
 
 **Completed:**
+
 - ✅ Created `packages/api/src/routers/genui.ts` with `submit` procedure
 - ✅ Created `packages/api/src/services/form.ts` with `inject()` function
 - ✅ Created `apps/web/src/hooks/submit.ts` hook for client-side submission
@@ -436,4 +465,5 @@ const form = useAppForm({
 - ✅ Added validation and error handling via TanStack Form in `GenUIFormWrapper`
 
 **Pending:**
+
 - Performance testing to verify form submission latency (<100ms p95)

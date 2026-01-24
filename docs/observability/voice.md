@@ -67,4 +67,3 @@ Define the minimum observability surface for production voice-to-voice (WebRTC p
 - **WebSocket overload**
   - Trigger: `rate(voice_websocket_connection_rejected_total[5m]) > 0`
   - Action: reduce connection churn, adjust limits, investigate runaway clients.
-

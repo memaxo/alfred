@@ -18,6 +18,7 @@
 ## Backend Routers Without Frontend Usage
 
 ### book (packages/api/src/routers/book.ts) - **HIGH PRIORITY**
+
 - **Procedures**: `create`, `list`, `delete`
 - **Status**: Router exists, no UI route found
 - **Expected Location**: `apps/web/src/routes/_protected/book.tsx` (missing)
@@ -27,6 +28,7 @@
 - **Linear Ticket**: [ALF-306](https://linear.app/alfred-ops/issue/ALF-306) - Create bookmark management UI route (Status: Backlog, Priority: High, Estimate: 3 Points)
 
 ### fs (packages/api/src/routers/fs.ts) - **MEDIUM PRIORITY**
+
 - **Procedures**: `read`, `write`
 - **Status**: Router exists, no frontend usage found
 - **Security Note**: Path validation implemented (`validatePath` ensures project root containment)
@@ -35,6 +37,7 @@
 - **Recommendation**: Consider if needed for code editor integration
 
 ### eval (packages/api/src/routers/eval.ts) - **LOW PRIORITY**
+
 - **Procedures**: `define`, `list`, `dataset.create`, `dataset.add`, `dataset.list`, `run.start`, `run.get`, `run.list`, `run.scores`
 - **Status**: Router exists, no frontend usage found
 - **Note**: `run.start` throws `NOT_IMPLEMENTED` error (line 209)
@@ -43,6 +46,7 @@
 - **Recommendation**: Admin UI or CLI tool
 
 ### deploy (packages/api/src/routers/deploy.ts) - **MEDIUM PRIORITY**
+
 - **Procedures**: `list`, `get`, `removeRecord`, `createPreview`, `promote`, `probe`, `healthStream`, `remove`
 - **Status**: Router exists, no frontend usage found
 - **Use Case**: Preview/production deployment management
@@ -51,6 +55,7 @@
 - **Recommendation**: Admin dashboard or workflow integration
 
 ### tune (packages/api/src/routers/tune.ts) - **LOW PRIORITY**
+
 - **Procedures**: `start`
 - **Status**: Router exists, no frontend usage found
 - **Use Case**: Fine-tuning job management
@@ -58,6 +63,7 @@
 - **Recommendation**: Admin UI or CLI tool
 
 ### codex (packages/api/src/routers/codex.ts) - **MEDIUM PRIORITY**
+
 - **Procedures**: `run`, `stream`, `listRuns`, `getRun`, `events`, `searchEvents`, `streamEvents`, `listSessions`, `getSession`, `terminateSession`
 - **Status**: Router exists, no direct frontend usage found
 - **Note**: Used internally by orchestrator/workflow system
@@ -67,6 +73,7 @@
 - **Recommendation**: Consider exposing via workflow UI or admin panel
 
 ### codexIntent (packages/api/src/routers/codex-intent.ts) - **MEDIUM PRIORITY**
+
 - **Procedures**: `run`
 - **Status**: Router exists, no frontend usage found
 - **Use Case**: Intent-based codex API for mobile/simplified clients
@@ -74,6 +81,7 @@
 - **Recommendation**: Connect to mobile chat interface
 
 ### cognitive (packages/api/src/routers/cognitive.ts) - **LOW PRIORITY**
+
 - **Procedures**: `feedback`
 - **Status**: Router exists, used indirectly via `useCognitiveFeedback` hook
 - **Note**: Not directly called from UI components, wrapped in hook abstraction
@@ -81,12 +89,14 @@
 - **Recommendation**: Current abstraction is acceptable
 
 ### jwks (packages/api/src/routers/jwks.ts) - **N/A**
+
 - **Procedures**: `get`
 - **Status**: Public endpoint, used by auth library
 - **Note**: Infrastructure endpoint, not user-facing
 - **Impact**: None - correctly abstracted
 
 ### token (packages/api/src/routers/token.ts) - **LOW PRIORITY**
+
 - **Procedures**: `issue`, `elevate`
 - **Status**: Router exists, no frontend usage found
 - **Use Case**: Tool token issuance for elevated operations
@@ -95,6 +105,7 @@
 - **Recommendation**: Keep internal, document for admin use
 
 ### profile (packages/api/src/routers/profile.ts) - **MEDIUM PRIORITY**
+
 - **Procedures**: `get`, `update`
 - **Status**: Router exists, no frontend usage found
 - **Use Case**: User profile management
@@ -103,6 +114,7 @@
 - **Recommendation**: Add profile page in settings
 
 ### project (packages/api/src/routers/project.ts) - **MEDIUM PRIORITY**
+
 - **Procedures**: `detect`, `linkLinear`, `get`, `list`
 - **Status**: Router exists, no frontend usage found
 - **Use Case**: Project detection and Linear integration
@@ -110,6 +122,7 @@
 - **Recommendation**: Integrate into workflow or project management UI
 
 ### privacy (packages/api/src/routers/privacy.ts) - **HIGH PRIORITY**
+
 - **Procedures**: `facts`, `deleteFact`, `events`
 - **Status**: Router exists, no frontend usage found
 - **Use Case**: Privacy controls and fact management
@@ -123,6 +136,7 @@
 ## Partial Integrations
 
 ### timer (packages/api/src/routers/timer.ts) - **COMPLETE** ✅
+
 - **Router**: `packages/api/src/routers/timer.ts`
 - **Frontend**: `apps/web/src/routes/_protected/timer.tsx` ✅
 - **Procedures Used**: `create`, `active`, `done`, `cancel` (all procedures used)
@@ -130,6 +144,7 @@
 - **Note**: Previously reported as missing in PRD status, but implementation exists
 
 ### graph (packages/api/src/routers/graph.ts) - **PARTIAL**
+
 - **Router**: `packages/api/src/routers/graph.ts`
 - **Frontend Usage**: `apps/web/src/hooks/use-focused-context.ts` (line 216) - uses `graph.runQuery`
 - **Procedures Available**: `ensureMirrors`, `getEdges`, `connect`, `explainedBy`, `watchEdges`, `runQuery`
@@ -139,6 +154,7 @@
 - **Recommendation**: Add graph visualization component
 
 ### knowledge (packages/api/src/routers/knowledge.ts) - **PARTIAL**
+
 - **Router**: `packages/api/src/routers/knowledge.ts`
 - **Frontend Usage**: `apps/web/src/hooks/use-knowledge-visualize.ts` (line 13) - uses `knowledge.visualize`
 - **Procedures Available**: `visualize` only
@@ -146,6 +162,7 @@
 - **Status**: Fully integrated (only one procedure exists)
 
 ### admin (packages/api/src/routers/admin.ts) - **PARTIAL**
+
 - **Router**: `packages/api/src/routers/admin.ts`
 - **Frontend Usage**: `apps/web/src/routes/_protected/admin/voice.tsx` (lines 55, 66, 80)
 - **Procedures Available**: `getVoiceStats`, `restartVoicePool`, `clearVoiceSessions`
@@ -153,6 +170,7 @@
 - **Status**: Fully integrated (admin-only route)
 
 ### droid (packages/api/src/routers/droids.ts) - **PARTIAL**
+
 - **Router**: `packages/api/src/routers/droids.ts`
 - **Frontend Usage**: `apps/web/src/components/biometric-challenge-dialog.tsx` (line 80) - uses `droid.resume`
 - **Procedures Available**: `run`, `stream`, `resume`
@@ -166,6 +184,7 @@
 ## Frontend Features Without Backend Integration
 
 ### Mobile Chat Interface - **HIGH PRIORITY**
+
 - **Location**: `apps/native/app/(drawer)/(tabs)/index.tsx`
 - **Status**: Placeholder only ("Tab One")
 - **Required Backend**: `trpc.assistant.stream` or `trpc.orchestrator.stream`
@@ -176,10 +195,11 @@
 - **Linear Ticket**: [ALF-82](https://linear.app/alfred-ops/issue/ALF-82) - Implement mobile chat interface (Status: Backlog, Priority: Medium, Estimate: 5 Points)
 
 ### Message Editing/Regeneration - **HIGH PRIORITY**
+
 - **Location**: Chat components (`apps/web/src/components/chat-container.tsx`, `apps/web/src/components/windows/chat/chat-window.tsx`)
 - **Status**: Not implemented
 - **PRD Reference**: `docs/reports/prd-implementation-status.md` line 53
-- **Required Backend**: 
+- **Required Backend**:
   - Message update endpoint (or message regeneration via assistant stream)
   - Message history modification
 - **Impact**: User cannot edit or regenerate assistant responses
@@ -188,6 +208,7 @@
 - **Linear Ticket**: [ALF-78](https://linear.app/alfred-ops/issue/ALF-78) - Implement message editing and regeneration UI (Status: Backlog, Priority: Medium, Estimate: 2 Points)
 
 ### Performance Metrics Dashboard - **MEDIUM PRIORITY**
+
 - **Location**: No UI component found
 - **Status**: Metrics collection exists (`packages/api/src/metrics.ts`), Prometheus endpoint exists (`apps/web/src/routes/api/metrics.ts`)
 - **PRD Reference**: `docs/reports/prd-implementation-status.md` line 74
@@ -222,12 +243,14 @@ These routers are fully integrated with frontend consumers:
 ## Priority Ranking
 
 ### High Priority (User-Facing Features)
+
 1. **book** - Bookmark pane missing (PRD requirement)
 2. **privacy** - Privacy controls missing (PRD requirement)
 3. **Mobile Chat Interface** - Core mobile functionality
 4. **Message Editing/Regeneration** - User experience improvement
 
 ### Medium Priority (Feature Enhancements)
+
 1. **fs** - File system access (requires careful security design)
 2. **deploy** - Deployment management (DevOps workflow)
 3. **codex** - Direct codex UI (power user feature)
@@ -237,6 +260,7 @@ These routers are fully integrated with frontend consumers:
 7. **Performance Metrics Dashboard** - Observability
 
 ### Low Priority (Admin/Developer Tools)
+
 1. **eval** - Evaluation framework (admin tool)
 2. **tune** - Fine-tuning jobs (admin tool)
 3. **token** - Token management (internal use)
@@ -247,6 +271,7 @@ These routers are fully integrated with frontend consumers:
 ## Recommendations
 
 ### Immediate Actions
+
 1. **Create bookmark UI route** (`apps/web/src/routes/_protected/book.tsx`)
    - Use `trpc.book.create`, `trpc.book.list`, `trpc.book.delete`
    - Follow pattern from `note.tsx` or `remind.tsx`
@@ -268,6 +293,7 @@ These routers are fully integrated with frontend consumers:
    - Follow AI SDK v6 patterns for message manipulation
 
 ### Short-Term Enhancements
+
 1. **Profile management page**
    - Create `apps/web/src/routes/_protected/settings/profile.tsx`
    - Use `trpc.profile.get`, `trpc.profile.update`
@@ -282,6 +308,7 @@ These routers are fully integrated with frontend consumers:
    - Create graph visualization component
 
 ### Long-Term Considerations
+
 1. **Deployment management UI** (if needed for DevOps workflows)
 2. **Codex direct UI** (power user feature)
 3. **Evaluation framework UI** (admin tool)
@@ -291,6 +318,7 @@ These routers are fully integrated with frontend consumers:
 ## Testing Recommendations
 
 For each new integration:
+
 1. **Type Safety**: Ensure full TypeScript inference (no `as any` casts)
 2. **Error Handling**: Add proper error states and loading indicators
 3. **Security**: Verify policy checks and authentication
@@ -302,15 +330,18 @@ For each new integration:
 ## File Reference Summary
 
 ### Backend Routers
+
 - Router registry: `packages/api/src/routers/index.ts`
 - All routers: `packages/api/src/routers/*.ts`
 
 ### Frontend tRPC Setup
+
 - Web client: `apps/web/src/lib/trpc-client.ts`
 - Native client: `apps/native/utils/trpc.ts`
 - React Query wrapper: `apps/web/src/router.tsx`
 
 ### Existing Connected Patterns
+
 - Timer: `apps/web/src/routes/_protected/timer.tsx`
 - Visual: `apps/web/src/routes/_protected/settings/visual.tsx`
 - Terminal: `apps/web/src/components/windows/terminal/terminal-window.tsx`
@@ -318,6 +349,7 @@ For each new integration:
 - Reminders: `apps/web/src/routes/remind.tsx`
 
 ### PRD References
+
 - Status report: `docs/reports/prd-implementation-status.md`
 - PRD: `docs/alfred-prd.md`
 

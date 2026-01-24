@@ -1,9 +1,10 @@
 ---
 title: Microsoft | Better Auth
-url: 
+url:
 description: Microsoft provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Enabling OAuth with Microsoft Azure Entra ID (formerly Active Directory) allows your users to sign in and sign up to your application with their Microsoft account.
 
-### [Get your Microsoft credentials](https://www.better-auth.com/docs/authentication/microsoft\#get-your-microsoft-credentials)
+### [Get your Microsoft credentials](https://www.better-auth.com/docs/authentication/microsoft#get-your-microsoft-credentials)
 
 To use Microsoft as a social provider, you need to get your Microsoft credentials. Which involves generating your own Client ID and Client Secret using your Microsoft Entra ID dashboard account.
 
@@ -36,7 +37,7 @@ Make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/mi
 
 see the [Microsoft Entra ID documentation](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app) for more information.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/microsoft\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/microsoft#configure-the-provider)
 
 To configure the provider, you need to pass the `clientId` and `clientSecret` to `socialProviders.microsoft` in your auth configuration.
 
@@ -61,7 +62,7 @@ export const auth = betterAuth({
 
 **Authority URL**: Use the default `https://login.microsoftonline.com` for standard Entra ID scenarios or `https://<tenant-id>.ciamlogin.com` for CIAM (Customer Identity and Access Management) scenarios.
 
-## [Sign In with Microsoft](https://www.better-auth.com/docs/authentication/microsoft\#sign-in-with-microsoft)
+## [Sign In with Microsoft](https://www.better-auth.com/docs/authentication/microsoft#sign-in-with-microsoft)
 
 To sign in with Microsoft, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 

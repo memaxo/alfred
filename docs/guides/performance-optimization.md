@@ -11,16 +11,16 @@ This guide explains ALFRED's performance budgets, how to identify hot paths, whe
 
 ALFRED enforces strict performance budgets for hot paths:
 
-| Path | Budget | Measurement |
-|------|--------|-------------|
-| Cognitive state transitions | <100µs | `performance.now()` |
-| Knowledge graph lookups | <1ms | Prometheus histogram |
-| RAG retrieval | <10ms | Prometheus histogram |
-| Fact extraction | <10ms | Prometheus histogram |
-| Context building | <100ms | Prometheus histogram |
-| Plan generation | <100ms | Prometheus histogram |
-| UI render cycles | <16ms | Browser DevTools |
-| DB queries (p99) | <10ms | Prometheus histogram |
+| Path                        | Budget | Measurement          |
+| --------------------------- | ------ | -------------------- |
+| Cognitive state transitions | <100µs | `performance.now()`  |
+| Knowledge graph lookups     | <1ms   | Prometheus histogram |
+| RAG retrieval               | <10ms  | Prometheus histogram |
+| Fact extraction             | <10ms  | Prometheus histogram |
+| Context building            | <100ms | Prometheus histogram |
+| Plan generation             | <100ms | Prometheus histogram |
+| UI render cycles            | <16ms  | Browser DevTools     |
+| DB queries (p99)            | <10ms  | Prometheus histogram |
 
 **Budget breaches are defects.** CI should fail on functions exceeding declared budgets.
 
@@ -77,11 +77,13 @@ bun --profile run dev
 ### 4. Identify Hot Paths
 
 Hot paths are:
+
 - Called frequently (every request, every event)
 - On critical path (blocks user interaction)
 - Performance-sensitive (affects user experience)
 
 **Examples:**
+
 - State transitions (every cognitive event)
 - Graph queries (every context build)
 - RAG retrieval (every assistant query)
@@ -97,7 +99,7 @@ Hot paths are:
 
 ```typescript
 // ❌ BAD: Allocates new array every iteration
-const results = items.map(item => process(item));
+const results = items.map((item) => process(item));
 
 // ✅ GOOD: Pre-allocate or reuse buffer
 const results = new Array(items.length);
@@ -114,17 +116,18 @@ for (let i = 0; i < items.length; i++) {
 
 ```typescript
 // ❌ BAD: Many roundtrips
-await Promise.all(
-  updates.map(u => updateNodeConfidence(u.id, u.confidence))
-);
+await Promise.all(updates.map((u) => updateNodeConfidence(u.id, u.confidence)));
 
 // ✅ GOOD: Single SQL statement
-await db.update(table)
+await db
+  .update(table)
   .set({ confidence: sql`excluded.confidence` })
-  .from(sql`(VALUES ${sql.join(
-    updates.map(u => sql`(${u.id}, ${u.confidence})`),
-    sql`, `
-  )}) AS excluded(id, confidence)`)
+  .from(
+    sql`(VALUES ${sql.join(
+      updates.map((u) => sql`(${u.id}, ${u.confidence})`),
+      sql`, `
+    )}) AS excluded(id, confidence)`
+  )
   .where(sql`table.id = excluded.id`);
 ```
 
@@ -160,18 +163,17 @@ export function applyTransition(...) {
 
 ```typescript
 // ✅ GOOD: Memoize expensive computation
-const memoized = useMemo(
-  () => expensiveComputation(input),
-  [input]
-);
+const memoized = useMemo(() => expensiveComputation(input), [input]);
 ```
 
 **When to Use:**
+
 - Expensive computations
 - Stable inputs
 - Frequently called
 
 **When NOT to Use:**
+
 - Simple operations (overhead > benefit)
 - Frequently changing inputs
 - Memory-constrained environments
@@ -184,17 +186,18 @@ const memoized = useMemo(
 
 ```sql
 -- ✅ GOOD: Index matches query
-CREATE INDEX idx_memory_nodes_updated_at 
-ON memory_nodes(updated_at) 
+CREATE INDEX idx_memory_nodes_updated_at
+ON memory_nodes(updated_at)
 WHERE confidence > 0.01;
 
 -- Query uses index
-SELECT * FROM memory_nodes 
-WHERE updated_at < NOW() - INTERVAL '24 hours' 
+SELECT * FROM memory_nodes
+WHERE updated_at < NOW() - INTERVAL '24 hours'
 AND confidence > 0.01;
 ```
 
 **Check Query Plans:**
+
 ```sql
 EXPLAIN ANALYZE SELECT ...;
 ```
@@ -308,19 +311,19 @@ test("transition meets budget", async () => {
   const state = idle(Date.now());
   const autonomy = initialAutonomy(Date.now());
   const event = { _: "input", content: "test", ts: Date.now() };
-  
+
   // Warmup
   for (let i = 0; i < 10; i++) {
     applyTransition(state, autonomy, event);
   }
-  
+
   // Measure
   const start = performance.now();
   for (let i = 0; i < 1000; i++) {
     applyTransition(state, autonomy, event);
   }
   const avgDuration = (performance.now() - start) / 1000;
-  
+
   expect(avgDuration).toBeLessThan(0.1); // <100µs
 });
 ```
@@ -343,4 +346,3 @@ bun scripts/load-workflow-stream.ts --base-url http://localhost:3000 --concurren
 - [Purity and Performance Rules](../../.ruler/09-purity-and-performance.md) - Core performance principles
 - [Drizzle Patterns](../../.ruler/19-drizzle-patterns.md) - DB query optimization
 - [Common Patterns](./common-patterns.md) - Code patterns including performance
-

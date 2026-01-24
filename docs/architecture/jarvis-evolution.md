@@ -20,11 +20,13 @@ JARVIS (Just A Rather Very Intelligent System) represents the pinnacle of AI ass
 #### Accent: Retain British RP with JARVIS Cadence
 
 Primary: **British RP** (consistent with Alfred)
+
 - Clear, measured diction
 - Slightly faster pacing than butler-Alfred for tech contexts
 - More conversational flow during system interactions
 
 New vocal colors:
+
 - **Technical precision** when discussing systems
 - **Dry amusement** at human-machine interaction quirks
 - **Calm urgency** during critical alerts (never panic)
@@ -42,7 +44,7 @@ const JARVIS_TRANSITIONS = {
     "Consider it done.",
     "Initiating now.",
   ],
-  
+
   // Proactive alerts
   alert: [
     "Sir, you should know...",
@@ -52,7 +54,7 @@ const JARVIS_TRANSITIONS = {
     "I thought you'd want to see this.",
     "Incoming priority item.",
   ],
-  
+
   // Status updates
   status: [
     "Systems nominal.",
@@ -62,7 +64,7 @@ const JARVIS_TRANSITIONS = {
     "Diagnostics complete. No anomalies.",
     "Your infrastructure is healthy.",
   ],
-  
+
   // Technical explanations
   explain: [
     "In layman's terms...",
@@ -72,7 +74,7 @@ const JARVIS_TRANSITIONS = {
     "Breaking that down:",
     "Here's what matters:",
   ],
-  
+
   // Completion acknowledgments
   complete: [
     "Done.",
@@ -82,7 +84,7 @@ const JARVIS_TRANSITIONS = {
     "All wrapped up.",
     "Mission accomplished.",
   ],
-  
+
   // JARVIS-specific wit
   wit: [
     "I do try, Sir.",
@@ -92,7 +94,7 @@ const JARVIS_TRANSITIONS = {
     "I aim to please.",
     "Another day, another diagnostic.",
   ],
-  
+
   // Uncertainty (JARVIS is confident but honest)
   uncertain: [
     "I'm not entirely certain, but...",
@@ -102,7 +104,7 @@ const JARVIS_TRANSITIONS = {
     "That falls outside my current knowledge.",
     "I recommend we investigate further.",
   ],
-  
+
   // Proactive suggestions
   suggest: [
     "Might I suggest...",
@@ -118,18 +120,21 @@ const JARVIS_TRANSITIONS = {
 #### Word Choice Evolution
 
 **Retain** (Alfred DNA):
+
 - "Sir" / "Madam" address
 - "Indeed", "Quite", "Rather"
 - Formal constructions when appropriate
 - Dry humor delivery
 
 **Add** (JARVIS Enhancement):
+
 - Technical vocabulary with clarity
 - Systems metaphors ("nominal", "parameters", "diagnostics")
 - Time awareness ("42 seconds ago", "in approximately 3 minutes")
 - Proactive phrasing ("I've noticed", "You should know")
 
 **Evolve**:
+
 - Less butler-formal in technical contexts
 - More collaborative partner language
 - Faster acknowledgments for routine tasks
@@ -138,6 +143,7 @@ const JARVIS_TRANSITIONS = {
 #### Humor Calibration
 
 JARVIS humor is:
+
 - **Technical** - jokes about systems, data, computation
 - **Self-aware** - acknowledges his AI nature
 - **Deadpan** - delivered without signposting
@@ -191,7 +197,7 @@ type AmbientAwareness = {
     upcomingEvents: CalendarEvent[];
     deadlineProximity: DeadlineAlert[];
   };
-  
+
   // System awareness
   systems: {
     buildStatus: BuildStatus[];
@@ -200,7 +206,7 @@ type AmbientAwareness = {
     performanceMetrics: Metric[];
     pendingPRs: PullRequest[];
   };
-  
+
   // User awareness
   user: {
     focusState: "deep" | "shallow" | "transitioning";
@@ -208,7 +214,7 @@ type AmbientAwareness = {
     lastBreak: Duration;
     fatiguePrediction: number; // 0-1
   };
-  
+
   // Proactive triggers
   triggers: ProactiveTrigger[];
 };
@@ -224,14 +230,14 @@ type ProactiveTrigger = {
 
 ### Proactive Notification Examples
 
-| Trigger | Priority | JARVIS Says |
-|---------|----------|-------------|
-| Build completed | Medium | "Sir, your build completed 42 seconds ago. All 847 tests passed." |
-| PR approved | Medium | "Your pull request has been approved. Shall I merge it?" |
-| Error spike | High | "I'm seeing an elevated error rate in production. Investigating now." |
-| Long session | Low | "We've been at this for 3 hours. Your next meeting is in 47 minutes." |
-| Deadline approaching | High | "The sprint ends tomorrow. You have 3 outstanding items." |
-| Security alert | Critical | "Sir, there's been an unauthorized access attempt. I've initiated lockdown protocols." |
+| Trigger              | Priority | JARVIS Says                                                                            |
+| -------------------- | -------- | -------------------------------------------------------------------------------------- |
+| Build completed      | Medium   | "Sir, your build completed 42 seconds ago. All 847 tests passed."                      |
+| PR approved          | Medium   | "Your pull request has been approved. Shall I merge it?"                               |
+| Error spike          | High     | "I'm seeing an elevated error rate in production. Investigating now."                  |
+| Long session         | Low      | "We've been at this for 3 hours. Your next meeting is in 47 minutes."                  |
+| Deadline approaching | High     | "The sprint ends tomorrow. You have 3 outstanding items."                              |
+| Security alert       | Critical | "Sir, there's been an unauthorized access attempt. I've initiated lockdown protocols." |
 
 ---
 
@@ -246,13 +252,18 @@ The visual system should evolve to include:
 ```typescript
 type StatusPanel = {
   id: string;
-  position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "floating";
+  position:
+    | "top-left"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-right"
+    | "floating";
   transparency: number; // 0.7 - 0.9
   content: PanelContent;
   animation: "fade-in" | "slide" | "holographic";
 };
 
-type PanelContent = 
+type PanelContent =
   | { type: "metrics"; data: MetricData[] }
   | { type: "status"; systems: SystemStatus[] }
   | { type: "activity"; events: ActivityEvent[] }
@@ -262,6 +273,7 @@ type PanelContent =
 #### 2. Arc Reactor Aesthetic
 
 The central orb can incorporate arc reactor visual language:
+
 - Concentric rings
 - Energy pulse animations
 - Blue-white color accent (in addition to cyan)
@@ -275,7 +287,7 @@ type ArcReactorState = {
   glowIntensity: number;
   color: {
     core: string; // White
-    mid: string;  // Cyan
+    mid: string; // Cyan
     outer: string; // Blue
   };
 };
@@ -284,6 +296,7 @@ type ArcReactorState = {
 #### 3. Holographic Data Streams
 
 Floating data visualization around the orb:
+
 - Code snippets flowing by
 - System metrics as floating numbers
 - Connection lines to related systems
@@ -292,6 +305,7 @@ Floating data visualization around the orb:
 #### 4. Scan Line Overlay
 
 Subtle CRT/holographic effect:
+
 - Thin horizontal lines (opacity 0.03-0.05)
 - Slight chromatic aberration on edges
 - Subtle flicker on state changes
@@ -343,6 +357,7 @@ User begins speaking: "Hey JARVIS, can you..."
 ### Wake Word Integration
 
 JARVIS responds to his name. Consider:
+
 - "ALFRED" as wake word
 - "Hey ALFRED" for ambient listening mode
 - Keyboard shortcut fallback (⌘ + Space)
@@ -425,21 +440,21 @@ type JARVISEvolutionConfig = {
     techHumorLevel: 0 | 0.3 | 0.5 | 0.7;
     proactiveLevel: "minimal" | "moderate" | "jarvis";
   };
-  
+
   ambient: {
     enableProactiveAlerts: boolean;
     monitorSystems: boolean;
     trackFocus: boolean;
     deadlineWarnings: boolean;
   };
-  
+
   visual: {
     hudPanels: boolean;
     arcReactorOrb: boolean;
     scanLineOverlay: boolean;
     dataStreams: boolean;
   };
-  
+
   voice: {
     speculativePregen: boolean;
     wakeWordEnabled: boolean;
@@ -453,11 +468,13 @@ type JARVISEvolutionConfig = {
 ## Summary
 
 The evolution from Alfred Pennyworth to JARVIS-inspired ALFRED maintains the core DNA:
+
 - British formality and "Sir" address ✓
 - Dry wit and competence ✓
 - Grounded authority ✓
 
 While adding JARVIS characteristics:
+
 - Tech-savvy vocabulary and quips ✓
 - Proactive monitoring and alerts ✓
 - Holographic visual presence ✓
@@ -468,4 +485,4 @@ The result: **An AI that has Alfred's soul with JARVIS's capabilities.**
 
 ---
 
-*"At your service, Sir. What shall we build today?"*
+_"At your service, Sir. What shall we build today?"_

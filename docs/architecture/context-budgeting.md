@@ -9,6 +9,7 @@ ALFRED manages LLM context window limits by intelligently pruning message histor
 **Primary function:** `buildHistoryContext` from `@alfred/history` (`packages/history/src/history-context.ts`)
 
 **Purpose:** Selects which messages to include in the LLM context window based on:
+
 - Token budget constraints
 - Message importance (anchors, tool chains, recent messages)
 - Aggressive vs. conservative pruning strategies
@@ -26,6 +27,7 @@ const budget = resolveBudget(
 ```
 
 **Budget components:**
+
 - `maxContextTokens`: Model's maximum context window size
 - `minSystemReserve`: Reserved tokens for system prompt (default: 2000)
 - `minHeadroom`: Safety buffer to avoid overflow (default: 2000)
@@ -33,6 +35,7 @@ const budget = resolveBudget(
 - `historyRatio`: Fraction of available tokens for history (default: 0.5, range: 0.05-0.95)
 
 **Formula:**
+
 ```
 availableTokens = maxContextTokens - systemTokens - minHeadroom - reservedTooling
 historyBudget = availableTokens * historyRatio
@@ -57,6 +60,7 @@ When `aggressive: true` (used in voice assistant for latency):
 - Faster selection algorithm (fewer passes)
 
 **Usage:** Voice assistant (`packages/api/src/voice/assistant.ts` line 457):
+
 ```typescript
 const historyContext = await buildHistoryContext({
   messages: allMessages,
@@ -99,11 +103,13 @@ When `aggressive: false` (default for chat):
 **Estimator:** `createTokenEstimator` from `@alfred/metrics/token`
 
 **Method:** Model-specific token counting:
+
 - Uses model's tokenizer when available
 - Falls back to character-based estimation
 - Accounts for message structure (role, parts, tool calls)
 
 **Role weights:** Different message roles have different token costs:
+
 - `user`: 3x weight (more verbose)
 - `assistant`: 2x weight
 - `tool`: 1x weight
@@ -116,6 +122,7 @@ When `aggressive: false` (default for chat):
 **File:** `packages/api/src/voice/assistant.ts`
 
 **Strategy:** Aggressive pruning for low latency
+
 - Prunes aggressively to keep response times fast
 - Preserves recent context and active tool chains
 - Trade-off: May lose older context for speed
@@ -125,6 +132,7 @@ When `aggressive: false` (default for chat):
 **Files:** `apps/web/src/hooks/use-chat-logic.ts`, `apps/native/hooks/use-chat-logic.ts`
 
 **Strategy:** Conservative pruning (default)
+
 - Preserves more historical context
 - Better for maintaining conversation coherence
 - Trade-off: May hit token limits in very long conversations
@@ -134,6 +142,7 @@ When `aggressive: false` (default for chat):
 **File:** `packages/runtime/src/context.ts` (via `buildHistoryContext`)
 
 **Strategy:** Context-dependent
+
 - Uses history context for plan generation
 - May use aggressive mode for fast planning
 - Preserves tool chains and decision points
@@ -149,11 +158,13 @@ When `aggressive: false` (default for chat):
 ## Configuration
 
 **Environment variables:**
+
 - `HISTORY_RATIO`: Fraction of tokens for history (default: 0.5)
 - `MIN_SYSTEM_RESERVE`: Reserved system tokens (default: 2000)
 - `MIN_HEADROOM`: Safety buffer (default: 2000)
 
 **Per-call options:**
+
 - `aggressive`: Enable aggressive pruning (default: false)
 - `forceKeepIds`: Message IDs to always include
 - `maxHistoryTokens`: Override calculated budget

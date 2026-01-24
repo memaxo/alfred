@@ -91,7 +91,7 @@ Document the expected log snippets (voice session creation, workflow runtime sta
    - `bun test packages/api/test/voice.streaming.integration.test.ts`
    - `bun test packages/api/test/voice.streaming.e2e.test.ts`
    - `bun test packages/api/test/workflow.runtime-integration.test.ts`
-   capture short expected outputs for the docs.
+     capture short expected outputs for the docs.
 
 ## Validation and Acceptance
 

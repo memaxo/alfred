@@ -1,9 +1,10 @@
 ---
 title: Module resolution – Runtime | Bun Docs
-url: 
+url:
 description: Bun uses ESM and implements an extended version of the Node.js module resolution algorithm.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -58,7 +59,7 @@ The ecosystem is currently in the midst of a years-long transition from CommonJS
 
 Bun aims to provide a consistent and predictable module resolution system that just works. Unfortunately it's still quite complex.
 
-## [Syntax](https://bun.com/docs/runtime/modules\#syntax)
+## [Syntax](https://bun.com/docs/runtime/modules#syntax)
 
 Consider the following files.
 
@@ -160,18 +161,18 @@ exports.hello = hello;
 
 That said, using CommonJS is discouraged in new projects.
 
-## [Module systems](https://bun.com/docs/runtime/modules\#module-systems)
+## [Module systems](https://bun.com/docs/runtime/modules#module-systems)
 
 Bun has native support for CommonJS and ES modules. ES Modules are the recommended module format for new projects, but CommonJS modules are still widely used in the Node.js ecosystem.
 
 In Bun's JavaScript runtime, `require` can be used by both ES Modules and CommonJS modules. If the target module is an ES Module, `require` returns the module namespace object (equivalent to `import * as`). If the target module is a CommonJS module, `require` returns the `module.exports` object (as in Node.js).
 
-| Module Type | `require()` | `import * as` |
-| --- | --- | --- |
-| ES Module | Module Namespace | Module Namespace |
-| CommonJS | module.exports | `default` is `module.exports`, keys of module.exports are named exports |
+| Module Type | `require()`      | `import * as`                                                           |
+| ----------- | ---------------- | ----------------------------------------------------------------------- |
+| ES Module   | Module Namespace | Module Namespace                                                        |
+| CommonJS    | module.exports   | `default` is `module.exports`, keys of module.exports are named exports |
 
-### [Using `require()`](https://bun.com/docs/runtime/modules\#using-require)
+### [Using `require()`](https://bun.com/docs/runtime/modules#using-require)
 
 You can `require()` any file or package, even `.ts` or `.mjs` files.
 
@@ -213,7 +214,7 @@ The biggest difference between CommonJS and ES Modules is that CommonJS modules 
 - CommonJS modules and static ES Modules ( `import` statements) work in a similar synchronous way, like reading a book from start to finish.
 - ES Modules also offer the option to import modules asynchronously using the `import()` function. This is like looking up additional information in the middle of reading the book without stopping.
 
-### [Using `import`](https://bun.com/docs/runtime/modules\#using-import)
+### [Using `import`](https://bun.com/docs/runtime/modules#using-import)
 
 You can `import` any file or package, even `.cjs` files.
 
@@ -224,7 +225,7 @@ import { stuff } from "./my-commonjs.cjs";
 
 ```
 
-### [Using `import` and `require()` together](https://bun.com/docs/runtime/modules\#using-import-and-require-together)
+### [Using `import` and `require()` together](https://bun.com/docs/runtime/modules#using-import-and-require-together)
 
 In Bun, you can use `import` or `require` in the same file—they both work, all the time.
 
@@ -235,13 +236,13 @@ const myStuff = require("./my-commonjs.cjs");
 
 ```
 
-### [Top level await](https://bun.com/docs/runtime/modules\#top-level-await)
+### [Top level await](https://bun.com/docs/runtime/modules#top-level-await)
 
 The only exception to this rule is top-level await. You can't `require()` a file that uses top-level await, since the `require()` function is inherently synchronous.
 
 Fortunately, very few libraries use top-level await, so this is rarely a problem. But if you're using top-level await in your application code, make sure that file isn't being `require()` from elsewhere in your application. Instead, you should use `import` or [dynamic `import()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import).
 
-## [Importing packages](https://bun.com/docs/runtime/modules\#importing-packages)
+## [Importing packages](https://bun.com/docs/runtime/modules#importing-packages)
 
 Bun implements the Node.js module resolution algorithm, so you can import packages from `node_modules` with a bare specifier.
 
@@ -324,7 +325,7 @@ package.json
 
 ```
 
-### [Custom conditions](https://bun.com/docs/runtime/modules\#custom-conditions)
+### [Custom conditions](https://bun.com/docs/runtime/modules#custom-conditions)
 
 The `--conditions` flag allows you to specify a list of conditions to use when resolving packages from package.json `"exports"`.
 
@@ -358,7 +359,7 @@ await Bun.build({
 
 ```
 
-## [Path re-mapping](https://bun.com/docs/runtime/modules\#path-re-mapping)
+## [Path re-mapping](https://bun.com/docs/runtime/modules#path-re-mapping)
 
 In the spirit of treating TypeScript as a first-class citizen, the Bun runtime will re-map import paths according to the [`compilerOptions.paths`](https://www.typescriptlang.org/tsconfig#paths) field in `tsconfig.json`. This is a major divergence from Node.js, which doesn't support any form of import path re-mapping.
 
@@ -401,7 +402,7 @@ Watch mode](https://bun.com/docs/runtime/hot) [Next\\
 \\
 Auto-install](https://bun.com/docs/runtime/autoimport)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/modules.md)
 
@@ -425,7 +426,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

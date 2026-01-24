@@ -128,6 +128,7 @@ bun run build            # Builds all packages/apps
 ### Entry Point Analysis
 
 **TanStack Start** (`apps/web/src/router.tsx`):
+
 - Single Bun process handles both SSR and API
 - Server routes defined in `apps/web/src/routes/api/`
 - Bootstrap code (`apps/web/src/server/bootstrap.ts`) initializes schedulers
@@ -138,22 +139,26 @@ bun run build            # Builds all packages/apps
 ### Option 1: Single Bun Executable (Recommended)
 
 **Approach**: Use `bun build --compile` to create a standalone executable containing:
+
 - Bundled web app (SSR + API routes)
 - All TypeScript packages
 - Bun runtime embedded
 
 **Pros**:
+
 - Single binary deployment (no Node.js/Bun installation needed)
 - Fast startup (bytecode compilation available)
 - Minimal dependencies
 - Easy to deploy and update
 
 **Cons**:
+
 - Python subprocesses still require Python runtime
 - Cannot embed PostgreSQL/Redis
 - Larger binary size (~50-100MB)
 
 **Build Command**:
+
 ```bash
 # Build single executable
 bun build --compile \
@@ -167,6 +172,7 @@ bun build --compile \
 ```
 
 **Deployment Structure**:
+
 ```
 /opt/alfred/
 ├── alfred-server          # Main executable
@@ -178,6 +184,7 @@ bun build --compile \
 ```
 
 **Dependencies**:
+
 - PostgreSQL 16 + pgvector (separate container/VM)
 - Python 3.10+ (for voice/embeddings if using local models)
 - Redis (optional, separate container)
@@ -187,6 +194,7 @@ bun build --compile \
 **Approach**: Multi-stage Docker build with Bun runtime
 
 **Dockerfile Structure**:
+
 ```dockerfile
 # Stage 1: Build
 FROM oven/bun:1.3.5 AS builder
@@ -219,17 +227,20 @@ CMD ["bun", "run", "apps/web/dist/server.js"]
 ```
 
 **Pros**:
+
 - Isolated environment
 - Easy to scale horizontally
 - Can include Python runtime
 - Standard deployment pattern
 
 **Cons**:
+
 - Larger image size (~500MB+)
 - Slower startup than executable
 - Requires Docker runtime on Proxmox
 
 **Docker Compose**:
+
 ```yaml
 version: "3.9"
 services:
@@ -243,12 +254,12 @@ services:
     depends_on:
       - postgres
       - redis
-  
+
   postgres:
     image: pgvector/pgvector:pg16
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  
+
   redis:
     image: redis:7-alpine
     volumes:
@@ -260,6 +271,7 @@ services:
 **Approach**: LXC container with Bun installed
 
 **Setup**:
+
 ```bash
 # Create LXC container (Ubuntu 22.04)
 pct create 100 ubuntu-22.04-standard \
@@ -277,12 +289,14 @@ pct push 100 ./.env /opt/alfred/.env
 ```
 
 **Pros**:
+
 - Lightweight (minimal overhead)
 - Direct access to host resources
 - Easy to manage via Proxmox UI
 - Can share PostgreSQL/Redis with host
 
 **Cons**:
+
 - Manual setup required
 - Less isolation than Docker
 - Requires Bun installation in container
@@ -292,11 +306,13 @@ pct push 100 ./.env /opt/alfred/.env
 **Approach**: Full VM with Bun + dependencies
 
 **Pros**:
+
 - Maximum isolation
 - Full OS capabilities
 - Easy to manage
 
 **Cons**:
+
 - Highest resource overhead
 - Slower startup
 - More maintenance
@@ -348,12 +364,14 @@ Proxmox Host
 ### 1. Pre-build Optimization
 
 **Bundle Strategy**:
+
 - Use `bun build` to bundle all packages into single entry point
 - Enable minification (`--minify`)
 - Enable sourcemaps for production debugging (`--sourcemap`)
 - Use bytecode compilation (`--bytecode`) for faster startup
 
 **Code Splitting**:
+
 - TanStack Start handles code splitting automatically
 - API routes are server-only (not bundled for client)
 - Client bundles are optimized by Vite
@@ -361,6 +379,7 @@ Proxmox Host
 ### 2. Executable Build
 
 **Single Entry Point**:
+
 ```typescript
 // apps/web/src/server.ts (new entry point for executable)
 import { initServer } from "./server/bootstrap";
@@ -374,6 +393,7 @@ export { getRouter };
 ```
 
 **Build Command**:
+
 ```bash
 # Production executable
 bun build --compile \
@@ -391,16 +411,19 @@ bun build --compile --target=bun-linux-arm64 ./apps/web/src/server.ts --outfile 
 ### 3. Python Dependencies
 
 **Option A: System Python** (Recommended for LXC/VM)
+
 - Install Python 3.10+ on host/container
 - Install dependencies via `uv` or `pip`
 - Models downloaded to persistent volume
 
 **Option B: Python Container** (For Docker deployment)
+
 - Separate Python container for voice/embeddings
 - IPC via HTTP or shared volume
 - More complex but better isolation
 
 **Model Storage**:
+
 - Store models in persistent volume (`/opt/alfred/models/`)
 - Download during deployment or first run
 - Cache models to avoid re-downloading
@@ -408,6 +431,7 @@ bun build --compile --target=bun-linux-arm64 ./apps/web/src/server.ts --outfile 
 ### 4. Environment Configuration
 
 **Centralized Config**:
+
 ```bash
 # /opt/alfred/.env
 DATABASE_URL=postgresql://alfred:alfred@postgres:5432/alfred
@@ -418,6 +442,7 @@ OPENAI_API_KEY=...
 ```
 
 **Secrets Management**:
+
 - Use Proxmox secrets or external secret manager
 - Never commit secrets to repo
 - Use environment variables for sensitive data
@@ -487,6 +512,7 @@ docker-compose -f docker/postgres/docker-compose.yml up -d
 ### Service Management
 
 **Systemd Service** (`/etc/systemd/system/alfred.service`):
+
 ```ini
 [Unit]
 Description=ALFRED AI Assistant
@@ -526,6 +552,7 @@ WantedBy=multi-user.target
 ### Metrics Endpoint
 
 ALFRED exposes Prometheus metrics at `/api/metrics`:
+
 - tRPC request counts/durations
 - Workflow execution metrics
 - Tool call metrics

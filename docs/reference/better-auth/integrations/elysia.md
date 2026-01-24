@@ -1,9 +1,10 @@
 ---
 title: Elysia Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Elysia.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,7 +31,7 @@ This integration guide is assuming you are using Elysia with bun server.
 
 Before you start, make sure you have a Better Auth instance configured. If you haven't done that yet, check out the [installation](https://www.better-auth.com/docs/installation).
 
-### [Mount the handler](https://www.better-auth.com/docs/integrations/elysia\#mount-the-handler)
+### [Mount the handler](https://www.better-auth.com/docs/integrations/elysia#mount-the-handler)
 
 We need to mount the handler to Elysia endpoint.
 
@@ -45,7 +46,7 @@ console.log(
 );
 ```
 
-### [CORS](https://www.better-auth.com/docs/integrations/elysia\#cors)
+### [CORS](https://www.better-auth.com/docs/integrations/elysia#cors)
 
 To configure cors, you can use the `cors` plugin from `@elysiajs/cors`.
 
@@ -72,7 +73,7 @@ console.log(
 );
 ```
 
-### [Macro](https://www.better-auth.com/docs/integrations/elysia\#macro)
+### [Macro](https://www.better-auth.com/docs/integrations/elysia#macro)
 
 You can use [macro](https://elysiajs.com/patterns/macro.html#macro) with [resolve](https://elysiajs.com/essential/handler.html#resolve) to provide session and user information before pass to view.
 

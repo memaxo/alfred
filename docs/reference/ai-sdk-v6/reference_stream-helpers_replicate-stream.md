@@ -13,8 +13,7 @@ The ReplicateStream function is a utility that handles extracting the stream fro
 ## Import
 
 ### React
-    
-    
+
     import { ReplicateStream } from "ai"
 
 ## API Signature

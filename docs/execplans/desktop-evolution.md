@@ -93,34 +93,34 @@ AlfredDesktop
 
 ### Tier 1: Core Apps (Ship First)
 
-| App | Window Type | Description | Priority |
-|-----|------------|-------------|----------|
-| **Alfred Chat** | `chat` | Primary AI conversation interface with Orb integration | P0 |
-| **Terminal** | `terminal` | XTerm.js shell (exists, enhance) | P0 |
-| **Code Editor** | `code` | Monaco-based editor with AI assist | P0 |
-| **Workflow Builder** | `workflow-builder` | n8n-style visual workflow editor | P0 |
-| **Task Manager** | `taskmanager` | Running agents, workflows, system resources | P0 |
-| **File Browser** | `files` | Project file navigation with tree view | P0 |
+| App                  | Window Type        | Description                                            | Priority |
+| -------------------- | ------------------ | ------------------------------------------------------ | -------- |
+| **Alfred Chat**      | `chat`             | Primary AI conversation interface with Orb integration | P0       |
+| **Terminal**         | `terminal`         | XTerm.js shell (exists, enhance)                       | P0       |
+| **Code Editor**      | `code`             | Monaco-based editor with AI assist                     | P0       |
+| **Workflow Builder** | `workflow-builder` | n8n-style visual workflow editor                       | P0       |
+| **Task Manager**     | `taskmanager`      | Running agents, workflows, system resources            | P0       |
+| **File Browser**     | `files`            | Project file navigation with tree view                 | P0       |
 
 ### Tier 2: Productivity Apps
 
-| App | Window Type | Description | Priority |
-|-----|------------|-------------|----------|
-| **Notes** | `note` | Rich text editor (exists, enhance) | P1 |
-| **Knowledge Graph** | `knowledge` | Mindscape exploration view | P1 |
-| **Agent Viewer** | `agent` | Agent state, logs, tool history | P1 |
-| **Settings** | `settings` | App preferences (exists) | P1 |
-| **Integrations** | `integrations` | Third-party connections (exists) | P1 |
+| App                 | Window Type    | Description                        | Priority |
+| ------------------- | -------------- | ---------------------------------- | -------- |
+| **Notes**           | `note`         | Rich text editor (exists, enhance) | P1       |
+| **Knowledge Graph** | `knowledge`    | Mindscape exploration view         | P1       |
+| **Agent Viewer**    | `agent`        | Agent state, logs, tool history    | P1       |
+| **Settings**        | `settings`     | App preferences (exists)           | P1       |
+| **Integrations**    | `integrations` | Third-party connections (exists)   | P1       |
 
 ### Tier 3: Specialized Apps
 
-| App | Window Type | Description | Priority |
-|-----|------------|-------------|----------|
-| **Reminders** | `reminder` | Scheduled reminders (exists) | P2 |
-| **Todos** | `todo` | Task lists (exists) | P2 |
-| **Calendar** | `calendar` | Schedule visualization | P2 |
-| **Bookmarks** | `bookmark` | Saved links with preview | P2 |
-| **Concept Map** | `concept` | Focused knowledge exploration | P2 |
+| App             | Window Type | Description                   | Priority |
+| --------------- | ----------- | ----------------------------- | -------- |
+| **Reminders**   | `reminder`  | Scheduled reminders (exists)  | P2       |
+| **Todos**       | `todo`      | Task lists (exists)           | P2       |
+| **Calendar**    | `calendar`  | Schedule visualization        | P2       |
+| **Bookmarks**   | `bookmark`  | Saved links with preview      | P2       |
+| **Concept Map** | `concept`   | Focused knowledge exploration | P2       |
 
 ---
 
@@ -185,18 +185,18 @@ type WindowChromeProps = {
   title: string;
   icon?: ReactNode;
   children: ReactNode;
-  
+
   // Window controls
   closable?: boolean;
   minimizable?: boolean;
   maximizable?: boolean;
   resizable?: boolean;
-  
+
   // State
   isMaximized?: boolean;
   isMinimized?: boolean;
   isFocused?: boolean;
-  
+
   // Size constraints
   minWidth?: number;
   minHeight?: number;
@@ -416,6 +416,7 @@ type DesktopIcon = {
 ### 1. **Living Desktop**
 
 Desktop wallpaper subtly responds to Alfred's state:
+
 - Idle: Gentle void with occasional particle drift
 - Active: Subtle energy patterns emanating from Orb
 - Thinking: Faint neural network visualization
@@ -424,6 +425,7 @@ Desktop wallpaper subtly responds to Alfred's state:
 ### 2. **Context Lens**
 
 When hovering over any window for 2 seconds, a "lens" appears showing:
+
 - Related knowledge nodes
 - Recent activity
 - AI-suggested actions
@@ -432,6 +434,7 @@ When hovering over any window for 2 seconds, a "lens" appears showing:
 ### 3. **Ghost Windows**
 
 Background agents show as semi-transparent "ghost" windows:
+
 - 20% opacity
 - Show activity without interrupting
 - Click to focus/solidify
@@ -440,6 +443,7 @@ Background agents show as semi-transparent "ghost" windows:
 ### 4. **Workflow Trails**
 
 When a workflow runs:
+
 - Glowing paths appear between affected windows
 - Data packets animate along paths
 - Completed steps leave fading trails
@@ -447,6 +451,7 @@ When a workflow runs:
 ### 5. **Cognitive Load Indicator**
 
 Subtle visual system showing Alfred's "cognitive load":
+
 - Background noise density increases with load
 - Orb intensity reflects processing
 - Menubar status shows capacity
@@ -454,6 +459,7 @@ Subtle visual system showing Alfred's "cognitive load":
 ### 6. **Time Capsules**
 
 Snapshot current desktop state:
+
 - All window positions
 - Current content
 - Mindscape view
@@ -462,6 +468,7 @@ Snapshot current desktop state:
 ### 7. **Focus Mode**
 
 ⌘F activates distraction-free mode:
+
 - Single window fills screen
 - All other windows minimize
 - Notifications pause
@@ -471,13 +478,13 @@ Snapshot current desktop state:
 
 ## Deprecated/Removed Concepts
 
-| Concept | Reason | Replacement |
-|---------|--------|-------------|
-| `droid` window | Confusing distinction from chat | Merged into Agent Viewer |
-| `workflowlist` window | Redundant with Task Manager | Task Manager "Workflows" tab |
-| Edge-based window connections | Too complex for desktop mode | Reserved for Mindscape only |
-| LOD (Level of Detail) for windows | Desktop uses fixed sizes | Mindscape retains LOD |
-| Window tiers (primary/secondary/tertiary) | Over-engineered | Simple z-order based on focus |
+| Concept                                   | Reason                          | Replacement                   |
+| ----------------------------------------- | ------------------------------- | ----------------------------- |
+| `droid` window                            | Confusing distinction from chat | Merged into Agent Viewer      |
+| `workflowlist` window                     | Redundant with Task Manager     | Task Manager "Workflows" tab  |
+| Edge-based window connections             | Too complex for desktop mode    | Reserved for Mindscape only   |
+| LOD (Level of Detail) for windows         | Desktop uses fixed sizes        | Mindscape retains LOD         |
+| Window tiers (primary/secondary/tertiary) | Over-engineered                 | Simple z-order based on focus |
 
 ---
 
@@ -523,27 +530,27 @@ Snapshot current desktop state:
 
 ## Progress
 
-*To be updated as implementation proceeds.*
+_To be updated as implementation proceeds._
 
 ---
 
 ## Surprises & Discoveries
 
-*Document unexpected findings during implementation.*
+_Document unexpected findings during implementation._
 
 ---
 
 ## Decision Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
+| Date       | Decision                          | Rationale                                        |
+| ---------- | --------------------------------- | ------------------------------------------------ |
 | 2026-01-02 | Keep ReactFlow for Mindscape only | Desktop mode needs traditional window management |
-| 2026-01-02 | Taskbar over Dock | More familiar, supports window previews |
-| 2026-01-02 | Deprecate window tiers | Unnecessary complexity for desktop metaphor |
-| 2026-01-02 | Monaco for code editor | Already a dependency, best-in-class |
+| 2026-01-02 | Taskbar over Dock                 | More familiar, supports window previews          |
+| 2026-01-02 | Deprecate window tiers            | Unnecessary complexity for desktop metaphor      |
+| 2026-01-02 | Monaco for code editor            | Already a dependency, best-in-class              |
 
 ---
 
 ## Outcomes & Retrospective
 
-*To be completed after implementation.*
+_To be completed after implementation._

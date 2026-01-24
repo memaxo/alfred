@@ -94,6 +94,7 @@ The ALFRED authentication system is well-architected with Better Auth, Ed25519 t
 ### 2.2 Web Authentication Flow (Step-by-Step)
 
 **Initial Sign-Up (Jack's first time):**
+
 1. Jack navigates to `/login` (defaults to sign-up form)
 2. Enters name, email, password
 3. `authClient.signUp.email()` sends POST to `/api/auth/sign-up/email`
@@ -102,6 +103,7 @@ The ALFRED authentication system is well-architected with Better Auth, Ed25519 t
 6. Redirect to `/mindscape`
 
 **Subsequent Sign-In:**
+
 1. Jack navigates to `/login` → clicks "Sign In"
 2. Enters email, password
 3. `authClient.signIn.email()` authenticates against account table
@@ -109,6 +111,7 @@ The ALFRED authentication system is well-architected with Better Auth, Ed25519 t
 5. Redirect to `/mindscape`
 
 **Passkey Authentication (for elevation):**
+
 1. Sensitive action triggers `requireRecentBiometric()`
 2. If no valid bio-ticket: `biometric_required` error
 3. Client calls `authClient.signIn.passkey({ email })`
@@ -119,6 +122,7 @@ The ALFRED authentication system is well-architected with Better Auth, Ed25519 t
 ### 2.3 Native Authentication Flow
 
 **Current Implementation:**
+
 1. Email/password only (no passkey support yet)
 2. Uses Expo SecureStore for token persistence
 3. Same Better Auth backend via `EXPO_PUBLIC_SERVER_URL`
@@ -127,15 +131,19 @@ The ALFRED authentication system is well-architected with Better Auth, Ed25519 t
 
 ```typescript
 // packages/api/src/context.ts
-export async function createContext({ req }: { req: Request }): Promise<Context> {
+export async function createContext({
+  req,
+}: {
+  req: Request;
+}): Promise<Context> {
   // 1. Check for test session header (development bypass)
   const testSession = parseTestSession(headers);
-  
+
   // 2. Get real session from Better Auth
-  const session = testSession 
-    ? testSession 
+  const session = testSession
+    ? testSession
     : await auth.api.getSession({ headers }).catch(() => null);
-  
+
   // 3. Build runtime context
   return { session, runtime, runtimeContext };
 }
@@ -154,6 +162,7 @@ export async function createContext({ req }: { req: Request }): Promise<Context>
 **Problem:** Protected routes don't use `beforeLoad` guards to verify authentication. Users can navigate directly to protected routes without a session.
 
 **Evidence:**
+
 ```typescript
 // apps/web/src/routes/mindscape.tsx - NO AUTH CHECK
 export const Route = createFileRoute("/mindscape")({
@@ -177,6 +186,7 @@ export const Route = createFileRoute("/mindscape")({
 **Problem:** The `x-alfred-test-session` header bypass is always active, not just in test mode.
 
 **Evidence:**
+
 ```typescript
 // packages/api/src/context.ts:90-108
 function parseTestSession(headers: Headers): AuthSession | null {
@@ -207,7 +217,7 @@ export function createAuth() {
   throw new Error("Not implemented");
 }
 
-// packages/auth/src/key.ts - DEAD CODE  
+// packages/auth/src/key.ts - DEAD CODE
 export async function loadKeys(): Promise<KeyPair> {
   throw new Error("Not implemented");
 }
@@ -226,6 +236,7 @@ export async function loadKeys(): Promise<KeyPair> {
 **Problem:** When developing without a passkey (e.g., CI, remote dev), biometric-protected flows are blocked with no workaround.
 
 **Current State:**
+
 - `requireRecentBiometric()` always checks for valid ticket
 - No environment variable to bypass
 - Test mode bypasses entire auth, not just biometrics
@@ -258,7 +269,9 @@ export async function loadKeys(): Promise<KeyPair> {
 // Complexity not needed for Jack-only usage
 const buckets = new Map<string, Bucket>();
 function rateKey(userId: string | null, procedure?: string, type?: string) {
-  return [userId ?? "anon", procedure ?? "unknown", type ?? "unknown"].join(":");
+  return [userId ?? "anon", procedure ?? "unknown", type ?? "unknown"].join(
+    ":"
+  );
 }
 ```
 
@@ -301,6 +314,7 @@ roles:
 **Location:** `packages/api/src/routers/token.ts`, various routers
 
 **Problem:** Session access uses unsafe casts:
+
 ```typescript
 const sessionRecord = (ctx.session as any)?.session;
 const sessionId = sessionRecord?.id ?? sessionRecord?.token;
@@ -358,11 +372,13 @@ function memorySet(sessionId: string, ttlSec: number) {
 export async function setBiometricTicket(sessionId: string, ttlSec: number) {
   const redis = getRedis();
   if (redis) {
-    await (redis.set as unknown as (
-      key: string,
-      value: string,
-      options: { EX: number }
-    ) => Promise<string>)(`bio:${sessionId}`, String(ttlSec), { EX: ttlSec });
+    await (
+      redis.set as unknown as (
+        key: string,
+        value: string,
+        options: { EX: number }
+      ) => Promise<string>
+    )(`bio:${sessionId}`, String(ttlSec), { EX: ttlSec });
   } else {
     memorySet(sessionId, ttlSec);
   }
@@ -371,13 +387,16 @@ export async function setBiometricTicket(sessionId: string, ttlSec: number) {
 export async function requireRecentBiometric(sessionId: string) {
   // Bypass for development
   if (isBioBypassEnabled()) {
-    logger.warn("biometric_bypassed", { sessionId, reason: "BIO_AUTH_BYPASS=true" });
+    logger.warn("biometric_bypassed", {
+      sessionId,
+      reason: "BIO_AUTH_BYPASS=true",
+    });
     return;
   }
 
   const now = Math.floor(Date.now() / 1000);
   const redis = getRedis();
-  
+
   if (redis) {
     const ttl = await redis.ttl(`bio:${sessionId}`);
     if (ttl <= 0) {
@@ -398,7 +417,10 @@ export async function requireRecentBiometric(sessionId: string) {
  */
 export async function autoGrantBiometricIfBypassed(sessionId: string) {
   if (isBioBypassEnabled()) {
-    logger.warn("biometric_auto_granted", { sessionId, reason: "BIO_AUTH_BYPASS=true" });
+    logger.warn("biometric_auto_granted", {
+      sessionId,
+      reason: "BIO_AUTH_BYPASS=true",
+    });
     await setBiometricTicket(sessionId, 3600); // 1 hour in dev
   }
 }
@@ -477,14 +499,14 @@ import { auth } from "@alfred/auth";
 
 export async function requireAuth(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
-  
+
   if (!session) {
     throw redirect({
       to: "/login",
       search: { redirect: new URL(request.url).pathname },
     });
   }
-  
+
   return session;
 }
 ```
@@ -543,7 +565,7 @@ function isTestModeEnabled(): boolean {
   if (process.env.NODE_ENV === "production") {
     return false;
   }
-  
+
   const testMode = process.env.TEST_MODE ?? process.env.VITE_TEST_MODE;
   return testMode === "true" || testMode === "1";
 }
@@ -553,12 +575,12 @@ function parseTestSession(headers: Headers): AuthSession | null {
   if (!isTestModeEnabled()) {
     return null;
   }
-  
+
   const value = headers.get(TEST_SESSION_HEADER);
   if (!value) {
     return null;
   }
-  
+
   try {
     const payload = Buffer.from(value, "base64").toString("utf8");
     const parsed = JSON.parse(payload) as AuthSession;
@@ -619,7 +641,10 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     mutations: {
       onError: (error) => {
-        if (error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED") {
+        if (
+          error instanceof TRPCClientError &&
+          error.data?.code === "UNAUTHORIZED"
+        ) {
           window.location.href = "/login";
         }
       },
@@ -663,11 +688,12 @@ export const rateLimit = t.middleware(async ({ next }) => {
     requestCount = 0;
     resetTime = now + 60000;
   }
-  
-  if (++requestCount > 1000) { // 1000 req/min is plenty for one user
+
+  if (++requestCount > 1000) {
+    // 1000 req/min is plenty for one user
     throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
   }
-  
+
   return next();
 });
 ```
@@ -688,7 +714,7 @@ rules:
     actions: ["*"]
     roles: ["owner"]
     effect: "allow"
-    
+
   # Sensitive actions still require biometric
   - id: require-bio-sensitive
     actions: ["deploy.promote", "proxmox.admin", "droid.exec"]
@@ -709,20 +735,20 @@ rules:
 
 ### 6.1 Session Creation
 
-| Event | Method | Storage |
-|-------|--------|---------|
-| Sign-up | `authClient.signUp.email()` | PostgreSQL `session` table |
-| Sign-in | `authClient.signIn.email()` | PostgreSQL `session` table |
+| Event   | Method                        | Storage                                       |
+| ------- | ----------------------------- | --------------------------------------------- |
+| Sign-up | `authClient.signUp.email()`   | PostgreSQL `session` table                    |
+| Sign-in | `authClient.signIn.email()`   | PostgreSQL `session` table                    |
 | Passkey | `authClient.signIn.passkey()` | PostgreSQL `session` table + Redis bio-ticket |
 
 ### 6.2 Session Validation
 
-| Layer | Check | On Failure |
-|-------|-------|------------|
-| tRPC Context | `auth.api.getSession()` | `ctx.session = null` |
-| `authedProcedure` | `ctx.session !== null` | UNAUTHORIZED error |
-| `requirePolicy()` | Role + scope check | FORBIDDEN error |
-| Tool Token | Ed25519 + JTI + expiry | Error in verifyAccessToken |
+| Layer             | Check                   | On Failure                 |
+| ----------------- | ----------------------- | -------------------------- |
+| tRPC Context      | `auth.api.getSession()` | `ctx.session = null`       |
+| `authedProcedure` | `ctx.session !== null`  | UNAUTHORIZED error         |
+| `requirePolicy()` | Role + scope check      | FORBIDDEN error            |
+| Tool Token        | Ed25519 + JTI + expiry  | Error in verifyAccessToken |
 
 ### 6.3 Session Refresh
 
@@ -734,19 +760,19 @@ rules:
 
 ## 7. Security Checklist
 
-| Category | Status | Notes |
-|----------|--------|-------|
-| Session cookies | ✅ | HttpOnly, Secure (via Better Auth) |
-| CSRF protection | ✅ | SameSite cookies |
-| Token signing | ✅ | Ed25519, 5-min TTL |
-| Token replay | ✅ | JTI cache in Redis/memory |
-| Password hashing | ✅ | Better Auth default (bcrypt/argon2) |
-| Biometric elevation | ⚠️ | Works, needs bypass for dev |
-| Route protection | ❌ | Missing beforeLoad guards |
-| Test bypass safety | ❌ | Not gated behind NODE_ENV |
-| Session expiration UX | ❌ | No client-side handling |
-| Secrets in env | ✅ | All secrets via process.env |
-| Rate limiting | ⚠️ | Overly complex for single-user |
+| Category              | Status | Notes                               |
+| --------------------- | ------ | ----------------------------------- |
+| Session cookies       | ✅     | HttpOnly, Secure (via Better Auth)  |
+| CSRF protection       | ✅     | SameSite cookies                    |
+| Token signing         | ✅     | Ed25519, 5-min TTL                  |
+| Token replay          | ✅     | JTI cache in Redis/memory           |
+| Password hashing      | ✅     | Better Auth default (bcrypt/argon2) |
+| Biometric elevation   | ⚠️     | Works, needs bypass for dev         |
+| Route protection      | ❌     | Missing beforeLoad guards           |
+| Test bypass safety    | ❌     | Not gated behind NODE_ENV           |
+| Session expiration UX | ❌     | No client-side handling             |
+| Secrets in env        | ✅     | All secrets via process.env         |
+| Rate limiting         | ⚠️     | Overly complex for single-user      |
 
 ---
 
@@ -754,34 +780,34 @@ rules:
 
 ### Core Auth Files
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `packages/auth/src/index.ts` | Better Auth config + plugins | Active |
-| `packages/auth/src/biometric.ts` | Bio-ticket management + bypass | Active |
-| `packages/auth/src/token.ts` | Ed25519 tool token issuing | Active |
-| `packages/auth/src/jwks.ts` | JWKS endpoint for token verification | Active |
-| `packages/auth/src/redis.ts` | Redis client for tickets/JTI | Active |
-| `packages/auth/src/auth.ts` | ~~Placeholder functions~~ | **DELETED** |
-| `packages/auth/src/key.ts` | ~~Placeholder functions~~ | **DELETED** |
+| File                             | Purpose                              | Status      |
+| -------------------------------- | ------------------------------------ | ----------- |
+| `packages/auth/src/index.ts`     | Better Auth config + plugins         | Active      |
+| `packages/auth/src/biometric.ts` | Bio-ticket management + bypass       | Active      |
+| `packages/auth/src/token.ts`     | Ed25519 tool token issuing           | Active      |
+| `packages/auth/src/jwks.ts`      | JWKS endpoint for token verification | Active      |
+| `packages/auth/src/redis.ts`     | Redis client for tickets/JTI         | Active      |
+| `packages/auth/src/auth.ts`      | ~~Placeholder functions~~            | **DELETED** |
+| `packages/auth/src/key.ts`       | ~~Placeholder functions~~            | **DELETED** |
 
 ### Client Auth Files
 
-| File | Purpose |
-|------|---------|
-| `apps/web/src/lib/auth-client.ts` | Better Auth React client |
-| `apps/web/src/lib/test-auth.ts` | Test mode session bypass |
-| `apps/web/src/lib/token.ts` | Tool token acquisition helpers |
-| `apps/web/src/lib/obligation-retry.ts` | Auto-retry with biometric |
-| `apps/native/lib/auth-client.ts` | Better Auth Expo client |
+| File                                   | Purpose                        |
+| -------------------------------------- | ------------------------------ |
+| `apps/web/src/lib/auth-client.ts`      | Better Auth React client       |
+| `apps/web/src/lib/test-auth.ts`        | Test mode session bypass       |
+| `apps/web/src/lib/token.ts`            | Tool token acquisition helpers |
+| `apps/web/src/lib/obligation-retry.ts` | Auto-retry with biometric      |
+| `apps/native/lib/auth-client.ts`       | Better Auth Expo client        |
 
 ### API Auth Files
 
-| File | Purpose |
-|------|---------|
-| `packages/api/src/context.ts` | tRPC context with session |
-| `packages/api/src/trpc.ts` | Auth middleware + rate limiter |
-| `packages/api/src/gate.ts` | Policy enforcement middleware |
-| `packages/api/src/routers/token.ts` | Token issue/elevate endpoints |
+| File                                | Purpose                        |
+| ----------------------------------- | ------------------------------ |
+| `packages/api/src/context.ts`       | tRPC context with session      |
+| `packages/api/src/trpc.ts`          | Auth middleware + rate limiter |
+| `packages/api/src/gate.ts`          | Policy enforcement middleware  |
+| `packages/api/src/routers/token.ts` | Token issue/elevate endpoints  |
 
 ---
 
@@ -842,20 +868,20 @@ BIO_AUTH_BYPASS=false
 
 ### Files Changed
 
-| File | Change |
-|------|--------|
-| `packages/api/src/context.ts` | Added test mode gate |
-| `packages/api/src/trpc.ts` | Simplified rate limiter |
-| `packages/auth/src/biometric.ts` | Added bypass logic |
-| `packages/auth/src/index.ts` | Added bio auto-grant hook |
-| `apps/web/src/routes/_protected.tsx` | **NEW** - Layout guard |
-| `apps/web/src/lib/auth-error-handler.ts` | **NEW** - Error handler |
-| `apps/web/src/router.tsx` | Added error handling |
-| `apps/native/lib/auth-client.ts` | Added passkey plugin |
-| `apps/native/components/sign-in.tsx` | Added passkey button |
-| `apps/native/app/(drawer)/(tabs)/profile.tsx` | Added passkey management |
-| `config/policy.yaml` | Simplified for single-user |
-| `config/env.example` | Documented BIO_AUTH_BYPASS |
+| File                                          | Change                     |
+| --------------------------------------------- | -------------------------- |
+| `packages/api/src/context.ts`                 | Added test mode gate       |
+| `packages/api/src/trpc.ts`                    | Simplified rate limiter    |
+| `packages/auth/src/biometric.ts`              | Added bypass logic         |
+| `packages/auth/src/index.ts`                  | Added bio auto-grant hook  |
+| `apps/web/src/routes/_protected.tsx`          | **NEW** - Layout guard     |
+| `apps/web/src/lib/auth-error-handler.ts`      | **NEW** - Error handler    |
+| `apps/web/src/router.tsx`                     | Added error handling       |
+| `apps/native/lib/auth-client.ts`              | Added passkey plugin       |
+| `apps/native/components/sign-in.tsx`          | Added passkey button       |
+| `apps/native/app/(drawer)/(tabs)/profile.tsx` | Added passkey management   |
+| `config/policy.yaml`                          | Simplified for single-user |
+| `config/env.example`                          | Documented BIO_AUTH_BYPASS |
 
 ### Remaining Tasks
 

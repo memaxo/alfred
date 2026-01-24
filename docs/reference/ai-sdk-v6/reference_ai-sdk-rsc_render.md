@@ -13,8 +13,7 @@ A helper function to create a streamable UI from LLM providers. This function is
 > **Note** : `render` has been deprecated in favor of `streamUI`. During migration, please ensure that the `messages` parameter follows the updated specification.
 
 ## Import
-    
-    
+
     import { render } from "@ai-sdk/rsc"
 
 ## API Signature

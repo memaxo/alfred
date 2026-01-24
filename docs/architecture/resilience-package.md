@@ -9,7 +9,7 @@ The `@alfred/resilience` package provides battle-tested primitives for building 
 Before this package, resilience patterns were duplicated across `@alfred/pipeline`, `@alfred/agent`, and `@alfred/runtime`. Each implementation had subtle differences, making it hard to:
 
 - Reason about abort signal propagation
-- Configure MAX_TRANSITIONS consistently  
+- Configure MAX_TRANSITIONS consistently
 - Handle escalation uniformly
 - Test resilience behavior in isolation
 
@@ -38,6 +38,7 @@ await guardedLoop(
 ### 2. Zero Runtime Overhead
 
 All utilities are lightweight wrappers around native JavaScript primitives:
+
 - `AbortSignal` and `AbortController` (native)
 - Simple counter for transition guard
 - Map-based storage for escalation history
@@ -51,7 +52,7 @@ Every function and class has precise TypeScript types:
 ```typescript
 // Type inference works correctly
 const result = await raceWithAbort(
-  fetchData(),  // Promise<Data>
+  fetchData(), // Promise<Data>
   signal
 ); // result: Data (throws on abort)
 ```
@@ -63,6 +64,7 @@ const result = await raceWithAbort(
 **Purpose:** Manage AbortSignal propagation across async boundaries.
 
 **Key Functions:**
+
 - `createLinkedAbortController(parent)` - Child signal that aborts with parent
 - `raceWithAbort(operation, signal)` - Race against abort with proper typing
 - `combineAbortSignals(...signals)` - Merge multiple signals into one
@@ -72,7 +74,7 @@ const result = await raceWithAbort(
 ```typescript
 async function complexOperation(parentSignal: AbortSignal) {
   const childController = createLinkedAbortController(parentSignal);
-  
+
   try {
     await raceWithAbort(
       performSteps(childController.signal),
@@ -89,6 +91,7 @@ async function complexOperation(parentSignal: AbortSignal) {
 **Purpose:** Prevent infinite loops in state machines and workflows.
 
 **Key Classes:**
+
 - `TransitionGuard` - Counter with configurable max limit
 - `guardedLoop()` - Protected iteration with callbacks
 
@@ -108,6 +111,7 @@ while (workflow.needsTransition()) {
 **Purpose:** Detect and handle stuck workflows with recovery mechanisms.
 
 **Key Classes:**
+
 - `EscalationDetector` - Centralized escalation handling
 - `detectStuck()` - Multi-signal stuck detection
 
@@ -148,7 +152,7 @@ import { TransitionGuard, EscalationDetector } from "@alfred/resilience";
 class PipelineRunner {
   private guard = new TransitionGuard(50);
   private detector = new EscalationDetector();
-  
+
   async execute(ctx: PipelineContext) {
     while (this.needsTransition(ctx)) {
       this.guard.tick();
@@ -162,11 +166,14 @@ class PipelineRunner {
 
 ```typescript
 // packages/agent/src/executor.ts
-import { createLinkedAbortController, raceWithAbort } from "@alfred/resilience/abort";
+import {
+  createLinkedAbortController,
+  raceWithAbort,
+} from "@alfred/resilience/abort";
 
 async function executeAgent(parentSignal: AbortSignal) {
   const controller = createLinkedAbortController(parentSignal);
-  
+
   return raceWithAbort(
     runAgentSession(controller.signal),
     controller.signal,
@@ -179,11 +186,14 @@ async function executeAgent(parentSignal: AbortSignal) {
 
 ```typescript
 // packages/runtime/src/workflow.ts
-import { detectStuck, defaultEscalationDetector } from "@alfred/resilience/escalation";
+import {
+  detectStuck,
+  defaultEscalationDetector,
+} from "@alfred/resilience/escalation";
 
 async function monitorWorkflow(runId: string) {
   const reason = detectStuck(config, workflowMetrics);
-  
+
   if (reason) {
     await defaultEscalationDetector.escalate({
       reason,
@@ -206,7 +216,7 @@ Test each utility in isolation:
 test("createLinkedAbortController aborts child when parent aborts", () => {
   const parent = new AbortController();
   const child = createLinkedAbortController(parent.signal);
-  
+
   expect(child.signal.aborted).toBe(false);
   parent.abort();
   expect(child.signal.aborted).toBe(true);
@@ -221,7 +231,7 @@ Test utilities working together:
 test("guarded loop with abort signal", async () => {
   const controller = new AbortController();
   const guard = new TransitionGuard(10);
-  
+
   let count = 0;
   await guardedLoop(
     () => !controller.signal.aborted,
@@ -231,7 +241,7 @@ test("guarded loop with abort signal", async () => {
       if (count > 5) controller.abort();
     }
   );
-  
+
   expect(count).toBe(6);
 });
 ```
@@ -244,12 +254,12 @@ Test behavior when integrated into pipeline/agent:
 test("pipeline respects abort signal", async () => {
   const controller = new AbortController();
   const runner = new PipelineRunner();
-  
+
   setTimeout(() => controller.abort(), 100);
-  
-  await expect(
-    runner.run(ctx, controller.signal)
-  ).rejects.toThrow("pipeline_aborted");
+
+  await expect(runner.run(ctx, controller.signal)).rejects.toThrow(
+    "pipeline_aborted"
+  );
 });
 ```
 
@@ -262,6 +272,7 @@ All utilities are designed for minimal overhead:
 - **Escalation detector**: O(1) escalation emission, O(m) history lookup for m events
 
 Memory usage:
+
 - Abort controllers: ~100 bytes per controller
 - Transition guard: ~50 bytes (single counter)
 - Escalation detector: ~200 bytes + (n events × event size)
@@ -312,6 +323,7 @@ const guard = new TransitionGuard(50);
 ### From inline abort handling
 
 **Before:**
+
 ```typescript
 const controller = new AbortController();
 if (parent.aborted) controller.abort();
@@ -319,6 +331,7 @@ parent.addEventListener("abort", () => controller.abort());
 ```
 
 **After:**
+
 ```typescript
 const controller = createLinkedAbortController(parent);
 ```
@@ -326,6 +339,7 @@ const controller = createLinkedAbortController(parent);
 ### From manual loop guards
 
 **Before:**
+
 ```typescript
 let count = 0;
 while (hasWork()) {
@@ -335,6 +349,7 @@ while (hasWork()) {
 ```
 
 **After:**
+
 ```typescript
 await guardedLoop(
   () => hasWork(),
@@ -346,6 +361,7 @@ await guardedLoop(
 ### From ad-hoc stuck detection
 
 **Before:**
+
 ```typescript
 if (transitions > max || time > timeout || errors > maxErrors) {
   logger.error("Stuck!");
@@ -354,6 +370,7 @@ if (transitions > max || time > timeout || errors > maxErrors) {
 ```
 
 **After:**
+
 ```typescript
 const reason = detectStuck(config, { transitions, time, errors });
 if (reason) await detector.escalate({ reason, context, timestamp });

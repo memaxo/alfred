@@ -7,33 +7,31 @@ Copy markdown
 Generates text and calls tools for a given prompt using a language model.
 
 It is ideal for non-interactive use cases such as automation tasks where you need to write text (e.g. drafting email or summarizing web pages) and for agents that use tools.
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { generateText } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { text } = await generateText({
-    
+
       model: openai('gpt-4o'),
-    
+
       prompt: 'Invent a new holiday and describe its traditions.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(text);
 
 To see `generateText` in action, check out these examples.
 
 ## Import
-    
-    
+
     import { generateText } from "ai"
 
 ## API Signature

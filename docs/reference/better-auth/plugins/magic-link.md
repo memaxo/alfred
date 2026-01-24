@@ -1,9 +1,10 @@
 ---
 title: Magic link | Better Auth
-url: 
+url:
 description: Magic link plugin
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 Magic link or email link is a way to authenticate users without a password. When a user enters their email, a link is sent to their email. When the user clicks on the link, they are authenticated.
 
-## [Installation](https://www.better-auth.com/docs/plugins/magic-link\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/magic-link#installation)
 
-### [Add the server Plugin](https://www.better-auth.com/docs/plugins/magic-link\#add-the-server-plugin)
+### [Add the server Plugin](https://www.better-auth.com/docs/plugins/magic-link#add-the-server-plugin)
 
 Add the magic link plugin to your server:
 
@@ -51,7 +52,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Add the client Plugin](https://www.better-auth.com/docs/plugins/magic-link\#add-the-client-plugin)
+### [Add the client Plugin](https://www.better-auth.com/docs/plugins/magic-link#add-the-client-plugin)
 
 Add the magic link plugin to your client:
 
@@ -67,9 +68,9 @@ export const authClient = createAuthClient({
 });
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/magic-link\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/magic-link#usage)
 
-### [Sign In with Magic Link](https://www.better-auth.com/docs/plugins/magic-link\#sign-in-with-magic-link)
+### [Sign In with Magic Link](https://www.better-auth.com/docs/plugins/magic-link#sign-in-with-magic-link)
 
 To sign in with a magic link, you need to call `signIn.magicLink` with the user's email address. The `sendMagicLink` function is called to send the magic link to the user's email.
 
@@ -89,13 +90,13 @@ const { data, error } = await authClient.signIn.magicLink({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | Email address to send the magic link. | `string` |
-| `name?` | User display name. Only used if the user is registering for the first time. | `string` |
-| `callbackURL?` | URL to redirect after magic link verification. | `string` |
-| `newUserCallbackURL?` | URL to redirect after new user signup | `string` |
-| `errorCallbackURL?` | URL to redirect if an error happen on verification If only callbackURL is provided but without an `errorCallbackURL` then they will be redirected to the callbackURL with an `error` query parameter. | `string` |
+| Prop                  | Description                                                                                                                                                                                           | Type     |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `email`               | Email address to send the magic link.                                                                                                                                                                 | `string` |
+| `name?`               | User display name. Only used if the user is registering for the first time.                                                                                                                           | `string` |
+| `callbackURL?`        | URL to redirect after magic link verification.                                                                                                                                                        | `string` |
+| `newUserCallbackURL?` | URL to redirect after new user signup                                                                                                                                                                 | `string` |
+| `errorCallbackURL?`   | URL to redirect if an error happen on verification If only callbackURL is provided but without an `errorCallbackURL` then they will be redirected to the callbackURL with an `error` query parameter. | `string` |
 
 POST
 
@@ -115,17 +116,17 @@ const data = await auth.api.signInMagicLink({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | Email address to send the magic link. | `string` |
-| `name?` | User display name. Only used if the user is registering for the first time. | `string` |
-| `callbackURL?` | URL to redirect after magic link verification. | `string` |
-| `newUserCallbackURL?` | URL to redirect after new user signup | `string` |
-| `errorCallbackURL?` | URL to redirect if an error happen on verification If only callbackURL is provided but without an `errorCallbackURL` then they will be redirected to the callbackURL with an `error` query parameter. | `string` |
+| Prop                  | Description                                                                                                                                                                                           | Type     |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `email`               | Email address to send the magic link.                                                                                                                                                                 | `string` |
+| `name?`               | User display name. Only used if the user is registering for the first time.                                                                                                                           | `string` |
+| `callbackURL?`        | URL to redirect after magic link verification.                                                                                                                                                        | `string` |
+| `newUserCallbackURL?` | URL to redirect after new user signup                                                                                                                                                                 | `string` |
+| `errorCallbackURL?`   | URL to redirect if an error happen on verification If only callbackURL is provided but without an `errorCallbackURL` then they will be redirected to the callbackURL with an `error` query parameter. | `string` |
 
 If the user has not signed up, unless `disableSignUp` is set to `true`, the user will be signed up automatically.
 
-### [Verify Magic Link](https://www.better-auth.com/docs/plugins/magic-link\#verify-magic-link)
+### [Verify Magic Link](https://www.better-auth.com/docs/plugins/magic-link#verify-magic-link)
 
 When you send the URL generated by the `sendMagicLink` function to a user, clicking the link will authenticate them and redirect them to the `callbackURL` specified in the `signIn.magicLink` function. If an error occurs, the user will be redirected to the `callbackURL` with an error query parameter.
 
@@ -146,9 +147,9 @@ const { data, error } = await authClient.magicLink.verify({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `token` | Verification token. | `string` |
+| Prop           | Description                                                                             | Type     |
+| -------------- | --------------------------------------------------------------------------------------- | -------- |
+| `token`        | Verification token.                                                                     | `string` |
 | `callbackURL?` | URL to redirect after magic link verification, if not provided will return the session. | `string` |
 
 GET
@@ -166,12 +167,12 @@ const data = await auth.api.magicLinkVerify({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `token` | Verification token. | `string` |
+| Prop           | Description                                                                             | Type     |
+| -------------- | --------------------------------------------------------------------------------------- | -------- |
+| `token`        | Verification token.                                                                     | `string` |
 | `callbackURL?` | URL to redirect after magic link verification, if not provided will return the session. | `string` |
 
-## [Configuration Options](https://www.better-auth.com/docs/plugins/magic-link\#configuration-options)
+## [Configuration Options](https://www.better-auth.com/docs/plugins/magic-link#configuration-options)
 
 **sendMagicLink**: The `sendMagicLink` function is called when a user requests a magic link. It takes an object with the following properties:
 

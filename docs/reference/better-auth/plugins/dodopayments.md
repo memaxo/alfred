@@ -1,9 +1,10 @@
 ---
 title: Dodo Payments | Better Auth
-url: 
+url:
 description: Better Auth Plugin for Dodo Payments
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -34,7 +35,7 @@ This plugin is maintained by the Dodo Payments team.\\
 \\
 Have questions? Our team is available on Discord to assist you anytime.](https://discord.gg/bYqAp4ayYh)
 
-## [Features](https://www.better-auth.com/docs/plugins/dodopayments\#features)
+## [Features](https://www.better-auth.com/docs/plugins/dodopayments#features)
 
 - Automatic customer creation on sign-up
 - Type-safe checkout flows with product slug mapping
@@ -45,7 +46,7 @@ Have questions? Our team is available on Discord to assist you anytime.](https:/
 \\
 You need a Dodo Payments account and API keys to use this integration.](https://app.dodopayments.com/)
 
-## [Installation](https://www.better-auth.com/docs/plugins/dodopayments\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/dodopayments#installation)
 
 Run the following command in your project root:
 
@@ -119,9 +120,9 @@ export const authClient = createAuthClient({
 });
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/dodopayments\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/dodopayments#usage)
 
-### [Creating a Checkout Session](https://www.better-auth.com/docs/plugins/dodopayments\#creating-a-checkout-session)
+### [Creating a Checkout Session](https://www.better-auth.com/docs/plugins/dodopayments#creating-a-checkout-session)
 
 ```
 const { data: checkout, error } = await authClient.dodopayments.checkout({
@@ -145,7 +146,7 @@ if (checkout) {
 }
 ```
 
-### [Accessing the Customer Portal](https://www.better-auth.com/docs/plugins/dodopayments\#accessing-the-customer-portal)
+### [Accessing the Customer Portal](https://www.better-auth.com/docs/plugins/dodopayments#accessing-the-customer-portal)
 
 ```
 const { data: customerPortal, error } = await authClient.dodopayments.customer.portal();
@@ -154,7 +155,7 @@ if (customerPortal && customerPortal.redirect) {
 }
 ```
 
-### [Listing Customer Data](https://www.better-auth.com/docs/plugins/dodopayments\#listing-customer-data)
+### [Listing Customer Data](https://www.better-auth.com/docs/plugins/dodopayments#listing-customer-data)
 
 ```
 // Get subscriptions
@@ -177,7 +178,7 @@ const { data: payments, error } = await authClient.dodopayments.customer.payment
 });
 ```
 
-### [Webhooks](https://www.better-auth.com/docs/plugins/dodopayments\#webhooks)
+### [Webhooks](https://www.better-auth.com/docs/plugins/dodopayments#webhooks)
 
 The webhooks plugin processes real-time payment events from Dodo Payments with secure signature verification. The default endpoint is `/api/auth/dodopayments/webhooks`.
 
@@ -198,15 +199,15 @@ webhooks({
 });
 ```
 
-## [Configuration Reference](https://www.better-auth.com/docs/plugins/dodopayments\#configuration-reference)
+## [Configuration Reference](https://www.better-auth.com/docs/plugins/dodopayments#configuration-reference)
 
-### [Plugin Options](https://www.better-auth.com/docs/plugins/dodopayments\#plugin-options)
+### [Plugin Options](https://www.better-auth.com/docs/plugins/dodopayments#plugin-options)
 
 - **client** (required): DodoPayments client instance
 - **createCustomerOnSignUp** (optional): Auto-create customers on user signup
 - **use** (required): Array of plugins to enable (checkout, portal, webhooks)
 
-### [Checkout Plugin Options](https://www.better-auth.com/docs/plugins/dodopayments\#checkout-plugin-options)
+### [Checkout Plugin Options](https://www.better-auth.com/docs/plugins/dodopayments#checkout-plugin-options)
 
 - **products**: Array of products or async function returning products
 - **successUrl**: URL to redirect after successful payment

@@ -8,24 +8,23 @@ This error occurs when an invalid argument was provided.
 
 ## Properties
 
-  * `parameter`: The name of the parameter that is invalid
-  * `value`: The invalid value
-  * `message`: The error message
+- `parameter`: The name of the parameter that is invalid
+- `value`: The invalid value
+- `message`: The error message
 
 ## Checking for this Error
 
 You can check if an error is an instance of `AI_InvalidArgumentError` using:
-    
-    
+
     import { InvalidArgumentError } from 'ai';
-    
-    
-    
-    
+
+
+
+
     if (InvalidArgumentError.isInstance(error)) {
-    
+
       // Handle the error
-    
+
     }
 
 Previous

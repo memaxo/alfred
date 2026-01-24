@@ -9,6 +9,7 @@
 This document provides detailed answers to 20 architectural questions and presents a comprehensive implementation plan for Phase 3: Runtime Integration Layer. The runtime layer will replace the current `runPlanV6` implementation while maintaining full backward compatibility with existing event consumers.
 
 **Key Design Decisions:**
+
 - Runtime as a pure execution engine with AsyncGenerator interface
 - Dependency injection for testability (AI SDK, storage, tools)
 - Hybrid state management (memory + database)
@@ -22,6 +23,7 @@ This document provides detailed answers to 20 architectural questions and presen
 Use checkboxes to track granular implementation steps. Update this section at every stopping point. Timestamps measure progress rates.
 
 ### Phase 3.1: Runtime Core (Week 1) ✅ COMPLETE
+
 - [x] Create runtime package structure (package.json, tsconfig.json, turbo.json updates)
 - [x] Implement WorkflowRuntime class with AsyncGenerator interface
 - [x] Implement phase orchestration (scan, plan, act, report)
@@ -33,6 +35,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Write unit tests for error handling
 
 ### Phase 3.2: Domain Package Integration (Week 1) ✅ COMPLETE
+
 - [x] Create CognitiveEngine wrapper for cognitive state functions
 - [x] Create KnowledgeEngine wrapper for knowledge graph queries
 - [x] Create LearningEngine wrapper for learning/supervision functions
@@ -46,6 +49,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Write integration tests for context caching
 
 ### Phase 3.3: Router Integration (Week 2) ✅ COMPLETE (2025-11-17)
+
 - [x] Replace runPlanV6 with WorkflowRuntime in workflow.ts
 - [x] Update start endpoint to create runtime
 - [x] Update stream endpoint to consume runtime generator
@@ -56,6 +60,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Mark runPlanV6 deprecated with migration guide
 
 ### Phase 3.4: Performance Optimization (Week 2) ✅ COMPLETE (2025-11-17)
+
 - [x] Add context build time metrics
 - [x] Add phase execution time metrics
 - [x] Add AI SDK call duration metrics
@@ -69,6 +74,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Verify knowledge batch writes <1s
 
 ### Phase 3.5: Observability & Monitoring (Week 3) ✅ COMPLETE (2025-11-17)
+
 - [x] Add runtime_executions_total metric
 - [x] Add runtime_phase_duration_seconds metric
 - [x] Add runtime_context_build_duration_seconds metric
@@ -84,6 +90,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Update dashboards with runtime metrics
 
 ### Phase 3.6: Migration & Cleanup (Week 3) ✅ COMPLETE (2025-11-17)
+
 - [x] Validate event schema compatibility
 - [x] Remove feature flag (cutover)
 - [x] Update documentation
@@ -103,9 +110,9 @@ Document unexpected behaviors, bugs, optimizations, or insights discovered durin
   - `tool-call` uses `input` not `args`
   - `tool-result` uses `output` not `result` and includes `input` field
   - `text-delta` requires `id` field for tracking text blocks
-  **Impact:** Original plan would have failed at runtime with undefined values
-  **Resolution:** Updated AISDKAdapter.mapEvent() to use correct AI SDK v6 property names before implementation
-  **Date:** 2025-11-16
+    **Impact:** Original plan would have failed at runtime with undefined values
+    **Resolution:** Updated AISDKAdapter.mapEvent() to use correct AI SDK v6 property names before implementation
+    **Date:** 2025-11-16
 
 - **Observation:** Phase TODOs (real context gatherers, AISDK plan/act streaming, workflow report) remained unimplemented, so runtime emitted placeholders.
   **Evidence:** `docs/execplans/runtime/runtime-integration-code-review.md` flagged missing integrations at `packages/runtime/src/core.ts` lines 190-225.
@@ -164,6 +171,7 @@ Record every decision made while working on the plan.
 **Status:** ✅ COMPLETE
 
 **What Was Delivered:**
+
 - Feature flag infrastructure (`USE_WORKFLOW_RUNTIME`) for safe gradual migration
 - Conditional executor function (`createWorkflowExecutor`) supporting both runtime and legacy paths
 - Comprehensive dual-path test coverage (8 compatibility tests)
@@ -173,12 +181,14 @@ Record every decision made while working on the plan.
 - Complete documentation (runtime-integration-final-summary.md)
 
 **Test Results:**
+
 - Runtime package: 42 pass, 3 skip, 0 fail
 - Router tests: 27 new tests added (execution blocked by pre-existing @alfred/policy export issue, code structurally correct)
 - TypeCheck: ✅ api & runtime packages pass
 - Build: ✅ runtime builds successfully
 
 **Key Achievements:**
+
 1. Zero breaking changes - runtime emits identical events to runPlanV6
 2. Interface compatibility verified - both paths use same WorkflowEvent types
 3. Feature flag defaults to false for safe deployment
@@ -186,17 +196,20 @@ Record every decision made while working on the plan.
 5. Migration path to Phase 3.4 clear
 
 **Challenges Encountered:**
+
 1. Pre-existing @alfred/policy module export issue blocks router test execution (not Phase 3.3 related)
 2. Pre-existing tsdown heap exhaustion issue (not Phase 3.3 related)
 3. Pre-existing web app tRPC type errors (not Phase 3.3 related)
 
 **Lessons Learned:**
+
 1. Feature flag pattern enables safe incremental rollouts
 2. Comprehensive test coverage (even when blocked) validates implementation correctness
 3. Interface compatibility makes migration seamless for consumers
 4. Documentation and rollback planning critical for production readiness
 
 **Next Steps:**
+
 - ~~Proceed to Phase 3.4: Performance Optimization~~ ✅ Complete
 - Fix pre-existing @alfred/policy export issue (separate task)
 - Address tsdown memory issue or migrate bundler (separate task)
@@ -208,6 +221,7 @@ Record every decision made while working on the plan.
 **What Was Delivered:**
 
 **Phase 3.4: Performance Optimization**
+
 - Comprehensive metrics registry (`packages/runtime/src/metrics.ts`) with 11 Prometheus metrics
 - Context builder instrumentation with cache hit/miss tracking, duration histograms, token counts
 - Phase execution instrumentation with per-phase duration and status tracking
@@ -216,6 +230,7 @@ Record every decision made while working on the plan.
 - Performance tests validating budgets (<50ms cached context, <5s uncached, <1s batch writes)
 
 **Phase 3.5: Observability & Monitoring**
+
 - Structured logging across all runtime components (context, core, AI adapter, learning engine)
 - Distributed tracing support (`packages/runtime/src/tracing.ts`) with nanosecond precision
 - Observability tests validating metric emission and tracing functionality
@@ -223,6 +238,7 @@ Record every decision made while working on the plan.
 - Complete integration with existing Prometheus registry from `@alfred/api/metrics`
 
 **Files Created:**
+
 - `packages/runtime/src/metrics.ts` - Runtime-specific Prometheus metrics
 - `packages/runtime/src/tracing.ts` - Distributed tracing infrastructure
 - `packages/runtime/test/performance.test.ts` - Performance budget validation
@@ -230,6 +246,7 @@ Record every decision made while working on the plan.
 - `docs/observability/runtime-dashboard.md` - Grafana dashboard configuration
 
 **Files Modified:**
+
 - `packages/runtime/src/context.ts` - Added metrics and logging to build()
 - `packages/runtime/src/core.ts` - Added metrics and logging to execute() and executePhase()
 - `packages/runtime/src/adapters/ai.ts` - Added metrics and logging to stream()
@@ -237,6 +254,7 @@ Record every decision made while working on the plan.
 - `packages/runtime/src/index.ts` - Exported metrics and tracing support
 
 **Metrics Added:**
+
 1. `runtime_executions_total` - Workflow execution counts by status
 2. `runtime_execution_duration_seconds` - Workflow duration histogram
 3. `runtime_phases_total` - Phase execution counts by phase and status
@@ -251,6 +269,7 @@ Record every decision made while working on the plan.
 12. `runtime_knowledge_batch_duration_seconds` - Batch operation duration
 
 **Performance Validation:**
+
 - Context build (cached): ✅ <50ms validated
 - Context build (uncached): ✅ <5s validated
 - Batch persistence: ✅ <1s per 100 updates validated
@@ -258,6 +277,7 @@ Record every decision made while working on the plan.
 - Memory management: ✅ LRU eviction prevents unbounded growth
 
 **Key Achievements:**
+
 1. Complete observability coverage for all runtime operations
 2. Performance budgets enforced and validated via tests
 3. Grafana dashboard ready for production deployment
@@ -267,11 +287,13 @@ Record every decision made while working on the plan.
 7. Comprehensive documentation for ops team
 
 **Challenges Encountered:**
+
 1. Metric cardinality management (avoided runId in labels, used in logs only)
 2. Timer cleanup in error paths (resolved with finally blocks)
 3. Test mocking of Prometheus metrics (resolved with vi.spyOn)
 
 **Lessons Learned:**
+
 1. Metrics cardinality must be bounded (labels vs logs trade-off)
 2. Structured logging more useful than metrics for debugging specific runs
 3. Performance tests with withBudget() catch regressions early
@@ -279,6 +301,7 @@ Record every decision made while working on the plan.
 5. Tracing provides visibility that metrics alone can't offer
 
 **Test Results:**
+
 - Performance tests: 11 new tests added, all passing
 - Observability tests: 12 new tests added, all passing
 - Total runtime tests: 65+ pass, 3 skip, 0 fail
@@ -286,6 +309,7 @@ Record every decision made while working on the plan.
 - Build: ✅ runtime builds successfully
 
 **Next Steps:**
+
 - ~~Proceed to Phase 3.6: Migration & Cleanup~~ ✅ Complete
 
 ### Phase 3.6 Completion (2025-11-17)
@@ -295,6 +319,7 @@ Record every decision made while working on the plan.
 **What Was Delivered:**
 
 **Local Migration (Single-User System)**
+
 - Simplified migration guide for local development setup
 - Feature flag infrastructure enables safe testing (`USE_WORKFLOW_RUNTIME=true`)
 - Event schema compatibility verified (zero breaking changes)
@@ -302,6 +327,7 @@ Record every decision made while working on the plan.
 - Migration guide rewritten: `docs/guides/runtime-migration-phase-3-6.md`
 
 **Ready for Local Deployment:**
+
 1. Enable runtime: `export USE_WORKFLOW_RUNTIME=true`
 2. Test workflows locally
 3. Verify metrics appear in Grafana
@@ -309,6 +335,7 @@ Record every decision made while working on the plan.
 5. Delete deprecated `runner.ts` file
 
 **Key Achievements:**
+
 1. ✅ Runtime ready for immediate use (no staged rollout needed)
 2. ✅ Documentation reflects single-user local context
 3. ✅ Simple migration path: enable → test → cleanup
@@ -316,22 +343,26 @@ Record every decision made while working on the plan.
 5. ✅ Full observability ready (12 metrics, tracing, dashboards)
 
 **Migration Approach:**
+
 - **NOT a production deployment** - this is a personal local system
 - No canary deployments, no monitoring periods, no staged rollouts
 - Simple: flip the flag, test a few workflows, delete old code
 - Rollback: just set `USE_WORKFLOW_RUNTIME=false` if needed
 
 **Files Ready for Deletion After Migration:**
+
 - `packages/api/src/workflow/runner.ts` (deprecated runner)
 - Feature flag code in `packages/api/src/routers/workflow.ts` (lines 35, 49-105)
 - `runPlanV6` import statement (line 32)
 
 **Documentation Delivered:**
+
 - `docs/guides/runtime-migration-phase-3-6.md` - Simple local migration guide
 - `docs/observability/runtime-dashboard.md` - Grafana dashboard setup
 - PRD updated to reflect completion (`docs/alfred-prd.md`)
 
 **Phase 3 Complete Summary:**
+
 - **3.1:** Runtime core with AsyncGenerator interface ✅
 - **3.2:** Domain package integration (engines + adapters) ✅
 - **3.3:** Router integration with feature flag ✅
@@ -340,6 +371,7 @@ Record every decision made while working on the plan.
 - **3.6:** Migration & cleanup documentation ✅
 
 **Total Deliverables:**
+
 - 1 new package (`@alfred/runtime`) with 2,000+ lines of code
 - 65+ passing tests (42 runtime + 23+ performance/observability)
 - 12 Prometheus metrics with validated budgets
@@ -349,6 +381,7 @@ Record every decision made while working on the plan.
 - Production-ready in 3 weeks
 
 **Actual User Action Required:**
+
 ```bash
 # That's it. Just:
 export USE_WORKFLOW_RUNTIME=true
@@ -366,6 +399,7 @@ bun run dev
 **Decision:** Create `packages/runtime/` as a **leaf package** that depends on domain packages but is never depended upon by them.
 
 **Dependency Graph:**
+
 ```
 packages/runtime/
 ├─→ @alfred/cognitive (pure functions, no side effects)
@@ -378,29 +412,32 @@ packages/runtime/
 ```
 
 **Key Files to Modify:**
+
 - Create `packages/runtime/package.json` with dependencies
 - Create `packages/runtime/tsconfig.json` extending base config
 - Update `turbo.json` to include runtime in build pipeline
 
 **Dependency Injection Pattern:**
+
 ```typescript
 // packages/runtime/src/core.ts
 export class WorkflowRuntime {
   constructor(
     private readonly options: {
-      streamText: typeof streamText;  // Injected AI SDK function
-      tools: ToolMap;                  // Injected from @alfred/agent/v6
-      storage: WorkflowStorage;        // Injected database adapter
-      cognitive: CognitiveEngine;      // Injected domain logic
-      knowledge: KnowledgeEngine;      // Injected domain logic
-      learning: LearningEngine;        // Injected domain logic
-      policy: PolicyEngine;            // Injected domain logic
+      streamText: typeof streamText; // Injected AI SDK function
+      tools: ToolMap; // Injected from @alfred/agent/v6
+      storage: WorkflowStorage; // Injected database adapter
+      cognitive: CognitiveEngine; // Injected domain logic
+      knowledge: KnowledgeEngine; // Injected domain logic
+      learning: LearningEngine; // Injected domain logic
+      policy: PolicyEngine; // Injected domain logic
     }
   ) {}
 }
 ```
 
 **Why This Works:**
+
 - No circular dependencies (runtime is a leaf)
 - All dependencies are explicit and testable
 - Domain packages remain pure (no knowledge of runtime)
@@ -414,54 +451,56 @@ export class WorkflowRuntime {
 
 **Ownership Split:**
 
-| Component | Owned By | Responsibilities |
-|-----------|----------|------------------|
-| HTTP lifecycle (start, subscribe, cancel) | Router (`workflow.ts`) | Authentication, authorization, tRPC wiring, SSE streaming |
-| Execution lifecycle (initialize, run phases, suspend/resume) | Runtime (`core.ts`) | Phase orchestration, context building, AI streaming, tool execution |
-| Persistence lifecycle (create run, append events) | Router (`workflow.ts`) | Database writes, audit logging, metrics emission |
-| Coordination lifecycle (register, unregister, dispatch resume) | Run Registry (`run-registry.ts`) | Multi-instance coordination, resume routing |
+| Component                                                      | Owned By                         | Responsibilities                                                    |
+| -------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------- |
+| HTTP lifecycle (start, subscribe, cancel)                      | Router (`workflow.ts`)           | Authentication, authorization, tRPC wiring, SSE streaming           |
+| Execution lifecycle (initialize, run phases, suspend/resume)   | Runtime (`core.ts`)              | Phase orchestration, context building, AI streaming, tool execution |
+| Persistence lifecycle (create run, append events)              | Router (`workflow.ts`)           | Database writes, audit logging, metrics emission                    |
+| Coordination lifecycle (register, unregister, dispatch resume) | Run Registry (`run-registry.ts`) | Multi-instance coordination, resume routing                         |
 
 **Key Files to Modify:**
+
 - `packages/api/src/routers/workflow.ts` (lines 91-209): Replace `runPlanV6` with `WorkflowRuntime`
 - `packages/runtime/src/core.ts`: New file, execution engine
 - `packages/api/src/run-registry.ts`: No changes needed (already generic)
 
 **Router Integration Pattern:**
+
 ```typescript
 // packages/api/src/routers/workflow.ts
-import { WorkflowRuntime } from '@alfred/runtime';
+import { WorkflowRuntime } from "@alfred/runtime";
 
 export const workflowRouter = router({
   start: authedProcedure.mutation(async ({ input, ctx }) => {
     const runtime = createRuntime({ user: ctx.session.user, input });
-    
-    await workflowRepo.createRun({ 
-      id: runtime.runId, 
+
+    await workflowRepo.createRun({
+      id: runtime.runId,
       userId: ctx.session.user.id,
-      status: "running" 
+      status: "running",
     });
-    
+
     await runRegistry.register(runtime.runId, {
       resume: async ({ resumeData }) => runtime.resume(resumeData),
       cancel: async () => runtime.cancel(),
       abortController: runtime.abortController,
     });
-    
+
     return { runId: runtime.runId, summary: runtime.summary };
   }),
-  
+
   stream: authedProcedure.subscription(({ input, ctx }) =>
     observable<WorkflowEvent>((emit) => {
       const runtime = createRuntime({ user: ctx.session.user, input });
-      
+
       (async () => {
         try {
           for await (const event of runtime.execute()) {
             emit.next(event);
-            await workflowRepo.appendEvent({ 
-              runId: runtime.runId, 
+            await workflowRepo.appendEvent({
+              runId: runtime.runId,
               eventType: event.type,
-              eventData: event 
+              eventData: event,
             });
           }
           emit.complete();
@@ -469,7 +508,7 @@ export const workflowRouter = router({
           emit.error(toTRPCError(error));
         }
       })();
-      
+
       return () => runtime.cancel();
     })
   ),
@@ -477,6 +516,7 @@ export const workflowRouter = router({
 ```
 
 **Why This Works:**
+
 - Router handles HTTP concerns (auth, subscriptions, persistence)
 - Runtime is a pure execution engine (testable, reusable)
 - Clear separation of concerns
@@ -490,23 +530,25 @@ export const workflowRouter = router({
 
 **State Layers:**
 
-| State Type | Storage | Lifecycle | Example |
-|------------|---------|-----------|---------|
-| Execution state | Memory (runtime instance) | Workflow execution | Current phase, context bundle, resume resolver |
-| Durable state | Database (`workflow_runs`, `workflow_events`) | Persistent | Input data, events, final status |
-| Coordination state | Run Registry (memory or Redis) | Distributed | Run ownership, resume routing |
+| State Type         | Storage                                       | Lifecycle          | Example                                        |
+| ------------------ | --------------------------------------------- | ------------------ | ---------------------------------------------- |
+| Execution state    | Memory (runtime instance)                     | Workflow execution | Current phase, context bundle, resume resolver |
+| Durable state      | Database (`workflow_runs`, `workflow_events`) | Persistent         | Input data, events, final status               |
+| Coordination state | Run Registry (memory or Redis)                | Distributed        | Run ownership, resume routing                  |
 
 **Key Files to Modify:**
+
 - `packages/db/src/schema/workflow.ts`: No changes needed (already supports stateData JSONB)
 - `packages/runtime/src/state.ts`: New file for runtime state types
 - `packages/runtime/src/storage.ts`: New file for storage adapter interface
 
 **Runtime State Structure:**
+
 ```typescript
 // packages/runtime/src/state.ts
 export type RuntimeState = {
   runId: string;
-  phase: WorkflowPhase;  // 'scan' | 'plan' | 'act' | 'report'
+  phase: WorkflowPhase; // 'scan' | 'plan' | 'act' | 'report'
   context: ExecutionContext | null;
   resumeWaiter: Promise<ResumePayload> | null;
   cancelled: boolean;
@@ -515,18 +557,19 @@ export type RuntimeState = {
 // Transient state (not persisted)
 class WorkflowRuntime {
   private state: RuntimeState;
-  
+
   async execute(): AsyncGenerator<WorkflowEvent> {
     // State evolves during execution
     for (const phase of phases) {
       this.state.phase = phase;
-      yield* this.executePhase(phase);
+      yield * this.executePhase(phase);
     }
   }
 }
 ```
 
 **Suspend/Resume Reconstruction:**
+
 ```typescript
 // Runtime does NOT reconstruct from database on resume
 // Resume is in-flight, not cross-instance
@@ -544,6 +587,7 @@ async resume(payload: ResumePayload) {
 ```
 
 **Why This Works:**
+
 - Memory state is fast and type-safe
 - Database state is durable for replay/debugging
 - No complex state rehydration logic
@@ -556,6 +600,7 @@ async resume(payload: ResumePayload) {
 **Decision:** Runtime owns event generation, router owns event delivery.
 
 **Event Flow:**
+
 ```
 WorkflowRuntime.execute()
   ↓ (yields)
@@ -571,39 +616,42 @@ Client UI
 ```
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/core.ts`: `async *execute(): AsyncGenerator<WorkflowEvent>`
 - `packages/api/src/routers/workflow.ts` (lines 227-486): No changes to observable wrapper
 
 **Runtime Event Generation:**
+
 ```typescript
 // packages/runtime/src/core.ts
 export class WorkflowRuntime {
   async *execute(): AsyncGenerator<WorkflowEvent> {
-    yield { type: 'run', id: this.runId };
-    
+    yield { type: "run", id: this.runId };
+
     // Context phase
     const context = await this.buildContext();
-    yield { type: 'context', phase: 'scan', receipts: context.receipts };
-    
+    yield { type: "context", phase: "scan", receipts: context.receipts };
+
     // Planning phase
     for await (const event of this.streamPlanning(context)) {
-      yield event;  // Forward AI SDK events
+      yield event; // Forward AI SDK events
     }
-    
+
     // Acting phase
     for (const action of plan.actions) {
-      yield { type: 'tool-call', id: action.id, toolName: action.name };
+      yield { type: "tool-call", id: action.id, toolName: action.name };
       const result = await this.executeTool(action);
-      yield { type: 'tool-result', id: action.id, result };
+      yield { type: "tool-result", id: action.id, result };
     }
-    
+
     // Completion
-    yield { type: 'progress', pct: 100, message: 'completed' };
+    yield { type: "progress", pct: 100, message: "completed" };
   }
 }
 ```
 
 **Why This Works:**
+
 - AsyncGenerator is composable and backpressure-friendly
 - Router simply wraps in observable (no business logic)
 - Maintains backward compatibility with current consumers
@@ -618,43 +666,47 @@ export class WorkflowRuntime {
 **Decision:** Build context **once before execution**, cache aggressively, refresh only on explicit request.
 
 **Key Files to Modify:**
+
 - `packages/agent/src/orchestrator/flow/context.ts`: No changes needed (already has caching)
 - `packages/runtime/src/context-builder.ts`: New file wrapping existing context functions
 
 **Context Building Flow:**
+
 ```typescript
 // packages/runtime/src/context-builder.ts
 export class ContextBuilder {
   constructor(
     private cache: Map<string, { expires: number; context: ExecutionContext }>
   ) {}
-  
+
   async build(input: ContextBuildInput): Promise<ExecutionContext> {
     const cacheKey = this.computeKey(input);
     const cached = this.cache.get(cacheKey);
-    
+
     if (cached && cached.expires > Date.now()) {
       return cached.context;
     }
-    
+
     // Use existing context gathering functions
-    const codeReceipt = await gatherCodeContext({ 
+    const codeReceipt = await gatherCodeContext({
       requirement: input.requirement,
       cw: input.workspace,
       authz: input.authz,
     });
-    
-    const webReceipt = input.web ? await gatherWebContext({
-      requirement: input.requirement,
-      authz: input.authz,
-    }) : null;
-    
+
+    const webReceipt = input.web
+      ? await gatherWebContext({
+          requirement: input.requirement,
+          authz: input.authz,
+        })
+      : null;
+
     const bundle = await buildContextBundle({
       cw: input.workspace,
       receipts: { ...codeReceipt, web: webReceipt?.web },
       maxTokens: input.maxTokens,
     });
-    
+
     const context: ExecutionContext = {
       requirement: input.requirement,
       receipts: { ...codeReceipt, web: webReceipt?.web },
@@ -662,18 +714,19 @@ export class ContextBuilder {
       knowledge: await this.queryKnowledge(input),
       cognitive: await this.buildCognitiveState(input),
     };
-    
+
     this.cache.set(cacheKey, {
       context,
       expires: Date.now() + 5 * 60_000, // 5 minutes
     });
-    
+
     return context;
   }
 }
 ```
 
 **Cache Key Computation:**
+
 ```typescript
 private computeKey(input: ContextBuildInput): string {
   return createHash('sha256')
@@ -687,6 +740,7 @@ private computeKey(input: ContextBuildInput): string {
 ```
 
 **Why This Works:**
+
 - Preserves existing caching behavior (5-minute TTL)
 - No mid-execution rebuilds (keeps context stable)
 - Optional refresh for long-running workflows via explicit flag
@@ -699,30 +753,34 @@ private computeKey(input: ContextBuildInput): string {
 **Decision:** Runtime uses existing `buildTools()` from `@alfred/agent/v6`, no dynamic composition.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/core.ts`: Import `buildTools()` from `@alfred/agent/v6`
 - `packages/agent/src/v6.ts`: No changes needed (already exports tool registry)
 
 **Runtime Tool Integration:**
+
 ```typescript
 // packages/runtime/src/core.ts
-import { buildTools } from '@alfred/agent/v6';
-import { streamText } from 'ai';
+import { buildTools } from "@alfred/agent/v6";
+import { streamText } from "ai";
 
 export class WorkflowRuntime {
   private readonly tools: ToolMap;
-  
+
   constructor(options: RuntimeOptions) {
-    this.tools = options.tools ?? buildTools();  // Use provided or default
+    this.tools = options.tools ?? buildTools(); // Use provided or default
   }
-  
-  async *streamPlanning(context: ExecutionContext): AsyncGenerator<WorkflowEvent> {
+
+  async *streamPlanning(
+    context: ExecutionContext
+  ): AsyncGenerator<WorkflowEvent> {
     const stream = streamText({
       model: this.model,
       messages: this.buildMessages(context),
-      tools: this.tools,  // Pass static tool registry
-      toolChoice: 'auto',
+      tools: this.tools, // Pass static tool registry
+      toolChoice: "auto",
     });
-    
+
     for await (const event of stream.fullStream) {
       yield* this.adaptAIEvent(event);
     }
@@ -731,6 +789,7 @@ export class WorkflowRuntime {
 ```
 
 **Tool Authorization:**
+
 ```typescript
 // Tools handle their own authorization (no runtime filtering)
 // Example from packages/agent/src/orchestrator/tool/codex.ts
@@ -738,14 +797,15 @@ export const toolCodex = {
   async execute({ input, writer }) {
     // Tool checks permissions internally
     await enforcePolicy(input);
-    
+
     // Tool execution logic
     // ...
-  }
+  },
 };
 ```
 
 **Why This Works:**
+
 - Reuses proven tool registry pattern
 - Tools self-authorize via policy engine
 - No runtime complexity for permission filtering
@@ -759,30 +819,37 @@ export const toolCodex = {
 **Decision:** Domain packages provide **pure functions**, runtime calls them explicitly and emits results as events.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/engines/cognitive-engine.ts`: New file wrapping cognitive functions
 - `packages/runtime/src/engines/knowledge-engine.ts`: New file wrapping knowledge functions
 - `packages/runtime/src/engines/learning-engine.ts`: New file wrapping learning functions
 - `packages/runtime/src/engines/policy-engine.ts`: New file wrapping policy functions
 
 **Cognitive Integration:**
+
 ```typescript
 // packages/runtime/src/engines/cognitive-engine.ts
-import { capturing, thinking, deciding, executing } from '@alfred/cognitive/state';
+import {
+  capturing,
+  thinking,
+  deciding,
+  executing,
+} from "@alfred/cognitive/state";
 
 export class CognitiveEngine {
   // Wrap pure cognitive functions with context
   capture(input: string): CognitiveState {
-    return capturing(input, 0.8);  // Pure function from @alfred/cognitive
+    return capturing(input, 0.8); // Pure function from @alfred/cognitive
   }
-  
+
   think(about: string, traces: string[]): CognitiveState {
     return thinking(about, traces.length, traces);
   }
-  
+
   decide(options: Decision[]): CognitiveState {
     return deciding(options);
   }
-  
+
   execute(plan: Plan, autonomy: AutonomyGradient): CognitiveState {
     return executing(plan, autonomy);
   }
@@ -790,30 +857,32 @@ export class CognitiveEngine {
 ```
 
 **Runtime Usage:**
+
 ```typescript
 // packages/runtime/src/core.ts
 async *execute(): AsyncGenerator<WorkflowEvent> {
   // Emit cognitive state transitions as events
   const captureState = this.cognitive.capture(this.input.requirement);
-  yield { 
-    type: 'cognitive-state', 
+  yield {
+    type: 'cognitive-state',
     state: captureState,
-    phase: 'capture' 
+    phase: 'capture'
   };
-  
+
   // Continue with thinking phase
   const thinkState = this.cognitive.think(this.input.requirement, traces);
-  yield { 
-    type: 'cognitive-state', 
+  yield {
+    type: 'cognitive-state',
     state: thinkState,
-    phase: 'think' 
+    phase: 'think'
   };
-  
+
   // Domain packages are CALLED, not OBSERVED
 }
 ```
 
 **Why This Works:**
+
 - Domain packages remain pure (no side effects, no observers)
 - Runtime explicitly orchestrates state transitions
 - Clear control flow (no magic event buses)
@@ -827,18 +896,20 @@ async *execute(): AsyncGenerator<WorkflowEvent> {
 **Decision:** Record outcomes **after each phase completes**, batch knowledge updates at **workflow completion**.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/engines/learning-engine.ts`: New file wrapping learning functions
 - `packages/runtime/src/core.ts`: Call learning engine after each phase
 
 **Learning Integration:**
+
 ```typescript
 // packages/runtime/src/engines/learning-engine.ts
-import { supervise } from '@alfred/learning/self_supervision';
-import { persistKnowledge } from '@alfred/agent/assistant/graphstore';
+import { supervise } from "@alfred/learning/self_supervision";
+import { persistKnowledge } from "@alfred/agent/assistant/graphstore";
 
 export class LearningEngine {
   private outcomes: SupervisionEvent[] = [];
-  
+
   recordOutcome(outcome: PhaseOutcome): void {
     this.outcomes.push({
       input: outcome.input,
@@ -849,26 +920,26 @@ export class LearningEngine {
       ts: new Date().toISOString(),
     });
   }
-  
+
   async commitLearning(resource: string): Promise<void> {
     // Batch process all outcomes
     const updates: KnowledgeUpdate[] = [];
-    
+
     for (const outcome of this.outcomes) {
       const result = supervise(outcome);
       if (result) {
         updates.push(...result);
       }
     }
-    
+
     if (updates.length === 0) return;
-    
+
     // Persist asynchronously (fire-and-forget)
-    persistKnowledge(resource, updates).catch(error => {
-      logger.warn('learning_persistence_failed', { 
-        resource, 
+    persistKnowledge(resource, updates).catch((error) => {
+      logger.warn("learning_persistence_failed", {
+        resource,
         count: updates.length,
-        error: error.message 
+        error: error.message,
       });
     });
   }
@@ -876,16 +947,17 @@ export class LearningEngine {
 ```
 
 **Runtime Usage:**
+
 ```typescript
 // packages/runtime/src/core.ts
 async *executePhase(phase: PhaseConfig): AsyncGenerator<WorkflowEvent> {
   const startTime = Date.now();
   let outcome: PhaseOutcome;
-  
+
   try {
     // Execute phase
     yield* this.runPhase(phase);
-    
+
     outcome = {
       input: phase.input,
       output: phase.result,
@@ -902,7 +974,7 @@ async *executePhase(phase: PhaseConfig): AsyncGenerator<WorkflowEvent> {
       context: { phase: phase.name, error: error.message },
     };
   }
-  
+
   // Record outcome immediately
   this.learning.recordOutcome(outcome);
 }
@@ -912,15 +984,16 @@ async *execute(): AsyncGenerator<WorkflowEvent> {
   for (const phase of this.phases) {
     yield* this.executePhase(phase);
   }
-  
+
   // Batch commit at workflow completion
   await this.learning.commitLearning(this.input.workspace);
-  
+
   yield { type: 'progress', pct: 100, message: 'completed' };
 }
 ```
 
 **Why This Works:**
+
 - Incremental outcome recording (no data loss on partial failure)
 - Batch persistence for efficiency
 - Async/fire-and-forget (doesn't block workflow completion)
@@ -936,95 +1009,99 @@ async *execute(): AsyncGenerator<WorkflowEvent> {
 **Decision:** Runtime wraps `streamText()` in an internal adapter, maintains `AsyncGenerator<WorkflowEvent>` signature.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/adapters/ai-sdk-adapter.ts`: New file wrapping AI SDK
 - `packages/runtime/src/core.ts`: Use adapter internally
 
 **AI SDK Adapter:**
+
 ```typescript
 // packages/runtime/src/adapters/ai-sdk-adapter.ts
-import { streamText, type StreamTextResult } from 'ai';
+import { streamText, type StreamTextResult } from "ai";
 
 export class AISDKAdapter {
   async *stream(options: StreamTextOptions): AsyncGenerator<WorkflowEvent> {
     const stream = await streamText(options);
-    
+
     for await (const event of stream.fullStream) {
       const mapped = this.mapEvent(event);
       if (mapped) yield mapped;
     }
   }
-  
+
   private mapEvent(sdkEvent: any): WorkflowEvent | null {
     switch (sdkEvent.type) {
-      case 'text-delta':
+      case "text-delta":
         return {
-          type: 'text-delta',
-          id: sdkEvent.id,           // Required id field for tracking text blocks
-          delta: sdkEvent.delta,     // FIXED: was sdkEvent.textDelta (v4 legacy)
+          type: "text-delta",
+          id: sdkEvent.id, // Required id field for tracking text blocks
+          delta: sdkEvent.delta, // FIXED: was sdkEvent.textDelta (v4 legacy)
         };
-      
-      case 'tool-call':
+
+      case "tool-call":
         return {
-          type: 'tool-call',
-          toolCallId: sdkEvent.toolCallId,  // Keep consistent property naming
+          type: "tool-call",
+          toolCallId: sdkEvent.toolCallId, // Keep consistent property naming
           toolName: sdkEvent.toolName,
-          input: sdkEvent.input,             // FIXED: was sdkEvent.args
+          input: sdkEvent.input, // FIXED: was sdkEvent.args
         };
-      
-      case 'tool-result':
+
+      case "tool-result":
         return {
-          type: 'tool-result',
-          toolCallId: sdkEvent.toolCallId,  // Keep consistent property naming
+          type: "tool-result",
+          toolCallId: sdkEvent.toolCallId, // Keep consistent property naming
           toolName: sdkEvent.toolName,
-          input: sdkEvent.input,             // Include input that was passed
-          output: sdkEvent.output,           // FIXED: was sdkEvent.result
+          input: sdkEvent.input, // Include input that was passed
+          output: sdkEvent.output, // FIXED: was sdkEvent.result
         };
-      
-      case 'finish':
+
+      case "finish":
         return {
-          type: 'finish',
+          type: "finish",
           finishReason: sdkEvent.finishReason,
           usage: sdkEvent.usage,
         };
-      
-      case 'error':
+
+      case "error":
         return {
-          type: 'error',
-          message: sdkEvent.error instanceof Error 
-            ? sdkEvent.error.message 
-            : String(sdkEvent.error),
+          type: "error",
+          message:
+            sdkEvent.error instanceof Error
+              ? sdkEvent.error.message
+              : String(sdkEvent.error),
         };
-      
+
       // Additional event types (forward if WorkflowEvent supports them)
-      case 'text-start':
-      case 'text-end':
-      case 'reasoning':
-      case 'reasoning-start':
-      case 'reasoning-delta':
-      case 'reasoning-end':
-      case 'start-step':
-      case 'finish-step':
-      case 'abort':
+      case "text-start":
+      case "text-end":
+      case "reasoning":
+      case "reasoning-start":
+      case "reasoning-delta":
+      case "reasoning-end":
+      case "start-step":
+      case "finish-step":
+      case "abort":
         // Forward these events - can be handled by UI incrementally
         return sdkEvent as WorkflowEvent;
-      
+
       default:
-        return null;  // Ignore unknown events
+        return null; // Ignore unknown events
     }
   }
 }
 ```
 
 **Runtime Usage:**
+
 ```typescript
 // packages/runtime/src/core.ts
 export class WorkflowRuntime {
   private readonly aiAdapter: AISDKAdapter;
-  
+
   constructor(options: RuntimeOptions) {
     this.aiAdapter = new AISDKAdapter(options.streamText);
   }
-  
+
   async *execute(): AsyncGenerator<WorkflowEvent> {
     // Use adapter for AI streaming
     for await (const event of this.aiAdapter.stream({
@@ -1032,13 +1109,14 @@ export class WorkflowRuntime {
       messages: this.messages,
       tools: this.tools,
     })) {
-      yield event;  // Forward mapped events
+      yield event; // Forward mapped events
     }
   }
 }
 ```
 
 **Why This Works:**
+
 - Maintains AsyncGenerator signature for compatibility
 - Adapter is testable (inject mock streamText function)
 - Runtime doesn't know about AI SDK internals
@@ -1052,32 +1130,34 @@ export class WorkflowRuntime {
 **Decision:** Normalization happens **in the runtime adapter**, not in the router.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/adapters/ai-sdk-adapter.ts`: Map AI SDK events to WorkflowEvent
 - `packages/api/src/ai/normalize.ts`: Keep for replay/persistence (not streaming)
 
 **Event Mapping Strategy:**
 
-| AI SDK Event | WorkflowEvent | Notes |
-|--------------|---------------|-------|
-| `text-delta` | `{ type: 'text-delta', id, delta }` | AI SDK v6: property is `delta` not `textDelta` |
-| `tool-call` | `{ type: 'tool-call', toolCallId, toolName, input }` | AI SDK v6: property is `input` not `args` |
-| `tool-result` | `{ type: 'tool-result', toolCallId, toolName, input, output }` | AI SDK v6: properties are `input` and `output` |
-| `finish` | `{ type: 'finish', finishReason, usage }` | No changes from AI SDK v6 |
-| `error` | `{ type: 'error', message }` | Extract and stringify error message |
-| `reasoning` | `{ type: 'reasoning', text }` | For O1/O3 models |
-| `text-start`, `text-end` | Forward as-is | Text block lifecycle events |
-| `start-step`, `finish-step` | Forward as-is | Multi-step workflow events |
-| `abort` | Forward as-is | Stream cancellation event |
+| AI SDK Event                | WorkflowEvent                                                  | Notes                                          |
+| --------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| `text-delta`                | `{ type: 'text-delta', id, delta }`                            | AI SDK v6: property is `delta` not `textDelta` |
+| `tool-call`                 | `{ type: 'tool-call', toolCallId, toolName, input }`           | AI SDK v6: property is `input` not `args`      |
+| `tool-result`               | `{ type: 'tool-result', toolCallId, toolName, input, output }` | AI SDK v6: properties are `input` and `output` |
+| `finish`                    | `{ type: 'finish', finishReason, usage }`                      | No changes from AI SDK v6                      |
+| `error`                     | `{ type: 'error', message }`                                   | Extract and stringify error message            |
+| `reasoning`                 | `{ type: 'reasoning', text }`                                  | For O1/O3 models                               |
+| `text-start`, `text-end`    | Forward as-is                                                  | Text block lifecycle events                    |
+| `start-step`, `finish-step` | Forward as-is                                                  | Multi-step workflow events                     |
+| `abort`                     | Forward as-is                                                  | Stream cancellation event                      |
 
 **Adapter Implementation** (see Question 9 for full code)
 
 **Router Pass-Through:**
+
 ```typescript
 // packages/api/src/routers/workflow.ts
 stream: authedProcedure.subscription(({ input, ctx }) =>
   observable<WorkflowEvent>((emit) => {
     const runtime = createRuntime({ user: ctx.session.user, input });
-    
+
     (async () => {
       for await (const event of runtime.execute()) {
         emit.next(event);  // No normalization, just pass through
@@ -1090,6 +1170,7 @@ stream: authedProcedure.subscription(({ input, ctx }) =>
 ```
 
 **Why This Works:**
+
 - Single responsibility: adapter handles mapping, runtime handles execution
 - Router is thin (no business logic)
 - Events are normalized at source (not multiple places)
@@ -1102,10 +1183,12 @@ stream: authedProcedure.subscription(({ input, ctx }) =>
 **Decision:** Let AI SDK manage tool execution automatically (simpler, more reliable).
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/adapters/ai-sdk-adapter.ts`: Trust AI SDK for tool orchestration
 - Tool implementations: No changes needed (already support async execution)
 
 **Tool Execution Flow:**
+
 ```
 1. Runtime calls aiAdapter.stream({ tools })
 2. AI SDK invokes tool when model requests it
@@ -1117,40 +1200,43 @@ stream: authedProcedure.subscription(({ input, ctx }) =>
 ```
 
 **Long-Running Tool Example:**
+
 ```typescript
 // packages/agent/src/orchestrator/tool/codex.ts
 export const toolCodex = {
   async execute({ input, writer }) {
     // Tool has its own timeout (e.g., 30 minutes)
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
-    
+
     // Emit progress periodically
-    await writer?.write({ type: 'notice', message: 'codex_turn_started' });
-    
+    await writer?.write({ type: "notice", message: "codex_turn_started" });
+
     // Long-running operation
     const result = await runCodexWithTimeout(input, timeoutSec);
-    
-    await writer?.write({ type: 'notice', message: 'codex_turn_completed' });
-    
+
+    await writer?.write({ type: "notice", message: "codex_turn_completed" });
+
     return result;
-  }
+  },
 };
 ```
 
 **Runtime Configuration:**
+
 ```typescript
 // AI SDK timeout is separate from tool timeout
 const stream = streamText({
   model: this.model,
   messages: this.messages,
   tools: this.tools,
-  maxSteps: 12,  // Limit tool call depth
-  abortSignal: this.abortController.signal,  // For cancellation
+  maxSteps: 12, // Limit tool call depth
+  abortSignal: this.abortController.signal, // For cancellation
   // No global timeout (tools manage their own)
 });
 ```
 
 **Why This Works:**
+
 - AI SDK handles tool call/result orchestration (proven pattern)
 - Tools manage their own timeouts (more granular)
 - Writer pattern allows progress streaming (already implemented)
@@ -1164,20 +1250,22 @@ const stream = streamText({
 **Decision:** Map AI SDK errors to `WorkflowEvent` error types, runtime emits errors but continues if recoverable.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/adapters/ai-sdk-adapter.ts`: Error mapping
 - `packages/runtime/src/core.ts`: Error recovery logic
 
 **Error Classification:**
 
-| Error Type | Recoverable | Action |
-|------------|-------------|--------|
-| Model timeout | Yes | Emit error event, retry with shorter context |
-| Rate limit | Yes | Emit error event, wait and retry |
-| Invalid API key | No | Emit error event, abort workflow |
-| Network error | Yes | Emit error event, retry up to 3 times |
-| Tool execution error | Yes | Emit error event, continue workflow |
+| Error Type           | Recoverable | Action                                       |
+| -------------------- | ----------- | -------------------------------------------- |
+| Model timeout        | Yes         | Emit error event, retry with shorter context |
+| Rate limit           | Yes         | Emit error event, wait and retry             |
+| Invalid API key      | No          | Emit error event, abort workflow             |
+| Network error        | Yes         | Emit error event, retry up to 3 times        |
+| Tool execution error | Yes         | Emit error event, continue workflow          |
 
 **Error Mapping:**
+
 ```typescript
 // packages/runtime/src/adapters/ai-sdk-adapter.ts
 private handleError(error: unknown): WorkflowEvent {
@@ -1185,36 +1273,36 @@ private handleError(error: unknown): WorkflowEvent {
     // AI SDK errors
     if (error.name === 'AI_APICallError') {
       const apiError = error as { statusCode?: number; message: string };
-      
+
       if (apiError.statusCode === 401 || apiError.statusCode === 403) {
-        return { 
-          type: 'error', 
+        return {
+          type: 'error',
           message: 'authentication_failed',
-          recoverable: false 
+          recoverable: false
         };
       }
-      
+
       if (apiError.statusCode === 429) {
-        return { 
-          type: 'error', 
+        return {
+          type: 'error',
           message: 'rate_limit_exceeded',
           recoverable: true,
           retryAfter: this.extractRetryAfter(apiError),
         };
       }
     }
-    
+
     if (error.name === 'AbortError') {
-      return { 
-        type: 'error', 
+      return {
+        type: 'error',
         message: 'workflow_cancelled',
-        recoverable: false 
+        recoverable: false
       };
     }
   }
-  
-  return { 
-    type: 'error', 
+
+  return {
+    type: 'error',
     message: error instanceof Error ? error.message : String(error),
     recoverable: true  // Default to recoverable
   };
@@ -1222,12 +1310,13 @@ private handleError(error: unknown): WorkflowEvent {
 ```
 
 **Runtime Error Recovery:**
+
 ```typescript
 // packages/runtime/src/core.ts
 async *executeWithRetry(): AsyncGenerator<WorkflowEvent> {
   let attempts = 0;
   const maxAttempts = 3;
-  
+
   while (attempts < maxAttempts) {
     try {
       for await (const event of this.aiAdapter.stream(options)) {
@@ -1235,20 +1324,20 @@ async *executeWithRetry(): AsyncGenerator<WorkflowEvent> {
           yield event;
           throw new Error(event.message);  // Abort on fatal error
         }
-        
+
         if (event.type === 'error' && event.recoverable) {
           yield event;  // Emit error but continue
-          
+
           if (event.retryAfter) {
             await delay(event.retryAfter);
             attempts++;
             continue;  // Retry
           }
         }
-        
+
         yield event;
       }
-      
+
       return;  // Success
     } catch (error) {
       attempts++;
@@ -1256,7 +1345,7 @@ async *executeWithRetry(): AsyncGenerator<WorkflowEvent> {
         yield { type: 'error', message: 'max_retries_exceeded', recoverable: false };
         throw error;
       }
-      
+
       yield { type: 'notice', message: `retry_attempt_${attempts}` };
       await delay(1000 * attempts);  // Exponential backoff
     }
@@ -1265,6 +1354,7 @@ async *executeWithRetry(): AsyncGenerator<WorkflowEvent> {
 ```
 
 **Why This Works:**
+
 - Clear error classification (recoverable vs fatal)
 - Runtime handles retries transparently
 - Router converts error events to tRPC errors
@@ -1280,12 +1370,14 @@ async *executeWithRetry(): AsyncGenerator<WorkflowEvent> {
 **Decision:** Keep existing cache strategy (Map with 5-minute TTL), cache key based on requirement hash.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/context-builder.ts`: Reuse caching from `context.ts`
 - `packages/agent/src/orchestrator/flow/context.ts`: No changes needed
 
 **Cache Implementation** (see Question 5 for full code)
 
 **Cache Key:**
+
 ```typescript
 private computeKey(input: ContextBuildInput): string {
   return createHash('sha256')
@@ -1299,11 +1391,13 @@ private computeKey(input: ContextBuildInput): string {
 ```
 
 **Cache Invalidation:**
+
 - Time-based: 5-minute TTL (existing behavior)
 - No event-based invalidation (too complex)
 - User can force rebuild via `clearCache` flag in input
 
 **Why This Works:**
+
 - Preserves existing caching behavior (no regressions)
 - Simple, predictable invalidation (time-based)
 - No cache stampede (single-threaded builds)
@@ -1316,42 +1410,46 @@ private computeKey(input: ContextBuildInput): string {
 **Decision:** Multiple workflows CAN run concurrently for the same user, no runtime-level concurrency control.
 
 **Key Files to Modify:**
+
 - None (existing run registry already supports concurrent workflows)
 
 **Concurrency Strategy:**
 
-| Resource | Concurrency Control | Location |
-|----------|---------------------|----------|
-| Workflows (same user) | Allowed | None |
-| File system (same repo) | Allowed (tools use locks) | Tool level (git, droid) |
-| Database connections | Pooled | `packages/db/src/client.ts` |
-| Knowledge graph writes | Queued | `packages/db/src/repo/graph.ts` |
+| Resource                | Concurrency Control       | Location                        |
+| ----------------------- | ------------------------- | ------------------------------- |
+| Workflows (same user)   | Allowed                   | None                            |
+| File system (same repo) | Allowed (tools use locks) | Tool level (git, droid)         |
+| Database connections    | Pooled                    | `packages/db/src/client.ts`     |
+| Knowledge graph writes  | Queued                    | `packages/db/src/repo/graph.ts` |
 
 **Tool-Level Locking:**
+
 ```typescript
 // packages/agent/src/orchestrator/tool/git.ts
 export const toolGit = {
   async execute({ input }) {
     // Git already handles file locking via .git/index.lock
-    const result = await runGit({ args: ['commit', '-m', input.message] });
+    const result = await runGit({ args: ["commit", "-m", input.message] });
     return result;
-  }
+  },
 };
 ```
 
 **Database Concurrency:**
+
 ```typescript
 // packages/db/src/client.ts
 export function createPgPool(options: PoolConfig = {}): Pool {
   return new Pool({
     min: options.min ?? 0,
-    max: options.max ?? 10,  // 10 concurrent connections
+    max: options.max ?? 10, // 10 concurrent connections
     idleTimeoutMillis: options.idleTimeoutMillis ?? 30_000,
   });
 }
 ```
 
 **Why This Works:**
+
 - No artificial bottlenecks (workflows run in parallel)
 - File contention handled by OS/tools (git locks)
 - Database pooling prevents connection exhaustion
@@ -1365,23 +1463,25 @@ export function createPgPool(options: PoolConfig = {}): Pool {
 **Decision:** Runtime respects maxTokens from input, truncates context at build time, errors early if requirement + tools exceed model limit.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/context-builder.ts`: Add token budget validation
 - `packages/agent/src/util/token.ts`: Reuse existing token estimator
 
 **Token Budget Validation:**
+
 ```typescript
 // packages/runtime/src/context-builder.ts
 async build(input: ContextBuildInput): Promise<ExecutionContext> {
   const estimator = createTokenEstimator();
-  
+
   // Calculate token budget
   const systemPromptTokens = estimator.estimate(SYSTEM_PROMPT);
   const toolSchemaTokens = estimator.estimate(JSON.stringify(this.tools));
   const requirementTokens = estimator.estimate(input.requirement);
   const overheadTokens = systemPromptTokens + toolSchemaTokens + requirementTokens;
-  
+
   const contextBudget = input.maxTokens - overheadTokens;
-  
+
   if (contextBudget < 2000) {
     throw new Error(
       `Insufficient token budget: requirement (${requirementTokens}) + ` +
@@ -1389,14 +1489,14 @@ async build(input: ContextBuildInput): Promise<ExecutionContext> {
       `maxTokens (${input.maxTokens}). Need at least 2000 tokens for context.`
     );
   }
-  
+
   // Build context with remaining budget
   const bundle = await buildContextBundle({
     cw: input.workspace,
     receipts: this.receipts,
     maxTokens: contextBudget,
   });
-  
+
   // Verify final context fits
   const totalTokens = overheadTokens + bundle.estimatedTokens;
   if (totalTokens > input.maxTokens) {
@@ -1404,17 +1504,18 @@ async build(input: ContextBuildInput): Promise<ExecutionContext> {
       `Context bundle exceeded token budget: ${totalTokens} > ${input.maxTokens}`
     );
   }
-  
+
   return { bundle, totalTokens };
 }
 ```
 
 **Runtime Token Tracking:**
+
 ```typescript
 // packages/runtime/src/core.ts
 async *execute(): AsyncGenerator<WorkflowEvent> {
-  yield { 
-    type: 'notice', 
+  yield {
+    type: 'notice',
     message: 'token_budget',
     tokens: {
       max: this.input.maxTokens,
@@ -1422,12 +1523,13 @@ async *execute(): AsyncGenerator<WorkflowEvent> {
       remaining: this.input.maxTokens - this.context.totalTokens,
     }
   };
-  
+
   // Continue execution
 }
 ```
 
 **Why This Works:**
+
 - Fails fast with clear error message
 - Prevents OOM errors from oversized context
 - Token estimation at build time (no surprises)
@@ -1440,24 +1542,26 @@ async *execute(): AsyncGenerator<WorkflowEvent> {
 **Decision:** Use transactions for **atomic batch writes**, not for entire workflow. Best-effort for knowledge/learning updates.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/storage.ts`: New storage adapter with transaction support
 - `packages/db/src/repo/workflow.ts`: Reuse existing transaction patterns
 
 **Transaction Strategy:**
 
-| Operation | Transactional | Rationale |
-|-----------|---------------|-----------|
-| Event batch writes (replay) | Yes | Must be atomic for replay consistency |
-| Knowledge graph updates | No | Best-effort, async fire-and-forget |
-| Learning ledger updates | No | Best-effort, async fire-and-forget |
-| Run status updates | No | Single-row update, implicit transaction |
+| Operation                   | Transactional | Rationale                               |
+| --------------------------- | ------------- | --------------------------------------- |
+| Event batch writes (replay) | Yes           | Must be atomic for replay consistency   |
+| Knowledge graph updates     | No            | Best-effort, async fire-and-forget      |
+| Learning ledger updates     | No            | Best-effort, async fire-and-forget      |
+| Run status updates          | No            | Single-row update, implicit transaction |
 
 **Event Batch Persistence:**
+
 ```typescript
 // packages/runtime/src/storage.ts
 export class WorkflowStorage {
   async appendEventBatch(
-    runId: string, 
+    runId: string,
     events: WorkflowEvent[]
   ): Promise<void> {
     await db.transaction(async (tx) => {
@@ -1475,20 +1579,22 @@ export class WorkflowStorage {
 ```
 
 **Knowledge Updates (Best-Effort):**
+
 ```typescript
 // packages/runtime/src/engines/knowledge-engine.ts
 async persistUpdates(updates: KnowledgeUpdate[]): Promise<void> {
   // No transaction, fire-and-forget
   persistKnowledge(this.resource, updates).catch(error => {
-    logger.warn('knowledge_persistence_failed', { 
+    logger.warn('knowledge_persistence_failed', {
       count: updates.length,
-      error: error.message 
+      error: error.message
     });
   });
 }
 ```
 
 **Why This Works:**
+
 - Atomic operations where it matters (event replay)
 - Non-blocking for best-effort operations (knowledge, learning)
 - Transaction duration is short (batch insert)
@@ -1503,23 +1609,25 @@ async persistUpdates(updates: KnowledgeUpdate[]): Promise<void> {
 **Decision:** Clean cutover (no parallel implementations), `WorkflowRuntime` emits identical `WorkflowEvent` types as `runPlanV6`.
 
 **Key Files to Modify:**
+
 - `packages/api/src/routers/workflow.ts`: Replace `runPlanV6` with `WorkflowRuntime`
 - `packages/api/src/workflow/runner.ts`: Mark deprecated, add migration guide comment
 
 **Migration Steps:**
 
-| Step | Action | Files |
-|------|--------|-------|
-| 1. Implement runtime | Create runtime package | `packages/runtime/src/*` |
-| 2. Add tests | Test runtime in isolation | `packages/runtime/test/*` |
-| 3. Update router | Replace runner with runtime | `packages/api/src/routers/workflow.ts` |
-| 4. Integration tests | Test end-to-end with real AI | `packages/api/test/workflow.router.test.ts` |
-| 5. Deploy | Deploy to production | CI/CD |
-| 6. Monitor | Watch metrics, error rates | Prometheus, Loki |
-| 7. Deprecate | Mark runner as deprecated | `packages/api/src/workflow/runner.ts` |
-| 8. Remove | Delete runner after 1 release | `packages/api/src/workflow/runner.ts` |
+| Step                 | Action                        | Files                                       |
+| -------------------- | ----------------------------- | ------------------------------------------- |
+| 1. Implement runtime | Create runtime package        | `packages/runtime/src/*`                    |
+| 2. Add tests         | Test runtime in isolation     | `packages/runtime/test/*`                   |
+| 3. Update router     | Replace runner with runtime   | `packages/api/src/routers/workflow.ts`      |
+| 4. Integration tests | Test end-to-end with real AI  | `packages/api/test/workflow.router.test.ts` |
+| 5. Deploy            | Deploy to production          | CI/CD                                       |
+| 6. Monitor           | Watch metrics, error rates    | Prometheus, Loki                            |
+| 7. Deprecate         | Mark runner as deprecated     | `packages/api/src/workflow/runner.ts`       |
+| 8. Remove            | Delete runner after 1 release | `packages/api/src/workflow/runner.ts`       |
 
 **Router Update:**
+
 ```typescript
 // packages/api/src/routers/workflow.ts
 -import { runPlanV6 } from '../workflow/runner';
@@ -1529,12 +1637,12 @@ export const workflowRouter = router({
   stream: authedProcedure.subscription(({ input, ctx }) =>
     observable<WorkflowEvent>((emit) => {
 -      const runner = runPlanV6(input, { signal: abortController.signal });
-+      const runtime = createRuntime({ 
-+        user: ctx.session.user, 
++      const runtime = createRuntime({
++        user: ctx.session.user,
 +        input,
 +        signal: abortController.signal,
 +      });
-      
+
       (async () => {
 -        for await (const event of runner.stream) {
 +        for await (const event of runtime.execute()) {
@@ -1548,12 +1656,13 @@ export const workflowRouter = router({
 ```
 
 **Runner Deprecation:**
+
 ```typescript
 // packages/api/src/workflow/runner.ts
 /**
  * @deprecated Use WorkflowRuntime from @alfred/runtime instead.
  * This runner will be removed in v2.0.0.
- * 
+ *
  * Migration guide:
  * - Replace: runPlanV6(input, opts)
  * - With: createRuntime({ user, input, signal: opts.signal }).execute()
@@ -1564,6 +1673,7 @@ export function runPlanV6(input: RunPlanInput, opts?: RunOptions): RunPlanV6 {
 ```
 
 **Why This Works:**
+
 - Clean cutover reduces maintenance burden
 - Identical events mean no consumer changes
 - Deprecation period gives time for validation
@@ -1576,65 +1686,68 @@ export function runPlanV6(input: RunPlanInput, opts?: RunOptions): RunPlanV6 {
 **Decision:** `WorkflowRuntime` emits **identical** `WorkflowEvent` types that `runPlanV6` currently emits.
 
 **Key Files to Modify:**
+
 - `packages/type/src/plan.ts`: No changes needed (types stay the same)
 - `packages/runtime/src/core.ts`: Import and use existing WorkflowEvent types
 
 **Event Type Mapping:**
 
-| Event Type | Current (`runPlanV6`) | Runtime | Changes |
-|------------|----------------------|---------|---------|
-| `run` | ✅ | ✅ | None |
-| `progress` | ✅ | ✅ | None |
-| `context` | ✅ | ✅ | None |
-| `require-scope` | ✅ | ✅ | None |
-| `notice` | ✅ | ✅ | None |
-| `error` | ✅ | ✅ | None |
-| `stdout` | ✅ | ✅ | None |
-| `stderr` | ✅ | ✅ | None |
-| `droid` | ✅ | ✅ | None |
-| `data-cache-handoff` | ✅ | ✅ | None |
-| `assistant` | ❌ | ✅ | **New** (from AI SDK) |
-| `tool-call` | ❌ | ✅ | **New** (from AI SDK) |
-| `tool-result` | ❌ | ✅ | **New** (from AI SDK) |
+| Event Type           | Current (`runPlanV6`) | Runtime | Changes               |
+| -------------------- | --------------------- | ------- | --------------------- |
+| `run`                | ✅                    | ✅      | None                  |
+| `progress`           | ✅                    | ✅      | None                  |
+| `context`            | ✅                    | ✅      | None                  |
+| `require-scope`      | ✅                    | ✅      | None                  |
+| `notice`             | ✅                    | ✅      | None                  |
+| `error`              | ✅                    | ✅      | None                  |
+| `stdout`             | ✅                    | ✅      | None                  |
+| `stderr`             | ✅                    | ✅      | None                  |
+| `droid`              | ✅                    | ✅      | None                  |
+| `data-cache-handoff` | ✅                    | ✅      | None                  |
+| `assistant`          | ❌                    | ✅      | **New** (from AI SDK) |
+| `tool-call`          | ❌                    | ✅      | **New** (from AI SDK) |
+| `tool-result`        | ❌                    | ✅      | **New** (from AI SDK) |
 
 **Runtime Implementation:**
+
 ```typescript
 // packages/runtime/src/core.ts
-import type { WorkflowEvent } from '@alfred/type/plan';
+import type { WorkflowEvent } from "@alfred/type/plan";
 
 export class WorkflowRuntime {
   async *execute(): AsyncGenerator<WorkflowEvent> {
     // Emit same events as runPlanV6
-    yield { type: 'run', id: this.runId };
-    yield { type: 'progress', pct: 10, message: 'initializing' };
-    yield { type: 'context', phase: 'scan', receipts: context.receipts };
-    
+    yield { type: "run", id: this.runId };
+    yield { type: "progress", pct: 10, message: "initializing" };
+    yield { type: "context", phase: "scan", receipts: context.receipts };
+
     // New AI SDK events (backward compatible, UI ignores unknown types)
-    yield { type: 'assistant', text: 'Planning...' };
-    yield { type: 'tool-call', id: 'tc-1', toolName: 'grep', args: {} };
-    yield { type: 'tool-result', id: 'tc-1', toolName: 'grep', result: {} };
-    
-    yield { type: 'progress', pct: 100, message: 'completed' };
+    yield { type: "assistant", text: "Planning..." };
+    yield { type: "tool-call", id: "tc-1", toolName: "grep", args: {} };
+    yield { type: "tool-result", id: "tc-1", toolName: "grep", result: {} };
+
+    yield { type: "progress", pct: 100, message: "completed" };
   }
 }
 ```
 
 **Consumer Compatibility:**
+
 ```typescript
 // apps/web/src/routes/orchestrator/run.tsx
 // UI already handles unknown event types gracefully
 function handleEvent(event: WorkflowEvent) {
   switch (event.type) {
-    case 'run':
+    case "run":
       setRunId(event.id);
       break;
-    case 'progress':
+    case "progress":
       setProgress(event.pct);
       break;
     // New events ignored by current UI (no changes needed)
-    case 'assistant':
-    case 'tool-call':
-    case 'tool-result':
+    case "assistant":
+    case "tool-call":
+    case "tool-result":
       // Future: render these in UI
       break;
     default:
@@ -1645,6 +1758,7 @@ function handleEvent(event: WorkflowEvent) {
 ```
 
 **Why This Works:**
+
 - Zero breaking changes for existing consumers
 - New events are additive (backward compatible)
 - UI can adopt new events incrementally
@@ -1657,10 +1771,12 @@ function handleEvent(event: WorkflowEvent) {
 **Decision:** `WorkflowRuntime` handles same resume payloads as `runPlanV6`, router does not translate.
 
 **Key Files to Modify:**
+
 - `packages/runtime/src/core.ts`: Implement resume logic identical to runner
 - `packages/api/src/routers/workflow.ts`: No changes to resume endpoint
 
 **Resume Flow:**
+
 ```
 1. Client calls workflow.resume({ runId, event, authz })
 2. Router calls runRegistry.dispatchResume(runId, payload)
@@ -1672,12 +1788,13 @@ function handleEvent(event: WorkflowEvent) {
 ```
 
 **Runtime Resume Implementation:**
+
 ```typescript
 // packages/runtime/src/core.ts
 export class WorkflowRuntime {
   private resumeResolver: ((payload: ResumePayload) => void) | null = null;
   private resumeQueue: ResumePayload[] = [];
-  
+
   async resume(payload: ResumePayload): Promise<void> {
     if (this.resumeResolver) {
       // In-flight wait, resolve immediately
@@ -1688,47 +1805,55 @@ export class WorkflowRuntime {
       this.resumeQueue.push(payload);
     }
   }
-  
+
   private async waitForResume(
-    requiredEvent: ResumePayload['event']
+    requiredEvent: ResumePayload["event"]
   ): Promise<ResumePayload> {
     // Check queue first
-    const queued = this.resumeQueue.find(p => p.event === requiredEvent);
+    const queued = this.resumeQueue.find((p) => p.event === requiredEvent);
     if (queued) {
-      this.resumeQueue = this.resumeQueue.filter(p => p !== queued);
+      this.resumeQueue = this.resumeQueue.filter((p) => p !== queued);
       return queued;
     }
-    
+
     // Wait for new resume
     return new Promise<ResumePayload>((resolve) => {
       this.resumeResolver = resolve;
-      
+
       // Timeout after 10 seconds
       setTimeout(() => {
         this.resumeResolver = null;
-        resolve(null as any);  // Timeout, continue without authz
+        resolve(null as any); // Timeout, continue without authz
       }, 10_000);
     });
   }
-  
+
   async *execute(): AsyncGenerator<WorkflowEvent> {
     // Request elevated scopes for medium/high autonomy
-    if (this.input.auto === 'medium' || this.input.auto === 'high') {
-      yield { type: 'require-scope', scopes: ['repo.write'], event: 'bio-authz' };
-      
-      const resume = await this.waitForResume('bio-authz');
-      
+    if (this.input.auto === "medium" || this.input.auto === "high") {
+      yield {
+        type: "require-scope",
+        scopes: ["repo.write"],
+        event: "bio-authz",
+      };
+
+      const resume = await this.waitForResume("bio-authz");
+
       if (resume) {
-        yield { type: 'notice', message: `Authorization '${resume.event}' acknowledged.` };
+        yield {
+          type: "notice",
+          message: `Authorization '${resume.event}' acknowledged.`,
+        };
       }
     }
-    
+
     // Continue execution
   }
 }
 ```
 
 **Router Pass-Through:**
+
 ```typescript
 // packages/api/src/routers/workflow.ts
 resume: authedProcedure
@@ -1743,16 +1868,17 @@ resume: authedProcedure
       event: input.event,
       authz: input.authz,
     });
-    
+
     if (!delivered) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'run_not_found' });
     }
-    
+
     return { ok: true };
   }),
 ```
 
 **Why This Works:**
+
 - Same resume payloads as current runner
 - Router stays thin (no translation logic)
 - Runtime owns resume semantics
@@ -1767,41 +1893,43 @@ resume: authedProcedure
 **Decision:** Test runtime with mock AI SDK via dependency injection, verify domain packages called via spies.
 
 **Key Files to Modify:**
+
 - `packages/runtime/test/core.test.ts`: New test file for runtime
 - `packages/runtime/test/utils/mock-ai-sdk.ts`: New mock AI SDK implementation
 - `packages/api/test/workflow.router.test.ts`: Update to test with runtime
 
 **Mock AI SDK:**
+
 ```typescript
 // packages/runtime/test/utils/mock-ai-sdk.ts
-import { MockLanguageModelV1 } from 'ai/test';
-import { convertArrayToReadableStream } from 'ai';
+import { MockLanguageModelV1 } from "ai/test";
+import { convertArrayToReadableStream } from "ai";
 
 export function createMockModel() {
   return new MockLanguageModelV1({
     doStream: async () => ({
       stream: convertArrayToReadableStream([
         // Yield deterministic events with correct AI SDK v6 property names
-        { type: 'text-start', id: 'text-1' },
-        { type: 'text-delta', id: 'text-1', delta: 'Planning...' },  // FIXED: was textDelta
-        { type: 'text-end', id: 'text-1' },
-        
-        { 
-        type: 'tool-call', 
-        toolCallId: 'tc-1',
-        toolName: 'grep',
-          input: { pattern: 'test' },  // FIXED: was args
-        },
-      
+        { type: "text-start", id: "text-1" },
+        { type: "text-delta", id: "text-1", delta: "Planning..." }, // FIXED: was textDelta
+        { type: "text-end", id: "text-1" },
+
         {
-        type: 'tool-result',
-        toolCallId: 'tc-1',
-        toolName: 'grep',
-          input: { pattern: 'test' },   // Include input
-          output: { matches: ['test'] }, // FIXED: was result
+          type: "tool-call",
+          toolCallId: "tc-1",
+          toolName: "grep",
+          input: { pattern: "test" }, // FIXED: was args
         },
-        
-        { type: 'finish', finishReason: 'stop', usage: { totalTokens: 100 } },
+
+        {
+          type: "tool-result",
+          toolCallId: "tc-1",
+          toolName: "grep",
+          input: { pattern: "test" }, // Include input
+          output: { matches: ["test"] }, // FIXED: was result
+        },
+
+        { type: "finish", finishReason: "stop", usage: { totalTokens: 100 } },
       ]),
       rawCall: { rawPrompt: null, rawSettings: {} },
     }),
@@ -1810,83 +1938,87 @@ export function createMockModel() {
 ```
 
 **Runtime Unit Test:**
+
 ```typescript
 // packages/runtime/test/core.test.ts
-import { describe, expect, it, vi } from 'bun:test';
-import { WorkflowRuntime } from '../src/core';
-import { createMockModel } from './utils/mock-ai-sdk';
+import { describe, expect, it, vi } from "bun:test";
+import { WorkflowRuntime } from "../src/core";
+import { createMockModel } from "./utils/mock-ai-sdk";
 
-describe('WorkflowRuntime', () => {
-  it('executes workflow phases in order', async () => {
-    const mockModel = createMockModel();  // Use MockLanguageModelV1
+describe("WorkflowRuntime", () => {
+  it("executes workflow phases in order", async () => {
+    const mockModel = createMockModel(); // Use MockLanguageModelV1
     const mockCognitive = {
-      capture: vi.fn().mockReturnValue({ _: 'capturing' }),
-      think: vi.fn().mockReturnValue({ _: 'thinking' }),
+      capture: vi.fn().mockReturnValue({ _: "capturing" }),
+      think: vi.fn().mockReturnValue({ _: "thinking" }),
     };
-    
+
     const runtime = new WorkflowRuntime({
-      model: mockModel,          // Inject mock model instead of mocking streamText
+      model: mockModel, // Inject mock model instead of mocking streamText
       cognitive: mockCognitive,
       // ... other mocks
     });
-    
+
     const events: WorkflowEvent[] = [];
     for await (const event of runtime.execute()) {
       events.push(event);
     }
-    
+
     // Verify phase order (updated with text lifecycle events)
-    expect(events.map(e => e.type)).toEqual([
-      'run',
-      'progress',
-      'context',
-      'text-start',      // Added: text block start
-      'text-delta',
-      'text-end',        // Added: text block end
-      'tool-call',
-      'tool-result',
-      'progress',
+    expect(events.map((e) => e.type)).toEqual([
+      "run",
+      "progress",
+      "context",
+      "text-start", // Added: text block start
+      "text-delta",
+      "text-end", // Added: text block end
+      "tool-call",
+      "tool-result",
+      "progress",
     ]);
-    
+
     // Verify domain packages called
-    expect(mockCognitive.capture).toHaveBeenCalledWith('test requirement');
+    expect(mockCognitive.capture).toHaveBeenCalledWith("test requirement");
     expect(mockCognitive.think).toHaveBeenCalled();
   });
-  
-  it('handles AI SDK errors gracefully', async () => {
+
+  it("handles AI SDK errors gracefully", async () => {
     const mockStreamText = createMockStreamText();
     mockStreamText.mockImplementation(async () => ({
       async *fullStream() {
-        yield { type: 'error', error: { message: 'rate_limit_exceeded' } };
+        yield { type: "error", error: { message: "rate_limit_exceeded" } };
       },
     }));
-    
+
     const runtime = new WorkflowRuntime({ streamText: mockStreamText });
-    
+
     const events: WorkflowEvent[] = [];
     for await (const event of runtime.execute()) {
       events.push(event);
     }
-    
-    expect(events.some(e => e.type === 'error')).toBe(true);
-    expect(events.find(e => e.type === 'error')?.message).toContain('rate_limit');
+
+    expect(events.some((e) => e.type === "error")).toBe(true);
+    expect(events.find((e) => e.type === "error")?.message).toContain(
+      "rate_limit"
+    );
   });
 });
 ```
 
 **Integration Test with Real AI:**
+
 ```typescript
 // packages/api/test/workflow.router.integration.test.ts
-describe('workflow router with real AI', () => {
-  it('executes workflow end-to-end', async () => {
+describe("workflow router with real AI", () => {
+  it("executes workflow end-to-end", async () => {
     // Uses real AI SDK (recorded fixtures for determinism)
-    const caller = await createTestCaller({ scopes: ['workflow.plan'] });
-    
+    const caller = await createTestCaller({ scopes: ["workflow.plan"] });
+
     const subscription = caller.workflow.stream({
-      requirement: 'create hello world app',
-      auto: 'low',
+      requirement: "create hello world app",
+      auto: "low",
     });
-    
+
     const events: WorkflowEvent[] = [];
     await new Promise<void>((resolve, reject) => {
       subscription.subscribe({
@@ -1895,10 +2027,10 @@ describe('workflow router with real AI', () => {
         complete: resolve,
       });
     });
-    
-    expect(events[0].type).toBe('run');
+
+    expect(events[0].type).toBe("run");
     expect(events[events.length - 1]).toMatchObject({
-      type: 'progress',
+      type: "progress",
       pct: 100,
     });
   });
@@ -1906,6 +2038,7 @@ describe('workflow router with real AI', () => {
 ```
 
 **Observability Instrumentation:**
+
 ```typescript
 // packages/runtime/src/core.ts
 export class WorkflowRuntime {
@@ -1913,24 +2046,27 @@ export class WorkflowRuntime {
     const stopTimer = workflowExecutionDurationSeconds.startTimer({
       auto: this.input.auto,
     });
-    
-    workflowExecutionsTotal.inc({ auto: this.input.auto, status: 'started' });
-    
+
+    workflowExecutionsTotal.inc({ auto: this.input.auto, status: "started" });
+
     try {
       yield* this.runPhases();
-      
-      workflowExecutionsTotal.inc({ auto: this.input.auto, status: 'completed' });
-      stopTimer({ status: 'completed' });
+
+      workflowExecutionsTotal.inc({
+        auto: this.input.auto,
+        status: "completed",
+      });
+      stopTimer({ status: "completed" });
     } catch (error) {
-      workflowExecutionsTotal.inc({ auto: this.input.auto, status: 'failed' });
-      stopTimer({ status: 'failed' });
-      
-      logger.error('workflow_execution_failed', {
+      workflowExecutionsTotal.inc({ auto: this.input.auto, status: "failed" });
+      stopTimer({ status: "failed" });
+
+      logger.error("workflow_execution_failed", {
         runId: this.runId,
         auto: this.input.auto,
         error: error.message,
       });
-      
+
       throw error;
     }
   }
@@ -1938,6 +2074,7 @@ export class WorkflowRuntime {
 ```
 
 **Why This Works:**
+
 - Dependency injection makes testing easy
 - Mock AI SDK provides deterministic tests
 - Integration tests use real AI with fixtures
@@ -1951,6 +2088,7 @@ export class WorkflowRuntime {
 ### Phase 3.1: Runtime Core (Week 1)
 
 **Files to Create:**
+
 ```
 packages/runtime/
 ├── package.json
@@ -1986,6 +2124,7 @@ packages/runtime/
    - Test error handling
 
 **Acceptance Criteria:**
+
 - [ ] Runtime executes phases in correct order
 - [ ] Runtime emits `WorkflowEvent` types matching `runPlanV6`
 - [ ] Runtime supports cancellation
@@ -1997,6 +2136,7 @@ packages/runtime/
 ### Phase 3.2: Domain Package Integration (Week 1)
 
 **Files to Create:**
+
 ```
 packages/runtime/src/
 ├── engines/
@@ -2033,6 +2173,7 @@ packages/runtime/src/
    - Test context builder caching
 
 **Acceptance Criteria:**
+
 - [ ] Runtime calls domain packages via engines
 - [ ] AI SDK events map to WorkflowEvent types
 - [ ] Context caching works with existing TTL
@@ -2044,6 +2185,7 @@ packages/runtime/src/
 ### Phase 3.3: Router Integration (Week 2)
 
 **Files to Modify:**
+
 ```
 packages/api/src/
 ├── routers/
@@ -2070,6 +2212,7 @@ packages/api/src/
    - Add migration guide to doc comment
 
 **Acceptance Criteria:**
+
 - [ ] Router uses runtime instead of runner
 - [ ] All existing tests pass
 - [ ] Event schema unchanged (backward compatible)
@@ -2080,6 +2223,7 @@ packages/api/src/
 ### Phase 3.4: Performance Optimization (Week 2)
 
 **Files to Modify:**
+
 ```
 packages/runtime/src/
 ├── context-builder.ts              # Add caching metrics
@@ -2107,6 +2251,7 @@ packages/runtime/src/
    - Test token budget validation rejects early
 
 **Acceptance Criteria:**
+
 - [ ] Context build time < 5 seconds (cached < 50ms)
 - [ ] Knowledge batch writes < 1 second
 - [ ] All performance budgets met
@@ -2116,6 +2261,7 @@ packages/runtime/src/
 ### Phase 3.5: Observability & Monitoring (Week 3)
 
 **Files to Create:**
+
 ```
 packages/runtime/src/
 └── metrics.ts                      # Runtime-specific metrics
@@ -2142,6 +2288,7 @@ packages/runtime/src/
    - Trace database operations
 
 **Acceptance Criteria:**
+
 - [ ] All metrics emitted correctly
 - [ ] Logs are structured and searchable
 - [ ] Traces show execution timeline
@@ -2152,6 +2299,7 @@ packages/runtime/src/
 ### Phase 3.6: Migration & Cleanup (Week 3)
 
 **Files to Modify/Remove:**
+
 ```
 packages/api/src/
 └── workflow/
@@ -2176,6 +2324,7 @@ packages/api/src/
    - Update imports
 
 **Acceptance Criteria:**
+
 - [ ] Runtime deployed to production
 - [ ] No regressions in metrics
 - [ ] Event consumers unchanged
@@ -2258,14 +2407,14 @@ packages/api/src/
 
 ## Timeline
 
-| Phase | Duration | Milestone |
-|-------|----------|-----------|
-| 3.1: Runtime Core | Week 1 | Runtime executes phases |
-| 3.2: Domain Integration | Week 1 | Runtime calls domain packages |
-| 3.3: Router Integration | Week 2 | Router uses runtime |
-| 3.4: Performance | Week 2 | Performance budgets met |
-| 3.5: Observability | Week 3 | Metrics, logs, traces |
-| 3.6: Migration | Week 3 | Runner removed |
+| Phase                   | Duration | Milestone                     |
+| ----------------------- | -------- | ----------------------------- |
+| 3.1: Runtime Core       | Week 1   | Runtime executes phases       |
+| 3.2: Domain Integration | Week 1   | Runtime calls domain packages |
+| 3.3: Router Integration | Week 2   | Router uses runtime           |
+| 3.4: Performance        | Week 2   | Performance budgets met       |
+| 3.5: Observability      | Week 3   | Metrics, logs, traces         |
+| 3.6: Migration          | Week 3   | Runner removed                |
 
 **Total: 3 weeks**
 
@@ -2274,6 +2423,7 @@ packages/api/src/
 ## Conclusion
 
 This implementation plan provides:
+
 - **Clear architecture** with explicit boundaries and ownership
 - **Testable design** via dependency injection
 - **Backward compatibility** with existing event consumers

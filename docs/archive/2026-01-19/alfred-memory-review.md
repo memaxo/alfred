@@ -14,12 +14,12 @@ ALFRED's confidence-based decay model sits in an interesting middle ground withi
 
 **ACT-R cognitive architecture** uses power-law decay with parameter d=0.5, where activation equals `ln(Σⱼ tⱼ⁻ᵈ)`. This produces fundamentally different behavior than ALFRED's exponential decay: frequently accessed items accumulate activation traces that decay independently, making them more resilient. ACT-R's model is more cognitively accurate but computationally expensive.
 
-| Feature | ALFRED | MemGPT | Zep/Graphiti | ACT-R |
-|---------|--------|--------|--------------|-------|
-| Decay model | Exponential (7-day) | None | Validity intervals | Power-law (d=0.5) |
-| Access strengthening | No | Manual | Via updates | Yes (trace accumulation) |
-| Temporal reasoning | Decay only | None | Bi-temporal | Access history |
-| Override mechanism | ≥0.8 threshold | Manual | Update validity | Rehearsal |
+| Feature              | ALFRED              | MemGPT | Zep/Graphiti       | ACT-R                    |
+| -------------------- | ------------------- | ------ | ------------------ | ------------------------ |
+| Decay model          | Exponential (7-day) | None   | Validity intervals | Power-law (d=0.5)        |
+| Access strengthening | No                  | Manual | Via updates        | Yes (trace accumulation) |
+| Temporal reasoning   | Decay only          | None   | Bi-temporal        | Access history           |
+| Override mechanism   | ≥0.8 threshold      | Manual | Update validity    | Rehearsal                |
 
 **Key recommendation**: Implement adaptive decay where frequently accessed items decay slower. Consider the formula: `effective_half_life = base_half_life × importance_factor × (1 + log(access_count))`. This preserves ALFRED's simplicity while incorporating ACT-R-validated strengthening mechanics.
 
@@ -47,13 +47,13 @@ ALFRED's fixed BFS depth-3 is appropriate for characterizing local topology—re
 
 **Self-RAG** uses reflection tokens during fine-tuning to teach self-critique, dynamically deciding retrieve/no-retrieve and evaluating relevance. This adaptive retrieval triggering could inform ALFRED's sync/async path decision—implementing confidence-based retrieval triggering for the async path.
 
-| Capability | ALFRED Current | 2024-2025 Best-in-Class |
-|------------|----------------|-------------------------|
-| Hybrid retrieval | FTS + pgvector | SPLADE++ + ColBERTv2/PLAID |
-| Graph structure | Hypergraph (4 types) | GraphRAG communities + RAPTOR trees |
-| Traversal | BFS depth 3 | DSA-BFS (similarity-aware) |
-| Quality control | 0.5 threshold | CRAG evaluator + Self-RAG reflection |
-| Global queries | Limited | GraphRAG map-reduce summaries |
+| Capability       | ALFRED Current       | 2024-2025 Best-in-Class              |
+| ---------------- | -------------------- | ------------------------------------ |
+| Hybrid retrieval | FTS + pgvector       | SPLADE++ + ColBERTv2/PLAID           |
+| Graph structure  | Hypergraph (4 types) | GraphRAG communities + RAPTOR trees  |
+| Traversal        | BFS depth 3          | DSA-BFS (similarity-aware)           |
+| Quality control  | 0.5 threshold        | CRAG evaluator + Self-RAG reflection |
+| Global queries   | Limited              | GraphRAG map-reduce summaries        |
 
 ---
 
@@ -65,12 +65,12 @@ ALFRED's 1536-dimensional ada-002 embeddings with static 0.5 cosine threshold re
 
 OpenAI's **text-embedding-3-large** supports native Matryoshka representation learning, where models are trained to store most important information in earlier dimensions. The critical benchmark: text-embedding-3-large at **256 dimensions outperforms ada-002 at 1536 dimensions** on MTEB—representing 6x smaller storage with better accuracy.
 
-| Dimensions | Performance vs Full | Storage Reduction |
-|------------|---------------------|-------------------|
-| 3072 (full) | 100% | 1x |
-| 1024 | ~99% | 3x |
-| 512 | ~95-97% | 6x |
-| 256 | ~93% | 12x |
+| Dimensions  | Performance vs Full | Storage Reduction |
+| ----------- | ------------------- | ----------------- |
+| 3072 (full) | 100%                | 1x                |
+| 1024        | ~99%                | 3x                |
+| 512         | ~95-97%             | 6x                |
+| 256         | ~93%                | 12x               |
 
 **Immediate recommendation**: Migrate from ada-002 (1536d) to text-embedding-3-large at 512 dimensions, achieving 3x storage savings with 95-97% accuracy retention and likely improved absolute performance.
 
@@ -102,12 +102,12 @@ ALFRED's user corrections at 0.9 confidence parallel high-quality preference sig
 
 **Constitutional AI** (Anthropic) achieves equivalent or better results than human feedback at ~100x lower cost through AI self-critique. Before applying corrections, ALFRED could self-critique to generate richer training signals.
 
-| Method | Signal Type | Matches ALFRED? |
-|--------|-------------|-----------------|
-| DPO | Preference pairs | Partially |
-| KTO | Binary desirable/undesirable | **Yes** |
-| Constitutional AI | Self-critique + revision | Enhancement opportunity |
-| SPIN | Self-play against previous versions | Enhancement opportunity |
+| Method            | Signal Type                         | Matches ALFRED?         |
+| ----------------- | ----------------------------------- | ----------------------- |
+| DPO               | Preference pairs                    | Partially               |
+| KTO               | Binary desirable/undesirable        | **Yes**                 |
+| Constitutional AI | Self-critique + revision            | Enhancement opportunity |
+| SPIN              | Self-play against previous versions | Enhancement opportunity |
 
 ### Domain-adaptive thresholds outperform static values
 
@@ -123,13 +123,13 @@ Research strongly supports learning domain-specific thresholds rather than using
 
 The 0.5 bootstrap seed represents maximum uncertainty for binary outcomes (uninformative prior). However, research shows domain-specific priors improve Bayesian inference. **Recommended differentiation**:
 
-| Knowledge Type | Recommended Seed | Rationale |
-|----------------|------------------|-----------|
-| Official documentation | 0.8 | High source reliability |
-| Well-established facts | 0.7 | Strong prior evidence |
-| Inferred relationships | 0.5 | Maximum uncertainty |
-| Community knowledge | 0.5 | Moderate reliability |
-| User-specific preferences | 0.4 | High update expectation |
+| Knowledge Type            | Recommended Seed | Rationale               |
+| ------------------------- | ---------------- | ----------------------- |
+| Official documentation    | 0.8              | High source reliability |
+| Well-established facts    | 0.7              | Strong prior evidence   |
+| Inferred relationships    | 0.5              | Maximum uncertainty     |
+| Community knowledge       | 0.5              | Moderate reliability    |
+| User-specific preferences | 0.4              | High update expectation |
 
 ### Self-improvement via SPIN shows promise
 
@@ -145,11 +145,11 @@ ALFRED's per-user graph-based classification aligns with 2024-2025 research conf
 
 ### Graph-based approach beats collaborative filtering for ALFRED's use case
 
-| Approach | Sample Efficiency | Update Speed | Cold-Start | ALFRED Fit |
-|----------|------------------|--------------|------------|------------|
-| Graph-based | Immediate (single interaction) | Real-time | Good | **Excellent** |
-| Collaborative filtering | Requires user overlap | Batch retraining | Poor | Poor |
-| LoRA adapters | 100-500 samples | Minutes-Hours | Poor | Heavy users only |
+| Approach                | Sample Efficiency              | Update Speed     | Cold-Start | ALFRED Fit       |
+| ----------------------- | ------------------------------ | ---------------- | ---------- | ---------------- |
+| Graph-based             | Immediate (single interaction) | Real-time        | Good       | **Excellent**    |
+| Collaborative filtering | Requires user overlap          | Batch retraining | Poor       | Poor             |
+| LoRA adapters           | 100-500 samples                | Minutes-Hours    | Poor       | Heavy users only |
 
 **Cross-user pattern learning** could address cold-start scenarios. FSPO 2025 demonstrates that "users with some overlap allow meta-learning algorithms to learn how to transfer knowledge effectively from one user to another." Implementing optional cross-user similarity matching for cold-start users or sparse domains would enhance the system without compromising the core graph-based approach.
 
@@ -158,6 +158,7 @@ ALFRED's per-user graph-based classification aligns with 2024-2025 research conf
 ALFRED lacks explicit concept drift handling. **ADWIN (Adaptive Windowing)** uses variable-sized sliding windows, detecting when "two windows have distinctly different averages." This triggers recalibration when user interests shift.
 
 **Recommended implementation**:
+
 1. Monitor per-user interaction distribution (domains, patterns)
 2. Trigger recalibration when ADWIN detects significant shift
 3. Apply adaptive forgetting: newer associations weighted higher
@@ -172,6 +173,7 @@ ALFRED lacks explicit concept drift handling. **ADWIN (Adaptive Windowing)** use
 Node2Vec research (Stanford, validated 2024) confirms BFS-style traversal "is sufficient to characterize the local topology" for structural equivalence. ALFRED's BFS depth-3 aligns with this finding.
 
 **Recursive CTE performance** at scale shows concerning metrics: Neo4j benchmarks show 2.7 seconds for 4-level traversal vs MySQL recursive at 240 seconds. Key optimizations include:
+
 - Visited-node tracking for cycles (Neo4j reports being "stuck in traversing 600,000 nodes, only 130 of whom are unique")
 - JOIN hints to avoid traversing through supernodes
 - PruningVarExpander for distinct results
@@ -182,12 +184,12 @@ Research consensus: "Setting a very short expiration time, such as one minute, m
 
 **Recommended tiered TTL**:
 
-| Data Type | Current | Recommended |
-|-----------|---------|-------------|
-| User session context | 60s | 60s ✓ |
-| Domain preferences | 60s | 300-600s |
-| User embeddings | 60s | 3600s |
-| Cross-user patterns | 60s | 86400s |
+| Data Type            | Current | Recommended |
+| -------------------- | ------- | ----------- |
+| User session context | 60s     | 60s ✓       |
+| Domain preferences   | 60s     | 300-600s    |
+| User embeddings      | 60s     | 3600s       |
+| Cross-user patterns  | 60s     | 86400s      |
 
 Additionally, **event-driven invalidation** should supplement TTL. Netflix and Twitter use combination strategies, achieving "30% reduction in cache-related CPU usage."
 
@@ -197,33 +199,33 @@ Additionally, **event-driven invalidation** should supplement TTL. Netflix and T
 
 ### Tier 1: High impact, moderate complexity (implement within 3 months)
 
-| Enhancement | Expected Impact | Complexity |
-|-------------|-----------------|------------|
-| Migrate to text-embedding-3-large @ 512d | 3x storage, better accuracy | Low |
-| Implement int8 quantization | 4x additional storage, 3.7x speed | Low |
-| Replace 0.5 threshold with top-K + filtering | Improved retrieval quality | Low |
-| Add domain-adaptive override thresholds | Better learning calibration | Medium |
-| Implement tiered TTL caching | Reduced query load, better freshness | Low |
+| Enhancement                                  | Expected Impact                      | Complexity |
+| -------------------------------------------- | ------------------------------------ | ---------- |
+| Migrate to text-embedding-3-large @ 512d     | 3x storage, better accuracy          | Low        |
+| Implement int8 quantization                  | 4x additional storage, 3.7x speed    | Low        |
+| Replace 0.5 threshold with top-K + filtering | Improved retrieval quality           | Low        |
+| Add domain-adaptive override thresholds      | Better learning calibration          | Medium     |
+| Implement tiered TTL caching                 | Reduced query load, better freshness | Low        |
 
 ### Tier 2: Significant enhancement, higher complexity (3-6 months)
 
-| Enhancement | Expected Impact | Complexity |
-|-------------|-----------------|------------|
-| Dynamic Similarity-Aware BFS (DSA-BFS) | Deeper contextual connections | Medium |
-| CRAG-style retrieval evaluator | 12-18% error reduction | Medium |
-| Leiden clustering + community summaries | Global query support | High |
-| ADWIN-based concept drift detection | Better personalization stability | Medium |
-| Event-driven cache invalidation | 30% cache efficiency gain | Medium |
+| Enhancement                             | Expected Impact                  | Complexity |
+| --------------------------------------- | -------------------------------- | ---------- |
+| Dynamic Similarity-Aware BFS (DSA-BFS)  | Deeper contextual connections    | Medium     |
+| CRAG-style retrieval evaluator          | 12-18% error reduction           | Medium     |
+| Leiden clustering + community summaries | Global query support             | High       |
+| ADWIN-based concept drift detection     | Better personalization stability | Medium     |
+| Event-driven cache invalidation         | 30% cache efficiency gain        | Medium     |
 
 ### Tier 3: Strategic capabilities (6-12 months)
 
-| Enhancement | Expected Impact | Complexity |
-|-------------|-----------------|------------|
-| Bi-temporal edges (Zep-style) | Temporal reasoning, non-lossy updates | High |
-| SPIN-style self-play validation | Autonomous quality improvement | High |
-| ColBERTv2/PLAID late interaction reranking | Complex query handling | High |
-| Cross-user meta-learning for cold-start | Improved onboarding | Medium |
-| Binary quantization pipeline | 39x storage vs float32 baseline | Medium |
+| Enhancement                                | Expected Impact                       | Complexity |
+| ------------------------------------------ | ------------------------------------- | ---------- |
+| Bi-temporal edges (Zep-style)              | Temporal reasoning, non-lossy updates | High       |
+| SPIN-style self-play validation            | Autonomous quality improvement        | High       |
+| ColBERTv2/PLAID late interaction reranking | Complex query handling                | High       |
+| Cross-user meta-learning for cold-start    | Improved onboarding                   | Medium     |
+| Binary quantization pipeline               | 39x storage vs float32 baseline       | Medium     |
 
 ---
 
@@ -245,30 +247,30 @@ The comparative analysis reveals several open problems where ALFRED's architectu
 
 ### Retrieval quality metrics
 
-| Metric | Measurement | Target |
-|--------|-------------|--------|
-| nDCG@10 | BEIR benchmark | ≥0.45 (SPLADE++ level) |
-| Contextual precision | RAGAS framework | ≥0.85 |
-| Contextual recall | RAGAS framework | ≥0.80 |
-| Global query F1 | Custom GraphRAG-style | ≥0.70 |
+| Metric               | Measurement           | Target                 |
+| -------------------- | --------------------- | ---------------------- |
+| nDCG@10              | BEIR benchmark        | ≥0.45 (SPLADE++ level) |
+| Contextual precision | RAGAS framework       | ≥0.85                  |
+| Contextual recall    | RAGAS framework       | ≥0.80                  |
+| Global query F1      | Custom GraphRAG-style | ≥0.70                  |
 
 ### Memory and learning metrics
 
-| Metric | Measurement | Target |
-|--------|-------------|--------|
-| Deep Memory Retrieval | MemGPT DMR benchmark | ≥94% (Zep level) |
-| Correction sample efficiency | Corrections to 90% accuracy | ≤15 corrections |
-| Confidence calibration ECE | Expected Calibration Error | ≤0.05 |
-| Concept drift adaptation | Time to detect + adapt | ≤24 hours |
+| Metric                       | Measurement                 | Target           |
+| ---------------------------- | --------------------------- | ---------------- |
+| Deep Memory Retrieval        | MemGPT DMR benchmark        | ≥94% (Zep level) |
+| Correction sample efficiency | Corrections to 90% accuracy | ≤15 corrections  |
+| Confidence calibration ECE   | Expected Calibration Error  | ≤0.05            |
+| Concept drift adaptation     | Time to detect + adapt      | ≤24 hours        |
 
 ### Efficiency metrics
 
-| Metric | Current Baseline | Target |
-|--------|------------------|--------|
-| Embedding storage | 1536d × 4 bytes | 512d × 1 byte (12x reduction) |
-| P99 retrieval latency | Baseline | ≤300ms (Zep-comparable) |
-| Cache hit ratio | Baseline | ≥85% |
-| Graph traversal P99 | Baseline | ≤50ms at 1M nodes |
+| Metric                | Current Baseline | Target                        |
+| --------------------- | ---------------- | ----------------------------- |
+| Embedding storage     | 1536d × 4 bytes  | 512d × 1 byte (12x reduction) |
+| P99 retrieval latency | Baseline         | ≤300ms (Zep-comparable)       |
+| Cache hit ratio       | Baseline         | ≥85%                          |
+| Graph traversal P99   | Baseline         | ≤50ms at 1M nodes             |
 
 ### Recommended evaluation datasets
 

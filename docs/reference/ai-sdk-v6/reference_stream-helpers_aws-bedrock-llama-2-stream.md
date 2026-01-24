@@ -13,8 +13,7 @@ The AWS Bedrock stream functions are utilties that transform the outputs from th
 ## Import
 
 ### React
-    
-    
+
     import { AWSBedrockLlama2Stream } from "ai"
 
 ## API Signature

@@ -1,39 +1,37 @@
 node_modules
- package-lock.json
- yarn.lock
+package-lock.json
+yarn.lock
 
- !.env
- .DS_Store
- .cache
- .vercel
- .output
- /build/
- /api/
- /server/build
- /public/build# Sentry Config File
- .env.sentry-build-plugin
- /test-results/
- /playwright-report/
- /blob-report/
- /playwright/.cache/
+!.env
+.DS_Store
+.cache
+.vercel
+.output
+/build/
+/api/
+/server/build
+/public/build# Sentry Config File
+.env.sentry-build-plugin
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
+node_modules
+package-lock.json
+yarn.lock
 
-
- node_modules
- package-lock.json
- yarn.lock
-
- !.env
- .DS_Store
- .cache
- .vercel
- .output
- /build/
- /api/
- /server/build
- /public/build# Sentry Config File
- .env.sentry-build-plugin
- /test-results/
- /playwright-report/
- /blob-report/
- /playwright/.cache/
+!.env
+.DS_Store
+.cache
+.vercel
+.output
+/build/
+/api/
+/server/build
+/public/build# Sentry Config File
+.env.sentry-build-plugin
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

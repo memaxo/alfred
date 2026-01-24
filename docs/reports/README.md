@@ -35,6 +35,7 @@ Historical reports are archived by date:
 ## Cleanup (2025-12-16)
 
 Removed outdated and redundant files:
+
 - `REORGANIZATION-2025-12-16.md` - Meta-document (temporary)
 - `linear-issues-audit.md` - Superseded by newer repo-state reports
 - `linear-issues-next-steps.md` - Outdated follow-up document

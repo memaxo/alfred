@@ -46,14 +46,14 @@ sunny
 
 Thanks!
 
-At the core of generative UI are  tools , which are functions you provide to the model to perform specialized tasks like getting the weather in a location. The model can decide when and how to use these tools based on the context of the conversation.
+At the core of generative UI are tools , which are functions you provide to the model to perform specialized tasks like getting the weather in a location. The model can decide when and how to use these tools based on the context of the conversation.
 
 Generative UI is the process of connecting the results of a tool call to a React component. Here's how it works:
 
-  1. You provide the model with a prompt or conversation history, along with a set of tools.
-  2. Based on the context, the model may decide to call a tool.
-  3. If a tool is called, it will execute and return data.
-  4. This data can then be passed to a React component for rendering.
+1. You provide the model with a prompt or conversation history, along with a set of tools.
+2. Based on the context, the model may decide to call a tool.
+3. If a tool is called, it will execute and return data.
+4. This data can then be passed to a React component for rendering.
 
 By passing the tool results to React components, you can create a generative UI experience that's more engaging and adaptive to your needs.
 
@@ -66,129 +66,127 @@ Let's create a chat interface that handles text-based conversations and incorpor
 Start with a basic chat implementation using the `useChat` hook:
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { useState } from 'react';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, sendMessage } = useChat();
-    
-    
-    
-    
+
+
+
+
       const handleSubmit = (e: React.FormEvent) => {
-    
+
         e.preventDefault();
-    
+
         sendMessage({ text: input });
-    
+
         setInput('');
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {messages.map(message => (
-    
-            
-    
+
+
+
               {message.role === 'user' ? 'User: ' : 'AI: '}
-    
-              
-    
+
+
+
                 {message.parts.map((part, index) => {
-    
+
                   if (part.type === 'text') {
-    
+
                     return {part.text};
-    
+
                   }
-    
+
                   return null;
-    
+
                 })}
-    
-              
-    
-            
-    
+
+
+
+
+
           ))}
-    
-    
-    
-    
-          
-    
+
+
+
+
+
+
              setInput(e.target.value)}
-    
+
               placeholder="Type a message..."
-    
+
             />
-    
+
             Send
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 To handle the chat requests and model responses, set up an API route:
 
 app/api/chat/route.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamText, convertToModelMessages, UIMessage, stepCountIs } from 'ai';
-    
-    
-    
-    
+
+
+
+
     export async function POST(request: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await request.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         system: 'You are a friendly assistant!',
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 This API route uses the `streamText` function to process chat messages and stream the model's responses back to the client.
@@ -200,42 +198,41 @@ Before enhancing your chat interface with dynamic UI elements, you need to creat
 Create a new file called `ai/tools.ts` with the following content:
 
 ai/tools.ts
-    
-    
+
     import { tool as createTool } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     export const weatherTool = createTool({
-    
+
       description: 'Display the weather for a location',
-    
+
       inputSchema: z.object({
-    
+
         location: z.string().describe('The location to get the weather for'),
-    
+
       }),
-    
+
       execute: async function ({ location }) {
-    
+
         await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
         return { weather: 'Sunny', temperature: 75, location };
-    
+
       },
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     export const tools = {
-    
+
       displayWeather: weatherTool,
-    
+
     };
 
 In this file, you've created a tool called `weatherTool`. This tool simulates fetching weather information for a given location. This tool will return simulated data after a 2-second delay. In a real-world application, you would replace this simulation with an actual API call to a weather service.
@@ -245,43 +242,42 @@ In this file, you've created a tool called `weatherTool`. This tool simulates fe
 Update the API route to include the tool you've defined:
 
 app/api/chat/route.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamText, convertToModelMessages, UIMessage, stepCountIs } from 'ai';
-    
+
     import { tools } from '@/ai/tools';
-    
-    
-    
-    
+
+
+
+
     export async function POST(request: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await request.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         system: 'You are a friendly assistant!',
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
         tools,
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 Now that you've defined the tool and added it to your `streamText` call, let's build a React component to display the weather information it returns.
@@ -291,37 +287,36 @@ Now that you've defined the tool and added it to your `streamText` call, let's b
 Create a new file called `components/weather.tsx`:
 
 components/weather.tsx
-    
-    
+
     type WeatherProps = {
-    
+
       temperature: number;
-    
+
       weather: string;
-    
+
       location: string;
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export const Weather = ({ temperature, weather, location }: WeatherProps) => {
-    
+
       return (
-    
-        
-    
+
+
+
           Current Weather for {location}
-    
+
           Condition: {weather}
-    
+
           Temperature: {temperature}°C
-    
-        
-    
+
+
+
       );
-    
+
     };
 
 This component will display the weather information for a given location. It takes three props: `temperature`, `weather`, and `location` (exactly what the `weatherTool` returns).
@@ -335,139 +330,138 @@ To check if the model has called a tool, you can check the `parts` array of the 
 Update your `page.tsx` file:
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { useState } from 'react';
-    
+
     import { Weather } from '@/components/weather';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, sendMessage } = useChat();
-    
-    
-    
-    
+
+
+
+
       const handleSubmit = (e: React.FormEvent) => {
-    
+
         e.preventDefault();
-    
+
         sendMessage({ text: input });
-    
+
         setInput('');
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {messages.map(message => (
-    
-            
-    
+
+
+
               {message.role === 'user' ? 'User: ' : 'AI: '}
-    
-              
-    
+
+
+
                 {message.parts.map((part, index) => {
-    
+
                   if (part.type === 'text') {
-    
+
                     return {part.text};
-    
+
                   }
-    
-    
-    
-    
+
+
+
+
                   if (part.type === 'tool-displayWeather') {
-    
+
                     switch (part.state) {
-    
+
                       case 'input-available':
-    
+
                         return Loading weather...;
-    
+
                       case 'output-available':
-    
+
                         return (
-    
-                          
-    
-                            
-    
-                          
-    
+
+
+
+
+
+
+
                         );
-    
+
                       case 'output-error':
-    
+
                         return Error: {part.errorText};
-    
+
                       default:
-    
+
                         return null;
-    
+
                     }
-    
+
                   }
-    
-    
-    
-    
+
+
+
+
                   return null;
-    
+
                 })}
-    
-              
-    
-            
-    
+
+
+
+
+
           ))}
-    
-    
-    
-    
-          
-    
+
+
+
+
+
+
              setInput(e.target.value)}
-    
+
               placeholder="Type a message..."
-    
+
             />
-    
+
             Send
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 In this updated code snippet, you:
 
-  1. Use manual input state management with `useState` instead of the built-in `input` and `handleInputChange`.
-  2. Use `sendMessage` instead of `handleSubmit` to send messages.
-  3. Check the `parts` array of each message for different content types.
-  4. Handle tool parts with type `tool-displayWeather` and their different states (`input-available`, `output-available`, `output-error`).
+1. Use manual input state management with `useState` instead of the built-in `input` and `handleInputChange`.
+2. Use `sendMessage` instead of `handleSubmit` to send messages.
+3. Check the `parts` array of each message for different content types.
+4. Handle tool parts with type `tool-displayWeather` and their different states (`input-available`, `output-available`, `output-error`).
 
 This approach allows you to dynamically render UI components based on the model's responses, creating a more interactive and context-aware chat experience.
 
@@ -478,238 +472,235 @@ You can enhance your chat application by adding more tools and components, creat
 ### Adding More Tools
 
 To add more tools, simply define them in your `ai/tools.ts` file:
-    
-    
+
     // Add a new stock tool
-    
+
     export const stockTool = createTool({
-    
+
       description: 'Get price for a stock',
-    
+
       inputSchema: z.object({
-    
+
         symbol: z.string().describe('The stock symbol to get the price for'),
-    
+
       }),
-    
+
       execute: async function ({ symbol }) {
-    
+
         // Simulated API call
-    
+
         await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
         return { symbol, price: 100 };
-    
+
       },
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     // Update the tools object
-    
+
     export const tools = {
-    
+
       displayWeather: weatherTool,
-    
+
       getStockPrice: stockTool,
-    
+
     };
 
 Now, create a new file called `components/stock.tsx`:
-    
-    
+
     type StockProps = {
-    
+
       price: number;
-    
+
       symbol: string;
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export const Stock = ({ price, symbol }: StockProps) => {
-    
+
       return (
-    
-        
-    
+
+
+
           Stock Information
-    
+
           Symbol: {symbol}
-    
+
           Price: ${price}
-    
-        
-    
+
+
+
       );
-    
+
     };
 
 Finally, update your `page.tsx` file to include the new Stock component:
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { useState } from 'react';
-    
+
     import { Weather } from '@/components/weather';
-    
+
     import { Stock } from '@/components/stock';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, sendMessage } = useChat();
-    
-    
-    
-    
+
+
+
+
       const handleSubmit = (e: React.FormEvent) => {
-    
+
         e.preventDefault();
-    
+
         sendMessage({ text: input });
-    
+
         setInput('');
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {messages.map(message => (
-    
-            
-    
+
+
+
               {message.role}
-    
-              
-    
+
+
+
                 {message.parts.map((part, index) => {
-    
+
                   if (part.type === 'text') {
-    
+
                     return {part.text};
-    
+
                   }
-    
-    
-    
-    
+
+
+
+
                   if (part.type === 'tool-displayWeather') {
-    
+
                     switch (part.state) {
-    
+
                       case 'input-available':
-    
+
                         return Loading weather...;
-    
+
                       case 'output-available':
-    
+
                         return (
-    
-                          
-    
-                            
-    
-                          
-    
+
+
+
+
+
+
+
                         );
-    
+
                       case 'output-error':
-    
+
                         return Error: {part.errorText};
-    
+
                       default:
-    
+
                         return null;
-    
+
                     }
-    
+
                   }
-    
-    
-    
-    
+
+
+
+
                   if (part.type === 'tool-getStockPrice') {
-    
+
                     switch (part.state) {
-    
+
                       case 'input-available':
-    
+
                         return Loading stock price...;
-    
+
                       case 'output-available':
-    
+
                         return (
-    
-                          
-    
-                            
-    
-                          
-    
+
+
+
+
+
+
+
                         );
-    
+
                       case 'output-error':
-    
+
                         return Error: {part.errorText};
-    
+
                       default:
-    
+
                         return null;
-    
+
                     }
-    
+
                   }
-    
-    
-    
-    
+
+
+
+
                   return null;
-    
+
                 })}
-    
-              
-    
-            
-    
+
+
+
+
+
           ))}
-    
-    
-    
-    
-          
-    
+
+
+
+
+
+
              setInput(e.target.value)}
-    
+
             />
-    
+
             Send
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 By following this pattern, you can continue to add more tools and components, expanding the capabilities of your Generative UI application.

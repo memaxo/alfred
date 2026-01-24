@@ -1,9 +1,10 @@
 ---
 title: Web APIs – Runtime | Bun Docs
-url: 
+url:
 description: Bun implements an array of Web-standard APIs like fetch, URL, and WebSocket.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -76,7 +77,7 @@ Bun APIs](https://bun.com/docs/runtime/bun-apis) [Next\\
 \\
 Node.js compatibility](https://bun.com/docs/runtime/nodejs-apis)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/web-apis.md)
 
@@ -100,7 +101,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

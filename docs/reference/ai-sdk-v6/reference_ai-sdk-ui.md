@@ -48,12 +48,12 @@ Transform a stream of UIMessageChunk objects into an AsyncIterableStream of UIMe
 
 AI SDK UI supports the following frameworks: React, Svelte, and Vue.js. Here is a comparison of the supported functions across these frameworks:
 
-Function| React| Svelte| Vue.js  
----|---|---|---  
-useChat| |  Chat|   
-useCompletion| |  Completion|   
-useObject| |  StructuredObject|   
-  
+| Function      | React | Svelte           | Vue.js |
+| ------------- | ----- | ---------------- | ------ |
+| useChat       |       | Chat             |
+| useCompletion |       | Completion       |
+| useObject     |       | StructuredObject |
+
 Contributions are welcome to implement missing features for non-React frameworks.
 
 Previous

@@ -6,17 +6,16 @@ Copy markdown
 
 Creates a lightweight Model Context Protocol (MCP) client that connects to an MCP server. The client provides:
 
-  * **Tools** : Automatic conversion between MCP tools and AI SDK tools
-  * **Resources** : Methods to list, read, and discover resource templates from MCP servers
-  * **Prompts** : Methods to list available prompts and retrieve prompt messages
+- **Tools** : Automatic conversion between MCP tools and AI SDK tools
+- **Resources** : Methods to list, read, and discover resource templates from MCP servers
+- **Prompts** : Methods to list available prompts and retrieve prompt messages
 
 It currently does not support accepting notifications from an MCP server, and custom configuration of the client.
 
 This feature is experimental and may change or be removed in the future.
 
 ## Import
-    
-    
+
     import { experimental_createMCPClient } from "@ai-sdk/mcp"
 
 ## API Signature
@@ -238,81 +237,80 @@ async () => void
 Closes the connection to the MCP server and cleans up resources.
 
 ## Example
-    
-    
+
     import { experimental_createMCPClient, generateText } from '@ai-sdk/mcp';
-    
+
     import { Experimental_StdioMCPTransport } from '@ai-sdk/mcp/mcp-stdio';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
-    
-    
-    
+
+
+
+
     let client;
-    
-    
-    
-    
+
+
+
+
     try {
-    
+
       client = await experimental_createMCPClient({
-    
+
         transport: new Experimental_StdioMCPTransport({
-    
+
           command: 'node server.js',
-    
+
         }),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       const tools = await client.tools();
-    
-    
-    
-    
+
+
+
+
       const response = await generateText({
-    
+
         model: openai('gpt-4o-mini'),
-    
+
         tools,
-    
+
         messages: [{ role: 'user', content: 'Query the data' }],
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       console.log(response);
-    
+
     } catch (error) {
-    
+
       console.error('Error:', error);
-    
+
     } finally {
-    
+
       // ensure the client is closed even if an error occurs
-    
+
       if (client) {
-    
+
         await client.close();
-    
+
       }
-    
+
     }
 
 ## Error Handling
 
 The client throws `MCPClientError` for:
 
-  * Client initialization failures
-  * Protocol version mismatches
-  * Missing server capabilities
-  * Connection failures
+- Client initialization failures
+- Protocol version mismatches
+- Missing server capabilities
+- Connection failures
 
 For tool execution, errors are propagated as `CallToolError` errors.
 

@@ -1,9 +1,10 @@
 ---
 title: Laminar evaluations cookbook - Laminar documentation
-url: 
+url:
 description: Examples of evaluations in Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/cookbook#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -28,7 +29,7 @@ On this page
 - [LLM as a judge offline evaluation](https://docs.lmnr.ai/evaluations/cookbook#llm-as-a-judge-offline-evaluation)
 - [Evaluation with no target](https://docs.lmnr.ai/evaluations/cookbook#evaluation-with-no-target)
 
-## [​](https://docs.lmnr.ai/evaluations/cookbook\#basic-correctness-evaluation)  Basic correctness evaluation
+## [​](https://docs.lmnr.ai/evaluations/cookbook#basic-correctness-evaluation) Basic correctness evaluation
 
 In this example our executor function calls an LLM to get the capital of a country.
 We then evaluate the correctness of the prediction by checking for exact match with the target capital.
@@ -44,7 +45,6 @@ you will likely want to use structured output to get the city name only.
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -85,7 +85,6 @@ matches the target, and 0 otherwise.
 
 - Python
 
-
 Copy
 
 ```
@@ -101,7 +100,6 @@ const evaluator = async (output: Promise<string>, target?: {capital: string}) =>
 - JavaScript/TypeScript
 
 - Python
-
 
 my-eval.ts
 
@@ -129,7 +127,7 @@ evaluate({
 
 And then run either `ts-node my-eval.ts` or `npx lmnr eval my-eval.ts`.
 
-## [​](https://docs.lmnr.ai/evaluations/cookbook\#llm-as-a-judge-offline-evaluation)  LLM as a judge offline evaluation
+## [​](https://docs.lmnr.ai/evaluations/cookbook#llm-as-a-judge-offline-evaluation) LLM as a judge offline evaluation
 
 In this example, our executor will write short summaries of news articles,
 and the evaluator will check if the summary is correct, and grade them from 1 to 5.
@@ -166,7 +164,6 @@ An executor function calls OpenAI to summarize a news article. It returns a sing
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -207,7 +204,6 @@ when given a chance to explain their reasoning.
 
 - Python
 
-
 Copy
 
 ```
@@ -242,7 +238,6 @@ const gradeSummary = async (
 
 - Python
 
-
 my-eval.ts
 
 Copy
@@ -269,7 +264,7 @@ evaluate({
 
 And then run either `ts-node my-eval.ts` or `npx lmnr eval my-eval.ts`.
 
-## [​](https://docs.lmnr.ai/evaluations/cookbook\#evaluation-with-no-target)  Evaluation with no target
+## [​](https://docs.lmnr.ai/evaluations/cookbook#evaluation-with-no-target) Evaluation with no target
 
 Sometimes you may want to run evaluations on the output of the executor without a target.
 This can be useful, for example, to check if the output of the executor is in the correct format
@@ -278,7 +273,6 @@ or if you want to use an LLM as a judge evaluator that generally evaluates the o
 - JavaScript/TypeScript
 
 - Python
-
 
 This is as simple as not passing `target` to your evaluator functions.
 

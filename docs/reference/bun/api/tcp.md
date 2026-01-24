@@ -1,9 +1,10 @@
 ---
 title: TCP sockets – API | Bun Docs
-url: 
+url:
 description: Bun's native API implements Web-standard TCP Sockets, plus a Bun-native API for building fast TCP servers.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Use Bun's native TCP API to implement performance sensitive systems like database clients, game servers, or anything that needs to communicate over TCP (instead of HTTP). This is a low-level API intended for library authors and for advanced use cases.
 
-## [Start a server ( `Bun.listen()`)](https://bun.com/docs/api/tcp\#start-a-server-bun-listen)
+## [Start a server ( `Bun.listen()`)](https://bun.com/docs/api/tcp#start-a-server-bun-listen)
 
 To start a TCP server with `Bun.listen`:
 
@@ -167,7 +168,7 @@ server.unref();
 
 ```
 
-## [Create a connection ( `Bun.connect()`)](https://bun.com/docs/api/tcp\#create-a-connection-bun-connect)
+## [Create a connection ( `Bun.connect()`)](https://bun.com/docs/api/tcp#create-a-connection-bun-connect)
 
 Use `Bun.connect` to connect to a TCP server. Specify the server to connect to with `hostname` and `port`. TCP clients can define the same set of handlers as `Bun.listen`, plus a couple client-specific handlers.
 
@@ -204,7 +205,7 @@ const socket = await Bun.connect({
 
 ```
 
-## [Hot reloading](https://bun.com/docs/api/tcp\#hot-reloading)
+## [Hot reloading](https://bun.com/docs/api/tcp#hot-reloading)
 
 Both TCP servers and sockets can be hot reloaded with new handlers.
 
@@ -240,7 +241,7 @@ socket.reload({
 
 ```
 
-## [Buffering](https://bun.com/docs/api/tcp\#buffering)
+## [Buffering](https://bun.com/docs/api/tcp#buffering)
 
 Currently, TCP sockets in Bun do not buffer data. For performance-sensitive code, it's important to consider buffering carefully. For example, this:
 
@@ -293,7 +294,7 @@ FileSystemRouter](https://bun.com/docs/api/file-system-router) [Next\\
 \\
 UDP sockets](https://bun.com/docs/api/udp)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/tcp.md)
 
@@ -317,7 +318,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

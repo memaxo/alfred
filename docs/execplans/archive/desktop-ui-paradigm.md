@@ -43,6 +43,7 @@
 ### 1.1 Problem Statement
 
 The current frontend (`apps/web/src`) suffers from:
+
 - **Dual Entry Points:** A WebGPU landing page (`/`) and a protected Mindscape route (`/mindscape`) with overlapping concerns.
 - **Dead Code:** WebGPU engine, disabled physics worker, legacy voice stubs, polling initializers.
 - **Fragmented Architecture:** 22 node types with inconsistent patterns, no shared window abstraction.
@@ -51,6 +52,7 @@ The current frontend (`apps/web/src`) suffers from:
 ### 1.2 Proposed Solution
 
 Transform the frontend into a **Spatial Operating System** where:
+
 - Nodes are **Window Instances** referencing optional **Resources** (not "Apps" containing "Entities").
 - A unified **Desktop** metaphor provides window management, docking, and layout.
 - React Flow serves as the rendering substrate with a clean component hierarchy.
@@ -59,23 +61,23 @@ Transform the frontend into a **Spatial Operating System** where:
 
 ### 1.3 Key Architectural Decisions (Post-Review)
 
-| Decision | Before | After | Rationale |
-|----------|--------|-------|-----------|
-| Ontology | App vs Entity | Window Instance vs Resource | Clearer separation; one resource can have multiple windows |
-| Local-First Scope | Everything | Layout only | Avoids dual-authority; backend is truth for domain data |
-| Data Layer | Zustand only | Zustand (layout) + TanStack DB (resources) | Purpose-built sync; optimistic updates |
-| Subscription Model | N subscriptions per node | One WS, multiplexed streams | Scalable; cursor-based resume |
+| Decision           | Before                   | After                                      | Rationale                                                  |
+| ------------------ | ------------------------ | ------------------------------------------ | ---------------------------------------------------------- |
+| Ontology           | App vs Entity            | Window Instance vs Resource                | Clearer separation; one resource can have multiple windows |
+| Local-First Scope  | Everything               | Layout only                                | Avoids dual-authority; backend is truth for domain data    |
+| Data Layer         | Zustand only             | Zustand (layout) + TanStack DB (resources) | Purpose-built sync; optimistic updates                     |
+| Subscription Model | N subscriptions per node | One WS, multiplexed streams                | Scalable; cursor-based resume                              |
 
 ### 1.4 Key Outcomes
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Entry Points | 2 (`/`, `/mindscape`) | 1 (`/` → Desktop) |
-| Node Types | 22 (inconsistent) | 12 (categorized) |
-| Dead Code Lines | ~2,500 | 0 |
-| Time to Interactive | ~3.5s (WebGPU init) | <1s |
-| Max Supported Nodes | ~50 (before lag) | 200+ |
-| localStorage Size | Unbounded | <50KB (layout only) |
+| Metric              | Current               | Target              |
+| ------------------- | --------------------- | ------------------- |
+| Entry Points        | 2 (`/`, `/mindscape`) | 1 (`/` → Desktop)   |
+| Node Types          | 22 (inconsistent)     | 12 (categorized)    |
+| Dead Code Lines     | ~2,500                | 0                   |
+| Time to Interactive | ~3.5s (WebGPU init)   | <1s                 |
+| Max Supported Nodes | ~50 (before lag)      | 200+                |
+| localStorage Size   | Unbounded             | <50KB (layout only) |
 
 ### 1.5 Critical Paradigm Insight (Revision 3.0)
 
@@ -83,13 +85,13 @@ Transform the frontend into a **Spatial Operating System** where:
 
 #### The Two Paradigms
 
-| Aspect | Mindscape (Old) | Desktop (New) |
-|--------|-----------------|---------------|
-| **Data Model** | Fat nodes with embedded data | Thin windows with external data |
-| **Source of Truth** | Zustand store holds everything | Collections/API hold domain data |
-| **Node Data** | 21 discriminated types (ArtifactData) | Simple WindowData (type + ref) |
-| **Persistence** | Store syncs to backend | Windows reference persisted resources |
-| **Example** | `NoteNode.data = { title, content, tags }` | `NoteWindow.resourceRef → noteCollection` |
+| Aspect              | Mindscape (Old)                            | Desktop (New)                             |
+| ------------------- | ------------------------------------------ | ----------------------------------------- |
+| **Data Model**      | Fat nodes with embedded data               | Thin windows with external data           |
+| **Source of Truth** | Zustand store holds everything             | Collections/API hold domain data          |
+| **Node Data**       | 21 discriminated types (ArtifactData)      | Simple WindowData (type + ref)            |
+| **Persistence**     | Store syncs to backend                     | Windows reference persisted resources     |
+| **Example**         | `NoteNode.data = { title, content, tags }` | `NoteWindow.resourceRef → noteCollection` |
 
 #### Visual Comparison
 
@@ -141,11 +143,12 @@ The initial approach tried to create a compatibility layer to bridge Mindscape �
 
 ```typescript
 // FAILED: Compat layer tried to map incompatible types
-useMindscapeStore → useDesktopStore  
+useMindscapeStore → useDesktopStore
 ArtifactData → WindowData  // 21 rich types → 1 simple type
 ```
 
 This failed because:
+
 1. **Type mismatch**: `ArtifactData` has 50+ fields across 21 types; `WindowData` has 4 fields
 2. **Data location**: Nodes expect `data.title`, windows expect to fetch from collection
 3. **Render pattern**: Nodes render embedded data, windows fetch then render
@@ -174,6 +177,7 @@ function NoteWindow({ data }: { data: WindowData }) {
 ### 2.1 The Desktop Metaphor
 
 The interface is a **spatial operating system** inspired by:
+
 - **macOS Stage Manager:** Windows cluster and declutter automatically.
 - **n8n Workflow Editor:** Nodes on an infinite canvas with connection handles.
 - **i3/Hyprland Tiling:** Keyboard-driven window management.
@@ -230,41 +234,41 @@ apps/web/src/
 
 ### 3.2 Current Node Types (22)
 
-| Category | Types | Notes |
-|----------|-------|-------|
-| **Core Apps** | `chat`, `terminal`, `droid` | Singleton, always available |
-| **Data Entities** | `note`, `reminder`, `ticket`, `todo`, `bookmark`, `timer` | Multi-instance, persisted |
-| **Workflow** | `workflow`, `workflowlist` | Execution state tracking |
-| **System** | `settings`, `privacy`, `profile`, `integrations`, `deployment` | Singleton, config-focused |
-| **Knowledge** | `knowledge`, `concept` | Graph-derived, read-only |
-| **Legacy** | `orb`, `artifact`, `code` | Vestigial, DELETE |
+| Category          | Types                                                          | Notes                       |
+| ----------------- | -------------------------------------------------------------- | --------------------------- |
+| **Core Apps**     | `chat`, `terminal`, `droid`                                    | Singleton, always available |
+| **Data Entities** | `note`, `reminder`, `ticket`, `todo`, `bookmark`, `timer`      | Multi-instance, persisted   |
+| **Workflow**      | `workflow`, `workflowlist`                                     | Execution state tracking    |
+| **System**        | `settings`, `privacy`, `profile`, `integrations`, `deployment` | Singleton, config-focused   |
+| **Knowledge**     | `knowledge`, `concept`                                         | Graph-derived, read-only    |
+| **Legacy**        | `orb`, `artifact`, `code`                                      | Vestigial, DELETE           |
 
 ### 3.3 Identified Dead Code
 
-| File/Folder | Lines | Reason for Removal |
-|-------------|-------|---------------------|
-| `lib/mindscape/gpu/*` | ~800 | WebGPU engine unused in React Flow paradigm |
-| `routes/index.tsx` (WebGPU logic) | ~200 | Landing page replaced by direct Desktop route |
-| `hooks/use-physics-worker.ts` | 144 | Always disabled (`active: false`) |
-| `hooks/use-voice-session-web.ts` (legacy stubs) | ~80 | Empty async functions |
-| `components/mindscape/initializer.tsx` | 542 | Replaced by subscription-based sync |
-| `components/mindscape/panels/*` | ~200 | Convert to nodes or remove |
+| File/Folder                                     | Lines | Reason for Removal                            |
+| ----------------------------------------------- | ----- | --------------------------------------------- |
+| `lib/mindscape/gpu/*`                           | ~800  | WebGPU engine unused in React Flow paradigm   |
+| `routes/index.tsx` (WebGPU logic)               | ~200  | Landing page replaced by direct Desktop route |
+| `hooks/use-physics-worker.ts`                   | 144   | Always disabled (`active: false`)             |
+| `hooks/use-voice-session-web.ts` (legacy stubs) | ~80   | Empty async functions                         |
+| `components/mindscape/initializer.tsx`          | 542   | Replaced by subscription-based sync           |
+| `components/mindscape/panels/*`                 | ~200  | Convert to nodes or remove                    |
 
 **Total Removal Target:** ~1,966 lines
 
 ### 3.4 tRPC Coverage Map
 
-| Frontend Hook/Component | Backend Procedure | Transport | Status |
-|-------------------------|-------------------|-----------|--------|
-| `MindscapeInitializer` | `graph.getEdges` | Query (Poll 5s) | ❌ REMOVE |
-| `MindscapeInitializer` | `graph.watchEdges` | Subscription | ✅ KEEP |
-| `MindscapeInitializer` | `graph.runQuery` | Query (Poll 15s) | ❌ REFACTOR |
-| `NoteNode` | `note.create/update/delete` | Mutation | ✅ KEEP |
-| `ReminderNode` | `remind.create/snooze` | Mutation | ✅ KEEP |
-| `WorkflowManager` | `workflow.stream` | SSE | ✅ KEEP |
-| `TerminalNode` | `terminal.*` | Subscription | ✅ KEEP |
-| `useVoiceSessionWeb` | `voice.sttTranscribe` | Mutation | ❌ REWRITE |
-| `useVoiceSessionWeb` | `voice.stream` | Subscription | ✅ WIRE UP |
+| Frontend Hook/Component | Backend Procedure           | Transport        | Status      |
+| ----------------------- | --------------------------- | ---------------- | ----------- |
+| `MindscapeInitializer`  | `graph.getEdges`            | Query (Poll 5s)  | ❌ REMOVE   |
+| `MindscapeInitializer`  | `graph.watchEdges`          | Subscription     | ✅ KEEP     |
+| `MindscapeInitializer`  | `graph.runQuery`            | Query (Poll 15s) | ❌ REFACTOR |
+| `NoteNode`              | `note.create/update/delete` | Mutation         | ✅ KEEP     |
+| `ReminderNode`          | `remind.create/snooze`      | Mutation         | ✅ KEEP     |
+| `WorkflowManager`       | `workflow.stream`           | SSE              | ✅ KEEP     |
+| `TerminalNode`          | `terminal.*`                | Subscription     | ✅ KEEP     |
+| `useVoiceSessionWeb`    | `voice.sttTranscribe`       | Mutation         | ❌ REWRITE  |
+| `useVoiceSessionWeb`    | `voice.stream`              | Subscription     | ✅ WIRE UP  |
 
 ---
 
@@ -277,11 +281,13 @@ apps/web/src/
 #### 4.1.1 Window Instance (Node)
 
 A **Window Instance** is:
+
 - Layout + presentation state (position, size, focus, view mode, draft state).
 - An optional pointer to a **Resource** (`resourceId`).
 - Independent of persistence—ephemeral UI like command palette or transient tools have no resource.
 
 **Properties:**
+
 - `id`: Unique window identifier (React Flow node ID)
 - `position`: `{ x, y }` on canvas
 - `size`: `{ width, height }` (optional, defaults per type)
@@ -289,7 +295,8 @@ A **Window Instance** is:
 - `viewMode`: `"compact" | "full" | "maximized"`
 - `draft`: Local unsaved state (edit buffer, scrollback cap)
 
-**Examples:** 
+**Examples:**
+
 - Chat window (no resourceId, messages are child resources)
 - Note window (resourceRef: `{ type: "note", id: "abc123" }`)
 - Terminal window (no resourceId, ephemeral PTY session)
@@ -297,17 +304,20 @@ A **Window Instance** is:
 #### 4.1.2 Resource
 
 A **Resource** is:
+
 - A persisted domain object in the backend (Postgres).
 - Independent of any window—can have zero, one, or many window instances.
 - Has a unique ID, schema, and lifecycle.
 
 **Properties:**
+
 - `id`: Postgres UUID
 - `type`: `"note" | "reminder" | "workflow_run" | "thread" | ...`
 - `data`: Type-specific payload
 - `createdAt`, `updatedAt`: Timestamps
 
-**Examples:** 
+**Examples:**
+
 - A note (`id: "abc123"`, `type: "note"`)
 - A workflow run (`id: "xyz789"`, `type: "workflow_run"`)
 - A thread with messages (`id: "thread1"`, `type: "thread"`)
@@ -316,15 +326,16 @@ A **Resource** is:
 
 > A note can have **multiple windows** referencing the **same resource**.
 
-| Window Instance | Resource |
-|-----------------|----------|
-| Note window (edit mode, position A) | → `note:abc123` |
-| Note window (view mode, position B) | → `note:abc123` |
-| Note window (draft, unsaved) | → (no resourceId yet) |
+| Window Instance                     | Resource              |
+| ----------------------------------- | --------------------- |
+| Note window (edit mode, position A) | → `note:abc123`       |
+| Note window (view mode, position B) | → `note:abc123`       |
+| Note window (draft, unsaved)        | → (no resourceId yet) |
 
 #### 4.1.4 Edge
 
 An **Edge** is a connection that:
+
 - Links two windows visually on the canvas.
 - May be persisted to the backend graph (`memoryEdges`).
 - Has a `kind` discriminant and metadata.
@@ -346,19 +357,21 @@ An **Edge** is a connection that:
 | `part_of` | Directed | A is part of B (composition) | Yes |
 
 **Edge Metadata (NEW):**
+
 ```typescript
 type EdgeMetadata = {
   source: "user" | "assistant" | "import" | "inference";
-  confidence?: number;        // 0-1 for inferred edges
+  confidence?: number; // 0-1 for inferred edges
   createdAt: string;
   updatedAt?: string;
-  scope?: string;             // "runtime:<runId>" for temporary reasoning edges
+  scope?: string; // "runtime:<runId>" for temporary reasoning edges
 };
 ```
 
 #### 4.1.5 Desktop
 
 The **Desktop** is:
+
 - The root container component wrapping React Flow.
 - Manages global layout state (viewport, focused window, active edges).
 - Renders the Dock and Command Palette.
@@ -367,30 +380,32 @@ The **Desktop** is:
 #### 4.1.6 Dock
 
 The **Dock** is:
+
 - A fixed UI panel for spawning windows.
 - Contains icons for pinned/favorite window types.
 - Shows running/active window indicators.
 
 ### 4.2 Window Type Taxonomy (Proposed 12 Types)
 
-| Type | Category | Singleton? | Persisted? | Description |
-|------|----------|------------|------------|-------------|
-| `chat` | Core App | Yes | Partial (messages) | AI conversation interface |
-| `terminal` | Core App | Yes | No | PTY shell session |
-| `droid` | Core App | Yes | Yes (runId) | Autonomous agent executor |
-| `note` | Data Entity | No | Yes | Text note with tags |
-| `reminder` | Data Entity | No | Yes | Time-based reminder |
-| `todo` | Data Entity | Yes | Yes | Checklist manager |
-| `workflow` | Execution | No | Yes | Workflow run instance |
-| `settings` | System | Yes | Yes (prefs) | Autonomy, voice, etc. |
-| `integrations` | System | Yes | Yes | Linear, GitHub connections |
-| `knowledge` | Graph | No | Read-only | RAG/graph-derived fact |
-| `concept` | Graph | No | Read-only | Entity/concept from extraction |
-| `workflowlist` | View | Yes | No | Filterable list of runs |
+| Type           | Category    | Singleton? | Persisted?         | Description                    |
+| -------------- | ----------- | ---------- | ------------------ | ------------------------------ |
+| `chat`         | Core App    | Yes        | Partial (messages) | AI conversation interface      |
+| `terminal`     | Core App    | Yes        | No                 | PTY shell session              |
+| `droid`        | Core App    | Yes        | Yes (runId)        | Autonomous agent executor      |
+| `note`         | Data Entity | No         | Yes                | Text note with tags            |
+| `reminder`     | Data Entity | No         | Yes                | Time-based reminder            |
+| `todo`         | Data Entity | Yes        | Yes                | Checklist manager              |
+| `workflow`     | Execution   | No         | Yes                | Workflow run instance          |
+| `settings`     | System      | Yes        | Yes (prefs)        | Autonomy, voice, etc.          |
+| `integrations` | System      | Yes        | Yes                | Linear, GitHub connections     |
+| `knowledge`    | Graph       | No         | Read-only          | RAG/graph-derived fact         |
+| `concept`      | Graph       | No         | Read-only          | Entity/concept from extraction |
+| `workflowlist` | View        | Yes        | No                 | Filterable list of runs        |
 
 **Removed Types:** `orb`, `artifact`, `code`, `ticket`, `timer`, `bookmark`, `privacy`, `profile`, `deployment`
 
 **Rationale:**
+
 - `orb`: Vestigial from WebGPU era. Remove entirely.
 - `artifact`, `code`: Unused generic types. Remove.
 - `ticket`: Fold into `knowledge` or `concept` (Linear issues are entities).
@@ -400,14 +415,14 @@ The **Dock** is:
 
 ### 4.3 Resource Types
 
-| Type | Postgres Table | Collection | Description |
-|------|---------------|------------|-------------|
-| `note` | `note` | `noteCollection` | Text note with tags |
-| `reminder` | `reminder` | `reminderCollection` | Time-based reminder |
-| `thread` | `thread` + `message` | `threadCollection` | Chat thread with messages |
-| `workflow_run` | `workflow_runs` | `workflowCollection` | Workflow execution |
-| `preference` | `user_preferences` | (settings window) | User preferences |
-| `integration` | `user_integrations` | (integrations window) | OAuth connections |
+| Type           | Postgres Table       | Collection            | Description               |
+| -------------- | -------------------- | --------------------- | ------------------------- |
+| `note`         | `note`               | `noteCollection`      | Text note with tags       |
+| `reminder`     | `reminder`           | `reminderCollection`  | Time-based reminder       |
+| `thread`       | `thread` + `message` | `threadCollection`    | Chat thread with messages |
+| `workflow_run` | `workflow_runs`      | `workflowCollection`  | Workflow execution        |
+| `preference`   | `user_preferences`   | (settings window)     | User preferences          |
+| `integration`  | `user_integrations`  | (integrations window) | OAuth connections         |
 
 ---
 
@@ -417,32 +432,33 @@ The **Dock** is:
 
 ### 5.1 State Ownership
 
-| Data Type | Source of Truth | Local Cache | Sync Strategy |
-|-----------|-----------------|-------------|---------------|
-| **Layout State** | | | |
-| Window positions | Zustand | localStorage | None (UI-only) |
-| Window sizes | Zustand | localStorage | None (UI-only) |
-| Focused window | Zustand | Memory only | None |
-| Dock pins | Zustand | localStorage | None |
-| Viewport (pan/zoom) | Zustand | localStorage | None |
-| **Domain Resources** | | | |
-| Note content | Postgres | TanStack DB Collection | Optimistic mutation |
-| Reminder data | Postgres | TanStack DB Collection | Optimistic mutation |
-| Chat messages | Postgres | TanStack DB Collection | tRPC subscription |
-| Workflow runs | Postgres | TanStack DB Collection | tRPC subscription |
-| Workflow events | Postgres | (streamed, not cached) | SSE stream |
-| Graph edges | Postgres | TanStack DB Collection | tRPC subscription |
-| **Ephemeral State** | | | |
-| Terminal scrollback | Memory | Window-local | None (ephemeral) |
-| Draft (unsaved edits) | Window-local | Memory | Explicit save |
-| Command palette state | Memory | None | None |
+| Data Type             | Source of Truth | Local Cache            | Sync Strategy       |
+| --------------------- | --------------- | ---------------------- | ------------------- |
+| **Layout State**      |                 |                        |                     |
+| Window positions      | Zustand         | localStorage           | None (UI-only)      |
+| Window sizes          | Zustand         | localStorage           | None (UI-only)      |
+| Focused window        | Zustand         | Memory only            | None                |
+| Dock pins             | Zustand         | localStorage           | None                |
+| Viewport (pan/zoom)   | Zustand         | localStorage           | None                |
+| **Domain Resources**  |                 |                        |                     |
+| Note content          | Postgres        | TanStack DB Collection | Optimistic mutation |
+| Reminder data         | Postgres        | TanStack DB Collection | Optimistic mutation |
+| Chat messages         | Postgres        | TanStack DB Collection | tRPC subscription   |
+| Workflow runs         | Postgres        | TanStack DB Collection | tRPC subscription   |
+| Workflow events       | Postgres        | (streamed, not cached) | SSE stream          |
+| Graph edges           | Postgres        | TanStack DB Collection | tRPC subscription   |
+| **Ephemeral State**   |                 |                        |                     |
+| Terminal scrollback   | Memory          | Window-local           | None (ephemeral)    |
+| Draft (unsaved edits) | Window-local    | Memory                 | Explicit save       |
+| Command palette state | Memory          | None                   | None                |
 
 ### 5.2 Why This Split?
 
 **The Dual-Authority Problem (Avoided):**
+
 ```
 ❌ BEFORE: Local-first for everything
-   User edits note → Zustand updates → localStorage saves → tRPC mutation → 
+   User edits note → Zustand updates → localStorage saves → tRPC mutation →
    Subscription receives "same" update → Re-applies to Zustand → Echo/duplicate
 
 ✅ AFTER: Layout-first, Backend-first for resources
@@ -451,6 +467,7 @@ The **Dock** is:
 ```
 
 **Benefits:**
+
 1. **No echo/duplication** — TanStack DB handles optimistic reconciliation with transaction IDs
 2. **No localStorage limits** — Only ~50KB of layout state persisted locally
 3. **No schema migration pain** — Layout schema is simple and stable
@@ -459,12 +476,12 @@ The **Dock** is:
 
 ### 5.3 localStorage Budget
 
-| Category | Max Size | Contents |
-|----------|----------|----------|
-| Layout state | 30KB | Window positions, sizes, viewport |
-| Dock config | 1KB | Pinned types, order |
-| UI preferences | 5KB | Theme, shortcuts, view modes |
-| **Total** | **<50KB** | Well under 5MB browser limit |
+| Category       | Max Size  | Contents                          |
+| -------------- | --------- | --------------------------------- |
+| Layout state   | 30KB      | Window positions, sizes, viewport |
+| Dock config    | 1KB       | Pinned types, order               |
+| UI preferences | 5KB       | Theme, shortcuts, view modes      |
+| **Total**      | **<50KB** | Well under 5MB browser limit      |
 
 ---
 
@@ -584,6 +601,7 @@ The **Dock** is:
 ```
 
 **Key Difference from Before:**
+
 - Layout actions NEVER touch the network
 - Resource actions use TanStack DB's transaction ID to prevent echo
 - Subscriptions use cursor-based resume (see Section 10)
@@ -606,15 +624,15 @@ export type WindowInstance = Node<WindowData>;
 export type WindowData = {
   type: WindowType;
   label?: string;
-  resourceRef?: ResourceRef;     // Optional pointer to backend resource
+  resourceRef?: ResourceRef; // Optional pointer to backend resource
   viewMode: "compact" | "full" | "maximized";
-  draft?: unknown;               // Local unsaved state (type varies)
+  draft?: unknown; // Local unsaved state (type varies)
 };
 
 /** Reference to a backend resource */
 export type ResourceRef = {
   type: ResourceType;
-  id: string;                    // Postgres UUID
+  id: string; // Postgres UUID
 };
 
 /** All window types */
@@ -668,7 +686,7 @@ export type EdgeMetadata = {
   confidence?: number;
   createdAt: string;
   updatedAt?: string;
-  scope?: string;  // "runtime:<runId>" for temporary edges
+  scope?: string; // "runtime:<runId>" for temporary edges
 };
 
 /** Window lifecycle states */
@@ -684,7 +702,14 @@ export type WindowState = "spawning" | "active" | "background" | "closing";
 import { z } from "zod";
 
 const resourceRefSchema = z.object({
-  type: z.enum(["note", "reminder", "thread", "workflow_run", "preference", "integration"]),
+  type: z.enum([
+    "note",
+    "reminder",
+    "thread",
+    "workflow_run",
+    "preference",
+    "integration",
+  ]),
   id: z.string().uuid(),
 });
 
@@ -697,20 +722,22 @@ const baseWindowDataSchema = z.object({
 
 export const chatWindowDataSchema = baseWindowDataSchema.extend({
   type: z.literal("chat"),
-  threadId: z.string().uuid().optional(),  // resourceRef.id alias for convenience
+  threadId: z.string().uuid().optional(), // resourceRef.id alias for convenience
 });
 
 export const noteWindowDataSchema = baseWindowDataSchema.extend({
   type: z.literal("note"),
-  draft: z.object({
-    title: z.string().optional(),
-    content: z.string().optional(),
-  }).optional(),  // Local unsaved edits
+  draft: z
+    .object({
+      title: z.string().optional(),
+      content: z.string().optional(),
+    })
+    .optional(), // Local unsaved edits
 });
 
 export const terminalWindowDataSchema = baseWindowDataSchema.extend({
   type: z.literal("terminal"),
-  sessionId: z.string().optional(),  // Ephemeral PTY session
+  sessionId: z.string().optional(), // Ephemeral PTY session
 });
 
 // ... (other window schemas follow same pattern)
@@ -760,7 +787,11 @@ export const threadResourceSchema = z.object({
 
 export const windowRegistry = {
   chat: { component: ChatWindow, singleton: true, icon: MessageSquare },
-  terminal: { component: TerminalWindow, singleton: true, icon: TerminalSquare },
+  terminal: {
+    component: TerminalWindow,
+    singleton: true,
+    icon: TerminalSquare,
+  },
   note: { component: NoteWindow, singleton: false, icon: FileText },
   reminder: { component: ReminderWindow, singleton: false, icon: Bell },
   workflow: { component: WorkflowWindow, singleton: false, icon: GitBranch },
@@ -778,9 +809,9 @@ export type WindowType = keyof typeof windowRegistry;
 
 > **Key Change:** We split state into two stores with different responsibilities.
 
-| Store | Purpose | Persistence | Sync |
-|-------|---------|-------------|------|
-| **Zustand** | Layout state | localStorage | None (UI-only) |
+| Store           | Purpose          | Persistence     | Sync           |
+| --------------- | ---------------- | --------------- | -------------- |
+| **Zustand**     | Layout state     | localStorage    | None (UI-only) |
 | **TanStack DB** | Domain resources | In-memory cache | tRPC mutations |
 
 ### 8.2 Zustand Store (Layout Only)
@@ -795,9 +826,9 @@ import { persist } from "zustand/middleware";
 export const useDesktopStore = create<DesktopState>()(
   persist(
     (...a) => ({
-      ...createWindowSlice(...a),    // windows (nodes), visual edges
-      ...createViewportSlice(...a),  // zoom, pan, focused
-      ...createDockSlice(...a),      // pinned types, spawn
+      ...createWindowSlice(...a), // windows (nodes), visual edges
+      ...createViewportSlice(...a), // zoom, pan, focused
+      ...createDockSlice(...a), // pinned types, spawn
     }),
     {
       name: "desktop-layout-v1",
@@ -805,7 +836,7 @@ export const useDesktopStore = create<DesktopState>()(
       partialize: (state) => ({
         // ONLY persist layout-relevant data
         windows: state.windows.map(sanitizeWindowForPersist),
-        edges: state.edges.filter(e => !e.data?.scope), // Exclude runtime edges
+        edges: state.edges.filter((e) => !e.data?.scope), // Exclude runtime edges
         focusedWindowId: state.focusedWindowId,
         viewport: state.viewport,
         dockPins: state.dockPins,
@@ -835,19 +866,19 @@ function sanitizeWindowForPersist(window: WindowInstance): WindowInstance {
 ```typescript
 type WindowSlice = {
   windows: WindowInstance[];
-  edges: DesktopEdge[];           // Visual edges only
-  
+  edges: DesktopEdge[]; // Visual edges only
+
   // Layout mutations (no network)
   addWindow: (window: WindowInstance) => void;
   removeWindow: (windowId: string) => void;
   updateWindowPosition: (windowId: string, position: Position) => void;
   updateWindowSize: (windowId: string, size: Size) => void;
   updateWindowViewMode: (windowId: string, mode: ViewMode) => void;
-  
+
   // Draft state (local, not persisted)
   setWindowDraft: (windowId: string, draft: unknown) => void;
   clearWindowDraft: (windowId: string) => void;
-  
+
   // React Flow handlers
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
@@ -861,7 +892,7 @@ type WindowSlice = {
 type ViewportSlice = {
   focusedWindowId: string | null;
   viewport: { x: number; y: number; zoom: number };
-  
+
   focusWindow: (windowId: string | null) => void;
   setViewport: (viewport: Viewport) => void;
   fitView: (windowIds?: string[]) => void;
@@ -873,22 +904,26 @@ type ViewportSlice = {
 ```typescript
 type DockSlice = {
   dockPins: WindowType[];
-  
+
   pinType: (type: WindowType) => void;
   unpinType: (type: WindowType) => void;
-  spawnWindow: (type: WindowType, resourceRef?: ResourceRef, position?: Position) => string;
+  spawnWindow: (
+    type: WindowType,
+    resourceRef?: ResourceRef,
+    position?: Position
+  ) => string;
 };
 ```
 
 ### 8.4 What NOT to Store in Zustand
 
-| Data | Why NOT Zustand | Where Instead |
-|------|-----------------|---------------|
-| Note content | Large, changes frequently | TanStack DB `noteCollection` |
-| Chat messages | Can be very large | TanStack DB `threadCollection` |
-| Workflow events | Streamed, transient | SSE stream (not cached) |
-| Graph edges (persisted) | Backend is truth | TanStack DB `edgeCollection` |
-| User preferences | Backend sync needed | TanStack DB or direct tRPC |
+| Data                    | Why NOT Zustand           | Where Instead                  |
+| ----------------------- | ------------------------- | ------------------------------ |
+| Note content            | Large, changes frequently | TanStack DB `noteCollection`   |
+| Chat messages           | Can be very large         | TanStack DB `threadCollection` |
+| Workflow events         | Streamed, transient       | SSE stream (not cached)        |
+| Graph edges (persisted) | Backend is truth          | TanStack DB `edgeCollection`   |
+| User preferences        | Backend sync needed       | TanStack DB or direct tRPC     |
 
 ---
 
@@ -900,13 +935,13 @@ type DockSlice = {
 
 TanStack DB solves the **dual-authority problem** identified in the AI review:
 
-| Problem | Zustand-Only Solution | TanStack DB Solution |
-|---------|----------------------|---------------------|
-| Echo/duplication | Manual dedup logic | Transaction IDs (txid) auto-reconcile |
-| Optimistic updates | Custom rollback code | Built-in optimistic state with `isPersisted.promise` |
-| Schema validation | Manual Zod checks | Any Standard Schema (Zod, Valibot, etc.) |
-| Query derivation | Manual selectors | `useLiveQuery` with SQL-like query builder |
-| Rollback on error | Manual context passing | Automatic rollback via `SchemaValidationError`, `DuplicateKeyError` |
+| Problem            | Zustand-Only Solution  | TanStack DB Solution                                                |
+| ------------------ | ---------------------- | ------------------------------------------------------------------- |
+| Echo/duplication   | Manual dedup logic     | Transaction IDs (txid) auto-reconcile                               |
+| Optimistic updates | Custom rollback code   | Built-in optimistic state with `isPersisted.promise`                |
+| Schema validation  | Manual Zod checks      | Any Standard Schema (Zod, Valibot, etc.)                            |
+| Query derivation   | Manual selectors       | `useLiveQuery` with SQL-like query builder                          |
+| Rollback on error  | Manual context passing | Automatic rollback via `SchemaValidationError`, `DuplicateKeyError` |
 
 ### 9.2 Package Architecture
 
@@ -924,14 +959,15 @@ npm install @tanstack/electric-db-collection # For ElectricSQL real-time sync
 
 **Available Collection Types:**
 
-| Collection | Use Case | Real-time Sync |
-|------------|----------|----------------|
-| `queryCollectionOptions` | TanStack Query integration (our choice) | Polling or manual |
-| `electricCollectionOptions` | ElectricSQL real-time sync | Yes (txid matching) |
-| `localStorageCollectionOptions` | Browser localStorage | No |
-| `localOnlyCollectionOptions` | In-memory only | No |
+| Collection                      | Use Case                                | Real-time Sync      |
+| ------------------------------- | --------------------------------------- | ------------------- |
+| `queryCollectionOptions`        | TanStack Query integration (our choice) | Polling or manual   |
+| `electricCollectionOptions`     | ElectricSQL real-time sync              | Yes (txid matching) |
+| `localStorageCollectionOptions` | Browser localStorage                    | No                  |
+| `localOnlyCollectionOptions`    | In-memory only                          | No                  |
 
 **Our Choice:** `queryCollectionOptions` with tRPC because:
+
 1. Already using TanStack Query via tRPC
 2. Can add real-time via tRPC subscriptions
 3. No ElectricSQL infrastructure needed
@@ -952,18 +988,18 @@ const queryClient = new QueryClient();
 
 export const noteCollection = createCollection(
   queryCollectionOptions({
-    id: "notes",                              // Unique collection ID
-    queryKey: ["notes"],                      // TanStack Query cache key
-    queryClient,                              // Shared QueryClient
-    getKey: (note) => note.id,                // How to identify items
-    schema: noteResourceSchema,               // Zod schema for validation
-    
+    id: "notes", // Unique collection ID
+    queryKey: ["notes"], // TanStack Query cache key
+    queryClient, // Shared QueryClient
+    getKey: (note) => note.id, // How to identify items
+    schema: noteResourceSchema, // Zod schema for validation
+
     queryFn: async () => {
       // Fetch initial data via tRPC
       const notes = await trpc.note.list.query();
       return notes;
     },
-    
+
     // Called BEFORE insert - persist to backend
     onInsert: async ({ transaction }) => {
       const newNote = transaction.mutations[0].modified;
@@ -976,7 +1012,7 @@ export const noteCollection = createCollection(
       // (we'll update via subscription instead)
       return { refetch: false };
     },
-    
+
     // Called BEFORE update
     onUpdate: async ({ transaction }) => {
       const { original, changes } = transaction.mutations[0];
@@ -986,7 +1022,7 @@ export const noteCollection = createCollection(
       });
       return { refetch: false };
     },
-    
+
     // Called BEFORE delete
     onDelete: async ({ transaction }) => {
       const { original } = transaction.mutations[0];
@@ -1007,19 +1043,23 @@ import { noteCollection } from "@/collections/note";
 
 export function NoteWindow({ id, data }: WindowProps<NoteWindowData>) {
   const { resourceRef } = data;
-  
+
   // Live query - automatically updates when collection changes
   // Returns { data, collection, isReady, status, isError, isLoading }
-  const { data: note, isLoading, isError } = useLiveQuery((q) =>
+  const {
+    data: note,
+    isLoading,
+    isError,
+  } = useLiveQuery((q) =>
     q
       .from({ note: noteCollection })
       .where(({ note }) => note.id === resourceRef?.id)
       .select(({ note }) => note)
   );
-  
+
   // Access the first result (query returns array)
   const noteData = note?.[0];
-  
+
   // Optimistic insert - applies immediately, persists async
   const handleCreate = async (newNote: Omit<NoteResource, "id">) => {
     try {
@@ -1029,10 +1069,10 @@ export function NoteWindow({ id, data }: WindowProps<NoteWindowData>) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      
+
       // Optional: wait for persistence to complete
       await tx.isPersisted.promise;
-      
+
       // Update window to reference new resource
       useDesktopStore.getState().updateWindow(id, {
         resourceRef: { type: "note", id: tx.key },
@@ -1047,7 +1087,7 @@ export function NoteWindow({ id, data }: WindowProps<NoteWindowData>) {
       }
     }
   };
-  
+
   // Optimistic update with draft function
   const handleUpdate = (noteId: string, changes: Partial<NoteResource>) => {
     noteCollection.update(noteId, (draft) => {
@@ -1055,15 +1095,15 @@ export function NoteWindow({ id, data }: WindowProps<NoteWindowData>) {
       draft.updatedAt = new Date().toISOString();
     });
   };
-  
+
   // Delete
   const handleDelete = (noteId: string) => {
     noteCollection.delete({ id: noteId });
   };
-  
+
   if (isLoading) return <LoadingSpinner />;
   if (isError) return <ErrorState />;
-  
+
   return (
     <WindowFrame id={id} title={noteData?.title || "Untitled"}>
       <NoteEditor
@@ -1092,7 +1132,7 @@ export const createLinkedNote = createOptimisticAction({
   // Runs immediately (optimistic)
   onMutate: ({ title, linkedToId }) => {
     const noteId = crypto.randomUUID();
-    
+
     // Insert note optimistically
     noteCollection.insert({
       id: noteId,
@@ -1100,7 +1140,7 @@ export const createLinkedNote = createOptimisticAction({
       content: "",
       createdAt: new Date().toISOString(),
     });
-    
+
     // Insert edge optimistically
     edgeCollection.insert({
       id: crypto.randomUUID(),
@@ -1108,10 +1148,10 @@ export const createLinkedNote = createOptimisticAction({
       target: noteId,
       kind: "relates_to",
     });
-    
+
     return { noteId }; // Context for mutationFn
   },
-  
+
   // Runs async (persist to backend)
   mutationFn: async ({ title, linkedToId }, context) => {
     // Backend creates both in transaction
@@ -1183,24 +1223,25 @@ function WorkflowDashboard() {
   const { data: allWorkflows } = useLiveQuery((q) =>
     q.from({ wf: workflowCollection })
   );
-  
+
   // Only running
   const { data: running } = useLiveQuery((q) =>
     q
       .from({ wf: workflowCollection })
       .where(({ wf }) => wf.status === "running")
   );
-  
+
   // Only failed (last 24h)
   const { data: failed } = useLiveQuery((q) =>
     q
       .from({ wf: workflowCollection })
-      .where(({ wf }) => 
-        wf.status === "failed" && 
-        new Date(wf.updatedAt) > new Date(Date.now() - 86400000)
+      .where(
+        ({ wf }) =>
+          wf.status === "failed" &&
+          new Date(wf.updatedAt) > new Date(Date.now() - 86400000)
       )
   );
-  
+
   // All three update automatically when collection changes
 }
 ```
@@ -1208,10 +1249,7 @@ function WorkflowDashboard() {
 ### 9.8 Error Handling Best Practices
 
 ```typescript
-import { 
-  SchemaValidationError, 
-  DuplicateKeyError 
-} from "@tanstack/react-db";
+import { SchemaValidationError, DuplicateKeyError } from "@tanstack/react-db";
 
 async function safeInsert(data: NoteInput) {
   try {
@@ -1221,9 +1259,12 @@ async function safeInsert(data: NoteInput) {
   } catch (error) {
     if (error instanceof SchemaValidationError) {
       // Validation failed - show field-level errors
-      return { 
-        success: false, 
-        errors: error.issues.map(i => ({ field: i.path, message: i.message }))
+      return {
+        success: false,
+        errors: error.issues.map((i) => ({
+          field: i.path,
+          message: i.message,
+        })),
       };
     }
     if (error instanceof DuplicateKeyError) {
@@ -1238,39 +1279,43 @@ async function safeInsert(data: NoteInput) {
 
 ### 9.9 Migration Path (Updated)
 
-| Phase | Action | Effort |
-|-------|--------|--------|
-| 1 | Install `@tanstack/react-db` and `@tanstack/query-db-collection` | 10 min |
-| 2 | Create `collections/` folder with `note.ts` | 1 hour |
-| 3 | Add `noteResourceSchema` with Zod | 30 min |
-| 4 | Migrate `NoteWindow` to use `useLiveQuery` | 2 hours |
-| 5 | Test optimistic updates and rollback | 1 hour |
-| 6 | Remove note data from Zustand store | 30 min |
-| 7 | Repeat for reminder, thread, workflow, edge | 4 hours |
-| 8 | Add `useCollectionSync` for real-time updates | 2 hours |
-| 9 | Verify localStorage size is <50KB | 30 min |
+| Phase | Action                                                           | Effort  |
+| ----- | ---------------------------------------------------------------- | ------- |
+| 1     | Install `@tanstack/react-db` and `@tanstack/query-db-collection` | 10 min  |
+| 2     | Create `collections/` folder with `note.ts`                      | 1 hour  |
+| 3     | Add `noteResourceSchema` with Zod                                | 30 min  |
+| 4     | Migrate `NoteWindow` to use `useLiveQuery`                       | 2 hours |
+| 5     | Test optimistic updates and rollback                             | 1 hour  |
+| 6     | Remove note data from Zustand store                              | 30 min  |
+| 7     | Repeat for reminder, thread, workflow, edge                      | 4 hours |
+| 8     | Add `useCollectionSync` for real-time updates                    | 2 hours |
+| 9     | Verify localStorage size is <50KB                                | 30 min  |
 
 **Total estimated effort:** ~12 hours
 
 ### 9.10 TanStack DB Considerations & Limitations
 
 **Beta Status:**
+
 - TanStack DB is v0.x (beta) as of December 2025
 - API may have breaking changes
 - Monitor changelog before upgrading
 
 **When to Use queryCollectionOptions (Our Choice):**
+
 - Already using TanStack Query
 - Backend is tRPC/REST (not ElectricSQL)
 - Manual control over sync timing
 - Polling or subscription-based updates
 
 **When to Use electricCollectionOptions Instead:**
+
 - Using ElectricSQL for real-time Postgres sync
 - Need automatic txid matching
 - High-frequency updates (100+ per second)
 
 **Important Caveats:**
+
 1. **No automatic refetch by default** — `onInsert`/`onUpdate`/`onDelete` return `{ refetch: false }` to skip
 2. **Optimistic state is temporary** — Cleared on next sync or error
 3. **Schema required for validation** — Without schema, any data is accepted
@@ -1286,13 +1331,13 @@ async function safeInsert(data: NoteInput) {
 
 ### 10.2 Protocol Requirements
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Cursor-based resume** | Every event includes `cursor` (monotonic sequence) |
-| **Idempotent merge** | Events keyed by `id`; re-applying same event is no-op |
-| **Snapshot vs delta** | On reconnect: delta if cursor valid, snapshot if stale |
-| **Backpressure** | Server coalesces bursts (max 10 events/100ms) |
-| **Ordering guarantee** | Events ordered by `seq`; client buffers out-of-order |
+| Requirement             | Implementation                                         |
+| ----------------------- | ------------------------------------------------------ |
+| **Cursor-based resume** | Every event includes `cursor` (monotonic sequence)     |
+| **Idempotent merge**    | Events keyed by `id`; re-applying same event is no-op  |
+| **Snapshot vs delta**   | On reconnect: delta if cursor valid, snapshot if stale |
+| **Backpressure**        | Server coalesces bursts (max 10 events/100ms)          |
+| **Ordering guarantee**  | Events ordered by `seq`; client buffers out-of-order   |
 
 ### 10.3 Event Schema
 
@@ -1301,9 +1346,9 @@ async function safeInsert(data: NoteInput) {
 
 export type SubscriptionEvent<T> = {
   type: "delta" | "snapshot";
-  cursor: string;        // Monotonic, resumable
-  seq: number;           // For ordering
-  timestamp: string;     // ISO-8601
+  cursor: string; // Monotonic, resumable
+  seq: number; // For ordering
+  timestamp: string; // ISO-8601
   payload: T;
 };
 
@@ -1353,7 +1398,7 @@ export const graphRouter = router({
     .input(z.object({ cursor: z.string().optional() }))
     .subscription(async function* ({ input, ctx }) {
       const { cursor } = input;
-      
+
       // Check if cursor is still valid
       const cursorAge = await getCursorAge(cursor);
       if (!cursor || cursorAge > MAX_CURSOR_AGE_MS) {
@@ -1368,7 +1413,7 @@ export const graphRouter = router({
           payload: { edges },
         };
       }
-      
+
       // Stream deltas
       for await (const event of subscribeToEdgeChanges(cursor)) {
         yield {
@@ -1392,7 +1437,7 @@ Instead of N subscriptions per node type, use ONE WebSocket with stream multiple
 
 export const subscriptionManager = {
   streams: new Map<string, Subscription>(),
-  
+
   subscribe(streamId: string, handler: (event: any) => void) {
     // Reuse existing connection, add stream
     if (!this.ws) {
@@ -1401,7 +1446,7 @@ export const subscriptionManager = {
     this.ws.send({ type: "subscribe", streamId });
     this.streams.set(streamId, { handler });
   },
-  
+
   unsubscribe(streamId: string) {
     this.ws?.send({ type: "unsubscribe", streamId });
     this.streams.delete(streamId);
@@ -1452,21 +1497,21 @@ export function WindowFrame({
   const { isFocused, isDimmed } = useWindowFocus(id);
   const lod = useLOD();
   const removeWindow = useDesktopStore((s) => s.removeWindow);
-  const viewMode = useDesktopStore((s) => 
-    s.windows.find(w => w.id === id)?.data.viewMode ?? "full"
+  const viewMode = useDesktopStore(
+    (s) => s.windows.find((w) => w.id === id)?.data.viewMode ?? "full"
   );
   const setViewMode = useDesktopStore((s) => s.updateWindowViewMode);
-  
+
   // LOD 0: Tiny (zoomed out far)
   if (lod === "tiny") {
     return <TinyDot color={getWindowColor(title)} />;
   }
-  
+
   // LOD 1: Small (zoomed out)
   if (lod === "small") {
     return <SmallCard icon={icon} label={title} />;
   }
-  
+
   // LOD 2+: Full window
   return (
     <div
@@ -1482,20 +1527,22 @@ export function WindowFrame({
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 drag-handle">
         <div className="flex items-center gap-2">
           {icon}
-          <span className="font-medium text-biolum tracking-tight">{title}</span>
+          <span className="font-medium text-biolum tracking-tight">
+            {title}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           {/* View Mode Toggle */}
           {modes.length > 1 && (
-            <ViewModeToggle 
-              current={viewMode} 
+            <ViewModeToggle
+              current={viewMode}
               modes={modes}
-              onChange={(mode) => setViewMode(id, mode)} 
+              onChange={(mode) => setViewMode(id, mode)}
             />
           )}
           {actions}
           {closable && (
-            <button 
+            <button
               onClick={() => removeWindow(id)}
               className="hover:text-red-400 transition-colors"
             >
@@ -1504,17 +1551,17 @@ export function WindowFrame({
           )}
         </div>
       </div>
-      
+
       {/* Content */}
       <div className="flex-1 overflow-auto">{children}</div>
-      
+
       {/* Footer */}
       {footer && (
         <div className="border-t border-white/10 px-4 py-2 text-xs text-biolum-dim">
           {footer}
         </div>
       )}
-      
+
       {/* Resize Handle */}
       {resizable && <ResizeHandle />}
     </div>
@@ -1533,21 +1580,22 @@ export function NoteWindow({ id, data }: WindowProps<NoteWindowData>) {
   // 1. Layout hooks (always called)
   const lod = useLOD();
   useWindowFocus(id);
-  
+
   // 2. Resource data from TanStack DB (NOT Zustand)
   const { data: note, isLoading } = useLiveQuery((q) =>
-    q.from({ note: noteCollection })
+    q
+      .from({ note: noteCollection })
       .where(({ note }) => eq(note.id, data.resourceRef?.id))
       .select(({ note }) => note)
       .first()
   );
-  
+
   // 3. Local draft state (window-specific, not persisted)
-  const draft = useDesktopStore((s) => 
-    s.windows.find(w => w.id === id)?.data.draft
+  const draft = useDesktopStore(
+    (s) => s.windows.find((w) => w.id === id)?.data.draft
   );
   const setDraft = useDesktopStore((s) => s.setWindowDraft);
-  
+
   // 4. Optimistic save via collection
   const handleSave = () => {
     if (note?.id) {
@@ -1557,19 +1605,23 @@ export function NoteWindow({ id, data }: WindowProps<NoteWindowData>) {
     }
     setDraft(id, null);
   };
-  
+
   // 5. LOD early returns
   if (lod === "tiny") return <TinyDot color="yellow" />;
   if (lod === "small") return <SmallCard label={note?.title || "Note"} />;
-  
+
   // 6. Full render
   return (
-    <WindowFrame id={id} title={note?.title || "Untitled Note"} icon={<FileText />}>
+    <WindowFrame
+      id={id}
+      title={note?.title || "Untitled Note"}
+      icon={<FileText />}
+    >
       {isLoading ? (
         <LoadingSpinner />
       ) : (
-        <NoteEditor 
-          value={draft ?? note} 
+        <NoteEditor
+          value={draft ?? note}
           onChange={(v) => setDraft(id, v)}
           onSave={handleSave}
         />
@@ -1591,12 +1643,12 @@ export function Dock() {
       spawnWindow: s.spawnWindow,
     }))
   );
-  
+
   // Derive running windows from layout store
-  const runningTypes = useDesktopStore((s) => 
-    new Set(s.windows.map(w => w.data.type))
+  const runningTypes = useDesktopStore(
+    (s) => new Set(s.windows.map((w) => w.data.type))
   );
-  
+
   return (
     <Panel position="bottom-center">
       <div className="flex gap-2 rounded-full bg-void-surface/80 p-2 backdrop-blur">
@@ -1619,14 +1671,14 @@ export function Dock() {
 > **AI Feedback:** "Make presentation modes first-class: windowed / frameless / fullscreen / docked"
 
 ```typescript
-type PresentationMode = 
+type PresentationMode =
   | "windowed"      // Standard window chrome
   | "frameless"     // Content only (terminal maximized)
   | "fullscreen"    // Portal overlay, exits canvas
   | "docked";       // Snapped to canvas edge
 
 // Usage in terminal:
-<WindowFrame 
+<WindowFrame
   modes={["windowed", "frameless", "fullscreen"]}
   // ...
 />
@@ -1637,6 +1689,7 @@ type PresentationMode =
 > **AI Warning:** "WindowFrame becomes a 'god wrapper' that owns behaviors apps should control"
 
 **WindowFrame SHOULD handle:**
+
 - Focus/dimming rules
 - Resize/drag affordances
 - LOD switching
@@ -1644,6 +1697,7 @@ type PresentationMode =
 - View mode toggle
 
 **WindowFrame should NOT handle:**
+
 - Resource CRUD (that's the window's job)
 - Network calls (collection handles this)
 - Keyboard shortcuts (registered globally)
@@ -1695,7 +1749,7 @@ const windowData = useDesktopStore(
 
 // NOT this (causes all windows to re-render):
 const allWindows = useDesktopStore((s) => s.windows);
-const myWindow = allWindows.find(w => w.id === id);
+const myWindow = allWindows.find((w) => w.id === id);
 ```
 
 ### 12.3 Edge Degradation
@@ -1710,7 +1764,7 @@ const myWindow = allWindows.find(w => w.id === id);
 function Canvas() {
   const zoom = useViewport().zoom;
   const edges = useDesktopStore(selectEdgesArray);
-  
+
   // Hide edges when zoomed out
   const visibleEdges = useMemo(() => {
     if (zoom < 0.3) return []; // No edges at tiny LOD
@@ -1720,7 +1774,7 @@ function Canvas() {
     }
     return edges;
   }, [edges, zoom]);
-  
+
   return <ReactFlow edges={visibleEdges} /* ... */ />;
 }
 ```
@@ -1735,8 +1789,11 @@ function Canvas() {
 <ReactFlow
   nodes={windows}
   edges={visibleEdges}
-  onlyRenderVisibleElements={true}  // Default in v12
-  nodeExtent={[[-10000, -10000], [10000, 10000]]}  // Bound the canvas
+  onlyRenderVisibleElements={true} // Default in v12
+  nodeExtent={[
+    [-10000, -10000],
+    [10000, 10000],
+  ]} // Bound the canvas
 />
 ```
 
@@ -1757,13 +1814,17 @@ self.onmessage = (e: MessageEvent<LayoutInput>) => {
 };
 
 // In component:
-const layoutWorker = useMemo(() => new Worker(
-  new URL("../workers/layout.worker.ts", import.meta.url)
-), []);
+const layoutWorker = useMemo(
+  () => new Worker(new URL("../workers/layout.worker.ts", import.meta.url)),
+  []
+);
 
-const runLayout = useCallback((nodes, edges) => {
-  layoutWorker.postMessage({ nodes, edges, direction: "TB" });
-}, [layoutWorker]);
+const runLayout = useCallback(
+  (nodes, edges) => {
+    layoutWorker.postMessage({ nodes, edges, direction: "TB" });
+  },
+  [layoutWorker]
+);
 
 useEffect(() => {
   layoutWorker.onmessage = (e) => setNodes(e.data.nodes);
@@ -1772,26 +1833,27 @@ useEffect(() => {
 
 ### 12.6 Performance Budgets
 
-| Operation | Budget | Measurement |
-|-----------|--------|-------------|
-| Add window | <10ms | `performance.now()` |
-| Update window position | <5ms | React DevTools Profiler |
-| Zoom/pan frame | <16ms | FPS counter |
-| Full layout (50 nodes) | <100ms | Worker postMessage round-trip |
-| Edge render (100 edges) | <16ms | React DevTools |
-| Collection query | <5ms | TanStack DB devtools |
+| Operation               | Budget | Measurement                   |
+| ----------------------- | ------ | ----------------------------- |
+| Add window              | <10ms  | `performance.now()`           |
+| Update window position  | <5ms   | React DevTools Profiler       |
+| Zoom/pan frame          | <16ms  | FPS counter                   |
+| Full layout (50 nodes)  | <100ms | Worker postMessage round-trip |
+| Edge render (100 edges) | <16ms  | React DevTools                |
+| Collection query        | <5ms   | TanStack DB devtools          |
 
 ### 12.7 Scale Testing
 
-| Nodes | Expected FPS | Actions |
-|-------|--------------|---------|
-| 50 | 60 | Baseline |
-| 100 | 60 | Verify LOD kicks in |
-| 200 | 60 | Verify edge degradation |
-| 500 | 30-60 | Acceptable degradation |
-| 1000 | 30 | Investigate further optimizations |
+| Nodes | Expected FPS | Actions                           |
+| ----- | ------------ | --------------------------------- |
+| 50    | 60           | Baseline                          |
+| 100   | 60           | Verify LOD kicks in               |
+| 200   | 60           | Verify edge degradation           |
+| 500   | 30-60        | Acceptable degradation            |
+| 1000  | 30           | Investigate further optimizations |
 
 **Testing script:**
+
 ```bash
 # Generate test data
 bun run scripts/generate-test-nodes.ts --count=500
@@ -1808,38 +1870,38 @@ bun run dev
 
 ### 13.1 Design System (Signal in the Void)
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--color-void` | `oklch(0.05 0 0)` | Background |
-| `--color-void-surface` | `oklch(0.14 0 0)` | Card/window bg |
-| `--color-biolum` | `oklch(0.99 0 0)` | Primary text |
-| `--color-biolum-dim` | `oklch(0.70 0 0)` | Secondary text |
-| `--color-biolum-faint` | `oklch(0.40 0 0)` | Disabled/hint |
-| `--radius-3xl` | `24px` | Window corners |
-| `--ease-fluid` | `cubic-bezier(0.25, 0.4, 0.25, 1)` | Transitions |
+| Token                  | Value                              | Usage          |
+| ---------------------- | ---------------------------------- | -------------- |
+| `--color-void`         | `oklch(0.05 0 0)`                  | Background     |
+| `--color-void-surface` | `oklch(0.14 0 0)`                  | Card/window bg |
+| `--color-biolum`       | `oklch(0.99 0 0)`                  | Primary text   |
+| `--color-biolum-dim`   | `oklch(0.70 0 0)`                  | Secondary text |
+| `--color-biolum-faint` | `oklch(0.40 0 0)`                  | Disabled/hint  |
+| `--radius-3xl`         | `24px`                             | Window corners |
+| `--ease-fluid`         | `cubic-bezier(0.25, 0.4, 0.25, 1)` | Transitions    |
 
 ### 13.2 Level of Detail (LOD)
 
-| Zoom Level | LOD | Rendering |
-|------------|-----|-----------|
-| < 0.3 | `tiny` | 8px colored dot |
-| 0.3 - 0.6 | `small` | Icon + label badge |
-| 0.6 - 1.0 | `medium` | Compact card |
-| > 1.0 | `full` | Full window |
+| Zoom Level | LOD      | Rendering          |
+| ---------- | -------- | ------------------ |
+| < 0.3      | `tiny`   | 8px colored dot    |
+| 0.3 - 0.6  | `small`  | Icon + label badge |
+| 0.6 - 1.0  | `medium` | Compact card       |
+| > 1.0      | `full`   | Full window        |
 
 ### 13.3 Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `⌘+K` | Open command palette |
-| `⌘+N` | New note window |
-| `⌘+T` | New terminal window |
-| `⌘+Enter` | Send message (in chat) |
-| `Space` (hold) | Push-to-talk |
-| `Escape` | Unfocus current window / close palette |
-| `Delete` / `Backspace` | Close focused window |
-| `⌘+W` | Close focused window |
-| `⌘+1-9` | Focus dock item N |
+| Shortcut               | Action                                 |
+| ---------------------- | -------------------------------------- |
+| `⌘+K`                  | Open command palette                   |
+| `⌘+N`                  | New note window                        |
+| `⌘+T`                  | New terminal window                    |
+| `⌘+Enter`              | Send message (in chat)                 |
+| `Space` (hold)         | Push-to-talk                           |
+| `Escape`               | Unfocus current window / close palette |
+| `Delete` / `Backspace` | Close focused window                   |
+| `⌘+W`                  | Close focused window                   |
+| `⌘+1-9`                | Focus dock item N                      |
 
 ### 13.4 Window Management
 
@@ -1959,22 +2021,22 @@ See Section 15 for detailed removal manifest.
 
 ### 15.1 Files to Delete Completely
 
-| File | Lines | Reason |
-|------|-------|--------|
-| `routes/index.tsx` | 237 | WebGPU landing page replaced |
-| `lib/mindscape/gpu/engine.ts` | ~400 | WebGPU engine unused |
-| `lib/mindscape/gpu/*.ts` | ~400 | Supporting WebGPU files |
-| `components/mindscape/initializer.tsx` | 542 | Polling replaced by subscription |
-| `components/mindscape/detail-panel.tsx` | 526 | Context-lens pattern removed |
-| `hooks/use-physics-worker.ts` | 144 | Always disabled |
+| File                                    | Lines | Reason                           |
+| --------------------------------------- | ----- | -------------------------------- |
+| `routes/index.tsx`                      | 237   | WebGPU landing page replaced     |
+| `lib/mindscape/gpu/engine.ts`           | ~400  | WebGPU engine unused             |
+| `lib/mindscape/gpu/*.ts`                | ~400  | Supporting WebGPU files          |
+| `components/mindscape/initializer.tsx`  | 542   | Polling replaced by subscription |
+| `components/mindscape/detail-panel.tsx` | 526   | Context-lens pattern removed     |
+| `hooks/use-physics-worker.ts`           | 144   | Always disabled                  |
 
 ### 15.2 Files to Refactor
 
-| File | Changes |
-|------|---------|
+| File                              | Changes                                                             |
+| --------------------------------- | ------------------------------------------------------------------- |
 | `components/mindscape/canvas.tsx` | Move to `components/desktop/canvas.tsx`, remove initializer imports |
-| `store/mindscape.ts` | Rename to `store/desktop.ts` |
-| `hooks/use-voice-session-web.ts` | Rewrite to use only WebSocket protocol |
+| `store/mindscape.ts`              | Rename to `store/desktop.ts`                                        |
+| `hooks/use-voice-session-web.ts`  | Rewrite to use only WebSocket protocol                              |
 
 ### 15.3 Dead Code Patterns to Remove
 
@@ -2061,46 +2123,46 @@ if (import.meta.env.VITE_TEST_MODE === "true") {
 
 ### 17.1 Decided (Updated Post-Review)
 
-| Question | Decision | Rationale |
-|----------|----------|-----------|
-| Ontology naming | Window Instance ↔ Resource | AI recommended; clearer than App/Entity |
-| State ownership | Layout-first (local), Backend-first (resources) | Avoids dual-authority; AI identified as biggest risk |
-| Data layer | Zustand (layout) + TanStack DB (resources) | Purpose-built sync; transaction IDs prevent echo |
-| Local storage scope | Layout only (<50KB) | AI warned about size limits, blocking serialization |
-| Window frame | Shared `WindowFrame` (thin) | AI: keep it dumb, modes are first-class |
-| Physics Engine | Remove | Unused, adds complexity |
-| Subscription model | Single WS, multiplexed, cursor-based | AI recommended; scalable |
-| Edge metadata | Add source, confidence, scope | AI: needed for provenance and debugging |
-| Structural edges | Add contains/member_of/part_of | AI: needed for grouping and scale |
+| Question            | Decision                                        | Rationale                                            |
+| ------------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| Ontology naming     | Window Instance ↔ Resource                      | AI recommended; clearer than App/Entity              |
+| State ownership     | Layout-first (local), Backend-first (resources) | Avoids dual-authority; AI identified as biggest risk |
+| Data layer          | Zustand (layout) + TanStack DB (resources)      | Purpose-built sync; transaction IDs prevent echo     |
+| Local storage scope | Layout only (<50KB)                             | AI warned about size limits, blocking serialization  |
+| Window frame        | Shared `WindowFrame` (thin)                     | AI: keep it dumb, modes are first-class              |
+| Physics Engine      | Remove                                          | Unused, adds complexity                              |
+| Subscription model  | Single WS, multiplexed, cursor-based            | AI recommended; scalable                             |
+| Edge metadata       | Add source, confidence, scope                   | AI: needed for provenance and debugging              |
+| Structural edges    | Add contains/member_of/part_of                  | AI: needed for grouping and scale                    |
 
 ### 17.2 Decided (UX & Behavior)
 
-| Question | Decision | Rationale |
-|----------|----------|-----------|
-| Dock Location | Bottom | macOS style; consistent with spatial metaphor; leaves sides free for future panels |
-| Window Resizing | Snap to 50px grid | Prevents visual chaos; easier alignment; improves layout predictability |
-| Tiling Mode | Optional via ⌥+drag | Power users can tile; default is freeform; avoids forced constraints |
-| Multi-window per resource | Yes | One note can have multiple views (edit, preview); matches desktop OS behavior |
-| Edge kind extensibility | Fixed enum | Simplicity for MVP; avoid plugin complexity; can extend enum later if needed |
+| Question                  | Decision            | Rationale                                                                          |
+| ------------------------- | ------------------- | ---------------------------------------------------------------------------------- |
+| Dock Location             | Bottom              | macOS style; consistent with spatial metaphor; leaves sides free for future panels |
+| Window Resizing           | Snap to 50px grid   | Prevents visual chaos; easier alignment; improves layout predictability            |
+| Tiling Mode               | Optional via ⌥+drag | Power users can tile; default is freeform; avoids forced constraints               |
+| Multi-window per resource | Yes                 | One note can have multiple views (edit, preview); matches desktop OS behavior      |
+| Edge kind extensibility   | Fixed enum          | Simplicity for MVP; avoid plugin complexity; can extend enum later if needed       |
 
 ### 17.3 Decided Against (AI Guidance)
 
-| Rejected Option | Why |
-|-----------------|-----|
-| Local-first for everything | Dual authority problem; sync echo; localStorage limits |
+| Rejected Option             | Why                                                    |
+| --------------------------- | ------------------------------------------------------ |
+| Local-first for everything  | Dual authority problem; sync echo; localStorage limits |
 | Storing messages in Zustand | Too large; blocks serialization; schema migration pain |
-| N subscriptions per node | Doesn't scale; connection overhead |
-| Unifying Window/Resource | Forces persistence semantics on ephemeral UI |
+| N subscriptions per node    | Doesn't scale; connection overhead                     |
+| Unifying Window/Resource    | Forces persistence semantics on ephemeral UI           |
 
 ### 17.4 Risks & Mitigations
 
-| Risk | Likelihood | Impact | Mitigation | Recovery |
-|------|------------|--------|------------|----------|
-| **TanStack DB Beta Breaking Changes** | Medium | High | Pin version, monitor changelog, avoid undocumented APIs | Git revert to pre-TanStack DB commit |
-| **Performance Regression** | Low | High | Add performance budget tests in Phase 5; profile before each merge | Git revert specific optimization commits |
-| **Backend Subscription Changes** | Medium | Medium | Design cursor protocol first (Section 10); implement backend in parallel | Git revert subscription changes |
-| **localStorage Corruption** | Low | Medium | Version schema (`desktop-layout-v1`); add migration logic | Clear localStorage, reinitialize from backend |
-| **React Flow Version Incompatibility** | Low | Low | Already on v12.9.3; avoid bleeding-edge features | Pin version, defer upgrades |
+| Risk                                   | Likelihood | Impact | Mitigation                                                               | Recovery                                      |
+| -------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------ | --------------------------------------------- |
+| **TanStack DB Beta Breaking Changes**  | Medium     | High   | Pin version, monitor changelog, avoid undocumented APIs                  | Git revert to pre-TanStack DB commit          |
+| **Performance Regression**             | Low        | High   | Add performance budget tests in Phase 5; profile before each merge       | Git revert specific optimization commits      |
+| **Backend Subscription Changes**       | Medium     | Medium | Design cursor protocol first (Section 10); implement backend in parallel | Git revert subscription changes               |
+| **localStorage Corruption**            | Low        | Medium | Version schema (`desktop-layout-v1`); add migration logic                | Clear localStorage, reinitialize from backend |
+| **React Flow Version Incompatibility** | Low        | Low    | Already on v12.9.3; avoid bleeding-edge features                         | Pin version, defer upgrades                   |
 
 **Recovery Strategy:**
 
@@ -2151,6 +2213,7 @@ All recovery is via `git revert` to the last known good commit. No feature flags
 ```
 
 **React Flow provides:**
+
 - Canvas rendering, pan/zoom, viewport management
 - Node/edge change handling (`onNodesChange`, `onEdgesChange`)
 - Connection management (`onConnect`)
@@ -2158,6 +2221,7 @@ All recovery is via `git revert` to the last known good commit. No feature flags
 - Internal state via `useStore`
 
 **Desktop UI provides:**
+
 - Window/Resource ontology (separation of concerns)
 - External state management (Zustand for layout, TanStack DB for resources)
 - Custom node rendering with WindowFrame wrapper
@@ -2168,6 +2232,7 @@ All recovery is via `git revert` to the last known good commit. No feature flags
 ### 18.2 Current ALFRED React Flow Integration
 
 **Already Implemented:**
+
 ```typescript
 // apps/web/src/components/mindscape/canvas.tsx
 - ReactFlowProvider for context
@@ -2199,6 +2264,7 @@ All recovery is via `git revert` to the last known good commit. No feature flags
 ### 18.3 React Flow + Zustand Best Practices (from Research)
 
 #### Pattern 1: External Store with Selectors
+
 ```typescript
 // ✅ CORRECT: Use selector to minimize re-renders
 const focusedNodeId = useDesktopStore((s) => s.focusedNodeId);
@@ -2208,6 +2274,7 @@ const { nodes, edges } = useDesktopStore();
 ```
 
 #### Pattern 2: Per-Node State Selection
+
 ```typescript
 // ✅ CORRECT: Each node selects only its own data
 function NoteWindow({ id }) {
@@ -2221,14 +2288,15 @@ function NoteWindow({ id }) {
 // ❌ WRONG: Causes all windows to re-render
 function NoteWindow({ id }) {
   const allWindows = useDesktopStore((s) => s.windows);
-  const myWindow = allWindows.find(w => w.id === id);
+  const myWindow = allWindows.find((w) => w.id === id);
 }
 ```
 
 #### Pattern 3: Memoized Selectors with Reselect
+
 ```typescript
 // apps/web/src/store/desktop/selectors.ts
-import { createSelector } from 'reselect';
+import { createSelector } from "reselect";
 
 const selectWindowsById = (state: DesktopState) => state.windowsById;
 const selectEdgesById = (state: DesktopState) => state.edgesById;
@@ -2239,9 +2307,8 @@ export const selectWindowsArray = createSelector(
   (windowsById) => Array.from(windowsById.values())
 );
 
-export const selectEdgesArray = createSelector(
-  [selectEdgesById],
-  (edgesById) => Array.from(edgesById.values())
+export const selectEdgesArray = createSelector([selectEdgesById], (edgesById) =>
+  Array.from(edgesById.values())
 );
 
 // Usage:
@@ -2249,6 +2316,7 @@ const windows = useDesktopStore(selectWindowsArray);
 ```
 
 #### Pattern 4: React Flow Internal State Access
+
 ```typescript
 // Access React Flow's internal state (zoom, viewport)
 import { useStore } from "@xyflow/react";
@@ -2262,6 +2330,7 @@ function ZoomDisplay() {
 ### 18.4 Performance Patterns (React Flow Specific)
 
 #### LOD Implementation (Already Done)
+
 ```typescript
 // apps/web/src/lib/mindscape/lod.ts
 export function useLOD(): LODLevel {
@@ -2276,28 +2345,30 @@ export function useLOD(): LODLevel {
 ```
 
 #### Edge Degradation (From Research)
+
 ```typescript
 // Hide edges at low zoom for performance
 function Canvas() {
   const zoom = useStore((s) => s.transform[2]);
   const edges = useDesktopStore(selectEdgesArray);
-  
+
   const visibleEdges = useMemo(() => {
     if (zoom < 0.3) return [];  // No edges at tiny LOD
     if (zoom < 0.6) {
       // Show only critical edges
-      return edges.filter(e => 
+      return edges.filter(e =>
         e.data?.kind === "blocks" || e.data?.kind === "depends_on"
       );
     }
     return edges;
   }, [edges, zoom]);
-  
+
   return <ReactFlow edges={visibleEdges} /* ... */ />;
 }
 ```
 
 #### Memoized Node Components
+
 ```typescript
 // apps/web/src/components/windows/note/note-window.tsx
 import { memo } from "react";
@@ -2308,11 +2379,12 @@ export const NoteWindow = memo(function NoteWindow({ id, data }) {
 
 // In registry:
 export const windowTypes = {
-  note: NoteWindow,  // Already memoized
+  note: NoteWindow, // Already memoized
 };
 ```
 
 #### Web Worker Layout (From Research)
+
 ```typescript
 // apps/web/src/workers/layout.worker.ts
 import Dagre from "@dagrejs/dagre";
@@ -2330,41 +2402,43 @@ self.addEventListener("message", (e: MessageEvent<LayoutRequest>) => {
 });
 
 // In component:
-const layoutWorker = useMemo(() => new Worker(
-  new URL("../workers/layout.worker.ts", import.meta.url)
-), []);
+const layoutWorker = useMemo(
+  () => new Worker(new URL("../workers/layout.worker.ts", import.meta.url)),
+  []
+);
 ```
 
 ### 18.5 React Flow Features to Leverage
 
-| Feature | Current Usage | Desktop UI Usage |
-|---------|---------------|------------------|
-| `onNodesChange` | ✅ Connected to Zustand | Same (layout-only) |
-| `onEdgesChange` | ✅ Connected to Zustand | Same (visual edges) |
-| `onConnect` | ✅ Via `useEdgePersistence` | Same (persist to backend) |
-| `fitView` | ✅ For focus/center | Same |
-| `MiniMap` | ✅ Enabled | Same |
-| `Controls` | ✅ Enabled | Same |
-| `Background` | ✅ Dots pattern | Same |
-| `nodeTypes` | ✅ 22 types registered | Reduce to 12 |
-| `edgeTypes` | ✅ LivingEdge | Same + degradation |
-| Node `hidden` | ⚠️ Not used | Use for LOD tiny |
-| Node `extent` | ⚠️ Not used | Consider for bounds |
-| `onlyRenderVisibleElements` | ⚠️ Not explicit | Enable (default v12) |
+| Feature                     | Current Usage               | Desktop UI Usage          |
+| --------------------------- | --------------------------- | ------------------------- |
+| `onNodesChange`             | ✅ Connected to Zustand     | Same (layout-only)        |
+| `onEdgesChange`             | ✅ Connected to Zustand     | Same (visual edges)       |
+| `onConnect`                 | ✅ Via `useEdgePersistence` | Same (persist to backend) |
+| `fitView`                   | ✅ For focus/center         | Same                      |
+| `MiniMap`                   | ✅ Enabled                  | Same                      |
+| `Controls`                  | ✅ Enabled                  | Same                      |
+| `Background`                | ✅ Dots pattern             | Same                      |
+| `nodeTypes`                 | ✅ 22 types registered      | Reduce to 12              |
+| `edgeTypes`                 | ✅ LivingEdge               | Same + degradation        |
+| Node `hidden`               | ⚠️ Not used                 | Use for LOD tiny          |
+| Node `extent`               | ⚠️ Not used                 | Consider for bounds       |
+| `onlyRenderVisibleElements` | ⚠️ Not explicit             | Enable (default v12)      |
 
 ### 18.6 Compatibility Verdict
 
-| Aspect | Compatible? | Notes |
-|--------|-------------|-------|
-| Node rendering | ✅ Yes | WindowFrame is just a custom node component |
-| Edge rendering | ✅ Yes | LivingEdge already works |
-| State management | ✅ Yes | Zustand + React Flow is documented pattern |
-| LOD | ✅ Yes | Already implemented via `useLOD()` |
-| Performance | ✅ Yes | Follows recommended patterns |
-| TanStack DB | ✅ Yes | Collections are separate from React Flow |
-| Subscriptions | ✅ Yes | Update collections, React Flow re-renders |
+| Aspect           | Compatible? | Notes                                       |
+| ---------------- | ----------- | ------------------------------------------- |
+| Node rendering   | ✅ Yes      | WindowFrame is just a custom node component |
+| Edge rendering   | ✅ Yes      | LivingEdge already works                    |
+| State management | ✅ Yes      | Zustand + React Flow is documented pattern  |
+| LOD              | ✅ Yes      | Already implemented via `useLOD()`          |
+| Performance      | ✅ Yes      | Follows recommended patterns                |
+| TanStack DB      | ✅ Yes      | Collections are separate from React Flow    |
+| Subscriptions    | ✅ Yes      | Update collections, React Flow re-renders   |
 
 **Conclusion:** React Flow is the **foundation** of the Desktop UI, not a competing paradigm. The Desktop UI document describes:
+
 1. **What** nodes represent (Window Instances vs Resources)
 2. **How** state is managed (Zustand for layout, TanStack DB for resources)
 3. **Performance** optimizations (LOD, edge degradation, normalization)
@@ -2377,27 +2451,28 @@ React Flow handles the **rendering mechanics**. Desktop UI handles the **semanti
 
 ### 19.1 External Projects to Study
 
-| Project | What to Learn | Priority |
-|---------|---------------|----------|
-| n8n | Node connections, execution state, canvas UX | High |
-| Excalidraw | Document vs app state separation; local-first patterns | High |
-| Linear | Keyboard-driven workflows | Medium |
-| Obsidian Canvas | Freeform cards, link handling | Medium |
-| Figma | Real-time sync machinery (but don't over-engineer) | Low |
+| Project         | What to Learn                                          | Priority |
+| --------------- | ------------------------------------------------------ | -------- |
+| n8n             | Node connections, execution state, canvas UX           | High     |
+| Excalidraw      | Document vs app state separation; local-first patterns | High     |
+| Linear          | Keyboard-driven workflows                              | Medium   |
+| Obsidian Canvas | Freeform cards, link handling                          | Medium   |
+| Figma           | Real-time sync machinery (but don't over-engineer)     | Low      |
 
 ### 18.2 TanStack DB Deep Dive (Researched)
 
-| Topic | Finding |
-|-------|---------|
-| tRPC integration | ✅ Yes - `queryCollectionOptions` wraps any async `queryFn`, including tRPC |
+| Topic                | Finding                                                                                              |
+| -------------------- | ---------------------------------------------------------------------------------------------------- |
+| tRPC integration     | ✅ Yes - `queryCollectionOptions` wraps any async `queryFn`, including tRPC                          |
 | Subscription support | ✅ Yes - Collections expose `insert`, `update`, `delete` methods callable from subscription handlers |
-| Bundle size | TBD - Measure after integration |
-| Maturity | **Beta (v0.x)** - API stabilizing, may have breaking changes |
-| Schema validation | ✅ Any Standard Schema (Zod, Valibot) works |
-| Transaction matching | ✅ Via `txid` return or `awaitMatch` utility |
-| Error handling | ✅ `SchemaValidationError`, `DuplicateKeyError` for rollback |
+| Bundle size          | TBD - Measure after integration                                                                      |
+| Maturity             | **Beta (v0.x)** - API stabilizing, may have breaking changes                                         |
+| Schema validation    | ✅ Any Standard Schema (Zod, Valibot) works                                                          |
+| Transaction matching | ✅ Via `txid` return or `awaitMatch` utility                                                         |
+| Error handling       | ✅ `SchemaValidationError`, `DuplicateKeyError` for rollback                                         |
 
 **Key API Patterns Learned:**
+
 - `transaction.mutations[0].modified` - New item data
 - `transaction.mutations[0].original` - Original item (for updates/deletes)
 - `transaction.mutations[0].changes` - Only changed fields (for updates)
@@ -2413,6 +2488,7 @@ React Flow handles the **rendering mechanics**. Desktop UI handles the **semanti
 #### 18.3.1 Current ALFRED Integration
 
 **Existing Usage:**
+
 - ✅ React Flow v12.9.3 already integrated in `apps/web/src/components/mindscape/canvas.tsx`
 - ✅ Custom nodes (22 types) implemented as React components
 - ✅ Custom edges (`LivingEdge`) with smooth step paths
@@ -2422,6 +2498,7 @@ React Flow handles the **rendering mechanics**. Desktop UI handles the **semanti
 - ✅ Performance optimizations (`onlyRenderVisibleElements` default in v12)
 
 **Key Files:**
+
 - `apps/web/src/components/mindscape/canvas.tsx` - Main React Flow wrapper
 - `apps/web/src/store/mindscape/graph.ts` - Store integration with `applyNodeChanges`, `applyEdgeChanges`
 - `apps/web/src/components/mindscape/registry.tsx` - Node type registry
@@ -2429,23 +2506,24 @@ React Flow handles the **rendering mechanics**. Desktop UI handles the **semanti
 
 #### 18.3.2 Desktop UI Paradigm Compatibility
 
-| Desktop UI Requirement | React Flow Support | Status | Notes |
-|------------------------|-------------------|--------|-------|
-| **Window Positioning** | ✅ Native | Compatible | Nodes have `position: { x, y }` - perfect for windows |
-| **Window Dragging** | ✅ Native | Compatible | Built-in drag via `draggable` prop |
-| **Window Resizing** | ✅ Via `NodeResizer` | Compatible | `@xyflow/react` provides `<NodeResizer />` component |
-| **Window Focus** | ⚠️ Selection-based | Needs custom | React Flow uses selection, not focus. Need custom `focusedWindowId` state |
-| **Window Minimize/Maximize** | ❌ Not native | Custom needed | Use `viewMode` in node data + conditional rendering |
-| **Dock (Fixed Panel)** | ✅ Via `Panel` | Compatible | `<Panel position="bottom-center">` for dock |
-| **Command Palette** | ❌ Not native | Custom needed | Build as overlay modal (already exists in ALFRED) |
-| **Edge Connections** | ✅ Native | Compatible | Edges represent relationships perfectly |
-| **LOD (Level of Detail)** | ⚠️ Manual | Custom needed | Use `useViewport()` hook + conditional rendering (already implemented) |
-| **Viewport Pan/Zoom** | ✅ Native | Compatible | Built-in with `panOnDrag`, `zoomOnScroll` |
-| **Performance (200+ nodes)** | ✅ Optimized | Compatible | v12 has `onlyRenderVisibleElements` default, viewport culling |
+| Desktop UI Requirement       | React Flow Support   | Status        | Notes                                                                     |
+| ---------------------------- | -------------------- | ------------- | ------------------------------------------------------------------------- |
+| **Window Positioning**       | ✅ Native            | Compatible    | Nodes have `position: { x, y }` - perfect for windows                     |
+| **Window Dragging**          | ✅ Native            | Compatible    | Built-in drag via `draggable` prop                                        |
+| **Window Resizing**          | ✅ Via `NodeResizer` | Compatible    | `@xyflow/react` provides `<NodeResizer />` component                      |
+| **Window Focus**             | ⚠️ Selection-based   | Needs custom  | React Flow uses selection, not focus. Need custom `focusedWindowId` state |
+| **Window Minimize/Maximize** | ❌ Not native        | Custom needed | Use `viewMode` in node data + conditional rendering                       |
+| **Dock (Fixed Panel)**       | ✅ Via `Panel`       | Compatible    | `<Panel position="bottom-center">` for dock                               |
+| **Command Palette**          | ❌ Not native        | Custom needed | Build as overlay modal (already exists in ALFRED)                         |
+| **Edge Connections**         | ✅ Native            | Compatible    | Edges represent relationships perfectly                                   |
+| **LOD (Level of Detail)**    | ⚠️ Manual            | Custom needed | Use `useViewport()` hook + conditional rendering (already implemented)    |
+| **Viewport Pan/Zoom**        | ✅ Native            | Compatible    | Built-in with `panOnDrag`, `zoomOnScroll`                                 |
+| **Performance (200+ nodes)** | ✅ Optimized         | Compatible    | v12 has `onlyRenderVisibleElements` default, viewport culling             |
 
 #### 18.3.3 Key React Flow v12 Features for Desktop UI
 
 **1. Custom Nodes (Window Instances)**
+
 ```typescript
 // React Flow nodes ARE windows - perfect match
 type WindowInstance = Node<WindowData>;
@@ -2461,12 +2539,13 @@ export function NoteWindow({ id, data, position }: NodeProps<NoteWindowData>) {
 ```
 
 **2. Node Resizing (Window Resize)**
+
 ```typescript
 import { NodeResizer } from '@xyflow/react';
 
 <WindowFrame>
-  <NodeResizer 
-    minWidth={200} 
+  <NodeResizer
+    minWidth={200}
     minHeight={150}
     handleStyle={{ border: '1px solid white/10' }}
   />
@@ -2475,24 +2554,27 @@ import { NodeResizer } from '@xyflow/react';
 ```
 
 **3. Viewport Management**
+
 ```typescript
 const reactFlow = useReactFlow();
 
 // Focus window = fit view to node
-reactFlow.fitView({ 
+reactFlow.fitView({
   nodes: [{ id: windowId }],
-  padding: { top: '50px', bottom: '50px', left: '50px', right: '50px' },
-  duration: 400
+  padding: { top: "50px", bottom: "50px", left: "50px", right: "50px" },
+  duration: 400,
 });
 ```
 
 **4. Performance Optimizations**
+
 - ✅ `onlyRenderVisibleElements={true}` (default in v12)
 - ✅ Viewport culling (nodes outside viewport not rendered)
 - ✅ Memoized node components prevent unnecessary re-renders
 - ✅ Edge degradation via conditional rendering based on zoom
 
 **5. Panel Components (Dock)**
+
 ```typescript
 import { Panel } from '@xyflow/react';
 
@@ -2504,6 +2586,7 @@ import { Panel } from '@xyflow/react';
 #### 18.3.4 Compatibility Assessment
 
 **✅ FULLY COMPATIBLE:**
+
 - Window positioning and dragging
 - Edge connections (relationships)
 - Viewport pan/zoom
@@ -2511,12 +2594,14 @@ import { Panel } from '@xyflow/react';
 - Performance at scale (200+ nodes)
 
 **⚠️ REQUIRES CUSTOM IMPLEMENTATION:**
+
 - Window focus system (React Flow uses selection, not focus)
 - Window minimize/maximize (use `viewMode` state + conditional rendering)
 - LOD system (already implemented in ALFRED via `useLOD()` hook)
 - Command palette (already exists as overlay)
 
 **❌ NOT PROVIDED (Build Custom):**
+
 - Dock component (use `Panel` + custom UI)
 - Window chrome (title bar, close button) - build in `WindowFrame`
 - Window state management (Zustand + React Flow controlled flow)
@@ -2524,17 +2609,20 @@ import { Panel } from '@xyflow/react';
 #### 18.3.5 React Flow vs Desktop UI: Balance Strategy
 
 **React Flow's Role:**
+
 - **Rendering substrate** - Provides canvas, viewport, node/edge rendering
 - **Interaction layer** - Handles drag, pan, zoom, selection
 - **State synchronization** - Controlled flow pattern with Zustand
 
 **Desktop UI's Role:**
+
 - **Window abstraction** - `WindowFrame` component wraps React Flow nodes
 - **Window management** - Focus, minimize, maximize, dock logic
 - **Desktop metaphors** - Dock, command palette, window chrome
 - **State ownership** - Layout (Zustand) + Resources (TanStack DB)
 
 **Architecture Pattern:**
+
 ```
 React Flow (Infrastructure)
   ↓
@@ -2549,17 +2637,18 @@ TanStack DB Collections (Data Layer)
 
 #### 18.3.6 Potential Conflicts & Solutions
 
-| Conflict | Solution |
-|----------|----------|
+| Conflict                                  | Solution                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **React Flow selection vs Desktop focus** | Use separate `focusedWindowId` in Zustand. React Flow selection for multi-select, focus for single window highlight |
-| **Node dragging vs Window dragging** | Same thing! React Flow handles dragging natively. Window chrome (title bar) is drag handle |
-| **Edge handles vs Window connections** | Edges represent relationships. Hide handles for non-connectable windows (settings, terminal) |
-| **Viewport zoom vs LOD** | Use `useViewport().zoom` to drive LOD. React Flow handles zoom, LOD handles rendering complexity |
-| **Panel positioning vs Dock** | Use `Panel` component for dock positioning. Custom styling for desktop aesthetic |
+| **Node dragging vs Window dragging**      | Same thing! React Flow handles dragging natively. Window chrome (title bar) is drag handle                          |
+| **Edge handles vs Window connections**    | Edges represent relationships. Hide handles for non-connectable windows (settings, terminal)                        |
+| **Viewport zoom vs LOD**                  | Use `useViewport().zoom` to drive LOD. React Flow handles zoom, LOD handles rendering complexity                    |
+| **Panel positioning vs Dock**             | Use `Panel` component for dock positioning. Custom styling for desktop aesthetic                                    |
 
 #### 18.3.7 Migration Considerations
 
 **From Mindscape to Desktop UI:**
+
 1. ✅ React Flow already integrated - no migration needed
 2. ✅ Custom nodes already exist - rename to "windows"
 3. ✅ Zustand store pattern compatible - split layout vs resources
@@ -2568,19 +2657,21 @@ TanStack DB Collections (Data Layer)
 6. ⚠️ Add window management (minimize, maximize, dock)
 
 **Breaking Changes (v12.9.3 → v12.10.0):**
+
 - None expected (patch version)
 - Monitor changelog for future major versions
 
 #### 18.3.8 Performance Benchmarks (React Flow v12)
 
-| Metric | React Flow v12 | ALFRED Target | Status |
-|--------|---------------|---------------|--------|
-| Nodes before lag | 500+ (with optimizations) | 200+ | ✅ Exceeds target |
-| Edge rendering | 1000+ edges (with degradation) | 500+ | ✅ Exceeds target |
-| Viewport culling | Automatic (v12 default) | Required | ✅ Native support |
-| Re-render optimization | Memoized nodes | Required | ✅ Built-in |
+| Metric                 | React Flow v12                 | ALFRED Target | Status            |
+| ---------------------- | ------------------------------ | ------------- | ----------------- |
+| Nodes before lag       | 500+ (with optimizations)      | 200+          | ✅ Exceeds target |
+| Edge rendering         | 1000+ edges (with degradation) | 500+          | ✅ Exceeds target |
+| Viewport culling       | Automatic (v12 default)        | Required      | ✅ Native support |
+| Re-render optimization | Memoized nodes                 | Required      | ✅ Built-in       |
 
 **Performance Tips:**
+
 - Use `React.memo` on window components
 - Implement edge degradation at zoom < 0.3
 - Use `onlyRenderVisibleElements={true}` (default)
@@ -2589,6 +2680,7 @@ TanStack DB Collections (Data Layer)
 #### 18.3.9 Recommendations
 
 **✅ PROCEED WITH REACT FLOW:**
+
 1. React Flow is **perfect** for Desktop UI rendering substrate
 2. Already integrated and working in ALFRED
 3. No conflicts with Desktop UI patterns
@@ -2596,6 +2688,7 @@ TanStack DB Collections (Data Layer)
 5. Custom nodes = Windows is natural mapping
 
 **⚠️ IMPLEMENTATION NOTES:**
+
 1. Build `WindowFrame` as abstraction layer above React Flow nodes
 2. Use React Flow for rendering, Desktop UI for window management
 3. Separate focus (Zustand) from selection (React Flow)
@@ -2603,6 +2696,7 @@ TanStack DB Collections (Data Layer)
 5. Use `NodeResizer` for window resizing
 
 **📚 Documentation References:**
+
 - [React Flow Custom Nodes](https://reactflow.dev/learn/customization/custom-nodes)
 - [React Flow Performance](https://reactflow.dev/learn/advanced-use/performance)
 - [React Flow Node Resizer](https://reactflow.dev/api-reference/components/node-resizer)
@@ -2613,12 +2707,12 @@ TanStack DB Collections (Data Layer)
 
 ### 18.4 Subscription Protocol
 
-| Topic | Goal |
-|-------|------|
-| Cursor-based resume | Implement snapshot vs delta logic |
-| Backpressure handling | Coalesce bursts on server |
-| Multiplexing | Single WS with stream IDs |
-| Idempotency | Transaction ID reconciliation |
+| Topic                 | Goal                              |
+| --------------------- | --------------------------------- |
+| Cursor-based resume   | Implement snapshot vs delta logic |
+| Backpressure handling | Coalesce bursts on server         |
+| Multiplexing          | Single WS with stream IDs         |
+| Idempotency           | Transaction ID reconciliation     |
 
 ---
 
@@ -2694,6 +2788,7 @@ TanStack DB Collections (Data Layer)
 > **Key Insight:** Don't migrate existing nodes. Build new windows from scratch that fetch data from collections.
 
 #### 6.1 NoteWindow (Validates Pattern)
+
 - [ ] Create `components/windows/note/note-window.tsx`
 - [ ] Use `useLiveQuery` from `noteCollection`
 - [ ] Handle create/edit/delete via collection mutations
@@ -2701,22 +2796,26 @@ TanStack DB Collections (Data Layer)
 - [ ] Test alongside existing NoteNode
 
 #### 6.2 ReminderWindow
+
 - [ ] Create `components/windows/reminder/reminder-window.tsx`
 - [ ] Use `useLiveQuery` from `reminderCollection`
 - [ ] Handle fire/snooze/delete actions
 
 #### 6.3 ChatWindow
+
 - [ ] Create `threadCollection` with thread API
 - [ ] Create `components/windows/chat/chat-window.tsx`
 - [ ] Use `useLiveQuery` for messages
 - [ ] Wire to streaming for new messages
 
 #### 6.4 WorkflowWindow
+
 - [ ] Create `components/windows/workflow/workflow-window.tsx`
 - [ ] Use workflow API for run data
 - [ ] Use SSE for event streaming
 
 #### 6.5 Remaining Windows
+
 - [ ] TodoWindow
 - [ ] SettingsWindow
 - [ ] IntegrationsWindow
@@ -2726,6 +2825,7 @@ TanStack DB Collections (Data Layer)
 - [ ] DroidWindow
 
 #### 6.6 Feature Parity Validation
+
 - [ ] All window types functional
 - [ ] Desktop route usable as primary interface
 - [ ] Performance: 200 nodes @ 60fps
@@ -2787,6 +2887,7 @@ TanStack DB Collections (Data Layer)
 **Tasks:**
 
 #### P8.1: Add Context/Cache/Feedback Slices to Desktop Store
+
 - [ ] Create `store/desktop/context.ts`:
   - `contextCache: Record<string, ContextCacheEntry>`
   - `recordContextReceipt(windowId, entry)`
@@ -2800,6 +2901,7 @@ TanStack DB Collections (Data Layer)
 - [ ] Update desktop store index to include new slices
 
 #### P8.2: Create Desktop Command Palette
+
 - [ ] Create `components/desktop/command-palette.tsx`
 - [ ] Wire ⌘+K shortcut in desktop canvas
 - [ ] Define actions in `config/desktop-actions.ts` (replace `config/actions.ts`)
@@ -2808,6 +2910,7 @@ TanStack DB Collections (Data Layer)
 - [ ] Integrate with desktop store: `spawnWindow`, `removeWindow`, `focusWindow`
 
 #### P8.3: Migrate use-focused-context to Desktop
+
 - [ ] Import `useDesktopStore` instead of `useMindscapeStore`
 - [ ] Change `focusedNodeId` → `focusedWindowId`
 - [ ] Change `nodes` → `windows`, `state.nodes` → `state.windows`
@@ -2815,6 +2918,7 @@ TanStack DB Collections (Data Layer)
 - [ ] Update tests in `hooks/__tests__/use-focused-context.test.tsx`
 
 #### P8.4: Rename use-mindscape-activations → use-desktop-activations
+
 - [ ] Rename file to `hooks/use-desktop-activations.ts`
 - [ ] Rename exports: `dispatchMindscapeEvent` → `dispatchDesktopEvent`
 - [ ] Rename types: `MindscapeEvent` → `DesktopActivationEvent`
@@ -2823,43 +2927,53 @@ TanStack DB Collections (Data Layer)
 - [ ] Update all callers (4 files)
 
 #### P8.5: Update use-chat-logic to Desktop Store
+
 - [ ] Import `useDesktopStore` instead of `useMindscapeStore`
 - [ ] Update `resolveId` to search `windows` array by `resourceRef.id` or `window.id`
 - [ ] Update `x-mindscape-activation` header parsing to dispatch desktop events
 - [ ] Rename header to `x-desktop-activation` (coordinate with backend)
 
 #### P8.6: Update use-voice-session-web
+
 - [ ] Import `dispatchDesktopEvent` instead of `dispatchMindscapeEvent`
 - [ ] Update event types for voice-input/voice-output
 
 #### P8.7: Update components/ai-elements/tool.tsx
+
 - [ ] Import `dispatchDesktopEvent` instead of `dispatchMindscapeEvent`
 - [ ] Update event dispatch for tool-call events
 
 #### P8.8: Migrate Config Files
+
 - [ ] Create `config/desktop-actions.ts` with `WindowType` instead of `ArtifactType`
 - [ ] Delete `config/actions.ts` (old)
 - [ ] Rename `config/mindscape.ts` → `config/desktop.ts`
 - [ ] Update `MINDSCAPE_CONFIG` → `DESKTOP_CONFIG`
 
 #### P8.9: Rename API Route
+
 - [ ] Rename `routes/api/mindscape.metrics.ts` → `routes/api/desktop.metrics.ts`
 - [ ] Update metric name `mindscapeRagCacheEventsTotal` → `desktopRagCacheEventsTotal`
 - [ ] Update telemetry.ts to POST to new endpoint
 
 #### P8.10: Add Knowledge Graph Visualization
+
 - [ ] Add `spawnKnowledgeGraph(result)` action to desktop store:
   ```typescript
-  spawnKnowledgeGraph: (result: { nodes: VisualizeNode[], edges: VisualizeEdge[] }) => {
+  spawnKnowledgeGraph: (result: {
+    nodes: VisualizeNode[];
+    edges: VisualizeEdge[];
+  }) => {
     // For each node: spawnWindow("knowledge" | "concept", { resourceRef, ...data })
     // For each edge: addEdge({ source, target, data: { kind } })
-  }
+  };
   ```
 - [ ] Add "Visualize Knowledge" command to command palette
 - [ ] Connect to `trpc.knowledge.visualize.mutate({ text })`
 - [ ] Auto-layout spawned knowledge windows using semantic layout
 
 #### P8.11: Delete Mindscape Store Entirely
+
 - [ ] Delete `store/mindscape/` (6 files: cache.ts, context.ts, graph.ts, index.ts, persist.ts, types.ts)
 - [ ] Delete `store/mindscape.ts`
 - [ ] Delete `store/mindscape.schemas.ts`
@@ -2869,6 +2983,7 @@ TanStack DB Collections (Data Layer)
 - [ ] Estimated: **-2,500 lines**
 
 #### P8.12: Add Deep Linking for Desktop
+
 - [ ] Add search params to route: `windowId`, `spawn`, `resourceRef`
 - [ ] On load: focus window by `windowId` if provided
 - [ ] On load: spawn window by `spawn` type with optional `resourceRef`
@@ -2876,6 +2991,7 @@ TanStack DB Collections (Data Layer)
 - [ ] Preserve workflow route behavior (`/workflow/$runId`)
 
 #### P8.13: E2E Test Coverage Expansion
+
 - [ ] Fix 4 skipped tests in desktop specs (command palette, persistence, multi-spawn)
 - [ ] Add tests for command palette actions (spawn, delete, focus)
 - [ ] Add tests for knowledge visualization flow
@@ -2884,6 +3000,7 @@ TanStack DB Collections (Data Layer)
 - [ ] Target: **25+ desktop E2E tests**
 
 #### P8.14: Performance Validation
+
 - [ ] Create stress test with 200+ windows
 - [ ] Validate 60fps pan/zoom at scale
 - [ ] Measure localStorage size under load (<50KB)
@@ -2893,6 +3010,7 @@ TanStack DB Collections (Data Layer)
 **Deliverable:** Complete desktop system with zero mindscape dependencies, full knowledge integration, and comprehensive test coverage.
 
 **Estimated Impact:**
+
 - Lines deleted: ~2,500
 - Lines added: ~800 (new slices, command palette, actions)
 - Net change: **-1,700 lines**
@@ -2903,48 +3021,48 @@ TanStack DB Collections (Data Layer)
 
 ### Unit Tests
 
-| Component | Test Focus | Location |
-|-----------|------------|----------|
-| `useDesktopStore` | Slice actions, persistence serialization | `apps/web/src/store/__tests__/desktop.test.ts` |
-| `WindowFrame` | Rendering, LOD transitions, focus/dim states | `apps/web/src/components/windows/shared/__tests__/` |
-| Collections | Insert/update/delete, optimistic rollback, schema validation | `apps/web/src/collections/__tests__/` |
-| `useLOD` | Zoom thresholds, state transitions | `apps/web/src/hooks/__tests__/use-lod.test.ts` |
+| Component         | Test Focus                                                   | Location                                            |
+| ----------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| `useDesktopStore` | Slice actions, persistence serialization                     | `apps/web/src/store/__tests__/desktop.test.ts`      |
+| `WindowFrame`     | Rendering, LOD transitions, focus/dim states                 | `apps/web/src/components/windows/shared/__tests__/` |
+| Collections       | Insert/update/delete, optimistic rollback, schema validation | `apps/web/src/collections/__tests__/`               |
+| `useLOD`          | Zoom thresholds, state transitions                           | `apps/web/src/hooks/__tests__/use-lod.test.ts`      |
 
 ### Integration Tests
 
-| Scenario | Test Focus | Location |
-|----------|------------|----------|
-| Note CRUD via collection | TanStack DB → tRPC → Backend round-trip | `apps/web/src/collections/__tests__/note.integration.test.ts` |
-| Subscription reconnect | Cursor resume, snapshot fallback | `packages/api/test/routers/graph.test.ts` |
-| Window spawn from Dock | Store update → React Flow node creation | `apps/web/src/components/desktop/__tests__/dock.integration.test.ts` |
+| Scenario                 | Test Focus                              | Location                                                             |
+| ------------------------ | --------------------------------------- | -------------------------------------------------------------------- |
+| Note CRUD via collection | TanStack DB → tRPC → Backend round-trip | `apps/web/src/collections/__tests__/note.integration.test.ts`        |
+| Subscription reconnect   | Cursor resume, snapshot fallback        | `packages/api/test/routers/graph.test.ts`                            |
+| Window spawn from Dock   | Store update → React Flow node creation | `apps/web/src/components/desktop/__tests__/dock.integration.test.ts` |
 
 ### E2E Tests (Playwright)
 
-| Flow | Test Focus | Location |
-|------|------------|----------|
-| Desktop load | Auth → Route → Canvas renders <1s | `tests/e2e/desktop-load.spec.ts` |
-| Note creation | Dock click → Window spawns → Type → Save → Persist | `tests/e2e/note-crud.spec.ts` |
-| 200 node scale | Spawn 200 windows → Pan/zoom → FPS >30 | `tests/e2e/scale.spec.ts` |
-| Subscription recovery | Disconnect WS → Reconnect → State intact | `tests/e2e/subscription-recovery.spec.ts` |
+| Flow                  | Test Focus                                         | Location                                  |
+| --------------------- | -------------------------------------------------- | ----------------------------------------- |
+| Desktop load          | Auth → Route → Canvas renders <1s                  | `tests/e2e/desktop-load.spec.ts`          |
+| Note creation         | Dock click → Window spawns → Type → Save → Persist | `tests/e2e/note-crud.spec.ts`             |
+| 200 node scale        | Spawn 200 windows → Pan/zoom → FPS >30             | `tests/e2e/scale.spec.ts`                 |
+| Subscription recovery | Disconnect WS → Reconnect → State intact           | `tests/e2e/subscription-recovery.spec.ts` |
 
 ### Performance Tests
 
-| Test | Metric | Threshold | Tool |
-|------|--------|-----------|------|
-| Window spawn | Time to render | <10ms | `performance.now()` |
-| 100 node pan | Frame time | <16ms (60fps) | Chrome DevTools |
-| Collection query | Query latency | <5ms | TanStack DB devtools |
-| localStorage size | Total bytes | <50KB | `JSON.stringify().length` |
+| Test              | Metric         | Threshold     | Tool                      |
+| ----------------- | -------------- | ------------- | ------------------------- |
+| Window spawn      | Time to render | <10ms         | `performance.now()`       |
+| 100 node pan      | Frame time     | <16ms (60fps) | Chrome DevTools           |
+| Collection query  | Query latency  | <5ms          | TanStack DB devtools      |
+| localStorage size | Total bytes    | <50KB         | `JSON.stringify().length` |
 
 ### Test Execution by Phase
 
-| Phase | Required Tests | Go/No-Go |
-|-------|---------------|----------|
-| Phase 1 | Unit: store slices, type checks pass | All green |
+| Phase   | Required Tests                            | Go/No-Go                |
+| ------- | ----------------------------------------- | ----------------------- |
+| Phase 1 | Unit: store slices, type checks pass      | All green               |
 | Phase 2 | Unit: collections; Integration: note CRUD | Notes persist correctly |
-| Phase 3 | E2E: desktop load, dock spawn | Route loads <1s |
-| Phase 4 | Integration: subscription reconnect | Cursor resume works |
-| Phase 5 | E2E: scale test; Performance: all metrics | 200 nodes @ 60fps |
+| Phase 3 | E2E: desktop load, dock spawn             | Route loads <1s         |
+| Phase 4 | Integration: subscription reconnect       | Cursor resume works     |
+| Phase 5 | E2E: scale test; Performance: all metrics | 200 nodes @ 60fps       |
 
 ---
 
@@ -2963,15 +3081,15 @@ TanStack DB Collections (Data Layer)
 
 ### 22.2 Non-Functional Requirements
 
-| Metric | Target |
-|--------|--------|
-| Time to Interactive | < 1s |
-| Bundle Size (main) | < 500KB gzipped |
-| Nodes before lag | 200+ @ 60fps |
-| Memory usage (100 nodes) | < 150MB |
-| Lighthouse Performance | > 85 |
-| localStorage size | < 50KB |
-| Subscription reconnect | < 1s with cursor resume |
+| Metric                   | Target                  |
+| ------------------------ | ----------------------- |
+| Time to Interactive      | < 1s                    |
+| Bundle Size (main)       | < 500KB gzipped         |
+| Nodes before lag         | 200+ @ 60fps            |
+| Memory usage (100 nodes) | < 150MB                 |
+| Lighthouse Performance   | > 85                    |
+| localStorage size        | < 50KB                  |
+| Subscription reconnect   | < 1s with cursor resume |
 
 ### 22.3 Architecture Requirements
 
@@ -2996,34 +3114,35 @@ TanStack DB Collections (Data Layer)
 
 ## Appendix A: Glossary (Updated)
 
-| Term | Definition |
-|------|------------|
+| Term                | Definition                                                                 |
+| ------------------- | -------------------------------------------------------------------------- |
 | **Window Instance** | A React Flow node representing UI + layout state; may reference a Resource |
-| **Resource** | A backend-persisted domain object (note, reminder, thread, workflow run) |
-| **Canvas** | The React Flow viewport |
-| **Desktop** | The root container component |
-| **Dock** | The window launcher panel |
-| **Edge** | A visual/data connection between windows |
-| **LOD** | Level of Detail (zoom-based rendering) |
-| **WindowFrame** | Shared window chrome wrapper component |
-| **Collection** | TanStack DB collection for domain resources |
-| **Cursor** | Monotonic sequence for subscription resume |
-| **txid** | Transaction ID for optimistic reconciliation |
+| **Resource**        | A backend-persisted domain object (note, reminder, thread, workflow run)   |
+| **Canvas**          | The React Flow viewport                                                    |
+| **Desktop**         | The root container component                                               |
+| **Dock**            | The window launcher panel                                                  |
+| **Edge**            | A visual/data connection between windows                                   |
+| **LOD**             | Level of Detail (zoom-based rendering)                                     |
+| **WindowFrame**     | Shared window chrome wrapper component                                     |
+| **Collection**      | TanStack DB collection for domain resources                                |
+| **Cursor**          | Monotonic sequence for subscription resume                                 |
+| **txid**            | Transaction ID for optimistic reconciliation                               |
 
 ## Appendix B: Key Changes from v1.0
 
-| Section | Change | Rationale |
-|---------|--------|-----------|
-| Ontology | App → Window Instance, Entity → Resource | AI: clearer abstraction |
-| State | Local-first everything → Layout-first only | AI: avoids dual-authority |
-| Data Layer | Zustand only → Zustand + TanStack DB | AI: purpose-built sync |
-| Subscriptions | N per node → Single WS, multiplexed | AI: scalable |
-| localStorage | Unbounded → <50KB budget | AI: avoid limits/blocking |
-| Edges | 5 kinds → 8 kinds + metadata | AI: structural + provenance |
+| Section       | Change                                     | Rationale                   |
+| ------------- | ------------------------------------------ | --------------------------- |
+| Ontology      | App → Window Instance, Entity → Resource   | AI: clearer abstraction     |
+| State         | Local-first everything → Layout-first only | AI: avoids dual-authority   |
+| Data Layer    | Zustand only → Zustand + TanStack DB       | AI: purpose-built sync      |
+| Subscriptions | N per node → Single WS, multiplexed        | AI: scalable                |
+| localStorage  | Unbounded → <50KB budget                   | AI: avoid limits/blocking   |
+| Edges         | 5 kinds → 8 kinds + metadata               | AI: structural + provenance |
 
 ## Appendix C: Related Documents
 
 **Internal:**
+
 - `.ruler/26-design-system.md` - Signal in the Void design tokens
 - `.ruler/12-component-development.md` - React component patterns
 - `.ruler/13-streaming-patterns.md` - tRPC streaming patterns
@@ -3031,6 +3150,7 @@ TanStack DB Collections (Data Layer)
 - `docs/alfred-prd.md` - Product requirements
 
 **TanStack DB Official Documentation:**
+
 - [Overview](https://tanstack.com/db/latest/docs) - Core concepts and architecture
 - [Quick Start](https://tanstack.com/db/latest/docs/quick-start) - Installation and basic usage
 - [Query Collection](https://tanstack.com/db/latest/docs/collections/query-collection) - TanStack Query integration
@@ -3044,12 +3164,15 @@ TanStack DB Collections (Data Layer)
 **Reviewer:** Genius-level AI (2025-12-23)
 
 **Biggest Mistake Identified:**
-> Making "local-first" mean the same store owns both UI state *and* domain data while also introducing real-time backend subscriptions. That produces *two authorities* and you'll spend months chasing sync echo, stale caches, and migration bugs.
+
+> Making "local-first" mean the same store owns both UI state _and_ domain data while also introducing real-time backend subscriptions. That produces _two authorities_ and you'll spend months chasing sync echo, stale caches, and migration bugs.
 
 **6-Month Regret Warning:**
+
 > Persisting large/denormalized node `data` (messages, note bodies, workflow payloads) to `localStorage`/Zustand. It will hit size limits, blocking serialization, and schema-migration pain faster than you expect.
 
 **Key Missing Items (Now Added):**
+
 1. Source-of-Truth Matrix (Section 5)
 2. Subscription Protocol Contract (Section 10)
 3. Performance Patterns (Section 12)
@@ -3060,61 +3183,61 @@ TanStack DB Collections (Data Layer)
 
 > Track completed items as implementation proceeds.
 
-| Date | Phase | Item | Status | Notes |
-|------|-------|------|--------|-------|
-| 2025-12-23 | 0 | ExecPlan v2.0 complete | ✅ | Post AI review, ready for execution |
-| 2025-12-23 | 1 | Create store/desktop/ structure | ✅ | New types, windows, viewport, dock, persist slices |
-| 2025-12-23 | 1 | Create store/desktop.ts | ✅ | Layout-only Zustand store with persistence |
-| 2025-12-23 | 1 | Create store/desktop.schemas.ts | ✅ | 12 window types (reduced from 21) |
-| 2025-12-23 | 1 | Create WindowFrame | ✅ | Shared window chrome with tier styling |
-| 2025-12-23 | 1 | Create components/windows/ | ✅ | Shared: lod, focus, error-boundary, lod-views |
-| 2025-12-23 | 1 | Create registry.ts (12 types) | ✅ | References existing nodes, wraps with error boundary |
-| 2025-12-23 | 1 | Create components/desktop/ | ✅ | Desktop, Canvas, Dock components |
-| 2025-12-23 | 1 | Typecheck passes | ✅ | New desktop code compiles cleanly |
-| 2025-12-23 | 1 | Lint passes | ✅ | Biome check with all safe fixes applied |
-| 2025-12-23 | 1 | Build passes | ✅ | `bun run build` succeeds |
-| 2025-12-23 | 1 | Layout functions generic | ✅ | `layout.ts`, `layout-semantic.ts` now work with any node data type |
-| 2025-12-23 | 1 | Compatibility layer | ✅ | `store/compat.ts` provides mindscape-compatible aliases for desktop store |
-| | 1 | Migrate individual components | ⬜ | Node-by-node migration as part of Phase 3 route consolidation |
-| 2025-12-23 | 2 | Install TanStack DB | ✅ | @tanstack/react-db v0.1.60, @tanstack/query-db-collection v1.0.12 |
-| 2025-12-23 | 2 | Create resource schemas | ✅ | note, reminder, thread, workflow, edge schemas in collections/schemas.ts |
-| 2025-12-23 | 2 | Create noteCollection | ✅ | Optimistic insert/update/delete with tRPC persistence |
-| 2025-12-23 | 2 | Create reminderCollection | ✅ | Optimistic insert/fire/delete with tRPC persistence |
-| | 2 | Migrate NoteWindow | ⬜ | Replace direct tRPC with useLiveQuery |
-| 2025-12-23 | 3 | Delete WebGPU landing | ✅ | Removed routes/index.tsx (~236 lines) |
-| 2025-12-23 | 3 | Delete gpu folder | ✅ | Removed lib/mindscape/gpu/ (~1,351 lines) |
-| 2025-12-23 | 3 | Route consolidation | ✅ | /mindscape → /, all navigations updated |
-| 2025-12-23 | 3 | Remove Cmd+M shortcut | ✅ | No longer needed with single entry point |
-| 2025-12-23 | 4 | Subscription types | ✅ | @alfred/type/subscription with cursor-based events |
-| 2025-12-23 | 4 | Subscription manager | ✅ | Single WebSocket, multiplexed streams, auto-reconnect |
-| 2025-12-23 | 4 | Subscription hooks | ✅ | useSubscription, useGraphSubscription, useWorkflowSubscription |
-| 2025-12-24 | 5 | Performance utilities | ✅ | getLayoutStorageSize, filterEdgesByZoom, debounce/throttle |
-| 2025-12-24 | 5 | Store selectors | ✅ | Memoized selectors for windows, edges, viewport |
-| 2025-12-24 | 5 | Edge degradation hook | ✅ | useVisibleEdges with zoom-aware filtering |
-| 2025-12-24 | 5 | Storage monitor | ✅ | Dev-only localStorage budget display |
-| 2025-12-24 | 6 | Bug fix | ✅ | WorkflowEvent → WorkflowSubscriptionEvent collision |
-| 2025-12-24 | 7 | Barrel exports | ✅ | lib/desktop, store/desktop exports |
-| 2025-12-24 | 7 | StorageMonitor wiring | ✅ | Added to Desktop component |
-| 2025-12-24 | 8 | Doc updates | ✅ | Updated .ruler/30-mindscape.md, docs/architecture/mindscape.md |
-| 2025-12-24 | 9 | Unit tests | ✅ | 80 tests: store, selectors, performance, schemas, collections, subscriptions |
-| 2025-12-24 | 9 | E2E smoke tests | ✅ | 4 tests: canvas load, controls, default chat, routes |
-| 2025-12-24 | 9 | E2E window tests | ✅ | 5 pass, 2 skip: spawn, focus, drag, close |
-| 2025-12-24 | 9 | E2E dock tests | ✅ | 4 pass, 2 skip: palette, spawn types, viewport |
-| 2025-12-24 | 6 | Compat layer attempt | ❌ | Failed: type mismatch, paradigm incompatibility |
-| 2025-12-24 | 6 | Compat layer removed | ✅ | Deleted store/compat.ts, clean separation |
-| 2025-12-24 | 6 | Paradigm clarification | ✅ | Documented Fat Nodes vs Thin Windows in Section 1.5 |
-| 2025-12-24 | 6 | ExecPlan v3.0 | ✅ | Updated phases, added Phase 6-7, corrected strategy |
-| 2025-12-24 | 6 | Create all 12 window components | ✅ | ~3,025 lines: Note, Reminder, Terminal, Droid, Chat, Workflow, WorkflowList, Todo, Settings, Integrations, Knowledge, Concept |
-| 2025-12-24 | 6 | Delete mindscape/nodes | ✅ | -5,600 lines: 25 node files removed |
-| 2025-12-24 | 6 | Delete mindscape/registry.tsx | ✅ | Replaced by windows/registry.tsx |
-| 2025-12-24 | 6 | Delete orphaned hooks | ✅ | use-mindscape-executor.ts, use-mindscape-stream.ts |
-| 2025-12-24 | 6 | Delete orphaned LOD/utils | ✅ | mindscape/lod.ts, lib/mindscape/lod.ts, mindscape/utils.ts |
-| 2025-12-24 | 6 | Update imports | ✅ | canvas.tsx, command-palette.tsx, living-edge.tsx, use-deep-links.ts |
-| 2025-12-24 | 6 | **Net code reduction** | ✅ | **-2,850 lines** (added 3,025, removed 5,875) |
-| 2025-12-24 | 7 | Migrate / route to Desktop | ✅ | Route now uses DesktopCanvas instead of MindscapeCanvas |
-| 2025-12-24 | 7 | Move essential components | ✅ | living-edge, context-lens, workflow-drawer → shared/ |
-| 2025-12-24 | 7 | Delete mindscape infrastructure | ✅ | components/mindscape/, 6 hooks, 8 lib files, tests |
-| 2025-12-24 | 7 | **Phase 7 total deletion** | ✅ | **-8,775 lines** (50 files) |
+| Date       | Phase | Item                            | Status | Notes                                                                                                                         |
+| ---------- | ----- | ------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| 2025-12-23 | 0     | ExecPlan v2.0 complete          | ✅     | Post AI review, ready for execution                                                                                           |
+| 2025-12-23 | 1     | Create store/desktop/ structure | ✅     | New types, windows, viewport, dock, persist slices                                                                            |
+| 2025-12-23 | 1     | Create store/desktop.ts         | ✅     | Layout-only Zustand store with persistence                                                                                    |
+| 2025-12-23 | 1     | Create store/desktop.schemas.ts | ✅     | 12 window types (reduced from 21)                                                                                             |
+| 2025-12-23 | 1     | Create WindowFrame              | ✅     | Shared window chrome with tier styling                                                                                        |
+| 2025-12-23 | 1     | Create components/windows/      | ✅     | Shared: lod, focus, error-boundary, lod-views                                                                                 |
+| 2025-12-23 | 1     | Create registry.ts (12 types)   | ✅     | References existing nodes, wraps with error boundary                                                                          |
+| 2025-12-23 | 1     | Create components/desktop/      | ✅     | Desktop, Canvas, Dock components                                                                                              |
+| 2025-12-23 | 1     | Typecheck passes                | ✅     | New desktop code compiles cleanly                                                                                             |
+| 2025-12-23 | 1     | Lint passes                     | ✅     | Biome check with all safe fixes applied                                                                                       |
+| 2025-12-23 | 1     | Build passes                    | ✅     | `bun run build` succeeds                                                                                                      |
+| 2025-12-23 | 1     | Layout functions generic        | ✅     | `layout.ts`, `layout-semantic.ts` now work with any node data type                                                            |
+| 2025-12-23 | 1     | Compatibility layer             | ✅     | `store/compat.ts` provides mindscape-compatible aliases for desktop store                                                     |
+|            | 1     | Migrate individual components   | ⬜     | Node-by-node migration as part of Phase 3 route consolidation                                                                 |
+| 2025-12-23 | 2     | Install TanStack DB             | ✅     | @tanstack/react-db v0.1.60, @tanstack/query-db-collection v1.0.12                                                             |
+| 2025-12-23 | 2     | Create resource schemas         | ✅     | note, reminder, thread, workflow, edge schemas in collections/schemas.ts                                                      |
+| 2025-12-23 | 2     | Create noteCollection           | ✅     | Optimistic insert/update/delete with tRPC persistence                                                                         |
+| 2025-12-23 | 2     | Create reminderCollection       | ✅     | Optimistic insert/fire/delete with tRPC persistence                                                                           |
+|            | 2     | Migrate NoteWindow              | ⬜     | Replace direct tRPC with useLiveQuery                                                                                         |
+| 2025-12-23 | 3     | Delete WebGPU landing           | ✅     | Removed routes/index.tsx (~236 lines)                                                                                         |
+| 2025-12-23 | 3     | Delete gpu folder               | ✅     | Removed lib/mindscape/gpu/ (~1,351 lines)                                                                                     |
+| 2025-12-23 | 3     | Route consolidation             | ✅     | /mindscape → /, all navigations updated                                                                                       |
+| 2025-12-23 | 3     | Remove Cmd+M shortcut           | ✅     | No longer needed with single entry point                                                                                      |
+| 2025-12-23 | 4     | Subscription types              | ✅     | @alfred/type/subscription with cursor-based events                                                                            |
+| 2025-12-23 | 4     | Subscription manager            | ✅     | Single WebSocket, multiplexed streams, auto-reconnect                                                                         |
+| 2025-12-23 | 4     | Subscription hooks              | ✅     | useSubscription, useGraphSubscription, useWorkflowSubscription                                                                |
+| 2025-12-24 | 5     | Performance utilities           | ✅     | getLayoutStorageSize, filterEdgesByZoom, debounce/throttle                                                                    |
+| 2025-12-24 | 5     | Store selectors                 | ✅     | Memoized selectors for windows, edges, viewport                                                                               |
+| 2025-12-24 | 5     | Edge degradation hook           | ✅     | useVisibleEdges with zoom-aware filtering                                                                                     |
+| 2025-12-24 | 5     | Storage monitor                 | ✅     | Dev-only localStorage budget display                                                                                          |
+| 2025-12-24 | 6     | Bug fix                         | ✅     | WorkflowEvent → WorkflowSubscriptionEvent collision                                                                           |
+| 2025-12-24 | 7     | Barrel exports                  | ✅     | lib/desktop, store/desktop exports                                                                                            |
+| 2025-12-24 | 7     | StorageMonitor wiring           | ✅     | Added to Desktop component                                                                                                    |
+| 2025-12-24 | 8     | Doc updates                     | ✅     | Updated .ruler/30-mindscape.md, docs/architecture/mindscape.md                                                                |
+| 2025-12-24 | 9     | Unit tests                      | ✅     | 80 tests: store, selectors, performance, schemas, collections, subscriptions                                                  |
+| 2025-12-24 | 9     | E2E smoke tests                 | ✅     | 4 tests: canvas load, controls, default chat, routes                                                                          |
+| 2025-12-24 | 9     | E2E window tests                | ✅     | 5 pass, 2 skip: spawn, focus, drag, close                                                                                     |
+| 2025-12-24 | 9     | E2E dock tests                  | ✅     | 4 pass, 2 skip: palette, spawn types, viewport                                                                                |
+| 2025-12-24 | 6     | Compat layer attempt            | ❌     | Failed: type mismatch, paradigm incompatibility                                                                               |
+| 2025-12-24 | 6     | Compat layer removed            | ✅     | Deleted store/compat.ts, clean separation                                                                                     |
+| 2025-12-24 | 6     | Paradigm clarification          | ✅     | Documented Fat Nodes vs Thin Windows in Section 1.5                                                                           |
+| 2025-12-24 | 6     | ExecPlan v3.0                   | ✅     | Updated phases, added Phase 6-7, corrected strategy                                                                           |
+| 2025-12-24 | 6     | Create all 12 window components | ✅     | ~3,025 lines: Note, Reminder, Terminal, Droid, Chat, Workflow, WorkflowList, Todo, Settings, Integrations, Knowledge, Concept |
+| 2025-12-24 | 6     | Delete mindscape/nodes          | ✅     | -5,600 lines: 25 node files removed                                                                                           |
+| 2025-12-24 | 6     | Delete mindscape/registry.tsx   | ✅     | Replaced by windows/registry.tsx                                                                                              |
+| 2025-12-24 | 6     | Delete orphaned hooks           | ✅     | use-mindscape-executor.ts, use-mindscape-stream.ts                                                                            |
+| 2025-12-24 | 6     | Delete orphaned LOD/utils       | ✅     | mindscape/lod.ts, lib/mindscape/lod.ts, mindscape/utils.ts                                                                    |
+| 2025-12-24 | 6     | Update imports                  | ✅     | canvas.tsx, command-palette.tsx, living-edge.tsx, use-deep-links.ts                                                           |
+| 2025-12-24 | 6     | **Net code reduction**          | ✅     | **-2,850 lines** (added 3,025, removed 5,875)                                                                                 |
+| 2025-12-24 | 7     | Migrate / route to Desktop      | ✅     | Route now uses DesktopCanvas instead of MindscapeCanvas                                                                       |
+| 2025-12-24 | 7     | Move essential components       | ✅     | living-edge, context-lens, workflow-drawer → shared/                                                                          |
+| 2025-12-24 | 7     | Delete mindscape infrastructure | ✅     | components/mindscape/, 6 hooks, 8 lib files, tests                                                                            |
+| 2025-12-24 | 7     | **Phase 7 total deletion**      | ✅     | **-8,775 lines** (50 files)                                                                                                   |
 
 ---
 
@@ -3122,18 +3245,18 @@ TanStack DB Collections (Data Layer)
 
 > Document unexpected findings during implementation.
 
-| Date | Phase | Discovery | Impact | Resolution |
-|------|-------|-----------|--------|------------|
-| 2025-12-23 | 1 | Existing nodes depend heavily on `useMindscapeStore` | Medium | Created parallel desktop store; registry references existing nodes for now |
-| 2025-12-23 | 1 | Layout functions typed to `ArtifactData` | Low | Fixed: made functions generic with `NodeData` type constraint |
-| 2025-12-23 | 1 | Pre-existing type errors in packages/api metrics | None | Unrelated to desktop; noted but not blocking |
-| 2025-12-23 | 1 | Node components tightly coupled to mindscape | Medium | Created compat layer; full migration deferred to Phase 3 |
-| 2025-12-23 | 2 | No conversation/thread tRPC router exists | Low | threadCollection deferred; requires API work first |
-| 2025-12-23 | 2 | TanStack DB API differs from initial assumptions | Low | Fixed: use collection.insert/update/delete with onInsert/onUpdate/onDelete handlers |
-| 2025-12-24 | 6 | **CRITICAL: Fat Nodes vs Thin Windows paradigm mismatch** | **High** | Compat layer approach abandoned. New strategy: build replacement windows from scratch. See Section 1.5 |
-| 2025-12-24 | 6 | ArtifactData (21 types, 50+ fields) incompatible with WindowData (4 fields) | High | Don't unify types. Desktop windows fetch data externally via collections |
-| 2025-12-24 | 6 | Node render pattern (`data.title`) incompatible with window pattern (`useNote().title`) | High | Build new window components, don't refactor existing nodes |
-| 2025-12-24 | 6 | Compat layer complexity exploded trying to bridge paradigms | High | Deleted compat.ts. Clean separation: mindscape components use mindscape store, desktop components use desktop store |
+| Date       | Phase | Discovery                                                                               | Impact   | Resolution                                                                                                          |
+| ---------- | ----- | --------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| 2025-12-23 | 1     | Existing nodes depend heavily on `useMindscapeStore`                                    | Medium   | Created parallel desktop store; registry references existing nodes for now                                          |
+| 2025-12-23 | 1     | Layout functions typed to `ArtifactData`                                                | Low      | Fixed: made functions generic with `NodeData` type constraint                                                       |
+| 2025-12-23 | 1     | Pre-existing type errors in packages/api metrics                                        | None     | Unrelated to desktop; noted but not blocking                                                                        |
+| 2025-12-23 | 1     | Node components tightly coupled to mindscape                                            | Medium   | Created compat layer; full migration deferred to Phase 3                                                            |
+| 2025-12-23 | 2     | No conversation/thread tRPC router exists                                               | Low      | threadCollection deferred; requires API work first                                                                  |
+| 2025-12-23 | 2     | TanStack DB API differs from initial assumptions                                        | Low      | Fixed: use collection.insert/update/delete with onInsert/onUpdate/onDelete handlers                                 |
+| 2025-12-24 | 6     | **CRITICAL: Fat Nodes vs Thin Windows paradigm mismatch**                               | **High** | Compat layer approach abandoned. New strategy: build replacement windows from scratch. See Section 1.5              |
+| 2025-12-24 | 6     | ArtifactData (21 types, 50+ fields) incompatible with WindowData (4 fields)             | High     | Don't unify types. Desktop windows fetch data externally via collections                                            |
+| 2025-12-24 | 6     | Node render pattern (`data.title`) incompatible with window pattern (`useNote().title`) | High     | Build new window components, don't refactor existing nodes                                                          |
+| 2025-12-24 | 6     | Compat layer complexity exploded trying to bridge paradigms                             | High     | Deleted compat.ts. Clean separation: mindscape components use mindscape store, desktop components use desktop store |
 
 ---
 
@@ -3141,26 +3264,26 @@ TanStack DB Collections (Data Layer)
 
 > Consolidate all decisions with rationale and date.
 
-| Date | Decision | Rationale | Made By |
-|------|----------|-----------|---------|
-| 2025-12-23 | Window Instance ↔ Resource ontology | AI recommended; clearer separation than App/Entity | AI Review |
-| 2025-12-23 | Layout-first (local), Backend-first (resources) | Avoids dual-authority problem; biggest risk identified by AI | AI Review |
-| 2025-12-23 | Zustand (layout) + TanStack DB (resources) | Purpose-built sync; transaction IDs prevent echo | AI Review |
-| 2025-12-23 | localStorage <50KB budget | Avoid size limits, blocking serialization, schema migration pain | AI Review |
-| 2025-12-23 | Single WS, multiplexed, cursor-based subscriptions | Scalable; N subscriptions per node doesn't scale | AI Review |
-| 2025-12-23 | Dock at bottom | macOS style; consistent with spatial metaphor | UX Decision |
-| 2025-12-23 | Snap to 50px grid | Prevents visual chaos; easier alignment | UX Decision |
-| 2025-12-23 | Tiling optional via ⌥+drag | Power users can tile; default is freeform | UX Decision |
-| 2025-12-23 | Multi-window per resource: Yes | Matches desktop OS behavior | UX Decision |
-| 2025-12-23 | Fixed enum for edge kinds | Simplicity for MVP; can extend later | Architecture |
-| 2025-12-23 | TanStack DB beta risk accepted | Pin version; git revert if breaking changes | Risk Mitigation |
-| 2025-12-23 | No feature flags | Immediate removal of dead code; git revert for recovery | ALFRED Principle |
-| 2025-12-23 | Collections use onInsert/onUpdate/onDelete handlers | TanStack DB queryCollectionOptions pattern with refetch on mutation complete | Architecture |
-| 2025-12-23 | createOptimisticAction for UI-initiated mutations | Separate actions for insert/update/delete with immediate optimistic state | Architecture |
-| 2025-12-24 | **Abandon compat layer approach** | Compat layer added complexity without value; paradigms fundamentally incompatible | Architecture |
-| 2025-12-24 | **Build replacement windows, don't migrate nodes** | Fat Nodes (embedded data) vs Thin Windows (external data) are incompatible patterns | Architecture |
-| 2025-12-24 | Keep mindscape and desktop stores separate | No bridge needed; mindscape → mindscape store, desktop → desktop store | Architecture |
-| 2025-12-24 | Windows fetch data via collections, not store | Desktop windows use `useLiveQuery` from collections, not Zustand selectors | Architecture |
+| Date       | Decision                                            | Rationale                                                                           | Made By          |
+| ---------- | --------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------- |
+| 2025-12-23 | Window Instance ↔ Resource ontology                 | AI recommended; clearer separation than App/Entity                                  | AI Review        |
+| 2025-12-23 | Layout-first (local), Backend-first (resources)     | Avoids dual-authority problem; biggest risk identified by AI                        | AI Review        |
+| 2025-12-23 | Zustand (layout) + TanStack DB (resources)          | Purpose-built sync; transaction IDs prevent echo                                    | AI Review        |
+| 2025-12-23 | localStorage <50KB budget                           | Avoid size limits, blocking serialization, schema migration pain                    | AI Review        |
+| 2025-12-23 | Single WS, multiplexed, cursor-based subscriptions  | Scalable; N subscriptions per node doesn't scale                                    | AI Review        |
+| 2025-12-23 | Dock at bottom                                      | macOS style; consistent with spatial metaphor                                       | UX Decision      |
+| 2025-12-23 | Snap to 50px grid                                   | Prevents visual chaos; easier alignment                                             | UX Decision      |
+| 2025-12-23 | Tiling optional via ⌥+drag                          | Power users can tile; default is freeform                                           | UX Decision      |
+| 2025-12-23 | Multi-window per resource: Yes                      | Matches desktop OS behavior                                                         | UX Decision      |
+| 2025-12-23 | Fixed enum for edge kinds                           | Simplicity for MVP; can extend later                                                | Architecture     |
+| 2025-12-23 | TanStack DB beta risk accepted                      | Pin version; git revert if breaking changes                                         | Risk Mitigation  |
+| 2025-12-23 | No feature flags                                    | Immediate removal of dead code; git revert for recovery                             | ALFRED Principle |
+| 2025-12-23 | Collections use onInsert/onUpdate/onDelete handlers | TanStack DB queryCollectionOptions pattern with refetch on mutation complete        | Architecture     |
+| 2025-12-23 | createOptimisticAction for UI-initiated mutations   | Separate actions for insert/update/delete with immediate optimistic state           | Architecture     |
+| 2025-12-24 | **Abandon compat layer approach**                   | Compat layer added complexity without value; paradigms fundamentally incompatible   | Architecture     |
+| 2025-12-24 | **Build replacement windows, don't migrate nodes**  | Fat Nodes (embedded data) vs Thin Windows (external data) are incompatible patterns | Architecture     |
+| 2025-12-24 | Keep mindscape and desktop stores separate          | No bridge needed; mindscape → mindscape store, desktop → desktop store              | Architecture     |
+| 2025-12-24 | Windows fetch data via collections, not store       | Desktop windows use `useLiveQuery` from collections, not Zustand selectors          | Architecture     |
 
 ---
 
@@ -3170,33 +3293,36 @@ TanStack DB Collections (Data Layer)
 
 ### Outcomes
 
-| Metric | Target | Actual | Status |
-|--------|--------|--------|--------|
-| Entry Points | 1 (`/`) | 1 (`/`) | ✅ |
-| Window Types | 12 | 12 (all implemented) | ✅ |
-| Dead Code Removed (Phase 6) | ~2,500 | ~5,875 (nodes + orphans) | ✅ |
-| Dead Code Removed (Phase 7) | - | ~8,775 (mindscape infra) | ✅ |
-| New Window Code | - | ~3,025 lines | ✅ |
-| **Total Net Code Change** | Reduction | **-11,625 lines** | ✅ |
-| Time to Interactive | <1s | <1s (no WebGPU init) | ✅ |
-| Max Nodes @ 60fps | 200+ | TBD (perf tests pending) | ⬜ |
-| localStorage Size | <50KB | <50KB (monitored) | ✅ |
-| Unit Test Coverage | 80% | 80 tests passing | ✅ |
-| E2E Test Coverage | Core flows | 13 pass, 4 skip | ✅ |
+| Metric                      | Target     | Actual                   | Status |
+| --------------------------- | ---------- | ------------------------ | ------ |
+| Entry Points                | 1 (`/`)    | 1 (`/`)                  | ✅     |
+| Window Types                | 12         | 12 (all implemented)     | ✅     |
+| Dead Code Removed (Phase 6) | ~2,500     | ~5,875 (nodes + orphans) | ✅     |
+| Dead Code Removed (Phase 7) | -          | ~8,775 (mindscape infra) | ✅     |
+| New Window Code             | -          | ~3,025 lines             | ✅     |
+| **Total Net Code Change**   | Reduction  | **-11,625 lines**        | ✅     |
+| Time to Interactive         | <1s        | <1s (no WebGPU init)     | ✅     |
+| Max Nodes @ 60fps           | 200+       | TBD (perf tests pending) | ⬜     |
+| localStorage Size           | <50KB      | <50KB (monitored)        | ✅     |
+| Unit Test Coverage          | 80%        | 80 tests passing         | ✅     |
+| E2E Test Coverage           | Core flows | 13 pass, 4 skip          | ✅     |
 
 ### Retrospective
 
 **What went well:**
+
 - Store architecture cleanly separated (windows, viewport, dock, persist)
 - TanStack DB integration for optimistic mutations
 - Subscription protocol provides scalable real-time sync foundation
 - Test infrastructure (bun test + Playwright) works well with auto dev server
 
 **What could be improved:**
+
 - Command palette keyboard interaction flaky in Playwright tests (4 tests skipped)
 - Some node migrations still reference old store (compat layer in place)
 
 **Lessons learned:**
+
 - Layout-first localStorage with backend-first resources avoids dual-authority pain
 - Multiplexed WebSocket with cursor-based resume is cleaner than N subscriptions
 - Zustand selectors should be defined separately for memoization

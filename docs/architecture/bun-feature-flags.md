@@ -3,6 +3,7 @@
 ## Purpose
 
 Use Bun's compile-time feature flags to conditionally include/exclude code paths at build time. This enables:
+
 - Deprecating code while keeping it testable
 - Reducing production bundle size via dead code elimination
 - Platform-specific code paths (e.g., Linux-only features)

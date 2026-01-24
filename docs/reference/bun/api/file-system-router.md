@@ -1,9 +1,10 @@
 ---
 title: FileSystemRouter – API | Bun Docs
-url: 
+url:
 description: Resolve incoming HTTP requests against a local file system directory with Bun's fast, Next.js-compatible router.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Bun provides a fast API for resolving routes against file-system paths. This API is primarily intended for library authors. At the moment only Next.js-style file-system routing is supported, but other styles may be added in the future.
 
-## [Next.js-style](https://bun.com/docs/api/file-system-router\#next-js-style)
+## [Next.js-style](https://bun.com/docs/api/file-system-router#next-js-style)
 
 The `FileSystemRouter` class can resolve routes against a `pages` directory. (The Next.js 13 `app` directory is not yet supported.) Consider the following `pages` directory:
 
@@ -143,7 +144,7 @@ router.reload();
 
 ```
 
-## [Reference](https://bun.com/docs/api/file-system-router\#reference)
+## [Reference](https://bun.com/docs/api/file-system-router#reference)
 
 ```
 interface Bun {
@@ -178,7 +179,7 @@ SQLite](https://bun.com/docs/api/sqlite) [Next\\
 \\
 TCP sockets](https://bun.com/docs/api/tcp)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/file-system-router.md)
 
@@ -202,7 +203,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

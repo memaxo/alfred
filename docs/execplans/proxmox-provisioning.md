@@ -12,7 +12,7 @@ Provision production infrastructure for **ALFRED itself** (not apps ALFRED gener
   - an ALFRED server LXC (web + API-in-process),
   - a Postgres 16 + pgvector LXC,
   - a Redis LXC,
-  and start them if needed.
+    and start them if needed.
 - Re-run the script safely (no destructive operations by default, no duplicate creates).
 - Verify connectivity by polling ALFRED health endpoints (`/healthz`, `/healthz/deps`) once the ALFRED service is installed and running in the server container.
 - Follow updated docs to understand the chosen topology, required Proxmox API credentials, and the next operational steps (deploying ALFRED, applying migrations, enabling schedulers).
@@ -103,7 +103,7 @@ Health check endpoints (server):
 
    cd /path/to/repo
    PROXMOX_HOST=... PROXMOX_TOKEN_ID=... PROXMOX_TOKEN_SECRET=... PROXMOX_NODE=... \\
-     bun run scripts/proxmox.ts
+   bun run scripts/proxmox.ts
 
 2. Verify ALFRED health (requires ALFRED running in the server container):
 

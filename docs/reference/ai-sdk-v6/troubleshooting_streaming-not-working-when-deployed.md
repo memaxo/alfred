@@ -16,19 +16,18 @@ The causes of this issue are varied and depend on the deployment environment.
 
 You can try the following:
 
-  * add `'Transfer-Encoding': 'chunked'` and/or `Connection: 'keep-alive'` headers
-        
-        return result.toUIMessageStreamResponse({
-        
-          headers: {
-        
-            'Transfer-Encoding': 'chunked',
-        
-            Connection: 'keep-alive',
-        
-          },
-        
-        });
+- add `'Transfer-Encoding': 'chunked'` and/or `Connection: 'keep-alive'` headers
+  return result.toUIMessageStreamResponse({
+
+        headers: {
+
+          'Transfer-Encoding': 'chunked',
+
+          Connection: 'keep-alive',
+
+        },
+
+      });
 
 Previous
 

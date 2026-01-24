@@ -15,6 +15,7 @@ The total estimated effort for all open items has been analyzed and sized. After
 **Active Development**: 7 items in progress
 
 The team is currently working on:
+
 1. Three technical debt items focused on code organization and simplification
 2. One urgent item related to exposing system capabilities as tools
 3. One strategic integration project
@@ -33,6 +34,7 @@ Two work items are incorrectly marked as "In Progress" when they have actually b
 **Action Required**: Update status for these two items (ALF-12, ALF-72) to "Done" immediately. Implementation has been verified in the codebase.
 
 **Update Commands**:
+
 - ALF-12: Implementation verified in `packages/runtime/src/orchestrator/index.ts:43-51`
 - ALF-72: Implementation verified in `packages/agent/assistant/src/tool/home.ts` (307 lines)
 
@@ -51,6 +53,7 @@ The majority of open items lack essential planning information:
 **Action Required**: Analysis complete. All 216 tickets have been analyzed with recommended sizes and priorities. See `docs/reports/ticket-update-manual-guide-2025-12-16.md` for detailed update instructions.
 
 **Analysis Results**:
+
 - 182 tickets sized (previously 34 had estimates)
 - 199 tickets prioritized (previously 17 had priorities)
 - Priority distribution: Urgent (2), High (6), Medium (195), Low (13)
@@ -108,16 +111,19 @@ Current priority breakdown:
 ## Risk Assessment
 
 **Low Risk Areas**:
+
 - Active work is progressing normally
 - No critical blockers identified
 - Team capacity appears adequate for current workload
 
 **Medium Risk Areas**:
+
 - Large backlog may indicate scope creep or insufficient prioritization
 - Missing metadata limits planning accuracy
 - Status tracking errors suggest process gaps
 
 **High Risk Areas**:
+
 - None identified at this time
 
 ## Next Steps
@@ -130,11 +136,13 @@ Current priority breakdown:
 ## Implementation Tools
 
 **Automated Script**: `scripts/size-linear-tickets.ts`
+
 - Analyzes all tickets and generates updates
 - Requires `LINEAR_API_KEY` environment variable
 - Can run in dry-run mode to preview changes
 
 **Manual Guide**: `docs/reports/ticket-update-manual-guide-2025-12-16.md`
+
 - Detailed instructions for each high-priority ticket
 - Linear CLI commands for manual updates
 - Priority framework and sizing guidelines
@@ -142,10 +150,12 @@ Current priority breakdown:
 ## Appendix: Key Metrics
 
 **Work Distribution**:
+
 - In Progress: 7 items (3%)
 - Backlog: 209 items (97%)
 
 **Priority Distribution**:
+
 - Urgent: 2 items (1%)
 - High: 5 items (2%)
 - Medium: 9 items (4%)
@@ -153,6 +163,7 @@ Current priority breakdown:
 - Unprioritized: 199 items (92%)
 
 **Metadata Completeness**:
+
 - Items with estimates: 34 of 216 (16%)
 - Items with labels: 90 of 216 (42%)
 - Items with assignees: 7 of 216 (3%)

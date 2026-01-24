@@ -1,5 +1,6 @@
 Use this prompt structure to generate a perfect plan for a new feature or refactor.
-```
+
+````
 You are an AI architect and systems designer investigating how to implement **multi-agent Codex orchestration** for the ALFRED project.
 
 Your job is to produce an **extremely detailed written report** (minimum ~3000+ words) that analyzes the current architecture and proposes a concrete, implementable multi-agent design — not to write code. Assume the reader is a strong engineer but *new to this repo*.
@@ -182,7 +183,7 @@ User → /workflow.start → workflowRouter.start
      → createRun() → createWorkflowExecutor() → WorkflowRuntime / runPlanV6
      → event stream → workflowRouter.stream → DB appendEvent + conversation persistence
      → knowledge (persistReasoning) + metrics + Linear (emitLinearActivity)
-```
+````
 
 Your task here is **not** to design anything new yet, but to clearly map out what exists.
 
@@ -199,18 +200,18 @@ You must:
      - A single **root ExecPlan**.
      - A set of **subtasks** with their own ExecPlans.
      - A sequence of **agent waves** (each wave = some number of Codex agents, each assigned one or more subtasks).
-   - How the *merge* and *review* agents fit into this sequence.
+   - How the _merge_ and _review_ agents fit into this sequence.
 
 2. **Define pure function interfaces (no side effects) for the core logic**. Give TypeScript-level signatures and describe semantics, e.g.:
 
 ```ts
 // Pure task decomposition from high-level requirement + context into subtasks.
 export type SubTask = {
-  id: string;            // stable identifier
+  id: string; // stable identifier
   title: string;
-  requirement: string;   // what this sub-agent must achieve
-  deps: string[];        // ids of subtasks that must complete first
-  priority: number;      // simple 0..1 or integer scale
+  requirement: string; // what this sub-agent must achieve
+  deps: string[]; // ids of subtasks that must complete first
+  priority: number; // simple 0..1 or integer scale
 };
 
 export function decomposeTask(
@@ -302,8 +303,8 @@ Requirements:
 
 3. **Who updates ExecPlans and how:**
    - How Codex agents (via prompts) are instructed to:
-     - First *read* the relevant ExecPlan.
-     - Then *update* Progress/Decision Log as work proceeds.
+     - First _read_ the relevant ExecPlan.
+     - Then _update_ Progress/Decision Log as work proceeds.
    - Explain how these modifications are kept consistent and idempotent (e.g., avoid two agents editing the same ExecPlan).
 
 4. **ExecPlan persistence in knowledge graph:**
@@ -342,7 +343,7 @@ Scenarios to cover in depth:
      - Stop the agent.
      - Mark the subtask as `stuck`.
      - Emit a `workflow` event (`type: "agent-stuck"`).
-     - Optionally spawn a *diagnostic* agent or request human guidance.
+     - Optionally spawn a _diagnostic_ agent or request human guidance.
 
 2. **Agent needs guidance**
    - Signals:
@@ -398,7 +399,7 @@ Design a **phased implementation roadmap** matching (but not coding) the followi
 **Phase 1: Task decomposition + root ExecPlan creation**
 
 - Implement pure decomposition function(s) and specify where they live.
-- Integrate the *idea* of root ExecPlan creation into `workflow.start` / `WorkflowRuntime` behavior.
+- Integrate the _idea_ of root ExecPlan creation into `workflow.start` / `WorkflowRuntime` behavior.
 
 **Phase 2: Single-agent ExecPlan execution**
 
@@ -561,4 +562,7 @@ You are not writing code or changing the repo. You are:
 - Producing a report that lets another engineer implement the feature confidently.
 
 Take your time, be concrete, and favor brevity in implementation mechanics while being exhaustive in architecture and reasoning.`
+
+```
+
 ```

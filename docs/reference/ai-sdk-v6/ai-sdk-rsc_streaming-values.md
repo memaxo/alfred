@@ -12,8 +12,8 @@ These utilities can also be paired with AI SDK Core functions like `streamText` 
 
 There are two functions provided by the RSC API that allow you to create streamable values:
 
-  * `createStreamableValue` \- creates a streamable (serializable) value, with full control over how you create, update, and close the stream.
-  * `createStreamableUI` \- creates a streamable React component, with full control over how you create, update, and close the stream.
+- `createStreamableValue` \- creates a streamable (serializable) value, with full control over how you create, update, and close the stream.
+- `createStreamableUI` \- creates a streamable React component, with full control over how you create, update, and close the stream.
 
 ## `createStreamableValue`
 
@@ -21,94 +21,92 @@ The RSC API allows you to stream serializable Javascript values from the server 
 
 This is useful when you want to stream:
 
-  * Text generations from the language model in real-time.
-  * Buffer values of image and audio generations from multi-modal models.
-  * Progress updates from multi-step agent runs.
+- Text generations from the language model in real-time.
+- Buffer values of image and audio generations from multi-modal models.
+- Progress updates from multi-step agent runs.
 
 ## Creating a Streamable Value
 
 You can import `createStreamableValue` from `@ai-sdk/rsc` and use it to create a streamable value.
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import { createStreamableValue } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export const runThread = async () => {
-    
+
       const streamableStatus = createStreamableValue('thread.init');
-    
-    
-    
-    
+
+
+
+
       setTimeout(() => {
-    
+
         streamableStatus.update('thread.run.create');
-    
+
         streamableStatus.update('thread.run.update');
-    
+
         streamableStatus.update('thread.run.end');
-    
+
         streamableStatus.done('thread.end');
-    
+
       }, 1000);
-    
-    
-    
-    
+
+
+
+
       return {
-    
+
         status: streamableStatus.value,
-    
+
       };
-    
+
     };
 
 ## Reading a Streamable Value
 
 You can read streamable values on the client using `readStreamableValue`. It returns an async iterator that yields the value of the streamable as it is updated:
-    
-    
+
     import { readStreamableValue } from '@ai-sdk/rsc';
-    
+
     import { runThread } from '@/actions';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       return (
-    
+
          {
-    
+
             const { status } = await runThread();
-    
-    
-    
-    
+
+
+
+
             for await (const value of readStreamableValue(status)) {
-    
+
               console.log(value);
-    
+
             }
-    
+
           }}
-    
+
         >
-    
+
           Ask
-    
-        
-    
+
+
+
       );
-    
+
     }
 
 Learn how to stream a text generation (with `streamText`) using the Next.js App Router and `createStreamableValue` in this example.
@@ -122,41 +120,40 @@ Learn how to stream a text generation (with `streamText`) using the Next.js App 
 Let's look at how you can use the `createStreamableUI` function with a Server Action.
 
 app/actions.tsx
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import { createStreamableUI } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export async function getWeather() {
-    
+
       const weatherUI = createStreamableUI();
-    
-    
-    
-    
+
+
+
+
       weatherUI.update(Loading...);
-    
-    
-    
-    
+
+
+
+
       setTimeout(() => {
-    
+
         weatherUI.done(It&apos;s a sunny day!);
-    
+
       }, 1000);
-    
-    
-    
-    
+
+
+
+
       return weatherUI.value;
-    
+
     }
 
 First, you create a streamable UI with an empty state and then update it with a loading message. After 1 second, you mark the stream as done passing in the actual weather information as its final value. The `.value` property contains the actual UI that can be sent to the client.
@@ -166,63 +163,62 @@ First, you create a streamable UI with an empty state and then update it with a 
 On the client side, you can call the `getWeather` Server Action and render the returned UI like any other React component.
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useState } from 'react';
-    
+
     import { readStreamableValue } from '@ai-sdk/rsc';
-    
+
     import { getWeather } from '@/actions';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [weather, setWeather] = useState(null);
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
            {
-    
+
               const weatherUI = await getWeather();
-    
+
               setWeather(weatherUI);
-    
+
             }}
-    
+
           >
-    
+
             What&apos;s the weather?
-    
-          
-    
-    
-    
-    
+
+
+
+
+
+
           {weather}
-    
-        
-    
+
+
+
       );
-    
+
     }
 
 When the button is clicked, the `getWeather` function is called, and the returned UI is set to the `weather` state and rendered on the page. Users will see the loading message first and then the actual weather information after 1 second.
 
 Learn more about handling multiple streams in a single request in the Multiple Streamables guide.
 
-Learn more about handling state for more complex use cases with  AI/UI State .
+Learn more about handling state for more complex use cases with AI/UI State .
 
 Previous
 

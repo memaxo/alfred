@@ -1,9 +1,10 @@
 ---
 title: Audit dependencies – Package manager | Bun Docs
-url: 
+url:
 description: Check installed packages for vulnerabilities.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -80,7 +81,7 @@ To update all dependencies to the latest versions (including breaking changes):
 
 ```
 
-### [`--json`](https://bun.com/docs/install/audit\#json)
+### [`--json`](https://bun.com/docs/install/audit#json)
 
 Use the `--json` flag to print the raw JSON response from the registry instead of the formatted report:
 
@@ -88,7 +89,7 @@ Use the `--json` flag to print the raw JSON response from the registry instead o
 bun audit --json
 ```
 
-### [Exit code](https://bun.com/docs/install/audit\#exit-code)
+### [Exit code](https://bun.com/docs/install/audit#exit-code)
 
 `bun audit` will exit with code `0` if no vulnerabilities are found and `1` if the report lists any vulnerabilities. This will still happen even if `--json` is passed.
 
@@ -98,7 +99,7 @@ Patch dependencies](https://bun.com/docs/install/patch) [Next\\
 \\
 .npmrc support](https://bun.com/docs/install/npmrc)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/audit.md)
 
@@ -122,7 +123,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

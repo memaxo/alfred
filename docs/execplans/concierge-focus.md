@@ -108,20 +108,20 @@ Learning runs in a background worker (`packages/agent/src/orchestrator/learning-
 
 Key “existing patterns” we will reuse:
 
-1) Durable post-run presentation:
-`docs/architecture/work-compilation.md` describes why workflow snapshots cannot be trusted after completion.
-`packages/api/src/services/compilation.ts` implements an API-layer observer that persists a compact compilation artifact under `workflow_runs.stateData.compilation`.
+1. Durable post-run presentation:
+   `docs/architecture/work-compilation.md` describes why workflow snapshots cannot be trusted after completion.
+   `packages/api/src/services/compilation.ts` implements an API-layer observer that persists a compact compilation artifact under `workflow_runs.stateData.compilation`.
 
-2) Suspend/resume:
-`packages/runtime/src/orchestrator/suspend.ts` and `resume.ts` implement suspension for clarifications and resuming with responses.
-`packages/api/src/routers/workflow.ts` provides API endpoints to suspend and resume runs.
+2. Suspend/resume:
+   `packages/runtime/src/orchestrator/suspend.ts` and `resume.ts` implement suspension for clarifications and resuming with responses.
+   `packages/api/src/routers/workflow.ts` provides API endpoints to suspend and resume runs.
 
-3) Sense + focus context:
-`packages/api/src/routers/workingset.ts` provides user focus state that can influence routing.
-`packages/api/src/routers/capture.ts`, `packages/api/src/routers/inbox.ts`, and `packages/api/src/routers/receipt.ts` implement capture/inbox/triage patterns with evidence and corrections.
+3. Sense + focus context:
+   `packages/api/src/routers/workingset.ts` provides user focus state that can influence routing.
+   `packages/api/src/routers/capture.ts`, `packages/api/src/routers/inbox.ts`, and `packages/api/src/routers/receipt.ts` implement capture/inbox/triage patterns with evidence and corrections.
 
-4) RAG + rerank:
-`packages/runtime/src/engines/knowledge.ts` is the canonical implementation of embed → hybrid search → optional rerank with metrics, plus touching nodes for recency.
+4. RAG + rerank:
+   `packages/runtime/src/engines/knowledge.ts` is the canonical implementation of embed → hybrid search → optional rerank with metrics, plus touching nodes for recency.
 
 Terminology for this plan:
 
@@ -196,9 +196,10 @@ The thresholds must allow existing known offenders only temporarily, with a docu
 Proof:
 
 Run:
-  - from repo root: `bun test packages/api/test/architecture.godfiles.test.ts`
-Expect:
-  - it passes after refactors, and fails before refactors (for at least `workflow.ts`).
+
+- from repo root: `bun test packages/api/test/architecture.godfiles.test.ts`
+  Expect:
+- it passes after refactors, and fails before refactors (for at least `workflow.ts`).
 
 ### Milestone 2: Refactor bundle A — de-god `packages/api/src/routers/workflow.ts`
 
@@ -274,10 +275,11 @@ Acceptance:
 Proof:
 
 Run:
-  - from repo root: `bun test packages/api/test/workflow.*`
-  - and: `bun test packages/pipeline`
-Expect:
-  - tests pass.
+
+- from repo root: `bun test packages/api/test/workflow.*`
+- and: `bun test packages/pipeline`
+  Expect:
+- tests pass.
 
 ### Milestone 3: Refactor bundle B — de-god `packages/api/src/routers/voice.ts`
 
@@ -296,10 +298,11 @@ Acceptance:
 Proof:
 
 Run:
-  - from repo root: `bun test packages/api/test/voice*`
-  - and: `bun test packages/voice`
-Expect:
-  - tests pass.
+
+- from repo root: `bun test packages/api/test/voice*`
+- and: `bun test packages/voice`
+  Expect:
+- tests pass.
 
 ### Milestone 4: Concierge Focus domain model (DB + types + repo)
 
@@ -351,10 +354,11 @@ Acceptance:
 Proof:
 
 Run:
-  - from repo root: `bun run db:migrate` (in an environment where DB is configured)
-  - and: `bun test packages/db/test/repo.focus.test.ts` (new)
-Expect:
-  - migrations apply; tests pass.
+
+- from repo root: `bun run db:migrate` (in an environment where DB is configured)
+- and: `bun test packages/db/test/repo.focus.test.ts` (new)
+  Expect:
+- migrations apply; tests pass.
 
 ### Milestone 5: Concierge Focus service layer (attention + delta)
 
@@ -406,9 +410,10 @@ and a resume action that clears the attention item when satisfied.
 Proof:
 
 Run:
-  - from repo root: `bun test packages/api/test/attention.*` (new)
-Expect:
-  - tests pass.
+
+- from repo root: `bun test packages/api/test/attention.*` (new)
+  Expect:
+- tests pass.
 
 ### Milestone 6: Concierge Focus routers (thin product boundary)
 
@@ -443,10 +448,11 @@ Web and native clients can call them via existing tRPC wiring.
 Proof:
 
 Run:
-  - from repo root: `bun test packages/api/test/focus.*` (new)
-  - and: `bun test packages/api/test/attention.*` (new)
-Expect:
-  - tests pass.
+
+- from repo root: `bun test packages/api/test/focus.*` (new)
+- and: `bun test packages/api/test/attention.*` (new)
+  Expect:
+- tests pass.
 
 Implementation notes (done):
 
@@ -482,9 +488,10 @@ Starting web + api, the user can create a focus set, start a workflow run, and s
 Proof:
 
 Manual run:
-  - start API and web dev servers
-  - navigate to the Focus Board route/window
-  - trigger a run and see updates
+
+- start API and web dev servers
+- navigate to the Focus Board route/window
+- trigger a run and see updates
 
 Implementation notes (done):
 
@@ -568,116 +575,116 @@ When commands are listed, they are run from the repository root unless stated ot
 
 ### Baseline measurement (Milestone 1)
 
-1) Measure router file sizes.
+1. Measure router file sizes.
 
    Command:
-     wc -l packages/api/src/routers/*.ts | sort -n
+   wc -l packages/api/src/routers/\*.ts | sort -n
 
    Expected notable outputs (approximate):
-     - packages/api/src/routers/workflow.ts ~ 3288
-     - packages/api/src/routers/voice.ts ~ 1029
+   - packages/api/src/routers/workflow.ts ~ 3288
+   - packages/api/src/routers/voice.ts ~ 1029
 
-2) Measure runtime orchestrator file sizes.
+2. Measure runtime orchestrator file sizes.
 
    Command:
-     wc -l packages/runtime/src/orchestrator/*.ts | sort -n
+   wc -l packages/runtime/src/orchestrator/\*.ts | sort -n
 
-3) Create a failing-then-fixing test `packages/api/test/architecture.godfiles.test.ts` that:
+3. Create a failing-then-fixing test `packages/api/test/architecture.godfiles.test.ts` that:
    reads a small list of critical files,
    calculates line counts,
    and asserts they are below the post-refactor thresholds.
    During milestone 1, allow an explicit exception list for current offenders, with a comment that milestone 2 removes the exception.
 
-4) Run:
-     bun test packages/api/test/architecture.godfiles.test.ts
+4. Run:
+   bun test packages/api/test/architecture.godfiles.test.ts
 
 ### Workflow router refactor (Milestone 2)
 
-1) Create new directory `packages/api/src/workflow/`.
+1. Create new directory `packages/api/src/workflow/`.
 
-2) Move checkpoint storage class and helpers:
+2. Move checkpoint storage class and helpers:
    - create `packages/api/src/workflow/checkpoint.ts`
    - move `WorkflowCheckpointStorage` and snapshot schema parsing there
    - export a factory to create `WorkflowCheckpointStorage` with either Postgres or in-memory storage
 
-3) Move metrics init:
+3. Move metrics init:
    - create `packages/api/src/workflow/metrics.ts`
    - move `initWorkflowMetrics()` there
    - ensure it is called only inside request paths (no import-time behavior)
 
-4) Move phase planning/execution helper code:
+4. Move phase planning/execution helper code:
    - create `packages/api/src/workflow/phase.ts`
    - extract helper functions used by `workflowPhaseRouter.plan`, `execute`, `status`, `streamPlan`, `executeByRunId`
 
-5) Move streaming/resume helpers:
+5. Move streaming/resume helpers:
    - create `packages/api/src/workflow/stream.ts`
    - extract the observable setup and queue observer wiring used by stream endpoints
 
-6) Move replay helpers:
+6. Move replay helpers:
    - create `packages/api/src/workflow/replay.ts`
 
-7) Move mapping helpers:
+7. Move mapping helpers:
    - create `packages/api/src/workflow/resource.ts`
 
-8) Update `packages/api/src/routers/workflow.ts` to import and delegate.
+8. Update `packages/api/src/routers/workflow.ts` to import and delegate.
    Keep the exported router shape intact.
 
-9) Ensure `packages/api/src/routers/workflow.ts` is now mostly:
+9. Ensure `packages/api/src/routers/workflow.ts` is now mostly:
    - imports
    - router definitions that call functions from `packages/api/src/workflow/*`
 
-10) Run targeted tests:
-     bun test packages/api/test/workflow*
-     bun test packages/pipeline
+10. Run targeted tests:
+    bun test packages/api/test/workflow\*
+    bun test packages/pipeline
 
-11) Update `packages/api/test/architecture.godfiles.test.ts` thresholds and remove the exception list for workflow once the refactor is complete.
+11. Update `packages/api/test/architecture.godfiles.test.ts` thresholds and remove the exception list for workflow once the refactor is complete.
 
 ### Voice router refactor (Milestone 3)
 
-1) Identify the largest cohesive units inside `packages/api/src/routers/voice.ts`:
+1. Identify the largest cohesive units inside `packages/api/src/routers/voice.ts`:
    - WebRTC session endpoints
    - streaming voice endpoints
    - session registry endpoints
 
-2) For each unit, create a handler module under `packages/api/src/voice/`:
+2. For each unit, create a handler module under `packages/api/src/voice/`:
    - example: `packages/api/src/voice/http.ts` for HTTP-ish procedures
    - example: `packages/api/src/voice/webrtc-handlers.ts` for WebRTC endpoint logic
 
-3) Update router to call those functions.
+3. Update router to call those functions.
 
-4) Run voice tests:
-     bun test packages/api/test/voice*
-     bun test packages/voice
+4. Run voice tests:
+   bun test packages/api/test/voice\*
+   bun test packages/voice
 
 ### Concierge Focus DB + types (Milestone 4)
 
-1) Add new Drizzle schema file `packages/db/src/schema/focus.ts`.
+1. Add new Drizzle schema file `packages/db/src/schema/focus.ts`.
    Define:
    - focus set table
    - commitments table
    - attention items table
-   Use UUID ids, userId ownership, and keep JSONB metadata versioned.
+     Use UUID ids, userId ownership, and keep JSONB metadata versioned.
 
-2) Add migration under `packages/db/src/migrations/NNNN_focus.sql`.
+2. Add migration under `packages/db/src/migrations/NNNN_focus.sql`.
    Use a single-word suffix, as required by repo naming rules.
 
-3) Add repo file `packages/db/src/repo/focus.ts` with CRUD functions.
+3. Add repo file `packages/db/src/repo/focus.ts` with CRUD functions.
    Follow repository patterns from `packages/db/src/repo/conversation.ts`.
 
-4) Add types under `packages/type/src/focus.ts` with Zod schemas.
+4. Add types under `packages/type/src/focus.ts` with Zod schemas.
    Export in `packages/type/src/index.ts`.
 
-5) Add DB tests under `packages/db/test/repo.focus.test.ts`.
+5. Add DB tests under `packages/db/test/repo.focus.test.ts`.
 
 ### Concierge Focus services and routers (Milestones 5–6)
 
-1) Add `packages/api/src/services/attention.ts`, `delta.ts`, `notify.ts`, `attention-observer.ts`.
+1. Add `packages/api/src/services/attention.ts`, `delta.ts`, `notify.ts`, `attention-observer.ts`.
 
-2) Add routers `packages/api/src/routers/focus.ts`, `attention.ts`, `delta.ts`, `notify.ts`.
+2. Add routers `packages/api/src/routers/focus.ts`, `attention.ts`, `delta.ts`, `notify.ts`.
 
-3) Wire routers into `packages/api/src/routers/index.ts`.
+3. Wire routers into `packages/api/src/routers/index.ts`.
 
-4) Add API tests under `packages/api/test/`.
+4. Add API tests under `packages/api/test/`.
 
 ### Web + native + tui MVP (Milestones 7–9)
 
@@ -688,10 +695,11 @@ Use existing workflow detail screens as the main “run viewer” to avoid dupli
 ### Full validation (Milestone 10)
 
 Run:
-  - bun test packages/api
-  - bun test packages/db
-  - bun test packages/pipeline
-  - bun test packages/runtime (if impacted)
+
+- bun test packages/api
+- bun test packages/db
+- bun test packages/pipeline
+- bun test packages/runtime (if impacted)
 
 Then execute the manual scenario below.
 
@@ -699,19 +707,20 @@ Then execute the manual scenario below.
 
 The north star loop is accepted when a novice can perform the following scenario on a dev machine:
 
-1) Start the API and web app.
-2) Create a focus set with WIP=1 (spotlight) and one commitment “Ship X”.
-3) Start a workflow run from that commitment.
-4) Observe the run streaming status in the UI.
-5) Trigger a clarification suspension (either via a test harness or by forcing a known “clarify” path).
-6) Observe an attention item created and visible in the Focus Board.
-7) Open voice call from the attention item and respond.
-8) Observe the workflow run resume and continue.
-9) Observe a compilation summary after completion (durable).
-10) Request a delta brief since last touch and see:
-   - major changes
-   - action items requiring review
-   - the current top decision (if any)
+1. Start the API and web app.
+2. Create a focus set with WIP=1 (spotlight) and one commitment “Ship X”.
+3. Start a workflow run from that commitment.
+4. Observe the run streaming status in the UI.
+5. Trigger a clarification suspension (either via a test harness or by forcing a known “clarify” path).
+6. Observe an attention item created and visible in the Focus Board.
+7. Open voice call from the attention item and respond.
+8. Observe the workflow run resume and continue.
+9. Observe a compilation summary after completion (durable).
+10. Request a delta brief since last touch and see:
+
+- major changes
+- action items requiring review
+- the current top decision (if any)
 
 Acceptance is not “types compile.”
 Acceptance is “this loop works and is observable.”
@@ -734,10 +743,10 @@ when adding new timers or background loops, call `.unref()` as required by impor
 
 Baseline evidence for current “god file” state (from `wc -l`):
 
-  - packages/api/src/routers/workflow.ts: 3288
-  - packages/api/src/routers/voice.ts: 1029
-  - packages/api/src/routers/plan.ts: 896
-  - packages/api/src/routers/agentfs.ts: 881
+- packages/api/src/routers/workflow.ts: 3288
+- packages/api/src/routers/voice.ts: 1029
+- packages/api/src/routers/plan.ts: 896
+- packages/api/src/routers/agentfs.ts: 881
 
 These numbers should be updated as the plan progresses, and the “god file guardrail” test should enforce the post-refactor targets.
 
@@ -762,4 +771,3 @@ At the end of implementation, the new Concierge Focus modules must integrate cle
 projects, learning, knowledge/graph entities, observability/metrics, persistence, rag/rerank, sense, protocol, summarize, pacer, api, agent, tui, and mindscape.
 
 Any future addition that tries to “just add a method” into `workflow.ts` should be rejected; the refactor milestone exists specifically to prevent that outcome.
-

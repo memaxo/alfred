@@ -1,9 +1,10 @@
 ---
 title: Contributing to BetterAuth | Better Auth
-url: 
+url:
 description: A concise guide to contributing to BetterAuth
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,27 +29,27 @@ Copy MarkdownOpen in
 
 Thank you for your interest in contributing to Better Auth! This guide is a concise guide to contributing to Better Auth.
 
-## [Getting Started](https://www.better-auth.com/docs/reference/contributing\#getting-started)
+## [Getting Started](https://www.better-auth.com/docs/reference/contributing#getting-started)
 
 Before diving in, here are a few important resources:
 
 - Take a look at our existing [issues](https://github.com/better-auth/better-auth/issues) and [pull requests](https://github.com/better-auth/better-auth/pulls)
 - Join our community discussions in [Discord](https://discord.gg/better-auth)
 
-## [Development Setup](https://www.better-auth.com/docs/reference/contributing\#development-setup)
+## [Development Setup](https://www.better-auth.com/docs/reference/contributing#development-setup)
 
 To get started with development:
 
 Make sure you have [Node.JS](https://nodejs.org/en/download)
 installed, preferably on LTS.
 
-### [1\. Fork the repository](https://www.better-auth.com/docs/reference/contributing\#1-fork-the-repository)
+### [1\. Fork the repository](https://www.better-auth.com/docs/reference/contributing#1-fork-the-repository)
 
 Visit [https://github.com/better-auth/better-auth](https://github.com/better-auth/better-auth)
 
 Click the "Fork" button in the top right.
 
-### [2\. Clone your fork](https://www.better-auth.com/docs/reference/contributing\#2-clone-your-fork)
+### [2\. Clone your fork](https://www.better-auth.com/docs/reference/contributing#2-clone-your-fork)
 
 ```
 # Replace YOUR-USERNAME with your GitHub username
@@ -56,7 +57,7 @@ git clone https://github.com/YOUR-USERNAME/better-auth.git
 cd better-auth
 ```
 
-### [3\. Install dependencies](https://www.better-auth.com/docs/reference/contributing\#3-install-dependencies)
+### [3\. Install dependencies](https://www.better-auth.com/docs/reference/contributing#3-install-dependencies)
 
 Make sure you have [pnpm](https://pnpm.io/installation) installed!
 
@@ -64,7 +65,7 @@ Make sure you have [pnpm](https://pnpm.io/installation) installed!
 pnpm install
 ```
 
-### [4\. Prepare ENV files](https://www.better-auth.com/docs/reference/contributing\#4-prepare-env-files)
+### [4\. Prepare ENV files](https://www.better-auth.com/docs/reference/contributing#4-prepare-env-files)
 
 Copy the example env file to create your new `.env` file.
 
@@ -72,11 +73,11 @@ Copy the example env file to create your new `.env` file.
 cp -n ./docs/.env.example ./docs/.env
 ```
 
-## [Making changes](https://www.better-auth.com/docs/reference/contributing\#making-changes)
+## [Making changes](https://www.better-auth.com/docs/reference/contributing#making-changes)
 
 Once you have an idea of what you want to contribute, you can start making changes. Here are some steps to get started:
 
-### [1\. Create a new branch](https://www.better-auth.com/docs/reference/contributing\#1-create-a-new-branch)
+### [1\. Create a new branch](https://www.better-auth.com/docs/reference/contributing#1-create-a-new-branch)
 
 ```
 # Make sure you're on main
@@ -89,7 +90,7 @@ git pull upstream main
 git checkout -b feature/your-feature-name
 ```
 
-### [2\. Start development server](https://www.better-auth.com/docs/reference/contributing\#2-start-development-server)
+### [2\. Start development server](https://www.better-auth.com/docs/reference/contributing#2-start-development-server)
 
 Start the development server:
 
@@ -103,7 +104,7 @@ To start the docs server:
 pnpm -F docs dev
 ```
 
-### [3\. Make Your Changes](https://www.better-auth.com/docs/reference/contributing\#3-make-your-changes)
+### [3\. Make Your Changes](https://www.better-auth.com/docs/reference/contributing#3-make-your-changes)
 
 - Make your changes to the codebase.
 
@@ -111,14 +112,13 @@ pnpm -F docs dev
 
 - Update documentation. (Read more about documenting [here](https://www.better-auth.com/docs/reference/contributing#documentation))
 
-
-### [Issues and Bug Fixes](https://www.better-auth.com/docs/reference/contributing\#issues-and-bug-fixes)
+### [Issues and Bug Fixes](https://www.better-auth.com/docs/reference/contributing#issues-and-bug-fixes)
 
 - Check our [GitHub issues](https://github.com/better-auth/better-auth/issues) for tasks labeled `good first issue`
 - When reporting bugs, include steps to reproduce and expected behavior
 - Comment on issues you'd like to work on to avoid duplicate efforts
 
-### [Framework Integrations](https://www.better-auth.com/docs/reference/contributing\#framework-integrations)
+### [Framework Integrations](https://www.better-auth.com/docs/reference/contributing#framework-integrations)
 
 We welcome contributions to support more frameworks:
 
@@ -126,19 +126,19 @@ We welcome contributions to support more frameworks:
 - Keep integrations minimal and maintainable
 - All integrations currently live in the main package
 
-### [Plugin Development](https://www.better-auth.com/docs/reference/contributing\#plugin-development)
+### [Plugin Development](https://www.better-auth.com/docs/reference/contributing#plugin-development)
 
 - For core plugins: Open an issue first to discuss your idea
 - For community plugins: Feel free to develop independently
 - Follow our plugin architecture guidelines
 
-### [Documentation](https://www.better-auth.com/docs/reference/contributing\#documentation)
+### [Documentation](https://www.better-auth.com/docs/reference/contributing#documentation)
 
 - Fix typos and errors
 - Add examples and clarify existing content
 - Ensure documentation is up to date with code changes
 
-## [Testing](https://www.better-auth.com/docs/reference/contributing\#testing)
+## [Testing](https://www.better-auth.com/docs/reference/contributing#testing)
 
 We use Vitest for testing. Place test files next to the source files they test:
 
@@ -155,7 +155,7 @@ describe("Feature", () => {
 });
 ```
 
-### [Testing Best Practices](https://www.better-auth.com/docs/reference/contributing\#testing-best-practices)
+### [Testing Best Practices](https://www.better-auth.com/docs/reference/contributing#testing-best-practices)
 
 - Write clear commit messages
 - Update documentation to reflect your changes
@@ -163,7 +163,7 @@ describe("Feature", () => {
 - Follow our coding standards
 - Keep pull requests focused on a single change
 
-## [Need Help?](https://www.better-auth.com/docs/reference/contributing\#need-help)
+## [Need Help?](https://www.better-auth.com/docs/reference/contributing#need-help)
 
 Don't hesitate to ask for help! You can:
 

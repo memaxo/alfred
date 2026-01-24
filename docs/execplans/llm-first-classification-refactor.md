@@ -90,11 +90,13 @@ You can see it working by:
 All 5 milestones implemented successfully, plus 2 optional enhancements:
 
 **Infrastructure:**
+
 - Added `classify` model role with `gpt-oss-120b` default
 - Created shared `classify()` and `classifyBatch()` utilities in `@alfred/plan/classify`
 - Integrated with existing `@alfred/agent/selector` infrastructure
 
 **Refactored Files:**
+
 1. `packages/plan/src/intent/classify.ts` - Intent classification with LLM + heuristic fallback
 2. `packages/plan/src/generate/group.ts` - Phase grouping with batch LLM classification
 3. `packages/plan/src/classify/path.ts` - Consolidated path classification (removed 2 duplicates)
@@ -102,16 +104,19 @@ All 5 milestones implemented successfully, plus 2 optional enhancements:
 5. `packages/plan/src/research/score.ts` - Added `calculateRelevanceWithLLM()` for semantic scoring (optional)
 
 **Test Coverage:**
+
 - 53 new tests across 5 test files
 - All backward compatible with existing tests
 
 **Key Decisions:**
+
 - Preserved <1ms sync paths for performance-critical code
 - LLM is opt-in via model parameter - no breaking changes to existing callers
 - Heuristics retained as fallbacks gated by `ALFRED_CLASSIFY_OFFLINE=1`
 - `calculateRelevance()` kept synchronous for backward compatibility; new `calculateRelevanceWithLLM()` for async LLM scoring
 
 ### Remaining Work
+
 None for core implementation.
 
 ## Context and Orientation
@@ -144,17 +149,20 @@ Add the foundation for LLM-based classification by extending the model selector 
 First, update `packages/type/src/model.ts` to add a `classify` role to `MODEL_ROLES`. This role will be used to select models optimized for classification tasks.
 
 Second, update `packages/agent/src/selector.ts` to:
+
 1. Add `gpt-oss-120b` and `gpt-oss-20b` to `MODEL_CAPABILITY_MAP` with capabilities `["genui", "tools", "streaming"]`
 2. Add default model mapping for the `classify` role that prefers Cerebras `gpt-oss-120b`
 3. Export a `getClassificationModel()` helper that returns a configured model for classification tasks
 
 Third, create `packages/plan/src/classify/index.ts` as a shared classification utility module that:
+
 1. Exports a `classify<T>()` generic function that wraps `generateObject` with standard classification patterns
 2. Handles the offline fallback check via `ALFRED_CLASSIFY_OFFLINE` environment variable
 3. Provides logging for classification calls (model used, latency, input/output token counts)
 4. Exports Zod schemas for common classification outputs (category enums, confidence scores)
 
 At the end of this milestone, you can verify by:
+
 - Running `bun run typecheck` with no errors
 - Importing `getClassificationModel()` from `@alfred/agent` in a test file
 - Importing `classify()` from `@alfred/plan/classify` in a test file
@@ -166,25 +174,28 @@ Refactor `packages/plan/src/intent/classify.ts` to use LLM-based classification.
 The current implementation uses 6 regex patterns to categorize intents into: fix, feat, refactor, test, docs, chore, misc. This is a classic classification task that benefits from semantic understanding.
 
 Create a new implementation that:
+
 1. Defines a Zod schema for the classification output: `{ category: z.enum(["fix", "feat", "refactor", "test", "docs", "chore", "misc"]), confidence: z.number().min(0).max(1) }`
 2. Uses `classify()` with a prompt that provides the intent description and asks for categorization
 3. Includes the category definitions in the prompt for clarity
 4. Falls back to the existing regex-based logic when `ALFRED_CLASSIFY_OFFLINE=1`
 
 The prompt should be minimal (~50-80 tokens):
-    
+
     Classify this development task intent:
     "{description}"
-    
-    Categories: fix (bugs/errors), feat (new features), refactor (code improvement), 
+
+    Categories: fix (bugs/errors), feat (new features), refactor (code improvement),
     test (testing), docs (documentation), chore (dependencies/build)
 
 Update tests in `packages/plan/src/intent/` to:
+
 1. Test the LLM path with a mock model
 2. Test the fallback path with `ALFRED_CLASSIFY_OFFLINE=1`
 3. Verify backward compatibility (same function signature, same output type)
 
 At the end of this milestone, you can verify by:
+
 - Running `bun test packages/plan/src/intent` with all tests passing
 - Checking that `classifyIntent()` returns consistent categories for sample inputs
 
@@ -202,42 +213,45 @@ This is a multi-label classification problem where each subtask needs to be assi
 4. Reconstruct the phase groups from the assignments
 
 The prompt structure:
-    
+
     Assign each task to exactly one phase.
-    Phases: setup (environment/install), db (database/schema), api (backend/logic), 
+    Phases: setup (environment/install), db (database/schema), api (backend/logic),
     ui (frontend/components), test (testing/validation), misc (other)
-    
+
     Tasks:
     0: "{title}" - {requirement}
     1: "{title}" - {requirement}
     ...
-    
+
     Return assignments as array of {index, phase}.
 
 Keep the existing heuristic as fallback. Update tests to verify both paths.
 
 At the end of this milestone, you can verify by:
+
 - Running `bun test packages/plan/src/generate/group` with all tests passing
 - Manually testing with sample subtask lists to verify reasonable phase assignments
 
 ### Milestone 3: Path Classification
 
 Consolidate and refactor the duplicate `classifyPath` functions in:
+
 - `packages/agent/src/orchestrator/multi/decompose.ts` (lines 23-53)
 - `packages/plan/src/generate/decompose.ts` (lines 35-65)
 
 These are identical heuristic implementations that classify file paths into buckets: backend, frontend, test, misc.
 
 First, create a single canonical implementation in `packages/plan/src/classify/path.ts`:
+
 1. Define the output schema: `{ bucket: z.enum(["backend", "frontend", "test", "misc"]) }`
 2. For batch efficiency, accept an array of paths and return assignments
 3. The prompt is straightforward since paths have clear signals
 
 The prompt:
-    
-    Classify each file path into: backend (api/server), frontend (app/components), 
+
+    Classify each file path into: backend (api/server), frontend (app/components),
     test (test files), misc (other)
-    
+
     Paths:
     0: {path}
     1: {path}
@@ -246,10 +260,12 @@ The prompt:
 Second, update both consuming files to import from the shared implementation. Remove the duplicate code.
 
 Third, since path classification is often called in hot loops during decomposition, implement aggressive caching:
+
 1. Cache classification results by path for the duration of a planning session
 2. Batch multiple paths in a single LLM call when possible
 
 At the end of this milestone, you can verify by:
+
 - Running `bun test packages/plan packages/agent` with all tests passing
 - Searching for `classifyPath` and finding only the canonical implementation plus imports
 
@@ -274,15 +290,16 @@ Strategy: Hybrid approach with LLM as the primary classifier and keyword matchin
    - `ALFRED_CLASSIFY_OFFLINE` is not set
 
 The domain classification prompt:
-    
+
     Classify the primary knowledge domain of this text:
     "{text_snippet}"
-    
+
     Domains: Coding, Science, Business, Health, Arts, Personal, News, Reference
 
 Update `detectTopics()` and code detection to use a similar hybrid approach, though code detection may remain heuristic-heavy since regex patterns for code blocks are reliable.
 
 At the end of this milestone, you can verify by:
+
 - Running `bun test packages/knowledge` with all tests passing
 - Observing that domain classification still meets <1ms for cached/keyword hits
 - Observing LLM-based classification for ambiguous text
@@ -311,37 +328,42 @@ At the end of this milestone, the refactoring is complete and verified.
 All commands are run from the repo root (`/Users/jackmazac/Development/alfred`).
 
 1. Typecheck baseline:
-       
-       bun run typecheck
+
+   bun run typecheck
 
 2. Test baseline for affected packages:
-       
-       bun test packages/plan packages/knowledge packages/agent --timeout 30000
+
+   bun test packages/plan packages/knowledge packages/agent --timeout 30000
 
 3. After each milestone, run targeted tests:
-       
-       # Milestone 0
-       bun run typecheck
-       
-       # Milestone 1
-       bun test packages/plan/src/intent
-       
-       # Milestone 2
-       bun test packages/plan/src/generate/group
-       
-       # Milestone 3
-       bun test packages/plan packages/agent --filter="*decompose*"
-       
-       # Milestone 4
-       bun test packages/knowledge/src/lexicon
-       
-       # Milestone 5
-       bun test packages/plan packages/knowledge packages/agent
-       bun run typecheck
+
+   # Milestone 0
+
+   bun run typecheck
+
+   # Milestone 1
+
+   bun test packages/plan/src/intent
+
+   # Milestone 2
+
+   bun test packages/plan/src/generate/group
+
+   # Milestone 3
+
+   bun test packages/plan packages/agent --filter="_decompose_"
+
+   # Milestone 4
+
+   bun test packages/knowledge/src/lexicon
+
+   # Milestone 5
+
+   bun test packages/plan packages/knowledge packages/agent
+   bun run typecheck
 
 4. Verify no regressions in dependent code:
-       
-       bun test packages/runtime
+   bun test packages/runtime
 
 ## Validation and Acceptance
 
@@ -372,10 +394,10 @@ No database migrations or destructive operations are involved. All changes are a
 ### New Exports
 
 In `packages/type/src/model.ts`:
-    
+
     export const MODEL_ROLES = [
       "chat",
-      "orchestrator", 
+      "orchestrator",
       "planner",
       "background",
       "voice",
@@ -383,13 +405,13 @@ In `packages/type/src/model.ts`:
     ] as const;
 
 In `packages/agent/src/selector.ts`:
-    
+
     export function getClassificationModel(
       opts?: ModelSelectionOpts
     ): Promise<ModelSelection>;
 
 In `packages/plan/src/classify/index.ts` (new file):
-    
+
     export async function classify<T extends z.ZodType>(
       schema: T,
       prompt: string,
@@ -398,13 +420,13 @@ In `packages/plan/src/classify/index.ts` (new file):
         model?: LanguageModel;
       }
     ): Promise<z.infer<T>>;
-    
+
     export const OFFLINE_MODE = process.env.ALFRED_CLASSIFY_OFFLINE === "1";
 
 In `packages/plan/src/classify/path.ts` (new file):
-    
+
     export type PathBucket = "backend" | "frontend" | "test" | "misc";
-    
+
     export async function classifyPaths(
       paths: string[]
     ): Promise<Map<string, PathBucket>>;
@@ -436,6 +458,7 @@ None. All heuristic code is retained as fallback implementations. The duplicate 
 ### Model Cost Estimates
 
 At $0.35/M input tokens and assuming:
+
 - 100 tokens average per classification call
 - 1000 classifications per day (high estimate for active development)
 

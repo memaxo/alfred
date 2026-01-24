@@ -1,9 +1,10 @@
 ---
 title: Migrating from Clerk to Better Auth | Better Auth
-url: 
+url:
 description: A step-by-step guide to transitioning from Clerk to Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,11 +31,11 @@ In this guide, we'll walk through the steps to migrate a project from Clerk to B
 
 This migration will invalidate all active sessions. This guide doesn't currently show you how to migrate Organization but it should be possible with additional steps and the [Organization](https://www.better-auth.com/docs/plugins/organization) Plugin.
 
-## [Before You Begin](https://www.better-auth.com/docs/guides/clerk-migration-guide\#before-you-begin)
+## [Before You Begin](https://www.better-auth.com/docs/guides/clerk-migration-guide#before-you-begin)
 
 Before starting the migration process, set up Better Auth in your project. Follow the [installation guide](https://www.better-auth.com/docs/installation) to get started. And go to
 
-### [Connect to your database](https://www.better-auth.com/docs/guides/clerk-migration-guide\#connect-to-your-database)
+### [Connect to your database](https://www.better-auth.com/docs/guides/clerk-migration-guide#connect-to-your-database)
 
 You'll need to connect to your database to migrate the users and accounts. You can use any database you want, but for this example, we'll use PostgreSQL.
 
@@ -64,7 +65,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Enable Email and Password (Optional)](https://www.better-auth.com/docs/guides/clerk-migration-guide\#enable-email-and-password-optional)
+### [Enable Email and Password (Optional)](https://www.better-auth.com/docs/guides/clerk-migration-guide#enable-email-and-password-optional)
 
 Enable the email and password in your auth config and implement your own logic for sending verification emails, reset password emails, etc.
 
@@ -90,7 +91,7 @@ export const auth = betterAuth({
 
 See [Email and Password](https://www.better-auth.com/docs/authentication/email-password) for more configuration options.
 
-### [Setup Social Providers (Optional)](https://www.better-auth.com/docs/guides/clerk-migration-guide\#setup-social-providers-optional)
+### [Setup Social Providers (Optional)](https://www.better-auth.com/docs/guides/clerk-migration-guide#setup-social-providers-optional)
 
 Add social providers you have enabled in your Clerk project in your auth config.
 
@@ -115,7 +116,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Add Plugins (Optional)](https://www.better-auth.com/docs/guides/clerk-migration-guide\#add-plugins-optional)
+### [Add Plugins (Optional)](https://www.better-auth.com/docs/guides/clerk-migration-guide#add-plugins-optional)
 
 You can add the following plugins to your auth config based on your needs.
 
@@ -151,7 +152,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Generate Schema](https://www.better-auth.com/docs/guides/clerk-migration-guide\#generate-schema)
+### [Generate Schema](https://www.better-auth.com/docs/guides/clerk-migration-guide#generate-schema)
 
 If you're using a custom database adapter, generate the schema:
 
@@ -165,11 +166,11 @@ or if you're using the default adapter, you can use the following command:
 npx @better-auth/cli migrate
 ```
 
-### [Export Clerk Users](https://www.better-auth.com/docs/guides/clerk-migration-guide\#export-clerk-users)
+### [Export Clerk Users](https://www.better-auth.com/docs/guides/clerk-migration-guide#export-clerk-users)
 
 Go to the Clerk dashboard and export the users. Check how to do it [here](https://clerk.com/docs/deployments/exporting-users#export-your-users-data-from-the-clerk-dashboard). It will download a CSV file with the users data. You need to save it as `exported_users.csv` and put it in the root of your project.
 
-### [Create the migration script](https://www.better-auth.com/docs/guides/clerk-migration-guide\#create-the-migration-script)
+### [Create the migration script](https://www.better-auth.com/docs/guides/clerk-migration-guide#create-the-migration-script)
 
 Create a new file called `migrate-clerk.ts` in the `scripts` folder and add the following code:
 
@@ -415,7 +416,7 @@ migrateFromClerk()
 
 Make sure to replace the `process.env.CLERK_SECRET_KEY` with your own Clerk secret key. Feel free to customize the script to your needs.
 
-### [Run the migration](https://www.better-auth.com/docs/guides/clerk-migration-guide\#run-the-migration)
+### [Run the migration](https://www.better-auth.com/docs/guides/clerk-migration-guide#run-the-migration)
 
 Run the migration:
 
@@ -430,11 +431,11 @@ Make sure to:
 3. Verify the migrated data in Better Auth before proceeding
 4. Keep Clerk installed and configured until the migration is complete
 
-### [Verify the migration](https://www.better-auth.com/docs/guides/clerk-migration-guide\#verify-the-migration)
+### [Verify the migration](https://www.better-auth.com/docs/guides/clerk-migration-guide#verify-the-migration)
 
 After running the migration, verify that all users have been properly migrated by checking the database.
 
-### [Update your components](https://www.better-auth.com/docs/guides/clerk-migration-guide\#update-your-components)
+### [Update your components](https://www.better-auth.com/docs/guides/clerk-migration-guide#update-your-components)
 
 Now that the data is migrated, you can start updating your components to use Better Auth. Here's an example for the sign-in component:
 
@@ -465,7 +466,7 @@ export const SignIn = () => {
 };
 ```
 
-### [Update the middleware](https://www.better-auth.com/docs/guides/clerk-migration-guide\#update-the-middleware)
+### [Update the middleware](https://www.better-auth.com/docs/guides/clerk-migration-guide#update-the-middleware)
 
 Replace your Clerk middleware with Better Auth's middleware:
 
@@ -492,7 +493,7 @@ export const config = {
 };
 ```
 
-### [Remove Clerk Dependencies](https://www.better-auth.com/docs/guides/clerk-migration-guide\#remove-clerk-dependencies)
+### [Remove Clerk Dependencies](https://www.better-auth.com/docs/guides/clerk-migration-guide#remove-clerk-dependencies)
 
 Once you've verified that everything is working correctly with Better Auth, you can remove Clerk:
 
@@ -502,11 +503,11 @@ Remove Clerk
 pnpm remove @clerk/nextjs @clerk/themes @clerk/types
 ```
 
-## [Additional Resources](https://www.better-auth.com/docs/guides/clerk-migration-guide\#additional-resources)
+## [Additional Resources](https://www.better-auth.com/docs/guides/clerk-migration-guide#additional-resources)
 
 [Goodbye Clerk, Hello Better Auth – Full Migration Guide!](https://www.youtube.com/watch?v=Za_QihbDSuk)
 
-## [Wrapping Up](https://www.better-auth.com/docs/guides/clerk-migration-guide\#wrapping-up)
+## [Wrapping Up](https://www.better-auth.com/docs/guides/clerk-migration-guide#wrapping-up)
 
 Congratulations! You've successfully migrated from Clerk to Better Auth.
 

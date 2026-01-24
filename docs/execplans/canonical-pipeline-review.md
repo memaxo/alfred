@@ -10,36 +10,45 @@ Review and update `docs/execplans/canonical-pipeline.md` to align with actual co
 
 ### 1. Functions That DON'T EXIST (Must Create or Rename References)
 
-| Execplan Reference | Actual Status | Correct Alternative |
-|-------------------|---------------|---------------------|
-| `createRootExecPlan()` | **Does not exist** | Must create or use `persistExecPlans()` from `@alfred/agent/assistant/graphstore` |
-| `createSubtaskSkeleton()` | **Does not exist** | Use `generateSubtaskExecPlanSkeleton(subTask, runId)` from `packages/agent/src/orchestrator/multi/execplan.ts:163` |
-| `learnFromRun()` | **Does not exist** | Learning is polling-based via `startLearningWorker(config?)` at `packages/agent/src/orchestrator/learning-worker.ts:105` |
-| `runReviewPhase()` at line 285 | **Does not exist as exported function** | Review logic is in `packages/runtime/src/orchestrator/review.ts` but exported via `reviewWorkflowRepo` pattern |
-| `updateLinearIssue()` | **Does not exist** | Use `toolTicket.execute()` from `@alfred/agent/orchestrator/tool/ticket` |
-| `commentOnLinearIssue()` | **Does not exist** | Use `toolTicket.execute()` with action `"comment"` |
+| Execplan Reference             | Actual Status                           | Correct Alternative                                                                                                      |
+| ------------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `createRootExecPlan()`         | **Does not exist**                      | Must create or use `persistExecPlans()` from `@alfred/agent/assistant/graphstore`                                        |
+| `createSubtaskSkeleton()`      | **Does not exist**                      | Use `generateSubtaskExecPlanSkeleton(subTask, runId)` from `packages/agent/src/orchestrator/multi/execplan.ts:163`       |
+| `learnFromRun()`               | **Does not exist**                      | Learning is polling-based via `startLearningWorker(config?)` at `packages/agent/src/orchestrator/learning-worker.ts:105` |
+| `runReviewPhase()` at line 285 | **Does not exist as exported function** | Review logic is in `packages/runtime/src/orchestrator/review.ts` but exported via `reviewWorkflowRepo` pattern           |
+| `updateLinearIssue()`          | **Does not exist**                      | Use `toolTicket.execute()` from `@alfred/agent/orchestrator/tool/ticket`                                                 |
+| `commentOnLinearIssue()`       | **Does not exist**                      | Use `toolTicket.execute()` with action `"comment"`                                                                       |
 
 ### 2. Function Signature Mismatches
 
 #### `runAgent` (packages/runtime/src/orchestrator/agent.ts:111)
 
 **Execplan assumes:**
+
 ```typescript
 runAgent({
-  id, subTaskId, requirement, runId, workspace, signal,
-  execPlanPath, handoffFromPrevious, maxAttempts
-})
+  id,
+  subTaskId,
+  requirement,
+  runId,
+  workspace,
+  signal,
+  execPlanPath,
+  handoffFromPrevious,
+  maxAttempts,
+});
 ```
 
 **Actual signature:**
+
 ```typescript
 export async function runAgent({
-  spec,           // AgentSpec object, not individual fields
+  spec, // AgentSpec object, not individual fields
   phaseId,
   runId,
   workspace,
   workspaceRoot,
-  subTaskById,    // Map<string, SubTask>
+  subTaskById, // Map<string, SubTask>
   projectConfig,
   activeWorkspaces,
   agentFileHints,
@@ -49,17 +58,19 @@ export async function runAgent({
   userId,
   trackerContextRef,
   queue,
-}: RunAgentOptions): Promise<AgentOutcome>
+}: RunAgentOptions): Promise<AgentOutcome>;
 ```
 
 #### `ContextBuilder.build()` (packages/runtime/src/context.ts:94)
 
 **Execplan assumes:**
+
 ```typescript
 builder.build() → { bundle, receipts, ragChunks, totalTokens }
 ```
 
 **Actual signature:**
+
 ```typescript
 async build(
   input: ContextBuildInput,
@@ -68,6 +79,7 @@ async build(
 ```
 
 Where `ContextBuildInput` is:
+
 ```typescript
 type ContextBuildInput = {
   requirement: string;
@@ -80,22 +92,24 @@ type ContextBuildInput = {
   ignore?: string[];
   seeds?: string[];
   authz?: string;
-}
+};
 ```
 
 #### `generateWaveSummary` (packages/runtime/src/orchestrator/summary.ts:9)
 
 **Execplan assumes:**
+
 ```typescript
-generateWaveSummary({ runId, workspace, requirement, insights })
+generateWaveSummary({ runId, workspace, requirement, insights });
 ```
 
 **Actual signature:**
+
 ```typescript
 export async function generateWaveSummary(
   outcomes: AgentOutcome[],
   changes: FileChanges
-): Promise<string>
+): Promise<string>;
 ```
 
 #### `decomposeTask` (packages/agent/src/orchestrator/multi/decompose.ts:151)
@@ -103,16 +117,17 @@ export async function generateWaveSummary(
 **Execplan assumes:** Returns `Promise<...>` (async)
 
 **Actual signature:** Synchronous function
+
 ```typescript
 export function decomposeTask(
   requirement: string,
-  context: DecomposeContext  // NOT ContextBundle directly
-): SubTask[]
+  context: DecomposeContext // NOT ContextBundle directly
+): SubTask[];
 
 type DecomposeContext = {
   bundle?: ContextBundle;
   linearMeta?: { projectId?: string; teamId?: string };
-}
+};
 ```
 
 #### `planWaves` (packages/agent/src/orchestrator/multi/spawn.ts:145)
@@ -120,6 +135,7 @@ type DecomposeContext = {
 **Execplan assumes:** Returns `Promise<...>` (async)
 
 **Actual signature:** Synchronous function
+
 ```typescript
 export function planWaves(
   subTasks: SubTask[],
@@ -127,19 +143,19 @@ export function planWaves(
     maxParallel?: number;
     dependencies?: Map<SubTaskId, SubTaskId[]>;
   }
-): WavePlan[]
+): WavePlan[];
 ```
 
 ### 3. Type Location Corrections
 
-| Type | Execplan Location | Actual Location |
-|------|-------------------|-----------------|
-| `ContextBundle` | `@alfred/type` | `@alfred/type/plan` (line 178) |
-| `SearchReceipt` | `@alfred/type` | `@alfred/type/plan` (line 150) |
-| `SubTask` | Custom definition | `@alfred/type/plan` (line 351) AND `@alfred/agent/orchestrator/multi/decompose` |
-| `WavePlan` | Custom definition | `@alfred/type/plan` (line 367) AND `@alfred/agent/orchestrator/multi/spawn` (line 36) |
-| `AgentSpec` | Custom definition | `@alfred/agent/orchestrator/multi/spawn` (line 11) |
-| `AgentOutcome` | Custom definition | `@alfred/runtime/orchestrator/agent` |
+| Type            | Execplan Location | Actual Location                                                                       |
+| --------------- | ----------------- | ------------------------------------------------------------------------------------- |
+| `ContextBundle` | `@alfred/type`    | `@alfred/type/plan` (line 178)                                                        |
+| `SearchReceipt` | `@alfred/type`    | `@alfred/type/plan` (line 150)                                                        |
+| `SubTask`       | Custom definition | `@alfred/type/plan` (line 351) AND `@alfred/agent/orchestrator/multi/decompose`       |
+| `WavePlan`      | Custom definition | `@alfred/type/plan` (line 367) AND `@alfred/agent/orchestrator/multi/spawn` (line 36) |
+| `AgentSpec`     | Custom definition | `@alfred/agent/orchestrator/multi/spawn` (line 11)                                    |
+| `AgentOutcome`  | Custom definition | `@alfred/runtime/orchestrator/agent`                                                  |
 
 ### 4. Existing Phase Functions (Correct References)
 
@@ -174,25 +190,30 @@ export async function* runWaves(
 ## Relevant Context Files
 
 ### Core Orchestration
+
 - `packages/runtime/src/orchestrator/agent.ts` - `runAgent()` actual implementation
 - `packages/runtime/src/orchestrator/waves.ts` - `runWaves()` wave orchestration
 - `packages/runtime/src/orchestrator/review.ts` - Review phase logic
 - `packages/runtime/src/context.ts` - `ContextBuilder` class
 
 ### Multi-Agent
+
 - `packages/agent/src/orchestrator/multi/decompose.ts` - Task decomposition
 - `packages/agent/src/orchestrator/multi/spawn.ts` - `buildAgentSpec()`, `planWaves()`
 - `packages/agent/src/orchestrator/multi/execplan.ts` - ExecPlan generation helpers
 
 ### Learning
+
 - `packages/agent/src/orchestrator/learning-worker.ts` - `startLearningWorker()` (polling-based)
 
 ### Linear Integration
+
 - `packages/agent/src/workflow/linear.ts` - `ensureLinearTicket()`
 - `packages/agent/src/orchestrator/linear-rate-limiter.ts` - `LinearRateLimiter` class
 - `packages/agent/src/orchestrator/tool/ticket.ts` - `toolTicket` for Linear actions
 
 ### Types
+
 - `packages/type/src/plan.ts` - `ContextBundle`, `SearchReceipt`, `SubTask`, `WavePlan`
 - `packages/agent/src/orchestrator/multi/spawn.ts` - `AgentSpec`, `WavePlan` (duplicate)
 - `packages/runtime/src/orchestrator/types.ts` - `OrchestratorContext`, `AgentHandoff`
@@ -207,12 +228,17 @@ The execplan defines custom types that conflict with existing ones. Update to us
 
 ```typescript
 // WRONG (execplan):
-import type { ContextBundle } from '@alfred/type';
+import type { ContextBundle } from "@alfred/type";
 
 // CORRECT:
-import type { ContextBundle, SearchReceipt, SubTask, WavePlan } from '@alfred/type/plan';
-import type { AgentSpec } from '@alfred/agent/orchestrator/multi/spawn';
-import type { ExecutionContext } from '@alfred/runtime/context';
+import type {
+  ContextBundle,
+  SearchReceipt,
+  SubTask,
+  WavePlan,
+} from "@alfred/type/plan";
+import type { AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
+import type { ExecutionContext } from "@alfred/runtime/context";
 ```
 
 ### Step 2: Fix ContextStage Implementation
@@ -263,10 +289,10 @@ const result = await runAgent({
 
 // CORRECT: Build full OrchestratorContext and delegate to runWaves
 // OR: Build RunAgentOptions with spec object
-const subTaskById = new Map(subtasks.map(t => [t.id, t]));
+const subTaskById = new Map(subtasks.map((t) => [t.id, t]));
 const result = await runAgent({
   spec: agentSpec,
-  phaseId: 'execute',
+  phaseId: "execute",
   runId: ctx.runId,
   workspace: ctx.workspace,
   workspaceRoot: ctx.workspace,
@@ -296,8 +322,8 @@ const learningResult = await learnFromRun({
 // CORRECT: Learning is done by background worker, not on-demand
 // Option A: Trigger via marking run complete (learning worker polls completed runs)
 // Option B: Extract and call internal functions directly:
-import { extract, toKnowledge } from '@alfred/knowledge/extractor';
-import { upsertNodes, upsertEdges } from '@alfred/db/repo/graph/index';
+import { extract, toKnowledge } from "@alfred/knowledge/extractor";
+import { upsertNodes, upsertEdges } from "@alfred/db/repo/graph/index";
 
 // Learning happens asynchronously after run completion
 ```
@@ -310,16 +336,16 @@ await updateLinearIssue({ issueId, status, authz });
 await commentOnLinearIssue({ issueId, body, authz });
 
 // CORRECT: Use toolTicket
-import { toolTicket } from '@alfred/agent/orchestrator/tool/ticket';
+import { toolTicket } from "@alfred/agent/orchestrator/tool/ticket";
 
 await toolTicket.execute({
-  action: 'update',
+  action: "update",
   input: { issueId, state: status },
   authz,
 });
 
 await toolTicket.execute({
-  action: 'comment',
+  action: "comment",
   input: { issueId, body },
   authz,
 });
@@ -343,6 +369,7 @@ await toolTicket.execute({
 ### Existing Pipeline Infrastructure
 
 There's already a nascent pipeline at `packages/runtime/src/pipeline/`:
+
 - `runner.ts` - `PipelineRunner` class with phase registration
 - `types.ts` - `Phase`, `PhaseResult`, `PipelineState` types
 - `phases/` - Phase implementations (scan, plan, act, report)
@@ -352,14 +379,16 @@ Consider whether to extend this existing infrastructure vs creating a new `packa
 ### AgentFS Workspace Sharing
 
 The execplan mentions "Agents share AgentFS container via runId convention". The actual pattern in `runAgent()` creates container names like `alfred-agentfs-{runId}` via:
+
 ```typescript
 // packages/runtime/src/orchestrator/agentfs.ts
-export function resolveAgentfsContainer(runId: string): string
-export function resolveAgentfsContainerCw(runId: string): string
+export function resolveAgentfsContainer(runId: string): string;
+export function resolveAgentfsContainerCw(runId: string): string;
 ```
 
 ### Internal Project Tracker
 
 The execplan mentions needing internal project tracking. This aligns with:
+
 - `packages/agent/src/orchestrator/multi/tracker.ts` - `TrackerContext`, `createTrackerContext()`
 - Consider this as the foundation for internal state management that mirrors Linear

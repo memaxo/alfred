@@ -1,8 +1,9 @@
 ---
 title: Introduction to Laminar datasets - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/datasets/introduction#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -29,14 +30,14 @@ On this page
 - [Use case: Evaluations](https://docs.lmnr.ai/datasets/introduction#use-case%3A-evaluations)
 - [Editing](https://docs.lmnr.ai/datasets/introduction#editing)
 
-## [​](https://docs.lmnr.ai/datasets/introduction\#concept)  Concept
+## [​](https://docs.lmnr.ai/datasets/introduction#concept) Concept
 
 Dataset is a collection of datapoints. It can be used for the following purposes:
 
 1. Data storage for use in future fine-tuning or prompt-tuning.
 2. Provide inputs and expected outputs for [Evaluations](https://docs.lmnr.ai/evaluations/introduction).
 
-## [​](https://docs.lmnr.ai/datasets/introduction\#format)  Format
+## [​](https://docs.lmnr.ai/datasets/introduction#format) Format
 
 Every datapoint has two fixed JSON objects: `data` and `target`, each with arbitrary keys.
 `target` is only used in evaluations.
@@ -47,7 +48,7 @@ Every datapoint has two fixed JSON objects: `data` and `target`, each with arbit
 
 For every key inside `data` and `target`, the value can be any JSON value.
 
-### [​](https://docs.lmnr.ai/datasets/introduction\#example)  Example
+### [​](https://docs.lmnr.ai/datasets/introduction#example) Example
 
 This is an example of a valid datapoint.
 
@@ -76,12 +77,12 @@ Copy
 
 ```
 
-## [​](https://docs.lmnr.ai/datasets/introduction\#use-case%3A-evaluations)  Use case: Evaluations
+## [​](https://docs.lmnr.ai/datasets/introduction#use-case%3A-evaluations) Use case: Evaluations
 
 Datasets can be used for evaluations to specify inputs and expected outputs.You will need to make sure the dataset keys match the input and output node names of the pipelines.
 See more in the [Evaluations](https://docs.lmnr.ai/evaluations/introduction) page.
 
-## [​](https://docs.lmnr.ai/datasets/introduction\#editing)  Editing
+## [​](https://docs.lmnr.ai/datasets/introduction#editing) Editing
 
 Datasets are editable. You can edit the datapoints by clicking on the datapoint and
 editing the data in JSON. The changes are saved automatically.

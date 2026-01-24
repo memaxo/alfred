@@ -1,9 +1,10 @@
 ---
 title: Debugger – Runtime | Bun Docs
-url: 
+url:
 description: Debug your code with Bun's web-based debugger or VS Code extension
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -52,7 +53,7 @@ Project
 
 Bun speaks the [WebKit Inspector Protocol](https://github.com/oven-sh/bun/blob/main/packages/bun-inspector-protocol/src/protocol/jsc/index.d.ts), so you can debug your code with an interactive debugger. For demonstration purposes, consider the following simple web server.
 
-## [Debugging JavaScript and TypeScript](https://bun.com/docs/runtime/debugger\#debugging-javascript-and-typescript)
+## [Debugging JavaScript and TypeScript](https://bun.com/docs/runtime/debugger#debugging-javascript-and-typescript)
 
 server.ts
 
@@ -66,7 +67,7 @@ Bun.serve({
 
 ```
 
-### [`--inspect`](https://bun.com/docs/runtime/debugger\#inspect)
+### [`--inspect`](https://bun.com/docs/runtime/debugger#inspect)
 
 To enable debugging when running code with Bun, use the `--inspect` flag. This automatically starts a WebSocket server on an available port that can be used to introspect the running Bun process.
 
@@ -84,15 +85,15 @@ Inspect in browser:
 ------------------ Bun Inspector ------------------
 ```
 
-### [`--inspect-brk`](https://bun.com/docs/runtime/debugger\#inspect-brk)
+### [`--inspect-brk`](https://bun.com/docs/runtime/debugger#inspect-brk)
 
 The `--inspect-brk` flag behaves identically to `--inspect`, except it automatically injects a breakpoint at the first line of the executed script. This is useful for debugging scripts that run quickly and exit immediately.
 
-### [`--inspect-wait`](https://bun.com/docs/runtime/debugger\#inspect-wait)
+### [`--inspect-wait`](https://bun.com/docs/runtime/debugger#inspect-wait)
 
 The `--inspect-wait` flag behaves identically to `--inspect`, except the code will not execute until a debugger has attached to the running process.
 
-### [Setting a port or URL for the debugger](https://bun.com/docs/runtime/debugger\#setting-a-port-or-url-for-the-debugger)
+### [Setting a port or URL for the debugger](https://bun.com/docs/runtime/debugger#setting-a-port-or-url-for-the-debugger)
 
 Regardless of which flag you use, you can optionally specify a port number, URL prefix, or both.
 
@@ -108,11 +109,11 @@ bun --inspect=localhost:4000 server.ts
 bun --inspect=localhost:4000/prefix server.ts
 ```
 
-## [Debuggers](https://bun.com/docs/runtime/debugger\#debuggers)
+## [Debuggers](https://bun.com/docs/runtime/debugger#debuggers)
 
 Various debugging tools can connect to this server to provide an interactive debugging experience.
 
-### [`debug.bun.sh`](https://bun.com/docs/runtime/debugger\#debug-bun-sh)
+### [`debug.bun.sh`](https://bun.com/docs/runtime/debugger#debug-bun-sh)
 
 Bun hosts a web-based debugger at [debug.bun.sh](https://debug.bun.sh/). It is a modified version of WebKit's [Web Inspector Interface](https://webkit.org/web-inspector/web-inspector-interface/), which will look familiar to Safari users.
 
@@ -151,21 +152,21 @@ Here's a cheat sheet explaining the functions of the control flow buttons.
 
 [![](https://github-production-user-asset-6210df.s3.amazonaws.com/3084745/261510346-6a94441c-75d3-413a-99a7-efa62365f83d.png)](https://github-production-user-asset-6210df.s3.amazonaws.com/3084745/261510346-6a94441c-75d3-413a-99a7-efa62365f83d.png)
 
-### [Visual Studio Code Debugger](https://bun.com/docs/runtime/debugger\#visual-studio-code-debugger)
+### [Visual Studio Code Debugger](https://bun.com/docs/runtime/debugger#visual-studio-code-debugger)
 
 Experimental support for debugging Bun scripts is available in Visual Studio Code. To use it, you'll need to install the [Bun VSCode extension](https://bun.com/guides/runtime/vscode-debugger).
 
-## [Debugging Network Requests](https://bun.com/docs/runtime/debugger\#debugging-network-requests)
+## [Debugging Network Requests](https://bun.com/docs/runtime/debugger#debugging-network-requests)
 
 The `BUN_CONFIG_VERBOSE_FETCH` environment variable lets you log network requests made with `fetch()` or `node:http` automatically.
 
-| Value | Description |
-| --- | --- |
-| `curl` | Print requests as `curl` commands. |
-| `true` | Print request & response info |
-| `false` | Don't print anything. Default |
+| Value   | Description                        |
+| ------- | ---------------------------------- |
+| `curl`  | Print requests as `curl` commands. |
+| `true`  | Print request & response info      |
+| `false` | Don't print anything. Default      |
 
-### [Print fetch & node:http requests as curl commands](https://bun.com/docs/runtime/debugger\#print-fetch-node-http-requests-as-curl-commands)
+### [Print fetch & node:http requests as curl commands](https://bun.com/docs/runtime/debugger#print-fetch-node-http-requests-as-curl-commands)
 
 Bun also supports printing `fetch()` and `node:http` network requests as `curl` commands by setting the environment variable `BUN_CONFIG_VERBOSE_FETCH` to `curl`.
 
@@ -252,13 +253,13 @@ This prints the following to the console:
 
 ```
 
-## [Stacktraces & sourcemaps](https://bun.com/docs/runtime/debugger\#stacktraces-sourcemaps)
+## [Stacktraces & sourcemaps](https://bun.com/docs/runtime/debugger#stacktraces-sourcemaps)
 
 Bun transpiles every file, which sounds like it would mean that the stack traces you see in the console would unhelpfully point to the transpiled output. To address this, Bun automatically generates and serves sourcemapped files for every file it transpiles. When you see a stack trace in the console, you can click on the file path and be taken to the original source code, even though it was written in TypeScript or JSX, or has some other transformation applied.
 
 Bun automatically loads sourcemaps both at runtime when transpiling files on-demand, and when using `bun build` to precompile files ahead of time.
 
-### [Syntax-highlighted source code preview](https://bun.com/docs/runtime/debugger\#syntax-highlighted-source-code-preview)
+### [Syntax-highlighted source code preview](https://bun.com/docs/runtime/debugger#syntax-highlighted-source-code-preview)
 
 To help with debugging, Bun automatically prints a small source-code preview when an unhandled exception or rejection occurs. You can simulate this behavior by calling `Bun.inspect(error)`:
 
@@ -280,7 +281,7 @@ error: Something went wrong
 
 ```
 
-### [V8 Stack Traces](https://bun.com/docs/runtime/debugger\#v8-stack-traces)
+### [V8 Stack Traces](https://bun.com/docs/runtime/debugger#v8-stack-traces)
 
 Bun uses JavaScriptCore as it's engine, but much of the Node.js ecosystem & npm expects V8. JavaScript engines differ in `error.stack` formatting. Bun intends to be a drop-in replacement for Node.js, and that means it's our job to make sure that even though the engine is different, the stack traces are as similar as possible.
 
@@ -309,26 +310,26 @@ console.log(err.stack);
 
 The `CallSite` object has the following methods:
 
-| Method | Returns |
-| --- | --- |
-| `getThis` | `this` value of the function call |
-| `getTypeName` | typeof `this` |
-| `getFunction` | function object |
-| `getFunctionName` | function name as a string |
-| `getMethodName` | method name as a string |
-| `getFileName` | file name or URL |
-| `getLineNumber` | line number |
-| `getColumnNumber` | column number |
-| `getEvalOrigin` | `undefined` |
-| `getScriptNameOrSourceURL` | source URL |
-| `isToplevel` | returns `true` if the function is in the global scope |
-| `isEval` | returns `true` if the function is an `eval` call |
-| `isNative` | returns `true` if the function is native |
-| `isConstructor` | returns `true` if the function is a constructor |
-| `isAsync` | returns `true` if the function is `async` |
-| `isPromiseAll` | Not implemented yet. |
-| `getPromiseIndex` | Not implemented yet. |
-| `toString` | returns a string representation of the call site |
+| Method                     | Returns                                               |
+| -------------------------- | ----------------------------------------------------- |
+| `getThis`                  | `this` value of the function call                     |
+| `getTypeName`              | typeof `this`                                         |
+| `getFunction`              | function object                                       |
+| `getFunctionName`          | function name as a string                             |
+| `getMethodName`            | method name as a string                               |
+| `getFileName`              | file name or URL                                      |
+| `getLineNumber`            | line number                                           |
+| `getColumnNumber`          | column number                                         |
+| `getEvalOrigin`            | `undefined`                                           |
+| `getScriptNameOrSourceURL` | source URL                                            |
+| `isToplevel`               | returns `true` if the function is in the global scope |
+| `isEval`                   | returns `true` if the function is an `eval` call      |
+| `isNative`                 | returns `true` if the function is native              |
+| `isConstructor`            | returns `true` if the function is a constructor       |
+| `isAsync`                  | returns `true` if the function is `async`             |
+| `isPromiseAll`             | Not implemented yet.                                  |
+| `getPromiseIndex`          | Not implemented yet.                                  |
+| `toString`                 | returns a string representation of the call site      |
 
 In some cases, the `Function` object may have already been garbage collected, so some of these methods may return `undefined`.
 
@@ -389,7 +390,7 @@ bunfig.toml](https://bun.com/docs/runtime/bunfig) [Next\\
 \\
 `bun install`](https://bun.com/docs/cli/install)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/debugger.md)
 
@@ -413,7 +414,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

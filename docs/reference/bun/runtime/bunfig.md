@@ -1,9 +1,10 @@
 ---
 title: bunfig.toml – Runtime | Bun Docs
-url: 
+url:
 description: Bun's runtime is configurable with environment variables and the bunfig.toml config file.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Bun's behavior can be configured using its configuration file, `bunfig.toml`.
 
 In general, Bun relies on pre-existing configuration files like `package.json` and `tsconfig.json` to configure its behavior. `bunfig.toml` is only necessary for configuring Bun-specific things. This file is optional, and Bun will work out of the box without it.
 
-## [Global vs. local](https://bun.com/docs/runtime/bunfig\#global-vs-local)
+## [Global vs. local](https://bun.com/docs/runtime/bunfig#global-vs-local)
 
 In general, it's recommended to add a `bunfig.toml` file to your project root, alongside your `package.json`.
 
@@ -67,11 +68,11 @@ To configure Bun globally, you can also create a `.bunfig.toml` file at one of t
 
 If both a global and local `bunfig` are detected, the results are shallow-merged, with local overriding global. CLI flags will override `bunfig` setting where applicable.
 
-## [Runtime](https://bun.com/docs/runtime/bunfig\#runtime)
+## [Runtime](https://bun.com/docs/runtime/bunfig#runtime)
 
 Bun's runtime behavior is configured using top-level fields in the `bunfig.toml` file.
 
-### [`preload`](https://bun.com/docs/runtime/bunfig\#preload)
+### [`preload`](https://bun.com/docs/runtime/bunfig#preload)
 
 An array of scripts/plugins to execute before running a file or script.
 
@@ -82,7 +83,7 @@ preload = ["./preload.ts"]
 
 ```
 
-### [`jsx`](https://bun.com/docs/runtime/bunfig\#jsx)
+### [`jsx`](https://bun.com/docs/runtime/bunfig#jsx)
 
 Configure how Bun handles JSX. You can also set these fields in the `compilerOptions` of your `tsconfig.json`, but they are supported here as well for non-TypeScript projects.
 
@@ -101,7 +102,7 @@ Refer to the tsconfig docs for more information on these fields.
 - [jsxFragment](https://www.typescriptlang.org/tsconfig#jsxFragment)
 - [jsxImportSource](https://www.typescriptlang.org/tsconfig#jsxImportSource)
 
-### [`smol`](https://bun.com/docs/runtime/bunfig\#smol)
+### [`smol`](https://bun.com/docs/runtime/bunfig#smol)
 
 Enable `smol` mode. This reduces memory usage at the cost of performance.
 
@@ -111,7 +112,7 @@ smol = true
 
 ```
 
-### [`logLevel`](https://bun.com/docs/runtime/bunfig\#loglevel)
+### [`logLevel`](https://bun.com/docs/runtime/bunfig#loglevel)
 
 Set the log level. This can be one of `"debug"`, `"warn"`, or `"error"`.
 
@@ -120,7 +121,7 @@ logLevel = "debug" # "debug" | "warn" | "error"
 
 ```
 
-### [`define`](https://bun.com/docs/runtime/bunfig\#define)
+### [`define`](https://bun.com/docs/runtime/bunfig#define)
 
 The `define` field allows you to replace certain global identifiers with constant expressions. Bun will replace any usage of the identifier with the expression. The expression should be a JSON string.
 
@@ -133,7 +134,7 @@ The `define` field allows you to replace certain global identifiers with constan
 
 ```
 
-### [`loader`](https://bun.com/docs/runtime/bunfig\#loader)
+### [`loader`](https://bun.com/docs/runtime/bunfig#loader)
 
 Configure how Bun maps file extensions to loaders. This is useful for loading files that aren't natively supported by Bun.
 
@@ -161,7 +162,7 @@ Bun supports the following loaders:
 - `dataurl`
 - `text`
 
-### [`telemetry`](https://bun.com/docs/runtime/bunfig\#telemetry)
+### [`telemetry`](https://bun.com/docs/runtime/bunfig#telemetry)
 
 The `telemetry` field permit to enable/disable the analytics records. Bun records bundle timings (so we can answer with data, "is Bun getting faster?") and feature usage (e.g., "are people actually using macros?"). The request body size is about 60 bytes, so it's not a lot of data. By default the telemetry is enabled. Equivalent of `DO_NOT_TRACK` env variable.
 
@@ -170,7 +171,7 @@ telemetry = false
 
 ```
 
-### [`console`](https://bun.com/docs/runtime/bunfig\#console)
+### [`console`](https://bun.com/docs/runtime/bunfig#console)
 
 Configure console output behavior.
 
@@ -186,7 +187,7 @@ depth = 3
 
 This controls how deeply nested objects are displayed in console output. Higher values show more nested properties but may produce verbose output for complex objects. This setting can be overridden by the `--console-depth` CLI flag.
 
-## [Test runner](https://bun.com/docs/runtime/bunfig\#test-runner)
+## [Test runner](https://bun.com/docs/runtime/bunfig#test-runner)
 
 The test runner is configured under the `[test]` section of your bunfig.toml.
 
@@ -196,7 +197,7 @@ The test runner is configured under the `[test]` section of your bunfig.toml.
 
 ```
 
-### [`test.root`](https://bun.com/docs/runtime/bunfig\#test-root)
+### [`test.root`](https://bun.com/docs/runtime/bunfig#test-root)
 
 The root directory to run tests from. Default `.`.
 
@@ -206,7 +207,7 @@ root = "./__tests__"
 
 ```
 
-### [`test.preload`](https://bun.com/docs/runtime/bunfig\#test-preload)
+### [`test.preload`](https://bun.com/docs/runtime/bunfig#test-preload)
 
 Same as the top-level `preload` field, but only applies to `bun test`.
 
@@ -216,7 +217,7 @@ preload = ["./setup.ts"]
 
 ```
 
-### [`test.smol`](https://bun.com/docs/runtime/bunfig\#test-smol)
+### [`test.smol`](https://bun.com/docs/runtime/bunfig#test-smol)
 
 Same as the top-level `smol` field, but only applies to `bun test`.
 
@@ -226,7 +227,7 @@ smol = true
 
 ```
 
-### [`test.coverage`](https://bun.com/docs/runtime/bunfig\#test-coverage)
+### [`test.coverage`](https://bun.com/docs/runtime/bunfig#test-coverage)
 
 Enables coverage reporting. Default `false`. Use `--coverage` to override.
 
@@ -236,7 +237,7 @@ coverage = false
 
 ```
 
-### [`test.coverageThreshold`](https://bun.com/docs/runtime/bunfig\#test-coveragethreshold)
+### [`test.coverageThreshold`](https://bun.com/docs/runtime/bunfig#test-coveragethreshold)
 
 To specify a coverage threshold. By default, no threshold is set. If your test suite does not meet or exceed this threshold, `bun test` will exit with a non-zero exit code to indicate the failure.
 
@@ -256,7 +257,7 @@ coverageThreshold = { line = 0.7, function = 0.8, statement = 0.9 }
 
 ```
 
-### [`test.coverageSkipTestFiles`](https://bun.com/docs/runtime/bunfig\#test-coverageskiptestfiles)
+### [`test.coverageSkipTestFiles`](https://bun.com/docs/runtime/bunfig#test-coverageskiptestfiles)
 
 Whether to skip test files when computing coverage statistics. Default `false`.
 
@@ -266,7 +267,7 @@ coverageSkipTestFiles = false
 
 ```
 
-### [`test.coveragePathIgnorePatterns`](https://bun.com/docs/runtime/bunfig\#test-coveragepathignorepatterns)
+### [`test.coveragePathIgnorePatterns`](https://bun.com/docs/runtime/bunfig#test-coveragepathignorepatterns)
 
 Exclude specific files or file patterns from coverage reports using glob patterns. Can be a single string pattern or an array of patterns.
 
@@ -285,7 +286,7 @@ coveragePathIgnorePatterns = [\
 
 ```
 
-### [`test.coverageReporter`](https://bun.com/docs/runtime/bunfig\#test-coveragereporter)
+### [`test.coverageReporter`](https://bun.com/docs/runtime/bunfig#test-coveragereporter)
 
 By default, coverage reports will be printed to the console. For persistent code coverage reports in CI environments and for other tools use `lcov`.
 
@@ -295,7 +296,7 @@ coverageReporter  = ["text", "lcov"]  # default ["text"]
 
 ```
 
-### [`test.coverageDir`](https://bun.com/docs/runtime/bunfig\#test-coveragedir)
+### [`test.coverageDir`](https://bun.com/docs/runtime/bunfig#test-coveragedir)
 
 Set path where coverage reports will be saved. Please notice, that it works only for persistent `coverageReporter` like `lcov`.
 
@@ -305,7 +306,7 @@ coverageDir = "path/to/somewhere"  # default "coverage"
 
 ```
 
-## [Package manager](https://bun.com/docs/runtime/bunfig\#package-manager)
+## [Package manager](https://bun.com/docs/runtime/bunfig#package-manager)
 
 Package management is a complex issue; to support a range of use cases, the behavior of `bun install` can be configured under the `[install]` section.
 
@@ -315,7 +316,7 @@ Package management is a complex issue; to support a range of use cases, the beha
 
 ```
 
-### [`install.optional`](https://bun.com/docs/runtime/bunfig\#install-optional)
+### [`install.optional`](https://bun.com/docs/runtime/bunfig#install-optional)
 
 Whether to install optional dependencies. Default `true`.
 
@@ -325,7 +326,7 @@ optional = true
 
 ```
 
-### [`install.dev`](https://bun.com/docs/runtime/bunfig\#install-dev)
+### [`install.dev`](https://bun.com/docs/runtime/bunfig#install-dev)
 
 Whether to install development dependencies. Default `true`.
 
@@ -335,7 +336,7 @@ dev = true
 
 ```
 
-### [`install.peer`](https://bun.com/docs/runtime/bunfig\#install-peer)
+### [`install.peer`](https://bun.com/docs/runtime/bunfig#install-peer)
 
 Whether to install peer dependencies. Default `true`.
 
@@ -345,7 +346,7 @@ peer = true
 
 ```
 
-### [`install.production`](https://bun.com/docs/runtime/bunfig\#install-production)
+### [`install.production`](https://bun.com/docs/runtime/bunfig#install-production)
 
 Whether `bun install` will run in "production mode". Default `false`.
 
@@ -357,7 +358,7 @@ production = false
 
 ```
 
-### [`install.exact`](https://bun.com/docs/runtime/bunfig\#install-exact)
+### [`install.exact`](https://bun.com/docs/runtime/bunfig#install-exact)
 
 Whether to set an exact version in `package.json`. Default `false`.
 
@@ -369,7 +370,7 @@ exact = false
 
 ```
 
-### [`install.saveTextLockfile`](https://bun.com/docs/runtime/bunfig\#install-savetextlockfile)
+### [`install.saveTextLockfile`](https://bun.com/docs/runtime/bunfig#install-savetextlockfile)
 
 If false, generate a binary `bun.lockb` instead of a text-based `bun.lock` file when running `bun install` and no lockfile is present.
 
@@ -381,7 +382,7 @@ saveTextLockfile = false
 
 ```
 
-### [`install.auto`](https://bun.com/docs/runtime/bunfig\#install-auto)
+### [`install.auto`](https://bun.com/docs/runtime/bunfig#install-auto)
 
 To configure Bun's package auto-install behavior. Default `"auto"` — when no `node_modules` folder is found, Bun will automatically install dependencies on the fly during execution.
 
@@ -393,14 +394,14 @@ auto = "auto"
 
 Valid values are:
 
-| Value | Description |
-| --- | --- |
-| `"auto"` | Resolve modules from local `node_modules` if it exists. Otherwise, auto-install dependencies on the fly. |
-| `"force"` | Always auto-install dependencies, even if `node_modules` exists. |
-| `"disable"` | Never auto-install dependencies. |
+| Value        | Description                                                                                                                         |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `"auto"`     | Resolve modules from local `node_modules` if it exists. Otherwise, auto-install dependencies on the fly.                            |
+| `"force"`    | Always auto-install dependencies, even if `node_modules` exists.                                                                    |
+| `"disable"`  | Never auto-install dependencies.                                                                                                    |
 | `"fallback"` | Check local `node_modules` first, then auto-install any packages that aren't found. You can enable this from the CLI with `bun -i`. |
 
-### [`install.frozenLockfile`](https://bun.com/docs/runtime/bunfig\#install-frozenlockfile)
+### [`install.frozenLockfile`](https://bun.com/docs/runtime/bunfig#install-frozenlockfile)
 
 When true, `bun install` will not update `bun.lock`. Default `false`. If `package.json` and the existing `bun.lock` are not in agreement, this will error.
 
@@ -410,7 +411,7 @@ frozenLockfile = false
 
 ```
 
-### [`install.dryRun`](https://bun.com/docs/runtime/bunfig\#install-dryrun)
+### [`install.dryRun`](https://bun.com/docs/runtime/bunfig#install-dryrun)
 
 Whether `bun install` will actually install dependencies. Default `false`. When true, it's equivalent to setting `--dry-run` on all `bun install` commands.
 
@@ -420,7 +421,7 @@ dryRun = false
 
 ```
 
-### [`install.globalDir`](https://bun.com/docs/runtime/bunfig\#install-globaldir)
+### [`install.globalDir`](https://bun.com/docs/runtime/bunfig#install-globaldir)
 
 To configure the directory where Bun puts globally installed packages.
 
@@ -433,7 +434,7 @@ globalDir = "~/.bun/install/global"
 
 ```
 
-### [`install.globalBinDir`](https://bun.com/docs/runtime/bunfig\#install-globalbindir)
+### [`install.globalBinDir`](https://bun.com/docs/runtime/bunfig#install-globalbindir)
 
 To configure the directory where Bun installs globally installed binaries and CLIs.
 
@@ -445,7 +446,7 @@ globalBinDir = "~/.bun/bin"
 
 ```
 
-### [`install.registry`](https://bun.com/docs/runtime/bunfig\#install-registry)
+### [`install.registry`](https://bun.com/docs/runtime/bunfig#install-registry)
 
 The default registry is `https://registry.npmjs.org/`. This can be globally configured in `bunfig.toml`:
 
@@ -460,7 +461,7 @@ registry = "https://username:password@registry.npmjs.org"
 
 ```
 
-### [`install.linkWorkspacePackages`](https://bun.com/docs/runtime/bunfig\#install-linkworkspacepackages)
+### [`install.linkWorkspacePackages`](https://bun.com/docs/runtime/bunfig#install-linkworkspacepackages)
 
 To configure how workspace packages are linked, use the `install.linkWorkspacePackages` option.
 
@@ -472,7 +473,7 @@ linkWorkspacePackages = true
 
 ```
 
-### [`install.scopes`](https://bun.com/docs/runtime/bunfig\#install-scopes)
+### [`install.scopes`](https://bun.com/docs/runtime/bunfig#install-scopes)
 
 To configure a registry for a particular scope (e.g. `@myorg/<package>`) use `install.scopes`. You can reference environment variables with `$variable` notation.
 
@@ -490,7 +491,7 @@ myorg = { token = "$npm_token", url = "https://registry.myorg.com/" }
 
 ```
 
-### [`install.ca` and `install.cafile`](https://bun.com/docs/runtime/bunfig\#install-ca-and-install-cafile)
+### [`install.ca` and `install.cafile`](https://bun.com/docs/runtime/bunfig#install-ca-and-install-cafile)
 
 To configure a CA certificate, use `install.ca` or `install.cafile` to specify a path to a CA certificate file.
 
@@ -504,7 +505,7 @@ cafile = "path/to/cafile"
 
 ```
 
-### [`install.cache`](https://bun.com/docs/runtime/bunfig\#install-cache)
+### [`install.cache`](https://bun.com/docs/runtime/bunfig#install-cache)
 
 To configure the cache behavior:
 
@@ -523,7 +524,7 @@ disableManifest = false
 
 ```
 
-### [`install.lockfile`](https://bun.com/docs/runtime/bunfig\#install-lockfile)
+### [`install.lockfile`](https://bun.com/docs/runtime/bunfig#install-lockfile)
 
 To configure lockfile behavior, use the `install.lockfile` section.
 
@@ -543,7 +544,7 @@ print = "yarn"
 
 ```
 
-### [`install.security.scanner`](https://bun.com/docs/runtime/bunfig\#install-security-scanner)
+### [`install.security.scanner`](https://bun.com/docs/runtime/bunfig#install-security-scanner)
 
 Configure a security scanner to scan packages for vulnerabilities before installation.
 
@@ -570,7 +571,7 @@ When a security scanner is configured:
 
 Learn more about [using and writing security scanners](https://bun.com/docs/install/security).
 
-### [`install.linker`](https://bun.com/docs/runtime/bunfig\#install-linker)
+### [`install.linker`](https://bun.com/docs/runtime/bunfig#install-linker)
 
 Configure the default linker strategy. Default `"hoisted"`.
 
@@ -584,18 +585,18 @@ linker = "hoisted"
 
 Valid values are:
 
-| Value | Description |
-| --- | --- |
-| `"hoisted"` | Link dependencies in a shared `node_modules` directory. |
-| `"isolated"` | Link dependencies inside each package installation. |
+| Value        | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| `"hoisted"`  | Link dependencies in a shared `node_modules` directory. |
+| `"isolated"` | Link dependencies inside each package installation.     |
 
-## [`bun run`](https://bun.com/docs/runtime/bunfig\#bun-run)
+## [`bun run`](https://bun.com/docs/runtime/bunfig#bun-run)
 
 The `bun run` command can be configured under the `[run]` section. These apply to the `bun run` command and the `bun` command when running a file or executable or script.
 
 Currently, `bunfig.toml` isn't always automatically loaded for `bun run` in a local project (it does check for a global `bunfig.toml`), so you might still need to pass `-c` or `-c=bunfig.toml` to use these settings.
 
-### [`run.shell` \- use the system shell or Bun's shell](https://bun.com/docs/runtime/bunfig\#run-shell-use-the-system-shell-or-bun-s-shell)
+### [`run.shell` \- use the system shell or Bun's shell](https://bun.com/docs/runtime/bunfig#run-shell-use-the-system-shell-or-bun-s-shell)
 
 The shell to use when running package.json scripts via `bun run` or `bun`. On Windows, this defaults to `"bun"` and on other platforms it defaults to `"system"`.
 
@@ -617,7 +618,7 @@ shell = "bun"
 
 ```
 
-### [`run.bun` \- auto alias `node` to `bun`](https://bun.com/docs/runtime/bunfig\#run-bun-auto-alias-node-to-bun)
+### [`run.bun` \- auto alias `node` to `bun`](https://bun.com/docs/runtime/bunfig#run-bun-auto-alias-node-to-bun)
 
 When `true`, this prepends `$PATH` with a `node` symlink that points to the `bun` binary for all scripts or executables invoked by `bun run` or `bun`.
 
@@ -653,7 +654,7 @@ bun run --bun dev
 
 If set to `false`, this will disable the `node` symlink.
 
-### [`run.silent` \- suppress reporting the command being run](https://bun.com/docs/runtime/bunfig\#run-silent-suppress-reporting-the-command-being-run)
+### [`run.silent` \- suppress reporting the command being run](https://bun.com/docs/runtime/bunfig#run-silent-suppress-reporting-the-command-being-run)
 
 When `true`, suppresses the output of the command being run by `bun run` or `bun`.
 
@@ -702,7 +703,7 @@ Auto-install](https://bun.com/docs/runtime/autoimport) [Next\\
 \\
 Debugger](https://bun.com/docs/runtime/debugger)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/bunfig.md)
 
@@ -726,7 +727,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

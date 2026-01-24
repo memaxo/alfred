@@ -1,9 +1,10 @@
 ---
 title: bun outdated – Package manager | Bun Docs
-url: 
+url:
 description: Check for outdated dependencies.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -138,7 +139,7 @@ typescript(dev)
 
 5.7.3
 
-## [Version Information](https://bun.com/docs/cli/outdated\#version-information)
+## [Version Information](https://bun.com/docs/cli/outdated#version-information)
 
 The output table shows three version columns:
 
@@ -146,7 +147,7 @@ The output table shows three version columns:
 - **Update**: The latest version that satisfies your package.json version range
 - **Latest**: The latest version published to the registry
 
-### [Dependency Filters](https://bun.com/docs/cli/outdated\#dependency-filters)
+### [Dependency Filters](https://bun.com/docs/cli/outdated#dependency-filters)
 
 `bun outdated` supports searching for outdated dependencies by package names and glob patterns.
 
@@ -318,7 +319,7 @@ typescript(dev)
 
 5.7.3
 
-### [Workspace Filters](https://bun.com/docs/cli/outdated\#workspace-filters)
+### [Workspace Filters](https://bun.com/docs/cli/outdated#workspace-filters)
 
 Use the `--filter` flag to check for outdated dependencies in a different workspace package:
 
@@ -640,7 +641,7 @@ Full documentation is available at https://bun.sh/docs/cli/outdated.
 \\
 `bun link`](https://bun.com/docs/cli/link)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/outdated.md)
 
@@ -664,7 +665,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

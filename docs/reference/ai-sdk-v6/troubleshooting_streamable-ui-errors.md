@@ -6,9 +6,9 @@ Copy markdown
 
 ## Issue
 
-  * Variable Not Found
-  * Cannot find `div`
-  * `Component` refers to a value, but is being used as a type
+- Variable Not Found
+- Cannot find `div`
+- `Component` refers to a value, but is being used as a type
 
 ## Solution
 

@@ -1,9 +1,10 @@
 ---
 title: Tracing Images sent to LLM models with Laminar - Laminar documentation
-url: 
+url:
 description: Automatic tracing of image data in LLM calls
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/image#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -30,7 +31,7 @@ On this page
 - [Viewing Images in Laminar Platform](https://docs.lmnr.ai/tracing/structure/image#viewing-images-in-laminar-platform)
 - [Start Tracing Images with these Integrations](https://docs.lmnr.ai/tracing/structure/image#start-tracing-images-with-these-integrations)
 
-## [​](https://docs.lmnr.ai/tracing/structure/image\#automatic-image-data-capture)  Automatic Image Data Capture
+## [​](https://docs.lmnr.ai/tracing/structure/image#automatic-image-data-capture) Automatic Image Data Capture
 
 Laminar automatically captures and stores image data sent to vision-capable LLM models across any SDK or framework you use. Whether you’re using OpenAI, Anthropic, Google, or any other provider’s SDK, Laminar seamlessly:
 
@@ -40,14 +41,13 @@ Laminar automatically captures and stores image data sent to vision-capable LLM 
 
 This happens transparently in the background - no code changes required.
 
-## [​](https://docs.lmnr.ai/tracing/structure/image\#openai-example)  OpenAI example
+## [​](https://docs.lmnr.ai/tracing/structure/image#openai-example) OpenAI example
 
 Laminar automatically detects images when you send them using the standard OpenAI SDK patterns. No additional configuration is required - simply use images in your LLM calls as you normally would.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -104,14 +104,13 @@ console.log(result);
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/image\#image-urls-from-external-sources)  Image URLs from External Sources
+## [​](https://docs.lmnr.ai/tracing/structure/image#image-urls-from-external-sources) Image URLs from External Sources
 
 Laminar also traces images when you reference them by URL instead of uploading them directly:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -152,7 +151,7 @@ const result = await analyzeWebImage(
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/image\#viewing-images-in-laminar-platform)  Viewing Images in Laminar Platform
+## [​](https://docs.lmnr.ai/tracing/structure/image#viewing-images-in-laminar-platform) Viewing Images in Laminar Platform
 
 When you send images to LLM models, Laminar renders them in the trace view:
 
@@ -165,20 +164,20 @@ In the Laminar platform, you can:
 - Correlate images with model responses for debugging.
 - Track image usage across different traces and sessions.
 
-## [​](https://docs.lmnr.ai/tracing/structure/image\#start-tracing-images-with-these-integrations)  Start Tracing Images with these Integrations
+## [​](https://docs.lmnr.ai/tracing/structure/image#start-tracing-images-with-these-integrations) Start Tracing Images with these Integrations
 
 Get started with automatic image tracing using any of our supported integrations. No configuration required - just install and your images will be automatically captured:
 
-| Integration | Description |
-| --- | --- |
-| [OpenAI](https://docs.lmnr.ai/tracing/integrations/openai) | Trace images sent to GPT-4o, GPT-4-turbo, and other vision models |
-| [Anthropic](https://docs.lmnr.ai/tracing/integrations/anthropic) | Automatically trace images in Claude conversations |
-| [Gemini](https://docs.lmnr.ai/tracing/integrations/gemini) | Capture images sent to Google’s Gemini Pro Vision models |
-| [LangChain](https://docs.lmnr.ai/tracing/integrations/langchain) | Automatic image tracing for LangChain vision chains |
-| [Vercel AI SDK](https://docs.lmnr.ai/tracing/integrations/vercel-ai-sdk) | Trace images in Vercel AI SDK multimodal applications |
-| [LiteLLM](https://docs.lmnr.ai/tracing/integrations/litellm) | Universal image tracing across 100+ LLM providers via LiteLLM |
-| [Browser Use](https://docs.lmnr.ai/tracing/integrations/browser-use) | Trace images in Browser Use applications |
-| [Stagehand](https://docs.lmnr.ai/tracing/integrations/stagehand) | Trace images in Stagehand applications |
+| Integration                                                              | Description                                                       |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| [OpenAI](https://docs.lmnr.ai/tracing/integrations/openai)               | Trace images sent to GPT-4o, GPT-4-turbo, and other vision models |
+| [Anthropic](https://docs.lmnr.ai/tracing/integrations/anthropic)         | Automatically trace images in Claude conversations                |
+| [Gemini](https://docs.lmnr.ai/tracing/integrations/gemini)               | Capture images sent to Google’s Gemini Pro Vision models          |
+| [LangChain](https://docs.lmnr.ai/tracing/integrations/langchain)         | Automatic image tracing for LangChain vision chains               |
+| [Vercel AI SDK](https://docs.lmnr.ai/tracing/integrations/vercel-ai-sdk) | Trace images in Vercel AI SDK multimodal applications             |
+| [LiteLLM](https://docs.lmnr.ai/tracing/integrations/litellm)             | Universal image tracing across 100+ LLM providers via LiteLLM     |
+| [Browser Use](https://docs.lmnr.ai/tracing/integrations/browser-use)     | Trace images in Browser Use applications                          |
+| [Stagehand](https://docs.lmnr.ai/tracing/integrations/stagehand)         | Trace images in Stagehand applications                            |
 
 [Tags](https://docs.lmnr.ai/tracing/structure/tags) [Continuing Traces](https://docs.lmnr.ai/tracing/structure/continuing-traces)
 

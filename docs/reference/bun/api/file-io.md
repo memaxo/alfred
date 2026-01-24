@@ -1,9 +1,10 @@
 ---
 title: File I/O – API | Bun Docs
-url: 
+url:
 description: Read and write files fast with Bun's heavily optimized file system API.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Project
 
 Bun provides a set of optimized APIs for reading and writing files.
 
-## [Reading files ( `Bun.file()`)](https://bun.com/docs/api/file-io\#reading-files-bun-file)
+## [Reading files ( `Bun.file()`)](https://bun.com/docs/api/file-io#reading-files-bun-file)
 
 `Bun.file(path): BunFile`
 
@@ -116,7 +117,7 @@ Bun.stderr;
 
 ```
 
-### [Deleting files ( `file.delete()`)](https://bun.com/docs/api/file-io\#deleting-files-file-delete)
+### [Deleting files ( `file.delete()`)](https://bun.com/docs/api/file-io#deleting-files-file-delete)
 
 You can delete a file by calling the `.delete()` function.
 
@@ -125,7 +126,7 @@ await Bun.file("logs.json").delete();
 
 ```
 
-## [Writing files ( `Bun.write()`)](https://bun.com/docs/api/file-io\#writing-files-bun-write)
+## [Writing files ( `Bun.write()`)](https://bun.com/docs/api/file-io#writing-files-bun-write)
 
 `Bun.write(destination, data): Promise<number>`
 
@@ -149,18 +150,18 @@ All possible permutations are handled using the fastest available system calls o
 
 See syscalls
 
-| Output | Input | System call | Platform |
-| --- | --- | --- | --- |
-| file | file | copy\_file\_range | Linux |
-| file | pipe | sendfile | Linux |
-| pipe | pipe | splice | Linux |
-| terminal | file | sendfile | Linux |
-| terminal | terminal | sendfile | Linux |
-| socket | file or pipe | sendfile (if http, not https) | Linux |
-| file (doesn't exist) | file (path) | clonefile | macOS |
-| file (exists) | file | fcopyfile | macOS |
-| file | Blob or string | write | macOS |
-| file | Blob or string | write | Linux |
+| Output               | Input          | System call                   | Platform |
+| -------------------- | -------------- | ----------------------------- | -------- |
+| file                 | file           | copy_file_range               | Linux    |
+| file                 | pipe           | sendfile                      | Linux    |
+| pipe                 | pipe           | splice                        | Linux    |
+| terminal             | file           | sendfile                      | Linux    |
+| terminal             | terminal       | sendfile                      | Linux    |
+| socket               | file or pipe   | sendfile (if http, not https) | Linux    |
+| file (doesn't exist) | file (path)    | clonefile                     | macOS    |
+| file (exists)        | file           | fcopyfile                     | macOS    |
+| file                 | Blob or string | write                         | macOS    |
+| file                 | Blob or string | write                         | Linux    |
 
 To write a string to disk:
 
@@ -204,7 +205,7 @@ await Bun.write("index.html", response);
 
 ```
 
-## [Incremental writing with `FileSink`](https://bun.com/docs/api/file-io\#incremental-writing-with-filesink)
+## [Incremental writing with `FileSink`](https://bun.com/docs/api/file-io#incremental-writing-with-filesink)
 
 Bun provides a native incremental file writing API called `FileSink`. To retrieve a `FileSink` instance from a `BunFile`:
 
@@ -257,11 +258,11 @@ writer.ref();
 
 ```
 
-## [Directories](https://bun.com/docs/api/file-io\#directories)
+## [Directories](https://bun.com/docs/api/file-io#directories)
 
 Bun's implementation of `node:fs` is fast, and we haven't implemented a Bun-specific API for reading directories just yet. For now, you should use `node:fs` for working with directories in Bun.
 
-### [Reading directories (readdir)](https://bun.com/docs/api/file-io\#reading-directories-readdir)
+### [Reading directories (readdir)](https://bun.com/docs/api/file-io#reading-directories-readdir)
 
 To read a directory in Bun, use `readdir` from `node:fs`.
 
@@ -285,7 +286,7 @@ const files = await readdir("../", { recursive: true });
 
 ```
 
-### [Creating directories (mkdir)](https://bun.com/docs/api/file-io\#creating-directories-mkdir)
+### [Creating directories (mkdir)](https://bun.com/docs/api/file-io#creating-directories-mkdir)
 
 To recursively create a directory, use `mkdir` in `node:fs`:
 
@@ -296,7 +297,7 @@ await mkdir("path/to/dir", { recursive: true });
 
 ```
 
-## [Benchmarks](https://bun.com/docs/api/file-io\#benchmarks)
+## [Benchmarks](https://bun.com/docs/api/file-io#benchmarks)
 
 The following is a 3-line implementation of the Linux `cat` command.
 
@@ -323,7 +324,7 @@ It runs 2x faster than GNU `cat` for large files on Linux.
 
 [![](https://bun.com/images/cat.jpg)](https://bun.com/images/cat.jpg)
 
-## [Reference](https://bun.com/docs/api/file-io\#reference)
+## [Reference](https://bun.com/docs/api/file-io#reference)
 
 ```
 interface Bun {
@@ -376,7 +377,7 @@ S3 Object Storage](https://bun.com/docs/api/s3) [Next\\
 \\
 Redis client](https://bun.com/docs/api/redis)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/file-io.md)
 
@@ -400,7 +401,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -7,27 +7,34 @@ The Voice system provides real-time speech-to-speech (S2S) capabilities, text-to
 ## Core Components
 
 ### 1. Voice Registry (`packages/voice/src/server/registry.ts`)
+
 The central authority for managing voice sessions.
+
 - **Responsibility**: Creates, retrieves, and cleans up `VoiceSession` instances.
 - **Lifecycle**: Monitors session idleness and enforces timeouts (5 minutes default).
 - **Pattern**: Singleton-like access via `getVoicePools()` in `packages/api`.
 
 ### 2. Voice Session (`packages/voice/src/server/session.ts`)
+
 Represents a single conversation context.
+
 - **State**: Maintains transcript buffer, audio buffer, VAD state, and STT cache affinity.
 - **Processing**: Coordinates STT transcription (with session affinity) and TTS synthesis.
 - **Isolation**: Decouples logic from transport (WebSocket/HTTP).
 - **Cache Management**: Manages STT cache lifecycle for cache-aware streaming.
 
 ### 3. Transport Layer
+
 - **WebSocket**: Primary transport for real-time S2S (`VoiceSocketHandler`).
-- **Protocol**: 
+- **Protocol**:
   - **Binary Frames**: Used for raw audio chunks (PCM/Opus) to minimize overhead.
   - **JSON Frames**: Used for control events (start, stop, status, transcript).
 - **Optimization**: Uses `Buffer` directly, avoiding Base64 encoding for audio on the hot path.
 
 ### 4. Process Pools (`packages/voice/src/process/`)
+
 Manages persistent Python subprocesses for model inference.
+
 - **STT Pool**: Runs Nemotron Speech (default) with cache-aware streaming. Handles VAD and transcription with session affinity.
 - **TTS Pool**: Runs Maya1 (or Piper). Handles synthesis.
   - **Dual-Backend**:
@@ -59,18 +66,19 @@ Each session is assigned to a specific Python process, ensuring cache continuity
 
 ### Chunk Size Configuration
 
-| Setting | Chunk Size | Latency | Accuracy | Use Case |
-|---------|------------|---------|----------|----------|
-| `fast` | 80ms | Lowest | Lower | Real-time feedback |
-| `low` | 160ms | Very Low | Good | Voice assistants |
-| `medium` | 560ms | Balanced | High | General use (default) |
-| `accurate` | 1.12s | Higher | Highest | Transcription tasks |
+| Setting    | Chunk Size | Latency  | Accuracy | Use Case              |
+| ---------- | ---------- | -------- | -------- | --------------------- |
+| `fast`     | 80ms       | Lowest   | Lower    | Real-time feedback    |
+| `low`      | 160ms      | Very Low | Good     | Voice assistants      |
+| `medium`   | 560ms      | Balanced | High     | General use (default) |
+| `accurate` | 1.12s      | Higher   | Highest  | Transcription tasks   |
 
 Configure via `VOICE_STT_CHUNK_SIZE` environment variable.
 
 ## Data Flow
 
 ### Client to Server (Audio Input)
+
 1. **Capture**: Client records audio (PCM/WebM).
 2. **Transport**: Sends binary chunks via WebSocket.
 3. **Handler**: `VoiceSocketHandler` receives chunk.
@@ -79,6 +87,7 @@ Configure via `VOICE_STT_CHUNK_SIZE` environment variable.
 6. **Event**: Server emits `vad_state` and `partial_transcript` (punctuated) to client.
 
 ### Server to Client (Audio Output)
+
 1. **Trigger**: Assistant generates text response.
 2. **Synthesis**: `VoiceSession.streamSynthesis()` sends text to TTS Pool.
 3. **Inference**: TTS Python process generates audio chunks (24kHz/16kHz).
@@ -90,7 +99,7 @@ Configure via `VOICE_STT_CHUNK_SIZE` environment variable.
 
 - **Runtime**: Bun (Server), React (Web), React Native (Mobile).
 - **Languages**: TypeScript (Core), Python (ML).
-- **Models**: 
+- **Models**:
   - TTS: Maya1 (primary), Piper (fallback/legacy).
   - STT: Nemotron Speech 0.6B (primary), Parakeet 120M (legacy fallback).
 - **Codec**: Native Opus (`@discordjs/opus`) for compression, PCM for raw quality.
@@ -100,17 +109,20 @@ Configure via `VOICE_STT_CHUNK_SIZE` environment variable.
 Environment variables control the behavior:
 
 ### STT Configuration
+
 - `VOICE_STT_MODEL`: HuggingFace model ID (default: `nvidia/nemotron-speech-streaming-en-0.6b`)
 - `VOICE_STT_DEVICE`: Device to use (`cuda`, `mps`, `cpu`, or auto-detect)
 - `VOICE_STT_CHUNK_SIZE`: Latency/accuracy tradeoff (`fast`, `low`, `medium`, `accurate`)
 - `VOICE_STT_POOL_SIZE`: Number of concurrent STT processes (default: 2)
 
 ### TTS Configuration
+
 - `VOICE_PROVIDER`: `maya1` (default) or `supertonic` (ONNX TTS).
 - `PIPER_MODEL_PATH`: Path or ID for TTS model (Maya uses internal HF path).
 - `VOICE_TTS_POOL_SIZE`: Number of concurrent TTS processes (default: 1).
 
 ### Legacy Variables (Deprecated)
+
 - `WHISPER_MODEL_PATH`: Use `VOICE_STT_MODEL` instead.
 - `WHISPER_DEVICE`: Use `VOICE_STT_DEVICE` instead.
 
@@ -156,12 +168,14 @@ Voice state is visualized in the Mindscape UI:
 Voice admin dashboard at `/admin/voice` (`apps/web/src/routes/admin/voice.tsx`):
 
 **Features:**
+
 - **Pool Management**: Restart STT/TTS pools (`restartVoicePool`)
 - **Session Management**: Clear active sessions (`clearVoiceSessions`)
 - **Statistics**: View voice stats (`getVoiceStats`)
 - **Telemetry**: View aggregated telemetry (`collectVoiceTelemetry`)
 
 **API Endpoints:**
+
 - `POST /api/admin/voice/restart-pool` - Restart STT or TTS pool
 - `POST /api/admin/voice/clear-sessions` - Clear all active sessions
 - `GET /api/admin/voice/stats` - Get voice statistics
@@ -188,6 +202,7 @@ Metrics exposed on `/api/metrics`:
 ### Telemetry Collection
 
 `collectVoiceTelemetry()` aggregates telemetry from active sessions:
+
 - Packet loss, jitter, RTT per session
 - Pool utilization and saturation
 - Process health and crash counts
@@ -196,10 +211,10 @@ Metrics exposed on `/api/metrics`:
 
 ## Model Comparison
 
-| Model | Parameters | WER (avg) | Punctuation | Streaming | VRAM |
-|-------|------------|-----------|-------------|-----------|------|
-| Nemotron 0.6B | 600M | 7.16% | Native | Cache-aware | ~1.5GB |
-| Parakeet 120M | 120M | ~9% | None | Buffered | ~0.5GB |
+| Model         | Parameters | WER (avg) | Punctuation | Streaming   | VRAM   |
+| ------------- | ---------- | --------- | ----------- | ----------- | ------ |
+| Nemotron 0.6B | 600M       | 7.16%     | Native      | Cache-aware | ~1.5GB |
+| Parakeet 120M | 120M       | ~9%       | None        | Buffered    | ~0.5GB |
 
 The default Nemotron model provides significantly better accuracy and native punctuation at the cost of additional memory.
 
@@ -218,6 +233,7 @@ The default Nemotron model provides significantly better accuracy and native pun
 3. **Audio too short:** Nemotron requires minimum ~0.3s of audio. Very short chunks may produce empty results.
 
 **Debugging:**
+
 ```python
 # Add to server.py _transcribe_batch():
 logger.info(f"Raw result: type={type(result)}, value={result}")
@@ -234,17 +250,21 @@ logger.info(f"Raw result: type={type(result)}, value={result}")
 2. **Warmup race condition:** TTS warmup runs in background and can race with actual requests. Wait 2-3s after initialization before sending requests.
 
 **Validation:**
+
 ```typescript
 const audioDuration = pcm.length / sampleRate;
 const expectedMin = wordCount * 0.1; // ~0.1s per word
 if (audioDuration < expectedMin) {
-  console.warn(`Audio too short: ${audioDuration}s vs expected ${expectedMin}s`);
+  console.warn(
+    `Audio too short: ${audioDuration}s vs expected ${expectedMin}s`
+  );
 }
 ```
 
 ### Pipeline Test Failures
 
 **Running pipeline tests:**
+
 ```bash
 # Use Supertonic TTS for reliable audio generation
 VOICE_PIPELINE_TEST=1 TTS_PROVIDER=supertonic VOICE_STT_DEVICE=cpu \
@@ -252,10 +272,12 @@ VOICE_PIPELINE_TEST=1 TTS_PROVIDER=supertonic VOICE_STT_DEVICE=cpu \
 ```
 
 **Expected results:**
+
 - Average WER: < 10%
 - Average similarity: > 90%
 
 **If tests fail:**
+
 1. Check audio duration (should be ~0.1s per word minimum)
 2. Check audio levels (RMS > 100, max > 1000)
 3. Try CPU device for STT

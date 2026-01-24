@@ -11,11 +11,13 @@ ALFRED maintains conversation and workflow continuity across three distinct memo
 **Purpose:** Maintains active session context for real-time interactions.
 
 **Characteristics:**
+
 - In-memory storage with TTL expiration
 - Optimized for low-latency access
 - Cleared when session ends or expires
 
 **Implementations:**
+
 - **Voice sessions**: `VoiceSessionManager` registry (`packages/voice/src/server/registry.ts`)
   - TTL: `VOICE_WS_INACTIVITY_TIMEOUT_MS` (default: 1 hour)
   - Stores: audio buffers, transcript state, session metadata
@@ -33,11 +35,13 @@ ALFRED maintains conversation and workflow continuity across three distinct memo
 **Purpose:** Enables resuming conversations across sessions, devices, and time gaps.
 
 **Characteristics:**
+
 - PostgreSQL-backed storage (`conversations`, `messages` tables)
 - Survives session expiration and server restarts
 - Queryable by `threadId` and `userId`
 
 **Implementations:**
+
 - **Conversation threads**: `conversationRepo` (`packages/db/src/repo/conversation.ts`)
   - Stores: message history, thread metadata, conversation state
   - Used by: voice assistant (`packages/api/src/voice/assistant.ts`), chat hooks (`apps/web/src/hooks/use-chat-logic.ts`)
@@ -52,11 +56,13 @@ ALFRED maintains conversation and workflow continuity across three distinct memo
 **Purpose:** Promotes important outcomes and decisions into durable, queryable artifacts.
 
 **Characteristics:**
+
 - PostgreSQL-backed structured data
 - Designed for querying "what matters" rather than full transcript
 - Survives indefinitely (no TTL)
 
 **Implementations:**
+
 - **Focus sets**: Collections of commitments (`focus_sets`, `focus_commitments` tables)
   - Represents: user's active priorities and WIP limits
   - Used by: Concierge Focus UI, workflow prioritization
@@ -71,17 +77,18 @@ ALFRED maintains conversation and workflow continuity across three distinct memo
 
 ## Concept Mapping
 
-| Concept | Layer | Storage | TTL | Purpose |
-|---------|-------|---------|-----|---------|
-| `sessionId` | Layer 1 | In-memory/Redis | 1 hour | Ephemeral WebSocket/voice session |
-| `threadId` | Layer 2 | PostgreSQL | Forever | Persistent conversation thread |
-| `workflowRunId` | Layer 3 | PostgreSQL | Forever | Persistent execution run |
+| Concept         | Layer   | Storage         | TTL     | Purpose                           |
+| --------------- | ------- | --------------- | ------- | --------------------------------- |
+| `sessionId`     | Layer 1 | In-memory/Redis | 1 hour  | Ephemeral WebSocket/voice session |
+| `threadId`      | Layer 2 | PostgreSQL      | Forever | Persistent conversation thread    |
+| `workflowRunId` | Layer 3 | PostgreSQL      | Forever | Persistent execution run          |
 
 ## Relationship to Context Types
 
 This document describes **continuity layers** (how ALFRED remembers across time). For agent execution context types (Window/Artifact/Domain/Environmental/Temporal), see [`docs/definitions/context.md`](../definitions/context.md).
 
 **Key distinction:**
+
 - **Continuity layers**: How ALFRED persists and retrieves conversation/workflow state
 - **Context types**: What information agents have available during execution
 

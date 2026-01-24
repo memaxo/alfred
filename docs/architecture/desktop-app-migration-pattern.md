@@ -7,6 +7,7 @@ This document describes the pattern for consolidating fragmented settings/config
 ## Problem
 
 Settings and configuration UIs often start simple but grow fragmented over time:
+
 - Settings spread across multiple route files
 - Duplicate logic in window components and route pages
 - Inconsistent organization and navigation
@@ -16,6 +17,7 @@ Settings and configuration UIs often start simple but grow fragmented over time:
 ## Solution: Section-Based Desktop App
 
 Consolidate all settings into a single desktop app with:
+
 1. Persistent sidebar navigation (10-15 categories max)
 2. Section-based file organization
 3. Self-contained section components
@@ -103,16 +105,19 @@ export function ProfileSection() {
 ### Phase 1: Create New Structure
 
 1. **Create parent app**
+
    ```bash
    touch apps/web/src/components/apps/settings/index.tsx
    ```
 
 2. **Create sections directory**
+
    ```bash
    mkdir apps/web/src/components/apps/settings/sections
    ```
 
 3. **Define section types**
+
    ```typescript
    type SettingsSection = "profile" | "security" | "models" | ...
    ```
@@ -132,6 +137,7 @@ For each existing settings route/component:
    - Copy local state management
 
 2. **Create section file**
+
    ```bash
    touch apps/web/src/components/apps/settings/sections/profile.tsx
    ```
@@ -149,6 +155,7 @@ For each existing settings route/component:
 ### Phase 3: Backend Support
 
 1. **Create tRPC routers**
+
    ```typescript
    // packages/api/src/routers/embed.ts
    export const embedRouter = router({
@@ -158,6 +165,7 @@ For each existing settings route/component:
    ```
 
 2. **Create database schemas** (if needed)
+
    ```typescript
    // packages/db/src/schema/notification.ts
    export const notificationPreferences = pgTable("notification_preferences", {
@@ -180,6 +188,7 @@ For each existing settings route/component:
 ### Phase 4: Update Window Integration
 
 1. **Update window component**
+
    ```typescript
    // components/windows/settings/settings-window.tsx
    import { SettingsApp } from "@/components/apps/settings";
@@ -216,6 +225,7 @@ For each existing settings route/component:
 ### Phase 5: Deprecation
 
 1. **Update route to redirect**
+
    ```typescript
    // apps/web/src/routes/_protected/settings.tsx
    function SettingsRoute() {
@@ -228,6 +238,7 @@ For each existing settings route/component:
    ```
 
 2. **Find all callers**
+
    ```bash
    rg "/settings/(profile|visual|mcp)" --type tsx
    ```
@@ -237,6 +248,7 @@ For each existing settings route/component:
    - Remove navigation to old routes
 
 4. **Delete deprecated files**
+
    ```bash
    rm apps/web/src/routes/_protected/settings/profile.tsx
    rm apps/web/src/routes/_protected/settings/visual.tsx
@@ -245,6 +257,7 @@ For each existing settings route/component:
    ```
 
 5. **Delete deprecated tests**
+
    ```bash
    rm components/windows/settings/__tests__/content.test.tsx
    ```
@@ -257,11 +270,13 @@ For each existing settings route/component:
 ### Phase 6: Verification
 
 1. **Typecheck**
+
    ```bash
    cd apps/web && bun run typecheck
    ```
 
 2. **Search for broken imports**
+
    ```bash
    rg "from.*content-tabs" --type tsx
    rg "SettingsContent" --type tsx
@@ -274,6 +289,7 @@ For each existing settings route/component:
    - Verify window sizing
 
 4. **Commit**
+
    ```bash
    git add -A
    git commit -m "Consolidate settings into unified desktop app
@@ -318,6 +334,7 @@ For each existing settings route/component:
 ## Success Metrics
 
 Settings consolidation (2025-01):
+
 - **Code removed:** 7 files, 71KB, 2,755 lines
 - **Code added:** 11 sections, 4 routers, 2 schemas
 - **Organization:** 10 categories in 1 place
@@ -329,11 +346,13 @@ Settings consolidation (2025-01):
 ### Issue: TypeScript errors with WindowComponentProps
 
 **Symptom:**
+
 ```
 Type 'NodeProps' is not assignable to type 'WindowInstance'
 ```
 
 **Solution:** Provide mock props in window wrapper:
+
 ```typescript
 const mockProps: WindowComponentProps = {
   window: {} as any,
@@ -347,6 +366,7 @@ const mockProps: WindowComponentProps = {
 **Symptom:** Form shows stale data after mutation
 
 **Solution:** Invalidate queries after mutation:
+
 ```typescript
 const utils = trpc.useUtils();
 const mutation = trpc.section.update.useMutation({
@@ -361,6 +381,7 @@ const mutation = trpc.section.update.useMutation({
 **Symptom:** Users can navigate to `/settings/profile`
 
 **Solution:** Delete the route file, not just redirect:
+
 ```bash
 rm routes/_protected/settings/profile.tsx
 ```

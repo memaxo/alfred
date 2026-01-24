@@ -32,6 +32,7 @@ MCP_CLIENT_SECRET=your-secret-here
 ```
 
 Generate a secure secret:
+
 ```bash
 openssl rand -base64 32
 ```
@@ -47,10 +48,10 @@ Clients with both `CLIENT_ID` and `CLIENT_SECRET` in env are automatically trust
 
 MCP clients discover ALFRED's OAuth configuration via well-known endpoints:
 
-| Endpoint | RFC | Purpose |
-|----------|-----|---------|
+| Endpoint                                  | RFC      | Purpose                       |
+| ----------------------------------------- | -------- | ----------------------------- |
 | `/.well-known/oauth-authorization-server` | RFC 8414 | Authorization server metadata |
-| `/.well-known/oauth-protected-resource` | RFC 9728 | Protected resource metadata |
+| `/.well-known/oauth-protected-resource`   | RFC 9728 | Protected resource metadata   |
 
 ### Authorization Server Metadata
 
@@ -71,51 +72,51 @@ MCP clients discover ALFRED's OAuth configuration via well-known endpoints:
 
 ### OIDC Standard Scopes
 
-| Scope | Description |
-|-------|-------------|
-| `openid` | Required for OIDC flows |
-| `profile` | User profile information |
-| `email` | User email address |
-| `offline_access` | Refresh tokens |
+| Scope            | Description              |
+| ---------------- | ------------------------ |
+| `openid`         | Required for OIDC flows  |
+| `profile`        | User profile information |
+| `email`          | User email address       |
+| `offline_access` | Refresh tokens           |
 
 ### Read Scopes
 
-| Scope | Description |
-|-------|-------------|
-| `read:*` | All read operations |
-| `read:todos` | View todos |
-| `read:notes` | View notes |
-| `read:reminders` | View reminders |
+| Scope            | Description          |
+| ---------------- | -------------------- |
+| `read:*`         | All read operations  |
+| `read:todos`     | View todos           |
+| `read:notes`     | View notes           |
+| `read:reminders` | View reminders       |
 | `read:knowledge` | View knowledge graph |
 | `read:cognitive` | View cognitive state |
-| `read:workflows` | View workflow runs |
-| `read:timers` | View timers |
-| `read:bookmarks` | View bookmarks |
+| `read:workflows` | View workflow runs   |
+| `read:timers`    | View timers          |
+| `read:bookmarks` | View bookmarks       |
 
 ### Write Scopes
 
-| Scope | Description |
-|-------|-------------|
-| `write:*` | All write operations |
-| `write:todos` | Create/update/delete todos |
-| `write:notes` | Create/update/delete notes |
+| Scope             | Description                    |
+| ----------------- | ------------------------------ |
+| `write:*`         | All write operations           |
+| `write:todos`     | Create/update/delete todos     |
+| `write:notes`     | Create/update/delete notes     |
 | `write:reminders` | Create/update/delete reminders |
 | `write:knowledge` | Create/update/delete knowledge |
-| `write:workflows` | Create/start/cancel workflows |
-| `write:timers` | Create/update/delete timers |
+| `write:workflows` | Create/start/cancel workflows  |
+| `write:timers`    | Create/update/delete timers    |
 | `write:bookmarks` | Create/update/delete bookmarks |
 
 ### Admin Scopes
 
 Admin scopes require biometric verification:
 
-| Scope | Description |
-|-------|-------------|
-| `admin:*` | All admin operations |
-| `admin:voice` | Voice pipeline control |
-| `admin:workflow` | Workflow system admin |
-| `admin:deploy` | Deploy operations |
-| `admin:system` | System administration |
+| Scope            | Description            |
+| ---------------- | ---------------------- |
+| `admin:*`        | All admin operations   |
+| `admin:voice`    | Voice pipeline control |
+| `admin:workflow` | Workflow system admin  |
+| `admin:deploy`   | Deploy operations      |
+| `admin:system`   | System administration  |
 
 ## Authentication Flows
 
@@ -141,17 +142,20 @@ authUrl.searchParams.set("code_challenge", codeChallenge);
 authUrl.searchParams.set("code_challenge_method", "S256");
 
 // Token exchange
-const tokenResponse = await fetch("https://alfred.local/api/auth/oauth2/token", {
-  method: "POST",
-  headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  body: new URLSearchParams({
-    grant_type: "authorization_code",
-    code: authorizationCode,
-    redirect_uri: "https://my-app.com/callback",
-    client_id: "my-client",
-    code_verifier: codeVerifier,
-  }),
-});
+const tokenResponse = await fetch(
+  "https://alfred.local/api/auth/oauth2/token",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code: authorizationCode,
+      redirect_uri: "https://my-app.com/callback",
+      client_id: "my-client",
+      code_verifier: codeVerifier,
+    }),
+  }
+);
 ```
 
 ### Device Authorization (CLI/TUI)
@@ -171,7 +175,8 @@ const deviceResponse = await fetch("https://alfred.local/api/auth/device", {
   }),
 });
 
-const { device_code, user_code, verification_uri, interval } = await deviceResponse.json();
+const { device_code, user_code, verification_uri, interval } =
+  await deviceResponse.json();
 
 console.log(`Open ${verification_uri} and enter: ${user_code}`);
 
@@ -179,17 +184,20 @@ console.log(`Open ${verification_uri} and enter: ${user_code}`);
 let token = null;
 while (!token) {
   await sleep(interval * 1000);
-  
-  const pollResponse = await fetch("https://alfred.local/api/auth/oauth2/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-      device_code,
-      client_id: "alfred-cli",
-    }),
-  });
-  
+
+  const pollResponse = await fetch(
+    "https://alfred.local/api/auth/oauth2/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        device_code,
+        client_id: "alfred-cli",
+      }),
+    }
+  );
+
   const result = await pollResponse.json();
   if (result.access_token) {
     token = result;
@@ -218,7 +226,7 @@ async function validateToken(accessToken: string) {
   const { payload } = await jwtVerify(accessToken, JWKS, {
     issuer: "https://alfred.local",
   });
-  
+
   return {
     userId: payload.sub,
     scopes: payload.scope?.split(" ") ?? [],
@@ -309,6 +317,7 @@ bun scripts/verify-mcp-auth.ts --base-url http://localhost:3000
 ```
 
 Expected output:
+
 ```
 🔐 MCP OAuth Authentication Verification
    Base URL: http://localhost:3000
@@ -331,6 +340,7 @@ Summary: 6 passed, 0 failed
 ### "client_id not found"
 
 The client is not registered. Add credentials to `.env`:
+
 ```bash
 MCP_CLIENT_ID=your-client-id
 MCP_CLIENT_SECRET=your-secret
@@ -339,6 +349,7 @@ MCP_CLIENT_SECRET=your-secret
 ### "scope_required" error
 
 The token doesn't have the required scope. Request additional scopes during authorization:
+
 ```
 scope=openid profile read:todos write:todos
 ```
@@ -350,16 +361,20 @@ Admin operations require recent biometric verification. Trigger a passkey authen
 ### "Token expired"
 
 Use the refresh token to get a new access token:
+
 ```typescript
-const refreshResponse = await fetch("https://alfred.local/api/auth/oauth2/token", {
-  method: "POST",
-  headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  body: new URLSearchParams({
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-    client_id: clientId,
-  }),
-});
+const refreshResponse = await fetch(
+  "https://alfred.local/api/auth/oauth2/token",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: clientId,
+    }),
+  }
+);
 ```
 
 ## Security Considerations

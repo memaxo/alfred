@@ -1,8 +1,9 @@
 ---
 title: Introduction to Laminar evaluations - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/introduction#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -31,11 +32,11 @@ Evaluation is the process of validating and testing the outputs that your AI app
 
 ![Screenshot of a trace visualization](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/evaluations/evals.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=0648a6cc3ff6e6c6ff31650fd2c03458)
 
-### [​](https://docs.lmnr.ai/evaluations/introduction\#why-do-we-need-evals%3F)  Why do we need evals?
+### [​](https://docs.lmnr.ai/evaluations/introduction#why-do-we-need-evals%3F) Why do we need evals?
 
 In short, evaluations bring rigor to AI development process.When you are building with foundation models, creating high-quality evals is one of the most impactful things you can do. Developing AI solutions involves an iterative design process. Without evals, it can be difficult and time-intensive to understand how different model versions and prompts affect your use case.With continuous model upgrades from providers, evals allow you to efficiently test model performance for your specific uses in a standardized way. Developing a suite of evals customized to your objectives will help you quickly understand how new models perform for your applications. You can also make evals part of your CI/CD pipeline to ensure desired accuracy before deployment.
 
-### [​](https://docs.lmnr.ai/evaluations/introduction\#types-of-evals)  Types of evals
+### [​](https://docs.lmnr.ai/evaluations/introduction#types-of-evals) Types of evals
 
 There are two main approaches to evaluating outputs:**1\. Logic-based evaluation**: The simplest and most common type uses code to check outputs against expected answers. For example:
 
@@ -50,7 +51,7 @@ There are two main approaches to evaluating outputs:**1\. Logic-based evaluation
 
 Model-based evaluation works best with powerful models when the desired output has significant variation, such as open-ended questions or creative tasks.
 
-## [​](https://docs.lmnr.ai/evaluations/introduction\#how-evals-differ-from-traditional-unit-tests)  How evals differ from traditional unit tests
+## [​](https://docs.lmnr.ai/evaluations/introduction#how-evals-differ-from-traditional-unit-tests) How evals differ from traditional unit tests
 
 Unlike traditional unit tests that focus on binary pass/fail outcomes, evaluations for AI systems require continuous tracking and visualization of performance metrics over time. As models evolve and prompts are refined, being able to compare performance across different versions becomes critical.What makes evals unique is their ability to:
 

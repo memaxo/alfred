@@ -1,9 +1,10 @@
 ---
 title: Introduction | Better Auth
-url: 
+url:
 description: Introduction to Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,11 +27,11 @@ language: en
 
 Better Auth is a framework-agnostic authentication and authorization framework for TypeScript. It provides a comprehensive set of features out of the box and includes a plugin ecosystem that simplifies adding advanced functionalities. Whether you need 2FA, multi-tenancy, multi-session support, or even enterprise features like SSO, it lets you focus on building your application instead of reinventing the wheel.
 
-## [Why Better Auth?](https://www.better-auth.com/docs/introduction\#why-better-auth)
+## [Why Better Auth?](https://www.better-auth.com/docs/introduction#why-better-auth)
 
 _Authentication in the TypeScript ecosystem has long been a half-solved problem. Other open-source libraries often require a lot of additional code for anything beyond basic authentication features. Rather than just pushing third-party services as the solution, I believe we can do better as a community—hence, Better Auth._
 
-## [Features](https://www.better-auth.com/docs/introduction\#features)
+## [Features](https://www.better-auth.com/docs/introduction#features)
 
 Better Auth aims to be the most comprehensive auth library. It provides a wide range of features out of the box and allows you to extend it with plugins. Here are some of the features:
 
@@ -72,7 +73,7 @@ Even more capabilities with plugins
 
 ...and much more!
 
-## [LLMs.txt](https://www.better-auth.com/docs/introduction\#llmstxt)
+## [LLMs.txt](https://www.better-auth.com/docs/introduction#llmstxt)
 
 Better Auth provides an LLMs.txt file that helps AI models understand how to interact with your authentication system. You can find it at [https://better-auth.com/llms.txt](https://better-auth.com/llms.txt).
 

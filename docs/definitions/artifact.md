@@ -7,6 +7,7 @@ An artifact is a persisted file output from a tool call. Artifacts are stored in
 Artifacts enable "context folding"—sub-agents do work and return results as files. The main agent reads artifact files rather than holding all context in the window. This pattern allows effectively infinite context without window bloat.
 
 Without artifacts, every piece of context must live in the message history, which:
+
 - Consumes expensive tokens
 - Accumulates noise and drift
 - Cannot survive process restarts
@@ -57,12 +58,14 @@ Artifacts are not automatically cleaned up. They persist until explicitly delete
 ALFRED stores tool outputs in two places:
 
 **AgentFS SQLite (`tool_calls` table)**
+
 - Structured audit trail
 - Queryable by tool name, time range, success/failure
 - Used for learning and pattern analysis
 - Internal format (JSON blobs)
 
 **Artifact files (`.agent/tools/`)**
+
 - Human-readable output
 - Directly readable by agents
 - Format optimized for consumption

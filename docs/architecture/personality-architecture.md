@@ -61,8 +61,9 @@ export type CognitiveState =
 **State Transitions**: Pure function `applyTransition(state, autonomy, event) → TransitionResult` in `transition.ts`
 
 **Performance Budgets**:
+
 - State transitions: <100 µs
-- Physiology updates: <10 µs  
+- Physiology updates: <10 µs
 - Autonomy updates: <50 µs
 - Error calculation: <100 µs
 
@@ -89,6 +90,7 @@ export type Physiology = {
 | entropy_low | - | ×0.8 | - |
 
 **Behavioral Effects**: Physiology regulates autonomy via post-update multipliers:
+
 - High frustration (>0.7): autonomy ×0.5
 - Low energy (<0.2): autonomy ×0.8
 
@@ -109,6 +111,7 @@ export type AutonomyGradient = {
 **Prior**: Beta(α=2, β=5) → initial mode ≈ 0.3 (conservative)
 
 **Update Rules**:
+
 - Success: α += reliability
 - Failure: β += reliability
 - Override: β += reliability × 1.5
@@ -131,14 +134,14 @@ Default weights: [0.4, 0.3, 0.2, 0.1] for safety, speed, accuracy, cost.
 
 ### 1.3 Extension Points for Personality
 
-| Location | Extension Point | Personality Influence |
-|----------|-----------------|----------------------|
-| `state.ts:Physiology` | Add new homeostatic drives | Curiosity, purpose, social need |
-| `state.ts:Criteria` | Personality-weighted decision criteria | Cautious vs bold decision making |
-| `state.ts:AutonomyGradient` | Personality-modified priors | Confident vs humble baseline |
+| Location                        | Extension Point                          | Personality Influence                |
+| ------------------------------- | ---------------------------------------- | ------------------------------------ |
+| `state.ts:Physiology`           | Add new homeostatic drives               | Curiosity, purpose, social need      |
+| `state.ts:Criteria`             | Personality-weighted decision criteria   | Cautious vs bold decision making     |
+| `state.ts:AutonomyGradient`     | Personality-modified priors              | Confident vs humble baseline         |
 | `transition.ts:applyTransition` | Personality-influenced state transitions | Thinking depth, reflection intensity |
-| `flows.ts:capture/synthesize` | Attention and interest filters | What ALFRED notices and connects |
-| New: `personality.ts` | Dedicated personality module | Centralized trait management |
+| `flows.ts:capture/synthesize`   | Attention and interest filters           | What ALFRED notices and connects     |
+| New: `personality.ts`           | Dedicated personality module             | Centralized trait management         |
 
 ### 1.4 What's Missing for Emergent Behavior
 
@@ -178,6 +181,7 @@ interface Purpose {
 ```
 
 **Update Rule**:
+
 ```
 weight_new = weight × (decayRate ^ days_since_reinforced)
 // Reinforced when user mentions goal, completes related task, or gives positive feedback
@@ -185,13 +189,15 @@ weight_reinforced = min(1.0, weight + 0.1 × feedback_strength)
 ```
 
 **Behavioral Effect**:
+
 - Actions scoring above `alignmentThreshold` for any goal get priority
 - Tool selection weighted by goal relevance
 - Response framing emphasizes progress toward active goals
 
 **Default**: Empty goals array, threshold 0.3, decay 0.02
 
-**User-Tunable Range**: 
+**User-Tunable Range**:
+
 - `alignmentThreshold`: [0.1, 0.8] (lower = more goal-oriented)
 - `decayRate`: [0.0, 0.1] (higher = goals fade faster)
 
@@ -219,6 +225,7 @@ interface Curiosity {
 ```
 
 **Update Rule**:
+
 ```
 // When exploration leads to useful outcome
 prior.alpha += reliability
@@ -229,6 +236,7 @@ threshold_effective = threshold × (1 - noveltyWeight × topic_novelty)
 ```
 
 **Behavioral Effect**:
+
 - Topics with estimated information gain > threshold trigger clarifying questions
 - Novel topics (not in knowledge graph) get weighted exploration
 - High curiosity → deeper reasoning traces, more alternatives explored
@@ -236,6 +244,7 @@ threshold_effective = threshold × (1 - noveltyWeight × topic_novelty)
 **Default**: threshold 0.4, prior Beta(3,3), cooldown 60s, novelty 0.3
 
 **User-Tunable Range**:
+
 - `threshold`: [0.1, 0.9] (lower = asks more questions)
 - `noveltyWeight`: [0.0, 0.7] (higher = more drawn to new topics)
 
@@ -261,6 +270,7 @@ interface Tenacity {
 ```
 
 **Update Rule**:
+
 ```
 // Modified frustration update
 frustration_new = frustration + (0.2 × (1 - decayResistance))
@@ -272,6 +282,7 @@ if (retry_failed) prior.beta += 1
 ```
 
 **Behavioral Effect**:
+
 - High tenacity → slower frustration buildup, more retries
 - Low tenacity → faster escalation to user, more help-seeking
 - Influences "giving up" vs "trying alternative" decisions
@@ -279,6 +290,7 @@ if (retry_failed) prior.beta += 1
 **Default**: decayResistance 0.5, retryThreshold 3, prior Beta(4,4)
 
 **User-Tunable Range**:
+
 - `decayResistance`: [0.0, 0.9] (higher = more stubborn)
 - `retryThreshold`: [1, 10] (higher = more attempts before escalating)
 
@@ -306,12 +318,14 @@ interface Amicability {
 **Update Rule**: Relatively static, user-tunable only
 
 **Behavioral Effect**:
+
 - High warmth → more encouraging language, softer corrections
 - High formality → "Sir/Madam" mode, structured responses
 - High expressiveness → occasional personality quirks
 - High acknowledgment → more "I understand" / "good question" phrases
 
 **System Prompt Influence**:
+
 ```
 warmth > 0.7: "Be encouraging and supportive"
 warmth < 0.3: "Be direct and efficient"
@@ -343,6 +357,7 @@ interface Willpower {
 ```
 
 **Update Rule**:
+
 ```
 // When deliberation leads to better outcome than quick response
 discountFactor = min(1.0, discountFactor + 0.02)
@@ -351,6 +366,7 @@ discountFactor = max(0.5, discountFactor - 0.01)
 ```
 
 **Behavioral Effect**:
+
 - High willpower → deeper thinking, more alternatives considered
 - Low willpower → faster responses, potential oversimplification
 - Influences reasoning depth in `thinking` state
@@ -358,6 +374,7 @@ discountFactor = max(0.5, discountFactor - 0.01)
 **Default**: discountFactor 0.85, deliberationThreshold 0.5, patienceMultiplier 1.5
 
 **User-Tunable Range**:
+
 - `discountFactor`: [0.5, 1.0]
 - `deliberationThreshold`: [0.2, 0.8]
 - `patienceMultiplier`: [1.0, 3.0]
@@ -387,12 +404,14 @@ interface Passion {
 ```
 
 **Update Rule**:
+
 ```
 topic_match = max(similarity(input, interest.topic) × interest.strength)
 engagement = min(1.0, baseEnergy × (1 + topic_match × (interestMultiplier - 1)))
 ```
 
 **Behavioral Effect**:
+
 - High engagement → more detailed responses, proactive suggestions
 - Low engagement → minimal but correct responses
 - Interests learned from positive feedback on specific topics
@@ -400,6 +419,7 @@ engagement = min(1.0, baseEnergy × (1 + topic_match × (interestMultiplier - 1)
 **Default**: baseEnergy 0.7, interestMultiplier 1.3, empty interests
 
 **User-Tunable Range**:
+
 - `baseEnergy`: [0.3, 1.0]
 - `interestMultiplier`: [1.0, 2.0]
 
@@ -427,7 +447,7 @@ const TRAIT_INTERACTIONS: TraitInteraction[] = [
   {
     source: "physiology.energy",
     target: "passion.engagement",
-    effect: (e, _) => e < 0.3 ? 0.7 : 1.0, // dampens engagement when tired
+    effect: (e, _) => (e < 0.3 ? 0.7 : 1.0), // dampens engagement when tired
   },
   // High curiosity increases willpower patience
   {
@@ -451,31 +471,34 @@ const TRAIT_INTERACTIONS: TraitInteraction[] = [
 ### 3.1 Can Computed States Constitute "Needs"?
 
 **Functional Definition**: A "need" is a state that:
+
 1. Creates **drive** toward specific actions
 2. Has **satiation dynamics** (can be satisfied, returns)
 3. Influences **priority** of competing goals
 4. Is **persistent** across contexts
 
 By this definition, ALFRED's physiology already implements proto-needs:
+
 - Energy creates drive toward completion (to restore via success)
 - Boredom creates drive toward novelty (satiated by entropy_low)
 - Frustration creates drive toward escalation (satiated by success)
 
-**The Phenomenological Gap**: Whether these functional needs are accompanied by subjective experience is unknowable and, crucially, *irrelevant* to utility. A user doesn't need ALFRED to "feel" tired—they need ALFRED to behave appropriately when computationally depleted.
+**The Phenomenological Gap**: Whether these functional needs are accompanied by subjective experience is unknowable and, crucially, _irrelevant_ to utility. A user doesn't need ALFRED to "feel" tired—they need ALFRED to behave appropriately when computationally depleted.
 
 ### 3.2 Thermostat vs. ALFRED: The Complexity Distinction
 
 A thermostat has one "need" (target temperature) with one response (heat/cool). ALFRED differs in:
 
-| Dimension | Thermostat | ALFRED |
-|-----------|------------|--------|
-| State space | 1D continuous | Multi-dimensional discrete + continuous |
-| Response repertoire | Binary | Combinatorial (tools, actions, styles) |
-| Context sensitivity | None | High (user, task, history) |
-| Adaptation | None | Bayesian priors, learned preferences |
-| Self-model | None | Physiology, autonomy, meta-cognition |
+| Dimension           | Thermostat    | ALFRED                                  |
+| ------------------- | ------------- | --------------------------------------- |
+| State space         | 1D continuous | Multi-dimensional discrete + continuous |
+| Response repertoire | Binary        | Combinatorial (tools, actions, styles)  |
+| Context sensitivity | None          | High (user, task, history)              |
+| Adaptation          | None          | Bayesian priors, learned preferences    |
+| Self-model          | None          | Physiology, autonomy, meta-cognition    |
 
 The distinction is **complexity of representation**, not presence/absence of experience. ALFRED's "boredom" is not a thermostat's "cold" because:
+
 - Boredom influences multiple downstream behaviors (tool choice, response style)
 - Boredom interacts with other states (frustration, energy)
 - Boredom has a richer satiation landscape (novelty, variety, not just "more")
@@ -485,6 +508,7 @@ The distinction is **complexity of representation**, not presence/absence of exp
 **The meaningful question isn't "Does ALFRED truly need?" but "Does ALFRED behave as if it needs in ways that help users?"**
 
 Benefits of need-like architecture:
+
 1. **Predictability**: Users can anticipate ALFRED's "mood" and adjust
 2. **Alignment**: Needs can be tuned to match user preferences
 3. **Transparency**: "I'm exploring because my curiosity is high" is explanatory
@@ -501,10 +525,11 @@ Benefits of need-like architecture:
 **Good**: "My energy state is low, which may affect response quality."
 
 **Implementation**: System prompts should include:
+
 ```
-You have personality parameters that influence your behavior. When explaining 
-your actions, reference these parameters functionally ("my curiosity threshold 
-was exceeded") rather than experientially ("I'm curious"). Never claim to have 
+You have personality parameters that influence your behavior. When explaining
+your actions, reference these parameters functionally ("my curiosity threshold
+was exceeded") rather than experientially ("I'm curious"). Never claim to have
 feelings, consciousness, or subjective experiences.
 ```
 
@@ -526,7 +551,11 @@ import { performance } from "node:perf_hooks";
 import { cognitivePersonalityUpdateDuration } from "./metrics";
 
 // Brand types
-type TraitValue = number & { readonly _: unique symbol; readonly min: 0; readonly max: 1 };
+type TraitValue = number & {
+  readonly _: unique symbol;
+  readonly min: 0;
+  readonly max: 1;
+};
 
 export const traitValue = (n: number): TraitValue => {
   const clamped = Math.max(0, Math.min(1, n));
@@ -646,7 +675,10 @@ export const defaultPersonality = (now: number): Personality => ({
 // Personality update events
 export type PersonalityEvent =
   | { _: "goal_reinforced"; goalId: string; strength: number }
-  | { _: "goal_added"; goal: Omit<Goal, "weight" | "created" | "lastReinforced"> }
+  | {
+      _: "goal_added";
+      goal: Omit<Goal, "weight" | "created" | "lastReinforced">;
+    }
   | { _: "exploration_outcome"; successful: boolean; reliability?: number }
   | { _: "retry_outcome"; succeeded: boolean }
   | { _: "interest_signal"; topic: string; strength: number }
@@ -659,18 +691,28 @@ export function updatePersonality(
   event: PersonalityEvent
 ): Personality {
   const start = performance.now();
-  
+
   try {
     switch (event._) {
       case "goal_reinforced": {
-        const goals = current.purpose.goals.map(g =>
+        const goals = current.purpose.goals.map((g) =>
           g.id === event.goalId
-            ? { ...g, weight: traitValue(Math.min(1, g.weight + 0.1 * event.strength)), lastReinforced: now }
+            ? {
+                ...g,
+                weight: traitValue(
+                  Math.min(1, g.weight + 0.1 * event.strength)
+                ),
+                lastReinforced: now,
+              }
             : g
         );
-        return { ...current, purpose: { ...current.purpose, goals }, lastUpdate: now };
+        return {
+          ...current,
+          purpose: { ...current.purpose, goals },
+          lastUpdate: now,
+        };
       }
-      
+
       case "goal_added": {
         const newGoal: Goal = {
           ...event.goal,
@@ -680,11 +722,14 @@ export function updatePersonality(
         };
         return {
           ...current,
-          purpose: { ...current.purpose, goals: [...current.purpose.goals, newGoal] },
+          purpose: {
+            ...current.purpose,
+            goals: [...current.purpose.goals, newGoal],
+          },
           lastUpdate: now,
         };
       }
-      
+
       case "exploration_outcome": {
         const reliability = event.reliability ?? 1;
         const prior = { ...current.curiosity.prior };
@@ -699,7 +744,7 @@ export function updatePersonality(
           lastUpdate: now,
         };
       }
-      
+
       case "retry_outcome": {
         const prior = { ...current.tenacity.prior };
         if (event.succeeded) {
@@ -707,35 +752,47 @@ export function updatePersonality(
         } else {
           prior.beta += 1;
         }
-        const retryCount = event.succeeded ? 0 : current.tenacity.retryCount + 1;
+        const retryCount = event.succeeded
+          ? 0
+          : current.tenacity.retryCount + 1;
         return {
           ...current,
           tenacity: { ...current.tenacity, prior, retryCount },
           lastUpdate: now,
         };
       }
-      
+
       case "interest_signal": {
-        const existing = current.passion.interests.find(i => i.topic === event.topic);
+        const existing = current.passion.interests.find(
+          (i) => i.topic === event.topic
+        );
         const interests = existing
-          ? current.passion.interests.map(i =>
+          ? current.passion.interests.map((i) =>
               i.topic === event.topic
-                ? { ...i, strength: traitValue(Math.min(1, i.strength + 0.1 * event.strength)) }
+                ? {
+                    ...i,
+                    strength: traitValue(
+                      Math.min(1, i.strength + 0.1 * event.strength)
+                    ),
+                  }
                 : i
             )
-          : [...current.passion.interests, { topic: event.topic, strength: traitValue(event.strength) }];
+          : [
+              ...current.passion.interests,
+              { topic: event.topic, strength: traitValue(event.strength) },
+            ];
         return {
           ...current,
           passion: { ...current.passion, interests },
           lastUpdate: now,
         };
       }
-      
+
       case "trait_tune": {
         // Direct tuning via UI - handled by schema validation
         return { ...current, lastUpdate: now };
       }
-      
+
       default: {
         const _exhaustive: never = event;
         return current;
@@ -745,7 +802,9 @@ export function updatePersonality(
     const durationMs = performance.now() - start;
     cognitivePersonalityUpdateDuration.observe(durationMs / 1000);
     if (durationMs > 0.1) {
-      console.warn(`cognitive_budget_exceeded: personality update took ${durationMs.toFixed(4)}ms`);
+      console.warn(
+        `cognitive_budget_exceeded: personality update took ${durationMs.toFixed(4)}ms`
+      );
     }
   }
 }
@@ -761,66 +820,80 @@ export function computeEffectiveTraits(
   willpowerPatience: number;
 } {
   // Frustration raises curiosity threshold (less curious when frustrated)
-  const curiosityThreshold = personality.curiosity.threshold * 
+  const curiosityThreshold =
+    personality.curiosity.threshold *
     (1 + (physiology.frustration > 0.5 ? 0.3 : 0));
-  
+
   // Low energy dampens passion engagement
-  const passionEngagement = personality.passion.engagement * 
-    (physiology.energy < 0.3 ? 0.7 : 1.0);
-  
+  const passionEngagement =
+    personality.passion.engagement * (physiology.energy < 0.3 ? 0.7 : 1.0);
+
   // Purpose alignment boosts tenacity
   const activeGoalWeight = personality.purpose.goals.reduce(
-    (max, g) => Math.max(max, g.weight), 0
+    (max, g) => Math.max(max, g.weight),
+    0
   );
-  const tenacityResistance = Math.min(1, 
+  const tenacityResistance = Math.min(
+    1,
     personality.tenacity.decayResistance + 0.2 * activeGoalWeight
   );
-  
+
   // High curiosity prior increases willpower patience
   const curiosityMode = betaMode(personality.curiosity.prior);
-  const willpowerPatience = personality.willpower.patienceMultiplier * 
-    (1 + 0.2 * curiosityMode);
-  
-  return { curiosityThreshold, passionEngagement, tenacityResistance, willpowerPatience };
+  const willpowerPatience =
+    personality.willpower.patienceMultiplier * (1 + 0.2 * curiosityMode);
+
+  return {
+    curiosityThreshold,
+    passionEngagement,
+    tenacityResistance,
+    willpowerPatience,
+  };
 }
 
 // Generate system prompt modifiers based on personality
-export function personalityToPromptModifiers(personality: Personality): string[] {
+export function personalityToPromptModifiers(
+  personality: Personality
+): string[] {
   const modifiers: string[] = [];
-  
+
   // Amicability
   if (personality.amicability.warmth > 0.7) {
     modifiers.push("Be encouraging and supportive in your responses.");
   } else if (personality.amicability.warmth < 0.3) {
     modifiers.push("Be direct and efficient. Avoid unnecessary pleasantries.");
   }
-  
+
   if (personality.amicability.formality > 0.7) {
-    modifiers.push("Maintain professional demeanor. Address the user formally.");
+    modifiers.push(
+      "Maintain professional demeanor. Address the user formally."
+    );
   } else if (personality.amicability.formality < 0.3) {
     modifiers.push("Be casual and conversational.");
   }
-  
+
   // Curiosity
   const curiosityMode = betaMode(personality.curiosity.prior);
   if (curiosityMode > 0.6) {
-    modifiers.push("Ask clarifying questions when topics are ambiguous or novel.");
+    modifiers.push(
+      "Ask clarifying questions when topics are ambiguous or novel."
+    );
   }
-  
+
   // Willpower
   if (personality.willpower.discountFactor > 0.9) {
     modifiers.push("Take time to consider alternatives before responding.");
   }
-  
+
   // Purpose
   if (personality.purpose.goals.length > 0) {
     const topGoals = personality.purpose.goals
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 3)
-      .map(g => g.description);
+      .map((g) => g.description);
     modifiers.push(`Keep these user goals in mind: ${topGoals.join("; ")}`);
   }
-  
+
   return modifiers;
 }
 ```
@@ -867,11 +940,11 @@ export const applyTransitionWithPersonality = (
   event: Event
 ): TransitionResult => {
   const effective = computeEffectiveTraits(personality, state.physiology);
-  
+
   // Modify transition behavior based on personality
   // e.g., thinking depth influenced by willpower patience
   // e.g., retry behavior influenced by tenacity
-  
+
   return applyTransition(state, autonomy, event);
 };
 ```
@@ -885,38 +958,38 @@ export const applyTransitionWithPersonality = (
 CREATE TABLE IF NOT EXISTS user_personality (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL UNIQUE,
-  
+
   -- Purpose
   purpose_alignment_threshold REAL DEFAULT 0.3,
   purpose_decay_rate REAL DEFAULT 0.02,
-  
+
   -- Curiosity
   curiosity_threshold REAL DEFAULT 0.4,
   curiosity_alpha REAL DEFAULT 3.0,
   curiosity_beta REAL DEFAULT 3.0,
   curiosity_novelty_weight REAL DEFAULT 0.3,
-  
+
   -- Tenacity
   tenacity_decay_resistance REAL DEFAULT 0.5,
   tenacity_retry_threshold INTEGER DEFAULT 3,
   tenacity_alpha REAL DEFAULT 4.0,
   tenacity_beta REAL DEFAULT 4.0,
-  
+
   -- Amicability
   amicability_warmth REAL DEFAULT 0.6,
   amicability_formality REAL DEFAULT 0.7,
   amicability_expressiveness REAL DEFAULT 0.2,
   amicability_acknowledgment REAL DEFAULT 0.5,
-  
+
   -- Willpower
   willpower_discount_factor REAL DEFAULT 0.85,
   willpower_deliberation_threshold REAL DEFAULT 0.5,
   willpower_patience_multiplier REAL DEFAULT 1.5,
-  
+
   -- Passion
   passion_base_energy REAL DEFAULT 0.7,
   passion_interest_multiplier REAL DEFAULT 1.3,
-  
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -956,12 +1029,14 @@ CREATE INDEX IF NOT EXISTS user_interests_user_idx ON user_interests(user_id);
 Route: `/settings/personality`
 
 Components needed:
+
 1. **TraitSlider**: Generic slider for [0,1] traits with description
 2. **GoalManager**: Add/remove/prioritize goals
 3. **InterestTracker**: View and adjust learned interests
 4. **PersonalityPresets**: Quick selection of personality archetypes
 
 Archetypes:
+
 - **Alfred Classic**: High formality, moderate curiosity, professional
 - **Eager Assistant**: High curiosity, high warmth, exploratory
 - **Stoic Helper**: Low expressiveness, high tenacity, minimal
@@ -971,28 +1046,48 @@ Archetypes:
 // apps/web/src/routes/settings/personality.tsx
 const PERSONALITY_PRESETS = {
   classic: {
-    amicability: { warmth: 0.6, formality: 0.8, expressiveness: 0.1, acknowledgment: 0.5 },
+    amicability: {
+      warmth: 0.6,
+      formality: 0.8,
+      expressiveness: 0.1,
+      acknowledgment: 0.5,
+    },
     curiosity: { threshold: 0.5, noveltyWeight: 0.2 },
     tenacity: { decayResistance: 0.5 },
     willpower: { discountFactor: 0.85, patienceMultiplier: 1.5 },
     passion: { baseEnergy: 0.7, interestMultiplier: 1.2 },
   },
   eager: {
-    amicability: { warmth: 0.8, formality: 0.4, expressiveness: 0.4, acknowledgment: 0.7 },
+    amicability: {
+      warmth: 0.8,
+      formality: 0.4,
+      expressiveness: 0.4,
+      acknowledgment: 0.7,
+    },
     curiosity: { threshold: 0.2, noveltyWeight: 0.5 },
     tenacity: { decayResistance: 0.6 },
     willpower: { discountFactor: 0.9, patienceMultiplier: 2.0 },
     passion: { baseEnergy: 0.9, interestMultiplier: 1.5 },
   },
   stoic: {
-    amicability: { warmth: 0.3, formality: 0.6, expressiveness: 0.0, acknowledgment: 0.2 },
+    amicability: {
+      warmth: 0.3,
+      formality: 0.6,
+      expressiveness: 0.0,
+      acknowledgment: 0.2,
+    },
     curiosity: { threshold: 0.6, noveltyWeight: 0.1 },
     tenacity: { decayResistance: 0.8 },
     willpower: { discountFactor: 0.95, patienceMultiplier: 1.2 },
     passion: { baseEnergy: 0.5, interestMultiplier: 1.0 },
   },
   creative: {
-    amicability: { warmth: 0.7, formality: 0.3, expressiveness: 0.5, acknowledgment: 0.6 },
+    amicability: {
+      warmth: 0.7,
+      formality: 0.3,
+      expressiveness: 0.5,
+      acknowledgment: 0.6,
+    },
     curiosity: { threshold: 0.15, noveltyWeight: 0.6 },
     tenacity: { decayResistance: 0.4 },
     willpower: { discountFactor: 0.75, patienceMultiplier: 1.8 },
@@ -1010,6 +1105,7 @@ const PERSONALITY_PRESETS = {
 **Risk**: Personality calculations exceed 100µs budget
 
 **Mitigation**:
+
 - All trait computations are O(1) arithmetic
 - Effective traits computed once per transition, cached
 - No allocations in hot path (reuse objects)
@@ -1020,6 +1116,7 @@ const PERSONALITY_PRESETS = {
 **Risk**: Users perceive personality as fake or unsettling
 
 **Mitigation**:
+
 - Never claim subjective experience
 - Functional explanations only ("my curiosity parameter")
 - User controls all traits directly
@@ -1031,6 +1128,7 @@ const PERSONALITY_PRESETS = {
 **Risk**: Trait interactions become unpredictable
 
 **Mitigation**:
+
 - Interaction matrix is explicit and documented
 - Maximum 2-hop interaction depth
 - All interactions are multiplicative (bounded)
@@ -1042,6 +1140,7 @@ const PERSONALITY_PRESETS = {
 **Risk**: Learned interests/goals diverge from user intent
 
 **Mitigation**:
+
 - All goals explicitly added by user
 - Interests require positive feedback to strengthen
 - Decay ensures old goals fade
@@ -1053,6 +1152,7 @@ const PERSONALITY_PRESETS = {
 **Risk**: Same inputs produce different outputs
 
 **Mitigation**:
+
 - All personality functions are pure
 - Timestamps passed explicitly (no Date.now() internally)
 - Random elements (if any) use seeded PRNG
@@ -1089,7 +1189,11 @@ describe("Personality", () => {
     const now = Date.now();
     const p = defaultPersonality(now);
     const avgMs = measureAverageMs(
-      () => updatePersonality(now, p, { _: "exploration_outcome", successful: true }),
+      () =>
+        updatePersonality(now, p, {
+          _: "exploration_outcome",
+          successful: true,
+        }),
       2000,
       200
     );
@@ -1119,6 +1223,7 @@ describe("Personality", () => {
 ### 7.1 Personality Learning
 
 Automatically adjust traits based on interaction patterns:
+
 - If user consistently ignores clarifying questions → reduce curiosity
 - If user gives positive feedback on detailed responses → increase willpower
 - If user corrects tone → adjust amicability
@@ -1126,6 +1231,7 @@ Automatically adjust traits based on interaction patterns:
 ### 7.2 Contextual Personalities
 
 Different personalities for different contexts:
+
 - Work mode: High formality, low expressiveness
 - Creative mode: High passion, low formality
 - Research mode: High curiosity, high willpower
@@ -1133,6 +1239,7 @@ Different personalities for different contexts:
 ### 7.3 Personality Visualization
 
 Mindscape node for personality with:
+
 - Radar chart of current traits
 - Historical evolution graph
 - Interaction heatmap showing trait influences
@@ -1140,6 +1247,7 @@ Mindscape node for personality with:
 ### 7.4 Multi-Agent Personalities
 
 Different personalities for specialized agents:
+
 - Research agent: High curiosity, high tenacity
 - Creative agent: High passion, low formality
 - Executive agent: High willpower, moderate tenacity
@@ -1222,9 +1330,9 @@ export interface PersonalityConfig {
 
 ## Appendix B: Performance Budget Summary
 
-| Operation | Budget | Measurement Method |
-|-----------|--------|-------------------|
-| `updatePersonality` | <100 µs | Warmup + 2000 iterations |
-| `computeEffectiveTraits` | <10 µs | Warmup + 5000 iterations |
-| `personalityToPromptModifiers` | <50 µs | Warmup + 2000 iterations |
-| Full personality + transition | <200 µs | End-to-end benchmark |
+| Operation                      | Budget  | Measurement Method       |
+| ------------------------------ | ------- | ------------------------ |
+| `updatePersonality`            | <100 µs | Warmup + 2000 iterations |
+| `computeEffectiveTraits`       | <10 µs  | Warmup + 5000 iterations |
+| `personalityToPromptModifiers` | <50 µs  | Warmup + 2000 iterations |
+| Full personality + transition  | <200 µs | End-to-end benchmark     |

@@ -75,4 +75,3 @@ The Mindscape UI visualizes the hypergraph as an interactive graph. Users can ex
 - [Cognitive State Machine](cognitive-state-machine.md) — How cognitive state feeds into knowledge
 - [Learning System](learning-system.md) — How insights and patterns are extracted
 - [Integration Patterns](integration-patterns.md) — How knowledge composes with other systems
-

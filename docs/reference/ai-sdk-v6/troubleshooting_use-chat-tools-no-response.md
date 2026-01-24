@@ -11,35 +11,34 @@ I am using `useChat`. When I log the incoming messages on the server, I can see 
 ## Solution
 
 To resolve this issue, convert the incoming messages to the `ModelMessage` format using the `convertToModelMessages` function.
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { convertToModelMessages, streamText } from 'ai';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 Previous

@@ -7,140 +7,137 @@ Copy markdown
 Language models generate text, so at first it may seem like you would only need to render text in your application.
 
 app/actions.tsx
-    
-    
+
     const text = generateText({
-    
+
       model: openai('gpt-3.5-turbo'),
-    
+
       system: 'You are a friendly assistant',
-    
+
       prompt: 'What is the weather in SF?',
-    
+
       tools: {
-    
+
         getWeather: {
-    
+
           description: 'Get the weather for a location',
-    
+
           parameters: z.object({
-    
+
             city: z.string().describe('The city to get the weather for'),
-    
+
             unit: z
-    
+
               .enum(['C', 'F'])
-    
+
               .describe('The unit to display the temperature in'),
-    
+
           }),
-    
+
           execute: async ({ city, unit }) => {
-    
+
             const weather = getWeather({ city, unit });
-    
+
             return `It is currently ${weather.value}°${unit} and ${weather.description} in ${city}!`;
-    
+
           },
-    
+
         },
-    
+
       },
-    
+
     });
 
 Above, the language model is passed a tool called `getWeather` that returns the weather information as text. However, instead of returning text, if you return a JSON object that represents the weather information, you can use it to render a React component instead.
 
 app/action.ts
-    
-    
+
     const text = generateText({
-    
+
       model: openai('gpt-3.5-turbo'),
-    
+
       system: 'You are a friendly assistant',
-    
+
       prompt: 'What is the weather in SF?',
-    
+
       tools: {
-    
+
         getWeather: {
-    
+
           description: 'Get the weather for a location',
-    
+
           parameters: z.object({
-    
+
             city: z.string().describe('The city to get the weather for'),
-    
+
             unit: z
-    
+
               .enum(['C', 'F'])
-    
+
               .describe('The unit to display the temperature in'),
-    
+
           }),
-    
+
           execute: async ({ city, unit }) => {
-    
+
             const weather = getWeather({ city, unit });
-    
+
             const { temperature, unit, description, forecast } = weather;
-    
-    
-    
-    
+
+
+
+
             return {
-    
+
               temperature,
-    
+
               unit,
-    
+
               description,
-    
+
               forecast,
-    
+
             };
-    
+
           },
-    
+
         },
-    
+
       },
-    
+
     });
 
 Now you can use the object returned by the `getWeather` function to conditionally render a React component `` that displays the weather information by passing the object as props.
 
 app/page.tsx
-    
-    
+
     return (
-    
-      
-    
+
+
+
         {messages.map(message => {
-    
+
           if (message.role === 'function') {
-    
+
             const { name, content } = message
-    
+
             const { temperature, unit, description, forecast } = content;
-    
-    
-    
-    
+
+
+
+
             return (
-    
-              
-    
+
+
+
             )
-    
+
           }
-    
+
         })}
-    
-      
-    
+
+
+
     )
 
 Here's a little preview of what that might look like.
@@ -197,56 +194,55 @@ They also make it easier for you to interpret sequential tool calls that take pl
 
 To recap, an application has to go through the following steps to render user interfaces as part of model generations:
 
-  1. The user prompts the language model.
-  2. The language model generates a response that includes a tool call.
-  3. The tool call returns a JSON object that represents the user interface.
-  4. The response is sent to the client.
-  5. The client receives the response and checks if the latest message was a tool call.
-  6. If it was a tool call, the client renders the user interface based on the JSON object returned by the tool call.
+1. The user prompts the language model.
+2. The language model generates a response that includes a tool call.
+3. The tool call returns a JSON object that represents the user interface.
+4. The response is sent to the client.
+5. The client receives the response and checks if the latest message was a tool call.
+6. If it was a tool call, the client renders the user interface based on the JSON object returned by the tool call.
 
 Most applications have multiple tools that are called by the language model, and each tool can return a different user interface.
 
 For example, a tool that searches for courses can return a list of courses, while a tool that searches for people can return a list of people. As this list grows, the complexity of your application will grow as well and it can become increasingly difficult to manage these user interfaces.
 
 app/page.tsx
-    
-    
+
     {
-    
+
       message.role === 'tool' ? (
-    
+
         message.name === 'api-search-course' ? (
-    
-          
-    
+
+
+
         ) : message.name === 'api-search-profile' ? (
-    
-          
-    
+
+
+
         ) : message.name === 'api-meetings' ? (
-    
-          
-    
+
+
+
         ) : message.name === 'api-search-building' ? (
-    
-          
-    
+
+
+
         ) : message.name === 'api-events' ? (
-    
-          
-    
+
+
+
         ) : message.name === 'api-meals' ? (
-    
-          
-    
+
+
+
         ) : null
-    
+
       ) : (
-    
+
         {message.content}
-    
+
       );
-    
+
     }
 
 ## Rendering User Interfaces on the Server
@@ -256,74 +252,73 @@ The **AI SDK RSC (`@ai-sdk/rsc`)** takes advantage of RSCs to solve the problem 
 Rather than conditionally rendering user interfaces on the client based on the data returned by the language model, you can directly stream them from the server during a model generation.
 
 app/action.ts
-    
-    
+
     import { createStreamableUI } from '@ai-sdk/rsc'
-    
-    
-    
-    
+
+
+
+
     const uiStream = createStreamableUI();
-    
-    
-    
-    
+
+
+
+
     const text = generateText({
-    
+
       model: openai('gpt-3.5-turbo'),
-    
+
       system: 'you are a friendly assistant'
-    
+
       prompt: 'what is the weather in SF?'
-    
+
       tools: {
-    
+
         getWeather: {
-    
+
           description: 'Get the weather for a location',
-    
+
           parameters: z.object({
-    
+
             city: z.string().describe('The city to get the weather for'),
-    
+
             unit: z
-    
+
               .enum(['C', 'F'])
-    
+
               .describe('The unit to display the temperature in')
-    
+
           }),
-    
+
           execute: async ({ city, unit }) => {
-    
+
             const weather = getWeather({ city, unit })
-    
+
             const { temperature, unit, description, forecast } = weather
-    
-    
-    
-    
+
+
+
+
             uiStream.done(
-    
-              
-    
+
+
+
             )
-    
+
           }
-    
+
         }
-    
+
       }
-    
+
     })
-    
-    
-    
-    
+
+
+
+
     return {
-    
+
       display: uiStream.value
-    
+
     }
 
 The `createStreamableUI` function belongs to the `@ai-sdk/rsc` module and creates a stream that can send React components to the client.
@@ -331,28 +326,27 @@ The `createStreamableUI` function belongs to the `@ai-sdk/rsc` module and create
 On the server, you render the `` component with the props passed to it, and then stream it to the client. On the client side, you only need to render the UI that is streamed from the server.
 
 app/page.tsx
-    
-    
+
     return (
-    
-      
-    
+
+
+
         {messages.map(message => (
-    
+
           {message.display}
-    
+
         ))}
-    
-      
-    
+
+
+
     );
 
 Now the steps involved are simplified:
 
-  1. The user prompts the language model.
-  2. The language model generates a response that includes a tool call.
-  3. The tool call renders a React component along with relevant props that represent the user interface.
-  4. The response is streamed to the client and rendered directly.
+1. The user prompts the language model.
+2. The language model generates a response that includes a tool call.
+3. The tool call renders a React component along with relevant props that represent the user interface.
+4. The response is streamed to the client and rendered directly.
 
 > **Note:** You can also render text on the server and stream it to the client using React Server Components. This way, all operations from language model generation to UI rendering can be done on the server, while the client only needs to render the UI that is streamed from the server.
 

@@ -9,6 +9,7 @@ Reference: `.agent/PLANS.md`
 This plan implements a unified, dependency-free logging package (`@alfred/logger`) for the ALFRED monorepo. Currently, logging logic is duplicated across `api`, `runtime`, and `db` packages, with inconsistent behavior and some no-op implementations.
 
 By consolidating logging into a single package, we ensure:
+
 1.  **Consistent Output**: Structured JSON in production, pretty-printing in development.
 2.  **Performance**: Minimal overhead using native `console` methods, suitable for hot paths.
 3.  **Type Safety**: Shared `LogContext` and `LogLevel` types across the codebase.
@@ -51,6 +52,7 @@ The logging system is now unified under `@alfred/logger`. This ensures consisten
 ## Context and Orientation
 
 Current State:
+
 - `packages/api/src/utils/logger.ts`: Working implementation (JSON/Pretty).
 - `packages/runtime/src/utils/logger.ts`: Duplicate of API logger.
 - `packages/db/src/utils/logger.ts`: Broken/No-op implementation.
@@ -62,12 +64,15 @@ The new package `@alfred/logger` will sit at the same level as `packages/type` o
 ## Plan of Work
 
 ### Phase 1: Create Package
+
 1.  Create `packages/logger/package.json` and `tsconfig.json`.
 2.  Implement `src/index.ts` with the consolidated logic from `@alfred/api`.
 3.  Add `src/logger.test.ts` to verify formatting and context merging.
 
 ### Phase 2: Implementation Details
+
 The logger will:
+
 - Support `debug`, `info`, `warn`, `error` levels.
 - Accept a message string and optional `LogContext` object.
 - Automatically inject `timestamp`, `service` (configurable), and `environment`.
@@ -75,7 +80,9 @@ The logger will:
 - Support a `configure({ service: string })` method to set the service name per-package if needed, or default to a generic one.
 
 ### Phase 3: Migration
+
 Iterate through each package:
+
 1.  Add `@alfred/logger` dependency.
 2.  Replace local imports with `@alfred/logger`.
 3.  Delete local `utils/logger.ts` files.
@@ -84,20 +91,25 @@ Iterate through each package:
 ## Concrete Steps
 
 1.  **Scaffold Package**
+
     ```bash
     mkdir -p packages/logger/src
     # Create package.json, tsconfig.json
     ```
 
 2.  **Implement Logger**
+
     ```typescript
     // packages/logger/src/index.ts
     export type LogLevel = "debug" | "info" | "warn" | "error";
-    export interface LogContext { [key: string]: unknown; }
+    export interface LogContext {
+      [key: string]: unknown;
+    }
     // ... implementation ...
     ```
 
 3.  **Test**
+
     ```bash
     cd packages/logger && bun test
     ```
@@ -130,6 +142,7 @@ Iterate through each package:
 **Dependencies**: None (dev-only: `bun-types`, `bun-test`).
 
 **Interface**:
+
 ```typescript
 export interface Logger {
   debug(message: string, context?: LogContext): void;

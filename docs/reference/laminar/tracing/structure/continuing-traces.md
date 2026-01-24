@@ -1,9 +1,10 @@
 ---
 title: Continuing Traces - Laminar documentation
-url: 
+url:
 description: Techniques for continuing traces across function boundaries and services
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/continuing-traces#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -35,7 +36,7 @@ On this page
 - [Best Practices](https://docs.lmnr.ai/tracing/structure/continuing-traces#best-practices)
 - [Context Validation](https://docs.lmnr.ai/tracing/structure/continuing-traces#context-validation)
 
-## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#overview) Overview
 
 When building complex applications, you often need to continue traces across different parts of your system:
 
@@ -44,14 +45,13 @@ When building complex applications, you often need to continue traces across dif
 - **Async operations** where traces need to be maintained across async boundaries
 - **Request handlers** where different API endpoints handle parts of the same user journey
 
-## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#passing-span-objects)  Passing Span Objects
+## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#passing-span-objects) Passing Span Objects
 
 The most direct way to continue traces is by passing span objects between functions.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Use `Laminar.startSpan()` and `Laminar.withSpan()` to create and continue spans:
 
@@ -97,18 +97,17 @@ const handleRequest = async (userInput: string) => {
 
 Remember to call `span.end()` to complete the trace. You can also pass `true` as the third argument ( `endOnExit`) to the last `Laminar.withSpan()` call to automatically end the span.
 
-## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#using-span-context-serialization)  Using Span Context Serialization
+## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#using-span-context-serialization) Using Span Context Serialization
 
 When you can’t pass span objects directly (e.g., across service boundaries or through message queues), use span context serialization.
 
-### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#laminarspancontext)  LaminarSpanContext
+### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#laminarspancontext) LaminarSpanContext
 
 LaminarSpanContext allows you to serialize and deserialize span context as strings, making it possible to continue traces across services.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -144,7 +143,7 @@ const secondHandler = async () => {
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#passing-context-via-http-headers)  Passing Context via HTTP Headers
+### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#passing-context-via-http-headers) Passing Context via HTTP Headers
 
 Copy
 
@@ -171,9 +170,9 @@ app.post('/api/service-b', (req, res) => {
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#common-patterns)  Common Patterns
+## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#common-patterns) Common Patterns
 
-### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#database-storage-pattern)  Database Storage Pattern
+### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#database-storage-pattern) Database Storage Pattern
 
 For long-running workflows where traces span multiple user sessions:
 
@@ -207,7 +206,7 @@ def continue_workflow(workflow_id: str):
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#message-queue-pattern)  Message Queue Pattern
+### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#message-queue-pattern) Message Queue Pattern
 
 For async processing across services:
 
@@ -240,9 +239,9 @@ def process_task(message: dict):
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#best-practices)  Best Practices
+## [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#best-practices) Best Practices
 
-### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces\#context-validation)  Context Validation
+### [​](https://docs.lmnr.ai/tracing/structure/continuing-traces#context-validation) Context Validation
 
 Always validate span context before using it:
 

@@ -8,9 +8,9 @@ It is often useful to send additional data alongside the model's response. For e
 
 The AI SDK provides several helpers that allows you to stream additional data to the client and attach it to the `UIMessage` parts array:
 
-  * `createUIMessageStream`: creates a data stream
-  * `createUIMessageStreamResponse`: creates a response object that streams data
-  * `pipeUIMessageStreamToResponse`: pipes a data stream to a server response object
+- `createUIMessageStream`: creates a data stream
+- `createUIMessageStreamResponse`: creates a response object that streams data
+- `pipeUIMessageStreamToResponse`: pipes a data stream to a server response object
 
 The data is streamed as part of the response stream using Server-Sent Events.
 
@@ -19,15 +19,14 @@ The data is streamed as part of the response stream using Server-Sent Events.
 First, define your custom message type with data part schemas for type safety:
 
 ai/types.ts
-    
-    
+
     import { UIMessage } from 'ai';
-    
-    
-    
-    
+
+
+
+
     // Define your custom message type with data part schemas
-    
+
     export type MyUIMessage = UIMessage;
 
 ## Streaming Data from the Server
@@ -35,154 +34,153 @@ ai/types.ts
 In your server-side route handler, you can create a `UIMessageStream` and then pass it to `createUIMessageStreamResponse`:
 
 route.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       createUIMessageStream,
-    
+
       createUIMessageStreamResponse,
-    
+
       streamText,
-    
+
       convertToModelMessages,
-    
+
     } from 'ai';
-    
+
     import type { MyUIMessage } from '@/ai/types';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const stream = createUIMessageStream({
-    
+
         execute: ({ writer }) => {
-    
+
           // 1. Send initial status (transient - won't be added to message history)
-    
+
           writer.write({
-    
+
             type: 'data-notification',
-    
+
             data: { message: 'Processing your request...', level: 'info' },
-    
+
             transient: true, // This part won't be added to message history
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           // 2. Send sources (useful for RAG use cases)
-    
+
           writer.write({
-    
+
             type: 'source',
-    
+
             value: {
-    
+
               type: 'source',
-    
+
               sourceType: 'url',
-    
+
               id: 'source-1',
-    
+
               url: 'https://weather.com',
-    
+
               title: 'Weather Data Source',
-    
+
             },
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           // 3. Send data parts with loading state
-    
+
           writer.write({
-    
+
             type: 'data-weather',
-    
+
             id: 'weather-1',
-    
+
             data: { city: 'San Francisco', status: 'loading' },
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           const result = streamText({
-    
+
             model: openai('gpt-4.1'),
-    
+
             messages: convertToModelMessages(messages),
-    
+
             onFinish() {
-    
+
               // 4. Update the same data part (reconciliation)
-    
+
               writer.write({
-    
+
                 type: 'data-weather',
-    
+
                 id: 'weather-1', // Same ID = update existing part
-    
+
                 data: {
-    
+
                   city: 'San Francisco',
-    
+
                   weather: 'sunny',
-    
+
                   status: 'success',
-    
+
                 },
-    
+
               });
-    
-    
-    
-    
+
+
+
+
               // 5. Send completion notification (transient)
-    
+
               writer.write({
-    
+
                 type: 'data-notification',
-    
+
                 data: { message: 'Request completed', level: 'info' },
-    
+
                 transient: true, // Won't be added to message history
-    
+
               });
-    
+
             },
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           writer.merge(result.toUIMessageStream());
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return createUIMessageStreamResponse({ stream });
-    
+
     }
 
 You can also send stream data from custom backends, e.g. Python / FastAPI, using the UI Message Stream Protocol.
@@ -192,92 +190,89 @@ You can also send stream data from custom backends, e.g. Python / FastAPI, using
 ### Data Parts (Persistent)
 
 Regular data parts are added to the message history and appear in `message.parts`:
-    
-    
+
     writer.write({
-    
+
       type: 'data-weather',
-    
+
       id: 'weather-1', // Optional: enables reconciliation
-    
+
       data: { city: 'San Francisco', status: 'loading' },
-    
+
     });
 
 ### Sources
 
 Sources are useful for RAG implementations where you want to show which documents or URLs were referenced:
-    
-    
+
     writer.write({
-    
+
       type: 'source',
-    
+
       value: {
-    
+
         type: 'source',
-    
+
         sourceType: 'url',
-    
+
         id: 'source-1',
-    
+
         url: 'https://example.com',
-    
+
         title: 'Example Source',
-    
+
       },
-    
+
     });
 
 ### Transient Data Parts (Ephemeral)
 
 Transient parts are sent to the client but not added to the message history. They are only accessible via the `onData` useChat handler:
-    
-    
+
     // server
-    
+
     writer.write({
-    
+
       type: 'data-notification',
-    
+
       data: { message: 'Processing...', level: 'info' },
-    
+
       transient: true, // Won't be added to message history
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     // client
-    
+
     const [notification, setNotification] = useState();
-    
-    
-    
-    
+
+
+
+
     const { messages } = useChat({
-    
+
       onData: ({ data, type }) => {
-    
+
         if (type === 'data-notification') {
-    
+
           setNotification({ message: data.message, level: data.level });
-    
+
         }
-    
+
       },
-    
+
     });
 
 ## Data Part Reconciliation
 
 When you write to a data part with the same ID, the client automatically reconciles and updates that part. This enables powerful dynamic experiences like:
 
-  * **Collaborative artifacts** \- Update code, documents, or designs in real-time
-  * **Progressive data loading** \- Show loading states that transform into final results
-  * **Live status updates** \- Update progress bars, counters, or status indicators
-  * **Interactive components** \- Build UI elements that evolve based on user interaction
+- **Collaborative artifacts** \- Update code, documents, or designs in real-time
+- **Progressive data loading** \- Show loading states that transform into final results
+- **Live status updates** \- Update progress bars, counters, or status indicators
+- **Interactive components** \- Build UI elements that evolve based on user interaction
 
 The reconciliation happens automatically - simply use the same `id` when writing to the stream.
 
@@ -288,49 +283,48 @@ The reconciliation happens automatically - simply use the same `id` when writing
 The `onData` callback is essential for handling streaming data, especially transient parts:
 
 page.tsx
-    
-    
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import type { MyUIMessage } from '@/ai/types';
-    
-    
-    
-    
+
+
+
+
     const { messages } = useChat({
-    
+
       api: '/api/chat',
-    
+
       onData: dataPart => {
-    
+
         // Handle all data parts as they arrive (including transient parts)
-    
+
         console.log('Received data part:', dataPart);
-    
-    
-    
-    
+
+
+
+
         // Handle different data part types
-    
+
         if (dataPart.type === 'data-weather') {
-    
+
           console.log('Weather update:', dataPart.data);
-    
+
         }
-    
-    
-    
-    
+
+
+
+
         // Handle transient notifications (ONLY available here, not in message.parts)
-    
+
         if (dataPart.type === 'data-notification') {
-    
+
           showToast(dataPart.data.message, dataPart.data.level);
-    
+
         }
-    
+
       },
-    
+
     });
 
 **Important:** Transient data parts are **only** available through the `onData` callback. They will not appear in the `message.parts` array since they're not added to message history.
@@ -340,234 +334,232 @@ page.tsx
 You can filter and render data parts from the message parts array:
 
 page.tsx
-    
-    
+
     const result = (
-    
+
       <>
-    
+
         {messages?.map(message => (
-    
-          
-    
+
+
+
             {/* Render weather data parts */}
-    
+
             {message.parts
-    
+
               .filter(part => part.type === 'data-weather')
-    
+
               .map((part, index) => (
-    
-                
-    
+
+
+
                   {part.data.status === 'loading' ? (
-    
+
                     <>Getting weather for {part.data.city}...
-    
+
                   ) : (
-    
+
                     <>
-    
+
                       Weather in {part.data.city}: {part.data.weather}
-    
-                    
-    
+
+
+
                   )}
-    
-                
-    
+
+
+
               ))}
-    
-    
-    
-    
+
+
+
+
             {/* Render text content */}
-    
+
             {message.parts
-    
+
               .filter(part => part.type === 'text')
-    
+
               .map((part, index) => (
-    
+
                 {part.text}
-    
+
               ))}
-    
-    
-    
-    
+
+
+
+
             {/* Render sources */}
-    
+
             {message.parts
-    
+
               .filter(part => part.type === 'source')
-    
+
               .map((part, index) => (
-    
-                
-    
+
+
+
                   Source: {part.title}
-    
-                
-    
+
+
+
               ))}
-    
-          
-    
+
+
+
         ))}
-    
-      
-    
+
+
+
     );
 
 ### Complete Example
 
 page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { useState } from 'react';
-    
+
     import type { MyUIMessage } from '@/ai/types';
-    
-    
-    
-    
+
+
+
+
     export default function Chat() {
-    
+
       const [input, setInput] = useState('');
-    
-    
-    
-    
+
+
+
+
       const { messages, sendMessage } = useChat({
-    
+
         api: '/api/chat',
-    
+
         onData: dataPart => {
-    
+
           // Handle transient notifications
-    
+
           if (dataPart.type === 'data-notification') {
-    
+
             console.log('Notification:', dataPart.data.message);
-    
+
           }
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       const handleSubmit = (e: React.FormEvent) => {
-    
+
         e.preventDefault();
-    
+
         sendMessage({ text: input });
-    
+
         setInput('');
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       return (
-    
+
         <>
-    
+
           {messages?.map(message => (
-    
-            
-    
+
+
+
               {message.role === 'user' ? 'User: ' : 'AI: '}
-    
-    
-    
-    
+
+
+
+
               {/* Render weather data */}
-    
+
               {message.parts
-    
+
                 .filter(part => part.type === 'data-weather')
-    
+
                 .map((part, index) => (
-    
-                  
-    
+
+
+
                     {part.data.status === 'loading' ? (
-    
+
                       <>Getting weather for {part.data.city}...
-    
+
                     ) : (
-    
+
                       <>
-    
+
                         Weather in {part.data.city}: {part.data.weather}
-    
-                      
-    
+
+
+
                     )}
-    
-                  
-    
+
+
+
                 ))}
-    
-    
-    
-    
+
+
+
+
               {/* Render text content */}
-    
+
               {message.parts
-    
+
                 .filter(part => part.type === 'text')
-    
+
                 .map((part, index) => (
-    
+
                   {part.text}
-    
+
                 ))}
-    
-            
-    
+
+
+
           ))}
-    
-    
-    
-    
-          
-    
+
+
+
+
+
+
              setInput(e.target.value)}
-    
+
               placeholder="Ask about the weather..."
-    
+
             />
-    
+
             Send
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 ## Use Cases
 
-  * **RAG Applications** \- Stream sources and retrieved documents
-  * **Real-time Status** \- Show loading states and progress updates
-  * **Collaborative Tools** \- Stream live updates to shared artifacts
-  * **Analytics** \- Send usage data without cluttering message history
-  * **Notifications** \- Display temporary alerts and status messages
+- **RAG Applications** \- Stream sources and retrieved documents
+- **Real-time Status** \- Show loading states and progress updates
+- **Collaborative Tools** \- Stream live updates to shared artifacts
+- **Analytics** \- Send usage data without cluttering message history
+- **Notifications** \- Display temporary alerts and status messages
 
 ## Message Metadata vs Data Parts
 
@@ -577,60 +569,56 @@ Both message metadata and data parts allow you to send additional information al
 
 Message metadata is best for **message-level information** that describes the message as a whole:
 
-  * Attached at the message level via `message.metadata`
-  * Sent using the `messageMetadata` callback in `toUIMessageStreamResponse`
-  * Ideal for: timestamps, model info, token usage, user context
-  * Type-safe with custom metadata types
+- Attached at the message level via `message.metadata`
+- Sent using the `messageMetadata` callback in `toUIMessageStreamResponse`
+- Ideal for: timestamps, model info, token usage, user context
+- Type-safe with custom metadata types
 
-    
-    
-    // Server: Send metadata about the message
-    
-    return result.toUIMessageStreamResponse({
-    
-      messageMetadata: ({ part }) => {
-    
-        if (part.type === 'finish') {
-    
-          return {
-    
-            model: part.response.modelId,
-    
-            totalTokens: part.totalUsage.totalTokens,
-    
-            createdAt: Date.now(),
-    
-          };
-    
-        }
-    
-      },
-    
-    });
+  // Server: Send metadata about the message
+
+  return result.toUIMessageStreamResponse({
+
+  messageMetadata: ({ part }) => {
+
+      if (part.type === 'finish') {
+
+        return {
+
+          model: part.response.modelId,
+
+          totalTokens: part.totalUsage.totalTokens,
+
+          createdAt: Date.now(),
+
+        };
+
+      }
+
+  },
+
+  });
 
 ### Data Parts
 
 Data parts are best for streaming **dynamic arbitrary data** :
 
-  * Added to the message parts array via `message.parts`
-  * Streamed using `createUIMessageStream` and `writer.write()`
-  * Can be reconciled/updated using the same ID
-  * Support transient parts that don't persist
-  * Ideal for: dynamic content, loading states, interactive components
+- Added to the message parts array via `message.parts`
+- Streamed using `createUIMessageStream` and `writer.write()`
+- Can be reconciled/updated using the same ID
+- Support transient parts that don't persist
+- Ideal for: dynamic content, loading states, interactive components
 
-    
-    
-    // Server: Stream data as part of message content
-    
-    writer.write({
-    
-      type: 'data-weather',
-    
-      id: 'weather-1',
-    
-      data: { city: 'San Francisco', status: 'loading' },
-    
-    });
+  // Server: Stream data as part of message content
+
+  writer.write({
+
+  type: 'data-weather',
+
+  id: 'weather-1',
+
+  data: { city: 'San Francisco', status: 'loading' },
+
+  });
 
 For more details on message metadata, see the Message Metadata documentation.
 

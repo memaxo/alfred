@@ -22,6 +22,7 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
 ### Initial Setup
 
 1. **Clone and install:**
+
    ```bash
    git clone <repo-url>
    cd alfred
@@ -29,6 +30,7 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
    ```
 
 2. **Configure environment:**
+
    ```bash
    cp config/env.example .env
    # Generate auth keys
@@ -39,6 +41,7 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
    ```
 
 3. **Start database:**
+
    ```bash
    # Ensure Docker is running (verify with: docker ps)
    bun run db:start       # Starts Postgres with pgvector
@@ -47,6 +50,7 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
    ```
 
 4. **Start development server:**
+
    ```bash
    bun run dev            # Starts web app + API
    ```
@@ -80,6 +84,7 @@ bun run test:sqlite
 ALFRED uses Bun's built-in debugger. See [Debugging Guide](./debugging.md) for full details.
 
 **Quick start:**
+
 ```bash
 # Start dev server with debugger
 bun run dev:debug
@@ -92,11 +97,13 @@ bun run debug:script scripts/migrate.ts
 ```
 
 **VS Code:**
+
 - Install Bun VS Code Extension
 - Press `F5` to start debugging
 - Use launch configurations in `.vscode/launch.json`
 
 **Web-based debugger:**
+
 - Start with `bun --inspect`
 - Open the `debug.bun.sh` URL from output
 
@@ -163,6 +170,7 @@ User Request → tRPC Router → WorkflowRuntime → AI SDK → Tools → Events
 ### Cognitive Loop Integration
 
 Voice/chat inputs feed into `runCognitiveLoop` which:
+
 1. Loads state from events/snapshots
 2. Applies pure state transitions
 3. Emits effects (generate_response, etc.)
@@ -175,13 +183,14 @@ Voice/chat inputs feed into `runCognitiveLoop` which:
 When verifying if an ExecPlan is complete:
 
 1. **Search for implementation:**
+
    ```bash
    # Find files
    fd "pattern" packages/
-   
+
    # Search codebase
    rg "functionName" packages/
-   
+
    # Semantic search
    codebase_search "What does X do?" target_directories: ["packages/"]
    ```
@@ -252,6 +261,7 @@ See `docs/guides/verification-patterns.md` for detailed verification workflow.
 ### Common Issues
 
 **Docker/Database connection errors:**
+
 - Verify Docker is running: `docker ps`
 - Verify Postgres is running: `bun run db:start`
 - Check `DATABASE_URL` in `.env` matches container settings (default: `postgresql://alfred:alfred@localhost:5432/alfred`)
@@ -259,24 +269,29 @@ See `docs/guides/verification-patterns.md` for detailed verification workflow.
 - If Docker is not installed, install Docker Desktop or Docker CLI
 
 **Missing environment variables:**
+
 - Generate `BETTER_AUTH_SECRET`: `bun scripts/gen-keys.ts >> .env`
 - Set `OPENAI_API_KEY` in `.env` (required for AI features)
 - Verify all required keys are set: `grep -E "(BETTER_AUTH_SECRET|OPENAI_API_KEY|DATABASE_URL)" .env`
 
 **Build failures:**
+
 - Run `bun run verify-build` to check for server code leakage
 - Check `apps/web/vite.config.ts` for `ssr.external` entries
 
 **Type errors:**
+
 - Run `bun run typecheck` to see all errors
 - Check `tsconfig.base.json` for path aliases
 
 **Test failures:**
+
 - Check if `DATABASE_URL` is set (for Postgres tests)
 - Verify `RUN_DB_TESTS=1` for DB suites
 - Use `bun run test:sqlite` for fast SQLite fallback
 
 **Voice/embed features not working:**
+
 - Install UV: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - Install voice dependencies: `cd packages/voice && bun run setup`
 - Install embed dependencies: `cd packages/embed && bun run install-deps`
@@ -289,4 +304,3 @@ See `docs/guides/troubleshooting.md` for more detailed troubleshooting.
 - Review [Development Rules](../../.ruler/)
 - Check [PRD](../alfred-prd.md) for feature status
 - Explore [ExecPlans](../execplans/) for implementation details
-

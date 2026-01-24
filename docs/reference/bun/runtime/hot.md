@@ -1,9 +1,10 @@
 ---
 title: Watch mode – Runtime | Bun Docs
-url: 
+url:
 description: Reload your application & tests automatically.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -57,7 +58,7 @@ Bun supports two kinds of automatic reloading via CLI flags:
 - `--watch` mode, which hard restarts Bun's process when imported files change.
 - `--hot` mode, which soft reloads the code (without restarting the process) when imported files change.
 
-## [`--watch` mode](https://bun.com/docs/runtime/hot\#watch-mode)
+## [`--watch` mode](https://bun.com/docs/runtime/hot#watch-mode)
 
 Watch mode can be used with `bun test` or when running TypeScript, JSX, and JavaScript files.
 
@@ -119,7 +120,7 @@ bun --watch test
 
 The **`--no-clear-screen`** flag is useful in scenarios where you don’t want the terminal to clear, such as when running multiple `bun build --watch` commands simultaneously using tools like `concurrently`. Without this flag, the output of one instance could clear the output of others, potentially hiding errors from one instance beneath the output of another. The `--no-clear-screen` flag, similar to TypeScript’s `--preserveWatchOutput`, prevents this issue. It can be used in combination with `--watch`, for example: `bun build --watch --no-clear-screen`.
 
-## [`--hot` mode](https://bun.com/docs/runtime/hot\#hot-mode)
+## [`--hot` mode](https://bun.com/docs/runtime/hot#hot-mode)
 
 Use `bun --hot` to enable hot reloading when executing code with Bun. This is distinct from `--watch` mode in that Bun does not hard-restart the entire process. Instead, it detects code changes and updates its internal module cache with the new code.
 
@@ -162,7 +163,7 @@ Reloaded 3 times
 
 Traditional file watchers like `nodemon` restart the entire process, so HTTP servers and other stateful objects are lost. By contrast, `bun --hot` is able to reflect the updated code without restarting the process.
 
-### [HTTP servers](https://bun.com/docs/runtime/hot\#http-servers)
+### [HTTP servers](https://bun.com/docs/runtime/hot#http-servers)
 
 This makes it possible, for instance, to update your HTTP request handler without shutting down the server itself. When you save the file, your HTTP server will be reloaded with the updated code without the process being restarted. This results in seriously fast refresh speeds.
 
@@ -200,7 +201,7 @@ Plugins](https://bun.com/docs/runtime/plugins) [Next\\
 \\
 Module resolution](https://bun.com/docs/runtime/modules)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/hot.md)
 
@@ -224,7 +225,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -16,8 +16,8 @@ This error occurs when you're trying to return a non-serializable object from a 
 
 To fix this issue, you need to ensure that you're only returning serializable data from your Server Action. Here's how you can modify your approach:
 
-  1. Instead of returning the entire result object from streamText, extract only the necessary serializable data.
-  2. Use the `createStreamableValue` function to create a streamable value that can be safely passed to the client.
+1. Instead of returning the entire result object from streamText, extract only the necessary serializable data.
+2. Use the `createStreamableValue` function to create a streamable value that can be safely passed to the client.
 
 Here's an example that demonstrates how to implement this solution: Streaming Text Generation.
 

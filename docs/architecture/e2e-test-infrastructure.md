@@ -71,12 +71,14 @@ ALFRED's E2E test infrastructure is optimized for AI coding agent consumption, p
 **Purpose:** Transform verbose Playwright output into token-efficient JSON summaries for AI consumption.
 
 **Key Decisions:**
+
 - Truncate errors at 500 chars (full text in attachments)
 - Use AI-parseable markers for section boundaries
 - Emit single-line failure summaries for quick scanning
 - Integrate with Prometheus metrics registry
 
 **Output Format:**
+
 ```json
 {
   "status": "failed",
@@ -103,12 +105,14 @@ ALFRED's E2E test infrastructure is optimized for AI coding agent consumption, p
 **Purpose:** Provide deterministic timeout behavior with hang detection and structured error context.
 
 **Key Decisions:**
+
 - Custom `TimeoutError` class with full operation context
 - 5-second progress logging for hang detection (matches `scripts/test-bun.ts` pattern)
 - Wrap native Playwright timeouts to add context
 - Support shared timeouts for multi-step workflows
 
 **API:**
+
 ```typescript
 // Single action with timeout
 await withTimeout(page, "navigate-home", 5000, async () => {
@@ -118,14 +122,14 @@ await withTimeout(page, "navigate-home", 5000, async () => {
 // Element wait with hang detection
 await waitForWithHangDetection(page, '[data-testid="workflow"]', {
   timeout: 30000,
-  state: "visible"
+  state: "visible",
 });
 
 // Multiple actions with shared timeout
 await withSharedTimeout(page, "complete-workflow", 10000, [
   async () => page.goto("/"),
   async () => page.click("button"),
-  async () => expect(page.locator(".result")).toBeVisible()
+  async () => expect(page.locator(".result")).toBeVisible(),
 ]);
 ```
 
@@ -136,12 +140,14 @@ await withSharedTimeout(page, "complete-workflow", 10000, [
 **Purpose:** Detect and report browser/page crashes with structured context.
 
 **Key Decisions:**
+
 - Monitor `page.on("crash")`, `context.on("close")` events
 - Collect console errors and network failures for context
 - Follow test-kit fixture handle pattern for consistency
 - Support optional screenshot integration via generic interface
 
 **API:**
+
 ```typescript
 const crashMonitor = createCrashMonitor(page, context, testInfo, screenshots);
 
@@ -159,16 +165,23 @@ if (crashMonitor.hasCrashed()) {
 **Purpose:** Unified fixture combining all AI-optimized capabilities.
 
 **Key Decisions:**
+
 - Extend base Playwright test with custom fixtures
 - Integrate existing screenshot/error monitoring
 - Add `safeAction()` and `safeAssert()` wrappers for automatic error handling
 - Keep app-specific to avoid package boundary violations
 
 **API:**
+
 ```typescript
 import { test, expect } from "./helpers/ai-harness";
 
-test("workflow renders", async ({ page, screenshots, safeAction, safeAssert }) => {
+test("workflow renders", async ({
+  page,
+  screenshots,
+  safeAction,
+  safeAssert,
+}) => {
   await safeAction("navigate", async () => {
     await page.goto("/");
   });
@@ -186,6 +199,7 @@ test("workflow renders", async ({ page, screenshots, safeAction, safeAssert }) =
 **Purpose:** Define and track performance budgets for E2E operations.
 
 **Key Decisions:**
+
 - Extend existing cognitive/workflow budgets with E2E categories
 - Navigation: 5000ms, Actions: 2000ms, Assertions: 1000ms
 - Use existing `withBudget()` and `assertBudget()` infrastructure
@@ -196,12 +210,14 @@ test("workflow renders", async ({ page, screenshots, safeAction, safeAssert }) =
 ### Default Behavior
 
 **AI Mode (default: enabled)**
+
 - Shorter timeouts: 60s test, 10s expect
 - Dot reporter for progress
 - AI-compact reporter for structured output
 - JSON reporter for programmatic access
 
 **Fail-Fast (default: enabled)**
+
 - Single worker (`workers: 1`)
 - No parallelism (`fullyParallel: false`)
 - Stop on first failure (`maxFailures: 1`)
@@ -221,14 +237,17 @@ PLAYWRIGHT_SCREENSHOTS=1 bun run test:e2e
 ### Test-Kit Module (`packages/test-kit/src/playwright/`)
 
 **Can import:**
+
 - `@playwright/test`
 - Core utilities (no app-specific code)
 
 **Cannot import:**
+
 - `apps/web` code
 - App-specific test helpers
 
 **Exports:**
+
 - `timeout.ts` - Structured timeout handling
 - `crash.ts` - Browser crash detection
 - Generic interfaces (e.g., `ScreenshotCapture`)
@@ -236,21 +255,25 @@ PLAYWRIGHT_SCREENSHOTS=1 bun run test:e2e
 ### App Test Helpers (`apps/web/.tests/helpers/`)
 
 **Can import:**
+
 - `@alfred/test-kit/playwright`
 - `@playwright/test`
 - App-specific screenshot utilities
 
 **Exports:**
+
 - `ai-harness.ts` - Unified AI test fixture
 - `screenshot.ts` - Screenshot management (existing)
 
 ### Reporter (`apps/web/.tests/reporters/`)
 
 **Can import:**
+
 - `@playwright/test/reporter`
 - `@alfred/metrics`
 
 **Exports:**
+
 - `ai-compact-reporter.ts` - AI-optimized reporter
 
 ## Integration with Existing Infrastructure
@@ -258,12 +281,14 @@ PLAYWRIGHT_SCREENSHOTS=1 bun run test:e2e
 ### Metrics
 
 Reporter automatically emits to global registry:
+
 - `e2e_tests_total` (counter, labels: status)
 - `e2e_test_duration_seconds` (histogram, labels: test, status)
 
 ### Performance Budgets
 
 E2E budgets extend existing categories in `@alfred/test-kit/performance`:
+
 ```typescript
 {
   "e2e-navigation": 5000,
@@ -276,6 +301,7 @@ E2E budgets extend existing categories in `@alfred/test-kit/performance`:
 ### Test-Kit Fixtures
 
 Follows existing patterns from:
+
 - `workflow/runtime-fixture.ts` - Handle pattern with cleanup
 - `voice/runtime-fixture.ts` - Factory pattern with options
 - `cognitive/vcr.ts` - Mock reset registry pattern
@@ -285,6 +311,7 @@ Follows existing patterns from:
 ### CI/CD
 
 Default AI mode and fail-fast work well for CI:
+
 - Fast feedback on failures
 - Compact output doesn't flood logs
 - Metrics available at `/api/metrics` endpoint
@@ -292,6 +319,7 @@ Default AI mode and fail-fast work well for CI:
 ### Local Development
 
 Developers can disable AI mode for verbose output:
+
 ```bash
 PLAYWRIGHT_AI_MODE=0 PLAYWRIGHT_FAIL_FAST=0 bun run test:e2e
 ```
@@ -299,6 +327,7 @@ PLAYWRIGHT_AI_MODE=0 PLAYWRIGHT_FAIL_FAST=0 bun run test:e2e
 ### Debugging Hangs
 
 Hang detection logs appear every 5 seconds:
+
 ```
 [HANG-CHECK] Waiting for "[data-testid="workflow"]" - 5s elapsed, 25s remaining
 [HANG-CHECK] Waiting for "[data-testid="workflow"]" - 10s elapsed, 20s remaining

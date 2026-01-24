@@ -1,9 +1,10 @@
 ---
 title: Migrating from Supabase Auth to Better Auth | Better Auth
-url: 
+url:
 description: A step-by-step guide to transitioning from Supabase Auth to Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,11 +31,11 @@ In this guide, we'll walk through the steps to migrate a project from Supabase A
 
 This migration will invalidate all active sessions. While this guide doesn't currently cover migrating two-factor (2FA) or Row Level Security (RLS) configurations, both should be possible with additional steps.
 
-## [Before You Begin](https://www.better-auth.com/docs/guides/supabase-migration-guide\#before-you-begin)
+## [Before You Begin](https://www.better-auth.com/docs/guides/supabase-migration-guide#before-you-begin)
 
 Before starting the migration process, set up Better Auth in your project. Follow the [installation guide](https://www.better-auth.com/docs/installation) to get started.
 
-### [Connect to your database](https://www.better-auth.com/docs/guides/supabase-migration-guide\#connect-to-your-database)
+### [Connect to your database](https://www.better-auth.com/docs/guides/supabase-migration-guide#connect-to-your-database)
 
 You'll need to connect to your database to migrate the users and accounts. Copy your `DATABASE_URL` from your Supabase project and use it to connect to your database. And for this example, we'll need to install `pg` to connect to the database.
 
@@ -64,7 +65,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Enable Email and Password (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide\#enable-email-and-password-optional)
+### [Enable Email and Password (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide#enable-email-and-password-optional)
 
 Enable the email and password in your auth config.
 
@@ -89,7 +90,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Setup Social Providers (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide\#setup-social-providers-optional)
+### [Setup Social Providers (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide#setup-social-providers-optional)
 
 Add social providers you have enabled in your Supabase project in your auth config.
 
@@ -114,7 +115,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Add admin and anonymous plugins (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide\#add-admin-and-anonymous-plugins-optional)
+### [Add admin and anonymous plugins (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide#add-admin-and-anonymous-plugins-optional)
 
 Add the [admin](https://www.better-auth.com/docs/plugins/admin) and [anonymous](https://www.better-auth.com/docs/plugins/anonymous) plugins to your auth config.
 
@@ -140,7 +141,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Run the migration](https://www.better-auth.com/docs/guides/supabase-migration-guide\#run-the-migration)
+### [Run the migration](https://www.better-auth.com/docs/guides/supabase-migration-guide#run-the-migration)
 
 Run the migration to create the necessary tables in your database.
 
@@ -159,7 +160,7 @@ This will create the following tables in your database:
 
 This tables will be created on the `public` schema.
 
-### [Copy the migration script](https://www.better-auth.com/docs/guides/supabase-migration-guide\#copy-the-migration-script)
+### [Copy the migration script](https://www.better-auth.com/docs/guides/supabase-migration-guide#copy-the-migration-script)
 
 Now that we have the necessary tables in our database, we can run the migration script to migrate the users and accounts from Supabase to Better Auth.
 
@@ -286,7 +287,7 @@ const migrateFromSupabase = async () => {
 migrateFromSupabase();
 ```
 
-### [Customize the migration script (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide\#customize-the-migration-script-optional)
+### [Customize the migration script (Optional)](https://www.better-auth.com/docs/guides/supabase-migration-guide#customize-the-migration-script-optional)
 
 - `name`: the migration script will use the user's email as the name. You might want to customize it if you have the user display name in your database.
 - `socialProviderList`: the migration script will use the social providers you have enabled in your auth config. You might want to customize it if you have additional social providers that you haven't enabled in your auth config.
@@ -294,7 +295,7 @@ migrateFromSupabase();
 - `isAnonymous`: remove `isAnonymous` if you're not using the `anonymous` plugin.
 - update other tables that reference the `users` table to use the `id` field.
 
-### [Run the migration script](https://www.better-auth.com/docs/guides/supabase-migration-guide\#run-the-migration-script)
+### [Run the migration script](https://www.better-auth.com/docs/guides/supabase-migration-guide#run-the-migration-script)
 
 Run the migration script to migrate the users and accounts from Supabase to Better Auth.
 
@@ -304,7 +305,7 @@ Terminal
 bun migration.ts # or use node, ts-node, etc.
 ```
 
-### [Update your code](https://www.better-auth.com/docs/guides/supabase-migration-guide\#update-your-code)
+### [Update your code](https://www.better-auth.com/docs/guides/supabase-migration-guide#update-your-code)
 
 Update your codebase from Supabase auth calls to Better Auth API.
 
@@ -327,11 +328,11 @@ Learn more:
 - [Hooks](https://www.better-auth.com/docs/concepts/hooks): Learn how to use the hooks to listen for events.
 - [Next.js](https://www.better-auth.com/docs/integrations/next): Learn how to use the auth client in a Next.js project.
 
-### [Middleware](https://www.better-auth.com/docs/guides/supabase-migration-guide\#middleware)
+### [Middleware](https://www.better-auth.com/docs/guides/supabase-migration-guide#middleware)
 
 To protect routes with middleware, refer to the [Next.js middleware guide](https://www.better-auth.com/docs/integrations/next#middleware) or your framework's documentation.
 
-## [Wrapping Up](https://www.better-auth.com/docs/guides/supabase-migration-guide\#wrapping-up)
+## [Wrapping Up](https://www.better-auth.com/docs/guides/supabase-migration-guide#wrapping-up)
 
 Congratulations! You've successfully migrated from Supabase Auth to Better Auth.
 

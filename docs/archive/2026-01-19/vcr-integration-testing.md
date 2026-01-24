@@ -43,12 +43,12 @@ packages/test-kit/src/vcr/
 
 ### Supported Providers
 
-| Provider | API Host | Status |
-|----------|----------|--------|
-| OpenAI | `api.openai.com` | ✅ Tested |
-| Anthropic | `api.anthropic.com` | ✅ Supported |
-| Google | `generativelanguage.googleapis.com` | ✅ Supported |
-| Cohere | `api.cohere.ai` | ✅ Supported |
+| Provider  | API Host                            | Status       |
+| --------- | ----------------------------------- | ------------ |
+| OpenAI    | `api.openai.com`                    | ✅ Tested    |
+| Anthropic | `api.anthropic.com`                 | ✅ Supported |
+| Google    | `generativelanguage.googleapis.com` | ✅ Supported |
+| Cohere    | `api.cohere.ai`                     | ✅ Supported |
 
 ## Usage
 
@@ -81,7 +81,9 @@ afterAll(async () => {
 it("makes AI API call", async () => {
   // Your test that calls OpenAI/Anthropic/etc
   const result = await caller.assistant.generate({
-    messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
+    messages: [
+      { id: "1", role: "user", parts: [{ type: "text", text: "Hello" }] },
+    ],
   });
   expect(result.text).toBeDefined();
 });
@@ -213,12 +215,12 @@ const vcr = createVCR({
 
 ### Existing Test Files
 
-| File | Description |
-|------|-------------|
-| `openai-vcr.integration.test.ts` | OpenAI API recording/replay |
-| `workflow-pipeline.integration.test.ts` | Workflow streaming tests |
-| `voice-pipeline.integration.test.ts` | Voice pipeline (local models) |
-| `auth-flow.integration.test.ts` | Authentication flows |
+| File                                    | Description                   |
+| --------------------------------------- | ----------------------------- |
+| `openai-vcr.integration.test.ts`        | OpenAI API recording/replay   |
+| `workflow-pipeline.integration.test.ts` | Workflow streaming tests      |
+| `voice-pipeline.integration.test.ts`    | Voice pipeline (local models) |
+| `auth-flow.integration.test.ts`         | Authentication flows          |
 
 ### Test Commands
 
@@ -237,11 +239,11 @@ bun run test:vcr:validate
 
 Playwright E2E tests that don't require VCR:
 
-| File | Tests |
-|------|-------|
-| `auth.e2e.spec.ts` | 15 authentication tests |
-| `workflow-execution.e2e.spec.ts` | 10 workflow UI tests |
-| `settings.e2e.spec.ts` | 12 settings/preferences tests |
+| File                             | Tests                         |
+| -------------------------------- | ----------------------------- |
+| `auth.e2e.spec.ts`               | 15 authentication tests       |
+| `workflow-execution.e2e.spec.ts` | 10 workflow UI tests          |
+| `settings.e2e.spec.ts`           | 12 settings/preferences tests |
 
 ```bash
 # Run E2E tests
@@ -278,6 +280,7 @@ Run with VCR_RECORD=1 to record.
 ```
 
 **Solution**: Run in record mode to capture the interaction:
+
 ```bash
 VCR_RECORD=1 bun test my-test.ts
 ```
@@ -289,6 +292,7 @@ AI_APICallError: Incorrect API key provided: test
 ```
 
 **Solution**: Ensure real API key is set and not overwritten:
+
 ```typescript
 // Preserve key before test utils load
 const REAL_KEY = process.env.OPENAI_API_KEY;
@@ -303,6 +307,7 @@ AI_APICallError: invalid model ID
 ```
 
 **Solution**: Set correct model format:
+
 ```typescript
 process.env.AI_MODEL = "gpt-4o-mini"; // Not "openai/gpt-4o-mini"
 ```
@@ -314,6 +319,7 @@ Voice pools not initialized. Call initializeVoicePools() first.
 ```
 
 **Solution**: Voice tests require local models. Tests will auto-skip if unavailable:
+
 ```typescript
 it.skipIf(!voicePoolsInitialized)("synthesizes speech", async () => {
   // Test body

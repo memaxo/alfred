@@ -1,9 +1,10 @@
 ---
 title: Installation | Better Auth
-url: 
+url:
 description: Learn how to configure Better Auth in your project.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Install the Package](https://www.better-auth.com/docs/installation\#install-the-package)
+### [Install the Package](https://www.better-auth.com/docs/installation#install-the-package)
 
 Let's start by adding Better Auth to your project:
 
@@ -44,7 +45,7 @@ npm install better-auth
 
 If you're using a separate client and server setup, make sure to install Better Auth in both parts of your project.
 
-### [Set Environment Variables](https://www.better-auth.com/docs/installation\#set-environment-variables)
+### [Set Environment Variables](https://www.better-auth.com/docs/installation#set-environment-variables)
 
 Create a `.env` file in the root of your project and add the following environment variables:
 
@@ -68,7 +69,7 @@ Generate Secret
 BETTER_AUTH_URL=http://localhost:3000 # Base URL of your app
 ```
 
-### [Create A Better Auth Instance](https://www.better-auth.com/docs/installation\#create-a-better-auth-instance)
+### [Create A Better Auth Instance](https://www.better-auth.com/docs/installation#create-a-better-auth-instance)
 
 Create a file named `auth.ts` in one of these locations:
 
@@ -90,7 +91,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Configure Database](https://www.better-auth.com/docs/installation\#configure-database)
+### [Configure Database](https://www.better-auth.com/docs/installation#configure-database)
 
 Better Auth requires a database to store user data.
 You can easily configure Better Auth to use SQLite, PostgreSQL, or MySQL, and more!
@@ -184,7 +185,7 @@ If your database is not listed above, check out our other supported
 [databases](https://www.better-auth.com/docs/adapters/other-relational-databases) for more information,
 or use one of the supported ORMs.
 
-### [Create Database Tables](https://www.better-auth.com/docs/installation\#create-database-tables)
+### [Create Database Tables](https://www.better-auth.com/docs/installation#create-database-tables)
 
 Better Auth includes a CLI tool to help manage the schema required by the library.
 
@@ -210,7 +211,7 @@ see the [CLI documentation](https://www.better-auth.com/docs/concepts/cli) for m
 
 If you instead want to create the schema manually, you can find the core schema required in the [database section](https://www.better-auth.com/docs/concepts/database#core-schema).
 
-### [Authentication Methods](https://www.better-auth.com/docs/installation\#authentication-methods)
+### [Authentication Methods](https://www.better-auth.com/docs/installation#authentication-methods)
 
 Configure the authentication methods you want to use. Better Auth comes with built-in support for email/password, and social sign-on providers.
 
@@ -235,7 +236,7 @@ export const auth = betterAuth({
 
 You can use even more authentication methods like [passkey](https://www.better-auth.com/docs/plugins/passkey), [username](https://www.better-auth.com/docs/plugins/username), [magic link](https://www.better-auth.com/docs/plugins/magic-link) and more through plugins.
 
-### [Mount Handler](https://www.better-auth.com/docs/installation\#mount-handler)
+### [Mount Handler](https://www.better-auth.com/docs/installation#mount-handler)
 
 To handle API requests, you need to set up a route handler on your server.
 
@@ -411,7 +412,7 @@ const handler = auth.handler;
 export { handler as GET, handler as POST };
 ```
 
-### [Create Client Instance](https://www.better-auth.com/docs/installation\#create-client-instance)
+### [Create Client Instance](https://www.better-auth.com/docs/installation#create-client-instance)
 
 The client-side library helps you interact with the auth server. Better Auth comes with a client for all the popular web frameworks, including vanilla JavaScript.
 
@@ -481,7 +482,7 @@ Tip: You can also export specific methods if you prefer:
 export const { signIn, signUp, useSession } = createAuthClient()
 ```
 
-### [🎉 That's it!](https://www.better-auth.com/docs/installation\#-thats-it)
+### [🎉 That's it!](https://www.better-auth.com/docs/installation#-thats-it)
 
 That's it! You're now ready to use better-auth in your application. Continue to [basic usage](https://www.better-auth.com/docs/basic-usage) to learn how to use the auth instance to sign in users.
 

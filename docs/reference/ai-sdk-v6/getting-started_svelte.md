@@ -14,21 +14,19 @@ If you are unfamiliar with the concepts of Prompt Engineering and HTTP Streaming
 
 To follow this quickstart, you'll need:
 
-  * Node.js 18+ and pnpm installed on your local development machine.
-  * An OpenAI API key.
+- Node.js 18+ and pnpm installed on your local development machine.
+- An OpenAI API key.
 
 If you haven't obtained your OpenAI API key, you can do so by signing up on the OpenAI website.
 
 ## Set Up Your Application
 
 Start by creating a new SvelteKit application. This command will create a new directory named `my-ai-app` and set up a basic SvelteKit application inside it.
-    
-    
+
     npx sv create my-ai-app
 
 Navigate to the newly created directory:
-    
-    
+
     cd my-ai-app
 
 ### Install Dependencies
@@ -44,22 +42,19 @@ npm
 yarn
 
 bun
-    
-    
+
     pnpm add -D ai @ai-sdk/openai @ai-sdk/svelte zod
 
 ### Configure OpenAI API Key
 
 Create a `.env.local` file in your project root and add your OpenAI API Key. This key is used to authenticate your application with the OpenAI service.
-    
-    
+
     touch .env.local
 
 Edit the `.env.local` file:
 
 .env.local
-    
-    
+
     OPENAI_API_KEY=xxxxxxxxx
 
 Replace `xxxxxxxxx` with your actual OpenAI API key.
@@ -71,60 +66,59 @@ Vite does not automatically load environment variables onto `process.env`, so yo
 Create a SvelteKit Endpoint, `src/routes/api/chat/+server.ts` and add the following code:
 
 src/routes/api/chat/+server.ts
-    
-    
+
     import { createOpenAI } from '@ai-sdk/openai';
-    
+
     import { streamText, type UIMessage, convertToModelMessages } from 'ai';
-    
-    
-    
-    
+
+
+
+
     import { OPENAI_API_KEY } from '$env/static/private';
-    
-    
-    
-    
+
+
+
+
     const openai = createOpenAI({
-    
+
       apiKey: OPENAI_API_KEY,
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     export async function POST({ request }) {
-    
+
       const { messages }: { messages: UIMessage[] } = await request.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 If you see type errors with `OPENAI_API_KEY` or your `POST` function, run the dev server.
 
 Let's take a look at what is happening in this code:
 
-  1. Create an OpenAI provider instance with the `createOpenAI` function from the `@ai-sdk/openai` package.
-  2. Define a `POST` request handler and extract `messages` from the body of the request. The `messages` variable contains a history of the conversation between you and the chatbot and provides the chatbot with the necessary context to make the next generation. The `messages` are of UIMessage type, which are designed for use in application UI - they contain the entire message history and associated metadata like timestamps.
-  3. Call `streamText`, which is imported from the `ai` package. This function accepts a configuration object that contains a `model` provider (defined in step 1) and `messages` (defined in step 2). You can pass additional settings to further customise the model's behaviour. The `messages` key expects a `ModelMessage[]` array. This type is different from `UIMessage` in that it does not include metadata, such as timestamps or sender information. To convert between these types, we use the `convertToModelMessages` function, which strips the UI-specific metadata and transforms the `UIMessage[]` array into the `ModelMessage[]` format that the model expects.
-  4. The `streamText` function returns a `StreamTextResult`. This result object contains the  `toUIMessageStreamResponse` function which converts the result to a streamed response object.
-  5. Return the result to the client to stream the response.
+1. Create an OpenAI provider instance with the `createOpenAI` function from the `@ai-sdk/openai` package.
+2. Define a `POST` request handler and extract `messages` from the body of the request. The `messages` variable contains a history of the conversation between you and the chatbot and provides the chatbot with the necessary context to make the next generation. The `messages` are of UIMessage type, which are designed for use in application UI - they contain the entire message history and associated metadata like timestamps.
+3. Call `streamText`, which is imported from the `ai` package. This function accepts a configuration object that contains a `model` provider (defined in step 1) and `messages` (defined in step 2). You can pass additional settings to further customise the model's behaviour. The `messages` key expects a `ModelMessage[]` array. This type is different from `UIMessage` in that it does not include metadata, such as timestamps or sender information. To convert between these types, we use the `convertToModelMessages` function, which strips the UI-specific metadata and transforms the `UIMessage[]` array into the `ModelMessage[]` format that the model expects.
+4. The `streamText` function returns a `StreamTextResult`. This result object contains the `toUIMessageStreamResponse` function which converts the result to a streamed response object.
+5. Return the result to the client to stream the response.
 
 ## Wire up the UI
 
@@ -133,81 +127,74 @@ Now that you have an API route that can query an LLM, it's time to set up your f
 Update your root page (`src/routes/+page.svelte`) with the following code to show a list of chat messages and provide a user message input:
 
 src/routes/+page.svelte
-    
-    
-    
-    
+
       import { Chat } from '@ai-sdk/svelte';
-    
-    
-    
-    
+
+
+
+
       let input = '';
-    
+
       const chat = new Chat({});
-    
-    
-    
-    
+
+
+
+
       function handleSubmit(event: SubmitEvent) {
-    
+
         event.preventDefault();
-    
+
         chat.sendMessage({ text: input });
-    
+
         input = '';
-    
+
       }
-    
-    
-    
-    
-    
-    
-    
-    
-      
-    
+
+
+
+
+
+
+
+
+
+
         {#each chat.messages as message, messageIndex (messageIndex)}
-    
-          
-    
+
+
+
             {message.role}
-    
-            
-    
+
+
+
               {#each message.parts as part, partIndex (partIndex)}
-    
+
                 {#if part.type === 'text'}
-    
+
                   {part.text}
-    
+
                 {/if}
-    
+
               {/each}
-    
-            
-    
-          
-    
+
+
+
+
+
         {/each}
-    
-      
-    
-      
-    
-        
-    
+
+
+
+
+
+
+
         Send
-    
-      
-    
-    
 
 This page utilizes the `Chat` class, which will, by default, use the `POST` route handler you created earlier. The class provides functions and state for handling user input and form submission. The `Chat` class provides multiple utility functions and state variables:
 
-  * `messages` \- the current chat messages (an array of objects with `id`, `role`, and `parts` properties).
-  * `sendMessage` \- a function to send a message to the chat API.
+- `messages` \- the current chat messages (an array of objects with `id`, `role`, and `parts` properties).
+- `sendMessage` \- a function to send a message to the chat API.
 
 The component uses local state to manage the input field value, and handles form submission by calling `sendMessage` with the input text and then clearing the input field.
 
@@ -216,8 +203,7 @@ The LLM's response is accessed through the message `parts` array. Each message c
 ## Running Your Application
 
 With that, you have built everything you need for your chatbot! To start your application, use the command:
-    
-    
+
     pnpm run dev
 
 Head to your browser and open http://localhost:5173. You should see an input field. Test it out by entering a message and see the AI chatbot respond in real-time! The AI SDK makes it fast and easy to build AI chat interfaces with Svelte.
@@ -237,104 +223,102 @@ Let's enhance your chatbot by adding a simple weather tool.
 Modify your `src/routes/api/chat/+server.ts` file to include the new weather tool:
 
 src/routes/api/chat/+server.ts
-    
-    
+
     import { createOpenAI } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       streamText,
-    
+
       type UIMessage,
-    
+
       convertToModelMessages,
-    
+
       tool,
-    
+
       stepCountIs,
-    
+
     } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     import { OPENAI_API_KEY } from '$env/static/private';
-    
-    
-    
-    
+
+
+
+
     const openai = createOpenAI({
-    
+
       apiKey: OPENAI_API_KEY,
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     export async function POST({ request }) {
-    
+
       const { messages }: { messages: UIMessage[] } = await request.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         tools: {
-    
+
           weather: tool({
-    
+
             description: 'Get the weather in a location (fahrenheit)',
-    
+
             inputSchema: z.object({
-    
+
               location: z.string().describe('The location to get the weather for'),
-    
+
             }),
-    
+
             execute: async ({ location }) => {
-    
+
               const temperature = Math.round(Math.random() * (90 - 32) + 32);
-    
+
               return {
-    
+
                 location,
-    
+
                 temperature,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 In this updated code:
 
-  1. You import the `tool` function from the `ai` package and `z` from `zod` for schema validation.
+1. You import the `tool` function from the `ai` package and `z` from `zod` for schema validation.
 
-  2. You define a `tools` object with a `weather` tool. This tool:
-
-     * Has a description that helps the model understand when to use it.
-     * Defines `inputSchema` using a Zod schema, specifying that it requires a `location` string to execute this tool. The model will attempt to extract this input from the context of the conversation. If it can't, it will ask the user for the missing information.
-     * Defines an `execute` function that simulates getting weather data (in this case, it returns a random temperature). This is an asynchronous function running on the server so you can fetch real data from an external API.
+2. You define a `tools` object with a `weather` tool. This tool:
+   - Has a description that helps the model understand when to use it.
+   - Defines `inputSchema` using a Zod schema, specifying that it requires a `location` string to execute this tool. The model will attempt to extract this input from the context of the conversation. If it can't, it will ask the user for the missing information.
+   - Defines an `execute` function that simulates getting weather data (in this case, it returns a random temperature). This is an asynchronous function running on the server so you can fetch real data from an external API.
 
 Now your chatbot can "fetch" weather information for any location the user asks about. When the model determines it needs to use the weather tool, it will generate a tool call with the necessary input. The `execute` function will then be automatically run, and the tool output will be added to the `messages` as a `tool` message.
 
@@ -349,80 +333,73 @@ Tool parts are always named `tool-{toolName}`, where `{toolName}` is the key you
 To display the tool invocation in your UI, update your `src/routes/+page.svelte` file:
 
 src/routes/+page.svelte
-    
-    
-    
-    
+
       import { Chat } from '@ai-sdk/svelte';
-    
-    
-    
-    
+
+
+
+
       let input = '';
-    
+
       const chat = new Chat({});
-    
-    
-    
-    
+
+
+
+
       function handleSubmit(event: SubmitEvent) {
-    
+
         event.preventDefault();
-    
+
         chat.sendMessage({ text: input });
-    
+
         input = '';
-    
+
       }
-    
-    
-    
-    
-    
-    
-    
-    
-      
-    
+
+
+
+
+
+
+
+
+
+
         {#each chat.messages as message, messageIndex (messageIndex)}
-    
-          
-    
+
+
+
             {message.role}
-    
-            
-    
+
+
+
               {#each message.parts as part, partIndex (partIndex)}
-    
+
                 {#if part.type === 'text'}
-    
+
                   {part.text}
-    
+
                 {:else if part.type === 'tool-weather'}
-    
+
                   {JSON.stringify(part, null, 2)}
-    
+
                 {/if}
-    
+
               {/each}
-    
-            
-    
-          
-    
+
+
+
+
+
         {/each}
-    
-      
-    
-      
-    
-        
-    
+
+
+
+
+
+
+
         Send
-    
-      
-    
-    
 
 With this change, you're updating the UI to handle different message parts. For text parts, you display the text content as before. For weather tool invocations, you display a JSON representation of the tool call and its result.
 
@@ -439,95 +416,94 @@ To solve this, you can enable multi-step tool calls using `stopWhen`. By default
 Modify your `src/routes/api/chat/+server.ts` file to include the `stopWhen` condition:
 
 src/routes/api/chat/+server.ts
-    
-    
+
     import { createOpenAI } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       streamText,
-    
+
       type UIMessage,
-    
+
       convertToModelMessages,
-    
+
       tool,
-    
+
       stepCountIs,
-    
+
     } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     import { OPENAI_API_KEY } from '$env/static/private';
-    
-    
-    
-    
+
+
+
+
     const openai = createOpenAI({
-    
+
       apiKey: OPENAI_API_KEY,
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     export async function POST({ request }) {
-    
+
       const { messages }: { messages: UIMessage[] } = await request.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
         tools: {
-    
+
           weather: tool({
-    
+
             description: 'Get the weather in a location (fahrenheit)',
-    
+
             inputSchema: z.object({
-    
+
               location: z.string().describe('The location to get the weather for'),
-    
+
             }),
-    
+
             execute: async ({ location }) => {
-    
+
               const temperature = Math.round(Math.random() * (90 - 32) + 32);
-    
+
               return {
-    
+
                 location,
-    
+
                 temperature,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 Head back to the browser and ask about the weather in a location. You should now see the model using the weather tool results to answer your question.
@@ -539,123 +515,122 @@ By setting `stopWhen: stepCountIs(5)`, you're allowing the model to use up to 5 
 Update your `src/routes/api/chat/+server.ts` file to add a new tool to convert the temperature from Fahrenheit to Celsius:
 
 src/routes/api/chat/+server.ts
-    
-    
+
     import { createOpenAI } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       streamText,
-    
+
       type UIMessage,
-    
+
       convertToModelMessages,
-    
+
       tool,
-    
+
       stepCountIs,
-    
+
     } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     import { OPENAI_API_KEY } from '$env/static/private';
-    
-    
-    
-    
+
+
+
+
     const openai = createOpenAI({
-    
+
       apiKey: OPENAI_API_KEY,
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     export async function POST({ request }) {
-    
+
       const { messages }: { messages: UIMessage[] } = await request.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
         tools: {
-    
+
           weather: tool({
-    
+
             description: 'Get the weather in a location (fahrenheit)',
-    
+
             inputSchema: z.object({
-    
+
               location: z.string().describe('The location to get the weather for'),
-    
+
             }),
-    
+
             execute: async ({ location }) => {
-    
+
               const temperature = Math.round(Math.random() * (90 - 32) + 32);
-    
+
               return {
-    
+
                 location,
-    
+
                 temperature,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
           convertFahrenheitToCelsius: tool({
-    
+
             description: 'Convert a temperature in fahrenheit to celsius',
-    
+
             inputSchema: z.object({
-    
+
               temperature: z
-    
+
                 .number()
-    
+
                 .describe('The temperature in fahrenheit to convert'),
-    
+
             }),
-    
+
             execute: async ({ temperature }) => {
-    
+
               const celsius = Math.round((temperature - 32) * (5 / 9));
-    
+
               return {
-    
+
                 celsius,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 ### Update Your Frontend
@@ -663,89 +638,82 @@ src/routes/api/chat/+server.ts
 Update your UI to handle the new temperature conversion tool by modifying the tool part handling:
 
 src/routes/+page.svelte
-    
-    
-    
-    
+
       import { Chat } from '@ai-sdk/svelte';
-    
-    
-    
-    
+
+
+
+
       let input = '';
-    
+
       const chat = new Chat({});
-    
-    
-    
-    
+
+
+
+
       function handleSubmit(event: SubmitEvent) {
-    
+
         event.preventDefault();
-    
+
         chat.sendMessage({ text: input });
-    
+
         input = '';
-    
+
       }
-    
-    
-    
-    
-    
-    
-    
-    
-      
-    
+
+
+
+
+
+
+
+
+
+
         {#each chat.messages as message, messageIndex (messageIndex)}
-    
-          
-    
+
+
+
             {message.role}
-    
-            
-    
+
+
+
               {#each message.parts as part, partIndex (partIndex)}
-    
+
                 {#if part.type === 'text'}
-    
+
                   {part.text}
-    
+
                 {:else if part.type === 'tool-weather' || part.type === 'tool-convertFahrenheitToCelsius'}
-    
+
                   {JSON.stringify(part, null, 2)}
-    
+
                 {/if}
-    
+
               {/each}
-    
-            
-    
-          
-    
+
+
+
+
+
         {/each}
-    
-      
-    
-      
-    
-        
-    
+
+
+
+
+
+
+
         Send
-    
-      
-    
-    
 
 This update handles the new `tool-convertFahrenheitToCelsius` part type, displaying the temperature conversion tool calls and results in the UI.
 
 Now, when you ask "What's the weather in New York in celsius?", you should see a more complete interaction:
 
-  1. The model will call the weather tool for New York.
-  2. You'll see the tool output displayed.
-  3. It will then call the temperature conversion tool to convert the temperature from Fahrenheit to Celsius.
-  4. The model will then use that information to provide a natural language response about the weather in New York.
+1. The model will call the weather tool for New York.
+2. You'll see the tool output displayed.
+3. It will then call the temperature conversion tool to convert the temperature from Fahrenheit to Celsius.
+4. The model will then use that information to provide a natural language response about the weather in New York.
 
 This multi-step approach allows the model to gather information and use it to provide more accurate and contextual responses, making your chatbot considerably more useful.
 
@@ -758,126 +726,112 @@ The surface-level difference is that Svelte uses classes to manage state, wherea
 ### 1\. Arguments to classes aren't reactive by default
 
 Unlike in React, where hooks are rerun any time their containing component is invalidated, code in the `script` block of a Svelte component is only run once when the component is created. This means that, if you want arguments to your class to be reactive, you need to make sure you pass a _reference_ into the class, rather than a value:
-    
-    
-    
-    
+
       import { Chat } from '@ai-sdk/svelte';
-    
-    
-    
-    
+
+
+
+
       let { id } = $props();
-    
-    
-    
-    
+
+
+
+
       // won't work; the class instance will be created once, `id` will be copied by value, and won't update when $props.id changes
-    
+
       let chat = new Chat({ id });
-    
-    
-    
-    
+
+
+
+
       // will work; passes `id` by reference, so `Chat` always has the latest value
-    
+
       let chat = new Chat({
-    
+
         get id() {
-    
+
           return id;
-    
+
         },
-    
+
       });
-    
-    
 
 Keep in mind that this normally doesn't matter; most parameters you'll pass into the Chat class are static (for example, you typically wouldn't expect your `onError` handler to change).
 
 ### 2\. You can't destructure class properties
 
 In vanilla JavaScript, destructuring class properties copies them by value and "disconnects" them from their class instance:
-    
-    
+
     const classInstance = new Whatever();
-    
+
     classInstance.foo = 'bar';
-    
+
     const { foo } = classInstance;
-    
+
     classInstance.foo = 'baz';
-    
-    
-    
-    
+
+
+
+
     console.log(foo); // 'bar'
 
 The same is true of classes in Svelte:
-    
-    
-    
-    
+
       import { Chat } from '@ai-sdk/svelte';
-    
-    
-    
-    
+
+
+
+
       const chat = new Chat({});
-    
+
       let { messages } = chat;
-    
-    
-    
-    
+
+
+
+
       chat.append({ content: 'Hello, world!', role: 'user' }).then(() => {
-    
+
         console.log(messages); // []
-    
+
         console.log(chat.messages); // [{ content: 'Hello, world!', role: 'user' }] (plus some other stuff)
-    
+
       });
-    
-    
 
 ### 3\. Instance synchronization requires context
 
 In React, hook instances with the same `id` are synchronized -- so two instances of `useChat` will have the same `messages`, `status`, etc. if they have the same `id`. For most use cases, you probably don't need this behavior -- but if you do, you can create a context in your root layout file using `createAIContext`:
-    
-    
-    
-    
+
       import { createAIContext } from '@ai-sdk/svelte';
-    
-    
-    
-    
+
+
+
+
       let { children } = $props();
-    
-    
-    
-    
+
+
+
+
       createAIContext();
-    
+
       // all hooks created after this or in components that are children of this component
-    
+
       // will have synchronized state
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
     {@render children()}
 
 ## Where to Next?
 
 You've built an AI chatbot using the AI SDK! From here, you have several paths to explore:
 
-  * To learn more about the AI SDK, read through the documentation.
-  * If you're interested in diving deeper with guides, check out the RAG (retrieval-augmented generation) and multi-modal chatbot guides.
-  * To jumpstart your first AI project, explore available templates.
-  * To learn more about Svelte, check out the official documentation.
+- To learn more about the AI SDK, read through the documentation.
+- If you're interested in diving deeper with guides, check out the RAG (retrieval-augmented generation) and multi-modal chatbot guides.
+- To jumpstart your first AI project, explore available templates.
+- To learn more about Svelte, check out the official documentation.
 
 Previous
 

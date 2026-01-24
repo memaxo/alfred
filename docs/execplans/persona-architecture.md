@@ -115,7 +115,7 @@ Definitions (as used in this plan):
 
 - Persona: The stable “presentation identity” of ALFRED (address style, tone, openings, vocabulary constraints, do/don’t rules, tool-call framing).
 - Modality: Where the user experiences output (voice TTS, text chat, workflow narration, TUI).
-- Deterministic envelope: The state machine and structured schemas controlling *when* and *what kind* of thing ALFRED says (acknowledge vs clarify vs answer vs error), plus tool lifecycle constraints.
+- Deterministic envelope: The state machine and structured schemas controlling _when_ and _what kind_ of thing ALFRED says (acknowledge vs clarify vs answer vs error), plus tool lifecycle constraints.
 - Generative content: The actual user-facing words inside that envelope, produced by the model within strict constraints.
 - Typed telemetry: Non-prose, structured metadata that describes protocol state (speech act), constraints applied, tool lifecycle progress, and evidence gates. Telemetry is safe to store/inspect and must never be spoken.
 
@@ -133,77 +133,77 @@ Milestone 1: Create `@alfred/persona` (pure shared package)
 
 Create a new package under `packages/persona/` following package standards:
 
-  - `packages/persona/package.json` with `"name": "@alfred/persona"`, `"type": "module"`, `exports` for main entry and any subpaths, and `"workspace:*"` deps.
-  - `packages/persona/tsconfig.json` extending `../tsconfig/tsconfig.json`.
-  - `packages/persona/turbo.json`, `README.md`, `src/index.ts`, `test/`.
+- `packages/persona/package.json` with `"name": "@alfred/persona"`, `"type": "module"`, `exports` for main entry and any subpaths, and `"workspace:*"` deps.
+- `packages/persona/tsconfig.json` extending `../tsconfig/tsconfig.json`.
+- `packages/persona/turbo.json`, `README.md`, `src/index.ts`, `test/`.
 
 Implement the following modules (all pure; no IO; no `Date.now()` internally; accept timestamps as arguments). This package must not read user preferences directly; callers must pass `honorific`, `verbosity`, and other user state explicitly.
 
-  - `src/character.ts`: Canonical ALFRED character constants and “do/don’t” rules.
-  - `src/transitions.ts`: Openings/transitions (acknowledge/status/alert/uncertain/complete/close) with honorific support.
-  - `src/honorific.ts`: `HonorificPreference` and `applyHonorific()`; plus a small “render honorific” helper.
-  - `src/prompt.ts`: `buildPersonaPrompt({ modality, honorific, focusMode, … })` including “runtime hints” with good vs bad examples.
-  - `src/voice.ts`: `adaptForVoice(text)` (remove markdown/odd punctuation, shorten sentences safely).
-  - `src/telemetry.ts`: Zod schema for persona-related telemetry that boundaries can emit and UIs can render (no free-text reasoning).
+- `src/character.ts`: Canonical ALFRED character constants and “do/don’t” rules.
+- `src/transitions.ts`: Openings/transitions (acknowledge/status/alert/uncertain/complete/close) with honorific support.
+- `src/honorific.ts`: `HonorificPreference` and `applyHonorific()`; plus a small “render honorific” helper.
+- `src/prompt.ts`: `buildPersonaPrompt({ modality, honorific, focusMode, … })` including “runtime hints” with good vs bad examples.
+- `src/voice.ts`: `adaptForVoice(text)` (remove markdown/odd punctuation, shorten sentences safely).
+- `src/telemetry.ts`: Zod schema for persona-related telemetry that boundaries can emit and UIs can render (no free-text reasoning).
 
 Milestone 2: Integrate persona into voice runtime (single spoken stream + deterministic protocol + typed telemetry)
 
 Update `packages/api/src/voice/assistant.ts` to:
 
-  - Stop building persona strings ad-hoc; instead call `@alfred/persona` builders to produce system prompt blocks for modality `"voice"`.
-  - Remove `looksLikeStatusQuery()` heuristic (currently only used to select opening type). Use `classifyVoiceIntent()` result to determine appropriate opening instead.
-  - Replace the current heuristic fallback in `classifyVoiceIntent()` with the approved minimal fallback (<5 branches), state-gated to only handle unambiguous cases (example: exact/near-exact “approve/yes” vs “reject/no” when `awaiting_approval`). In all other cases, degrade safely to “conversational” (or ask a clarification) rather than guessing “workflow/status” via keyword scoring.
-  - Remove `ENABLE_JARVIS_PERSONA` gating; persona is always active.
-  - Implement a deterministic conversation protocol state machine (separate from workflow state machine) that tracks speech acts:
-    - States: `greet` (session start), `ack` (routine acknowledgment), `clarify` (needs user input), `answer` (direct response), `tooling` (tools executing), `recover` (error handling), `close` (session end).
-    - Transitions driven by: classified intent (`classifyVoiceIntent()` result), session state (first turn vs continuation), tool execution state (tools in flight vs complete).
-    - The state machine determines *what kind* of response is needed, but the actual text remains generative (via `generateText()` with persona prompt).
-  - Emit typed persona telemetry using a single canonical transport:
-    - Transport: `VoiceAssistantRaw.meta.personaTelemetry` (validated by `@alfred/persona` `personaTelemetrySchema`).
-    - Do not add a separate `VoiceAssistantResult.telemetry` field (avoid duplicated surfaces and drift).
-    - Minimum telemetry fields:
-      - `speechAct: "greet" | "ack" | "clarify" | "answer" | "tooling" | "recover" | "close"`
-      - `constraints: { focusMode: boolean; ttsSafe: boolean; maxWords?: number | null }`
-      - `tooling: { toolsUsed: string[]; hasToolResults: boolean }`
-      - `heuristicFallbackUsed: boolean` (true only for the minimal approval/rejection fallback)
-      - `intent: { type: "workflow" | "approval" | "status_query" | "conversational"; confidence?: number | null }`
-  - Add runtime hints to persona prompt with good/bad examples (e.g., “Never claim tool results without tool evidence. Good: 'I'll check that for you, Sir.' Bad: 'I've found the answer' when no tool has run yet.”).
-  - Ensure tool-call framing: when tools are about to execute, inject persona-appropriate preamble into system prompt (e.g., “When calling tools, frame your announcement as: 'I'll look into that for you, {honorific}.' Do not claim results until tool execution completes.”).
-  - Define “tool evidence” precisely (so it can be tested):
-    - `toolsUsed`: derived from the AI SDK result (names of tools invoked during the `generateText()` tool loop).
-    - `hasToolResults`: true iff the AI SDK result contains at least one tool result for an invoked tool (not inferred from the spoken text).
+- Stop building persona strings ad-hoc; instead call `@alfred/persona` builders to produce system prompt blocks for modality `"voice"`.
+- Remove `looksLikeStatusQuery()` heuristic (currently only used to select opening type). Use `classifyVoiceIntent()` result to determine appropriate opening instead.
+- Replace the current heuristic fallback in `classifyVoiceIntent()` with the approved minimal fallback (<5 branches), state-gated to only handle unambiguous cases (example: exact/near-exact “approve/yes” vs “reject/no” when `awaiting_approval`). In all other cases, degrade safely to “conversational” (or ask a clarification) rather than guessing “workflow/status” via keyword scoring.
+- Remove `ENABLE_JARVIS_PERSONA` gating; persona is always active.
+- Implement a deterministic conversation protocol state machine (separate from workflow state machine) that tracks speech acts:
+  - States: `greet` (session start), `ack` (routine acknowledgment), `clarify` (needs user input), `answer` (direct response), `tooling` (tools executing), `recover` (error handling), `close` (session end).
+  - Transitions driven by: classified intent (`classifyVoiceIntent()` result), session state (first turn vs continuation), tool execution state (tools in flight vs complete).
+  - The state machine determines _what kind_ of response is needed, but the actual text remains generative (via `generateText()` with persona prompt).
+- Emit typed persona telemetry using a single canonical transport:
+  - Transport: `VoiceAssistantRaw.meta.personaTelemetry` (validated by `@alfred/persona` `personaTelemetrySchema`).
+  - Do not add a separate `VoiceAssistantResult.telemetry` field (avoid duplicated surfaces and drift).
+  - Minimum telemetry fields:
+    - `speechAct: "greet" | "ack" | "clarify" | "answer" | "tooling" | "recover" | "close"`
+    - `constraints: { focusMode: boolean; ttsSafe: boolean; maxWords?: number | null }`
+    - `tooling: { toolsUsed: string[]; hasToolResults: boolean }`
+    - `heuristicFallbackUsed: boolean` (true only for the minimal approval/rejection fallback)
+    - `intent: { type: "workflow" | "approval" | "status_query" | "conversational"; confidence?: number | null }`
+- Add runtime hints to persona prompt with good/bad examples (e.g., “Never claim tool results without tool evidence. Good: 'I'll check that for you, Sir.' Bad: 'I've found the answer' when no tool has run yet.”).
+- Ensure tool-call framing: when tools are about to execute, inject persona-appropriate preamble into system prompt (e.g., “When calling tools, frame your announcement as: 'I'll look into that for you, {honorific}.' Do not claim results until tool execution completes.”).
+- Define “tool evidence” precisely (so it can be tested):
+  - `toolsUsed`: derived from the AI SDK result (names of tools invoked during the `generateText()` tool loop).
+  - `hasToolResults`: true iff the AI SDK result contains at least one tool result for an invoked tool (not inferred from the spoken text).
 
 Milestone 3: Integrate persona into text assistant (and preference prompt)
 
 Update the text assistant prompt pipeline:
 
-  - `packages/agent/src/agents.ts`: Replace the hardcoded `assistantInstructions` string with `@alfred/persona` prompt construction for modality `"text"` (and keep `getVoiceAgentDefaults()` / `getAssistantAgentDefaults()` wired to the shared persona instructions).
-  - `packages/agent/src/preference/prompt.ts`: Keep preference adaptation as additive “response formatting” (verbosity/tone/format). It must append after persona prompt and must not contradict persona do/don’t rules.
-  - Tool-call framing: tools are executed via AI SDK `ToolLoopAgent`; persona prompt should only shape how tool execution is described to the user (before/after), not introduce separate “tool narration” heuristics.
+- `packages/agent/src/agents.ts`: Replace the hardcoded `assistantInstructions` string with `@alfred/persona` prompt construction for modality `"text"` (and keep `getVoiceAgentDefaults()` / `getAssistantAgentDefaults()` wired to the shared persona instructions).
+- `packages/agent/src/preference/prompt.ts`: Keep preference adaptation as additive “response formatting” (verbosity/tone/format). It must append after persona prompt and must not contradict persona do/don’t rules.
+- Tool-call framing: tools are executed via AI SDK `ToolLoopAgent`; persona prompt should only shape how tool execution is described to the user (before/after), not introduce separate “tool narration” heuristics.
 
 Milestone 4: Integrate persona into TUI greetings and workflow narration
 
 Update:
 
-  - `packages/tui/src/tui/intro/greeting.ts`: Replace hardcoded greetings with calls to `@alfred/persona` `formatGreeting({ timeOfDay, honorific })`. Honorific preference lookup must stay outside `@alfred/persona` (TUI loads it via existing preference mechanisms and passes it in).
-  - `packages/api/src/voice/plan-speech.ts`: Keep the structured plan-to-speech conversion logic (it's domain-specific), but use persona helpers for phrasing (e.g., `formatOpening()` from persona module instead of `formatOpening()` local function). Ensure honorific is passed through from user preferences.
-  - Web HUD greetings (`apps/web/src/hooks/use-ambient-awareness.ts`, `apps/web/src/components/hud/jarvis-hud.tsx`): Update to call `@alfred/persona` greeting generator so UI copy matches voice/TUI.
+- `packages/tui/src/tui/intro/greeting.ts`: Replace hardcoded greetings with calls to `@alfred/persona` `formatGreeting({ timeOfDay, honorific })`. Honorific preference lookup must stay outside `@alfred/persona` (TUI loads it via existing preference mechanisms and passes it in).
+- `packages/api/src/voice/plan-speech.ts`: Keep the structured plan-to-speech conversion logic (it's domain-specific), but use persona helpers for phrasing (e.g., `formatOpening()` from persona module instead of `formatOpening()` local function). Ensure honorific is passed through from user preferences.
+- Web HUD greetings (`apps/web/src/hooks/use-ambient-awareness.ts`, `apps/web/src/components/hud/jarvis-hud.tsx`): Update to call `@alfred/persona` greeting generator so UI copy matches voice/TUI.
 
 Milestone 5: Remove legacy gating + conflicting persona fragments
 
 Remove:
 
-  - `ENABLE_JARVIS_PERSONA` gating and related conditional prompt behavior in code paths where persona should always be active.
-  - Legacy persona ExecPlans that conflict with this approach.
+- `ENABLE_JARVIS_PERSONA` gating and related conditional prompt behavior in code paths where persona should always be active.
+- Legacy persona ExecPlans that conflict with this approach.
 
 Milestone 6: Validation and contract tests
 
 Add/extend tests that prove:
 
-  - Voice emits typed telemetry and never emits/stores any internal monologue text stream.
-  - Honorific preference is respected across modalities (voice/text/TUI).
-  - “Bad examples” constraints are enforced (no emojis, no “I’m happy to help”, no panic/alarmist language).
-  - Pipeline remains persona-free (no `@alfred/persona` imports under `packages/pipeline`).
+- Voice emits typed telemetry and never emits/stores any internal monologue text stream.
+- Honorific preference is respected across modalities (voice/text/TUI).
+- “Bad examples” constraints are enforced (no emojis, no “I’m happy to help”, no panic/alarmist language).
+- Pipeline remains persona-free (no `@alfred/persona` imports under `packages/pipeline`).
 
 ## Validation and Acceptance
 
@@ -225,15 +225,15 @@ Acceptance is achieved when the following are true:
 
 Proof (manual, copy/pasteable checks):
 
-1) Voice session greeting + no re-greet:
+1. Voice session greeting + no re-greet:
    - Start a voice session and speak two back-to-back queries.
    - Expect: first reply may include a greeting/opening; second reply must not include a greeting/opening.
 
-2) Telemetry never leaks into speech:
+2. Telemetry never leaks into speech:
    - Trigger a voice response that includes `raw.meta.personaTelemetry`.
    - Expect: `VoiceAssistantResult.text` contains no JSON, keys like `speechAct`, or any telemetry values.
 
-3) Minimal heuristic fallback only:
+3. Minimal heuristic fallback only:
    - Put the system into `awaiting_approval` voice workflow state, then speak “approve” and “reject”.
    - Expect: it resolves correctly even when LLM classification is unavailable; `raw.meta.personaTelemetry.heuristicFallbackUsed === true`.
    - Speak an ambiguous utterance (e.g. “let’s do it”) outside awaiting approval.
@@ -241,10 +241,10 @@ Proof (manual, copy/pasteable checks):
 
 Validation commands (examples; adjust as the implementation progresses):
 
-  - `bun test packages/api/test --grep persona`
-  - `bun test packages/agent/test --grep persona`
-  - `bun test packages/tui/test --grep greeting`
-  - `bun run typecheck`
+- `bun test packages/api/test --grep persona`
+- `bun test packages/agent/test --grep persona`
+- `bun test packages/tui/test --grep greeting`
+- `bun run typecheck`
 
 ## Idempotence and Recovery
 
@@ -254,8 +254,8 @@ This plan should be implemented as additive changes first (new package, new help
 
 As work proceeds, record short evidence here:
 
-  - Snippets of test output that demonstrate telemetry emission and that no “internal monologue” stream exists.
-  - A before/after transcript showing consistent honorific usage.
+- Snippets of test output that demonstrate telemetry emission and that no “internal monologue” stream exists.
+- A before/after transcript showing consistent honorific usage.
 
 Evidence (2026-01-20):
 
@@ -270,23 +270,23 @@ Evidence (2026-01-20):
 
 New package:
 
-  - `@alfred/persona` must be safe to import in browser and Bun CLI environments. It must not import server-only packages (`@alfred/db`, `pg`, Node-only APIs) or start timers at import time.
+- `@alfred/persona` must be safe to import in browser and Bun CLI environments. It must not import server-only packages (`@alfred/db`, `pg`, Node-only APIs) or start timers at import time.
 
 Stable APIs to implement in `@alfred/persona`:
 
-  - `buildPersonaPrompt(context: PersonaContext) -> string` (for model system prompt construction, includes runtime hints with good/bad examples)
-  - `formatGreeting({ timeOfDay, honorific, … }) -> string`
-  - `getTransition(kind, honorific) -> string`
-  - `adaptForVoice(text: string) -> string` (TTS-safe transformation)
-  - `personaTelemetrySchema` (Zod schema for typed telemetry) + `parsePersonaTelemetry(unknown) -> PersonaTelemetry | error`
+- `buildPersonaPrompt(context: PersonaContext) -> string` (for model system prompt construction, includes runtime hints with good/bad examples)
+- `formatGreeting({ timeOfDay, honorific, … }) -> string`
+- `getTransition(kind, honorific) -> string`
+- `adaptForVoice(text: string) -> string` (TTS-safe transformation)
+- `personaTelemetrySchema` (Zod schema for typed telemetry) + `parsePersonaTelemetry(unknown) -> PersonaTelemetry | error`
 
 Voice runtime contract (single spoken stream + typed telemetry):
 
-  - User-facing speech (`VoiceAssistantResult.text`) is a single stream and must not include telemetry or tool internals.
-  - Telemetry is structured data only (no free-text reasoning) and is safe to store/inspect. Canonical transport is `VoiceAssistantRaw.meta.personaTelemetry` (validated by schema).
-  - Tool-backed answers never claim tool results without tool result evidence. Runtime hints in persona prompt enforce this; protocol state machine tracks `toolLifecycle.phase` to validate.
-  - Tools are called automatically via AI SDK `ToolLoopAgent`; persona prompt guides how the model describes tool calls/results, but we do not intercept tool execution.
-  - Conversation protocol state machine (new) tracks speech acts deterministically; workflow state machine (existing) tracks workflow phases. These are separate concerns.
+- User-facing speech (`VoiceAssistantResult.text`) is a single stream and must not include telemetry or tool internals.
+- Telemetry is structured data only (no free-text reasoning) and is safe to store/inspect. Canonical transport is `VoiceAssistantRaw.meta.personaTelemetry` (validated by schema).
+- Tool-backed answers never claim tool results without tool result evidence. Runtime hints in persona prompt enforce this; protocol state machine tracks `toolLifecycle.phase` to validate.
+- Tools are called automatically via AI SDK `ToolLoopAgent`; persona prompt guides how the model describes tool calls/results, but we do not intercept tool execution.
+- Conversation protocol state machine (new) tracks speech acts deterministically; workflow state machine (existing) tracks workflow phases. These are separate concerns.
 
 Test plan notes (concrete):
 

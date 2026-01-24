@@ -1,9 +1,10 @@
 ---
 title: Dropbox | Better Auth
-url: 
+url:
 description: Dropbox provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Dropbox credentials](https://www.better-auth.com/docs/authentication/dropbox\#get-your-dropbox-credentials)
+### [Get your Dropbox credentials](https://www.better-auth.com/docs/authentication/dropbox#get-your-dropbox-credentials)
 
 To use Dropbox sign in, you need a client ID and client secret. You can get them from the [Dropbox Developer Portal](https://www.dropbox.com/developers). You can Allow "Implicit Grant & PKCE" for the application in the App Console.
 
@@ -34,7 +35,7 @@ Make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/dr
 
 If you need deeper dive into Dropbox Authentication, you can check out the [official documentation](https://developers.dropbox.com/oauth-guide).
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/dropbox\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/dropbox#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -53,7 +54,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Sign In with Dropbox](https://www.better-auth.com/docs/authentication/dropbox\#sign-in-with-dropbox)
+### [Sign In with Dropbox](https://www.better-auth.com/docs/authentication/dropbox#sign-in-with-dropbox)
 
 To sign in with Dropbox, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 

@@ -1,9 +1,10 @@
 ---
 title: Overview - Laminar documentation
-url: 
+url:
 description: General guidelines on using our API
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/api-reference/introduction#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -27,13 +28,13 @@ On this page
 - [General](https://docs.lmnr.ai/api-reference/introduction#general)
 - [Authentication](https://docs.lmnr.ai/api-reference/introduction#authentication)
 
-## [​](https://docs.lmnr.ai/api-reference/introduction\#general)  General
+## [​](https://docs.lmnr.ai/api-reference/introduction#general) General
 
 Use the following base URL: `https://api.lmnr.ai/v1`For example, `POST https://api.lmnr.ai/v1/sql/query`For more detailed information about each endpoint or schema, check our OpenAPI specification. [**Laminar OpenAPI specification** \\
 \\
 Full OpenAPI specification file](https://github.com/lmnr-ai/docs/blob/main/api-reference/openapi.json) Each endpoint’s page in OpenAPI specification specifies the method, path and parameters to be used. Additionally, you can try sending the request from there.
 
-## [​](https://docs.lmnr.ai/api-reference/introduction\#authentication)  Authentication
+## [​](https://docs.lmnr.ai/api-reference/introduction#authentication) Authentication
 
 All API endpoints are authenticated using Project API key as Bearer token.To get the token, go to “settings” page and move to “Project API keys” section. Then get a token from there or generate a new one.Note that each project has different Project API keys. For switching between projects, press “Laminar” icon at the top-left of the dashboard.
 

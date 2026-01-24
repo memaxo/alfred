@@ -2,29 +2,25 @@ What are Server Functions?
 
 Server functions let you define server-only logic that can be called from anywhere in your application - loaders, components, hooks, or other server functions. They run on the server but can be invoked from client code seamlessly.
 
+import { createServerFn } from '@tanstack/react-start'
 
- import { createServerFn } from '@tanstack/react-start'
+export const getServerTime = createServerFn().handler(async () => {
+// This runs only on the server
+return new Date().toISOString()
+})
 
- export const getServerTime = createServerFn().handler(async () => {
- // This runs only on the server
- return new Date().toISOString()
- })
+// Call from anywhere - components, loaders, hooks, etc.
+const time = await getServerTime()
 
- // Call from anywhere - components, loaders, hooks, etc.
- const time = await getServerTime()
+import { createServerFn } from '@tanstack/react-start'
 
+export const getServerTime = createServerFn().handler(async () => {
+// This runs only on the server
+return new Date().toISOString()
+})
 
-
- import { createServerFn } from '@tanstack/react-start'
-
- export const getServerTime = createServerFn().handler(async () => {
- // This runs only on the server
- return new Date().toISOString()
- })
-
- // Call from anywhere - components, loaders, hooks, etc.
- const time = await getServerTime()
-
+// Call from anywhere - components, loaders, hooks, etc.
+const time = await getServerTime()
 
 Server functions provide server capabilities (database access, environment variables, file system) while maintaining type safety across the network boundary.
 
@@ -32,79 +28,70 @@ Basic Usage
 
 Server functions are created with createServerFn() and can specify HTTP method:
 
+import { createServerFn } from '@tanstack/react-start'
 
- import { createServerFn } from '@tanstack/react-start'
+// GET request (default)
+export const getData = createServerFn().handler(async () => {
+return { message: 'Hello from server!' }
+})
 
- // GET request (default)
- export const getData = createServerFn().handler(async () => {
- return { message: 'Hello from server!' }
- })
+// POST request
+export const saveData = createServerFn({ method: 'POST' }).handler(async () => {
+// Server-only logic
+return { success: true }
+})
 
- // POST request
- export const saveData = createServerFn({ method: 'POST' }).handler(async () => {
- // Server-only logic
- return { success: true }
- })
+import { createServerFn } from '@tanstack/react-start'
 
+// GET request (default)
+export const getData = createServerFn().handler(async () => {
+return { message: 'Hello from server!' }
+})
 
-
- import { createServerFn } from '@tanstack/react-start'
-
- // GET request (default)
- export const getData = createServerFn().handler(async () => {
- return { message: 'Hello from server!' }
- })
-
- // POST request
- export const saveData = createServerFn({ method: 'POST' }).handler(async () => {
- // Server-only logic
- return { success: true }
- })
-
+// POST request
+export const saveData = createServerFn({ method: 'POST' }).handler(async () => {
+// Server-only logic
+return { success: true }
+})
 
 Where to Call Server Functions
 
 Call server functions from:
 
- * **Route loaders** \- Perfect for data fetching
- * **Components** \- Use with useServerFn() hook
- * **Other server functions** \- Compose server logic
- * **Event handlers** \- Handle form submissions, clicks, etc.
+- **Route loaders** \- Perfect for data fetching
+- **Components** \- Use with useServerFn() hook
+- **Other server functions** \- Compose server logic
+- **Event handlers** \- Handle form submissions, clicks, etc.
 
+// In a route loader
+export const Route = createFileRoute('/posts')({
+loader: () => getPosts(),
+})
 
+// In a component
+function PostList() {
+const getPosts = useServerFn(getServerPosts)
 
- // In a route loader
- export const Route = createFileRoute('/posts')({
- loader: () => getPosts(),
- })
+const { data } = useQuery({
+queryKey: ['posts'],
+queryFn: () => getPosts(),
+})
+}
 
- // In a component
- function PostList() {
- const getPosts = useServerFn(getServerPosts)
+// In a route loader
+export const Route = createFileRoute('/posts')({
+loader: () => getPosts(),
+})
 
- const { data } = useQuery({
- queryKey: ['posts'],
- queryFn: () => getPosts(),
- })
- }
+// In a component
+function PostList() {
+const getPosts = useServerFn(getServerPosts)
 
-
-
- // In a route loader
- export const Route = createFileRoute('/posts')({
- loader: () => getPosts(),
- })
-
- // In a component
- function PostList() {
- const getPosts = useServerFn(getServerPosts)
-
- const { data } = useQuery({
- queryKey: ['posts'],
- queryFn: () => getPosts(),
- })
- }
-
+const { data } = useQuery({
+queryKey: ['posts'],
+queryFn: () => getPosts(),
+})
+}
 
 Parameters & Validation
 
@@ -112,107 +99,95 @@ Server functions accept a single data parameter. Since they cross the network bo
 
 Basic Parameters
 
+import { createServerFn } from '@tanstack/react-start'
 
- import { createServerFn } from '@tanstack/react-start'
+export const greetUser = createServerFn({ method: 'GET' })
+.inputValidator((data: { name: string }) => data)
+.handler(async ({ data }) => {
+return `Hello, ${data.name}!`
+})
 
- export const greetUser = createServerFn({ method: 'GET' })
- .inputValidator((data: { name: string }) => data)
- .handler(async ({ data }) => {
- return `Hello, ${data.name}!`
- })
+await greetUser({ data: { name: 'John' } })
 
- await greetUser({ data: { name: 'John' } })
+import { createServerFn } from '@tanstack/react-start'
 
+export const greetUser = createServerFn({ method: 'GET' })
+.inputValidator((data: { name: string }) => data)
+.handler(async ({ data }) => {
+return `Hello, ${data.name}!`
+})
 
-
- import { createServerFn } from '@tanstack/react-start'
-
- export const greetUser = createServerFn({ method: 'GET' })
- .inputValidator((data: { name: string }) => data)
- .handler(async ({ data }) => {
- return `Hello, ${data.name}!`
- })
-
- await greetUser({ data: { name: 'John' } })
-
+await greetUser({ data: { name: 'John' } })
 
 Validation with Zod
 
 For robust validation, use schema libraries like Zod:
 
+import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 
- import { createServerFn } from '@tanstack/react-start'
- import { z } from 'zod'
+const UserSchema = z.object({
+name: z.string().min(1),
+age: z.number().min(0),
+})
 
- const UserSchema = z.object({
- name: z.string().min(1),
- age: z.number().min(0),
- })
+export const createUser = createServerFn({ method: 'POST' })
+.inputValidator(UserSchema)
+.handler(async ({ data }) => {
+// data is fully typed and validated
+return `Created user: ${data.name}, age ${data.age}`
+})
 
- export const createUser = createServerFn({ method: 'POST' })
- .inputValidator(UserSchema)
- .handler(async ({ data }) => {
- // data is fully typed and validated
- return `Created user: ${data.name}, age ${data.age}`
- })
+import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 
+const UserSchema = z.object({
+name: z.string().min(1),
+age: z.number().min(0),
+})
 
-
- import { createServerFn } from '@tanstack/react-start'
- import { z } from 'zod'
-
- const UserSchema = z.object({
- name: z.string().min(1),
- age: z.number().min(0),
- })
-
- export const createUser = createServerFn({ method: 'POST' })
- .inputValidator(UserSchema)
- .handler(async ({ data }) => {
- // data is fully typed and validated
- return `Created user: ${data.name}, age ${data.age}`
- })
-
+export const createUser = createServerFn({ method: 'POST' })
+.inputValidator(UserSchema)
+.handler(async ({ data }) => {
+// data is fully typed and validated
+return `Created user: ${data.name}, age ${data.age}`
+})
 
 Form Data
 
 Handle form submissions with FormData:
 
+export const submitForm = createServerFn({ method: 'POST' })
+.inputValidator((data) => {
+if (!(data instanceof FormData)) {
+throw new Error('Expected FormData')
+}
 
- export const submitForm = createServerFn({ method: 'POST' })
- .inputValidator((data) => {
- if (!(data instanceof FormData)) {
- throw new Error('Expected FormData')
- }
+return {
+name: data.get('name')?.toString() || '',
+email: data.get('email')?.toString() || '',
+}
+})
+.handler(async ({ data }) => {
+// Process form data
+return { success: true }
+})
 
- return {
- name: data.get('name')?.toString() || '',
- email: data.get('email')?.toString() || '',
- }
- })
- .handler(async ({ data }) => {
- // Process form data
- return { success: true }
- })
+export const submitForm = createServerFn({ method: 'POST' })
+.inputValidator((data) => {
+if (!(data instanceof FormData)) {
+throw new Error('Expected FormData')
+}
 
-
-
- export const submitForm = createServerFn({ method: 'POST' })
- .inputValidator((data) => {
- if (!(data instanceof FormData)) {
- throw new Error('Expected FormData')
- }
-
- return {
- name: data.get('name')?.toString() || '',
- email: data.get('email')?.toString() || '',
- }
- })
- .handler(async ({ data }) => {
- // Process form data
- return { success: true }
- })
-
+return {
+name: data.get('name')?.toString() || '',
+email: data.get('email')?.toString() || '',
+}
+})
+.handler(async ({ data }) => {
+// Process form data
+return { success: true }
+})
 
 Error Handling & Redirects
 
@@ -220,113 +195,101 @@ Server functions can throw errors, redirects, and not-found responses that are h
 
 Basic Errors
 
+import { createServerFn } from '@tanstack/react-start'
 
- import { createServerFn } from '@tanstack/react-start'
+export const riskyFunction = createServerFn().handler(async () => {
+if (Math.random() > 0.5) {
+throw new Error('Something went wrong!')
+}
+return { success: true }
+})
 
- export const riskyFunction = createServerFn().handler(async () => {
- if (Math.random() > 0.5) {
- throw new Error('Something went wrong!')
- }
- return { success: true }
- })
+// Errors are serialized to the client
+try {
+await riskyFunction()
+} catch (error) {
+console.log(error.message) // "Something went wrong!"
+}
 
- // Errors are serialized to the client
- try {
- await riskyFunction()
- } catch (error) {
- console.log(error.message) // "Something went wrong!"
- }
+import { createServerFn } from '@tanstack/react-start'
 
+export const riskyFunction = createServerFn().handler(async () => {
+if (Math.random() > 0.5) {
+throw new Error('Something went wrong!')
+}
+return { success: true }
+})
 
-
- import { createServerFn } from '@tanstack/react-start'
-
- export const riskyFunction = createServerFn().handler(async () => {
- if (Math.random() > 0.5) {
- throw new Error('Something went wrong!')
- }
- return { success: true }
- })
-
- // Errors are serialized to the client
- try {
- await riskyFunction()
- } catch (error) {
- console.log(error.message) // "Something went wrong!"
- }
-
+// Errors are serialized to the client
+try {
+await riskyFunction()
+} catch (error) {
+console.log(error.message) // "Something went wrong!"
+}
 
 Redirects
 
 Use redirects for authentication, navigation, etc:
 
+import { createServerFn } from '@tanstack/react-start'
+import { redirect } from '@tanstack/react-router'
 
- import { createServerFn } from '@tanstack/react-start'
- import { redirect } from '@tanstack/react-router'
+export const requireAuth = createServerFn().handler(async () => {
+const user = await getCurrentUser()
 
- export const requireAuth = createServerFn().handler(async () => {
- const user = await getCurrentUser()
+if (!user) {
+throw redirect({ to: '/login' })
+}
 
- if (!user) {
- throw redirect({ to: '/login' })
- }
+return user
+})
 
- return user
- })
+import { createServerFn } from '@tanstack/react-start'
+import { redirect } from '@tanstack/react-router'
 
+export const requireAuth = createServerFn().handler(async () => {
+const user = await getCurrentUser()
 
+if (!user) {
+throw redirect({ to: '/login' })
+}
 
- import { createServerFn } from '@tanstack/react-start'
- import { redirect } from '@tanstack/react-router'
-
- export const requireAuth = createServerFn().handler(async () => {
- const user = await getCurrentUser()
-
- if (!user) {
- throw redirect({ to: '/login' })
- }
-
- return user
- })
-
+return user
+})
 
 Not Found
 
 Throw not-found errors for missing resources:
 
+import { createServerFn } from '@tanstack/react-start'
+import { notFound } from '@tanstack/react-router'
 
- import { createServerFn } from '@tanstack/react-start'
- import { notFound } from '@tanstack/react-router'
+export const getPost = createServerFn()
+.inputValidator((data: { id: string }) => data)
+.handler(async ({ data }) => {
+const post = await db.findPost(data.id)
 
- export const getPost = createServerFn()
- .inputValidator((data: { id: string }) => data)
- .handler(async ({ data }) => {
- const post = await db.findPost(data.id)
+if (!post) {
+throw notFound()
+}
 
- if (!post) {
- throw notFound()
- }
+return post
+})
 
- return post
- })
+import { createServerFn } from '@tanstack/react-start'
+import { notFound } from '@tanstack/react-router'
 
+export const getPost = createServerFn()
+.inputValidator((data: { id: string }) => data)
+.handler(async ({ data }) => {
+const post = await db.findPost(data.id)
 
+if (!post) {
+throw notFound()
+}
 
- import { createServerFn } from '@tanstack/react-start'
- import { notFound } from '@tanstack/react-router'
-
- export const getPost = createServerFn()
- .inputValidator((data: { id: string }) => data)
- .handler(async ({ data }) => {
- const post = await db.findPost(data.id)
-
- if (!post) {
- throw notFound()
- }
-
- return post
- })
-
+return post
+})
 
 Advanced Topics
 
@@ -336,10 +299,10 @@ Server Context & Request Handling
 
 Access request headers, cookies, and response customization:
 
- * getRequest() \- Access the full request object
- * getRequestHeader() \- Read specific headers
- * setResponseHeader() \- Set custom response headers
- * setResponseStatus() \- Custom status codes
+- getRequest() \- Access the full request object
+- getRequestHeader() \- Read specific headers
+- setResponseHeader() \- Set custom response headers
+- setResponseStatus() \- Custom status codes
 
 Streaming
 
@@ -369,7 +332,7 @@ Function ID generation for production build
 
 Server functions are addressed by a generated, stable function ID under the hood. These IDs are embedded into the client/SSR builds and used by the server to locate and import the correct module at runtime.
 
-By default, IDs are SHA256 hashes of the same seed to keep bundles compact and avoid leaking file paths. If two server functions end up with the same ID (including when using a custom generator), the system de-duplicates by appending an incrementing suffix like _1, _2, etc.
+By default, IDs are SHA256 hashes of the same seed to keep bundles compact and avoid leaking file paths. If two server functions end up with the same ID (including when using a custom generator), the system de-duplicates by appending an incrementing suffix like \_1, \_2, etc.
 
 Customization:
 
@@ -381,56 +344,52 @@ Please note that this customization is **experimental** and subject to change.
 
 Example:
 
+// vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
- // vite.config.ts
- import { defineConfig } from 'vite'
- import react from '@vitejs/plugin-react'
- import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+export default defineConfig({
+plugins: [
+tanstackStart({
+serverFns: {
+generateFunctionId: ({ filename, functionName }) => {
+// Return a custom ID string. If you return undefined, the default is used.
+return crypto
+.createHash('sha1')
+.update(`${filename}--${functionName}`)
+.digest('hex')
+return undefined
+},
+},
+}),
+react(),
+],
+})
 
- export default defineConfig({
- plugins: [
- tanstackStart({
- serverFns: {
- generateFunctionId: ({ filename, functionName }) => {
- // Return a custom ID string. If you return undefined, the default is used.
- return crypto
- .createHash('sha1')
- .update(`${filename}--${functionName}`)
- .digest('hex')
- return undefined
- },
- },
- }),
- react(),
- ],
- })
+// vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
+export default defineConfig({
+plugins: [
+tanstackStart({
+serverFns: {
+generateFunctionId: ({ filename, functionName }) => {
+// Return a custom ID string. If you return undefined, the default is used.
+return crypto
+.createHash('sha1')
+.update(`${filename}--${functionName}`)
+.digest('hex')
+return undefined
+},
+},
+}),
+react(),
+],
+})
 
-
- // vite.config.ts
- import { defineConfig } from 'vite'
- import react from '@vitejs/plugin-react'
- import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-
- export default defineConfig({
- plugins: [
- tanstackStart({
- serverFns: {
- generateFunctionId: ({ filename, functionName }) => {
- // Return a custom ID string. If you return undefined, the default is used.
- return crypto
- .createHash('sha1')
- .update(`${filename}--${functionName}`)
- .digest('hex')
- return undefined
- },
- },
- }),
- react(),
- ],
- })
-
-
-* * *
+---
 
 > **Note** : Server functions use a compilation process that extracts server code from client bundles while maintaining seamless calling patterns. On the client, calls become fetch requests to the server.

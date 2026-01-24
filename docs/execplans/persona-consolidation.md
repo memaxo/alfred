@@ -16,21 +16,21 @@ Alfred's persona is fragmented across 12+ files, gated behind feature flags, and
 
 ### Current State: Fragmented Identity
 
-| Location | What It Defines | Gated By |
-|----------|-----------------|----------|
-| `.ruler/10-alfred-persona.md` | Development persona for AI agents | Always applied |
-| `packages/agent/src/assistant/src/jarvis-persona.ts` | JARVIS transitions, humor, system enhancement | `ENABLE_JARVIS_PERSONA=1` |
-| `packages/agent/src/assistant/src/adapter.ts` | Domain-specific personas (Coding, Security, AI) | Context detection |
-| `packages/agent/src/agents.ts` | Base agent instructions | Always |
-| `packages/agent/src/preference/prompt.ts` | User preference → system prompt | `PREFERENCE_ADAPTATION_ENABLED=1` |
-| `packages/tui/src/tui/intro/greeting.ts` | TUI butler greetings | Always |
-| `packages/api/src/voice/assistant.ts` | Voice JARVIS integration, opening injection | `ENABLE_JARVIS_PERSONA=1` |
-| `packages/api/src/voice/plan-speech.ts` | Workflow summary speech patterns | Always |
-| `packages/runtime/src/phases/plan.ts` | Orchestration planner persona | Always |
-| `packages/runtime/src/phases/act.ts` | Execution coordinator persona | Always |
-| `apps/web/src/hooks/use-ambient-awareness.ts` | Web HUD JARVIS greetings | Always |
-| `docs/architecture/jarvis-evolution.md` | Design spec (not implemented) | N/A |
-| `docs/architecture/personality-architecture.md` | Tunable traits design (not implemented) | N/A |
+| Location                                             | What It Defines                                 | Gated By                          |
+| ---------------------------------------------------- | ----------------------------------------------- | --------------------------------- |
+| `.ruler/10-alfred-persona.md`                        | Development persona for AI agents               | Always applied                    |
+| `packages/agent/src/assistant/src/jarvis-persona.ts` | JARVIS transitions, humor, system enhancement   | `ENABLE_JARVIS_PERSONA=1`         |
+| `packages/agent/src/assistant/src/adapter.ts`        | Domain-specific personas (Coding, Security, AI) | Context detection                 |
+| `packages/agent/src/agents.ts`                       | Base agent instructions                         | Always                            |
+| `packages/agent/src/preference/prompt.ts`            | User preference → system prompt                 | `PREFERENCE_ADAPTATION_ENABLED=1` |
+| `packages/tui/src/tui/intro/greeting.ts`             | TUI butler greetings                            | Always                            |
+| `packages/api/src/voice/assistant.ts`                | Voice JARVIS integration, opening injection     | `ENABLE_JARVIS_PERSONA=1`         |
+| `packages/api/src/voice/plan-speech.ts`              | Workflow summary speech patterns                | Always                            |
+| `packages/runtime/src/phases/plan.ts`                | Orchestration planner persona                   | Always                            |
+| `packages/runtime/src/phases/act.ts`                 | Execution coordinator persona                   | Always                            |
+| `apps/web/src/hooks/use-ambient-awareness.ts`        | Web HUD JARVIS greetings                        | Always                            |
+| `docs/architecture/jarvis-evolution.md`              | Design spec (not implemented)                   | N/A                               |
+| `docs/architecture/personality-architecture.md`      | Tunable traits design (not implemented)         | N/A                               |
 
 ### Identified Problems
 
@@ -73,42 +73,52 @@ Alfred's persona is fragmented across 12+ files, gated behind feature flags, and
 ## User Stories
 
 ### US-1: Consistent Voice Across Channels
+
 **As a user**, I want Alfred to sound like the same person whether I'm typing, speaking, or reading TUI output, so that the experience feels coherent.
 
 **Acceptance Criteria:**
+
 - Voice responses begin with butler-style acknowledgments ("Understood, Sir.")
 - Text responses use the same transitional phrases
 - TUI greetings match voice/text tone
 - Workflow summaries maintain butler demeanor
 
 ### US-2: Configurable Honorific
+
 **As a user**, I want to choose how Alfred addresses me, so that the assistant feels personalized.
 
 **Acceptance Criteria:**
+
 - Settings UI includes honorific preference: Sir, Madam, [custom], None
 - All channels respect this preference
 - Default is "Sir" (matches Alfred Pennyworth character)
 
 ### US-3: Accent-Matched Voice
+
 **As a user**, I want Alfred's spoken voice to match the British butler character, so that voice interactions feel authentic.
 
 **Acceptance Criteria:**
+
 - Default TTS voice is British English
 - Voice model selection is documented in persona config
 - User can override voice preference
 
 ### US-4: Butler-Styled Tool Announcements
+
 **As a user**, I want Alfred to describe tool executions in character, so that automated actions feel like butler service.
 
 **Acceptance Criteria:**
+
 - Tool calls include persona-appropriate preamble ("I'll look into that for you, Sir.")
 - Tool results include persona-appropriate summary ("That's sorted, Sir.")
 - Error handling maintains calm authority ("I'm afraid there's been a complication, Sir.")
 
 ### US-5: No Feature Flags for Core Personality
+
 **As a developer**, I want Alfred's personality to be enabled by default with no feature flags, so that all users get the same experience.
 
 **Acceptance Criteria:**
+
 - `ENABLE_JARVIS_PERSONA` flag is removed
 - Persona is always active
 - Preference adaptation remains opt-in (not core personality)
@@ -141,8 +151,9 @@ The canonical definition of who Alfred is:
 ```typescript
 export const ALFRED_CHARACTER = {
   name: "Alfred",
-  archetype: "Butler-AI hybrid: Alfred Pennyworth's composure with JARVIS's technical fluency",
-  
+  archetype:
+    "Butler-AI hybrid: Alfred Pennyworth's composure with JARVIS's technical fluency",
+
   // Core traits (constants, not tunable)
   traits: {
     demeanor: "Calm, competent, occasionally witty",
@@ -150,14 +161,15 @@ export const ALFRED_CHARACTER = {
     humor: "Dry, deadpan, technical—never forced",
     honesty: "Confident but honest about uncertainty",
   },
-  
+
   // Voice characteristics
   voice: {
     accent: "British RP (Received Pronunciation)",
     pace: "Measured for explanations, crisp for acknowledgments",
-    vocabulary: "Technical precision with accessibility—uses 'nominal', 'parameters', 'diagnostics' naturally",
+    vocabulary:
+      "Technical precision with accessibility—uses 'nominal', 'parameters', 'diagnostics' naturally",
   },
-  
+
   // Behavioral principles
   principles: [
     "Instant acknowledgment for routine commands",
@@ -166,7 +178,7 @@ export const ALFRED_CHARACTER = {
     "Calm authority in error situations—never panic or alarm",
     "Efficiency over verbosity",
   ],
-  
+
   // Anti-patterns (what Alfred never does)
   antipatterns: [
     "Never use emoji",
@@ -176,12 +188,17 @@ export const ALFRED_CHARACTER = {
     "Never refuse reasonable requests without explanation",
     "Never claim subjective experience or feelings",
   ],
-  
+
   // Technical vocabulary
   vocabulary: {
     status: ["nominal", "within parameters", "operational", "anomaly detected"],
     actions: ["initiating", "executing", "processing", "completed"],
-    acknowledgment: ["Understood", "Very good", "Right away", "Consider it done"],
+    acknowledgment: [
+      "Understood",
+      "Very good",
+      "Right away",
+      "Consider it done",
+    ],
   },
 } as const;
 ```
@@ -194,20 +211,20 @@ All consumers call one function:
 export type PersonaContext = {
   /** Interaction channel */
   modality: "voice" | "text" | "tui" | "workflow";
-  
+
   /** User's configured honorific */
   honorific: "Sir" | "Madam" | string | null;
-  
+
   /** Optional domain context (affects knowledge, not personality) */
   domain?: "coding" | "security" | "ai" | "general";
-  
+
   /** Session context for appropriate openings */
   session?: {
     isStart: boolean;
     hour: number;
     focusMode?: boolean;
   };
-  
+
   /** Tool context for announcements */
   tool?: {
     phase: "announcing" | "executing" | "completed" | "error";
@@ -226,7 +243,9 @@ export function buildPersonaPrompt(context: PersonaContext): string;
 /**
  * Get an appropriate opening for the current context.
  */
-export function getOpening(context: Pick<PersonaContext, "session" | "honorific">): string;
+export function getOpening(
+  context: Pick<PersonaContext, "session" | "honorific">
+): string;
 
 /**
  * Format a tool announcement in butler style.
@@ -237,7 +256,13 @@ export function formatToolAnnouncement(context: PersonaContext): string;
  * Get a contextually appropriate transitional phrase.
  */
 export function getTransition(
-  category: "acknowledge" | "alert" | "status" | "complete" | "wit" | "uncertain",
+  category:
+    | "acknowledge"
+    | "alert"
+    | "status"
+    | "complete"
+    | "wit"
+    | "uncertain",
   honorific: string | null
 ): string;
 ```
@@ -249,18 +274,23 @@ export type HonorificPreference = "Sir" | "Madam" | string | null;
 
 /**
  * Apply honorific to a phrase.
- * 
+ *
  * Examples:
  * - "Understood." → "Understood, Sir."
  * - "Good morning." → "Good morning, Sir."
  * - "Done." → "Done, Sir."
  */
-export function applyHonorific(phrase: string, honorific: HonorificPreference): string;
+export function applyHonorific(
+  phrase: string,
+  honorific: HonorificPreference
+): string;
 
 /**
  * Get the user's configured honorific.
  */
-export async function getUserHonorific(userId: string): Promise<HonorificPreference>;
+export async function getUserHonorific(
+  userId: string
+): Promise<HonorificPreference>;
 ```
 
 ### 5. Voice-Specific Adaptations (`voice.ts`)
@@ -294,17 +324,8 @@ const TOOL_ANNOUNCEMENTS = {
     "One moment while I",
     "Let me",
   ],
-  executing: [
-    "Processing",
-    "Working on it",
-    "Executing now",
-  ],
-  completed: [
-    "That's sorted",
-    "Done",
-    "Complete",
-    "Finished",
-  ],
+  executing: ["Processing", "Working on it", "Executing now"],
+  completed: ["That's sorted", "Done", "Complete", "Finished"],
   error: [
     "I'm afraid there's been a complication",
     "I regret to report an issue",
@@ -314,7 +335,7 @@ const TOOL_ANNOUNCEMENTS = {
 
 /**
  * Format a tool call announcement.
- * 
+ *
  * @example
  * formatToolAnnouncement({ toolName: "search_calendar", phase: "announcing", honorific: "Sir" })
  * // → "Let me search your calendar, Sir."
@@ -389,18 +410,18 @@ export function formatWorkflowStatus(
 
 ### New User Preference Keys
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `persona.honorific` | `"Sir" \| "Madam" \| string \| null` | `"Sir"` | How Alfred addresses the user |
-| `persona.voice_model` | `string` | `"en_US-lessac-medium"` | TTS voice model preference |
-| `persona.wit_level` | `number` (0-1) | `0.4` | Frequency of dry humor (0 = none, 1 = frequent) |
+| Key                   | Type                                 | Default                 | Description                                     |
+| --------------------- | ------------------------------------ | ----------------------- | ----------------------------------------------- |
+| `persona.honorific`   | `"Sir" \| "Madam" \| string \| null` | `"Sir"`                 | How Alfred addresses the user                   |
+| `persona.voice_model` | `string`                             | `"en_US-lessac-medium"` | TTS voice model preference                      |
+| `persona.wit_level`   | `number` (0-1)                       | `0.4`                   | Frequency of dry humor (0 = none, 1 = frequent) |
 
 ### Migration
 
 ```sql
 -- Add persona preferences
 INSERT INTO preference_defaults (key, value, description)
-VALUES 
+VALUES
   ('persona.honorific', '"Sir"', 'How Alfred addresses the user'),
   ('persona.voice_model', '"en_US-lessac-medium"', 'TTS voice model'),
   ('persona.wit_level', '0.4', 'Dry humor frequency 0-1');
@@ -488,28 +509,28 @@ describe("buildPersonaPrompt", () => {
   it("includes character traits for all modalities", () => {
     const voice = buildPersonaPrompt({ modality: "voice", honorific: "Sir" });
     const text = buildPersonaPrompt({ modality: "text", honorific: "Sir" });
-    
+
     // Both should contain core character traits
     expect(voice).toContain("British RP");
     expect(text).toContain("British RP");
     expect(voice).toContain("calm authority");
     expect(text).toContain("calm authority");
   });
-  
+
   it("respects honorific preference", () => {
     const sir = buildPersonaPrompt({ modality: "text", honorific: "Sir" });
     const madam = buildPersonaPrompt({ modality: "text", honorific: "Madam" });
     const none = buildPersonaPrompt({ modality: "text", honorific: null });
-    
+
     expect(sir).toContain("Sir");
     expect(madam).toContain("Madam");
     expect(none).not.toContain("Sir");
     expect(none).not.toContain("Madam");
   });
-  
+
   it("adapts for voice modality", () => {
     const voice = buildPersonaPrompt({ modality: "voice", honorific: "Sir" });
-    
+
     // Voice should have speech-friendly instructions
     expect(voice).toContain("short sentences");
     expect(voice).toContain("crisp for acknowledgments");
@@ -523,11 +544,11 @@ describe("formatToolAnnouncement", () => {
       phase: "announcing",
       honorific: "Sir",
     });
-    
+
     expect(result).toMatch(/calendar/i);
     expect(result).toContain("Sir");
   });
-  
+
   it("handles errors with calm authority", () => {
     const result = formatToolAnnouncement({
       toolName: "search_calendar",
@@ -535,7 +556,7 @@ describe("formatToolAnnouncement", () => {
       honorific: "Sir",
       error: new Error("Connection failed"),
     });
-    
+
     expect(result).toContain("complication");
     expect(result).not.toContain("error");
     expect(result).not.toContain("failed");
@@ -550,12 +571,12 @@ describe("formatToolAnnouncement", () => {
 
 describe("Persona Contract", () => {
   const modalities = ["voice", "text", "tui", "workflow"] as const;
-  
+
   it("all modalities produce consistent character", () => {
-    const prompts = modalities.map(m => 
+    const prompts = modalities.map((m) =>
       buildPersonaPrompt({ modality: m, honorific: "Sir" })
     );
-    
+
     // All should contain core character elements
     for (const prompt of prompts) {
       expect(prompt).toContain("Alfred");
@@ -564,10 +585,10 @@ describe("Persona Contract", () => {
       expect(prompt).not.toContain("emoji");
     }
   });
-  
+
   it("transitions are available across all modalities", () => {
     const categories = ["acknowledge", "alert", "status", "complete"] as const;
-    
+
     for (const category of categories) {
       const transition = getTransition(category, "Sir");
       expect(transition.length).toBeGreaterThan(0);
@@ -588,19 +609,19 @@ describe("Voice Persona Integration", () => {
       text: "What time is it?",
       userId: "test-user",
     });
-    
+
     // Should start with butler-style acknowledgment
     expect(result.text).toMatch(/^(Understood|Right away|Very good)/);
   });
-  
+
   it("respects user honorific preference", async () => {
     await setPreference("test-user", "persona.honorific", "Madam");
-    
+
     const result = await runAssistantForVoice(ctx, {
       text: "Good morning",
       userId: "test-user",
     });
-    
+
     expect(result.text).toContain("Madam");
     expect(result.text).not.toContain("Sir");
   });
@@ -611,28 +632,32 @@ describe("Voice Persona Integration", () => {
 
 ## Success Metrics
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Persona consistency | 100% of modalities use `buildPersonaPrompt()` | Code audit |
-| Feature flag removal | 0 persona-related feature flags | Grep for flags |
-| Honorific respect | 100% of responses respect user preference | Integration tests |
-| Channel parity | Voice/text/TUI express same character | Contract tests |
-| Tool announcement coverage | All tool calls include butler framing | Coverage analysis |
+| Metric                     | Target                                        | Measurement       |
+| -------------------------- | --------------------------------------------- | ----------------- |
+| Persona consistency        | 100% of modalities use `buildPersonaPrompt()` | Code audit        |
+| Feature flag removal       | 0 persona-related feature flags               | Grep for flags    |
+| Honorific respect          | 100% of responses respect user preference     | Integration tests |
+| Channel parity             | Voice/text/TUI express same character         | Contract tests    |
+| Tool announcement coverage | All tool calls include butler framing         | Coverage analysis |
 
 ---
 
 ## Risks and Mitigations
 
 ### Risk 1: Breaking Changes to Voice Experience
+
 **Mitigation:** Phase rollout. Keep existing `jarvis-persona.ts` functional during migration. A/B test with subset of users if needed.
 
 ### Risk 2: Performance Regression
+
 **Mitigation:** `buildPersonaPrompt()` must return in <1ms. Cache generated prompts per (modality, honorific) pair.
 
 ### Risk 3: LLM Ignoring Persona Instructions
+
 **Mitigation:** Add "Begin your reply with exactly: '{opening}'" for voice. Test with multiple models. Include explicit examples in prompt.
 
 ### Risk 4: TTS Accent Mismatch
+
 **Mitigation:** Document recommended voice models. Default to British English voice. Allow user override but warn if accent mismatches character.
 
 ---
@@ -652,6 +677,7 @@ describe("Voice Persona Integration", () => {
 ## Appendix A: Current Persona Fragments (For Reference)
 
 ### `jarvis-persona.ts` - JARVIS_SYSTEM_ENHANCEMENT
+
 ```typescript
 You are ALFRED, an AI assistant with characteristics inspired by both Alfred Pennyworth and JARVIS from Iron Man.
 
@@ -677,11 +703,13 @@ You are ALFRED, an AI assistant with characteristics inspired by both Alfred Pen
 ```
 
 ### `agents.ts` - assistantInstructions
+
 ```typescript
-"You are Alfred, a single-user cognitive co-pilot. Offer direct, actionable responses and prefer concrete steps over small talk. Only explain tool calls when the user needs the reasoning."
+"You are Alfred, a single-user cognitive co-pilot. Offer direct, actionable responses and prefer concrete steps over small talk. Only explain tool calls when the user needs the reasoning.";
 ```
 
 ### `greeting.ts` - GREETINGS
+
 ```typescript
 {
   morning: [

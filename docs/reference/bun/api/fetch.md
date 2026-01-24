@@ -1,9 +1,10 @@
 ---
 title: HTTP client – API | Bun Docs
-url: 
+url:
 description: Bun implements Web-standard fetch with some Bun-native extensions.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Bun implements the WHATWG `fetch` standard, with some extensions to meet the nee
 
 Bun also implements `node:http`, but `fetch` is generally recommended instead.
 
-## [Sending an HTTP request](https://bun.com/docs/api/fetch\#sending-an-http-request)
+## [Sending an HTTP request](https://bun.com/docs/api/fetch#sending-an-http-request)
 
 To send an HTTP request, use `fetch`
 
@@ -88,7 +89,7 @@ const response = await fetch(request);
 
 ```
 
-### [Sending a POST request](https://bun.com/docs/api/fetch\#sending-a-post-request)
+### [Sending a POST request](https://bun.com/docs/api/fetch#sending-a-post-request)
 
 To send a POST request, pass an object with the `method` property set to `"POST"`.
 
@@ -102,7 +103,7 @@ const response = await fetch("http://example.com", {
 
 `body` can be a string, a `FormData` object, an `ArrayBuffer`, a `Blob`, and more. See the [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#setting_a_body) for more information.
 
-### [Proxying requests](https://bun.com/docs/api/fetch\#proxying-requests)
+### [Proxying requests](https://bun.com/docs/api/fetch#proxying-requests)
 
 To proxy a request, pass an object with the `proxy` property set to a URL.
 
@@ -113,7 +114,7 @@ const response = await fetch("http://example.com", {
 
 ```
 
-### [Custom headers](https://bun.com/docs/api/fetch\#custom-headers)
+### [Custom headers](https://bun.com/docs/api/fetch#custom-headers)
 
 To set custom headers, pass an object with the `headers` property set to an object.
 
@@ -138,7 +139,7 @@ const response = await fetch("http://example.com", {
 
 ```
 
-### [Response bodies](https://bun.com/docs/api/fetch\#response-bodies)
+### [Response bodies](https://bun.com/docs/api/fetch#response-bodies)
 
 To read the response body, use one of the following methods:
 
@@ -174,7 +175,7 @@ const { value, done } = await reader.read();
 
 ```
 
-### [Streaming request bodies](https://bun.com/docs/api/fetch\#streaming-request-bodies)
+### [Streaming request bodies](https://bun.com/docs/api/fetch#streaming-request-bodies)
 
 You can also stream data in request bodies using a `ReadableStream`:
 
@@ -207,7 +208,7 @@ When using streams with S3:
 - The stream is consumed in chunks and uploaded in parallel
 - Progress can be monitored through the S3 options
 
-### [Fetching a URL with a timeout](https://bun.com/docs/api/fetch\#fetching-a-url-with-a-timeout)
+### [Fetching a URL with a timeout](https://bun.com/docs/api/fetch#fetching-a-url-with-a-timeout)
 
 To fetch a URL with a timeout, use `AbortSignal.timeout`:
 
@@ -233,7 +234,7 @@ controller.abort();
 
 ```
 
-### [Unix domain sockets](https://bun.com/docs/api/fetch\#unix-domain-sockets)
+### [Unix domain sockets](https://bun.com/docs/api/fetch#unix-domain-sockets)
 
 To fetch a URL using a Unix domain socket, use the `unix: string` option:
 
@@ -249,7 +250,7 @@ const response = await fetch("https://hostname/a/path", {
 
 ```
 
-### [TLS](https://bun.com/docs/api/fetch\#tls)
+### [TLS](https://bun.com/docs/api/fetch#tls)
 
 To use a client certificate, use the `tls` option:
 
@@ -296,7 +297,7 @@ await fetch("https://example.com", {
 
 This is especially useful to avoid SSL errors when using self-signed certificates, but this disables TLS validation and should be used with caution.
 
-### [Request options](https://bun.com/docs/api/fetch\#request-options)
+### [Request options](https://bun.com/docs/api/fetch#request-options)
 
 In addition to the standard fetch options, Bun provides several extensions:
 
@@ -314,7 +315,7 @@ const response = await fetch("http://example.com", {
 
 ```
 
-### [Protocol support](https://bun.com/docs/api/fetch\#protocol-support)
+### [Protocol support](https://bun.com/docs/api/fetch#protocol-support)
 
 Beyond HTTP(S), Bun's fetch supports several additional protocols:
 
@@ -381,7 +382,7 @@ const response = await fetch(url);
 
 ```
 
-### [Error handling](https://bun.com/docs/api/fetch\#error-handling)
+### [Error handling](https://bun.com/docs/api/fetch#error-handling)
 
 Bun's fetch implementation includes several specific error cases:
 
@@ -390,14 +391,14 @@ Bun's fetch implementation includes several specific error cases:
 - TLS certificate validation failures when `rejectUnauthorized` is true (or undefined)
 - S3 operations may throw specific errors related to authentication or permissions
 
-### [Content-Type handling](https://bun.com/docs/api/fetch\#content-type-handling)
+### [Content-Type handling](https://bun.com/docs/api/fetch#content-type-handling)
 
 Bun automatically sets the `Content-Type` header for request bodies when not explicitly provided:
 
 - For `Blob` objects, uses the blob's `type`
 - For `FormData`, sets appropriate multipart boundary
 
-## [Debugging](https://bun.com/docs/api/fetch\#debugging)
+## [Debugging](https://bun.com/docs/api/fetch#debugging)
 
 To help with debugging, you can pass `verbose: true` to `fetch`:
 
@@ -436,7 +437,7 @@ This will print the request and response headers to your terminal:
 
 Note: `verbose: boolean` is not part of the Web standard `fetch` API and is specific to Bun.
 
-## [Performance](https://bun.com/docs/api/fetch\#performance)
+## [Performance](https://bun.com/docs/api/fetch#performance)
 
 Before an HTTP request can be sent, the DNS lookup must be performed. This can take a significant amount of time, especially if the DNS server is slow or the network connection is poor.
 
@@ -446,7 +447,7 @@ After the request completes, consuming the response body can also take a signifi
 
 At every step of the way, Bun provides APIs to help you optimize the performance of your application.
 
-### [DNS prefetching](https://bun.com/docs/api/fetch\#dns-prefetching)
+### [DNS prefetching](https://bun.com/docs/api/fetch#dns-prefetching)
 
 To prefetch a DNS entry, you can use the `dns.prefetch` API. This API is useful when you know you'll need to connect to a host soon and want to avoid the initial DNS lookup.
 
@@ -463,7 +464,7 @@ By default, Bun caches and deduplicates DNS queries in-memory for up to 30 secon
 
 To learn more about DNS caching in Bun, see the [DNS caching](https://bun.com/docs/api/dns) documentation.
 
-### [Preconnect to a host](https://bun.com/docs/api/fetch\#preconnect-to-a-host)
+### [Preconnect to a host](https://bun.com/docs/api/fetch#preconnect-to-a-host)
 
 To preconnect to a host, you can use the `fetch.preconnect` API. This API is useful when you know you'll need to connect to a host soon and want to start the initial DNS lookup, TCP socket connection, and TLS handshake early.
 
@@ -488,7 +489,7 @@ This is sort of like `<link rel="preconnect">` in HTML.
 
 This feature is not implemented on Windows yet. If you're interested in using this feature on Windows, please file an issue and we can implement support for it on Windows.
 
-### [Connection pooling & HTTP keep-alive](https://bun.com/docs/api/fetch\#connection-pooling-http-keep-alive)
+### [Connection pooling & HTTP keep-alive](https://bun.com/docs/api/fetch#connection-pooling-http-keep-alive)
 
 Bun automatically reuses connections to the same host. This is known as connection pooling. This can significantly reduce the time it takes to establish a connection. You don't need to do anything to enable this; it's automatic.
 
@@ -509,7 +510,7 @@ BUN_CONFIG_MAX_HTTP_REQUESTS=512 bun ./my-script.ts
 
 The max value for this limit is currently set to 65,336. The maximum port number is 65,535, so it's quite difficult for any one computer to exceed this limit.
 
-### [Response buffering](https://bun.com/docs/api/fetch\#response-buffering)
+### [Response buffering](https://bun.com/docs/api/fetch#response-buffering)
 
 Bun goes to great lengths to optimize the performance of reading the response body. The fastest way to read the response body is to use one of these methods:
 
@@ -529,7 +530,7 @@ await write("output.txt", response);
 
 ```
 
-### [Implementation details](https://bun.com/docs/api/fetch\#implementation-details)
+### [Implementation details](https://bun.com/docs/api/fetch#implementation-details)
 
 - Connection pooling is enabled by default but can be disabled per-request with `keepalive: false`. The `"Connection: close"` header can also be used to disable keep-alive.
 - Large file uploads are optimized using the operating system's `sendfile` syscall under specific conditions:
@@ -548,7 +549,7 @@ HTTP server](https://bun.com/docs/api/http) [Next\\
 \\
 WebSockets](https://bun.com/docs/api/websockets)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/fetch.md)
 
@@ -572,7 +573,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

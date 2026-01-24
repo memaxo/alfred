@@ -1,9 +1,10 @@
 ---
 title: bun publish – Package manager | Bun Docs
-url: 
+url:
 description: Publish your package to an npm registry.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -102,7 +103,7 @@ bun publish ./package.tgz
 
 **Note** \- `bun publish` will not run lifecycle scripts ( `prepublishOnly/prepack/prepare/postpack/publish/postpublish`) if a tarball path is provided. Scripts will only be run if the package is packed by `bun publish`.
 
-### [`--access`](https://bun.com/docs/cli/publish\#access)
+### [`--access`](https://bun.com/docs/cli/publish#access)
 
 The `--access` flag can be used to set the access level of the package being published. The access level can be one of `public` or `restricted`. Unscoped packages are always public, and attempting to publish an unscoped package with `--access restricted` will result in an error.
 
@@ -121,7 +122,7 @@ bun publish --access public
 
 ```
 
-### [`--tag`](https://bun.com/docs/cli/publish\#tag)
+### [`--tag`](https://bun.com/docs/cli/publish#tag)
 
 Set the tag of the package version being published. By default, the tag is `latest`. The initial version of a package is always given the `latest` tag in addition to the specified tag.
 
@@ -140,7 +141,7 @@ bun publish --tag alpha
 
 ```
 
-### [`--dry-run`](https://bun.com/docs/cli/publish\#dry-run)
+### [`--dry-run`](https://bun.com/docs/cli/publish#dry-run)
 
 The `--dry-run` flag can be used to simulate the publish process without actually publishing the package. This is useful for verifying the contents of the published package without actually publishing the package.
 
@@ -148,7 +149,7 @@ The `--dry-run` flag can be used to simulate the publish process without actuall
 bun publish --dry-run
 ```
 
-### [`--gzip-level`](https://bun.com/docs/cli/publish\#gzip-level)
+### [`--gzip-level`](https://bun.com/docs/cli/publish#gzip-level)
 
 Specify the level of gzip compression to use when packing the package. Only applies to `bun publish` without a tarball path argument. Values range from `0` to `9` (default is `9`).
 
@@ -328,7 +329,7 @@ bun publish --tag next ./path/to/tarball.tgz
 
 Full documentation is available at https://bun.sh/docs/cli/publish.
 
-### [`--auth-type`](https://bun.com/docs/cli/publish\#auth-type)
+### [`--auth-type`](https://bun.com/docs/cli/publish#auth-type)
 
 If you have 2FA enabled for your npm account, `bun publish` will prompt you for a one-time password. This can be done through a browser or the CLI. The `--auth-type` flag can be used to tell the npm registry which method you prefer. The possible values are `web` and `legacy`, with `web` being the default.
 
@@ -343,7 +344,7 @@ Enter OTP: 123456
 ...
 ```
 
-### [`--otp`](https://bun.com/docs/cli/publish\#otp)
+### [`--otp`](https://bun.com/docs/cli/publish#otp)
 
 Provide a one-time password directly to the CLI. If the password is valid, this will skip the extra prompt for a one-time password before publishing. Example usage:
 
@@ -359,7 +360,7 @@ bun publish --otp 123456
 \\
 `bun outdated`](https://bun.com/docs/cli/outdated)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/publish.md)
 
@@ -383,7 +384,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

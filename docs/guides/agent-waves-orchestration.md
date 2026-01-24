@@ -10,32 +10,42 @@ The `scripts/orchestrate-agent-waves.ts` script automates the complete agent wor
 ## Workflow Phases
 
 ### 1. Discovery
+
 Finds parallelizable Linear tickets:
+
 - Status: "Todo" or "In Progress"
 - No parent issues (not subtasks)
 - No explicit blockers in description
 
 ### 2. Delegation
+
 Assigns tickets to Cursor agents:
+
 - Sets delegate field to Cursor agent ID
 - Creates instruction comments using template from `scripts/delegate-linear-tickets.ts`
 - Includes scope, key files, patterns, and testing requirements
 
 ### 3. Monitoring
+
 Tracks PRs linked to Linear issues:
+
 - Scans open PRs for `ALF-XXX` identifiers in PR body
 - Maps PRs to Linear issues
 - Tracks draft vs ready status
 
 ### 4. Review Coordination
+
 Manages CodeRabbit reviews:
+
 - Marks draft PRs as ready for review
 - Waits for CodeRabbit reviews (up to 5 minutes)
 - Extracts review summaries (actionable/nitpick counts)
 - Creates Linear comments tagging Cursor with feedback
 
 ### 5. Merge
+
 Merges green PRs:
+
 - Checks CI status (build-verify, typecheck, tests, e2e)
 - Merges PRs with all checks passing
 - Updates Linear issue status to "Done"
@@ -99,15 +109,21 @@ Example Linear CLI integration:
 
 ```typescript
 // Replace callLinearMCP with:
-async function callLinearMCP(toolName: string, args: Record<string, unknown>): Promise<unknown> {
+async function callLinearMCP(
+  toolName: string,
+  args: Record<string, unknown>
+): Promise<unknown> {
   if (toolName === "list_issues") {
     const result = await Bun.spawn([
       "linear",
       "issue",
       "list",
-      "--format", "json",
-      "--team", args.team as string,
-      "--state", (args.state as string[]).join(","),
+      "--format",
+      "json",
+      "--team",
+      args.team as string,
+      "--state",
+      (args.state as string[]).join(","),
     ]).text();
     return JSON.parse(result);
   }
@@ -143,6 +159,7 @@ The script logs progress for each phase:
 ```
 
 Final summary includes:
+
 - Tickets delegated
 - PRs created
 - Reviews completed
@@ -170,6 +187,7 @@ export const TICKETS = [
 ### CI Check Names
 
 Required CI checks are defined in the script:
+
 - `build-verify`
 - `typecheck`
 - `tests`

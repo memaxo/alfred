@@ -1,9 +1,10 @@
 ---
 title: Twitter (X) | Better Auth
-url: 
+url:
 description: Twitter provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Twitter Credentials](https://www.better-auth.com/docs/authentication/twitter\#get-your-twitter-credentials)
+### [Get your Twitter Credentials](https://www.better-auth.com/docs/authentication/twitter#get-your-twitter-credentials)
 
 Get your Twitter credentials from the [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard).
 
@@ -34,7 +35,7 @@ Make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/tw
 
 Twitter API v2 now supports email address retrieval. Make sure to request the `user.email` scope when configuring your Twitter app to enable this feature.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/twitter\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/twitter#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -53,7 +54,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Sign In with Twitter](https://www.better-auth.com/docs/authentication/twitter\#sign-in-with-twitter)
+### [Sign In with Twitter](https://www.better-auth.com/docs/authentication/twitter#sign-in-with-twitter)
 
 To sign in with Twitter, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 

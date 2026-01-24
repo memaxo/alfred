@@ -1,9 +1,10 @@
 ---
 title: Disable content tracing - Laminar documentation
-url: 
+url:
 description: Disable content tracing for a span
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/tracing-level#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -31,7 +32,6 @@ want to collect metadata for some of them.To achieve this, we offer a wrapper th
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 

@@ -1,9 +1,10 @@
 ---
 title: Tracing LLM calls in Next.js with Laminar - Laminar documentation
-url: 
+url:
 description: Next.js Integration with Laminar Tracing for AI Applications
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/guides/nextjs#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -37,7 +38,7 @@ On this page
 - [Example Traces](https://docs.lmnr.ai/guides/nextjs#example-traces)
 - [Troubleshooting](https://docs.lmnr.ai/guides/nextjs#troubleshooting)
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#overview)  Overview
+## [​](https://docs.lmnr.ai/guides/nextjs#overview) Overview
 
 We’ll explore a simple emotional support chat application built with Next.js that:
 
@@ -45,7 +46,7 @@ We’ll explore a simple emotional support chat application built with Next.js t
 2. Uses OpenAI or Anthropic models to generate empathetic responses
 3. Traces the entire process with Laminar
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#setup)  Setup
+## [​](https://docs.lmnr.ai/guides/nextjs#setup) Setup
 
 You can use the example app from our GitHub [repo](https://github.com/lmnr-ai/lmnr-ts/tree/main/examples/nextjs).Alternatively, for a clean install, follow these steps:
 
@@ -140,11 +141,11 @@ nextjs-app/
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#implementation)  Implementation
+## [​](https://docs.lmnr.ai/guides/nextjs#implementation) Implementation
 
 Let’s look at the key components of our Next.js application with Laminar tracing:
 
-### [​](https://docs.lmnr.ai/guides/nextjs\#1-instrumentation-ts)  1\. instrumentation.ts
+### [​](https://docs.lmnr.ai/guides/nextjs#1-instrumentation-ts) 1\. instrumentation.ts
 
 This file is crucial as it initializes Laminar for tracing.
 Next.js automatically loads this file during initialization.
@@ -173,7 +174,7 @@ Laminar only works in the ‘nodejs’ runtime of Next.js.Learn more about the `
 Laminar must be initialized at the entry point of the application, but after other tracing libraries are initialized.
 For Next.js, the `instrumentation.ts` file is ideal for this purpose as it’s loaded early in the application lifecycle.
 
-### [​](https://docs.lmnr.ai/guides/nextjs\#2-app%2Fpage-tsx)  2\. app/page.tsx
+### [​](https://docs.lmnr.ai/guides/nextjs#2-app%2Fpage-tsx) 2\. app/page.tsx
 
 This file contains the main page layout for our chat application:
 
@@ -206,7 +207,7 @@ export default function Home() {
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/nextjs\#3-app%2Fapi%2Fchat%2Froute-ts)  3\. app/api/chat/route.ts
+### [​](https://docs.lmnr.ai/guides/nextjs#3-app%2Fapi%2Fchat%2Froute-ts) 3\. app/api/chat/route.ts
 
 This file contains the API route handler that processes chat messages and communicates with the OpenAI API.Make sure to enable `experimental_telemetry` in the `generateText` function and pass the tracer to it.
 
@@ -265,7 +266,7 @@ Never give medical advice or diagnose conditions.`
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/nextjs\#4-lib%2Fopenai-ts-and-lib%2Fanthropic-ts)  4\. lib/openai.ts and lib/anthropic.ts
+### [​](https://docs.lmnr.ai/guides/nextjs#4-lib%2Fopenai-ts-and-lib%2Fanthropic-ts) 4\. lib/openai.ts and lib/anthropic.ts
 
 These files contain the LLM clients, but more importantly patching those functions by Laminar.
 
@@ -302,7 +303,7 @@ export { anthropicClient as anthropic };
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/nextjs\#5-components%2Fchat-ui-tsx)  5\. components/chat-ui.tsx
+### [​](https://docs.lmnr.ai/guides/nextjs#5-components%2Fchat-ui-tsx) 5\. components/chat-ui.tsx
 
 This component handles the chat interface and manages the chat state.Feel free to modify the UI as you see fit, this is just an example.
 
@@ -460,7 +461,7 @@ export default function ChatUI() {
 
 See all 144 lines
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#running-the-application)  Running the Application
+## [​](https://docs.lmnr.ai/guides/nextjs#running-the-application) Running the Application
 
 Start the Next.js development server:
 
@@ -471,12 +472,12 @@ npm run dev
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#testing-the-application)  Testing the Application
+## [​](https://docs.lmnr.ai/guides/nextjs#testing-the-application) Testing the Application
 
 1. Navigate to `http://localhost:3000` in your browser
 2. Interact with the chat interface by typing messages
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#viewing-traces)  Viewing Traces
+## [​](https://docs.lmnr.ai/guides/nextjs#viewing-traces) Viewing Traces
 
 After interacting with the chat, you can view the traces in your Laminar dashboard at [https://www.lmnr.ai](https://www.lmnr.ai/). The trace will show:
 
@@ -484,20 +485,20 @@ After interacting with the chat, you can view the traces in your Laminar dashboa
 2. The OpenAI or Anthropic API calls
 3. Token usage and response details
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#key-features-demonstrated)  Key Features Demonstrated
+## [​](https://docs.lmnr.ai/guides/nextjs#key-features-demonstrated) Key Features Demonstrated
 
 1. **Next.js Instrumentation**: Using Next.js’s instrumentation API to initialize Laminar
 2. **OpenAI or Anthropic Tracing**: Automatic tracing of OpenAI or Anthropic API calls
 3. **Token Usage**: Automatic calculation of tokens used for each OpenAI or Anthropic call
 4. **Cost Estimation**: Automatic estimation of the cost of each OpenAI or Anthropic call
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#example-traces)  Example Traces
+## [​](https://docs.lmnr.ai/guides/nextjs#example-traces) Example Traces
 
 ![Next.js Example Traces](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/images/tutorials/nextjs-guide-example-trace.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=c8f81b2ffe40b4b6774ebbe003867c0e)
 
 A screenshot of a trace from the example app.
 
-## [​](https://docs.lmnr.ai/guides/nextjs\#troubleshooting)  Troubleshooting
+## [​](https://docs.lmnr.ai/guides/nextjs#troubleshooting) Troubleshooting
 
 If you encounter issues:
 

@@ -1,9 +1,10 @@
 ---
 title: Runtime behavior – Test runner | Bun Docs
-url: 
+url:
 description: Learn how the test runner affects Bun's runtime behavior
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -77,9 +78,9 @@ By default, all `bun test` runs use UTC ( `Etc/UTC`) as the time zone unless ove
 
 Each test has a default timeout of 5000ms (5 seconds) if not explicitly overridden. Tests that exceed this timeout will fail. This can be changed globally with the `--timeout` flag or per-test as the third parameter to the test function.
 
-## [Error Handling](https://bun.com/docs/test/runtime-behavior\#error-handling)
+## [Error Handling](https://bun.com/docs/test/runtime-behavior#error-handling)
 
-### [Unhandled Errors](https://bun.com/docs/test/runtime-behavior\#unhandled-errors)
+### [Unhandled Errors](https://bun.com/docs/test/runtime-behavior#unhandled-errors)
 
 `bun test` tracks unhandled promise rejections and errors that occur between tests. If such errors occur, the final exit code will be non-zero (specifically, the count of such errors), even if all tests pass.
 
@@ -108,19 +109,19 @@ test("test 2", () => {
 
 Internally, this occurs with a higher precedence than `process.on("unhandledRejection")` or `process.on("uncaughtException")`, which makes it simpler to integrate with existing code.
 
-## [Using General CLI Flags with Tests](https://bun.com/docs/test/runtime-behavior\#using-general-cli-flags-with-tests)
+## [Using General CLI Flags with Tests](https://bun.com/docs/test/runtime-behavior#using-general-cli-flags-with-tests)
 
 Several Bun CLI flags can be used with `bun test` to modify its behavior:
 
-### [Memory Usage](https://bun.com/docs/test/runtime-behavior\#memory-usage)
+### [Memory Usage](https://bun.com/docs/test/runtime-behavior#memory-usage)
 
 - `--smol`: Reduces memory usage for the test runner VM
 
-### [Debugging](https://bun.com/docs/test/runtime-behavior\#debugging)
+### [Debugging](https://bun.com/docs/test/runtime-behavior#debugging)
 
 - `--inspect`, `--inspect-brk`: Attaches the debugger to the test runner process
 
-### [Module Loading](https://bun.com/docs/test/runtime-behavior\#module-loading)
+### [Module Loading](https://bun.com/docs/test/runtime-behavior#module-loading)
 
 - `--preload`: Runs scripts before test files (useful for global setup/mocks)
 - `--define`: Sets compile-time constants
@@ -129,17 +130,17 @@ Several Bun CLI flags can be used with `bun test` to modify its behavior:
 - `--conditions`: Sets package.json conditions for module resolution
 - `--env-file`: Loads environment variables for tests
 
-### [Installation-related Flags](https://bun.com/docs/test/runtime-behavior\#installation-related-flags)
+### [Installation-related Flags](https://bun.com/docs/test/runtime-behavior#installation-related-flags)
 
 - `--prefer-offline`, `--frozen-lockfile`, etc.: Affect any network requests or auto-installs during test execution
 
-## [Watch and Hot Reloading](https://bun.com/docs/test/runtime-behavior\#watch-and-hot-reloading)
+## [Watch and Hot Reloading](https://bun.com/docs/test/runtime-behavior#watch-and-hot-reloading)
 
 When running `bun test` with the `--watch` flag, the test runner will watch for file changes and re-run affected tests.
 
 The `--hot` flag provides similar functionality but is more aggressive about trying to preserve state between runs. For most test scenarios, `--watch` is the recommended option.
 
-## [Global Variables](https://bun.com/docs/test/runtime-behavior\#global-variables)
+## [Global Variables](https://bun.com/docs/test/runtime-behavior#global-variables)
 
 The following globals are automatically available in test files without importing (though they can be imported from `bun:test` if preferred):
 
@@ -156,7 +157,7 @@ Test configuration](https://bun.com/docs/test/configuration) [Next\\
 \\
 Finding tests](https://bun.com/docs/test/discovery)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/runtime-behavior.md)
 
@@ -180,7 +181,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

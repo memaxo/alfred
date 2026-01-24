@@ -1,9 +1,10 @@
 ---
 title: SvelteKit Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with SvelteKit.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Before you start, make sure you have a Better Auth instance configured. If you haven't done that yet, check out the [installation](https://www.better-auth.com/docs/installation).
 
-### [Mount the handler](https://www.better-auth.com/docs/integrations/svelte-kit\#mount-the-handler)
+### [Mount the handler](https://www.better-auth.com/docs/integrations/svelte-kit#mount-the-handler)
 
 We need to mount the handler to SvelteKit server hook.
 
@@ -44,7 +45,7 @@ export async function handle({ event, resolve }) {
 }
 ```
 
-### [Populate session data in the event ( `event.locals`)](https://www.better-auth.com/docs/integrations/svelte-kit\#populate-session-data-in-the-event-eventlocals)
+### [Populate session data in the event ( `event.locals`)](https://www.better-auth.com/docs/integrations/svelte-kit#populate-session-data-in-the-event-eventlocals)
 
 The `svelteKitHandler` does not automatically populate `event.locals.user` or `event.locals.session`. If you want to access the current session in your server code (e.g., in `+layout.server.ts`, actions, or endpoints), populate `event.locals` in your `handle` hook:
 
@@ -71,7 +72,7 @@ export async function handle({ event, resolve }) {
 }
 ```
 
-### [Server Action Cookies](https://www.better-auth.com/docs/integrations/svelte-kit\#server-action-cookies)
+### [Server Action Cookies](https://www.better-auth.com/docs/integrations/svelte-kit#server-action-cookies)
 
 To ensure cookies are properly set when you call functions like `signInEmail` or `signUpEmail` in a server action, you should use the `sveltekitCookies` plugin. This plugin will automatically handle setting cookies for you in SvelteKit.
 
@@ -93,7 +94,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [Create a client](https://www.better-auth.com/docs/integrations/svelte-kit\#create-a-client)
+## [Create a client](https://www.better-auth.com/docs/integrations/svelte-kit#create-a-client)
 
 Create a client instance. You can name the file anything you want. Here we are creating `client.ts` file inside the `lib/` directory.
 
@@ -110,7 +111,7 @@ export const authClient = createAuthClient({
 Once you have created the client, you can use it to sign up, sign in, and perform other actions.
 Some of the actions are reactive. The client use [nano-store](https://github.com/nanostores/nanostores) to store the state and reflect changes when there is a change like a user signing in or out affecting the session state.
 
-### [Example usage](https://www.better-auth.com/docs/integrations/svelte-kit\#example-usage)
+### [Example usage](https://www.better-auth.com/docs/integrations/svelte-kit#example-usage)
 
 ```
 <script lang="ts">

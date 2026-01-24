@@ -1,9 +1,10 @@
 ---
 title: Plugins – Runtime | Bun Docs
-url: 
+url:
 description: Implement custom loaders and module resolution logic with Bun's plugin system.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Bun provides a universal plugin API that can be used to extend both the _runtime
 
 Plugins intercept imports and perform custom loading logic: reading files, transpiling code, etc. They can be used to add support for additional file types, like `.scss` or `.yaml`. In the context of Bun's bundler, plugins can be used to implement framework-level features like CSS extraction, macros, and client-server code co-location.
 
-## [Usage](https://bun.com/docs/runtime/plugins\#usage)
+## [Usage](https://bun.com/docs/runtime/plugins#usage)
 
 A plugin is defined as simple JavaScript object containing a `name` property and a `setup` function. Register a plugin with Bun using the `plugin` function.
 
@@ -98,7 +99,7 @@ preload = ["./myPlugin.ts"]
 
 ```
 
-## [Plugin conventions](https://bun.com/docs/runtime/plugins\#plugin-conventions)
+## [Plugin conventions](https://bun.com/docs/runtime/plugins#plugin-conventions)
 
 By convention, third-party plugins intended for consumption should export a factory function that accepts some configuration and returns a plugin object.
 
@@ -124,7 +125,7 @@ plugin(mdx());
 
 ```
 
-## [Loaders](https://bun.com/docs/runtime/plugins\#loaders)
+## [Loaders](https://bun.com/docs/runtime/plugins#loaders)
 
 Plugins are primarily used to extend Bun with loaders for additional file types. Let's look at a simple plugin that implements a loader for `.yaml` files.
 
@@ -192,17 +193,17 @@ Note that the returned object has a `loader` property. This tells Bun which of i
 
 In this case we're using `"object"`—a built-in loader (intended for use by plugins) that converts a plain JavaScript object to an equivalent ES module. Any of Bun's built-in loaders are supported; these same loaders are used by Bun internally for handling files of various kinds. The table below is a quick reference; refer to [Bundler > Loaders](https://bun.com/docs/bundler/loaders) for complete documentation.
 
-| Loader | Extensions | Output |
-| --- | --- | --- |
-| `js` | `.mjs` `.cjs` | Transpile to JavaScript files |
-| `jsx` | `.js` `.jsx` | Transform JSX then transpile |
-| `ts` | `.ts` `.mts` `.cts` | Transform TypeScript then transpile |
-| `tsx` | `.tsx` | Transform TypeScript, JSX, then transpile |
-| `toml` | `.toml` | Parse using Bun's built-in TOML parser |
-| `json` | `.json` | Parse using Bun's built-in JSON parser |
-| `napi` | `.node` | Import a native Node.js addon |
-| `wasm` | `.wasm` | Import a native Node.js addon |
-| `object` | _none_ | A special loader intended for plugins that converts a plain JavaScript object to an equivalent ES module. Each key in the object corresponds to a named export. |
+| Loader   | Extensions          | Output                                                                                                                                                          |
+| -------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `js`     | `.mjs` `.cjs`       | Transpile to JavaScript files                                                                                                                                   |
+| `jsx`    | `.js` `.jsx`        | Transform JSX then transpile                                                                                                                                    |
+| `ts`     | `.ts` `.mts` `.cts` | Transform TypeScript then transpile                                                                                                                             |
+| `tsx`    | `.tsx`              | Transform TypeScript, JSX, then transpile                                                                                                                       |
+| `toml`   | `.toml`             | Parse using Bun's built-in TOML parser                                                                                                                          |
+| `json`   | `.json`             | Parse using Bun's built-in JSON parser                                                                                                                          |
+| `napi`   | `.node`             | Import a native Node.js addon                                                                                                                                   |
+| `wasm`   | `.wasm`             | Import a native Node.js addon                                                                                                                                   |
+| `object` | _none_              | A special loader intended for plugins that converts a plain JavaScript object to an equivalent ES module. Each key in the object corresponds to a named export. |
 
 Loading a YAML file is useful, but plugins support more than just data loading. Let's look at a plugin that lets Bun import `*.svelte` files.
 
@@ -251,7 +252,7 @@ console.log(MySvelteComponent.render());
 
 ```
 
-## [Virtual Modules](https://bun.com/docs/runtime/plugins\#virtual-modules)
+## [Virtual Modules](https://bun.com/docs/runtime/plugins#virtual-modules)
 
 This feature is currently only available at runtime with `Bun.plugin` and not yet supported in the bundler, but you can mimic the behavior using `onResolve` and `onLoad`.
 
@@ -303,7 +304,7 @@ require.resolve("my-object-virtual-module");
 
 ```
 
-### [Overriding existing modules](https://bun.com/docs/runtime/plugins\#overriding-existing-modules)
+### [Overriding existing modules](https://bun.com/docs/runtime/plugins#overriding-existing-modules)
 
 You can also override existing modules with `build.module`.
 
@@ -334,7 +335,7 @@ await import("my-object-virtual-module"); // { baz: "quix" }
 
 ```
 
-## [Reading or modifying the config](https://bun.com/docs/runtime/plugins\#reading-or-modifying-the-config)
+## [Reading or modifying the config](https://bun.com/docs/runtime/plugins#reading-or-modifying-the-config)
 
 Plugins can read and write to the [build config](https://bun.com/docs/bundler#api) with `build.config`.
 
@@ -385,7 +386,7 @@ await Bun.build({
 
 ```
 
-## [Lifecycle hooks](https://bun.com/docs/runtime/plugins\#lifecycle-hooks)
+## [Lifecycle hooks](https://bun.com/docs/runtime/plugins#lifecycle-hooks)
 
 Plugins can register callbacks to be run at various points in the lifecycle of a bundle:
 
@@ -393,7 +394,7 @@ Plugins can register callbacks to be run at various points in the lifecycle of a
 - [`onResolve()`](https://bun.com/docs/runtime/plugins#onresolve): Run before a module is resolved
 - [`onLoad()`](https://bun.com/docs/runtime/plugins#onload): Run before a module is loaded.
 
-### [Reference](https://bun.com/docs/runtime/plugins\#reference)
+### [Reference](https://bun.com/docs/runtime/plugins#reference)
 
 A rough overview of the types (please refer to Bun's `bun.d.ts` for the full type definitions):
 
@@ -429,7 +430,7 @@ type Loader = "js" | "jsx" | "ts" | "tsx" | "css" | "json" | "toml" | "object";
 
 ```
 
-### [Namespaces](https://bun.com/docs/runtime/plugins\#namespaces)
+### [Namespaces](https://bun.com/docs/runtime/plugins#namespaces)
 
 `onLoad` and `onResolve` accept an optional `namespace` string. What is a namespace?
 
@@ -442,7 +443,7 @@ Other common namespaces are:
 - `"bun"`: for Bun-specific modules (e.g. `"bun:test"`, `"bun:sqlite"`)
 - `"node"`: for Node.js modules (e.g. `"node:fs"`, `"node:path"`)
 
-### [`onStart`](https://bun.com/docs/runtime/plugins\#onstart)
+### [`onStart`](https://bun.com/docs/runtime/plugins#onstart)
 
 ```
 onStart(callback: () => void): Promise<void> | void;
@@ -502,7 +503,7 @@ In the above example, Bun will wait until the first `onStart()` (sleeping for 10
 
 Note that `onStart()` callbacks (like every other lifecycle callback) do not have the ability to modify the `build.config` object. If you want to mutate `build.config`, you must do so directly in the `setup()` function.
 
-### [`onResolve`](https://bun.com/docs/runtime/plugins\#onresolve)
+### [`onResolve`](https://bun.com/docs/runtime/plugins#onresolve)
 
 ```
 onResolve(
@@ -545,7 +546,7 @@ plugin({
 
 ```
 
-### [`onLoad`](https://bun.com/docs/runtime/plugins\#onload)
+### [`onLoad`](https://bun.com/docs/runtime/plugins#onload)
 
 ```
 onLoad(
@@ -598,7 +599,7 @@ Single-file executable](https://bun.com/docs/bundler/executables) [Next\\
 \\
 Watch mode](https://bun.com/docs/runtime/hot)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/plugins.md)
 
@@ -622,7 +623,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

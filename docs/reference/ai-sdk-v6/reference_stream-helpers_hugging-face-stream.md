@@ -14,13 +14,12 @@ While HuggingFaceStream is compatible with most Hugging Face language models, th
 
 To ensure that AI responses are comprised purely of text without any delimiters that could pose issues when rendering in chat or completion modes, we standardize and remove special end-of-response tokens. If your use case requires a different handling of responses, you can fork and modify this stream to meet your specific needs.
 
-Currently, `` and `` are recognized as end-of-stream tokens.
+Currently, `and` are recognized as end-of-stream tokens.
 
 ## Import
 
 ### React
-    
-    
+
     import { HuggingFaceStream } from "ai"
 
 ## API Signature

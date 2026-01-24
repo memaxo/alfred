@@ -6,11 +6,11 @@ ALFRED's TUI provides three interactive modes for different workflows. Each mode
 
 ## Available Modes
 
-| Mode | Purpose | Shortcut |
-|------|---------|----------|
-| **Chat** | Conversational interaction with ALFRED | `c` |
-| **Plan** | Workflow planning and execution monitoring | `p` |
-| **Debug** | System debugging and diagnostics | `d` |
+| Mode      | Purpose                                    | Shortcut |
+| --------- | ------------------------------------------ | -------- |
+| **Chat**  | Conversational interaction with ALFRED     | `c`      |
+| **Plan**  | Workflow planning and execution monitoring | `p`      |
+| **Debug** | System debugging and diagnostics           | `d`      |
 
 ## Chat Mode
 
@@ -35,15 +35,15 @@ alfred tui chat
 
 ### Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Enter` | Send message |
-| `↑/↓` | Navigate input history |
-| `PageUp/PageDown` | Scroll message history |
-| `Ctrl+C` | Cancel streaming response |
-| `Ctrl+A` | Move cursor to start |
-| `Ctrl+E` | Move cursor to end |
-| `Escape` | Exit chat mode |
+| Key               | Action                    |
+| ----------------- | ------------------------- |
+| `Enter`           | Send message              |
+| `↑/↓`             | Navigate input history    |
+| `PageUp/PageDown` | Scroll message history    |
+| `Ctrl+C`          | Cancel streaming response |
+| `Ctrl+A`          | Move cursor to start      |
+| `Ctrl+E`          | Move cursor to end        |
+| `Escape`          | Exit chat mode            |
 
 ### Example Session
 
@@ -87,15 +87,15 @@ alfred tui plan
 
 ### Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Enter` | Start new workflow |
-| `↑/↓` | Navigate workflows |
-| `Tab` | Switch between panes |
-| `c` | Cancel selected workflow |
-| `r` | Refresh status |
-| `l` | View logs |
-| `Escape` | Exit plan mode |
+| Key      | Action                   |
+| -------- | ------------------------ |
+| `Enter`  | Start new workflow       |
+| `↑/↓`    | Navigate workflows       |
+| `Tab`    | Switch between panes     |
+| `c`      | Cancel selected workflow |
+| `r`      | Refresh status           |
+| `l`      | View logs                |
+| `Escape` | Exit plan mode           |
 
 ### Layout
 
@@ -138,19 +138,20 @@ alfred tui debug
 
 ### Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Cycle panels |
-| `r` | Refresh all |
-| `c` | Cognitive state |
-| `e` | Event log |
-| `m` | Metrics |
-| `p` | Pool status |
+| Key      | Action          |
+| -------- | --------------- |
+| `Tab`    | Cycle panels    |
+| `r`      | Refresh all     |
+| `c`      | Cognitive state |
+| `e`      | Event log       |
+| `m`      | Metrics         |
+| `p`      | Pool status     |
 | `Escape` | Exit debug mode |
 
 ### Panels
 
 #### Cognitive State Panel
+
 Shows current cognitive phase, autonomy level, and physiology values.
 
 ```
@@ -165,6 +166,7 @@ Shows current cognitive phase, autonomy level, and physiology values.
 ```
 
 #### Event Log Panel
+
 Real-time event stream with filtering.
 
 ```
@@ -177,6 +179,7 @@ Real-time event stream with filtering.
 ```
 
 #### Metrics Panel
+
 System performance metrics with sparklines.
 
 ```
@@ -215,14 +218,14 @@ alfred tui
 
 ### Panel Navigation
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Next panel |
+| Key         | Action         |
+| ----------- | -------------- |
+| `Tab`       | Next panel     |
 | `Shift+Tab` | Previous panel |
-| `1-9` | Jump to panel |
-| `r` | Refresh all |
-| `?` | Show help |
-| `q` | Quit |
+| `1-9`       | Jump to panel  |
+| `r`         | Refresh all    |
+| `?`         | Show help      |
+| `q`         | Quit           |
 
 ## Configuration
 

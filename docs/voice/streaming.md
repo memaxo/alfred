@@ -30,7 +30,6 @@ This document describes the current WebSocket prototype, the message contract, a
 - Web app: set `VITE_VOICE_STREAMING_URL` (optional) and/or `VITE_VOICE_STREAMING_PORT`. When unset, the client derives `ws(s)://<frontend-host>:8788/voice/stream`.
 - Native app: set `EXPO_PUBLIC_VOICE_STREAM_URL` (optional) and/or `EXPO_PUBLIC_VOICE_STREAM_PORT`. When unset, the Expo client derives the URL from `EXPO_PUBLIC_SERVER_URL`.
 
-
 ## Message Contract
 
 The streaming transport uses **mixed frame types**:
@@ -101,7 +100,7 @@ Binary frames carry no metadata, so clients must provide `inputMimeType` in the 
 #### Server → Client reply audio frames (binary)
 
 - Reply audio chunks are streamed as **binary frames**. The bytes are encoded in the negotiated output codec (`codec` in `start`, echoed as `negotiatedCodec` in `session_started`).
-The prototype keeps transcripts in memory via `VoiceSession.getTranscript()`. `partial_transcript` is emitted immediately after each audio chunk, `vad_state` mirrors Silero’s confidence scores, and `auto_stop` fires when silence persists or `maxUtteranceMs` elapses. After `final_transcript`, the server runs the same assistant pipeline as `voice.speechToSpeech`, emits `assistant_message`, streams reply audio as binary frames, and terminates the turn with `tts_complete` plus a `status: idle` heartbeat.
+  The prototype keeps transcripts in memory via `VoiceSession.getTranscript()`. `partial_transcript` is emitted immediately after each audio chunk, `vad_state` mirrors Silero’s confidence scores, and `auto_stop` fires when silence persists or `maxUtteranceMs` elapses. After `final_transcript`, the server runs the same assistant pipeline as `voice.speechToSpeech`, emits `assistant_message`, streams reply audio as binary frames, and terminates the turn with `tts_complete` plus a `status: idle` heartbeat.
 
 ## Server Architecture
 

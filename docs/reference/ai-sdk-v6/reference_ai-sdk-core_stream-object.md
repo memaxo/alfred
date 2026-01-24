@@ -9,161 +9,156 @@ Streams a typed, structured object for a given prompt and schema using a languag
 It can be used to force the language model to return structured data, e.g. for information extraction, synthetic data generation, or classification tasks.
 
 #### Example: stream an object using a schema
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamObject } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     const { partialObjectStream } = streamObject({
-    
+
       model: openai('gpt-4.1'),
-    
+
       schema: z.object({
-    
+
         recipe: z.object({
-    
+
           name: z.string(),
-    
+
           ingredients: z.array(z.string()),
-    
+
           steps: z.array(z.string()),
-    
+
         }),
-    
+
       }),
-    
+
       prompt: 'Generate a lasagna recipe.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     for await (const partialObject of partialObjectStream) {
-    
+
       console.clear();
-    
+
       console.log(partialObject);
-    
+
     }
 
 #### Example: stream an array using a schema
 
 For arrays, you specify the schema of the array items. You can use `elementStream` to get the stream of complete array elements.
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamObject } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     const { elementStream } = streamObject({
-    
+
       model: openai('gpt-4.1'),
-    
+
       output: 'array',
-    
+
       schema: z.object({
-    
+
         name: z.string(),
-    
+
         class: z
-    
+
           .string()
-    
+
           .describe('Character class, e.g. warrior, mage, or thief.'),
-    
+
         description: z.string(),
-    
+
       }),
-    
+
       prompt: 'Generate 3 hero descriptions for a fantasy role playing game.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     for await (const hero of elementStream) {
-    
+
       console.log(hero);
-    
+
     }
 
 #### Example: generate JSON without a schema
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamObject } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { partialObjectStream } = streamObject({
-    
+
       model: openai('gpt-4.1'),
-    
+
       output: 'no-schema',
-    
+
       prompt: 'Generate a lasagna recipe.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     for await (const partialObject of partialObjectStream) {
-    
+
       console.clear();
-    
+
       console.log(partialObject);
-    
+
     }
 
 #### Example: generate an enum
 
 When you want to generate a specific enum value, you can set the output strategy to `enum` and provide the list of possible values in the `enum` parameter.
-    
-    
+
     import { streamObject } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { partialObjectStream } = streamObject({
-    
+
       model: 'openai/gpt-4.1',
-    
+
       output: 'enum',
-    
+
       enum: ['action', 'comedy', 'drama', 'horror', 'sci-fi'],
-    
+
       prompt:
-    
+
         'Classify the genre of this movie plot: ' +
-    
+
         '"A group of astronauts travel through a wormhole in search of a ' +
-    
+
         'new habitable planet for humanity."',
-    
+
     });
 
 To see `streamObject` in action, check out the additional examples.
 
 ## Import
-    
-    
+
     import { streamObject } from "ai"
 
 ## API Signature

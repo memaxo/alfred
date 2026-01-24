@@ -21,13 +21,20 @@ These types directly extend or depend on `@xyflow/react`:
 
 ```typescript
 // ❌ CURRENT: Extends ReactFlow Node
-import type { Node, Edge, OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
+import type {
+  Node,
+  Edge,
+  OnNodesChange,
+  OnEdgesChange,
+  OnConnect,
+} from "@xyflow/react";
 
-export type WindowInstance = Node<WindowData>;      // Window = ReactFlow Node
-export type DesktopEdge = Edge<EdgeData>;           // Edge = ReactFlow Edge
+export type WindowInstance = Node<WindowData>; // Window = ReactFlow Node
+export type DesktopEdge = Edge<EdgeData>; // Edge = ReactFlow Edge
 ```
 
 **Files Affected:**
+
 - `apps/web/src/store/desktop/types.ts` — Core type definitions
 - `apps/web/src/store/desktop/windows.ts` — Uses `applyNodeChanges`, `applyEdgeChanges`, `addEdge`
 - `apps/web/src/store/desktop/knowledge.ts` — Creates `WindowInstance` as nodes
@@ -125,29 +132,29 @@ export type WindowType =
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Bounds = {
-  x: number;      // Left position (px)
-  y: number;      // Top position (px)
-  width: number;  // Width (px)
+  x: number; // Left position (px)
+  y: number; // Top position (px)
+  width: number; // Width (px)
   height: number; // Height (px)
 };
 
-export type WindowState = 
-  | "normal"      // Default floating/tiled state
-  | "minimized"   // Hidden to taskbar
-  | "maximized"   // Full screen within desktop
+export type WindowState =
+  | "normal" // Default floating/tiled state
+  | "minimized" // Hidden to taskbar
+  | "maximized" // Full screen within desktop
   | "fullscreen"; // True fullscreen (hides shell)
 
 export type TileZone =
-  | "left"        // Left half
-  | "right"       // Right half
-  | "top"         // Top half
-  | "bottom"      // Bottom half
-  | "top-left"    // Top-left quadrant
-  | "top-right"   // Top-right quadrant
+  | "left" // Left half
+  | "right" // Right half
+  | "top" // Top half
+  | "bottom" // Bottom half
+  | "top-left" // Top-left quadrant
+  | "top-right" // Top-right quadrant
   | "bottom-left" // Bottom-left quadrant
-  | "bottom-right"// Bottom-right quadrant
-  | "center"      // Center (floating)
-  | "full";       // Full area
+  | "bottom-right" // Bottom-right quadrant
+  | "center" // Center (floating)
+  | "full"; // Full area
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WINDOW DATA — App-specific payload (decoupled from Node<T>)
@@ -169,24 +176,24 @@ export type WindowInstance = {
   id: string;
   type: WindowType;
   data: WindowData;
-  
+
   // Geometry (replaces ReactFlow position)
   bounds: Bounds;
   state: WindowState;
-  
+
   // Tiling
   isTiled: boolean;
   tileZone?: TileZone;
-  
+
   // Z-ordering (replaces ReactFlow selection)
   zIndex: number;
   isFocused: boolean;
-  
+
   // Constraints
   minSize: { width: number; height: number };
   maxSize?: { width: number; height: number };
   resizable: boolean;
-  
+
   // Metadata
   createdAt: number;
   lastFocusedAt: number;
@@ -199,27 +206,34 @@ export type WindowInstance = {
 export type WindowSlice = {
   windows: WindowInstance[];
   zIndexCounter: number;
-  
+
   // Window CRUD
-  openWindow: (type: WindowType, data?: Partial<WindowData>, bounds?: Partial<Bounds>) => string;
+  openWindow: (
+    type: WindowType,
+    data?: Partial<WindowData>,
+    bounds?: Partial<Bounds>
+  ) => string;
   closeWindow: (windowId: string) => void;
   updateWindow: (windowId: string, updates: Partial<WindowInstance>) => void;
   updateWindowData: (windowId: string, data: Partial<WindowData>) => void;
-  
+
   // Focus management (replaces ReactFlow selection)
   focusWindow: (windowId: string) => void;
   blurWindow: (windowId: string) => void;
-  
+
   // State transitions
   minimizeWindow: (windowId: string) => void;
   maximizeWindow: (windowId: string) => void;
   restoreWindow: (windowId: string) => void;
-  
+
   // Geometry
   moveWindow: (windowId: string, position: { x: number; y: number }) => void;
-  resizeWindow: (windowId: string, size: { width: number; height: number }) => void;
+  resizeWindow: (
+    windowId: string,
+    size: { width: number; height: number }
+  ) => void;
   setBounds: (windowId: string, bounds: Bounds) => void;
-  
+
   // Batch operations
   closeAllWindows: () => void;
   minimizeAllWindows: () => void;
@@ -235,21 +249,21 @@ export type WindowSlice = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type TilingLayout =
-  | "float"       // No tiling, traditional floating windows
-  | "split-h"     // Two windows, horizontal split
-  | "split-v"     // Two windows, vertical split
-  | "quad"        // Four windows, quadrant layout
-  | "main-side"   // One main window + sidebar stack
-  | "stack"       // All windows stacked, tabs
-  | "columns";    // N equal columns
+  | "float" // No tiling, traditional floating windows
+  | "split-h" // Two windows, horizontal split
+  | "split-v" // Two windows, vertical split
+  | "quad" // Four windows, quadrant layout
+  | "main-side" // One main window + sidebar stack
+  | "stack" // All windows stacked, tabs
+  | "columns"; // N equal columns
 
 export type TilingGap = number; // Gap between tiled windows (px)
 
 export type TilingConfig = {
   layout: TilingLayout;
   gap: TilingGap;
-  mainRatio: number;        // For main-side layout (0.5-0.8)
-  respectMinSize: boolean;  // Prevent tiles smaller than minSize
+  mainRatio: number; // For main-side layout (0.5-0.8)
+  respectMinSize: boolean; // Prevent tiles smaller than minSize
 };
 
 export type TilingZone = {
@@ -263,22 +277,22 @@ export type TilingSlice = {
   config: TilingConfig;
   zones: TilingZone[];
   activeTilePreview: TileZone | null;
-  
+
   // Layout control
   setLayout: (layout: TilingLayout) => void;
   setGap: (gap: number) => void;
   setMainRatio: (ratio: number) => void;
-  
+
   // Zone management
   calculateZones: () => void;
   tileWindow: (windowId: string, zone: TileZone) => void;
   untileWindow: (windowId: string) => void;
   swapTiles: (zoneA: TileZone, zoneB: TileZone) => void;
-  
+
   // Preview (during drag)
   showTilePreview: (zone: TileZone) => void;
   hideTilePreview: () => void;
-  
+
   // Auto-tile
   autoTile: () => void;
 };
@@ -294,14 +308,14 @@ export type TilingSlice = {
 // Old: { x, y, zoom } for infinite canvas pan/zoom
 // New: Desktop area bounds and mode
 
-export type DesktopMode = 
-  | "desktop"     // Traditional tiled desktop
-  | "mindscape";  // ReactFlow infinite canvas
+export type DesktopMode =
+  | "desktop" // Traditional tiled desktop
+  | "mindscape"; // ReactFlow infinite canvas
 
 export type DesktopArea = {
-  x: number;      // Left edge of usable area (after menu bar)
-  y: number;      // Top edge of usable area
-  width: number;  // Usable width (excludes taskbar if vertical)
+  x: number; // Left edge of usable area (after menu bar)
+  y: number; // Top edge of usable area
+  width: number; // Usable width (excludes taskbar if vertical)
   height: number; // Usable height (excludes taskbar)
 };
 
@@ -309,14 +323,14 @@ export type ViewportSlice = {
   mode: DesktopMode;
   desktopArea: DesktopArea;
   focusedWindowId: string | null;
-  
+
   // Mode switching
   setMode: (mode: DesktopMode) => void;
   toggleMindscape: () => void;
-  
+
   // Desktop area (recalculated on resize)
   setDesktopArea: (area: DesktopArea) => void;
-  
+
   // Focus (decoupled from ReactFlow selection)
   focusWindow: (windowId: string | null) => void;
 };
@@ -341,42 +355,42 @@ export type MindscapeNodeData = {
 };
 
 export type MindscapeNode = Node<MindscapeNodeData>;
-export type MindscapeEdge = Edge<EdgeData>;  // Reuse EdgeData
+export type MindscapeEdge = Edge<EdgeData>; // Reuse EdgeData
 
-export type MindscapeViewport = RFViewport;  // { x, y, zoom }
+export type MindscapeViewport = RFViewport; // { x, y, zoom }
 
 export type MindscapeSlice = {
   nodes: MindscapeNode[];
   edges: MindscapeEdge[];
   viewport: MindscapeViewport;
   selectedNodeIds: string[];
-  
+
   // Node CRUD (ReactFlow-compatible)
   addNode: (node: MindscapeNode) => void;
   removeNode: (nodeId: string) => void;
   updateNode: (nodeId: string, data: Partial<MindscapeNodeData>) => void;
-  
+
   // Edge CRUD
   addEdge: (edge: MindscapeEdge) => void;
   removeEdge: (edgeId: string) => void;
-  
+
   // ReactFlow callbacks
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  
+
   // Selection
   selectNode: (nodeId: string) => void;
   selectNodes: (nodeIds: string[]) => void;
   clearSelection: () => void;
-  
+
   // Viewport
   setViewport: (viewport: MindscapeViewport) => void;
   fitView: () => void;
-  
+
   // Layout
   autoLayout: () => void;
-  
+
   // Spawn from desktop
   spawnFromWindow: (windowId: string) => void;
 };
@@ -439,7 +453,9 @@ export type SpawnNodeData = {
 };
 
 export type SpawnTreeNode = GraphNodeBase<SpawnNodeData>;
-export type SpawnTreeEdge = GraphEdgeBase<{ dependencyType: "spawned_by" | "depends_on" }>;
+export type SpawnTreeEdge = GraphEdgeBase<{
+  dependencyType: "spawned_by" | "depends_on";
+}>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PLAN DAG (in Plan app)
@@ -454,7 +470,9 @@ export type PlanNodeData = {
 };
 
 export type PlanGraphNode = GraphNodeBase<PlanNodeData>;
-export type PlanGraphEdge = GraphEdgeBase<{ dependencyType: "blocks" | "requires" }>;
+export type PlanGraphEdge = GraphEdgeBase<{
+  dependencyType: "blocks" | "requires";
+}>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RAG EMBEDDING PROJECTION (in RAG app)
@@ -477,22 +495,22 @@ export type EmbeddingNode = GraphNodeBase<EmbeddingPointData>;
 
 ### 3.1 Type Migration Table
 
-| Current Type | Location | Action | New Type | New Location |
-|--------------|----------|--------|----------|--------------|
-| `WindowInstance` | `types.ts` | **REWRITE** | `WindowInstance` (no Node<T>) | `types.ts` |
-| `DesktopEdge` | `types.ts` | **REMOVE** | — | Edges only in Mindscape/graphs |
-| `Viewport` | `types.ts` | **REPLACE** | `DesktopArea` | `viewport.ts` |
-| `WindowSlice` | `types.ts` | **REWRITE** | `WindowSlice` (no RF callbacks) | `types.ts` |
-| `ViewportSlice` | `types.ts` | **ADAPT** | `ViewportSlice` (mode-based) | `viewport.ts` |
-| `DockSlice` | `types.ts` | **KEEP** | `TaskbarSlice` (renamed) | `taskbar.ts` |
-| `KnowledgeSlice` | `knowledge.ts` | **MOVE** | `MindscapeSlice` | `mindscape/types.ts` |
-| `KnowledgeNode` | `knowledge.ts` | **MOVE** | `MindscapeNodeData` | `mindscape/types.ts` |
-| `KnowledgeEdge` | `knowledge.ts` | **MOVE** | `MindscapeEdge` | `mindscape/types.ts` |
-| `CacheSlice` | `cache.ts` | **KEEP** | `CacheSlice` | `cache.ts` |
-| `ContextSlice` | `context.ts` | **KEEP** | `ContextSlice` | `context.ts` |
-| — | — | **NEW** | `TilingSlice` | `tiling.ts` |
-| — | — | **NEW** | `TilingConfig` | `tiling.ts` |
-| — | — | **NEW** | Graph types | `types/graph.ts` |
+| Current Type     | Location       | Action      | New Type                        | New Location                   |
+| ---------------- | -------------- | ----------- | ------------------------------- | ------------------------------ |
+| `WindowInstance` | `types.ts`     | **REWRITE** | `WindowInstance` (no Node<T>)   | `types.ts`                     |
+| `DesktopEdge`    | `types.ts`     | **REMOVE**  | —                               | Edges only in Mindscape/graphs |
+| `Viewport`       | `types.ts`     | **REPLACE** | `DesktopArea`                   | `viewport.ts`                  |
+| `WindowSlice`    | `types.ts`     | **REWRITE** | `WindowSlice` (no RF callbacks) | `types.ts`                     |
+| `ViewportSlice`  | `types.ts`     | **ADAPT**   | `ViewportSlice` (mode-based)    | `viewport.ts`                  |
+| `DockSlice`      | `types.ts`     | **KEEP**    | `TaskbarSlice` (renamed)        | `taskbar.ts`                   |
+| `KnowledgeSlice` | `knowledge.ts` | **MOVE**    | `MindscapeSlice`                | `mindscape/types.ts`           |
+| `KnowledgeNode`  | `knowledge.ts` | **MOVE**    | `MindscapeNodeData`             | `mindscape/types.ts`           |
+| `KnowledgeEdge`  | `knowledge.ts` | **MOVE**    | `MindscapeEdge`                 | `mindscape/types.ts`           |
+| `CacheSlice`     | `cache.ts`     | **KEEP**    | `CacheSlice`                    | `cache.ts`                     |
+| `ContextSlice`   | `context.ts`   | **KEEP**    | `ContextSlice`                  | `context.ts`                   |
+| —                | —              | **NEW**     | `TilingSlice`                   | `tiling.ts`                    |
+| —                | —              | **NEW**     | `TilingConfig`                  | `tiling.ts`                    |
+| —                | —              | **NEW**     | Graph types                     | `types/graph.ts`               |
 
 ### 3.2 Store Composition Changes
 
@@ -513,7 +531,7 @@ export type DesktopState = WindowSlice &    // ReactFlow nodes
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Desktop store (no ReactFlow)
-export type DesktopState = 
+export type DesktopState =
   WindowSlice &
   TilingSlice &       // NEW
   ViewportSlice &     // ADAPTED
@@ -584,7 +602,7 @@ export const boundsSchema = z.object({
 
 export const windowStateSchema = z.enum([
   "normal",
-  "minimized", 
+  "minimized",
   "maximized",
   "fullscreen",
 ]);
@@ -606,20 +624,20 @@ export const windowInstanceSchema = z.object({
   id: z.string(),
   type: windowTypeSchema,
   data: windowDataSchema,
-  
+
   bounds: boundsSchema,
   state: windowStateSchema,
-  
+
   isTiled: z.boolean(),
   tileZone: tileZoneSchema.optional(),
-  
+
   zIndex: z.number(),
   isFocused: z.boolean(),
-  
+
   minSize: z.object({ width: z.number(), height: z.number() }),
   maxSize: z.object({ width: z.number(), height: z.number() }).optional(),
   resizable: z.boolean(),
-  
+
   createdAt: z.number(),
   lastFocusedAt: z.number(),
 });
@@ -690,7 +708,7 @@ import type { NodeProps } from "@xyflow/react";
 // Knowledge graph nodes
 export function KnowledgeEntityNode({ id, data }: NodeProps<KnowledgeNodeData>) { ... }
 
-// Workflow nodes  
+// Workflow nodes
 export function WorkflowActionNode({ id, data }: NodeProps<WorkflowNodeData>) { ... }
 
 // Spawn tree nodes
@@ -739,7 +757,13 @@ export function SpawnAgentNode({ id, data }: NodeProps<SpawnNodeData>) { ... }
 // BEFORE: ReactFlow imports in desktop store
 // ═══════════════════════════════════════════════════════════════════════════
 
-import type { Node, Edge, OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
+import type {
+  Node,
+  Edge,
+  OnNodesChange,
+  OnEdgesChange,
+  OnConnect,
+} from "@xyflow/react";
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -751,7 +775,13 @@ import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 
 // Mindscape store — ReactFlow isolated
 // apps/web/src/store/mindscape/index.ts
-import type { Node, Edge, OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
+import type {
+  Node,
+  Edge,
+  OnNodesChange,
+  OnEdgesChange,
+  OnConnect,
+} from "@xyflow/react";
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 
 // Graph components — ReactFlow for visualization

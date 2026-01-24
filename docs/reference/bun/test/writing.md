@@ -1,9 +1,10 @@
 ---
 title: Writing tests – Test runner | Bun Docs
-url: 
+url:
 description: Write your tests using Jest-like expect matchers, plus setup/teardown hooks, snapshot testing, and more
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Define tests with a Jest-like API imported from the built-in `bun:test` module. Long term, Bun aims for complete Jest compatibility; at the moment, a [limited set](https://bun.com/docs/test/writing#matchers) of `expect` matchers are supported.
 
-## [Basic usage](https://bun.com/docs/test/writing\#basic-usage)
+## [Basic usage](https://bun.com/docs/test/writing#basic-usage)
 
 To define a simple test:
 
@@ -126,7 +127,7 @@ test("2 * 2", done => {
 
 ```
 
-## [Timeouts](https://bun.com/docs/test/writing\#timeouts)
+## [Timeouts](https://bun.com/docs/test/writing#timeouts)
 
 Optionally specify a per-test timeout in milliseconds by passing a number as the third argument to `test`.
 
@@ -144,11 +145,11 @@ In `bun:test`, test timeouts throw an uncatchable exception to force the test to
 
 The default timeout for each test is 5000ms (5 seconds) if not overridden by this timeout option or `jest.setDefaultTimeout()`.
 
-### [🧟 Zombie process killer](https://bun.com/docs/test/writing\#zombie-process-killer)
+### [🧟 Zombie process killer](https://bun.com/docs/test/writing#zombie-process-killer)
 
 When a test times out and processes spawned in the test via `Bun.spawn`, `Bun.spawnSync`, or `node:child_process` are not killed, they will be automatically killed and a message will be logged to the console. This prevents zombie processes from lingering in the background after timed-out tests.
 
-## [`test.skip`](https://bun.com/docs/test/writing\#test-skip)
+## [`test.skip`](https://bun.com/docs/test/writing#test-skip)
 
 Skip individual tests with `test.skip`. These tests will not be run.
 
@@ -162,7 +163,7 @@ test.skip("wat", () => {
 
 ```
 
-## [`test.todo`](https://bun.com/docs/test/writing\#test-todo)
+## [`test.todo`](https://bun.com/docs/test/writing#test-todo)
 
 Mark a test as a todo with `test.todo`. These tests will not be run.
 
@@ -193,7 +194,7 @@ my.test.ts:
 
 With this flag, failing todo tests will not cause an error, but todo tests which pass will be marked as failing so you can remove the todo mark orfix the test.
 
-## [`test.only`](https://bun.com/docs/test/writing\#test-only)
+## [`test.only`](https://bun.com/docs/test/writing#test-only)
 
 To run a particular test or suite of tests use `test.only()` or `describe.only()`.
 
@@ -228,7 +229,7 @@ The following command will only execute tests #1, #2 and #3.
 bun test
 ```
 
-## [`test.if`](https://bun.com/docs/test/writing\#test-if)
+## [`test.if`](https://bun.com/docs/test/writing#test-if)
 
 To run a test conditionally, use `test.if()`. The test will run if the condition is truthy. This is particularly useful for tests that should only run on specific architectures or operating systems.
 
@@ -244,7 +245,7 @@ test.if(macOS)("runs on macOS", () => {
 
 ```
 
-## [`test.skipIf`](https://bun.com/docs/test/writing\#test-skipif)
+## [`test.skipIf`](https://bun.com/docs/test/writing#test-skipif)
 
 To instead skip a test based on some condition, use `test.skipIf()` or `describe.skipIf()`.
 
@@ -257,7 +258,7 @@ test.skipIf(macOS)("runs on non-macOS", () => {
 
 ```
 
-## [`test.todoIf`](https://bun.com/docs/test/writing\#test-todoif)
+## [`test.todoIf`](https://bun.com/docs/test/writing#test-todoif)
 
 If instead you want to mark the test as TODO, use `test.todoIf()` or `describe.todoIf()`. Carefully choosing `skipIf` or `todoIf` can show a difference between, for example, intent of "invalid for this target" and "planned but not implemented yet."
 
@@ -271,7 +272,7 @@ test.todoIf(macOS)("runs on posix", () => {
 
 ```
 
-## [`test.failing`](https://bun.com/docs/test/writing\#test-failing)
+## [`test.failing`](https://bun.com/docs/test/writing#test-failing)
 
 Use `test.failing()` when you know a test is currently failing but you want to track it and be notified when it starts passing. This inverts the test result:
 
@@ -293,7 +294,7 @@ test.failing("fixed bug", () => {
 
 This is useful for tracking known bugs that you plan to fix later, or for implementing test-driven development.
 
-## [Conditional Tests for Describe Blocks](https://bun.com/docs/test/writing\#conditional-tests-for-describe-blocks)
+## [Conditional Tests for Describe Blocks](https://bun.com/docs/test/writing#conditional-tests-for-describe-blocks)
 
 The conditional modifiers `.if()`, `.skipIf()`, and `.todoIf()` can also be applied to `describe` blocks, affecting all tests within the suite:
 
@@ -327,7 +328,7 @@ describe.todoIf(process.platform === "linux")("Upcoming Linux support", () => {
 
 ```
 
-## [`test.each` and `describe.each`](https://bun.com/docs/test/writing\#test-each-and-describe-each)
+## [`test.each` and `describe.each`](https://bun.com/docs/test/writing#test-each-and-describe-each)
 
 To run the same test with multiple sets of data, use `test.each`. This creates a parametrized test that runs once for each test case provided.
 
@@ -362,7 +363,7 @@ describe.each([\
 
 ```
 
-### [Argument Passing](https://bun.com/docs/test/writing\#argument-passing)
+### [Argument Passing](https://bun.com/docs/test/writing#argument-passing)
 
 How arguments are passed to your test function depends on the structure of your test cases:
 
@@ -388,7 +389,7 @@ test.each([\
 
 ```
 
-### [Format Specifiers](https://bun.com/docs/test/writing\#format-specifiers)
+### [Format Specifiers](https://bun.com/docs/test/writing#format-specifiers)
 
 There are a number of options available for formatting the test title:
 
@@ -431,11 +432,11 @@ test.each(["apple", "banana"])("fruit #%# is %s", fruit => {
 
 ```
 
-## [Assertion Counting](https://bun.com/docs/test/writing\#assertion-counting)
+## [Assertion Counting](https://bun.com/docs/test/writing#assertion-counting)
 
 Bun supports verifying that a specific number of assertions were called during a test:
 
-### [expect.hasAssertions()](https://bun.com/docs/test/writing\#expect-hasassertions)
+### [expect.hasAssertions()](https://bun.com/docs/test/writing#expect-hasassertions)
 
 Use `expect.hasAssertions()` to verify that at least one assertion is called during a test:
 
@@ -451,7 +452,7 @@ test("async work calls assertions", async () => {
 
 This is especially useful for async tests to ensure your assertions actually run.
 
-### [expect.assertions(count)](https://bun.com/docs/test/writing\#expect-assertions-count)
+### [expect.assertions(count)](https://bun.com/docs/test/writing#expect-assertions-count)
 
 Use `expect.assertions(count)` to verify that a specific number of assertions are called during a test:
 
@@ -467,11 +468,11 @@ test("exactly two assertions", () => {
 
 This helps ensure all your assertions run, especially in complex async code with multiple code paths.
 
-## [Type Testing](https://bun.com/docs/test/writing\#type-testing)
+## [Type Testing](https://bun.com/docs/test/writing#type-testing)
 
 Bun includes `expectTypeOf` for testing typescript types, compatible with Vitest.
 
-### [expectTypeOf](https://bun.com/docs/test/writing\#expecttypeof)
+### [expectTypeOf](https://bun.com/docs/test/writing#expecttypeof)
 
 **Note** — These functions are no-ops at runtime - you need to run TypeScript separately to verify the type checks.
 
@@ -512,7 +513,7 @@ expectTypeOf(Promise.resolve(42)).resolves.toBeNumber();
 
 For full documentation on expectTypeOf matchers, see the [API Reference](https://bun.com/reference/bun/test/expectTypeOf)
 
-## [Matchers](https://bun.com/docs/test/writing\#matchers)
+## [Matchers](https://bun.com/docs/test/writing#matchers)
 
 Bun implements the following matchers. Full Jest compatibility is on the roadmap; track progress [here](https://github.com/oven-sh/bun/issues/1825).
 
@@ -572,11 +573,11 @@ Bun implements the following matchers. Full Jest compatibility is on the roadmap
 | ✅ | [`.toThrowErrorMatchingSnapshot()`](https://jestjs.io/docs/expect#tothrowerrormatchingsnapshothint) |
 | ✅ | [`.toThrowErrorMatchingInlineSnapshot()`](https://jestjs.io/docs/expect#tothrowerrormatchinginlinesnapshotinlinesnapshot) |
 
-## [TypeScript Type Safety](https://bun.com/docs/test/writing\#typescript-type-safety)
+## [TypeScript Type Safety](https://bun.com/docs/test/writing#typescript-type-safety)
 
 Bun's test runner provides enhanced TypeScript support with intelligent type checking for your test assertions. The type system helps catch potential bugs at compile time while still allowing flexibility when needed.
 
-### [Strict Type Checking by Default](https://bun.com/docs/test/writing\#strict-type-checking-by-default)
+### [Strict Type Checking by Default](https://bun.com/docs/test/writing#strict-type-checking-by-default)
 
 By default, Bun's test matchers enforce strict type checking between the actual value and expected value:
 
@@ -596,7 +597,7 @@ test("strict typing", () => {
 
 This helps catch common mistakes where you might accidentally compare values of different types.
 
-### [Relaxed Type Checking with Type Parameters](https://bun.com/docs/test/writing\#relaxed-type-checking-with-type-parameters)
+### [Relaxed Type Checking with Type Parameters](https://bun.com/docs/test/writing#relaxed-type-checking-with-type-parameters)
 
 Sometimes you need more flexibility in your tests, especially when working with:
 
@@ -631,7 +632,7 @@ test("useful for dynamic data", () => {
 
 ```
 
-### [Migration from Looser Type Systems](https://bun.com/docs/test/writing\#migration-from-looser-type-systems)
+### [Migration from Looser Type Systems](https://bun.com/docs/test/writing#migration-from-looser-type-systems)
 
 If migrating from a test framework with looser TypeScript integration, you can use type parameters as a stepping stone:
 
@@ -654,7 +655,7 @@ expect(statusCode).toBe(200); // Type-safe without explicit parameter
 \\
 Watch mode](https://bun.com/docs/test/hot)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/writing.md)
 
@@ -678,7 +679,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

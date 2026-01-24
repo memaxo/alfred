@@ -1,9 +1,10 @@
 ---
 title: Sign In With Ethereum (SIWE) | Better Auth
-url: 
+url:
 description: Sign in with Ethereum plugin for Better Auth
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The Sign in with Ethereum (SIWE) plugin allows users to authenticate using their Ethereum wallets following the [ERC-4361 standard](https://eips.ethereum.org/EIPS/eip-4361). This plugin provides flexibility by allowing you to implement your own message verification and nonce generation logic.
 
-## [Installation](https://www.better-auth.com/docs/plugins/siwe\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/siwe#installation)
 
-### [Add the Server Plugin](https://www.better-auth.com/docs/plugins/siwe\#add-the-server-plugin)
+### [Add the Server Plugin](https://www.better-auth.com/docs/plugins/siwe#add-the-server-plugin)
 
 Add the SIWE plugin to your auth configuration:
 
@@ -67,7 +68,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/siwe\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/siwe#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -83,7 +84,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/siwe#schema) section to add the fields manually.
 
-### [Add the Client Plugin](https://www.better-auth.com/docs/plugins/siwe\#add-the-client-plugin)
+### [Add the Client Plugin](https://www.better-auth.com/docs/plugins/siwe#add-the-client-plugin)
 
 auth-client.ts
 
@@ -96,9 +97,9 @@ export const authClient = createAuthClient({
 });
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/siwe\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/siwe#usage)
 
-### [Generate a Nonce](https://www.better-auth.com/docs/plugins/siwe\#generate-a-nonce)
+### [Generate a Nonce](https://www.better-auth.com/docs/plugins/siwe#generate-a-nonce)
 
 Before signing a SIWE message, you need to generate a nonce for the wallet address:
 
@@ -115,7 +116,7 @@ if (data) {
 }
 ```
 
-### [Sign In with Ethereum](https://www.better-auth.com/docs/plugins/siwe\#sign-in-with-ethereum)
+### [Sign In with Ethereum](https://www.better-auth.com/docs/plugins/siwe#sign-in-with-ethereum)
 
 After generating a nonce and creating a SIWE message, verify the signature to authenticate:
 
@@ -135,9 +136,9 @@ if (data) {
 }
 ```
 
-## [Configuration Options](https://www.better-auth.com/docs/plugins/siwe\#configuration-options)
+## [Configuration Options](https://www.better-auth.com/docs/plugins/siwe#configuration-options)
 
-### [Server Options](https://www.better-auth.com/docs/plugins/siwe\#server-options)
+### [Server Options](https://www.better-auth.com/docs/plugins/siwe#server-options)
 
 The SIWE plugin accepts the following configuration options:
 
@@ -148,7 +149,7 @@ The SIWE plugin accepts the following configuration options:
 - **verifyMessage**: Function to verify the signed SIWE message. Receives message details and should return `Promise<boolean>`
 - **ensLookup**: Optional function to lookup ENS names and avatars for Ethereum addresses
 
-### [Client Options](https://www.better-auth.com/docs/plugins/siwe\#client-options)
+### [Client Options](https://www.better-auth.com/docs/plugins/siwe#client-options)
 
 The SIWE client plugin doesn't require any configuration options, but you can pass them if needed for future extensibility:
 
@@ -167,20 +168,20 @@ export const authClient = createAuthClient({
 });
 ```
 
-## [Schema](https://www.better-auth.com/docs/plugins/siwe\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/siwe#schema)
 
 The SIWE plugin adds a `walletAddress` table to store user wallet associations:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| id | string | Primary key |
-| userId | string | Reference to user.id |
-| address | string | Ethereum wallet address |
-| chainId | number | Chain ID (e.g., 1 for Ethereum mainnet) |
+| Field     | Type    | Description                               |
+| --------- | ------- | ----------------------------------------- |
+| id        | string  | Primary key                               |
+| userId    | string  | Reference to user.id                      |
+| address   | string  | Ethereum wallet address                   |
+| chainId   | number  | Chain ID (e.g., 1 for Ethereum mainnet)   |
 | isPrimary | boolean | Whether this is the user's primary wallet |
-| createdAt | date | Creation timestamp |
+| createdAt | date    | Creation timestamp                        |
 
-## [Example Implementation](https://www.better-auth.com/docs/plugins/siwe\#example-implementation)
+## [Example Implementation](https://www.better-auth.com/docs/plugins/siwe#example-implementation)
 
 Here's a complete example showing how to implement SIWE authentication:
 

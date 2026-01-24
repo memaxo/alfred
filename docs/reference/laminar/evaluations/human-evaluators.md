@@ -1,9 +1,10 @@
 ---
 title: Human Evaluators - Laminar documentation
-url: 
+url:
 description: How to use human evaluators in your evaluations.
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/human-evaluators#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -36,14 +37,14 @@ On this page
 
 Human evaluators enable you to incorporate human judgment into your evaluation pipeline. Unlike automated evaluators that provide immediate scores, human evaluators create evaluation tasks that require manual scoring through Laminar’s evaluation interface.
 
-## [​](https://docs.lmnr.ai/evaluations/human-evaluators\#use-case%3A-evaluating-llm-as-a-judge)  Use case: evaluating LLM-as-a-judge
+## [​](https://docs.lmnr.ai/evaluations/human-evaluators#use-case%3A-evaluating-llm-as-a-judge) Use case: evaluating LLM-as-a-judge
 
 One of the most common use cases for human evaluators is **creating reference data to evaluate and calibrate LLM-as-a-judge evaluators**.When dealing with complex tasks that can’t be scored with simple code, you often need to prompt a strong reasoning LLM to act as an evaluator. However, you can’t assume your judge prompt is optimal and is aligned with human judgment. Human evaluators provide the ground truth needed to:
 
 - **Validate LLM judge accuracy** \- Compare LLM scores against human expert judgment
 - **Optimize judge prompts** \- Test different prompting strategies and select the best performing ones against human judgment
 
-## [​](https://docs.lmnr.ai/evaluations/human-evaluators\#when-to-use-human-evaluators)  When to use human evaluators
+## [​](https://docs.lmnr.ai/evaluations/human-evaluators#when-to-use-human-evaluators) When to use human evaluators
 
 Human evaluators are particularly valuable when:
 
@@ -51,7 +52,7 @@ Human evaluators are particularly valuable when:
 - **Subjective quality assessment** \- Evaluating creativity, tone, or style where human judgment is essential
 - **Domain expertise required** \- Evaluating specialized content that requires expert knowledge
 
-## [​](https://docs.lmnr.ai/evaluations/human-evaluators\#how-human-evaluators-work)  How human evaluators work
+## [​](https://docs.lmnr.ai/evaluations/human-evaluators#how-human-evaluators-work) How human evaluators work
 
 When you include a `HumanEvaluator` in your evaluation:
 
@@ -61,10 +62,10 @@ When you include a `HumanEvaluator` in your evaluation:
 4. **Manual scoring through UI** \- Evaluators access the evaluation interface to assign scores
 5. **Results integration** \- Human scores are incorporated into the overall evaluation metrics
 
-## [​](https://docs.lmnr.ai/evaluations/human-evaluators\#basic-usage)  Basic usage
+## [​](https://docs.lmnr.ai/evaluations/human-evaluators#basic-usage) Basic usage
 
 Here’s a simple example that combines automated and human evaluation.
-We use code to check the story is under MAX\_WORDS, and then use a human evaluator to get human assessment of the story quality.
+We use code to check the story is under MAX_WORDS, and then use a human evaluator to get human assessment of the story quality.
 
 Copy
 
@@ -139,7 +140,7 @@ After you score the human evaluator, you’ll see the scores in the dashboard.
 
 ![Human evaluator scores after](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/evaluations/human-evaluators/he-scores-after.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=8dc4bde9056cc950472922c2ac09dd01)
 
-## [​](https://docs.lmnr.ai/evaluations/human-evaluators\#validating-llm-as-a-judge-evaluators)  Validating LLM-as-a-judge evaluators
+## [​](https://docs.lmnr.ai/evaluations/human-evaluators#validating-llm-as-a-judge-evaluators) Validating LLM-as-a-judge evaluators
 
 Here’s a practical example of using human evaluators to create reference data for validating and improving LLM-as-a-judge evaluators:
 
@@ -216,7 +217,7 @@ evaluate(
 
 ```
 
-### [​](https://docs.lmnr.ai/evaluations/human-evaluators\#analyzing-judge-performance)  Analyzing judge performance
+### [​](https://docs.lmnr.ai/evaluations/human-evaluators#analyzing-judge-performance) Analyzing judge performance
 
 After collecting human reference scores, you can:
 
@@ -226,11 +227,11 @@ After collecting human reference scores, you can:
 
 Let’s explore how to collect human evaluator data into datasets and use it to validate your LLM-as-a-judge evaluator.
 
-### [​](https://docs.lmnr.ai/evaluations/human-evaluators\#collecting-human-evaluator-data-into-datasets)  Collecting human evaluator data into datasets
+### [​](https://docs.lmnr.ai/evaluations/human-evaluators#collecting-human-evaluator-data-into-datasets) Collecting human evaluator data into datasets
 
 The [SQL Editor](https://docs.lmnr.ai/sql-editor/introduction) is a powerful tool for analyzing your human evaluator results and creating datasets for training or validating LLM-as-a-judge evaluators. Here’s how to leverage it:
 
-### [​](https://docs.lmnr.ai/evaluations/human-evaluators\#finding-human-evaluator-spans)  Finding human evaluator spans
+### [​](https://docs.lmnr.ai/evaluations/human-evaluators#finding-human-evaluator-spans) Finding human evaluator spans
 
 Human evaluator spans are stored with `span_type = 'HUMAN_EVALUATOR'` and can be identified by their evaluator name. Here’s a basic query to find all human evaluator spans in evaluation with certain id:
 
@@ -247,7 +248,7 @@ ORDER BY start_time DESC
 
 ```
 
-### [​](https://docs.lmnr.ai/evaluations/human-evaluators\#creating-reference-datasets-from-human-scores)  Creating reference datasets from human scores
+### [​](https://docs.lmnr.ai/evaluations/human-evaluators#creating-reference-datasets-from-human-scores) Creating reference datasets from human scores
 
 After running this query, click **“Export to Dataset”** to:
 

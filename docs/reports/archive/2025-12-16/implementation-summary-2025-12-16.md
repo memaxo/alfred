@@ -8,6 +8,7 @@
 ### 1. Analysis Script Created
 
 Created `scripts/size-linear-tickets.ts` that:
+
 - Fetches all 216 open Linear tickets
 - Analyzes each ticket for complexity and POC relevance
 - Assigns story point estimates (Fibonacci: 1, 2, 3, 5, 8, 13)
@@ -18,6 +19,7 @@ Created `scripts/size-linear-tickets.ts` that:
 ### 2. Status Verification
 
 Verified implementation status for "In Progress" tickets:
+
 - **ALF-12**: ✅ Complete - Escalation handling implemented
 - **ALF-72**: ✅ Complete - Home tool fully implemented (307 lines)
 
@@ -40,11 +42,13 @@ Verified implementation status for "In Progress" tickets:
 ## Analysis Results
 
 ### Tickets Processed
+
 - **Total**: 216 tickets
 - **High-Priority Group**: 9 tickets (In Progress + Urgent/High)
 - **Backlog**: 207 tickets
 
 ### Sizing Results
+
 - **Tickets sized**: 182 (previously 34 had estimates)
 - **Size distribution**:
   - 1 point: 1 ticket
@@ -55,6 +59,7 @@ Verified implementation status for "In Progress" tickets:
   - 13 points: 13 tickets (epics - should be broken down)
 
 ### Prioritization Results
+
 - **Tickets prioritized**: 199 (previously 17 had priorities)
 - **Priority distribution**:
   - Urgent: 2 tickets (ALF-134, ALF-5)
@@ -63,6 +68,7 @@ Verified implementation status for "In Progress" tickets:
   - Low: 13 tickets
 
 ### Status Corrections
+
 - **ALF-12**: Marked for "Done" status (implementation verified)
 - **ALF-72**: Marked for "Done" status (implementation verified)
 
@@ -97,11 +103,13 @@ Verified implementation status for "In Progress" tickets:
 ### Option 1: Automated (Recommended)
 
 1. Set Linear API key:
+
    ```bash
    export LINEAR_API_KEY="lin_api_..."
    ```
 
 2. Run update script:
+
    ```bash
    bun scripts/size-linear-tickets.ts
    ```
@@ -111,11 +119,13 @@ Verified implementation status for "In Progress" tickets:
 ### Option 2: Manual via Linear CLI
 
 1. Install Linear CLI:
+
    ```bash
    brew install schpet/tap/linear
    ```
 
 2. Configure:
+
    ```bash
    linear config
    ```
@@ -142,6 +152,7 @@ Use `docs/reports/ticket-update-manual-guide-2025-12-16.md` as reference for eac
    - Set as `LINEAR_API_KEY` environment variable
 
 2. **Run Automated Updates**
+
    ```bash
    LINEAR_API_KEY="lin_api_..." bun scripts/size-linear-tickets.ts
    ```

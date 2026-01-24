@@ -1,9 +1,10 @@
 ---
 title: Test reporters – Test runner | Bun Docs
-url: 
+url:
 description: Add a junit reporter to your test runs
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,9 +55,9 @@ Project
 
 bun test supports different output formats through reporters. This document covers both built-in reporters and how to implement your own custom reporters.
 
-## [Built-in Reporters](https://bun.com/docs/test/reporters\#built-in-reporters)
+## [Built-in Reporters](https://bun.com/docs/test/reporters#built-in-reporters)
 
-### [Default Console Reporter](https://bun.com/docs/test/reporters\#default-console-reporter)
+### [Default Console Reporter](https://bun.com/docs/test/reporters#default-console-reporter)
 
 By default, bun test outputs results to the console in a human-readable format:
 
@@ -90,7 +91,7 @@ Ran 4 tests across 1 files. [0.66ms]
 
 ```
 
-### [JUnit XML Reporter](https://bun.com/docs/test/reporters\#junit-xml-reporter)
+### [JUnit XML Reporter](https://bun.com/docs/test/reporters#junit-xml-reporter)
 
 For CI/CD environments, Bun supports generating JUnit XML reports. JUnit XML is a widely-adopted format for test results that can be parsed by many CI/CD systems, including GitLab, Jenkins, and others.
 
@@ -120,11 +121,11 @@ The JUnit reporter automatically includes environment information as `<propertie
 
 Specifically, it includes the following environment variables when available:
 
-| Environment Variable | Property Name | Description |
-| --- | --- | --- |
-| `GITHUB_RUN_ID`, `GITHUB_SERVER_URL`, `GITHUB_REPOSITORY`, `CI_JOB_URL` | `ci` | CI build information |
-| `GITHUB_SHA`, `CI_COMMIT_SHA`, `GIT_SHA` | `commit` | Git commit identifiers |
-| System hostname | `hostname` | Machine hostname |
+| Environment Variable                                                    | Property Name | Description            |
+| ----------------------------------------------------------------------- | ------------- | ---------------------- |
+| `GITHUB_RUN_ID`, `GITHUB_SERVER_URL`, `GITHUB_REPOSITORY`, `CI_JOB_URL` | `ci`          | CI build information   |
+| `GITHUB_SHA`, `CI_COMMIT_SHA`, `GIT_SHA`                                | `commit`      | Git commit identifiers |
+| System hostname                                                         | `hostname`    | Machine hostname       |
 
 This makes it easier to track which environment and commit a particular test run was for.
 
@@ -135,17 +136,17 @@ The JUnit reporter currently has a few limitations that will be addressed in fut
 - `stdout` and `stderr` output from individual tests are not included in the report
 - Precise timestamp fields per test case are not included
 
-### [GitHub Actions reporter](https://bun.com/docs/test/reporters\#github-actions-reporter)
+### [GitHub Actions reporter](https://bun.com/docs/test/reporters#github-actions-reporter)
 
 Bun test automatically detects when it's running inside GitHub Actions and emits GitHub Actions annotations to the console directly. No special configuration is needed beyond installing Bun and running `bun test`.
 
 For a GitHub Actions workflow configuration example, see the [CI/CD integration](https://bun.com/docs/cli/test.md#cicd-integration) section of the CLI documentation.
 
-## [Custom Reporters](https://bun.com/docs/test/reporters\#custom-reporters)
+## [Custom Reporters](https://bun.com/docs/test/reporters#custom-reporters)
 
 Bun allows developers to implement custom test reporters by extending the WebKit Inspector Protocol with additional testing-specific domains.
 
-### [Inspector Protocol for Testing](https://bun.com/docs/test/reporters\#inspector-protocol-for-testing)
+### [Inspector Protocol for Testing](https://bun.com/docs/test/reporters#inspector-protocol-for-testing)
 
 To support test reporting, Bun extends the standard WebKit Inspector Protocol with two custom domains:
 
@@ -154,7 +155,7 @@ To support test reporting, Bun extends the standard WebKit Inspector Protocol wi
 
 These extensions allow you to build custom reporting tools that can receive detailed information about test execution in real-time.
 
-### [Key Events](https://bun.com/docs/test/reporters\#key-events)
+### [Key Events](https://bun.com/docs/test/reporters#key-events)
 
 Custom reporters can listen for these key events:
 
@@ -170,7 +171,7 @@ Code coverage](https://bun.com/docs/test/coverage) [Next\\
 \\
 Test configuration](https://bun.com/docs/test/configuration)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/reporters.md)
 
@@ -194,7 +195,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

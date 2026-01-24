@@ -1,9 +1,10 @@
 ---
 title: JSX – Runtime | Bun Docs
-url: 
+url:
 description: Bun can directly execute TypeScript files without additional configuration.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -69,13 +70,13 @@ console.log(<Component message="Hello world!" />);
 
 ```
 
-## [Configuration](https://bun.com/docs/runtime/jsx\#configuration)
+## [Configuration](https://bun.com/docs/runtime/jsx#configuration)
 
 Bun reads your `tsconfig.json` or `jsconfig.json` configuration files to determines how to perform the JSX transform internally. To avoid using either of these, the following options can also be defined in [`bunfig.toml`](https://bun.com/docs/runtime/bunfig).
 
 The following compiler options are respected.
 
-### [`jsx`](https://www.typescriptlang.org/tsconfig\#jsx)
+### [`jsx`](https://www.typescriptlang.org/tsconfig#jsx)
 
 How JSX constructs are transformed into vanilla JavaScript internally. The table below lists the possible values of `jsx`, along with their transpilation of the following simple JSX component:
 
@@ -84,54 +85,54 @@ How JSX constructs are transformed into vanilla JavaScript internally. The table
 
 ```
 
-| Compiler options | Transpiled output |
-| --- | --- |
-| ```<br>{<br>  "jsx": "react"<br>}<br>``` | ```<br>import { createElement } from "react";<br>createElement("Box", { width: 5 }, "Hello");<br>``` |
-| ```<br>{<br>  "jsx": "react-jsx"<br>}<br>``` | ```<br>import { jsx } from "react/jsx-runtime";<br>jsx("Box", { width: 5 }, "Hello");<br>``` |
-| ```<br>{<br>  "jsx": "react-jsxdev"<br>}<br>``` | ```<br>import { jsxDEV } from "react/jsx-dev-runtime";<br>jsxDEV(<br>  "Box",<br>  { width: 5, children: "Hello" },<br>  undefined,<br>  false,<br>  undefined,<br>  this,<br>);<br>```<br>The `jsxDEV` variable name is a convention used by React. The `DEV` suffix is a visible way to indicate that the code is intended for use in development. The development version of React is slower and includes additional validity checks & debugging tools. |
-| ```<br>{<br>  "jsx": "preserve"<br>}<br>``` | ```<br>// JSX is not transpiled<br>// "preserve" is not supported by Bun currently<br><Box width={5}>Hello</Box><br>``` |
+| Compiler options                            | Transpiled output                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `<br>{<br>  "jsx": "react"<br>}<br>`        | `<br>import { createElement } from "react";<br>createElement("Box", { width: 5 }, "Hello");<br>`                                                                                                                                                                                                                                                                                                                                                       |
+| `<br>{<br>  "jsx": "react-jsx"<br>}<br>`    | `<br>import { jsx } from "react/jsx-runtime";<br>jsx("Box", { width: 5 }, "Hello");<br>`                                                                                                                                                                                                                                                                                                                                                               |
+| `<br>{<br>  "jsx": "react-jsxdev"<br>}<br>` | `<br>import { jsxDEV } from "react/jsx-dev-runtime";<br>jsxDEV(<br>  "Box",<br>  { width: 5, children: "Hello" },<br>  undefined,<br>  false,<br>  undefined,<br>  this,<br>);<br>`<br>The `jsxDEV` variable name is a convention used by React. The `DEV` suffix is a visible way to indicate that the code is intended for use in development. The development version of React is slower and includes additional validity checks & debugging tools. |
+| `<br>{<br>  "jsx": "preserve"<br>}<br>`     | `<br>// JSX is not transpiled<br>// "preserve" is not supported by Bun currently<br><Box width={5}>Hello</Box><br>`                                                                                                                                                                                                                                                                                                                                    |
 
-### [`jsxFactory`](https://www.typescriptlang.org/tsconfig\#jsxFactory)
+### [`jsxFactory`](https://www.typescriptlang.org/tsconfig#jsxFactory)
 
 **Note** — Only applicable when `jsx` is `react`.
 
 The function name used to represent JSX constructs. Default value is `"createElement"`. This is useful for libraries like [Preact](https://preactjs.com/) that use a different function name ( `"h"`).
 
-| Compiler options | Transpiled output |
-| --- | --- |
-| ```<br>{<br>  "jsx": "react",<br>  "jsxFactory": "h"<br>}<br>``` | ```<br>import { h } from "react";<br>h("Box", { width: 5 }, "Hello");<br>``` |
+| Compiler options                                             | Transpiled output                                                        |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `<br>{<br>  "jsx": "react",<br>  "jsxFactory": "h"<br>}<br>` | `<br>import { h } from "react";<br>h("Box", { width: 5 }, "Hello");<br>` |
 
-### [`jsxFragmentFactory`](https://www.typescriptlang.org/tsconfig\#jsxFragmentFactory)
+### [`jsxFragmentFactory`](https://www.typescriptlang.org/tsconfig#jsxFragmentFactory)
 
 **Note** — Only applicable when `jsx` is `react`.
 
 The function name used to represent [JSX fragments](https://react.dev/reference/react/Fragment) such as `<>Hello</>`; only applicable when `jsx` is `react`. Default value is `"Fragment"`.
 
-| Compiler options | Transpiled output |
-| --- | --- |
-| ```<br>{<br>  "jsx": "react",<br>  "jsxFactory": "myjsx",<br>  "jsxFragmentFactory": "MyFragment"<br>}<br>``` | ```<br>// input<br><>Hello</>;<br>// output<br>import { myjsx, MyFragment } from "react";<br>myjsx(MyFragment, null, "Hello");<br>``` |
+| Compiler options                                                                                          | Transpiled output                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `<br>{<br>  "jsx": "react",<br>  "jsxFactory": "myjsx",<br>  "jsxFragmentFactory": "MyFragment"<br>}<br>` | `<br>// input<br><>Hello</>;<br>// output<br>import { myjsx, MyFragment } from "react";<br>myjsx(MyFragment, null, "Hello");<br>` |
 
-### [`jsxImportSource`](https://www.typescriptlang.org/tsconfig\#jsxImportSource)
+### [`jsxImportSource`](https://www.typescriptlang.org/tsconfig#jsxImportSource)
 
 **Note** — Only applicable when `jsx` is `react-jsx` or `react-jsxdev`.
 
 The module from which the component factory function ( `createElement`, `jsx`, `jsxDEV`, etc) will be imported. Default value is `"react"`. This will typically be necessary when using a component library like Preact.
 
-| Compiler options | Transpiled output |
-| --- | --- |
-| ```<br>{<br>  "jsx": "react",<br>  // jsxImportSource is not defined<br>  // default to "react"<br>}<br>``` | ```<br>import { jsx } from "react/jsx-runtime";<br>jsx("Box", { width: 5, children: "Hello" });<br>``` |
-| ```<br>{<br>  "jsx": "react-jsx",<br>  "jsxImportSource": "preact",<br>}<br>``` | ```<br>import { jsx } from "preact/jsx-runtime";<br>jsx("Box", { width: 5, children: "Hello" });<br>``` |
-| ```<br>{<br>  "jsx": "react-jsxdev",<br>  "jsxImportSource": "preact",<br>}<br>``` | ```<br>// /jsx-runtime is automatically appended<br>import { jsxDEV } from "preact/jsx-dev-runtime";<br>jsxDEV(<br>  "Box",<br>  { width: 5, children: "Hello" },<br>  undefined,<br>  false,<br>  undefined,<br>  this,<br>);<br>``` |
+| Compiler options                                                                                        | Transpiled output                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<br>{<br>  "jsx": "react",<br>  // jsxImportSource is not defined<br>  // default to "react"<br>}<br>` | `<br>import { jsx } from "react/jsx-runtime";<br>jsx("Box", { width: 5, children: "Hello" });<br>`                                                                                                                                |
+| `<br>{<br>  "jsx": "react-jsx",<br>  "jsxImportSource": "preact",<br>}<br>`                             | `<br>import { jsx } from "preact/jsx-runtime";<br>jsx("Box", { width: 5, children: "Hello" });<br>`                                                                                                                               |
+| `<br>{<br>  "jsx": "react-jsxdev",<br>  "jsxImportSource": "preact",<br>}<br>`                          | `<br>// /jsx-runtime is automatically appended<br>import { jsxDEV } from "preact/jsx-dev-runtime";<br>jsxDEV(<br>  "Box",<br>  { width: 5, children: "Hello" },<br>  undefined,<br>  false,<br>  undefined,<br>  this,<br>);<br>` |
 
-### [`jsxSideEffects`](https://bun.com/docs/runtime/jsx\#jsxsideeffects)
+### [`jsxSideEffects`](https://bun.com/docs/runtime/jsx#jsxsideeffects)
 
 By default, Bun marks JSX expressions as `/* @__PURE__ */` so they can be removed during bundling if they are unused (known as "dead code elimination" or "tree shaking"). Set `jsxSideEffects` to `true` to prevent this behavior.
 
-| Compiler options | Transpiled output |
-| --- | --- |
-| ```<br>{<br>  "jsx": "react",<br>  // jsxSideEffects is false by default<br>}<br>``` | ```<br>// JSX expressions are marked as pure<br>/* @__PURE__ */ React.createElement("div", null, "Hello");<br>``` |
-| ```<br>{<br>  "jsx": "react",<br>  "jsxSideEffects": true,<br>}<br>``` | ```<br>// JSX expressions are not marked as pure<br>React.createElement("div", null, "Hello");<br>``` |
-| ```<br>{<br>  "jsx": "react-jsx",<br>  "jsxSideEffects": true,<br>}<br>``` | ```<br>// Automatic runtime also respects jsxSideEffects<br>jsx("div", { children: "Hello" });<br>``` |
+| Compiler options                                                                 | Transpiled output                                                                                             |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `<br>{<br>  "jsx": "react",<br>  // jsxSideEffects is false by default<br>}<br>` | `<br>// JSX expressions are marked as pure<br>/* @__PURE__ */ React.createElement("div", null, "Hello");<br>` |
+| `<br>{<br>  "jsx": "react",<br>  "jsxSideEffects": true,<br>}<br>`               | `<br>// JSX expressions are not marked as pure<br>React.createElement("div", null, "Hello");<br>`             |
+| `<br>{<br>  "jsx": "react-jsx",<br>  "jsxSideEffects": true,<br>}<br>`           | `<br>// Automatic runtime also respects jsxSideEffects<br>jsx("div", { children: "Hello" });<br>`             |
 
 This option is also available as a CLI flag:
 
@@ -139,17 +140,17 @@ This option is also available as a CLI flag:
 bun build --jsx-side-effects
 ```
 
-### [JSX pragma](https://bun.com/docs/runtime/jsx\#jsx-pragma)
+### [JSX pragma](https://bun.com/docs/runtime/jsx#jsx-pragma)
 
 All of these values can be set on a per-file basis using _pragmas_. A pragma is a special comment that sets a compiler option in a particular file.
 
-| Pragma | Equivalent config |
-| --- | --- |
-| ```<br>// @jsx h<br>``` | ```<br>{<br>  "jsxFactory": "h",<br>}<br>``` |
-| ```<br>// @jsxFrag MyFragment<br>``` | ```<br>{<br>  "jsxFragmentFactory": "MyFragment",<br>}<br>``` |
-| ```<br>// @jsxImportSource preact<br>``` | ```<br>{<br>  "jsxImportSource": "preact",<br>}<br>``` |
+| Pragma                               | Equivalent config                                         |
+| ------------------------------------ | --------------------------------------------------------- |
+| `<br>// @jsx h<br>`                  | `<br>{<br>  "jsxFactory": "h",<br>}<br>`                  |
+| `<br>// @jsxFrag MyFragment<br>`     | `<br>{<br>  "jsxFragmentFactory": "MyFragment",<br>}<br>` |
+| `<br>// @jsxImportSource preact<br>` | `<br>{<br>  "jsxImportSource": "preact",<br>}<br>`        |
 
-## [Logging](https://bun.com/docs/runtime/jsx\#logging)
+## [Logging](https://bun.com/docs/runtime/jsx#logging)
 
 Bun implements special logging for JSX to make debugging easier. Given the following file:
 
@@ -171,7 +172,7 @@ Bun will pretty-print the component tree when logged:
 
 [![](https://github.com/oven-sh/bun/assets/3084745/d29db51d-6837-44e2-b8be-84fc1b9e9d97)](https://github.com/oven-sh/bun/assets/3084745/d29db51d-6837-44e2-b8be-84fc1b9e9d97)
 
-## [Prop punning](https://bun.com/docs/runtime/jsx\#prop-punning)
+## [Prop punning](https://bun.com/docs/runtime/jsx#prop-punning)
 
 The Bun runtime also supports "prop punning" for JSX. This is a shorthand syntax useful for assigning a variable to a prop with the same name.
 
@@ -193,7 +194,7 @@ TypeScript](https://bun.com/docs/runtime/typescript) [Next\\
 \\
 Environment variables](https://bun.com/docs/runtime/env)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/jsx.md)
 
@@ -217,7 +218,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

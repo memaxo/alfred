@@ -13,8 +13,7 @@ React
 Svelte
 
 Vue
-    
-    
+
     import { useCompletion } from '@ai-sdk/react'
 
 ## API Signature

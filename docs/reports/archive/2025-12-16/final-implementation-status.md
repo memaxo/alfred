@@ -53,6 +53,7 @@ bun scripts/size-linear-tickets.ts
 ```
 
 The script will:
+
 1. Fetch all tickets
 2. Apply size and priority updates
 3. Generate final report
@@ -63,6 +64,7 @@ The script will:
 For ALF-12 and ALF-72, update status to "Done" manually:
 
 **Via Linear CLI:**
+
 ```bash
 linear issue update ALF-12 --state Done
 linear issue comment add ALF-12 --body "Implementation verified in packages/runtime/src/orchestrator/index.ts:43-51"
@@ -72,6 +74,7 @@ linear issue comment add ALF-72 --body "Implementation verified: packages/agent/
 ```
 
 **Via Web UI:**
+
 - Open ALF-12 and ALF-72 in Linear
 - Change status to "Done"
 - Add verification comments
@@ -80,21 +83,22 @@ linear issue comment add ALF-72 --body "Implementation verified: packages/agent/
 
 ### High-Priority Tickets (9 tickets)
 
-| Ticket | Current | Recommended | Action |
-|--------|---------|-------------|--------|
-| ALF-12 | In Progress, High, 2pts | Done, High, 2pts | Update status + comment |
-| ALF-72 | In Progress, None, 5pts | Done, High, 5pts | Update status + priority + comment |
-| ALF-134 | In Progress, Urgent, no est | In Progress, Urgent, 8pts | Add estimate |
-| ALF-89 | In Progress, None, 8pts | In Progress, High, 8pts | Update priority |
-| ALF-139 | In Progress, High, no est | In Progress, Medium, 5pts | Add estimate + change priority |
-| ALF-142 | In Progress, High, no est | In Progress, Medium, 8pts | Add estimate + change priority |
-| ALF-143 | In Progress, High, no est | In Progress, Medium, 5pts | Add estimate + change priority |
-| ALF-5 | Backlog, Urgent, no est | Backlog, Urgent, 13pts | Add estimate |
-| ALF-6 | Backlog, High, no est | Backlog, High, 13pts | Add estimate |
+| Ticket  | Current                     | Recommended               | Action                             |
+| ------- | --------------------------- | ------------------------- | ---------------------------------- |
+| ALF-12  | In Progress, High, 2pts     | Done, High, 2pts          | Update status + comment            |
+| ALF-72  | In Progress, None, 5pts     | Done, High, 5pts          | Update status + priority + comment |
+| ALF-134 | In Progress, Urgent, no est | In Progress, Urgent, 8pts | Add estimate                       |
+| ALF-89  | In Progress, None, 8pts     | In Progress, High, 8pts   | Update priority                    |
+| ALF-139 | In Progress, High, no est   | In Progress, Medium, 5pts | Add estimate + change priority     |
+| ALF-142 | In Progress, High, no est   | In Progress, Medium, 8pts | Add estimate + change priority     |
+| ALF-143 | In Progress, High, no est   | In Progress, Medium, 5pts | Add estimate + change priority     |
+| ALF-5   | Backlog, Urgent, no est     | Backlog, Urgent, 13pts    | Add estimate                       |
+| ALF-6   | Backlog, High, no est       | Backlog, High, 13pts      | Add estimate                       |
 
 ### Backlog Tickets (207 tickets)
 
 All backlog tickets have been analyzed with:
+
 - Story point estimates assigned
 - Priorities assigned (mostly Medium, some High/Low)
 - Labels recommended

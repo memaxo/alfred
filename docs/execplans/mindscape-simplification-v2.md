@@ -39,7 +39,7 @@ Success is demonstrated by:
   - Landing background: `apps/web/src/lib/mindscape/*` + `apps/web/src/routes/index.tsx`
   - Cortex preview: `apps/web/src/hooks/use-cortex-engine.ts` + `apps/web/src/routes/_protected/settings/visual.tsx`
 
-### In-scope (packages/*)
+### In-scope (packages/\*)
 
 - `packages/cortex/*` only where required to keep WebGPU boundaries clean for the web app (no server-only imports into client bundles).
 
@@ -98,6 +98,7 @@ Success is demonstrated by:
 ### Completed (2025-12-21)
 
 **What was delivered:**
+
 - WebGPU code isolated in `lib/mindscape/gpu/` with compile-time gating
 - Store modularized into focused slices (cache, context, graph, persist)
 - Domain helpers extracted for pure graph/URL operations
@@ -105,22 +106,26 @@ Success is demonstrated by:
 - Build verification script for WebGPU-free builds
 
 **Key metrics:**
+
 - 57 files changed, 1771 insertions, 1395 deletions (net simplification)
 - 12 tests pass in lib/mindscape
 - TypeScript compilation clean
 - No deprecated nodes (all 20 actively used)
 
 **What worked well:**
+
 - Phased approach allowed incremental validation
 - Keeping tests green throughout prevented regressions
 - Type exports to `mindscape.schemas.ts` broke circular dependencies cleanly
 
 **What was harder than expected:**
+
 - React Flow type variance issues required simplifying `ArtifactNode` type
 - Phase 3 store modularization inadvertently broke type exports
 - Phase 2 node standardization caused test failures (partially reverted)
 
 **Future considerations:**
+
 - Add tests for `graph.ts` and `url.ts` helpers
 - Consider completing Phase 2 node standardization with proper test fixtures
 
@@ -140,18 +145,22 @@ Mindscape is not a disconnected prototype; it is already integrated across sever
 Remaining problems to solve in v2:
 
 **Problem 1: WebGPU bundling/gating is not aligned with the web build**
+
 - The plan previously proposed Bun `bun:bundle` feature flags inside `apps/web`. That is risky/incompatible: `apps/web` is Vite/TanStack Start.
 - WGSL is imported via `?raw` (`apps/web/src/lib/mindscape/gpu/renderer.ts`), so any static import of the renderer will ship shader strings; we need Vite-friendly gating to exclude that code when disabled.
 
 **Problem 2: Node UX is mostly standardized, but still drifts**
+
 - A shared shell already exists: `apps/web/src/components/mindscape/nodes/mindscape-node.tsx` (`MindscapeNode`) + `apps/web/src/components/mindscape/lod.ts` + `nodes/shared-lod.tsx`.
 - The remaining work is an audit + consolidation pass: ensure every node uses the shared shell/LOD patterns consistently and eliminate duplicated micro-patterns.
 
 **Problem 3: Store is large and persistence-coupled**
+
 - `apps/web/src/store/mindscape.ts` is ~600 lines and persisted (`name: "mindscape-storage-v2"`). It mixes graph state, cache state, receipts, feedback, and persistence helpers.
 - Splitting stores must account for persistence compatibility and test stability; prefer modularization and explicit migrations.
 
 **Problem 4: “Execution” already exists (graph + workflow), but semantics are spread out**
+
 - Edges are not purely visual; they have persistence semantics.
 - Workflow/context events already drive UI receipts.
 - The opportunity is to tighten boundaries and reduce coupling across `canvas.tsx`, `monitor.tsx`, and `useMindscapeStore`.
@@ -159,6 +168,7 @@ Remaining problems to solve in v2:
 ### Key Files to Modify
 
 apps/web (Mindscape UI + store):
+
 - `apps/web/src/components/mindscape/canvas.tsx` — ReactFlow wiring + edge persistence wrapper
 - `apps/web/src/components/mindscape/monitor.tsx` — workflow stream → UI receipts
 - `apps/web/src/components/mindscape/lod.ts` — `useLOD` + `useNodeFocus`
@@ -170,11 +180,13 @@ apps/web (Mindscape UI + store):
 - `apps/web/src/config/mindscape.ts` — shared spawn constants (`MINDSCAPE_CONFIG.SPAWN_RADIUS`)
 
 apps/web (WebGPU surfaces):
+
 - `apps/web/src/routes/index.tsx` — landing page uses `MindscapeEngine`
 - `apps/web/src/lib/mindscape/gpu/engine.ts` + `renderer.ts` — WebGPU/Canvas2D engine + WGSL `?raw`
 - `apps/web/src/hooks/use-cortex-engine.ts` + `apps/web/src/routes/_protected/settings/visual.tsx` — Cortex preview
 
 Tests (existing contract to preserve):
+
 - `apps/web/src/components/__tests__/mindscape.edge-persistence.test.tsx`
 - `apps/web/src/components/__tests__/mindscape.monitor.test.tsx`
 - `apps/web/src/components/__tests__/mindscape.graph.test.tsx`
@@ -194,6 +206,7 @@ Tests (existing contract to preserve):
 ### Current pattern compliance (verified ✓)
 
 **State Management (Controlled Flow with Zustand)**:
+
 - ✓ Uses controlled flow pattern with `applyNodeChanges`, `applyEdgeChanges`, `addEdge` from `@xyflow/react`
 - ✓ External state managed via zustand (`useMindscapeStore`)
 - ✓ Properly typed: Uses React Flow 12 generics `Node<ArtifactData, ArtifactType>` and `Edge`
@@ -201,16 +214,19 @@ Tests (existing contract to preserve):
 - ✓ Reference: React Flow controlled flow docs → this is the correct pattern for persisted state
 
 **Provider pattern**:
+
 - ✓ Wraps `<ReactFlow>` with `<ReactFlowProvider>` (required for hooks like `useReactFlow`)
 - ✓ Uses `useReactFlow` for imperative APIs (`fitView`)
 - ✓ Proper component boundary: `MindscapeCanvas` (provider wrapper) → `MindscapeCanvasInner` (flow consumer)
 
 **TypeScript (React Flow 12)**:
+
 - ✓ Custom node data properly typed via discriminated union `ArtifactData`
 - ✓ Custom node components receive `NodeProps<ArtifactNode>` from `@xyflow/react`
 - ✓ `nodeTypes` object properly typed as `NodeTypes` from `@xyflow/react`
 
 **SSR/SSG**:
+
 - ✓ Routes using Mindscape set `ssr: false` (WebGPU/Canvas require browser APIs)
 - ✓ TanStack Start loader still runs server-side for initial data (ASCII frame from `initial-frame.server`)
 - ✓ Client-only rendering for interactive canvas aligns with React Flow SSR guidance
@@ -218,23 +234,27 @@ Tests (existing contract to preserve):
 ### Gaps to address in the plan
 
 **React Flow performance best practices**:
+
 - [ ] Stabilize node/edge references and change handlers to prevent unnecessary re-renders.
 - [ ] Audit all custom node components and wrap in `React.memo` consistently.
 - [ ] Codify `useShallow` usage for all selectors in `MindscapeCanvasInner` and hooks.
 - [ ] Evaluate **`useNodesData`** and **`useHandleConnections`** for performance-intensive node-to-node data lookups.
 
 **React Flow controlled flow invariants**:
+
 - [ ] When modularizing the store (Phase 3), preserve the `onNodesChange`/`onEdgesChange`/`onConnect` handler signatures.
 - [ ] Ensure handler identity stability (Zustand stable methods or `useCallback`).
 - [ ] Any store refactor must maintain the controlled flow contract (ReactFlow reads `nodes`/`edges` props, writes via handlers).
 - [ ] Tests should assert handler behavior remains correct after store modularization.
 
 **Node data immutability**:
+
 - [ ] React Flow expects immutable updates to node data.
 - [ ] Audit `updateArtifactData` call sites to ensure no direct mutations occur.
 - [ ] Use spread operators consistently for all `data` updates.
 
 **Edge data typing**:
+
 - [ ] Transition to generic `Edge<CustomEdgeData>` and update zustand state type.
 - [ ] `LivingEdge` component should receive typed `EdgeProps<ArtifactEdge>`.
 
@@ -256,6 +276,7 @@ Tests (existing contract to preserve):
 Goal: Snapshot current Mindscape behavior, lock invariants with existing tests, and produce a node catalog. **No deletions** in this phase.
 
 Work:
+
 1. Catalog node types in `apps/web/src/components/mindscape/nodes/` and which are spawnable (`apps/web/src/components/mindscape/spawn.ts`).
 2. Capture current invariants explicitly (edges persist/rollback; workflow receipts; graph hydration; store persistence key).
 3. Run the existing Mindscape suites to establish a green baseline:
@@ -272,10 +293,12 @@ Result: A verified baseline and a concrete catalog to drive later phases.
 Goal: Make WebGPU code paths **explicitly and correctly gated** for the Vite-built web app, and prove disabled builds don’t ship WGSL/WebGPU init code.
 
 Reality:
+
 - `apps/web` is built by Vite/TanStack Start. Bun `bun:bundle` feature flags are not a valid gating mechanism inside the app bundle.
 - WGSL is currently imported via `?raw` (`apps/web/src/lib/mindscape/renderer.ts`), which will be bundled whenever that module is statically imported.
 
 Work (apps/web):
+
 1. Introduce a Vite-friendly flag (e.g. `import.meta.env.VITE_MINDSCAPE_WEBGPU === "1"`) and use it as a **compile-time constant** for tree-shaking.
 2. Refactor `apps/web/src/lib/mindscape/engine.ts` so WGSL/WebGPU renderer code is only loaded when the flag is enabled (prefer conditional dynamic import of the renderer module; use type-only imports for types).
 3. Decide the scope of “WebGPU-free build”:
@@ -284,10 +307,12 @@ Work (apps/web):
 4. Add a build verification that matches Vite reality:
    - Extend `scripts/verify-build.ts` or add a dedicated script (e.g. `scripts/verify-mindscape-webgpu.ts`) to build `apps/web` with the flag off and assert `dist/` does not contain shader strings (`compute.wgsl`, `fragment.wgsl`) or WebGPU init tokens (`GPUDevice`, `navigator.gpu`).
 
-Optional (packages/*):
+Optional (packages/\*):
+
 - If we also need compile-time gating inside Bun-built packages, use `bun:bundle` feature flags **there**, but keep this separate from the Vite app.
 
 Acceptance:
+
 - `apps/web/src/lib/mindscape/engine.test.ts` passes.
 - The build verification passes for the disabled flag.
 
@@ -296,12 +321,14 @@ Acceptance:
 Goal: Reduce node drift and make spawning behavior consistent and configurable, without rewriting the component architecture.
 
 Reality:
+
 - Shared node shell exists: `apps/web/src/components/mindscape/nodes/mindscape-node.tsx`.
 - LOD + focus exist: `apps/web/src/components/mindscape/lod.ts` and `apps/web/src/components/mindscape/nodes/shared-lod.tsx`.
 - Radial spawn constant exists and is already used for traversal/visualize: `apps/web/src/config/mindscape.ts` (`MINDSCAPE_CONFIG.SPAWN_RADIUS`).
 - Palette spawning uses tier radii in `apps/web/src/components/mindscape/spawn.ts` and currently diverges from the config constant.
 
 Work:
+
 1. Audit each node component under `apps/web/src/components/mindscape/nodes/`:
    - Ensure it renders via `MindscapeNode`.
    - Ensure it uses `useLOD` (and tiny/small variants via `NodeLODTiny`/`NodeLODSmall`) consistently.
@@ -316,6 +343,7 @@ Work:
 5. **Performance**: Investigate `useNodesData` for inter-node communication where nodes currently read from the global store.
 
 Acceptance:
+
 - Existing Mindscape integration tests remain green.
 - Add `apps/web/src/components/__tests__/mindscape.spawn.test.ts` (or similar) that asserts spawn position math is deterministic and uses `MINDSCAPE_CONFIG` where expected.
 - All node components are wrapped in `React.memo`.
@@ -327,11 +355,13 @@ Acceptance:
 Goal: Reduce cognitive load of `apps/web/src/store/mindscape.ts` while preserving the persisted contract (`mindscape-storage-v2`) and keeping existing tests intact.
 
 React Flow context:
+
 - Current implementation uses **controlled flow** pattern (recommended for persisted state per React Flow docs)
 - The store provides `nodes`, `edges`, `onNodesChange`, `onEdgesChange`, `onConnect` to ReactFlow
 - These handler signatures are the **contract** between zustand and ReactFlow; breaking them breaks the integration
 
 Work:
+
 1. Identify stable “store API surface” used by components (`nodes`, `edges`, `onConnect`, `recordContextReceipt`, etc.) and keep it stable during refactor.
 2. Ensure handler identity stability (Zustand stable methods or `useCallback`) to prevent downstream re-renders in `ReactFlow`.
 3. Extract pure helpers/slices into `apps/web/src/store/mindscape/` (single-word modules like `cache.ts`, `context.ts`, `persist.ts`) while keeping the public import `@/store/mindscape` intact.
@@ -341,6 +371,7 @@ Work:
 5. Add focused unit tests for store invariants (cache TTL/limit eviction, persisted sanitization, receipt record/clear).
 
 Acceptance:
+
 - Existing integration tests remain green:
   - edge persistence, monitor, graph hydration
 - New store unit tests exist under `apps/web/src/store/__tests__/` covering:
@@ -354,6 +385,7 @@ Acceptance:
 Goal: Make the current execution semantics (graph edges + workflow stream receipts) explicit and easier to maintain, without inventing a new local DAG runner.
 
 Work:
+
 1. Map responsibilities and reduce coupling:
    - `canvas.tsx`: UI graph interactions + edge persist/rollback
    - `monitor.tsx`: workflow stream → store receipts + node status updates
@@ -361,12 +393,13 @@ Work:
 2. **Edge data typing**: Transition to generic `Edge<CustomEdgeData>` and update `LivingEdge` to use `EdgeProps<ArtifactEdge>`.
 3. Where logic is duplicated or >300 lines in a component, extract domain helpers to `apps/web/src/lib/mindscape/` (pure functions) and keep components thin.
 4. Ensure cache handoff propagation remains correct (rule: cache handoff metadata must propagate alongside context receipts).
-5. Add/adjust tests *only where we changed behavior*, aligned with existing suites:
+5. Add/adjust tests _only where we changed behavior_, aligned with existing suites:
    - Extend `mindscape.edge-persistence.test.tsx` if edge validation rules change.
    - Extend `mindscape.monitor.test.tsx` for any new receipt/event shapes.
    - Extend `mindscape.graph.test.tsx` if node hydration changes.
 
 Acceptance:
+
 - Existing Mindscape tests remain green and still assert:
   - Edge connect persists/rolls back.
   - Workflow stream updates/clears context cache.
@@ -378,6 +411,7 @@ Acceptance:
 Goal: Reduce surface area (nodes/engines) safely, without surprise deletions.
 
 Work:
+
 1. Prefer **deprecation** over deletion:
    - Remove deprecated node types from `mindscapeSpawnTypes` / command palette.
    - Keep rendering code in place until explicitly approved for removal.
@@ -385,17 +419,20 @@ Work:
 3. If a removal is approved, add/update tests to prove behavior remains correct.
 
 Acceptance:
+
 - No user-facing regressions in Mindscape flows; tests remain green.
 
 ## Concrete Steps / Runbook
 
 Baseline (must stay green throughout):
+
 - `bun test apps/web/src/components/__tests__/mindscape.edge-persistence.test.tsx`
 - `bun test apps/web/src/components/__tests__/mindscape.monitor.test.tsx`
 - `bun test apps/web/src/components/__tests__/mindscape.graph.test.tsx`
 - `bun test apps/web/src/lib/mindscape/engine.test.ts`
 
 WebGPU gating verification (Vite):
+
 - Build web app with WebGPU disabled (example):
   - `VITE_MINDSCAPE_WEBGPU=0 bun --filter @alfred/web build`
 - Run build verifier:
@@ -406,6 +443,7 @@ WebGPU gating verification (Vite):
 ## Validation and Acceptance
 
 ### Phase 0 (baseline)
+
 - Node catalog completed (functional vs experimental), without deleting files.
 - Baseline tests are green:
   - Edge persist/rollback: `apps/web/src/components/__tests__/mindscape.edge-persistence.test.tsx`
@@ -414,27 +452,32 @@ WebGPU gating verification (Vite):
   - Landing engine safety: `apps/web/src/lib/mindscape/engine.test.ts`
 
 ### Phase 1 (WebGPU gating)
+
 - WebGPU gating is implemented in a Vite-compatible way (no `bun:bundle` imports in `apps/web`).
 - Build verification exists and passes: when disabled, gated bundles contain no WGSL strings and do not initialize WebGPU.
 - `apps/web/src/lib/mindscape/engine.test.ts` updated/passing.
 
 ### Phase 2 (nodes/spawn)
+
 - Node audit confirms node components use `MindscapeNode` + LOD primitives consistently (no new NodeShell introduced).
 - Spawn behavior is consistent with `MINDSCAPE_CONFIG` where expected.
 - New deterministic spawn tests exist under `apps/web/src/components/__tests__/`.
 
 ### Phase 3 (store)
+
 - Store refactor preserves persistence or ships an explicit migration (documented).
 - New store unit tests exist under `apps/web/src/store/__tests__/` for cache eviction + receipts + sanitization.
 - Existing integration tests remain green (edge persistence, monitor, graph hydration).
 
 ### Phase 4 (graph/workflow)
+
 - Existing integration tests remain the contract and stay green:
   - edge persist/rollback
   - workflow receipts
   - graph hydration
 
 ### Phase 5 (deprecations/removals)
+
 - No deletions performed without explicit approval logged in `Decision Log`.
 
 ## Migration, Idempotence, and Recovery

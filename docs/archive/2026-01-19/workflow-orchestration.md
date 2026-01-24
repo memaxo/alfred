@@ -93,4 +93,3 @@ The knowledge graph records workflow patterns and outcomes. Successful tool sequ
 - [Cognitive State Machine](cognitive-state-machine.md) — How workflows influence cognitive state
 - [Security and Autonomy](security-and-autonomy.md) — Policy enforcement and biometric obligations
 - [Linear Integration Guide](linear-integration.md) — Detailed Linear Agent Activities patterns
-

@@ -1,8 +1,9 @@
 ---
 title: Automatic LLM tracing with Laminar - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/automatic-instrumentation#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -35,7 +36,7 @@ On this page
 - [Error Handling](https://docs.lmnr.ai/tracing/automatic-instrumentation#error-handling)
 - [Next Steps](https://docs.lmnr.ai/tracing/automatic-instrumentation#next-steps)
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#overview) Overview
 
 Simply by initializing Laminar at the start of your application, you can start tracing **prompts, responses, token usage, and costs** of LLM calls from:
 
@@ -48,7 +49,6 @@ To learn more about the integrations with the LLM frameworks and SDKs, see the [
 - JavaScript/TypeScript
 
 - Python
-
 
 In JavaScript/TypeScript, **recommended approach** is to specify which modules to instrument using the `instrumentModules` parameter.
 
@@ -75,14 +75,13 @@ const response = await client.chat.completions.create({
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#instrument-all-supported-libraries)  Instrument all supported libraries
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#instrument-all-supported-libraries) Instrument all supported libraries
 
 This approach instruments all supported libraries automatically.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -102,14 +101,13 @@ import Anthropic from '@anthropic-ai/sdk';
 
 This approach may not work with all bundlers. If you encounter issues, use [selective instrumentation](https://docs.lmnr.ai/tracing/automatic-instrumentation#instrument-specific-libraries) instead.
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#instrument-specific-libraries)  Instrument specific libraries
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#instrument-specific-libraries) Instrument specific libraries
 
 For better control and compatibility, instrument only the libraries you need.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 **Recommended approach** for JavaScript/TypeScript applications:
 
@@ -134,12 +132,11 @@ const anthropicClient = new Anthropic();
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#disable-automatic-instrumentation)  Disable Automatic Instrumentation
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#disable-automatic-instrumentation) Disable Automatic Instrumentation
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -156,14 +153,13 @@ Laminar.initialize({
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#supported-libraries)  Supported Libraries
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#supported-libraries) Supported Libraries
 
 Laminar supports automatic instrumentation for a wide range of libraries:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 **LLM Providers:**
 
@@ -193,19 +189,19 @@ Show View complete list of supported modules
 - `google_aiplatform`
 - `pinecone`
 - `langchain`:
-
   - `chainsModule`
   - `agentsModule`
   - `toolsModule`
   - `runnablesModule`
   - `vectorStoreModule`
+
 - `llamaIndex`
 - `chromadb`
 - `qdrant`
 - `playwright`
 - `puppeteer` / `puppeteer-core`
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#integration-specific-guides)  Integration-Specific Guides
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#integration-specific-guides) Integration-Specific Guides
 
 Some frameworks require additional configuration:
 
@@ -213,11 +209,11 @@ Some frameworks require additional configuration:
 - **Vercel AI SDK**: See the [Vercel AI SDK guide](https://docs.lmnr.ai/tracing/integrations/vercel-ai-sdk)
 - **LangChain**: See the [LangChain integration guide](https://docs.lmnr.ai/tracing/integrations/langchain)
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#what-gets-traced)  What Gets Traced
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#what-gets-traced) What Gets Traced
 
 When automatic instrumentation is enabled, you’ll see detailed traces including:
 
-### [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#llm-calls)  LLM Calls
+### [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#llm-calls) LLM Calls
 
 - Request parameters (model, messages, temperature, etc.)
 - Response content and metadata
@@ -225,20 +221,20 @@ When automatic instrumentation is enabled, you’ll see detailed traces includin
 - Latency and performance metrics
 - Automatic cost calculation
 
-### [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#framework-operations)  Framework Operations
+### [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#framework-operations) Framework Operations
 
 - Chain executions in LangChain
 - Agent reasoning steps
 - Tool calls and results
 - Vector similarity searches
 
-### [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#error-handling)  Error Handling
+### [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#error-handling) Error Handling
 
 - Exception details and stack traces
 - Retry attempts and failures
 - Rate limiting and quota errors
 
-## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation\#next-steps)  Next Steps
+## [​](https://docs.lmnr.ai/tracing/automatic-instrumentation#next-steps) Next Steps
 
 Once automatic instrumentation is working:
 

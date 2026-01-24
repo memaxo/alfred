@@ -15,8 +15,7 @@ React
 Svelte
 
 Vue
-    
-    
+
     import { useChat } from '@ai-sdk/react'
 
 ## API Signature
@@ -385,9 +384,9 @@ Function to update the messages state locally without triggering an API call. Us
 
 ## Learn more
 
-  * Chatbot
-  * Chatbot with Tools
-  * UIMessage
+- Chatbot
+- Chatbot with Tools
+- UIMessage
 
 Previous
 

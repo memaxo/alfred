@@ -1,9 +1,10 @@
 ---
 title: Bindgen – Project | Bun Docs
-url: 
+url:
 description: About the bindgen code generator
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -61,7 +62,7 @@ There are currently other code generators and systems that achieve similarpurpos
 - "Classes generator", converting `*.classes.ts` for custom classes.
 - "JS2Native", allowing ad-hoc calls from `src/js` to native code.
 
-## [Creating JS Functions in Zig](https://bun.com/docs/project/bindgen\#creating-js-functions-in-zig)
+## [Creating JS Functions in Zig](https://bun.com/docs/project/bindgen#creating-js-functions-in-zig)
 
 Given a file implementing a simple function, such as `add`
 
@@ -116,7 +117,7 @@ declare function add(a: number, b: number = 1): number;
 
 The code generator will provide `bun.gen.math.jsAdd`, which is the nativefunction implementation. To pass to JavaScript, use `bun.gen.math.createAddCallback(global)`. JS files in `src/js/` may use `$bindgenFn("math.bind.ts", "add")` to get a handle to the implementation.
 
-## [Strings](https://bun.com/docs/project/bindgen\#strings)
+## [Strings](https://bun.com/docs/project/bindgen#strings)
 
 The type for receiving strings is one of [`t.DOMString`](https://webidl.spec.whatwg.org/#idl-DOMString), [`t.ByteString`](https://webidl.spec.whatwg.org/#idl-ByteString), and [`t.USVString`](https://webidl.spec.whatwg.org/#idl-USVString). These map directly to their WebIDL counterparts, and have slightly different conversion logic. Bindgen will pass BunString to native code in all cases.
 
@@ -130,7 +131,7 @@ TLDRs from WebIDL spec:
 - USVString will not contain invalid surrogate pairs, aka text that can be represented correctly in UTF-8.
 - DOMString is the loosest but also most recommended strategy.
 
-## [Function Variants](https://bun.com/docs/project/bindgen\#function-variants)
+## [Function Variants](https://bun.com/docs/project/bindgen#function-variants)
 
 A `variants` can specify multiple variants (also known as overloads).
 
@@ -171,11 +172,11 @@ fn action2(a: bun.String) bun.String {
 
 ```
 
-## [`t.dictionary`](https://bun.com/docs/project/bindgen\#t-dictionary)
+## [`t.dictionary`](https://bun.com/docs/project/bindgen#t-dictionary)
 
 A `dictionary` is a definition for a JavaScript object, typically as a function inputs. For function outputs, it is usually a smarter idea to declare a class type to add functions and destructuring.
 
-## [Enumerations](https://bun.com/docs/project/bindgen\#enumerations)
+## [Enumerations](https://bun.com/docs/project/bindgen#enumerations)
 
 To use [WebIDL's enumeration](https://webidl.spec.whatwg.org/#idl-enums) type, use either:
 
@@ -203,17 +204,17 @@ export const fmtString = fn({
 
 WebIDL strongly encourages using kebab case for enumeration values, to be consistent with existing Web APIs.
 
-### [Deriving enums from Zig code](https://bun.com/docs/project/bindgen\#deriving-enums-from-zig-code)
+### [Deriving enums from Zig code](https://bun.com/docs/project/bindgen#deriving-enums-from-zig-code)
 
 TODO: zigEnum
 
-## [`t.oneOf`](https://bun.com/docs/project/bindgen\#t-oneof)
+## [`t.oneOf`](https://bun.com/docs/project/bindgen#t-oneof)
 
 A `oneOf` is a union between two or more types. It is represented by `union(enum)` in Zig.
 
 TODO:
 
-## [Attributes](https://bun.com/docs/project/bindgen\#attributes)
+## [Attributes](https://bun.com/docs/project/bindgen#attributes)
 
 There are set of attributes that can be chained onto `t.*` types. On all types there are:
 
@@ -225,7 +226,7 @@ When a value is optional, it is lowered to a Zig optional.
 
 Depending on the type, there are more attributes available. See the type definitions in auto-complete for more details. Note that one of the above three can only be applied, and they must be applied at the end.
 
-### [Integer Attributes](https://bun.com/docs/project/bindgen\#integer-attributes)
+### [Integer Attributes](https://bun.com/docs/project/bindgen#integer-attributes)
 
 Integer types allow customizing the overflow behavior with `clamp` or `enforceRange`
 
@@ -273,11 +274,11 @@ export const add = fn({
 
 ```
 
-## [Callbacks](https://bun.com/docs/project/bindgen\#callbacks)
+## [Callbacks](https://bun.com/docs/project/bindgen#callbacks)
 
 TODO
 
-## [Classes](https://bun.com/docs/project/bindgen\#classes)
+## [Classes](https://bun.com/docs/project/bindgen#classes)
 
 TODO
 
@@ -287,7 +288,7 @@ Building Windows](https://bun.com/docs/project/building-windows) [Next\\
 \\
 License](https://bun.com/docs/project/licensing)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/project/bindgen.md)
 
@@ -311,7 +312,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

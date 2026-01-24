@@ -1,9 +1,10 @@
 ---
 title: Workspaces – Package manager | Bun Docs
-url: 
+url:
 description: Bun's package manager supports workspaces and monorepo development workflows.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -149,7 +150,7 @@ Workspaces have a couple major benefits.
 - **Dependencies can be de-duplicated.** If `a` and `b` share a common dependency, it will be _hoisted_ to the root `node_modules` directory. This reduces redundant disk usage and minimizes "dependency hell" issues associated with having multiple versions of a package installed simultaneously.
 - **Run scripts in multiple packages.** You can use the [`--filter` flag](https://bun.com/docs/cli/filter) to easily run `package.json` scripts in multiple packages in your workspace.
 
-## [Share versions with Catalogs](https://bun.com/docs/install/workspaces\#share-versions-with-catalogs)
+## [Share versions with Catalogs](https://bun.com/docs/install/workspaces#share-versions-with-catalogs)
 
 When many packages need the same dependency versions, catalogs let you definethose versions once in the root `package.json` and reference them from yourworkspaces using the `catalog:` protocol. Updating the catalog automaticallyupdates every package that references it. See [Catalogs](https://bun.com/docs/install/catalogs) for details.
 
@@ -167,7 +168,7 @@ Isolated installs](https://bun.com/docs/install/isolated) [Next\\
 \\
 Catalogs](https://bun.com/docs/install/catalogs)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/workspaces.md)
 
@@ -191,7 +192,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -1,9 +1,10 @@
 ---
 title: Email & Password | Better Auth
-url: 
+url:
 description: Implementing email and password authentication with Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -31,7 +32,7 @@ Email and password authentication is a common method used by many applications. 
 If you prefer username-based authentication, check out the [username plugin](https://www.better-auth.com/docs/plugins/username). It extends the
 email and password authenticator with username support.
 
-## [Enable Email and Password](https://www.better-auth.com/docs/authentication/email-password\#enable-email-and-password)
+## [Enable Email and Password](https://www.better-auth.com/docs/authentication/email-password#enable-email-and-password)
 
 To enable email and password authentication, you need to set the `emailAndPassword.enabled` option to `true` in the `auth` configuration.
 
@@ -50,9 +51,9 @@ export const auth = betterAuth({
 If it's not enabled, it'll not allow you to sign in or sign up with email and
 password.
 
-## [Usage](https://www.better-auth.com/docs/authentication/email-password\#usage)
+## [Usage](https://www.better-auth.com/docs/authentication/email-password#usage)
 
-### [Sign Up](https://www.better-auth.com/docs/authentication/email-password\#sign-up)
+### [Sign Up](https://www.better-auth.com/docs/authentication/email-password#sign-up)
 
 To sign a user up, you can use the `signUp.email` function provided by the client.
 
@@ -72,13 +73,13 @@ const { data, error } = await authClient.signUp.email({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name` | The name of the user. | `string` |
-| `email` | The email address of the user. | `string` |
-| `password` | The password of the user. It should be at least 8 characters long and max 128 by default. | `string` |
-| `image?` | An optional profile image of the user. | `string` |
-| `callbackURL?` | An optional URL to redirect to after the user signs up. | `string` |
+| Prop           | Description                                                                               | Type     |
+| -------------- | ----------------------------------------------------------------------------------------- | -------- |
+| `name`         | The name of the user.                                                                     | `string` |
+| `email`        | The email address of the user.                                                            | `string` |
+| `password`     | The password of the user. It should be at least 8 characters long and max 128 by default. | `string` |
+| `image?`       | An optional profile image of the user.                                                    | `string` |
+| `callbackURL?` | An optional URL to redirect to after the user signs up.                                   | `string` |
 
 POST
 
@@ -96,17 +97,17 @@ const data = await auth.api.signUpEmail({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name` | The name of the user. | `string` |
-| `email` | The email address of the user. | `string` |
-| `password` | The password of the user. It should be at least 8 characters long and max 128 by default. | `string` |
-| `image?` | An optional profile image of the user. | `string` |
-| `callbackURL?` | An optional URL to redirect to after the user signs up. | `string` |
+| Prop           | Description                                                                               | Type     |
+| -------------- | ----------------------------------------------------------------------------------------- | -------- |
+| `name`         | The name of the user.                                                                     | `string` |
+| `email`        | The email address of the user.                                                            | `string` |
+| `password`     | The password of the user. It should be at least 8 characters long and max 128 by default. | `string` |
+| `image?`       | An optional profile image of the user.                                                    | `string` |
+| `callbackURL?` | An optional URL to redirect to after the user signs up.                                   | `string` |
 
 These are the default properties for the sign up email endpoint, however it's possible that with [additional fields](https://www.better-auth.com/docs/concepts/typescript#additional-fields) or special plugins you can pass more properties to the endpoint.
 
-### [Sign In](https://www.better-auth.com/docs/authentication/email-password\#sign-in)
+### [Sign In](https://www.better-auth.com/docs/authentication/email-password#sign-in)
 
 To sign a user in, you can use the `signIn.email` function provided by the client.
 
@@ -125,12 +126,12 @@ const { data, error } = await authClient.signIn.email({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email address of the user. | `string` |
-| `password` | The password of the user. It should be at least 8 characters long and max 128 by default. | `string` |
-| `rememberMe?` | If false, the user will be signed out when the browser is closed. (optional) (default: true) | `boolean` |
-| `callbackURL?` | An optional URL to redirect to after the user signs in. (optional) | `string` |
+| Prop           | Description                                                                                  | Type      |
+| -------------- | -------------------------------------------------------------------------------------------- | --------- |
+| `email`        | The email address of the user.                                                               | `string`  |
+| `password`     | The password of the user. It should be at least 8 characters long and max 128 by default.    | `string`  |
+| `rememberMe?`  | If false, the user will be signed out when the browser is closed. (optional) (default: true) | `boolean` |
+| `callbackURL?` | An optional URL to redirect to after the user signs in. (optional)                           | `string`  |
 
 POST
 
@@ -149,16 +150,16 @@ const data = await auth.api.signInEmail({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email address of the user. | `string` |
-| `password` | The password of the user. It should be at least 8 characters long and max 128 by default. | `string` |
-| `rememberMe?` | If false, the user will be signed out when the browser is closed. (optional) (default: true) | `boolean` |
-| `callbackURL?` | An optional URL to redirect to after the user signs in. (optional) | `string` |
+| Prop           | Description                                                                                  | Type      |
+| -------------- | -------------------------------------------------------------------------------------------- | --------- |
+| `email`        | The email address of the user.                                                               | `string`  |
+| `password`     | The password of the user. It should be at least 8 characters long and max 128 by default.    | `string`  |
+| `rememberMe?`  | If false, the user will be signed out when the browser is closed. (optional) (default: true) | `boolean` |
+| `callbackURL?` | An optional URL to redirect to after the user signs in. (optional)                           | `string`  |
 
 These are the default properties for the sign in email endpoint, however it's possible that with [additional fields](https://www.better-auth.com/docs/concepts/typescript#additional-fields) or special plugins you can pass different properties to the endpoint.
 
-### [Sign Out](https://www.better-auth.com/docs/authentication/email-password\#sign-out)
+### [Sign Out](https://www.better-auth.com/docs/authentication/email-password#sign-out)
 
 To sign a user out, you can use the `signOut` function provided by the client.
 
@@ -197,7 +198,7 @@ await authClient.signOut({
 });
 ```
 
-### [Email Verification](https://www.better-auth.com/docs/authentication/email-password\#email-verification)
+### [Email Verification](https://www.better-auth.com/docs/authentication/email-password#email-verification)
 
 To enable email verification, you need to pass a function that sends a verification email with a link. The `sendVerificationEmail` function takes a data object with the following properties:
 
@@ -230,7 +231,7 @@ On the client side you can use `sendVerificationEmail` function to send verifica
 
 Once the user clicks on the link in the email, if the token is valid, the user will be redirected to the URL provided in the `callbackURL` parameter. If the token is invalid, the user will be redirected to the URL provided in the `callbackURL` parameter with an error message in the query string `?error=invalid_token`.
 
-#### [Require Email Verification](https://www.better-auth.com/docs/authentication/email-password\#require-email-verification)
+#### [Require Email Verification](https://www.better-auth.com/docs/authentication/email-password#require-email-verification)
 
 If you enable require email verification, users must verify their email before they can log in. And every time a user tries to sign in, sendVerificationEmail is called.
 
@@ -270,7 +271,7 @@ await authClient.signIn.email(
 );
 ```
 
-#### [Triggering manually Email Verification](https://www.better-auth.com/docs/authentication/email-password\#triggering-manually-email-verification)
+#### [Triggering manually Email Verification](https://www.better-auth.com/docs/authentication/email-password#triggering-manually-email-verification)
 
 You can trigger the email verification manually by calling the `sendVerificationEmail` function.
 
@@ -281,7 +282,7 @@ await authClient.sendVerificationEmail({
 });
 ```
 
-### [Request Password Reset](https://www.better-auth.com/docs/authentication/email-password\#request-password-reset)
+### [Request Password Reset](https://www.better-auth.com/docs/authentication/email-password#request-password-reset)
 
 To allow users to reset a password first you need to provide `sendResetPassword` function to the email and password authenticator. The `sendResetPassword` function takes a data object with the following properties:
 
@@ -332,10 +333,10 @@ const { data, error } = await authClient.requestPasswordReset({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email address of the user to send a password reset email to | `string` |
-| `redirectTo?` | The URL to redirect the user to reset their password. If the token isn't valid or expired, it'll be redirected with a query parameter `?error=INVALID_TOKEN`. If the token is valid, it'll be redirected with a query parameter \`?token=VALID\_TOKEN | `string` |
+| Prop          | Description                                                                                                                                                                                                                                          | Type     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `email`       | The email address of the user to send a password reset email to                                                                                                                                                                                      | `string` |
+| `redirectTo?` | The URL to redirect the user to reset their password. If the token isn't valid or expired, it'll be redirected with a query parameter `?error=INVALID_TOKEN`. If the token is valid, it'll be redirected with a query parameter \`?token=VALID_TOKEN | `string` |
 
 POST
 
@@ -350,10 +351,10 @@ const data = await auth.api.requestPasswordReset({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email address of the user to send a password reset email to | `string` |
-| `redirectTo?` | The URL to redirect the user to reset their password. If the token isn't valid or expired, it'll be redirected with a query parameter `?error=INVALID_TOKEN`. If the token is valid, it'll be redirected with a query parameter \`?token=VALID\_TOKEN | `string` |
+| Prop          | Description                                                                                                                                                                                                                                          | Type     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `email`       | The email address of the user to send a password reset email to                                                                                                                                                                                      | `string` |
+| `redirectTo?` | The URL to redirect the user to reset their password. If the token isn't valid or expired, it'll be redirected with a query parameter `?error=INVALID_TOKEN`. If the token is valid, it'll be redirected with a query parameter \`?token=VALID_TOKEN | `string` |
 
 When a user clicks on the link in the email, they will be redirected to the reset password page. You can add the reset password page to your app. Then you can use `resetPassword` function to reset the password. It takes an object with the following properties:
 
@@ -387,10 +388,10 @@ const { data, error } = await authClient.resetPassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password to set | `string` |
-| `token` | The token to reset the password | `string` |
+| Prop          | Description                     | Type     |
+| ------------- | ------------------------------- | -------- |
+| `newPassword` | The new password to set         | `string` |
+| `token`       | The token to reset the password | `string` |
 
 POST
 
@@ -411,12 +412,12 @@ const data = await auth.api.resetPassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password to set | `string` |
-| `token` | The token to reset the password | `string` |
+| Prop          | Description                     | Type     |
+| ------------- | ------------------------------- | -------- |
+| `newPassword` | The new password to set         | `string` |
+| `token`       | The token to reset the password | `string` |
 
-### [Update password](https://www.better-auth.com/docs/authentication/email-password\#update-password)
+### [Update password](https://www.better-auth.com/docs/authentication/email-password#update-password)
 
 A user's password isn't stored in the user table. Instead, it's stored in the account table. To change the password of a user, you can use one of the following approaches:
 
@@ -434,10 +435,10 @@ const { data, error } = await authClient.changePassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password to set | `string` |
-| `currentPassword` | The current user password | `string` |
+| Prop                   | Description                                                                   | Type      |
+| ---------------------- | ----------------------------------------------------------------------------- | --------- |
+| `newPassword`          | The new password to set                                                       | `string`  |
+| `currentPassword`      | The current user password                                                     | `string`  |
 | `revokeOtherSessions?` | When set to true, all other active sessions for this user will be invalidated | `boolean` |
 
 POST
@@ -456,13 +457,13 @@ const data = await auth.api.changePassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password to set | `string` |
-| `currentPassword` | The current user password | `string` |
+| Prop                   | Description                                                                   | Type      |
+| ---------------------- | ----------------------------------------------------------------------------- | --------- |
+| `newPassword`          | The new password to set                                                       | `string`  |
+| `currentPassword`      | The current user password                                                     | `string`  |
 | `revokeOtherSessions?` | When set to true, all other active sessions for this user will be invalidated | `boolean` |
 
-### [Configuration](https://www.better-auth.com/docs/authentication/email-password\#configuration)
+### [Configuration](https://www.better-auth.com/docs/authentication/email-password#configuration)
 
 **Password**
 
@@ -489,16 +490,16 @@ export const auth = betterAuth({
 })
 ```
 
-| Prop | Type | Default |
-| --- | --- | --- |
-| `enabled?` | `boolean` | `false` |
-| `disableSignUp?` | `boolean` | `false` |
-| `minPasswordLength?` | `number` | `8` |
-| `maxPasswordLength?` | `number` | `128` |
-| `sendResetPassword?` | `function` | - |
-| `onPasswordReset?` | `function` | - |
-| `resetPasswordTokenExpiresIn?` | `number` | `3600` |
-| `password?` | `object` | - |
+| Prop                           | Type       | Default |
+| ------------------------------ | ---------- | ------- |
+| `enabled?`                     | `boolean`  | `false` |
+| `disableSignUp?`               | `boolean`  | `false` |
+| `minPasswordLength?`           | `number`   | `8`     |
+| `maxPasswordLength?`           | `number`   | `128`   |
+| `sendResetPassword?`           | `function` | -       |
+| `onPasswordReset?`             | `function` | -       |
+| `resetPasswordTokenExpiresIn?` | `number`   | `3600`  |
+| `password?`                    | `object`   | -       |
 
 [Edit on GitHub](https://github.com/better-auth/better-auth/blob/main/docs/content/docs/authentication/email-password.mdx)
 

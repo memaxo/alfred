@@ -1,8 +1,9 @@
 ---
 title: Get started with Laminar evaluations - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/quickstart#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -39,10 +40,10 @@ This guide will walk you through running your first evaluation using Laminar’s
 - **Executors** \- Functions that process inputs and produce outputs, such as prompt templates, LLM calls, or production logic
 - **Evaluators** \- Functions that assess outputs against targets or quality criteria, producing numeric scores
 - **Datasets** \- Collections of datapoints (test cases) with 3 key elements:
-
   - `data` \- Required JSON input sent to the executor
   - `target` \- Optional reference data sent to the evaluator, typically containing expected outputs
   - `metadata` \- Optional metadata. This can be used to filter evaluation results in the UI after the evaluation is run.
+
 - **Visualization** \- Tools to track performance trends and detect regressions over time
 - **Tracing** \- Automatic recording of execution flow and model invocations
 
@@ -67,7 +68,7 @@ Copy
 
 **Evaluation Groups** group related evaluations to assess one feature or component, with results aggregated for comparison.
 
-## [​](https://docs.lmnr.ai/evaluations/quickstart\#evaluation-lifecycle)  Evaluation Lifecycle
+## [​](https://docs.lmnr.ai/evaluations/quickstart#evaluation-lifecycle) Evaluation Lifecycle
 
 For each datapoint in a dataset:
 
@@ -79,7 +80,7 @@ For each datapoint in a dataset:
 
 This approach helps you continuously measure your AI system’s performance as you make changes, showing the impact of model updates, prompt revisions, and code changes.
 
-### [​](https://docs.lmnr.ai/evaluations/quickstart\#evaluation-function-types)  Evaluation function types
+### [​](https://docs.lmnr.ai/evaluations/quickstart#evaluation-function-types) Evaluation function types
 
 Each executor takes in the `data` as it is defined in the datapoints.
 Evaluator accepts the output of the executor as its first argument,
@@ -109,20 +110,19 @@ evaluate<D, T, O>(
 
 See full reference [here](https://docs.lmnr.ai/evaluations/reference#typescript-evaluation-types).
 
-## [​](https://docs.lmnr.ai/evaluations/quickstart\#create-your-first-evaluation)  Create your first evaluation
+## [​](https://docs.lmnr.ai/evaluations/quickstart#create-your-first-evaluation) Create your first evaluation
 
-### [​](https://docs.lmnr.ai/evaluations/quickstart\#prerequisites)  Prerequisites
+### [​](https://docs.lmnr.ai/evaluations/quickstart#prerequisites) Prerequisites
 
 To get the project API key, go to the Laminar dashboard, click the project settings,
 and generate a project API key. This is available both in the cloud and in the self-hosted version of Laminar.Specify the key at `Laminar` initialization. If not specified,
 Laminar will look for the key in the `LMNR_PROJECT_API_KEY` environment variable.
 
-### [​](https://docs.lmnr.ai/evaluations/quickstart\#create-an-evaluation-file)  Create an evaluation file
+### [​](https://docs.lmnr.ai/evaluations/quickstart#create-an-evaluation-file) Create an evaluation file
 
 - TypeScript
 
 - Python
-
 
 Create a file named `my-first-evaluation.ts` and add the following code:
 
@@ -180,18 +180,17 @@ evaluate({
 
 It is important to pass the `config` object with `instrumentModules` to `evaluate` to ensure that the OpenAI client and any other instrumented modules are instrumented.
 
-### [​](https://docs.lmnr.ai/evaluations/quickstart\#run-the-evaluation)  Run the evaluation
+### [​](https://docs.lmnr.ai/evaluations/quickstart#run-the-evaluation) Run the evaluation
 
 You can run evaluations in two ways: using the `lmnr eval` CLI or directly executing the evaluation file.
 
-#### [​](https://docs.lmnr.ai/evaluations/quickstart\#using-the-cli)  Using the CLI
+#### [​](https://docs.lmnr.ai/evaluations/quickstart#using-the-cli) Using the CLI
 
 The Laminar CLI automatically detects top-level `evaluate` function calls in your files - you don’t need to wrap them in a `main` function or any special structure.
 
 - TypeScript
 
 - Python
-
 
 Copy
 
@@ -223,14 +222,13 @@ npx lmnr eval
 
 ```
 
-#### [​](https://docs.lmnr.ai/evaluations/quickstart\#running-as-a-standalone-script)  Running as a standalone script
+#### [​](https://docs.lmnr.ai/evaluations/quickstart#running-as-a-standalone-script) Running as a standalone script
 
 You can also import and call `evaluate` directly from your application code:
 
 - TypeScript
 
 - Python
-
 
 Copy
 
@@ -247,20 +245,19 @@ Evaluator functions must return either a single numeric score or a JSON object w
 
 No need to initialize Laminar - `evaluate` automatically initializes Laminar behind the scenes. All instrumented function calls and model invocations are traced without any additional setup.
 
-### [​](https://docs.lmnr.ai/evaluations/quickstart\#view-evaluation-results)  View evaluation results
+### [​](https://docs.lmnr.ai/evaluations/quickstart#view-evaluation-results) View evaluation results
 
 When you run an evaluation from the CLI, Laminar will output the link to the dashboard where you can view the evaluation results.Laminar stores every evaluation result. A run for every datapoint is represented as a trace. You can view the results and corresponding traces in the evaluations page.
 
 ![Example evaluation](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/evaluations/simple-eval-example.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=1864f7eda839ee6b67b97a3ab4643313)
 
-## [​](https://docs.lmnr.ai/evaluations/quickstart\#tracking-evaluation-progress)  Tracking evaluation progress
+## [​](https://docs.lmnr.ai/evaluations/quickstart#tracking-evaluation-progress) Tracking evaluation progress
 
 To track the score progression over time or compare evaluations side-by-side, you need to group them together. This can be achieved by passing the `groupName` parameter to the `evaluate` function.
 
 - TypeScript
 
 - Python
-
 
 Copy
 

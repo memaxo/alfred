@@ -21,6 +21,7 @@ Planners hold broader context than workers but not the entire project. They read
 - **Worker completion artifacts** — Status of spawned work
 
 Planners don't hold:
+
 - Full message history from all prior conversations
 - Implementation details of worker execution
 - Context from unrelated tasks
@@ -57,7 +58,7 @@ Task: Implement user authentication
 
 Subtasks:
 1. Add auth schema to database
-2. Create auth API routes  
+2. Create auth API routes
 3. Add login UI component
 4. Write auth tests
 

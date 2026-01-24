@@ -5,12 +5,14 @@
 ## Executive Summary
 
 This execution plan standardizes ALFRED on AgentFS for agent filesystem isolation, replacing the deprecated Poof system. AgentFS provides SQLite-based agent state storage with:
+
 - **Audit trails**: Every file operation and tool call recorded in queryable SQLite
 - **Reproducibility**: Snapshot entire agent state with `cp agent.db snapshot.db`
 - **Learning integration**: Tool call history feeds directly into ALFRED's learning system
 - **Copy-on-write**: Overlay filesystem over host directories without Linux kernel dependencies
 
 **Key Design Decisions:**
+
 - AgentFS as the standard agent filesystem abstraction (replacing poof)
 - **Hybrid architecture: Docker containers for process isolation + AgentFS inside for state management**
 - Tool call audit trail integrated with learning/knowledge systems
@@ -18,6 +20,7 @@ This execution plan standardizes ALFRED on AgentFS for agent filesystem isolatio
 - Full backward compatibility with existing container workspaces
 
 **Architecture:**
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Docker Container                                   │
@@ -39,6 +42,7 @@ Docker provides: process isolation, resource limits, network policy, seccomp.
 AgentFS provides: audit trail, queryable state, checkpoint/restore, learning data.
 
 **Scope:**
+
 - Remove 48 poof-related files
 - Create AgentFSWorkspace implementing Workspace interface
 - Migrate database schema (codex_runs table)
@@ -51,6 +55,7 @@ AgentFS provides: audit trail, queryable state, checkpoint/restore, learning dat
 Use checkboxes to track granular implementation steps. Update this section at every stopping point.
 
 ### Phase 1: Core AgentFS Package (Week 1)
+
 - [x] Add `agentfs-sdk@^0.3.1` to `packages/agent/package.json`
 - [x] Create `packages/agent/src/agentfs/types.ts` - TypeScript types for AgentFS
 - [x] Create `packages/agent/src/agentfs/wrapper.ts` - ALFRED-specific AgentFS wrapper
@@ -65,6 +70,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Create `packages/agent/src/agentfs/learning-bridge.ts` - Learning system integration
 
 ### Phase 2: Remove Poof System (Week 1)
+
 - [x] Delete `packages/agent/src/spawn/poof.ts`
 - [x] Delete `packages/agent/src/spawn/poof.test.ts`
 - [x] Delete `packages/agent/src/spawn/isolated.ts`
@@ -85,6 +91,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Update `packages/runtime/AGENTS.md` - Replace with agentfs patterns
 
 ### Phase 3: Database Schema Migration (Week 2)
+
 - [x] Create migration `packages/db/src/migrations/0067_agentfs.sql`
 - [x] Update `packages/db/src/schema/codex.ts` - Add agentfs columns (poof columns deprecated but kept)
 - [x] Update `packages/db/src/repo/codex-run.ts` - Add agentfsDbPath and agentfsRunId parameters
@@ -93,6 +100,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Verify backward compatibility with existing codex_runs data (null agentfs fields covered by tests)
 
 ### Phase 4: Codex CLI Integration (Week 2)
+
 - [x] Update `packages/agent/src/orchestrator/tool/codex/record.ts` - Add agentfs fields
 - [x] Update `packages/agent/src/orchestrator/tool/codex/definition.ts` - Add agentfsDbPath to schema
 - [x] Update `packages/agent/src/orchestrator/tool/codex/exec.ts` - Use agentfs environment
@@ -101,6 +109,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Update `packages/agent/test/codex-record.test.ts`
 
 ### Phase 5: Runtime/Orchestrator Integration (Week 2)
+
 - [x] Update `packages/runtime/src/orchestrator/agent.ts` - Replace poof with agentfs
 - [x] Update `packages/runtime/src/orchestrator/merge.ts` - Remove poof handling
 - [x] Update `packages/agent/src/orchestrator/multi/spawn.ts` - Update AgentSpec type (agentfsOverlay)
@@ -108,6 +117,7 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [x] Write integration tests for runtime with agentfs workspaces
 
 ### Phase 6: Metrics & Observability (Week 3)
+
 - [x] Create `packages/agent/src/agentfs/metrics.ts` - AgentFS Prometheus metrics (10 metrics)
 - [x] Removed poof metrics (directory deleted)
 - [x] Update `packages/metrics/src/default.ts` - Register agentfs metrics (auto-registered at module load)
@@ -116,12 +126,14 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [ ] Create Grafana dashboard panels for agentfs metrics (future)
 
 ### Phase 7: Learning System Integration (Week 3)
+
 - [x] Create `packages/agent/src/agentfs/learning-bridge.ts` - Tool call → Learning bridge
 - [x] Update `packages/learning/src/mistake_ledger.ts` - Accept agentfs entries (recordAgentFSMistake, processAgentFSForLearning)
 - [x] Wire agentfs audit trail to knowledge graph (via processAgentFSForLearning returning KnowledgeInsight[])
 - [x] Write tests for learning integration (packages/learning/test/agentfs-integration.test.ts - 10 pass)
 
 ### Phase 8: TUI Integration (Week 3)
+
 - [x] Create `packages/tui/src/tui/panels/agentfs/index.ts` - Main agentfs panel
 - [x] Create `packages/tui/src/tui/panels/agentfs/browser.ts` - File browser
 - [x] Create `packages/tui/src/tui/panels/agentfs/toolcalls.ts` - Tool call history
@@ -133,10 +145,12 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 - [ ] Write TUI panel tests (add when test infrastructure is ready)
 
 ### Phase 9: Policy Integration (Week 4)
+
 - [x] Create `packages/agent/src/agentfs/policy-audit.ts` - Policy decision logging
 - [x] Export policy audit functions from agentfs index
 
 ### Phase 10: Documentation & Cleanup (Week 4)
+
 - [x] Update `docs/guides/developer-onboarding.md` - Remove poof references
 - [x] Update `docs/architecture/bun-feature-flags.md` - Remove poof example
 - [x] Create `docs/guides/agentfs-usage.md` - Comprehensive AgentFS usage guide
@@ -147,9 +161,11 @@ Use checkboxes to track granular implementation steps. Update this section at ev
 ## Remaining Work (Out of Scope / Future)
 
 ### Phase 6: Metrics & Observability (Deferred)
+
 - [ ] Create Grafana dashboard panels for agentfs metrics (add when metrics infrastructure is ready)
 
 ### Phase 8: TUI Integration Tests (Deferred)
+
 - [ ] Write TUI panel tests (add when test infrastructure is ready)
 
 ---
@@ -282,9 +298,9 @@ CREATE TABLE fs_whiteout (
 ```typescript
 // packages/agent/src/environment/agentfs.ts
 
-import { AgentFS } from 'agentfs-sdk';
-import type { ExecOptions, ExecResult, Workspace } from './types';
-import type { ProjectConfig } from '../utils/project-detector';
+import { AgentFS } from "agentfs-sdk";
+import type { ExecOptions, ExecResult, Workspace } from "./types";
+import type { ProjectConfig } from "../utils/project-detector";
 
 export interface AgentFSWorkspaceConfig {
   /** Enable overlay mode over repoBase (copy-on-write) */
@@ -294,7 +310,7 @@ export interface AgentFSWorkspaceConfig {
 }
 
 export class AgentFSWorkspace implements Workspace {
-  readonly kind = 'agentfs' as const;
+  readonly kind = "agentfs" as const;
   private agent: AgentFS | null = null;
   private _dbPath: string;
 
@@ -345,8 +361,8 @@ export class AgentFSWorkspace implements Workspace {
   }
 
   async checkpoint(label: string): Promise<void> {
-    if (!this.agent) throw new Error('agentfs_not_initialized');
-    
+    if (!this.agent) throw new Error("agentfs_not_initialized");
+
     // SQLite VACUUM INTO for atomic snapshot
     const snapshotPath = `${this._dbPath}.checkpoint-${label}`;
     const db = this.agent.getDatabase();
@@ -354,14 +370,14 @@ export class AgentFSWorkspace implements Workspace {
   }
 
   async restore(label: string): Promise<void> {
-    if (!this.agent) throw new Error('agentfs_not_initialized');
-    
+    if (!this.agent) throw new Error("agentfs_not_initialized");
+
     const snapshotPath = `${this._dbPath}.checkpoint-${label}`;
     await this.agent.close();
-    
+
     // Replace current db with snapshot
     await copyFile(snapshotPath, this._dbPath);
-    
+
     this.agent = await AgentFS.open({
       id: this.id,
       path: this._dbPath,
@@ -379,7 +395,7 @@ export class AgentFSWorkspace implements Workspace {
   }
 
   // AgentFS-specific methods
-  
+
   async recordToolCall(
     name: string,
     startedAt: number,
@@ -388,27 +404,34 @@ export class AgentFSWorkspace implements Workspace {
     result?: unknown,
     error?: string
   ): Promise<number> {
-    if (!this.agent) throw new Error('agentfs_not_initialized');
-    return this.agent.tools.record(name, startedAt, completedAt, parameters, result, error);
+    if (!this.agent) throw new Error("agentfs_not_initialized");
+    return this.agent.tools.record(
+      name,
+      startedAt,
+      completedAt,
+      parameters,
+      result,
+      error
+    );
   }
 
   async getToolCalls(since?: number, limit?: number): Promise<ToolCall[]> {
-    if (!this.agent) throw new Error('agentfs_not_initialized');
+    if (!this.agent) throw new Error("agentfs_not_initialized");
     return this.agent.tools.getRecent(since ?? 0, limit);
   }
 
   async getToolStats(): Promise<ToolCallStats[]> {
-    if (!this.agent) throw new Error('agentfs_not_initialized');
+    if (!this.agent) throw new Error("agentfs_not_initialized");
     return this.agent.tools.getStats();
   }
 
   async setKV(key: string, value: unknown): Promise<void> {
-    if (!this.agent) throw new Error('agentfs_not_initialized');
+    if (!this.agent) throw new Error("agentfs_not_initialized");
     await this.agent.kv.set(key, value);
   }
 
   async getKV<T>(key: string): Promise<T | undefined> {
-    if (!this.agent) throw new Error('agentfs_not_initialized');
+    if (!this.agent) throw new Error("agentfs_not_initialized");
     return this.agent.kv.get(key) as T | undefined;
   }
 }
@@ -438,48 +461,48 @@ COMMENT ON COLUMN codex_runs.poof_profile IS 'DEPRECATED: Removed in agentfs mig
 ```typescript
 // packages/agent/src/agentfs/metrics.ts
 
-import { metricsRegistry } from '@alfred/metrics/registry';
-import client from 'prom-client';
+import { metricsRegistry } from "@alfred/metrics/registry";
+import client from "prom-client";
 
 export const agentfsExecutionsTotal = new client.Counter({
-  name: 'agentfs_executions_total',
-  help: 'Count of AgentFS workspace executions.',
-  labelNames: ['status', 'overlay'] as const,
+  name: "agentfs_executions_total",
+  help: "Count of AgentFS workspace executions.",
+  labelNames: ["status", "overlay"] as const,
   registers: [metricsRegistry],
 });
 
 export const agentfsToolCallsTotal = new client.Counter({
-  name: 'agentfs_tool_calls_total',
-  help: 'Count of tool calls recorded to AgentFS.',
-  labelNames: ['tool_name', 'status'] as const,
+  name: "agentfs_tool_calls_total",
+  help: "Count of tool calls recorded to AgentFS.",
+  labelNames: ["tool_name", "status"] as const,
   registers: [metricsRegistry],
 });
 
 export const agentfsDbSizeBytes = new client.Gauge({
-  name: 'agentfs_db_size_bytes',
-  help: 'Size of AgentFS database files in bytes.',
-  labelNames: ['run_id'] as const,
+  name: "agentfs_db_size_bytes",
+  help: "Size of AgentFS database files in bytes.",
+  labelNames: ["run_id"] as const,
   registers: [metricsRegistry],
 });
 
 export const agentfsFilesystemOpsTotal = new client.Counter({
-  name: 'agentfs_filesystem_ops_total',
-  help: 'Count of AgentFS filesystem operations.',
-  labelNames: ['operation'] as const, // read, write, delete, mkdir, readdir
+  name: "agentfs_filesystem_ops_total",
+  help: "Count of AgentFS filesystem operations.",
+  labelNames: ["operation"] as const, // read, write, delete, mkdir, readdir
   registers: [metricsRegistry],
 });
 
 export const agentfsCheckpointsTotal = new client.Counter({
-  name: 'agentfs_checkpoints_total',
-  help: 'Count of AgentFS checkpoint operations.',
-  labelNames: ['operation'] as const, // create, restore
+  name: "agentfs_checkpoints_total",
+  help: "Count of AgentFS checkpoint operations.",
+  labelNames: ["operation"] as const, // create, restore
   registers: [metricsRegistry],
 });
 
 export const agentfsExecutionDurationSeconds = new client.Histogram({
-  name: 'agentfs_execution_duration_seconds',
-  help: 'Duration of AgentFS command executions.',
-  labelNames: ['command_type'] as const,
+  name: "agentfs_execution_duration_seconds",
+  help: "Duration of AgentFS command executions.",
+  labelNames: ["command_type"] as const,
   buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300],
   registers: [metricsRegistry],
 });
@@ -490,9 +513,9 @@ export const agentfsExecutionDurationSeconds = new client.Histogram({
 ```typescript
 // packages/agent/src/agentfs/learning-bridge.ts
 
-import { AgentFS } from 'agentfs-sdk';
-import type { MistakeEntry } from '@alfred/learning';
-import type { KnowledgeInsight } from '@alfred/type/knowledge';
+import { AgentFS } from "agentfs-sdk";
+import type { MistakeEntry } from "@alfred/learning";
+import type { KnowledgeInsight } from "@alfred/type/knowledge";
 
 export interface ToolCallPattern {
   toolName: string;
@@ -510,18 +533,18 @@ export async function extractToolCallPatterns(
   dbPath: string
 ): Promise<ToolCallPattern[]> {
   const agent = await AgentFS.open({ path: dbPath });
-  
+
   try {
     const stats = await agent.tools.getStats();
     const patterns: ToolCallPattern[] = [];
-    
+
     for (const stat of stats) {
       const calls = await agent.tools.getByName(stat.name);
-      
+
       // Analyze parameter frequency
       const paramCounts: Record<string, number> = {};
       const errors: string[] = [];
-      
+
       for (const call of calls) {
         if (call.parameters) {
           for (const key of Object.keys(call.parameters)) {
@@ -532,7 +555,7 @@ export async function extractToolCallPatterns(
           errors.push(call.error);
         }
       }
-      
+
       patterns.push({
         toolName: stat.name,
         totalCalls: stat.total_calls,
@@ -542,7 +565,7 @@ export async function extractToolCallPatterns(
         commonErrors: [...new Set(errors)].slice(0, 5), // Top 5 unique errors
       });
     }
-    
+
     return patterns;
   } finally {
     await agent.close();
@@ -557,11 +580,11 @@ export async function extractMistakes(
   since?: number
 ): Promise<MistakeEntry[]> {
   const agent = await AgentFS.open({ path: dbPath });
-  
+
   try {
     const calls = await agent.tools.getRecent(since ?? 0);
     const mistakes: MistakeEntry[] = [];
-    
+
     for (const call of calls) {
       if (call.error) {
         mistakes.push({
@@ -573,12 +596,12 @@ export async function extractMistakes(
             duration_ms: call.duration_ms,
             timestamp: call.started_at,
           },
-          severity: call.duration_ms > 30000 ? 'high' : 'medium',
+          severity: call.duration_ms > 30000 ? "high" : "medium",
           timestamp: new Date(call.started_at * 1000).toISOString(),
         });
       }
     }
-    
+
     return mistakes;
   } finally {
     await agent.close();
@@ -592,7 +615,7 @@ export function generateInsights(
   patterns: ToolCallPattern[]
 ): KnowledgeInsight[] {
   const insights: KnowledgeInsight[] = [];
-  
+
   for (const pattern of patterns) {
     // Low success rate insight
     if (pattern.successRate < 0.7 && pattern.totalCalls >= 5) {
@@ -600,23 +623,31 @@ export function generateInsights(
         id: `insight-tool-${pattern.toolName}-${Date.now().toString(36)}`,
         derived: [],
         conclusion: `Tool ${pattern.toolName} has low success rate (${(pattern.successRate * 100).toFixed(1)}%)`,
-        confidence: { value: 0.8, source: 'statistical', basis: 'tool_call_analysis' },
+        confidence: {
+          value: 0.8,
+          source: "statistical",
+          basis: "tool_call_analysis",
+        },
         rationale: `Based on ${pattern.totalCalls} calls with ${pattern.commonErrors.length} unique error types.`,
       });
     }
-    
+
     // Slow execution insight
     if (pattern.avgDurationMs > 10000) {
       insights.push({
         id: `insight-perf-${pattern.toolName}-${Date.now().toString(36)}`,
         derived: [],
         conclusion: `Tool ${pattern.toolName} is slow (avg ${(pattern.avgDurationMs / 1000).toFixed(1)}s)`,
-        confidence: { value: 0.9, source: 'statistical', basis: 'performance_analysis' },
+        confidence: {
+          value: 0.9,
+          source: "statistical",
+          basis: "performance_analysis",
+        },
         rationale: `Average execution time exceeds 10 second threshold.`,
       });
     }
   }
-  
+
   return insights;
 }
 ```
@@ -626,36 +657,38 @@ export function generateInsights(
 ```typescript
 // packages/tui/src/tui/panels/agentfs/index.ts
 
-import { BasePanel } from '../base';
-import { AgentFSBrowserPanel } from './browser';
-import { AgentFSToolCallsPanel } from './toolcalls';
-import { AgentFSKVStorePanel } from './kvstore';
+import { BasePanel } from "../base";
+import { AgentFSBrowserPanel } from "./browser";
+import { AgentFSToolCallsPanel } from "./toolcalls";
+import { AgentFSKVStorePanel } from "./kvstore";
 
 export class AgentFSPanel extends BasePanel {
-  id = 'agentfs';
-  label = 'AgentFS';
-  
+  id = "agentfs";
+  label = "AgentFS";
+
   private subPanels = {
     browser: new AgentFSBrowserPanel(),
     toolcalls: new AgentFSToolCallsPanel(),
     kvstore: new AgentFSKVStorePanel(),
   };
-  
-  private activeSubPanel: keyof typeof this.subPanels = 'browser';
-  
+
+  private activeSubPanel: keyof typeof this.subPanels = "browser";
+
   renderContent(): string {
     const tabs = Object.keys(this.subPanels)
-      .map(key => key === this.activeSubPanel ? `[${key}]` : ` ${key} `)
-      .join(' ');
-    
+      .map((key) => (key === this.activeSubPanel ? `[${key}]` : ` ${key} `))
+      .join(" ");
+
     const content = this.subPanels[this.activeSubPanel].renderContent();
-    
-    return `${tabs}\n${'─'.repeat(40)}\n${content}`;
+
+    return `${tabs}\n${"─".repeat(40)}\n${content}`;
   }
-  
+
   handleKey(key: string): boolean {
-    if (key === 'tab') {
-      const keys = Object.keys(this.subPanels) as (keyof typeof this.subPanels)[];
+    if (key === "tab") {
+      const keys = Object.keys(
+        this.subPanels
+      ) as (keyof typeof this.subPanels)[];
       const idx = keys.indexOf(this.activeSubPanel);
       this.activeSubPanel = keys[(idx + 1) % keys.length];
       return true;
@@ -729,16 +762,19 @@ README.md
 ## Testing Strategy
 
 ### Unit Tests
+
 - `packages/agent/test/agentfs-workspace.test.ts` - AgentFSWorkspace class
 - `packages/agent/test/agentfs-learning-bridge.test.ts` - Learning bridge functions
 - `packages/tui/test/panels/agentfs.test.ts` - TUI panel rendering
 
 ### Integration Tests
+
 - `packages/agent/test/agentfs-integration.test.ts` - Full workspace lifecycle
 - `packages/agent/test/agentfs-container-integration.test.ts` - Docker + AgentFS hybrid
 - `packages/runtime/test/agentfs-runtime.test.ts` - Runtime orchestration with agentfs
 
 ### Migration Tests
+
 - Verify existing codex_runs data remains queryable
 - Verify poof_upper_dir/poof_profile columns preserved for historical runs
 - Verify new runs use agentfs_db_path column
@@ -747,15 +783,15 @@ README.md
 
 ## Performance Budgets
 
-| Operation | Target | Rationale |
-|-----------|--------|-----------|
-| AgentFS file read | <5ms | SQLite + FUSE overhead vs direct fs |
-| AgentFS file write | <10ms | Write + journal sync |
-| Checkpoint create | <100ms | VACUUM INTO is atomic |
-| Checkpoint restore | <200ms | File copy + reopen |
-| Tool call record | <1ms | Simple INSERT |
-| Tool call query | <10ms | Indexed queries |
-| DB size per run | <100MB | Typical agent produces ~10k operations |
+| Operation          | Target | Rationale                              |
+| ------------------ | ------ | -------------------------------------- |
+| AgentFS file read  | <5ms   | SQLite + FUSE overhead vs direct fs    |
+| AgentFS file write | <10ms  | Write + journal sync                   |
+| Checkpoint create  | <100ms | VACUUM INTO is atomic                  |
+| Checkpoint restore | <200ms | File copy + reopen                     |
+| Tool call record   | <1ms   | Simple INSERT                          |
+| Tool call query    | <10ms  | Indexed queries                        |
+| DB size per run    | <100MB | Typical agent produces ~10k operations |
 
 ---
 
@@ -772,12 +808,15 @@ README.md
 ## Outcomes & Retrospective
 
 ### Completion Date
+
 2025-12-29
 
 ### Summary
+
 Successfully completed AgentFS standardization with removal of Poof system. Core AgentFS Workspace implementation, database migration, learning bridge, metrics, API endpoints, learning integration, and TUI panels are all functional. ~77KB of poof-related code removed across 12 files.
 
 ### Completed Phases
+
 1. **Phase 1 (Core AgentFS Package)**: ✅ Complete - types, wrapper, metrics, learning-bridge, workspace class
 2. **Phase 2 (Remove Poof System)**: ✅ Complete - 12 poof files deleted, feature flags removed
 3. **Phase 3 (Database Schema)**: ✅ Complete - migration 0067 created, schema updated
@@ -790,11 +829,13 @@ Successfully completed AgentFS standardization with removal of Poof system. Core
 10. **Phase 10 (Documentation & Cleanup)**: ✅ Complete - docs updated, test mocks fixed
 
 ### Deferred Items (Future Work)
+
 - Grafana dashboard panels (add when metrics infrastructure is ready)
 - End-to-end runtime integration tests (comprehensive workflow tests)
 - TUI panel tests (add when test infrastructure is ready)
 
 ### Metrics to Track
+
 - agentfs_executions_total - Executing
 - agentfs_tool_calls_total - Recording
 - agentfs_db_size_bytes - Database growth monitoring
@@ -807,6 +848,7 @@ Successfully completed AgentFS standardization with removal of Poof system. Core
 - agentfs_learning_extractions_total - Learning bridge activity
 
 ### Success Criteria
+
 - ✅ All poof files deleted (12 files)
 - ✅ Unit tests passing (69 tests: 29 workspace + 30 learning-bridge + 10 learning-integration)
 - ✅ AgentFS workspace functional (AgentFSWorkspace class with Docker integration)
@@ -819,6 +861,7 @@ Successfully completed AgentFS standardization with removal of Poof system. Core
 - ⏳ Grafana dashboard panels deferred (metrics infrastructure ready when needed)
 
 ### Key Achievements
+
 1. **Code Reduction**: Removed ~77KB of poof-related code across 12 files
 2. **Architecture**: Hybrid Docker + AgentFS isolation with audit trails
 3. **Learning Integration**: Tool call pattern extraction feeds learning system via mistake_ledger with processAgentFSForLearning
@@ -829,11 +872,13 @@ Successfully completed AgentFS standardization with removal of Poof system. Core
 8. **TUI Panels**: 4 AgentFS panels (main, browser, toolcalls, kvstore) with subscription support
 
 ### Blockers & Challenges
+
 - agentfs-sdk npm package not fully published - tests skip gracefully
 - TUI integration deferred due to complexity and lower priority
 - Some runtime integration tests deferred due to complexity of Docker orchestration
 
 ### Lessons Learned
+
 1. **Graceful Degradation**: SDK unavailability handling works well with test skips
 2. **Legacy Support**: Keeping poof columns but marking deprecated preserves historical data
 3. **Type Safety**: Learning bridge types integrate well with ALFRED's learning system

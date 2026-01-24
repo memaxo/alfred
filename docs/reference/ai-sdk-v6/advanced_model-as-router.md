@@ -16,55 +16,54 @@ Users expect their experience using your application to be predictable, so non-d
 
 When language models are provided with a set of function definitions and instructed to execute any of them based on user query, they do either one of the following things:
 
-  * Execute a function that is most relevant to the user query.
-  * Not execute any function if the user query is out of bounds of the set of functions available to them.
+- Execute a function that is most relevant to the user query.
+- Not execute any function if the user query is out of bounds of the set of functions available to them.
 
 app/actions.ts
-    
-    
+
     const sendMessage = (prompt: string) =>
-    
+
       generateText({
-    
+
         model: 'gpt-3.5-turbo',
-    
+
         system: 'you are a friendly weather assistant!',
-    
+
         prompt,
-    
+
         tools: {
-    
+
           getWeather: {
-    
+
             description: 'Get the weather in a location',
-    
+
             parameters: z.object({
-    
+
               location: z.string().describe('The location to get the weather for'),
-    
+
             }),
-    
+
             execute: async ({ location }: { location: string }) => ({
-    
+
               location,
-    
+
               temperature: 72 + Math.floor(Math.random() * 21) - 10,
-    
+
             }),
-    
+
           },
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
     sendMessage('What is the weather in San Francisco?'); // getWeather is called
-    
+
     sendMessage('What is the weather in New York?'); // getWeather is called
-    
+
     sendMessage('What events are happening in London?'); // No function is called
 
 This way, it is possible to ensure that the generations result in deterministic outputs, while the choice a model makes still remains to be probabilistic.
@@ -79,19 +78,19 @@ Historically, developers had to write routing logic that connected different par
 
 In web applications today, most of the routing logic takes place in the form of routes:
 
-  * `/login` would navigate you to a page with a login form.
-  * `/user/john` would navigate you to a page with profile details about John.
-  * `/api/events?limit=5` would display the five most recent events from an events database.
+- `/login` would navigate you to a page with a login form.
+- `/user/john` would navigate you to a page with profile details about John.
+- `/api/events?limit=5` would display the five most recent events from an events database.
 
 While routes help you build web applications that connect different parts of an application into a seamless user experience, it can also be a burden to manage them as the complexity of applications grow.
 
 Next.js has helped reduce complexity in developing with routes by introducing:
 
-  * File-based routing system
-  * Dynamic routing
-  * API routes
-  * Middleware
-  * App router, and so on...
+- File-based routing system
+- Dynamic routing
+- API routes
+- Middleware
+- App router, and so on...
 
 With language models becoming better at reasoning, we believe that there is a future where developers only write core application specific components while models take care of routing them based on the user's state in an application.
 
@@ -101,9 +100,9 @@ With generative user interfaces, the language model decides which user interface
 
 For routes like:
 
-  * `/profile/[username]`
-  * `/search?q=[query]`
-  * `/media/[id]`
+- `/profile/[username]`
+- `/search?q=[query]`
+- `/media/[id]`
 
 that have segments dependent on dynamic data, the language model can generate the correct parameters and render the user interface.
 
@@ -143,11 +142,11 @@ For actions that require a sequence of steps to be completed by navigating throu
 
 For example, when you're in a calendar application, you can ask the language model to schedule a happy hour evening with your friends. The language model will then understand your request and will perform the right sequence of tool calls to:
 
-  1. Lookup your calendar
-  2. Lookup your friends' calendars
-  3. Determine the best time for everyone
-  4. Search for nearby happy hour spots
-  5. Create an event and send out invites to your friends
+1. Lookup your calendar
+2. Lookup your friends' calendars
+3. Determine the best time for everyone
+4. Search for nearby happy hour spots
+5. Create an event and send out invites to your friends
 
 I'd like to get drinks with Max tomorrow evening after studio!
 

@@ -1,9 +1,10 @@
 ---
 title: Hono Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Hono.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Before you start, make sure you have a Better Auth instance configured. If you haven't done that yet, check out the [installation](https://www.better-auth.com/docs/installation).
 
-### [Mount the handler](https://www.better-auth.com/docs/integrations/hono\#mount-the-handler)
+### [Mount the handler](https://www.better-auth.com/docs/integrations/hono#mount-the-handler)
 
 We need to mount the handler to Hono endpoint.
 
@@ -46,7 +47,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 serve(app);
 ```
 
-### [Cors](https://www.better-auth.com/docs/integrations/hono\#cors)
+### [Cors](https://www.better-auth.com/docs/integrations/hono#cors)
 
 To configure cors, you need to use the `cors` plugin from `hono/cors`.
 
@@ -79,7 +80,7 @@ serve(app);
 
 > **Important:** CORS middleware must be registered before your routes. This ensures that cross-origin requests are properly handled before they reach your authentication endpoints.
 
-### [Middleware](https://www.better-auth.com/docs/integrations/hono\#middleware)
+### [Middleware](https://www.better-auth.com/docs/integrations/hono#middleware)
 
 You can add a middleware to save the `session` and `user` in a `context` and also add validations for every route.
 
@@ -133,7 +134,7 @@ app.get("/session", (c) => {
 });
 ```
 
-### [Cross-Domain Cookies](https://www.better-auth.com/docs/integrations/hono\#cross-domain-cookies)
+### [Cross-Domain Cookies](https://www.better-auth.com/docs/integrations/hono#cross-domain-cookies)
 
 By default, all Better Auth cookies are set with `SameSite=Lax`. If you need to use cookies across different domains, you’ll need to set `SameSite=None` and `Secure=true`. However, we recommend using subdomains whenever possible, as this allows you to keep `SameSite=Lax`. To enable cross-subdomain cookies, simply turn on `crossSubDomainCookies` in your auth config.
 
@@ -185,7 +186,7 @@ export const auth = createAuth({
 })
 ```
 
-### [Client-Side Configuration](https://www.better-auth.com/docs/integrations/hono\#client-side-configuration)
+### [Client-Side Configuration](https://www.better-auth.com/docs/integrations/hono#client-side-configuration)
 
 When using the Hono client ( `@hono/client`) to make requests to your Better Auth-protected endpoints, you need to configure it to send credentials (cookies) with cross-origin requests.
 

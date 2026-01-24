@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Progress`, `Surprises & Discov
 
 ## Purpose / Big Picture
 
-ALFRED already has a `projects` table, but “project” is not yet the *primary organizing axis* for the system: many durable entities (Codex runs, chats, RAG docs, memory graph nodes, deployments) are stored without a `projectId`, so retrieval, learning, and container reuse cannot reliably stay “neuron-local” to a project’s lifecycle.
+ALFRED already has a `projects` table, but “project” is not yet the _primary organizing axis_ for the system: many durable entities (Codex runs, chats, RAG docs, memory graph nodes, deployments) are stored without a `projectId`, so retrieval, learning, and container reuse cannot reliably stay “neuron-local” to a project’s lifecycle.
 
 After this work, every durable ALFRED entity will be explicitly attached to an ALFRED Project, and ALFRED’s internal vocabulary will mirror Linear’s mental model: a Linear “workspace” (organization) contains teams, projects, and issues. ALFRED’s own “projects” will be first-class, long-lived containers for codebases, assistant threads, ALFRED self-improvement goals, artifacts, and knowledge. Agents (Codex) will run in shared Docker containers, reused per project for development, with managed attachment of additional containers for deployments.
 
@@ -88,6 +88,7 @@ All six milestones have been successfully implemented and verified:
   - SQLite schema parity maintained
 
 **Key Migrations:**
+
 - `0071_linearspace.sql` - Linear workspace ID
 - `0072_codexproject.sql` - Codex project scoping
 - `0073_chatproject.sql` - Conversation project scoping
@@ -97,12 +98,14 @@ All six milestones have been successfully implemented and verified:
 - `0077_projectcontainers.sql` - Container attachment table
 
 **Verification:**
+
 - All migrations applied successfully
 - Tests exist for schedulers (`project-lifecycle.scheduler.test.ts`, `pattern-lifecycle.scheduler.test.ts`)
 - Project router tests verify Linear linkage
 - Schema indexes ensure efficient project-scoped queries
 
 **Lessons Learned:**
+
 - SQLite schema parity is critical for test isolation
 - Join tables (`project_rag_documents`) preserve deduplication while enabling project scoping
 - Scheduler gating via env flags prevents accidental execution in multi-instance deployments
@@ -218,7 +221,6 @@ Acceptance:
 - Assistant entities created in a project context are persisted with `projectId`.
 - Workflow runs created via replay or suspension are persisted with `projectId`.
 
-
 ## Concrete Steps
 
 When implementing a milestone:
@@ -227,13 +229,11 @@ When implementing a milestone:
 2. Update the matching Drizzle schema file under `packages/db/src/schema/`.
 3. Update the relevant repo/router/service code.
 4. Run targeted tests with Bun:
-
    - From repo root:
      - `bun run scripts/test-bun.ts --scope unit --filter @alfred/plan`
      - `bun run scripts/test-bun.ts --scope unit --filter @alfred/api`
 
 5. If needed for integration verification:
-
    - `bun run db:migrate` (only when you intend to apply migrations to your local DB).
 
 ## Validation and Acceptance
@@ -254,4 +254,3 @@ Milestone 2 validation:
 - All migrations must be additive and use `ADD COLUMN IF NOT EXISTS` to support re-apply.
 - Do not drop or rename columns in early milestones; prefer backfill + parallel reads and only later consider cleanup migrations.
 - Container reuse changes must preserve an escape hatch: if project-based reuse fails, fall back to per-run container naming while still recording attachments.
-

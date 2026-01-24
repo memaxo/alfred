@@ -1,9 +1,10 @@
 ---
 title: One-Time Token Plugin | Better Auth
-url: 
+url:
 description: Generate and verify single-use token
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The One-Time Token (OTT) plugin provides functionality to generate and verify secure, single-use session tokens. These are commonly used for across domains authentication.
 
-## [Installation](https://www.better-auth.com/docs/plugins/one-time-token\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/one-time-token#installation)
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/one-time-token\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/one-time-token#add-the-plugin-to-your-auth-config)
 
 To use the One-Time Token plugin, add it to your auth config.
 
@@ -48,7 +49,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/one-time-token\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/one-time-token#add-the-client-plugin)
 
 Next, include the one-time-token client plugin in your authentication client instance.
 
@@ -65,9 +66,9 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/one-time-token\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/one-time-token#usage)
 
-### [1\. Generate a Token](https://www.better-auth.com/docs/plugins/one-time-token\#1-generate-a-token)
+### [1\. Generate a Token](https://www.better-auth.com/docs/plugins/one-time-token#1-generate-a-token)
 
 Generate a token using `auth.api.generateOneTimeToken` or `authClient.oneTimeToken.generate`
 
@@ -94,7 +95,7 @@ const data = await auth.api.generateOneTimeToken({
 
 This will return a `token` that is attached to the current session which can be used to verify the one-time token. By default, the token will expire in 3 minutes.
 
-### [2\. Verify the Token](https://www.better-auth.com/docs/plugins/one-time-token\#2-verify-the-token)
+### [2\. Verify the Token](https://www.better-auth.com/docs/plugins/one-time-token#2-verify-the-token)
 
 When the user clicks the link or submits the token, use the `auth.api.verifyOneTimeToken` or `authClient.oneTimeToken.verify` method in another API route to validate it.
 
@@ -110,8 +111,8 @@ const { data, error } = await authClient.oneTimeToken.verify({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop    | Description          | Type     |
+| ------- | -------------------- | -------- |
 | `token` | The token to verify. | `string` |
 
 POST
@@ -126,13 +127,13 @@ const data = await auth.api.verifyOneTimeToken({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop    | Description          | Type     |
+| ------- | -------------------- | -------- |
 | `token` | The token to verify. | `string` |
 
 This will return the session that was attached to the token.
 
-## [Options](https://www.better-auth.com/docs/plugins/one-time-token\#options)
+## [Options](https://www.better-auth.com/docs/plugins/one-time-token#options)
 
 These options can be configured when adding the `oneTimeToken` plugin:
 

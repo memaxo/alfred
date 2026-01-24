@@ -135,16 +135,16 @@ Work:
 
    Suggested shape (the exact naming may vary, but keep it a pure function with no side effects):
 
-     classifyAiSdkError(error: unknown) -> {
-       name: string | null,              // e.g. "AI_APICallError"
-       kind: "client" | "transient" | "misconfig" | "approval" | "tool" | "output" | "unknown",
-       retryable: boolean,
-       httpStatus: number,               // for HTTP streaming endpoints
-       trpcCode: "BAD_REQUEST" | "PRECONDITION_FAILED" | "INTERNAL_SERVER_ERROR" | "TIMEOUT" | ...,
-       safeCode: string,                 // stable, non-leaky error code for clients
-       safeMessage: string,              // stable, non-leaky short message
-       log: Record<string, unknown>,     // structured log fields; may include provider status codes, etc.
-     }
+   classifyAiSdkError(error: unknown) -> {
+   name: string | null, // e.g. "AI_APICallError"
+   kind: "client" | "transient" | "misconfig" | "approval" | "tool" | "output" | "unknown",
+   retryable: boolean,
+   httpStatus: number, // for HTTP streaming endpoints
+   trpcCode: "BAD_REQUEST" | "PRECONDITION_FAILED" | "INTERNAL_SERVER_ERROR" | "TIMEOUT" | ...,
+   safeCode: string, // stable, non-leaky error code for clients
+   safeMessage: string, // stable, non-leaky short message
+   log: Record<string, unknown>, // structured log fields; may include provider status codes, etc.
+   }
 
    Implementation notes:
    - Prefer `XxxError.isInstance(error)` checks where available; fall back to `error.name === "AI_..."` only when needed.
@@ -190,7 +190,7 @@ Explicit per-error handling list (each must have an explicit branch in the class
 - AI_DownloadError: transient upstream failure. Retryable=true, HTTP 502/503, safeCode `ai_download_failed`.
 - AI_EmptyResponseBodyError: upstream/proxy failure. Retryable=true, HTTP 502, safeCode `ai_empty_response`.
 - AI_InvalidArgumentError: client error / programmer error. Retryable=false, HTTP 400, safeCode `ai_invalid_argument`.
-- AI_InvalidDataContent: client input error (bad “data-*” payload shape). Retryable=false, HTTP 400, safeCode `ai_invalid_data_content`.
+- AI_InvalidDataContent: client input error (bad “data-\*” payload shape). Retryable=false, HTTP 400, safeCode `ai_invalid_data_content`.
 - AI_InvalidDataContentError: same class as above (treat as client error). Retryable=false, HTTP 400, safeCode `ai_invalid_data_content`.
 - AI_InvalidMessageRoleError: client error (bad role). Retryable=false, HTTP 400, safeCode `ai_invalid_message_role`.
 - AI_InvalidPromptError: client error (bad prompt shape). Retryable=false, HTTP 400, safeCode `ai_invalid_prompt`.
@@ -220,8 +220,9 @@ Explicit per-error handling list (each must have an explicit branch in the class
 Acceptance:
 
 For each error name in the list above, there exists at least one test that:
-1) feeds that error into the classifier, and asserts the resulting classification object (kind/retryable/status/safeCode), and
-2) proves that the appropriate front door surfaces the classification safely (HTTP status + JSON body; tRPC code/message; workflow error event).
+
+1. feeds that error into the classifier, and asserts the resulting classification object (kind/retryable/status/safeCode), and
+2. proves that the appropriate front door surfaces the classification safely (HTTP status + JSON body; tRPC code/message; workflow error event).
 
 ### Milestone 1: Make tool approval rendering reflect real AI SDK v6 state
 
@@ -268,7 +269,7 @@ Work:
 
    The hook should expose a function named something like:
    - `addToolApprovalResponse({ approvalId, approved })`
-   and it should delegate to the AI SDK chat instance’s approval API (do not invent a custom HTTP endpoint; use AI SDK’s built-in mechanism via `useChat` + transport).
+     and it should delegate to the AI SDK chat instance’s approval API (do not invent a custom HTTP endpoint; use AI SDK’s built-in mechanism via `useChat` + transport).
 
    If the AI SDK `useChat` instance also supports `addToolResult`, keep it, but do not use it to represent approval (approval is not a tool output; it is a gate).
 

@@ -7,50 +7,48 @@ Copy markdown
 The `createAgentUIStreamResponse` function executes an Agent and streams its output as a UI message stream in an HTTP Response body. This is designed for building API endpoints that deliver real-time streaming results from an agent (for example, chat or tool-use applications).
 
 ## Import
-    
-    
+
     import { createAgentUIStreamResponse } from "ai"
 
 ## Usage
-    
-    
+
     import { ToolLoopAgent, createAgentUIStreamResponse } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const agent = new ToolLoopAgent({
-    
+
       model: 'openai/gpt-4o',
-    
+
       instructions: 'You are a helpful assistant.',
-    
+
       tools: { weather: weatherTool, calculator: calculatorTool },
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     export async function POST(request: Request) {
-    
+
       const { messages } = await request.json();
-    
-    
-    
-    
+
+
+
+
       // Stream agent response as an HTTP Response with UI messages
-    
+
       return createAgentUIStreamResponse({
-    
+
         agent,
-    
+
         messages,
-    
+
         // ...other optional streaming options
-    
+
       });
-    
+
     }
 
 ## Parameters
@@ -78,57 +76,56 @@ Additional options for customizing UI message streaming. For example, controllin
 A `Promise` whose body is a stream of UI messages from the agent—suitable as an HTTP response in server-side API routes (Next.js, Express, serverless, or edge handlers).
 
 ## Example: Next.js API Route Handler
-    
-    
+
     import { createAgentUIStreamResponse } from 'ai';
-    
+
     import { MyCustomAgent } from '@/agent/my-custom-agent';
-    
-    
-    
-    
+
+
+
+
     export async function POST(request: Request) {
-    
+
       const { messages } = await request.json();
-    
-    
-    
-    
+
+
+
+
       return createAgentUIStreamResponse({
-    
+
         agent: MyCustomAgent,
-    
+
         messages,
-    
+
         sendSources: true, // optionally include sources in the UI message stream
-    
+
       });
-    
+
     }
 
 ## How It Works
 
 Under the hood, this function uses the internal `createAgentUIStream` utility and wraps its result as an HTTP `Response` readable stream:
 
-  1. **Message Validation:** The incoming array of `messages` is validated and normalized according to the agent's tools and requirements. Messages not meeting spec will trigger an error.
-  2. **Conversion:** Validated messages are transformed to the internal model message format expected by the agent.
-  3. **Streaming:** The agent's `.stream({ prompt })` method is called, producing a stream of UI message chunks representing the agent's process and outputs.
-  4. **HTTP Response:** The stream of UI message chunks is returned as a streaming `Response` object suitable for consumption by server-side API clients (such as a chat UI or live tool interface).
+1. **Message Validation:** The incoming array of `messages` is validated and normalized according to the agent's tools and requirements. Messages not meeting spec will trigger an error.
+2. **Conversion:** Validated messages are transformed to the internal model message format expected by the agent.
+3. **Streaming:** The agent's `.stream({ prompt })` method is called, producing a stream of UI message chunks representing the agent's process and outputs.
+4. **HTTP Response:** The stream of UI message chunks is returned as a streaming `Response` object suitable for consumption by server-side API clients (such as a chat UI or live tool interface).
 
 ## Notes
 
-  * The agent **must** define its `tools` and implement `.stream({ prompt })`.
-  * **Do not use in the browser** ; call this from backend/API/server code only.
-  * You can provide additional UI message streaming options (see `UIMessageStreamOptions`) to customize the response.
-  * The returned `Response` leverages Readable Streams. Make sure your client or framework can consume streamed HTTP responses.
+- The agent **must** define its `tools` and implement `.stream({ prompt })`.
+- **Do not use in the browser** ; call this from backend/API/server code only.
+- You can provide additional UI message streaming options (see `UIMessageStreamOptions`) to customize the response.
+- The returned `Response` leverages Readable Streams. Make sure your client or framework can consume streamed HTTP responses.
 
 ## See Also
 
-  * `Agent`
-  * `ToolLoopAgent`
-  * `UIMessage`
-  * `UIMessageStreamOptions`
-  * `createAgentUIStream`
+- `Agent`
+- `ToolLoopAgent`
+- `UIMessage`
+- `UIMessageStreamOptions`
+- `createAgentUIStream`
 
 Previous
 

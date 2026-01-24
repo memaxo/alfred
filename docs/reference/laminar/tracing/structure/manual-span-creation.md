@@ -1,9 +1,10 @@
 ---
 title: Manual Span Creation - Laminar documentation
-url: 
+url:
 description: Creating and managing spans manually for fine-grained control
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/manual-span-creation#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -36,7 +37,7 @@ On this page
 - [Meaningful Span Names](https://docs.lmnr.ai/tracing/structure/manual-span-creation#meaningful-span-names)
 - [Rich Attributes](https://docs.lmnr.ai/tracing/structure/manual-span-creation#rich-attributes)
 
-## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#overview) Overview
 
 Manual span creation gives you fine-grained control over span lifecycle, attributes, and hierarchies. This is useful for:
 
@@ -46,11 +47,10 @@ Manual span creation gives you fine-grained control over span lifecycle, attribu
 
 - Python
 
-
 The `Laminar.start_as_current_span` method is a recommended way to create spans manually in Python.
 It creates a new span and sets it as the current span using a context manager. Context manager properly starts and ends the span.
 
-### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#basic-usage)  Basic Usage
+### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#basic-usage) Basic Usage
 
 Copy
 
@@ -82,13 +82,13 @@ def process_data(input_data):
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#parameters)  Parameters
+### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#parameters) Parameters
 
 - `name` ( `str`): name of the span
 - `input` ( `Any`): input to the span. It will be serialized to JSON and recorded as span input
 - `span_type` ( `Literal['DEFAULT'] | Literal['LLM']`): type of the span. If not specified, it will be `'DEFAULT'`
 
-### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#manually-creating-an-llm-span)  Manually creating an LLM span
+### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#manually-creating-an-llm-span) Manually creating an LLM span
 
 To manually create an LLM span, set `span_type="LLM"` and properly set the span attributes related to LLM calls.
 
@@ -97,7 +97,6 @@ It’s highly recommended to set input of manual LLM spans in the OpenAI’s `me
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -128,14 +127,13 @@ span.end();
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#fine-grained-control-over-span-creation)  Fine-grained control over span creation
+## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#fine-grained-control-over-span-creation) Fine-grained control over span creation
 
 If you need absolute control over span creation and completion, Laminar provides methods to start and end spans manually.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 You can use `Laminar.startSpan` to create a span manually.
 It doesn’t set the span as the current span.
@@ -175,14 +173,13 @@ try {
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#custom-span-hierarchies)  Custom Span Hierarchies
+## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#custom-span-hierarchies) Custom Span Hierarchies
 
 Example of creating complex span hierarchies for detailed tracing of multi-step operations:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -239,14 +236,13 @@ const processWorkflow = async (workflowData) => {
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#capturing-errors-and-setting-span-attributes)  Capturing errors and setting span attributes
+## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#capturing-errors-and-setting-span-attributes) Capturing errors and setting span attributes
 
 To properly handle errors and set span attributes for better observability, you can use the following pattern.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -269,9 +265,9 @@ try {
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#best-practices)  Best Practices
+## [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#best-practices) Best Practices
 
-### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#always-end-spans)  Always End Spans
+### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#always-end-spans) Always End Spans
 
 Copy
 
@@ -293,7 +289,7 @@ do_work()
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#meaningful-span-names)  Meaningful Span Names
+### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#meaningful-span-names) Meaningful Span Names
 
 Copy
 
@@ -311,7 +307,7 @@ with Laminar.start_as_current_span(name="process"):
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation\#rich-attributes)  Rich Attributes
+### [​](https://docs.lmnr.ai/tracing/structure/manual-span-creation#rich-attributes) Rich Attributes
 
 Copy
 

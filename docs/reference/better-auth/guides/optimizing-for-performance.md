@@ -1,9 +1,10 @@
 ---
 title: Optimizing for Performance | Better Auth
-url: 
+url:
 description: A guide to optimizing your Better Auth application for performance.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,11 +29,11 @@ Copy MarkdownOpen in
 
 In this guide, we’ll go over some of the ways you can optimize your application for a more performant Better Auth app.
 
-## [Caching](https://www.better-auth.com/docs/guides/optimizing-for-performance\#caching)
+## [Caching](https://www.better-auth.com/docs/guides/optimizing-for-performance#caching)
 
 Caching is a powerful technique that can significantly improve the performance of your Better Auth application by reducing the number of database queries and speeding up response times.
 
-### [Cookie Cache](https://www.better-auth.com/docs/guides/optimizing-for-performance\#cookie-cache)
+### [Cookie Cache](https://www.better-auth.com/docs/guides/optimizing-for-performance#cookie-cache)
 
 Calling your database every time `useSession` or `getSession` is invoked isn’t ideal, especially if sessions don’t change frequently. Cookie caching handles this by storing session data in a short-lived, signed cookie similar to how JWT access tokens are used with refresh tokens.
 
@@ -55,7 +56,7 @@ export const auth = betterAuth({
 
 Read more about [cookie caching](https://www.better-auth.com/docs/concepts/session-management#cookie-cache).
 
-### [Framework Caching](https://www.better-auth.com/docs/guides/optimizing-for-performance\#framework-caching)
+### [Framework Caching](https://www.better-auth.com/docs/guides/optimizing-for-performance#framework-caching)
 
 Here are examples of how you can do caching in different frameworks and environments:
 
@@ -130,7 +131,7 @@ export default function Users() {
 
 Learn more about React Query use cache directive [here](https://react-query.tanstack.com/reference/useQuery#usecache).
 
-## [SSR Optimizations](https://www.better-auth.com/docs/guides/optimizing-for-performance\#ssr-optimizations)
+## [SSR Optimizations](https://www.better-auth.com/docs/guides/optimizing-for-performance#ssr-optimizations)
 
 If you're using a framework that supports server-side rendering, it's usually best to pre-fetch the user session on the server and use it as a fallback on the client.
 
@@ -141,23 +142,23 @@ const session = await auth.api.getSession({
 //then pass the session to the client
 ```
 
-## [Database optimizations](https://www.better-auth.com/docs/guides/optimizing-for-performance\#database-optimizations)
+## [Database optimizations](https://www.better-auth.com/docs/guides/optimizing-for-performance#database-optimizations)
 
 Optimizing database performance is essential to get the best out of Better Auth.
 
-#### [Recommended fields to index](https://www.better-auth.com/docs/guides/optimizing-for-performance\#recommended-fields-to-index)
+#### [Recommended fields to index](https://www.better-auth.com/docs/guides/optimizing-for-performance#recommended-fields-to-index)
 
-| Table | Fields | Plugin |
-| --- | --- | --- |
-| users | `email` |  |
-| accounts | `userId` |  |
-| sessions | `userId`, `token` |  |
-| verifications | `identifier` |  |
-| invitations | `email`, `organizationId` | organization |
-| members | `userId`, `organizationId` | organization |
-| organizations | `slug` | organization |
-| passkey | `userId` | passkey |
-| twoFactor | `secret` | twoFactor |
+| Table         | Fields                     | Plugin       |
+| ------------- | -------------------------- | ------------ |
+| users         | `email`                    |              |
+| accounts      | `userId`                   |              |
+| sessions      | `userId`, `token`          |              |
+| verifications | `identifier`               |              |
+| invitations   | `email`, `organizationId`  | organization |
+| members       | `userId`, `organizationId` | organization |
+| organizations | `slug`                     | organization |
+| passkey       | `userId`                   | passkey      |
+| twoFactor     | `secret`                   | twoFactor    |
 
 We intend to add indexing support in our schema generation tool in the future.
 

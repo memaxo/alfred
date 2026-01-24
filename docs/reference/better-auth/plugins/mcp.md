@@ -1,9 +1,10 @@
 ---
 title: MCP | Better Auth
-url: 
+url:
 description: MCP provider plugin for Better Auth
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,9 +31,9 @@ Copy MarkdownOpen in
 
 The **MCP** plugin lets your app act as an OAuth provider for MCP clients. It handles authentication and makes it easy to issue and manage access tokens for MCP applications.
 
-## [Installation](https://www.better-auth.com/docs/plugins/mcp\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/mcp#installation)
 
-### [Add the Plugin](https://www.better-auth.com/docs/plugins/mcp\#add-the-plugin)
+### [Add the Plugin](https://www.better-auth.com/docs/plugins/mcp#add-the-plugin)
 
 Add the MCP plugin to your auth configuration and specify the login page path.
 
@@ -53,7 +54,7 @@ export const auth = betterAuth({
 
 This doesn't have a client plugin, so you don't need to make any changes to your authClient.
 
-### [Generate Schema](https://www.better-auth.com/docs/plugins/mcp\#generate-schema)
+### [Generate Schema](https://www.better-auth.com/docs/plugins/mcp#generate-schema)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -69,9 +70,9 @@ npx @better-auth/cli generate
 
 The MCP plugin uses the same schema as the OIDC Provider plugin. See the [OIDC Provider Schema](https://www.better-auth.com/docs/plugins/mcp#schema) section for details.
 
-## [Usage](https://www.better-auth.com/docs/plugins/mcp\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/mcp#usage)
 
-### [OAuth Discovery Metadata](https://www.better-auth.com/docs/plugins/mcp\#oauth-discovery-metadata)
+### [OAuth Discovery Metadata](https://www.better-auth.com/docs/plugins/mcp#oauth-discovery-metadata)
 
 Better Auth already handles the `/api/auth/.well-known/oauth-authorization-server` route automatically but some client may fail to parse the `WWW-Authenticate` header and default to `/.well-known/oauth-authorization-server` (this can happen, for example, if your CORS configuration doesn't expose the `WWW-Authenticate`). For this reason it's better to add a route to expose OAuth metadata for MCP clients:
 
@@ -84,7 +85,7 @@ import { auth } from "../../../lib/auth";
 export const GET = oAuthDiscoveryMetadata(auth);
 ```
 
-### [OAuth Protected Resource Metadata](https://www.better-auth.com/docs/plugins/mcp\#oauth-protected-resource-metadata)
+### [OAuth Protected Resource Metadata](https://www.better-auth.com/docs/plugins/mcp#oauth-protected-resource-metadata)
 
 Better Auth already handles the `/api/auth/.well-known/oauth-protected-resource` route automatically but some client may fail to parse the `WWW-Authenticate` header and default to `/.well-known/oauth-protected-resource` (this can happen, for example, if your CORS configuration doesn't expose the `WWW-Authenticate`). For this reason it's better to add a route to expose OAuth metadata for MCP clients:
 
@@ -97,7 +98,7 @@ import { auth } from "@/lib/auth";
 export const GET = oAuthProtectedResourceMetadata(auth);
 ```
 
-### [MCP Session Handling](https://www.better-auth.com/docs/plugins/mcp\#mcp-session-handling)
+### [MCP Session Handling](https://www.better-auth.com/docs/plugins/mcp#mcp-session-handling)
 
 You can use the helper function `withMcpAuth` to get the session and handle unauthenticated calls automatically.
 
@@ -199,29 +200,29 @@ const handler = async (req: Request) => {
 export { handler as GET, handler as POST, handler as DELETE };
 ```
 
-## [Configuration](https://www.better-auth.com/docs/plugins/mcp\#configuration)
+## [Configuration](https://www.better-auth.com/docs/plugins/mcp#configuration)
 
 The MCP plugin accepts the following configuration options:
 
-| Prop | Type | Default |
-| --- | --- | --- |
-| `loginPage` | `string` | - |
-| `resource?` | `string` | - |
-| `oidcConfig?` | `object` | - |
+| Prop          | Type     | Default |
+| ------------- | -------- | ------- |
+| `loginPage`   | `string` | -       |
+| `resource?`   | `string` | -       |
+| `oidcConfig?` | `object` | -       |
 
-### [OIDC Configuration](https://www.better-auth.com/docs/plugins/mcp\#oidc-configuration)
+### [OIDC Configuration](https://www.better-auth.com/docs/plugins/mcp#oidc-configuration)
 
 The plugin supports additional OIDC configuration options through the `oidcConfig` parameter:
 
-| Prop | Type | Default |
-| --- | --- | --- |
-| `codeExpiresIn?` | `number` | `600` |
-| `accessTokenExpiresIn?` | `number` | `3600` |
-| `refreshTokenExpiresIn?` | `number` | `604800` |
-| `defaultScope?` | `string` | `openid` |
-| `scopes?` | `string[]` | `["openid", "profile", "email", "offline_access"]` |
+| Prop                     | Type       | Default                                            |
+| ------------------------ | ---------- | -------------------------------------------------- |
+| `codeExpiresIn?`         | `number`   | `600`                                              |
+| `accessTokenExpiresIn?`  | `number`   | `3600`                                             |
+| `refreshTokenExpiresIn?` | `number`   | `604800`                                           |
+| `defaultScope?`          | `string`   | `openid`                                           |
+| `scopes?`                | `string[]` | `["openid", "profile", "email", "offline_access"]` |
 
-## [Schema](https://www.better-auth.com/docs/plugins/mcp\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/mcp#schema)
 
 The MCP plugin uses the same schema as the OIDC Provider plugin. See the [OIDC Provider Schema](https://www.better-auth.com/docs/plugins/mcp#schema) section for details.
 

@@ -1,9 +1,11 @@
 # ExecPlan: TUI Package Audit and Validation
 
 ## Purpose
+
 Perform a comprehensive audit and functional validation of the `@alfred/tui` package, fix identified bugs/architectural gaps, and establish a robust functional testing plan.
 
 ## Plan
+
 1. **Fix Architectural Gaps & Bugs**
    - [ ] Add `.unref()` to timers in `SubscriptionManager` and `Renderer` to prevent hanging tests.
    - [ ] Implement credential encryption for file fallback in `credentials.ts` using `encryption.ts`.
@@ -28,6 +30,7 @@ Perform a comprehensive audit and functional validation of the `@alfred/tui` pac
    - [ ] Add a minimal perf guard to keep dashboard layout/render under a <16ms average frame budget in headless runs.
 
 ## Progress
+
 - [x] Initial audit of core files (`BasePanel`, `SubscriptionManager`, `PackageRegistry`, `Renderer`).
 - [x] Identification of timer leaks and credential encryption gaps.
 - [x] Fixed timer leaks in `SubscriptionManager`, `Renderer`, `BaseMode`, `Dashboard`, and `IntroSequence`.
@@ -53,6 +56,7 @@ Perform a comprehensive audit and functional validation of the `@alfred/tui` pac
 - [x] Added `read:agentfs` scope and enforced it on AgentFS procedures; added router tests for auth/scope/invalid input/stream lifecycle/resume/max-events.
 
 ## Surprises & Discoveries
+
 - `agentfs.ts` already implements `.unref()` on its polling timer.
 - `credentials.ts` was storing plaintext tokens in `~/.alfred/credentials.json` when OS keychain was unavailable.
 - Registry discovery returned placeholder panels that were classes, not instances, causing the TUI to crash.
@@ -61,6 +65,7 @@ Perform a comprehensive audit and functional validation of the `@alfred/tui` pac
 - Temporary `writeSync` debug logging in discovery/renderer polluted stderr and confused headless test output.
 
 ## Decision Log
+
 - Decided to use `Bun.spawn` with `stdin: "pipe"` for E2E tests to simulate user input.
 - Decided to explicitly register core domain panels in `Dashboard.ts` to ensure stability even if other packages return placeholders.
 - Added ANSI stripping in E2E tests to reliably verify content.
@@ -70,6 +75,7 @@ Perform a comprehensive audit and functional validation of the `@alfred/tui` pac
 - Implemented AgentFS “streaming” initially as a tRPC subscription with cursor-based resume and an explicit `ALFRED_AGENTFS_MAX_EVENTS` safety cap.
 
 ## Outcomes & Retrospective
+
 - The TUI architecture is now more robust and less prone to flickering.
 - Security is improved with mandatory encryption for all credential storage paths.
 - Functional testing framework established for future regression testing.
@@ -77,4 +83,3 @@ Perform a comprehensive audit and functional validation of the `@alfred/tui` pac
 - Quit confirmation behaves correctly: cancel returns you to the dashboard instead of freezing the session.
 - Help is now a first-class TUI mode with stable headless test coverage.
 - AgentFS API streaming contract exists (snapshot + stream), but the TUI AgentFS panels are still on mock/polling until Phase 4 wiring is completed.
-

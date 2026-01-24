@@ -14,17 +14,17 @@ DeepSeek R1 is a series of advanced AI models designed to tackle complex reasoni
 
 The series includes two primary variants:
 
-  * **DeepSeek R1-Zero** : Trained exclusively with reinforcement learning (RL) without any supervised fine-tuning. It exhibits advanced reasoning capabilities but may struggle with readability and formatting.
-  * **DeepSeek R1** : Combines reinforcement learning with cold-start data and supervised fine-tuning to improve both reasoning performance and the readability of outputs.
+- **DeepSeek R1-Zero** : Trained exclusively with reinforcement learning (RL) without any supervised fine-tuning. It exhibits advanced reasoning capabilities but may struggle with readability and formatting.
+- **DeepSeek R1** : Combines reinforcement learning with cold-start data and supervised fine-tuning to improve both reasoning performance and the readability of outputs.
 
 ### Benchmarks
 
 DeepSeek R1 models excel in reasoning tasks, delivering competitive performance across key benchmarks:
 
-  * **AIME 2024 (Pass@1)** : 79.8%
-  * **MATH-500 (Pass@1)** : 97.3%
-  * **Codeforces (Percentile)** : Top 4% (96.3%)
-  * **GPQA Diamond (Pass@1)** : 71.5%
+- **AIME 2024 (Pass@1)** : 79.8%
+- **MATH-500 (Pass@1)** : 97.3%
+- **Codeforces (Percentile)** : Top 4% (96.3%)
+- **GPQA Diamond (Pass@1)** : 71.5%
 
 Source
 
@@ -32,9 +32,9 @@ Source
 
 DeepSeek R1 models excel with structured and straightforward prompts. The following best practices can help achieve optimal performance:
 
-  1. **Use a structured format** : Leverage the model’s preferred output structure with `` tags for reasoning and `` tags for the final result.
-  2. **Prefer zero-shot prompts** : Avoid few-shot prompting as it can degrade performance; instead, directly state the problem clearly.
-  3. **Specify output expectations** : Guide the model by defining desired formats, such as markdown for readability or XML-like tags for clarity.
+1. **Use a structured format** : Leverage the model’s preferred output structure with `tags for reasoning and` tags for the final result.
+2. **Prefer zero-shot prompts** : Avoid few-shot prompting as it can degrade performance; instead, directly state the problem clearly.
+3. **Specify output expectations** : Guide the model by defining desired formats, such as markdown for readability or XML-like tags for clarity.
 
 ## Getting Started with the AI SDK
 
@@ -43,99 +43,96 @@ The AI SDK is the TypeScript toolkit designed to help developers build AI-powere
 The AI SDK abstracts away the differences between model providers, eliminates boilerplate code for building chatbots, and allows you to go beyond text output to generate rich, interactive components.
 
 At the center of the AI SDK is AI SDK Core, which provides a unified API to call any LLM. The code snippet below is all you need to call DeepSeek R1 with the AI SDK:
-    
-    
+
     import { deepseek } from '@ai-sdk/deepseek';
-    
+
     import { generateText } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { reasoningText, text } = await generateText({
-    
+
       model: deepseek('deepseek-reasoner'),
-    
+
       prompt: 'Explain quantum entanglement.',
-    
+
     });
 
 The unified interface also means that you can easily switch between providers by changing just two lines of code. For example, to use DeepSeek R1 via Fireworks:
-    
-    
+
     import { fireworks } from '@ai-sdk/fireworks';
-    
+
     import {
-    
+
       generateText,
-    
+
       wrapLanguageModel,
-    
+
       extractReasoningMiddleware,
-    
+
     } from 'ai';
-    
-    
-    
-    
+
+
+
+
     // middleware to extract reasoning tokens
-    
+
     const enhancedModel = wrapLanguageModel({
-    
+
       model: fireworks('accounts/fireworks/models/deepseek-r1'),
-    
+
       middleware: extractReasoningMiddleware({ tagName: 'think' }),
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const { reasoningText, text } = await generateText({
-    
+
       model: enhancedModel,
-    
+
       prompt: 'Explain quantum entanglement.',
-    
+
     });
 
 Or to use Groq's `deepseek-r1-distill-llama-70b` model:
-    
-    
+
     import { groq } from '@ai-sdk/groq';
-    
+
     import {
-    
+
       generateText,
-    
+
       wrapLanguageModel,
-    
+
       extractReasoningMiddleware,
-    
+
     } from 'ai';
-    
-    
-    
-    
+
+
+
+
     // middleware to extract reasoning tokens
-    
+
     const enhancedModel = wrapLanguageModel({
-    
+
       model: groq('deepseek-r1-distill-llama-70b'),
-    
+
       middleware: extractReasoningMiddleware({ tagName: 'think' }),
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const { reasoningText, text } = await generateText({
-    
+
       model: enhancedModel,
-    
+
       prompt: 'Explain quantum entanglement.',
-    
+
     });
 
 The AI SDK provides a middleware (`extractReasoningMiddleware`) that can be used to extract the reasoning tokens from the model's output.
@@ -146,16 +143,16 @@ When using DeepSeek-R1 series models with third-party providers like Together AI
 
 You can use DeepSeek R1 with the AI SDK through various providers. Here's a comparison of the providers that support DeepSeek R1:
 
-Provider| Model ID| Reasoning Tokens  
----|---|---  
-DeepSeek| `deepseek-reasoner`|   
-Fireworks| `accounts/fireworks/models/deepseek-r1`| Requires Middleware  
-Groq| `deepseek-r1-distill-llama-70b`| Requires Middleware  
-Azure| `DeepSeek-R1`| Requires Middleware  
-Together AI| `deepseek-ai/DeepSeek-R1`| Requires Middleware  
-FriendliAI| `deepseek-r1`| Requires Middleware  
-LangDB| `deepseek/deepseek-reasoner`| Requires Middleware  
-  
+| Provider    | Model ID                                | Reasoning Tokens    |
+| ----------- | --------------------------------------- | ------------------- |
+| DeepSeek    | `deepseek-reasoner`                     |
+| Fireworks   | `accounts/fireworks/models/deepseek-r1` | Requires Middleware |
+| Groq        | `deepseek-r1-distill-llama-70b`         | Requires Middleware |
+| Azure       | `DeepSeek-R1`                           | Requires Middleware |
+| Together AI | `deepseek-ai/DeepSeek-R1`               | Requires Middleware |
+| FriendliAI  | `deepseek-r1`                           | Requires Middleware |
+| LangDB      | `deepseek/deepseek-reasoner`            | Requires Middleware |
+
 ### Building Interactive Interfaces
 
 AI SDK Core can be paired with AI SDK UI, another powerful component of the AI SDK, to streamline the process of building chat, completion, and assistant interfaces with popular frameworks like Next.js, Nuxt, and SvelteKit.
@@ -167,46 +164,44 @@ With four main hooks — `useChat`, `useCompletion`, and `useObject` — you can
 Let's explore building a chatbot with Next.js, the AI SDK, and DeepSeek R1:
 
 In a new Next.js application, first install the AI SDK and the DeepSeek provider:
-    
-    
+
     pnpm install ai @ai-sdk/deepseek @ai-sdk/react
 
 Then, create a route handler for the chat endpoint:
 
 app/api/chat/route.ts
-    
-    
+
     import { deepseek } from '@ai-sdk/deepseek';
-    
+
     import { convertToModelMessages, streamText, UIMessage } from 'ai';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: deepseek('deepseek-reasoner'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse({
-    
+
         sendReasoning: true,
-    
+
       });
-    
+
     }
 
 You can forward the model's reasoning tokens to the client with `sendReasoning: true` in the `toDataStreamResponse` method.
@@ -214,92 +209,91 @@ You can forward the model's reasoning tokens to the client with `sendReasoning: 
 Finally, update the root page (`app/page.tsx`) to use the `useChat` hook:
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { useState } from 'react';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, sendMessage } = useChat();
-    
-    
-    
-    
+
+
+
+
       const handleSubmit = (e: React.FormEvent) => {
-    
+
         e.preventDefault();
-    
+
         if (input.trim()) {
-    
+
           sendMessage({ text: input });
-    
+
           setInput('');
-    
+
         }
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       return (
-    
+
         <>
-    
+
           {messages.map(message => (
-    
-            
-    
+
+
+
               {message.role === 'user' ? 'User: ' : 'AI: '}
-    
+
               {message.parts.map((part, index) => {
-    
+
                 if (part.type === 'reasoning') {
-    
+
                   return {part.text};
-    
+
                 }
-    
+
                 if (part.type === 'text') {
-    
+
                   return {part.text};
-    
+
                 }
-    
+
                 return null;
-    
+
               })}
-    
-            
-    
+
+
+
           ))}
-    
-          
-    
+
+
+
              setInput(e.target.value)}
-    
+
             />
-    
+
             Submit
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 You can access the model's reasoning tokens through the `parts` array on the `message` object, where reasoning parts have `type: 'reasoning'`.
@@ -310,17 +304,17 @@ The useChat hook on your root page (`app/page.tsx`) will make a request to your 
 
 While DeepSeek R1 models are powerful, they have certain limitations:
 
-  * No tool-calling support: DeepSeek R1 cannot directly interact with APIs or external tools.
-  * No object generation support: DeepSeek R1 does not support structured object generation. However, you can combine it with models that support structured object generation (like gpt-4o-mini) to generate objects. See the structured object generation with a reasoning model recipe for more information.
+- No tool-calling support: DeepSeek R1 cannot directly interact with APIs or external tools.
+- No object generation support: DeepSeek R1 does not support structured object generation. However, you can combine it with models that support structured object generation (like gpt-4o-mini) to generate objects. See the structured object generation with a reasoning model recipe for more information.
 
 ## Get Started
 
 Ready to dive in? Here's how you can begin:
 
-  1. Explore the documentation at ai-sdk.dev/docs to understand the capabilities of the AI SDK.
-  2. Check out practical examples at ai-sdk.dev/examples to see the SDK in action.
-  3. Dive deeper with advanced guides on topics like Retrieval-Augmented Generation (RAG) at ai-sdk.dev/docs/guides.
-  4. Use ready-to-deploy AI templates at vercel.com/templates?type=ai.
+1. Explore the documentation at ai-sdk.dev/docs to understand the capabilities of the AI SDK.
+2. Check out practical examples at ai-sdk.dev/examples to see the SDK in action.
+3. Dive deeper with advanced guides on topics like Retrieval-Augmented Generation (RAG) at ai-sdk.dev/docs/guides.
+4. Use ready-to-deploy AI templates at vercel.com/templates?type=ai.
 
 DeepSeek R1 opens new opportunities for reasoning-intensive AI applications. Start building today and leverage the power of advanced reasoning in your AI projects.
 

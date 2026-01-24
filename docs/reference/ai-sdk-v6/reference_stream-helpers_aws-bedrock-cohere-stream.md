@@ -13,8 +13,7 @@ AWSBedrockCohereStream is part of the legacy AWS Bedrock integration. It is not 
 The AWS Bedrock stream functions are utilties that transform the outputs from the AWS Bedrock API into a ReadableStream. It uses AIStream under the hood and handles parsing Bedrock's response.
 
 ### React
-    
-    
+
     import { AWSBedrockCohereStream } from "ai"
 
 ## API Signature

@@ -7,6 +7,7 @@ Communication direction describes how information flows between agents in a hier
 Information flows from planner to workers. Planners analyze tasks, create plans, and assign work. Workers receive assignments, execute, and write artifacts. Workers do not send information back to planners except via completion status and artifacts.
 
 ALFRED uses top-down direction for its rigid planning model. This simplifies the architecture:
+
 - Workers don't need to understand the planner's context
 - No escalation logic or decision routing
 - Clear responsibility boundaries
@@ -17,6 +18,7 @@ ALFRED uses top-down direction for its rigid planning model. This simplifies the
 Workers can escalate to planners. Information flows upward when workers encounter blockers, ambiguity, or need decisions they cannot make.
 
 ALFRED does not use bottom-up escalation in MVP. The rationale:
+
 - Escalation creates complexity and coordination overhead
 - Forces clear task decomposition upfront
 - Workers that can't complete write failure artifacts instead
@@ -27,6 +29,7 @@ ALFRED does not use bottom-up escalation in MVP. The rationale:
 Workers coordinate directly with other workers. Used for conflict resolution without planner involvement.
 
 ALFRED uses optimistic concurrency rather than explicit horizontal coordination. If two workers modify the same file:
+
 1. Both proceed without knowledge of the other
 2. Git detects the conflict
 3. The worker that commits second resolves the merge
@@ -38,6 +41,7 @@ This aligns with Cursor's finding that "allowing agents to work optimistically a
 A combination of directions. Cursor's research found that mixed approaches—hierarchy for planning, horizontal for conflicts—were most effective at scale.
 
 ALFRED's hybrid approach:
+
 - Top-down for task assignment (planner → worker)
 - Artifact-based for results (worker → artifacts → planner reads)
 - Optimistic concurrency for conflicts (workers resolve independently)
@@ -55,6 +59,7 @@ The cost is flexibility—workers can't adapt plans dynamically. ALFRED accepts 
 ## Implementation
 
 Top-down direction manifests in:
+
 - `packages/pipeline/` — Stages execute sequentially, each receiving prior stage output
 - Agent spawning — Orchestrator spawns workers with specific task context
 - Artifact handoff — Workers write to `.agent/tools/`, subsequent stages read

@@ -7,48 +7,46 @@ Copy markdown
 `useObject` is an experimental feature and only available in React, Svelte, and Vue.
 
 Allows you to consume text streams that represent a JSON object and parse them into a complete object based on a schema. You can use it together with `streamObject` in the backend.
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { experimental_useObject as useObject } from '@ai-sdk/react';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const { object, submit } = useObject({
-    
+
         api: '/api/use-object',
-    
+
         schema: z.object({ content: z.string() }),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
            submit('example input')}>Generate
-    
+
           {object?.content && {object.content}}
-    
-        
-    
+
+
+
       );
-    
+
     }
 
 ## Import
-    
-    
+
     import { experimental_useObject as useObject } from '@ai-sdk/react'
 
 ## API Signature

@@ -1,9 +1,10 @@
 ---
 title: Plugins – Bundler | Bun Docs
-url: 
+url:
 description: Implement custom loaders and module resolution logic with Bun's plugin system.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Bun provides a universal plugin API that can be used to extend both the _runtime
 
 Plugins intercept imports and perform custom loading logic: reading files, transpiling code, etc. They can be used to add support for additional file types, like `.scss` or `.yaml`. In the context of Bun's bundler, plugins can be used to implement framework-level features like CSS extraction, macros, and client-server code co-location.
 
-## [Lifecycle hooks](https://bun.com/docs/bundler/plugins\#lifecycle-hooks)
+## [Lifecycle hooks](https://bun.com/docs/bundler/plugins#lifecycle-hooks)
 
 Plugins can register callbacks to be run at various points in the lifecycle of a bundle:
 
@@ -66,7 +67,7 @@ Plugins can register callbacks to be run at various points in the lifecycle of a
 - [`onEnd()`](https://bun.com/docs/bundler/plugins#onend): Run after the bundle has completed
 - [`onBeforeParse()`](https://bun.com/docs/bundler/plugins#onbeforeparse): Run zero-copy native addons in the parser thread before a file is parsed.
 
-### [Reference](https://bun.com/docs/bundler/plugins\#reference)
+### [Reference](https://bun.com/docs/bundler/plugins#reference)
 
 A rough overview of the types (please refer to Bun's `bun.d.ts` for the full type definitions):
 
@@ -97,7 +98,7 @@ type Loader = "js" | "jsx" | "ts" | "tsx" | "css" | "json" | "toml";
 
 ```
 
-## [Usage](https://bun.com/docs/bundler/plugins\#usage)
+## [Usage](https://bun.com/docs/bundler/plugins#usage)
 
 A plugin is defined as simple JavaScript object containing a `name` property and a `setup` function.
 
@@ -126,9 +127,9 @@ await Bun.build({
 
 ```
 
-## [Plugin lifecycle](https://bun.com/docs/bundler/plugins\#plugin-lifecycle)
+## [Plugin lifecycle](https://bun.com/docs/bundler/plugins#plugin-lifecycle)
 
-### [Namespaces](https://bun.com/docs/bundler/plugins\#namespaces)
+### [Namespaces](https://bun.com/docs/bundler/plugins#namespaces)
 
 `onLoad` and `onResolve` accept an optional `namespace` string. What is a namespace?
 
@@ -141,7 +142,7 @@ Other common namespaces are:
 - `"bun"`: for Bun-specific modules (e.g. `"bun:test"`, `"bun:sqlite"`)
 - `"node"`: for Node.js modules (e.g. `"node:fs"`, `"node:path"`)
 
-### [`onStart`](https://bun.com/docs/bundler/plugins\#onstart)
+### [`onStart`](https://bun.com/docs/bundler/plugins#onstart)
 
 ```
 onStart(callback: () => void): Promise<void> | void;
@@ -201,7 +202,7 @@ In the above example, Bun will wait until the first `onStart()` (sleeping for 10
 
 Note that `onStart()` callbacks (like every other lifecycle callback) do not have the ability to modify the `build.config` object. If you want to mutate `build.config`, you must do so directly in the `setup()` function.
 
-### [`onResolve`](https://bun.com/docs/bundler/plugins\#onresolve)
+### [`onResolve`](https://bun.com/docs/bundler/plugins#onresolve)
 
 ```
 onResolve(
@@ -244,7 +245,7 @@ plugin({
 
 ```
 
-### [`onLoad`](https://bun.com/docs/bundler/plugins\#onload)
+### [`onLoad`](https://bun.com/docs/bundler/plugins#onload)
 
 ```
 onLoad(
@@ -354,7 +355,7 @@ plugin({
 
 Note that the `.defer()` function currently has the limitation that it can only be called once per `onLoad` callback.
 
-### [`onEnd`](https://bun.com/docs/bundler/plugins\#onend)
+### [`onEnd`](https://bun.com/docs/bundler/plugins#onend)
 
 ```
 onEnd(callback: (result: BuildOutput) => void | Promise<void>): void;
@@ -403,7 +404,7 @@ The `onEnd` callbacks are called:
 
 Multiple plugins can register `onEnd` callbacks, and they will all be called sequentially. If an `onEnd` callback returns a promise, the build will wait for it to resolve before continuing.
 
-## [Native plugins](https://bun.com/docs/bundler/plugins\#native-plugins)
+## [Native plugins](https://bun.com/docs/bundler/plugins#native-plugins)
 
 One of the reasons why Bun's bundler is so fast is that it is written in native code and leverages multi-threading to load and parse modules in parallel.
 
@@ -421,7 +422,7 @@ Native plugins are NAPI modules which expose lifecycle hooks as C ABI functions.
 
 To create a native plugin, you must export a C ABI function which matches the signature of the native lifecycle hook you want to implement.
 
-### [Creating a native plugin in Rust](https://bun.com/docs/bundler/plugins\#creating-a-native-plugin-in-rust)
+### [Creating a native plugin in Rust](https://bun.com/docs/bundler/plugins#creating-a-native-plugin-in-rust)
 
 Native plugins are NAPI modules which expose lifecycle hooks as C ABI functions.
 
@@ -504,7 +505,7 @@ Bun.build({
 
 ```
 
-### [`onBeforeParse`](https://bun.com/docs/bundler/plugins\#onbeforeparse)
+### [`onBeforeParse`](https://bun.com/docs/bundler/plugins#onbeforeparse)
 
 ```
 onBeforeParse(
@@ -526,7 +527,7 @@ Loaders](https://bun.com/docs/bundler/loaders) [Next\\
 \\
 Macros](https://bun.com/docs/bundler/macros)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/plugins.md)
 
@@ -550,7 +551,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

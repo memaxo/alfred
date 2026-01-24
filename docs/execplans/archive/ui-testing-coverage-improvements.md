@@ -23,7 +23,7 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
   - Fixed `voice-s2s.route.test.tsx` to import from `@/routes/_protected/voice-s2s` and added stream mock
   - Fixed `mindscape.workflow-route.test.tsx` to import from `@/routes/_protected/mindscape` and mocked physics worker + server functions
 - [x] (2025-12-15 01:45Z) Added missing jsdom polyfills to `apps/web/src/test/dom.ts`:
-  - Added `window.requestAnimationFrame` and `window.cancelAnimationFrame` polyfills (libraries access window.* directly)
+  - Added `window.requestAnimationFrame` and `window.cancelAnimationFrame` polyfills (libraries access window.\* directly)
 
 ## Surprises & Discoveries
 
@@ -50,7 +50,7 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 - Observation: TanStack Start server functions using `getRequest()` throw "No StartEvent found in AsyncLocalStorage" when called outside the server runtime (e.g., in tests).
   Evidence: `mindscape.workflow-route.test.tsx` at 2025-12-15 01:42Z failed until `getInitialMindscapeFrame` was mocked to return static data.
 - Observation: Some Radix UI components access `window.cancelAnimationFrame` directly instead of using the globalThis polyfill.
-  Evidence: `mindscape.workflow-route.test.tsx` at 2025-12-15 01:42Z failed with "window.cancelAnimationFrame is not a function" until `dom.ts` added window.* polyfills.
+  Evidence: `mindscape.workflow-route.test.tsx` at 2025-12-15 01:42Z failed with "window.cancelAnimationFrame is not a function" until `dom.ts` added window.\* polyfills.
 - Observation: The `useVoiceSessionWeb` hook returns a `stream` object that components destructure directly; tests must include this in mocks.
   Evidence: `voice-s2s.route.test.tsx` at 2025-12-15 01:43Z failed with "undefined is not an object (evaluating 'stream.analyser')" until the mock included the stream object.
 - Observation: AI SDK v6's `validateUIMessages` export created circular dependency issues when importing through the legacy `assistant-agent` streaming handler chain in tests.
@@ -112,6 +112,7 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 ### 2025-12-15 — Milestone 5 Completion
 
 **What Shipped:**
+
 - E2E regression tests for reminders flow (`remind-flow.e2e.test.ts`): CRUD operations, pagination, due reminders
 - E2E regression tests for workflow flow (`workflow-flow.e2e.test.ts`): list, filter, pagination, events retrieval
 - Fixed broken import paths in 3 test files after route restructuring
@@ -119,16 +120,19 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 - Updated voice-s2s component to export view function for testing
 
 **Test Results:**
+
 - 6 passing tests (voice admin, voice s2s, mindscape workflow navigation)
 - 15 skipped tests (E2E tests requiring database, assistant-agent integration; removed 2026-01-10)
 - 0 failing tests
 
 **What Remains:**
+
 - `assistant-agent/integration.test.ts` needed proper AI SDK mock chain to run (file removed 2026-01-10; see `apps/web/src/lib/api/__tests__/stream-handler.*.test.ts` for current coverage)
 - E2E tests require `RUN_DB_TESTS=1` environment variable and PostgreSQL to execute
 - Original smoke tests from Milestone 1 appear to have been relocated or refactored
 
 **Lessons Learned:**
+
 1. Route restructuring (`_protected/`) requires updating all test imports
 2. TanStack Start server functions need explicit mocking in test environments
 3. Radix UI and other libraries access `window.*` directly, requiring both globalThis and window polyfills
@@ -142,60 +146,68 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 ## Plan of Work
 
 ### Milestone 1 — Smoke tests for critical screens (Priority 1)
+
 Create a `apps/web/src/routes/__tests__/smoke-critical.test.tsx` suite that renders `login.tsx`, `ai.tsx`, `note.tsx`, `remind.tsx`, and `profile.tsx` using shared helpers. Introduce `apps/web/src/test/render-route.tsx` to wrap TanStack Start routes with providers (QueryClient, Router, auth context). Each smoke test loads the real route component, supplies the minimal loader data (stubbed via helper), and asserts the primary CTA or heading renders. Keep mocks minimal: only stub tRPC calls the route actually needs using lightweight utilities such as `createRouteTrpcMock({ noteList: [...] })`. Goal: catch missing imports, loader crashes, or regressions in the route composition.
 
 ### Milestone 2 — Real hook + mocked AI streaming integration (Priority 2)
+
 Replace the bespoke `useAssistantStream` mocks with a shared AI SDK mock so the real hook (deriveActions, clear/hydrate, agent switching) can run end-to-end inside RTL. The helper lives at `apps/web/src/test/mock-assistant-chat.ts`, stubs `@ai-sdk/react`'s `useChat` + `ai`'s `DefaultChatTransport`, and exposes `assistantChatMock` APIs (`emitAssistantMessage`, `emitError`, `sendSpy`, etc.). Refactor `apps/web/src/components/__tests__/chat-container.integration.test.tsx` to rely on this helper (no hook-level mocks) and assert UI behaviour by emitting messages/errors through the mock. Extend `apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` with a send test that proves `result.current.send()` forwards text to the mocked transport.
 
 ### Milestone 3 — Notes flow CRUD tests (Priority 3)
+
 Author `apps/web/src/routes/__tests__/note-flow.integration.test.tsx` covering create/read/update/delete. Use the Milestone 2 helper so the route renders with real hooks/components while the tRPC boundary is mocked with deterministic responses plus latency toggles to test optimistic updates. Cover:
+
 1. Rendering the note list from mocked `note.list` data.
 2. Creating a note via `note.create.mutate`, asserting optimistic insertion, server confirmation, and error rollback.
 3. Editing a note using `note.update.mutate`, confirming local state updates and server sync.
 4. Deleting a note via `note.delete.mutate`, checking confirmation and final list state.
-Add utility assertions around `trpc.useUtils().note.list.setData` to ensure cache updates happen exactly once per action. Document fallback behaviors (e.g., toast on failure) in the test file via inline comments so novices understand expected UX.
+   Add utility assertions around `trpc.useUtils().note.list.setData` to ensure cache updates happen exactly once per action. Document fallback behaviors (e.g., toast on failure) in the test file via inline comments so novices understand expected UX.
 
 ### Milestone 4 — E2E harness foundation (Priority 4)
+
 Lay infrastructure under `apps/web/src/test/`:
+
 - `server.ts`: `createTestServer`, `cleanupTestServer`, and `withTestServer` helpers that spin up `Bun.serve` with the real tRPC router (`@alfred/api/routers/index`). Wire it to a dedicated test database via `createTestDb` and ensure tables truncate between cases using `truncateTables`.
 - `client.ts`: `createTestClient` returning a real `@trpc/client` instance configured with HTTP batch links pointing at the ephemeral test server.
 - `auth.ts`: `createTestSession` and `authenticatedRender` that wrap components with session context matching what TanStack Start expects (reuse `createTestCaller` logic for claims), plus cookie injection helpers for fetch-based E2E calls.
 - `stream.ts`: utilities for simulating SSE/EventSource streams and waiting for streaming payloads so we can later exercise chat workflows.
-Integrate these helpers into Vitest by updating `apps/web/vitest.config.ts` (or local setup file) to allow `setupFilesAfterEnv` hooking to start/stop servers lazily. Provide documentation inside the helper files describing lifecycle expectations (start once per suite vs per test) and cleanup steps.
+  Integrate these helpers into Vitest by updating `apps/web/vitest.config.ts` (or local setup file) to allow `setupFilesAfterEnv` hooking to start/stop servers lazily. Provide documentation inside the helper files describing lifecycle expectations (start once per suite vs per test) and cleanup steps.
 
 ### Milestone 5 — Reminders & workflows coverage (Priority 5)
+
 With the harness in place, create `apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx` and (time permitting) `apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx`. These suites should:
+
 - Use `withTestServer` to boot the real API + DB, seed fixtures via `dbFixtures` (e.g., create user, seed reminders/workflows).
 - Call the real tRPC procedures through `createTestClient` to create/list/complete reminders and to start/monitor workflows.
 - Render the corresponding routes with `authenticatedRender` and confirm UI state reflects live server changes (e.g., SSE-driven workflow updates appear in the DOM within timeouts).
-These tests prove the entire pipeline works (component → hook → tRPC client → HTTP server → DB) and provide the template for future E2E flows.
+  These tests prove the entire pipeline works (component → hook → tRPC client → HTTP server → DB) and provide the template for future E2E flows.
 
 ## Concrete Steps
 
 1. Milestone 1 execution:
-    - Create `apps/web/src/test/render-route.tsx` exporting `renderRoute(Component, options)` that wraps React Testing Library’s `render` with QueryClientProvider, RouterContext, and optional loader data.
-    - Add `apps/web/src/routes/__tests__/smoke-critical.test.tsx` with one `describe` per route. For data-dependent routes (notes/remind/profile), use `createTestTrpcClient` from `render-route` options to stub the required queries. Keep each test to “render + assert primary heading/CTA present”.
-    - Run `bun test apps/web --filter=smoke-critical` and confirm five passing cases; ensure failure output clearly points to the broken screen.
+   - Create `apps/web/src/test/render-route.tsx` exporting `renderRoute(Component, options)` that wraps React Testing Library’s `render` with QueryClientProvider, RouterContext, and optional loader data.
+   - Add `apps/web/src/routes/__tests__/smoke-critical.test.tsx` with one `describe` per route. For data-dependent routes (notes/remind/profile), use `createTestTrpcClient` from `render-route` options to stub the required queries. Keep each test to “render + assert primary heading/CTA present”.
+   - Run `bun test apps/web --filter=smoke-critical` and confirm five passing cases; ensure failure output clearly points to the broken screen.
 2. Milestone 2 execution:
-    - Add `apps/web/src/test/mock-assistant-chat.ts` that mocks `@ai-sdk/react`’s `useChat` + `DefaultChatTransport`, exports `assistantChatMock` helpers (send spy, emitAssistantMessage/error, status setters), and documents how suites should interact with it.
-    - Refactor `apps/web/src/components/__tests__/chat-container.integration.test.tsx` to drop direct `useAssistantStream` mocks, import the helper, and focus on real hook behaviour (rendering stream updates, clear button, agent switching).
-    - Extend `apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` with a send test that asserts `result.current.send()` drives the mocked transport and appends the user message to hook state.
-    - Run `bun test apps/web/src/components/__tests__/chat-container.integration.test.tsx` and `bun test apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` (or `bun test apps/web --filter=assistant-stream`) to confirm the suites hit the live hook implementation.
+   - Add `apps/web/src/test/mock-assistant-chat.ts` that mocks `@ai-sdk/react`’s `useChat` + `DefaultChatTransport`, exports `assistantChatMock` helpers (send spy, emitAssistantMessage/error, status setters), and documents how suites should interact with it.
+   - Refactor `apps/web/src/components/__tests__/chat-container.integration.test.tsx` to drop direct `useAssistantStream` mocks, import the helper, and focus on real hook behaviour (rendering stream updates, clear button, agent switching).
+   - Extend `apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` with a send test that asserts `result.current.send()` drives the mocked transport and appends the user message to hook state.
+   - Run `bun test apps/web/src/components/__tests__/chat-container.integration.test.tsx` and `bun test apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` (or `bun test apps/web --filter=assistant-stream`) to confirm the suites hit the live hook implementation.
 3. Milestone 3 execution:
-    - Create `apps/web/src/routes/__tests__/note-flow.integration.test.tsx` using `renderRoute` + `trpc-mock`.
-    - Implement helper functions inside the test to mutate the mock cache (e.g., `getNoteListCacheCalls()`). Cover CRUD scenarios plus error rollback by having the mock mutate reject once; assert UI rolls back and surfaces toast text.
-    - Document expectations inline (“When `note.create` rejects, the optimistic card disappears and toast shows ‘Try again’”).
-    - Execute `bun test apps/web --filter=note-flow` after each scenario addition.
+   - Create `apps/web/src/routes/__tests__/note-flow.integration.test.tsx` using `renderRoute` + `trpc-mock`.
+   - Implement helper functions inside the test to mutate the mock cache (e.g., `getNoteListCacheCalls()`). Cover CRUD scenarios plus error rollback by having the mock mutate reject once; assert UI rolls back and surfaces toast text.
+   - Document expectations inline (“When `note.create` rejects, the optimistic card disappears and toast shows ‘Try again’”).
+   - Execute `bun test apps/web --filter=note-flow` after each scenario addition.
 4. Milestone 4 execution:
-    - Add `apps/web/src/test/server.ts`, `client.ts`, `auth.ts`, and `stream.ts` as described above. Each file needs docstrings referencing this ExecPlan for context.
-    - Update test setup to register global helpers if needed.
-    - Add npm scripts (e.g., `"test:ui": "bun test apps/web"`) if missing so new contributors can run suites via a single command.
-    - Prove the harness works by writing a minimal E2E test that starts the server, hits `client.health.ping.query()`, and asserts an OK response.
-    - Run `bun test apps/web --filter=e2e-smoke` and record expected output under `Artifacts and Notes`.
+   - Add `apps/web/src/test/server.ts`, `client.ts`, `auth.ts`, and `stream.ts` as described above. Each file needs docstrings referencing this ExecPlan for context.
+   - Update test setup to register global helpers if needed.
+   - Add npm scripts (e.g., `"test:ui": "bun test apps/web"`) if missing so new contributors can run suites via a single command.
+   - Prove the harness works by writing a minimal E2E test that starts the server, hits `client.health.ping.query()`, and asserts an OK response.
+   - Run `bun test apps/web --filter=e2e-smoke` and record expected output under `Artifacts and Notes`.
 5. Milestone 5 execution (time-permitting but scaffold instructions upfront):
-    - Build `remind-flow.e2e.test.tsx` using `withTestServer` to seed reminders via real tRPC calls and verify the reminders route reflects DB updates.
-    - Optionally add `workflow-flow.e2e.test.tsx` that streams workflow progress, using `stream.ts` utilities to wait for SSE events before asserting UI changes.
-    - Ensure suites clean up DB tables via `truncateTables` in `afterEach` to keep runs isolated.
+   - Build `remind-flow.e2e.test.tsx` using `withTestServer` to seed reminders via real tRPC calls and verify the reminders route reflects DB updates.
+   - Optionally add `workflow-flow.e2e.test.tsx` that streams workflow progress, using `stream.ts` utilities to wait for SSE events before asserting UI changes.
+   - Ensure suites clean up DB tables via `truncateTables` in `afterEach` to keep runs isolated.
 
 ## Validation and Acceptance
 
@@ -215,53 +227,53 @@ These tests prove the entire pipeline works (component → hook → tRPC client 
 ## Artifacts and Notes
 
 - Record the first successful run outputs inside this section once available, for example:
-    - Smoke suite sample output:
-        `bun test apps/web --filter=smoke-critical` → `5 tests passed (45 ms)`.
-    - Note flow integration suite:
-        `bun test apps/web/src/routes/__tests__/note-flow.integration.test.tsx` → `3 tests passed (752 ms)`.
-    - API E2E harness smoke:
-        `bun test apps/web/src/routes/__tests__/api-e2e-smoke.test.ts` → `1 test passed (326 ms)` (logs a warning if migrations have not created every table yet).
-    - Remind flow E2E (tRPC over HTTP):
-        `bun test apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx` → `2 tests passed (559 ms)` (will emit safe-reset warnings if the shared tables are absent locally).
-    - Note flow E2E (tRPC over HTTP):
-        `bun test apps/web/src/routes/__tests__/note-flow.e2e.test.tsx` → `2 tests passed (636 ms)` (embeddings are mocked to avoid pool initialization).
-    - Workflow flow E2E (tRPC over HTTP):
-        `bun test apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx` → `2 tests passed (786 ms)` (Radix Select/Dialog mocked for jsdom compatibility).
+  - Smoke suite sample output:
+    `bun test apps/web --filter=smoke-critical` → `5 tests passed (45 ms)`.
+  - Note flow integration suite:
+    `bun test apps/web/src/routes/__tests__/note-flow.integration.test.tsx` → `3 tests passed (752 ms)`.
+  - API E2E harness smoke:
+    `bun test apps/web/src/routes/__tests__/api-e2e-smoke.test.ts` → `1 test passed (326 ms)` (logs a warning if migrations have not created every table yet).
+  - Remind flow E2E (tRPC over HTTP):
+    `bun test apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx` → `2 tests passed (559 ms)` (will emit safe-reset warnings if the shared tables are absent locally).
+  - Note flow E2E (tRPC over HTTP):
+    `bun test apps/web/src/routes/__tests__/note-flow.e2e.test.tsx` → `2 tests passed (636 ms)` (embeddings are mocked to avoid pool initialization).
+  - Workflow flow E2E (tRPC over HTTP):
+    `bun test apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx` → `2 tests passed (786 ms)` (Radix Select/Dialog mocked for jsdom compatibility).
 - Note any helper-specific caveats (e.g., “renderRoute must be awaited because loader data is async”). Update this section whenever new suites add noteworthy debugging tips.
 
 ## Interfaces and Dependencies
 
 - `apps/web/src/test/render-route.tsx`
-    - Exports `renderRoute(Component, options?: { loaderData?: unknown; trpc?: TestTrpcClient; session?: TestSession })`.
-    - Internally mounts QueryClientProvider, TanStack RouterContext, and the new `TestTrpcProvider` so routes behave as in production.
+  - Exports `renderRoute(Component, options?: { loaderData?: unknown; trpc?: TestTrpcClient; session?: TestSession })`.
+  - Internally mounts QueryClientProvider, TanStack RouterContext, and the new `TestTrpcProvider` so routes behave as in production.
 - `apps/web/src/test/trpc-mock.ts`
-    - Provides `createTestTrpcClient(overrides?: Partial<MockShape>)` returning spies for every tRPC hook used in the suites, plus helpers like `recordCall('note.list.useQuery')` for assertions.
+  - Provides `createTestTrpcClient(overrides?: Partial<MockShape>)` returning spies for every tRPC hook used in the suites, plus helpers like `recordCall('note.list.useQuery')` for assertions.
 - `apps/web/src/test/mock-assistant-chat.ts`
-    - Replaces `@ai-sdk/react` and `ai` transports with deterministic mocks. Exports `assistantChatMock` (`sendSpy`, `emitAssistantMessage`, `emitError`, `reset`) so integration and hook tests can exercise the real `useAssistantStream` without touching the network.
+  - Replaces `@ai-sdk/react` and `ai` transports with deterministic mocks. Exports `assistantChatMock` (`sendSpy`, `emitAssistantMessage`, `emitError`, `reset`) so integration and hook tests can exercise the real `useAssistantStream` without touching the network.
 - `apps/web/src/test/server.ts`
-    - Declares `TestServer` objects with `url`, `port`, `db`, `getSession`, `setSession`, `reset`, and `stop`.
-    - Functions: `createTestServer`, `cleanupTestServer`, `withTestServer(async (ctx) => { ... })`; `safeReset` logs when the schema is missing tables.
+  - Declares `TestServer` objects with `url`, `port`, `db`, `getSession`, `setSession`, `reset`, and `stop`.
+  - Functions: `createTestServer`, `cleanupTestServer`, `withTestServer(async (ctx) => { ... })`; `safeReset` logs when the schema is missing tables.
 - `apps/web/src/test/client.ts`
-    - Exports `createTestClient(server, { session, headers })` returning an `@trpc/client` instance bound to the test server with serialized session headers.
+  - Exports `createTestClient(server, { session, headers })` returning an `@trpc/client` instance bound to the test server with serialized session headers.
 - `apps/web/src/test/app-router.ts`
-    - Defines `uiTestAppRouter`, a slimmed-down router (health, note, remind, token, profile, workflow list/events) used exclusively by UI tests to avoid importing unstable backend modules.
+  - Defines `uiTestAppRouter`, a slimmed-down router (health, note, remind, token, profile, workflow list/events) used exclusively by UI tests to avoid importing unstable backend modules.
 - `apps/web/src/test/auth.ts`
-    - Defines `TEST_SESSION_HEADER`, `createTestSession(userOverrides?)`, serialization helpers, `setTestSession`, and `authenticatedRender`, plus a global mock of `authClient` so `_authed` routes/readers always see the injected session.
+  - Defines `TEST_SESSION_HEADER`, `createTestSession(userOverrides?)`, serialization helpers, `setTestSession`, and `authenticatedRender`, plus a global mock of `authClient` so `_authed` routes/readers always see the injected session.
 - `apps/web/src/test/stream.ts`
-    - Utilities: `createMockStream(seedEvents)` and `waitForStreamMessage(kind, timeoutMs)` to emulate SSE outputs for future workflow/reminder suites.
+  - Utilities: `createMockStream(seedEvents)` and `waitForStreamMessage(kind, timeoutMs)` to emulate SSE outputs for future workflow/reminder suites.
 - Test suites:
-    - `apps/web/src/routes/__tests__/smoke-critical.test.tsx`
-    - `apps/web/src/components/__tests__/chat-container.integration.test.tsx` (refactored)
-    - `apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` (refactored)
-    - `apps/web/src/routes/__tests__/note-flow.integration.test.tsx`
-    - `apps/web/src/routes/__tests__/note-flow.e2e.test.tsx`
-    - `apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx`
-    - `apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx`
-    - `apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx` (stretch)
+  - `apps/web/src/routes/__tests__/smoke-critical.test.tsx`
+  - `apps/web/src/components/__tests__/chat-container.integration.test.tsx` (refactored)
+  - `apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` (refactored)
+  - `apps/web/src/routes/__tests__/note-flow.integration.test.tsx`
+  - `apps/web/src/routes/__tests__/note-flow.e2e.test.tsx`
+  - `apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx`
+  - `apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx`
+  - `apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx` (stretch)
 - Dependencies:
-    - `@testing-library/react` + `@testing-library/user-event` for UI interaction
-    - `@trpc/client` and `@trpc/server` (already in repo) for E2E harness
-    - Existing backend helpers from `packages/api/test/utils/db.ts` and `packages/api/test/utils/trpc.ts`
-    - `whatwg-fetch` polyfill (if not already in Vitest setup) so fetch-based clients work in node
+  - `@testing-library/react` + `@testing-library/user-event` for UI interaction
+  - `@trpc/client` and `@trpc/server` (already in repo) for E2E harness
+  - Existing backend helpers from `packages/api/test/utils/db.ts` and `packages/api/test/utils/trpc.ts`
+  - `whatwg-fetch` polyfill (if not already in Vitest setup) so fetch-based clients work in node
 
 Maintain this plan as implementation continues. Every milestone completion should update `Progress`, summarize discoveries, log decisions (e.g., chosen ports, retry strategies), and culminate in an `Outcomes & Retrospective` entry explaining the new testing guarantees.

@@ -1,9 +1,10 @@
 ---
 title: WebSockets – API | Bun Docs
-url: 
+url:
 description: Bun supports server-side WebSockets with on-the-fly compression, TLS support, and a Bun-native pubsub API.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,14 +57,14 @@ Project
 
 **⚡️ 7x more throughput** — Bun's WebSockets are fast. For a [simple chatroom](https://github.com/oven-sh/bun/tree/main/bench/websocket-server/README.md) on Linux x64, Bun can handle 7x more requests per second than Node.js + [`"ws"`](https://github.com/websockets/ws).
 
-| Messages sent per second | Runtime | Clients |
-| --- | --- | --- |
-| ~700,000 | ( `Bun.serve`) Bun v0.2.1 (x64) | 16 |
-| ~100,000 | ( `ws`) Node v18.10.0 (x64) | 16 |
+| Messages sent per second | Runtime                         | Clients |
+| ------------------------ | ------------------------------- | ------- |
+| ~700,000                 | ( `Bun.serve`) Bun v0.2.1 (x64) | 16      |
+| ~100,000                 | ( `ws`) Node v18.10.0 (x64)     | 16      |
 
 Internally Bun's WebSocket implementation is built on [uWebSockets](https://github.com/uNetworking/uWebSockets).
 
-## [Start a WebSocket server](https://bun.com/docs/api/websockets\#start-a-websocket-server)
+## [Start a WebSocket server](https://bun.com/docs/api/websockets#start-a-websocket-server)
 
 Below is a simple WebSocket server built with `Bun.serve`, in which all incoming requests are [upgraded](https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism) to WebSocket connections in the `fetch` handler. The socket handlers are declared in the `websocket` parameter.
 
@@ -128,7 +129,7 @@ Bun.serve({
 
 ```
 
-### [Sending messages](https://bun.com/docs/api/websockets\#sending-messages)
+### [Sending messages](https://bun.com/docs/api/websockets#sending-messages)
 
 Each `ServerWebSocket` instance has a `.send()` method for sending messages to the client. It supports a range of input types.
 
@@ -139,7 +140,7 @@ ws.send(new Uint8Array([1, 2, 3])); // TypedArray | DataView
 
 ```
 
-### [Headers](https://bun.com/docs/api/websockets\#headers)
+### [Headers](https://bun.com/docs/api/websockets#headers)
 
 Once the upgrade succeeds, Bun will send a `101 Switching Protocols` response per the [spec](https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism). Additional `headers` can be attached to this `Response` in the call to `server.upgrade()`.
 
@@ -158,7 +159,7 @@ Bun.serve({
 
 ```
 
-### [Contextual data](https://bun.com/docs/api/websockets\#contextual-data)
+### [Contextual data](https://bun.com/docs/api/websockets#contextual-data)
 
 Contextual `data` can be attached to a new WebSocket in the `.upgrade()` call. This data is made available on the `ws.data` property inside the WebSocket handlers.
 
@@ -216,7 +217,7 @@ socket.addEventListener("message", event => {
 
 **Identifying users** — The cookies that are currently set on the page will be sent with the WebSocket upgrade request and available on `req.headers` in the `fetch` handler. Parse these cookies to determine the identity of the connecting user and set the value of `data` accordingly.
 
-### [Pub/Sub](https://bun.com/docs/api/websockets\#pub-sub)
+### [Pub/Sub](https://bun.com/docs/api/websockets#pub-sub)
 
 Bun's `ServerWebSocket` implementation implements a native publish-subscribe API for topic-based broadcasting. Individual sockets can `.subscribe()` to a topic (specified with a string identifier) and `.publish()` messages to all other subscribers to that topic (excluding itself). This topic-based broadcast API is similar to [MQTT](https://en.wikipedia.org/wiki/MQTT) and [Redis Pub/Sub](https://redis.io/topics/pubsub).
 
@@ -272,7 +273,7 @@ server.publish("the-group-chat", "Hello world");
 
 ```
 
-### [Compression](https://bun.com/docs/api/websockets\#compression)
+### [Compression](https://bun.com/docs/api/websockets#compression)
 
 Per-message [compression](https://websockets.readthedocs.io/en/stable/topics/compression.html) can be enabled with the `perMessageDeflate` parameter.
 
@@ -296,7 +297,7 @@ ws.send("Hello world", true);
 
 For fine-grained control over compression characteristics, refer to the [Reference](https://bun.com/docs/api/websockets#reference).
 
-### [Backpressure](https://bun.com/docs/api/websockets\#backpressure)
+### [Backpressure](https://bun.com/docs/api/websockets#backpressure)
 
 The `.send(message)` method of `ServerWebSocket` returns a `number` indicating the result of the operation.
 
@@ -306,7 +307,7 @@ The `.send(message)` method of `ServerWebSocket` returns a `number` indicating t
 
 This gives you better control over backpressure in your server.
 
-### [Timeouts and limits](https://bun.com/docs/api/websockets\#timeouts-and-limits)
+### [Timeouts and limits](https://bun.com/docs/api/websockets#timeouts-and-limits)
 
 By default, Bun will close a WebSocket connection if it is idle for 120 seconds. This can be configured with the `idleTimeout` parameter.
 
@@ -336,7 +337,7 @@ Bun.serve({
 
 ```
 
-## [Connect to a `Websocket` server](https://bun.com/docs/api/websockets\#connect-to-a-websocket-server)
+## [Connect to a `Websocket` server](https://bun.com/docs/api/websockets#connect-to-a-websocket-server)
 
 Bun implements the `WebSocket` class. To create a WebSocket client that connects to a `ws://` or `wss://` server, create an instance of `WebSocket`, as you would in the browser.
 
@@ -375,7 +376,7 @@ socket.addEventListener("error", event => {});
 
 ```
 
-## [Reference](https://bun.com/docs/api/websockets\#reference)
+## [Reference](https://bun.com/docs/api/websockets#reference)
 
 ```
 namespace Bun {
@@ -458,7 +459,7 @@ HTTP client](https://bun.com/docs/api/fetch) [Next\\
 \\
 Workers](https://bun.com/docs/api/workers)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/websockets.md)
 
@@ -482,7 +483,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -93,4 +93,3 @@ The audit system logs policy decisions for compliance and forensics. Every PDP e
 - [Cognitive State Machine](cognitive-state-machine.md) — How autonomy gradient works
 - [Workflow Orchestration](workflow-orchestration.md) — How workflows suspend for obligations
 - [Policy Confidence Guide](policy-confidence.md) — Detailed policy configuration
-

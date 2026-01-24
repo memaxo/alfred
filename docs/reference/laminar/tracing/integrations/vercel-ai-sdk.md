@@ -1,8 +1,9 @@
 ---
 title: LLM Observability for AI SDK by Vercel - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/vercel-ai-sdk#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -38,7 +39,6 @@ Initialize Laminar
 - Next.js
 
 - Node.js
-
 
 In Next.js, place `Laminar.initialize` in the `instrumentation.ts` file.
 

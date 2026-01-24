@@ -1,9 +1,10 @@
 ---
 title: YAML – API | Bun Docs
-url: 
+url:
 description: Bun.YAML.parse(string) lets you parse YAML files in JavaScript
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -60,13 +61,13 @@ Bun provides built-in support for YAML files through both runtime APIs and bundl
 - import & require YAML files as modules at runtime (including hot reloading & watch mode support)
 - import & require YAML files in frontend apps via bun's bundler
 
-## [Conformance](https://bun.com/docs/api/yaml\#conformance)
+## [Conformance](https://bun.com/docs/api/yaml#conformance)
 
 Bun's YAML parser currently passes over 90% of the official YAML test suite. While we're actively working on reaching 100% conformance, the current implementation covers the vast majority of real-world use cases. The parser is written in Zig for optimal performance and is continuously being improved.
 
-## [Runtime API](https://bun.com/docs/api/yaml\#runtime-api)
+## [Runtime API](https://bun.com/docs/api/yaml#runtime-api)
 
-### [`Bun.YAML.parse()`](https://bun.com/docs/api/yaml\#bun-yaml-parse)
+### [`Bun.YAML.parse()`](https://bun.com/docs/api/yaml#bun-yaml-parse)
 
 Parse a YAML string into a JavaScript object.
 
@@ -172,9 +173,9 @@ try {
 
 ```
 
-## [Module Import](https://bun.com/docs/api/yaml\#module-import)
+## [Module Import](https://bun.com/docs/api/yaml#module-import)
 
-### [ES Modules](https://bun.com/docs/api/yaml\#es-modules)
+### [ES Modules](https://bun.com/docs/api/yaml#es-modules)
 
 You can import YAML files directly as ES modules. The YAML content is parsed and made available as both default and named exports:
 
@@ -237,7 +238,7 @@ if (features.rateLimit) {
 
 ```
 
-### [CommonJS](https://bun.com/docs/api/yaml\#commonjs)
+### [CommonJS](https://bun.com/docs/api/yaml#commonjs)
 
 YAML files can also be required in CommonJS:
 
@@ -251,7 +252,7 @@ console.log(database.port); // 5432
 
 ```
 
-### [TypeScript Support](https://bun.com/docs/api/yaml\#typescript-support)
+### [TypeScript Support](https://bun.com/docs/api/yaml#typescript-support)
 
 While Bun can import YAML files directly, TypeScript doesn't know the types of your YAML files by default. To add TypeScript support for your YAML imports, create a declaration file with `.d.ts` appended to the YAML filename (e.g., `config.yaml` → `config.yaml.d.ts`):
 
@@ -299,11 +300,11 @@ config.server.unknown; // Error: Property 'unknown' does not exist
 
 This approach works for both ES modules and CommonJS, giving you full type safety while Bun continues to handle the actual YAML parsing at runtime.
 
-## [Hot Reloading with YAML](https://bun.com/docs/api/yaml\#hot-reloading-with-yaml)
+## [Hot Reloading with YAML](https://bun.com/docs/api/yaml#hot-reloading-with-yaml)
 
 One of the most powerful features of Bun's YAML support is hot reloading. When you run your application with `bun --hot`, changes to YAML files are automatically detected and reloaded without closing connections
 
-### [Configuration Hot Reloading](https://bun.com/docs/api/yaml\#configuration-hot-reloading)
+### [Configuration Hot Reloading](https://bun.com/docs/api/yaml#configuration-hot-reloading)
 
 config.yaml
 
@@ -357,9 +358,9 @@ Now when you modify `config.yaml`, the changes are immediately reflected in your
 - Live debugging with configuration changes
 - Feature flag toggling
 
-## [Configuration Management](https://bun.com/docs/api/yaml\#configuration-management)
+## [Configuration Management](https://bun.com/docs/api/yaml#configuration-management)
 
-### [Environment-Based Configuration](https://bun.com/docs/api/yaml\#environment-based-configuration)
+### [Environment-Based Configuration](https://bun.com/docs/api/yaml#environment-based-configuration)
 
 YAML excels at managing configuration across different environments:
 
@@ -430,7 +431,7 @@ export default interpolateEnvVars(config);
 
 ```
 
-### [Feature Flags Configuration](https://bun.com/docs/api/yaml\#feature-flags-configuration)
+### [Feature Flags Configuration](https://bun.com/docs/api/yaml#feature-flags-configuration)
 
 features.yaml
 
@@ -495,7 +496,7 @@ if (isFeatureEnabled("newDashboard", user.email)) {
 
 ```
 
-### [Database Configuration](https://bun.com/docs/api/yaml\#database-configuration)
+### [Database Configuration](https://bun.com/docs/api/yaml#database-configuration)
 
 database.yaml
 
@@ -565,7 +566,7 @@ if (parseConfig(migrations).autoRun === "true") {
 
 ```
 
-### [Bundler Integration](https://bun.com/docs/api/yaml\#bundler-integration)
+### [Bundler Integration](https://bun.com/docs/api/yaml#bundler-integration)
 
 When you import YAML files in your application and bundle it with Bun, the YAML is parsed at build time and included as a JavaScript module:
 
@@ -580,7 +581,7 @@ This means:
 - Smaller bundle sizes
 - Tree-shaking support for unused configuration (named imports)
 
-### [Dynamic Imports](https://bun.com/docs/api/yaml\#dynamic-imports)
+### [Dynamic Imports](https://bun.com/docs/api/yaml#dynamic-imports)
 
 YAML files can be dynamically imported, useful for loading configuration on demand:
 
@@ -608,7 +609,7 @@ Child processes](https://bun.com/docs/api/spawn) [Next\\
 \\
 HTMLRewriter](https://bun.com/docs/api/html-rewriter)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/yaml.md)
 
@@ -632,7 +633,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -1,9 +1,10 @@
 ---
 title: LLM cost tracking - Laminar documentation
-url: 
+url:
 description: Overview of supported LLM providers and model names for accurate cost tracking
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/providers#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -41,34 +42,33 @@ On this page
 - [Use Exact Model Names](https://docs.lmnr.ai/tracing/structure/providers#use-exact-model-names)
 - [Handle Missing Usage Data](https://docs.lmnr.ai/tracing/structure/providers#handle-missing-usage-data)
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/structure/providers#overview) Overview
 
 Laminar automatically calculates costs for LLM calls when the correct provider and model names are set. This page lists the supported providers and their corresponding model names that Laminar recognizes for cost calculation.
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#supported-providers)  Supported Providers
+## [​](https://docs.lmnr.ai/tracing/structure/providers#supported-providers) Supported Providers
 
 Laminar uses provider names consistent with OpenLLMetry standards. When manually instrumenting LLM calls, set the `gen_ai.system` attribute to one of these values:
 
-| Provider | Provider Name | Example Model | Documentation |
-| --- | --- | --- | --- |
-| **OpenAI** | `openai` | `gpt-4o`, `gpt-4o-2024-11-20` | [platform.openai.com](https://platform.openai.com/docs/models) |
-| **Anthropic** | `anthropic` | `claude-3-5-sonnet`, `claude-3-5-sonnet-20241022` | [docs.anthropic.com](https://docs.anthropic.com/en/docs/about-claude/models#model-names) |
-| **Google Gemini** | `gemini`, `google-genai` | `models/gemini-1.5-pro` | [ai.google.dev](https://ai.google.dev/gemini-api/docs/models/gemini) |
-| **Azure OpenAI** | `azure-openai` | `gpt-4o-mini`, `gpt-4o-mini-2024-07-18` | [learn.microsoft.com](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models) |
-| **AWS Bedrock** | `bedrock-anthropic` | `claude-3-5-sonnet-20241022-v2:0` | [docs.aws.amazon.com](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-claude.html) |
-| **Mistral AI** | `mistral` | `mistral-large-2407` | [docs.mistral.ai](https://docs.mistral.ai/getting-started/models/models_overview/) |
-| **Groq** | `groq` | `llama-3.1-70b-versatile` | [console.groq.com](https://console.groq.com/docs/models) |
+| Provider          | Provider Name            | Example Model                                     | Documentation                                                                                            |
+| ----------------- | ------------------------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **OpenAI**        | `openai`                 | `gpt-4o`, `gpt-4o-2024-11-20`                     | [platform.openai.com](https://platform.openai.com/docs/models)                                           |
+| **Anthropic**     | `anthropic`              | `claude-3-5-sonnet`, `claude-3-5-sonnet-20241022` | [docs.anthropic.com](https://docs.anthropic.com/en/docs/about-claude/models#model-names)                 |
+| **Google Gemini** | `gemini`, `google-genai` | `models/gemini-1.5-pro`                           | [ai.google.dev](https://ai.google.dev/gemini-api/docs/models/gemini)                                     |
+| **Azure OpenAI**  | `azure-openai`           | `gpt-4o-mini`, `gpt-4o-mini-2024-07-18`           | [learn.microsoft.com](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models)        |
+| **AWS Bedrock**   | `bedrock-anthropic`      | `claude-3-5-sonnet-20241022-v2:0`                 | [docs.aws.amazon.com](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-claude.html) |
+| **Mistral AI**    | `mistral`                | `mistral-large-2407`                              | [docs.mistral.ai](https://docs.mistral.ai/getting-started/models/models_overview/)                       |
+| **Groq**          | `groq`                   | `llama-3.1-70b-versatile`                         | [console.groq.com](https://console.groq.com/docs/models)                                                 |
 
 Missing a provider or can’t see cost information? [Create an issue](https://github.com/lmnr-ai/lmnr/issues/new) and we’ll add it.
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#setting-provider-information)  Setting Provider Information
+## [​](https://docs.lmnr.ai/tracing/structure/providers#setting-provider-information) Setting Provider Information
 
 When manually instrumenting LLM calls, ensure you set the correct provider and model attributes:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -105,11 +105,11 @@ await observe(
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#model-name-formats)  Model Name Formats
+## [​](https://docs.lmnr.ai/tracing/structure/providers#model-name-formats) Model Name Formats
 
 Different providers use different model name formats. Use the exact names as returned by the provider’s API:
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#openai)  OpenAI
+### [​](https://docs.lmnr.ai/tracing/structure/providers#openai) OpenAI
 
 Copy
 
@@ -125,7 +125,7 @@ Copy
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#anthropic)  Anthropic
+### [​](https://docs.lmnr.ai/tracing/structure/providers#anthropic) Anthropic
 
 Copy
 
@@ -141,7 +141,7 @@ Copy
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#google-gemini)  Google Gemini
+### [​](https://docs.lmnr.ai/tracing/structure/providers#google-gemini) Google Gemini
 
 Copy
 
@@ -153,7 +153,7 @@ Copy
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#azure-openai)  Azure OpenAI
+### [​](https://docs.lmnr.ai/tracing/structure/providers#azure-openai) Azure OpenAI
 
 Copy
 
@@ -164,14 +164,13 @@ Copy
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#custom-providers)  Custom Providers
+## [​](https://docs.lmnr.ai/tracing/structure/providers#custom-providers) Custom Providers
 
 For providers not listed above, you can still track usage by setting custom attributes:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -190,7 +189,7 @@ Laminar.setSpanAttributes({
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#cost-calculation)  Cost Calculation
+## [​](https://docs.lmnr.ai/tracing/structure/providers#cost-calculation) Cost Calculation
 
 Laminar automatically calculates costs using:
 
@@ -202,7 +201,7 @@ Laminar also takes into account cached tokens to calculate cost for providers th
 
 The cost calculation uses current pricing from each provider. If explicit cost attributes are provided, they take precedence over calculated costs.
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#viewing-costs)  Viewing Costs
+### [​](https://docs.lmnr.ai/tracing/structure/providers#viewing-costs) Viewing Costs
 
 Costs appear in the Laminar UI on:
 
@@ -210,13 +209,13 @@ Costs appear in the Laminar UI on:
 - **LLM spans** \- Individual LLM call costs
 - **Analytics dashboard** \- Aggregated cost metrics by models
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#pricing-data)  Pricing Data
+## [​](https://docs.lmnr.ai/tracing/structure/providers#pricing-data) Pricing Data
 
 Laminar maintains current pricing information for supported providers. For the complete list of supported models and their pricing, see the [pricing data in our GitHub repository](https://github.com/lmnr-ai/lmnr/blob/main/frontend/lib/db/initial-data.json#L25).
 
-## [​](https://docs.lmnr.ai/tracing/structure/providers\#best-practices)  Best Practices
+## [​](https://docs.lmnr.ai/tracing/structure/providers#best-practices) Best Practices
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#always-set-provider-info)  Always Set Provider Info
+### [​](https://docs.lmnr.ai/tracing/structure/providers#always-set-provider-info) Always Set Provider Info
 
 Copy
 
@@ -236,7 +235,7 @@ Laminar.setSpanAttributes({
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#use-exact-model-names)  Use Exact Model Names
+### [​](https://docs.lmnr.ai/tracing/structure/providers#use-exact-model-names) Use Exact Model Names
 
 Copy
 
@@ -249,7 +248,7 @@ Copy
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/providers\#handle-missing-usage-data)  Handle Missing Usage Data
+### [​](https://docs.lmnr.ai/tracing/structure/providers#handle-missing-usage-data) Handle Missing Usage Data
 
 Copy
 

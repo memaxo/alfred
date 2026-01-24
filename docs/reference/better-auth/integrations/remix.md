@@ -1,9 +1,10 @@
 ---
 title: Remix Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Remix.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -32,7 +33,7 @@ You can follow the steps from [installation](https://www.better-auth.com/docs/in
 
 If you have followed the installation steps, you can skip the first step.
 
-## [Create auth instance](https://www.better-auth.com/docs/integrations/remix\#create-auth-instance)
+## [Create auth instance](https://www.better-auth.com/docs/integrations/remix#create-auth-instance)
 
 Create a file named `auth.server.ts` in one of these locations:
 
@@ -59,7 +60,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [Create API Route](https://www.better-auth.com/docs/integrations/remix\#create-api-route)
+## [Create API Route](https://www.better-auth.com/docs/integrations/remix#create-api-route)
 
 We need to mount the handler to a API route. Create a resource route file `api.auth.$.ts` inside `app/routes/` directory. And add the following code:
 
@@ -80,7 +81,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 You can change the path on your better-auth configuration but it's recommended to keep it as `routes/api.auth.$.ts`
 
-## [Create a client](https://www.better-auth.com/docs/integrations/remix\#create-a-client)
+## [Create a client](https://www.better-auth.com/docs/integrations/remix#create-a-client)
 
 Create a client instance. Here we are creating `auth-client.ts` file inside the `lib/` directory.
 
@@ -96,9 +97,9 @@ export const authClient = createAuthClient({
 
 Once you have created the client, you can use it to sign up, sign in, and perform other actions.
 
-### [Example usage](https://www.better-auth.com/docs/integrations/remix\#example-usage)
+### [Example usage](https://www.better-auth.com/docs/integrations/remix#example-usage)
 
-#### [Sign Up](https://www.better-auth.com/docs/integrations/remix\#sign-up)
+#### [Sign Up](https://www.better-auth.com/docs/integrations/remix#sign-up)
 
 app/routes/signup.tsx
 
@@ -170,7 +171,7 @@ export default function SignUp() {
 }
 ```
 
-#### [Sign In](https://www.better-auth.com/docs/integrations/remix\#sign-in)
+#### [Sign In](https://www.better-auth.com/docs/integrations/remix#sign-in)
 
 app/routes/signin.tsx
 

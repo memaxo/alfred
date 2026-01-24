@@ -33,50 +33,35 @@
 - **Current**: In Progress, Medium, 5 pts
 - **Updated**: Size=5, Priority=Medium
 
-
-
 ### ALF-142: [Tech Debt] Consolidate Cognitive Architecture - Ship What Exists
 
 - **Current**: In Progress, Medium, 8 pts
 - **Updated**: Size=8, Priority=Medium
-
-
 
 ### ALF-139: [Tech Debt] Simplify Auth Layer for Single-User Context
 
 - **Current**: In Progress, Medium, 5 pts
 - **Updated**: Size=5, Priority=Medium
 
-
-
 ### ALF-134: Agent Tool Gaps: Expose Core System Capabilities as Tools
 
 - **Current**: In Progress, Urgent, 8 pts
 - **Updated**: Size=8, Priority=Urgent
-
-
 
 ### ALF-89: [Strategic] Knowledge-Policy-Mindscape Integration
 
 - **Current**: In Progress, High, 8 pts
 - **Updated**: Size=8, Priority=High
 
-
-
 ### ALF-5: [Epic] Critical Workflow Reliability Issues
 
 - **Current**: Backlog, Urgent, 13 pts
 - **Updated**: Size=13, Priority=Urgent
 
-
-
 ### ALF-6: [Epic] High Priority Workflow Issues
 
 - **Current**: Backlog, High, 13 pts
 - **Updated**: Size=13, Priority=High
-
-
-
 
 ---
 

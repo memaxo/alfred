@@ -14,6 +14,7 @@
 ### ✅ Appropriate Mocks
 
 **Boundary Mocks (Correct):**
+
 - `@alfred/db` repo functions (`getProjectById`, `archiveProject`) ✓
 - `@alfred/db/repo/linear` (`getLinearByOAuth`) ✓
 - `@alfred/plan` functions (`detectProject`, `linkLinearProject`) ✓
@@ -37,6 +38,7 @@
 **Missing Tests:**
 
 1. **`linkLinear` - Linear installation missing `space`:**
+
    ```typescript
    it("throws PRECONDITION_FAILED when Linear installation has no space", async () => {
      mockGetLinearByOAuth.mockResolvedValue({
@@ -48,6 +50,7 @@
    ```
 
 2. **`linkLinear` - `linkLinearProject` throws error:**
+
    ```typescript
    it("propagates errors from linkLinearProject", async () => {
      linkSpy.mockRejectedValue(new Error("linear_api_error"));
@@ -73,6 +76,7 @@
 **Missing Tests:**
 
 1. **Concurrent execution prevention:**
+
    ```typescript
    it("skips tick when already running", async () => {
      // Start tick, verify running flag prevents concurrent execution
@@ -80,6 +84,7 @@
    ```
 
 2. **Partial batch failure:**
+
    ```typescript
    it("continues archiving when one project fails", async () => {
      listInactiveProjectIdsMock.mockResolvedValue(["proj-1", "proj-2"]);
@@ -109,6 +114,7 @@
 **Missing Tests:**
 
 1. **Concurrent execution prevention:**
+
    ```typescript
    it("skips tick when already running", async () => {
      // Similar to project lifecycle test
@@ -132,6 +138,7 @@
 ### ✅ Good Patterns
 
 **Reset Mocks:**
+
 ```typescript
 beforeEach(() => {
   mockProjectRepo.getProjectById.mockReset();
@@ -140,6 +147,7 @@ beforeEach(() => {
 ```
 
 **Cleanup:**
+
 ```typescript
 afterEach(() => {
   stopProjectLifecycleScheduler();
@@ -148,6 +156,7 @@ afterEach(() => {
 ```
 
 **Assertions:**
+
 - Clear expectations with descriptive messages ✓
 - Proper error type checking (`expect(error).toBeInstanceOf(TRPCError)`) ✓
 
@@ -165,6 +174,7 @@ expect(listInactiveProjectIdsMock).toHaveBeenCalledWith({
 ```
 
 **Fix:** Extract constants:
+
 ```typescript
 const DAY_MS = 24 * 60 * 60 * 1000;
 expect(listInactiveProjectIdsMock).toHaveBeenCalledWith({
@@ -184,6 +194,7 @@ await new Promise((resolve) => setTimeout(resolve, 30)); // Arbitrary timeout
 ```
 
 **Fix:** Use deterministic waiting or mock timers:
+
 ```typescript
 // Option 1: Mock timers
 vi.useFakeTimers();
@@ -204,11 +215,13 @@ await waitFor(() => {
 ### Missing Test Categories
 
 **Project Router:**
+
 - [ ] Schema validation (invalid UUIDs, empty strings)
 - [ ] Permission checks (all procedures verify ownership)
 - [ ] Error message format validation
 
 **Schedulers:**
+
 - [ ] Scheduler lifecycle (start/stop multiple times)
 - [ ] Environment variable edge cases (empty string, "0", "true")
 - [ ] Logger interface compliance
@@ -255,11 +268,13 @@ await waitFor(() => {
 - ✅ Core functionality covered
 
 **Gaps:**
+
 - ⚠️ Missing edge case tests (Linear linking, scheduler concurrency)
 - ⚠️ Magic numbers in assertions
 - ⚠️ Flaky timing in scheduler tests
 
 **Recommendations:**
+
 - Add edge case tests for Linear linking (high priority)
 - Add concurrent execution tests for schedulers (high priority)
 - Extract constants and use deterministic timing (medium priority)

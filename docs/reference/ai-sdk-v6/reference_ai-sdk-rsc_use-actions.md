@@ -11,8 +11,7 @@ It is a hook to help you access your Server Actions from the client. This is par
 It is required to access these server actions via this hook because they are patched when passed through the context. Accessing them directly may result in a Cannot find Client Component error.
 
 ## Import
-    
-    
+
     import { useActions } from "@ai-sdk/rsc"
 
 ## API Signature

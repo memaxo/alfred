@@ -16,12 +16,12 @@ ALFRED integrates with [poof](https://github.com/Jarred-Sumner/poof) for ephemer
 
 ## When to Use Poof
 
-| Use Case | Poof Mode | Description |
-|----------|-----------|-------------|
-| Research agents | `exec` | Exploratory work where changes should not persist |
-| Coder agents | `run` | Changes captured for review before merging |
-| Untrusted scripts | `exec` | Run potentially dangerous commands safely |
-| Parallel agents | `run` | Isolate each agent's filesystem changes |
+| Use Case          | Poof Mode | Description                                       |
+| ----------------- | --------- | ------------------------------------------------- |
+| Research agents   | `exec`    | Exploratory work where changes should not persist |
+| Coder agents      | `run`     | Changes captured for review before merging        |
+| Untrusted scripts | `exec`    | Run potentially dangerous commands safely         |
+| Parallel agents   | `run`     | Isolate each agent's filesystem changes           |
 
 ## Prerequisites
 
@@ -58,11 +58,11 @@ sudo mv poof /usr/local/bin/
 
 When running ALFRED inside Docker, poof needs additional permissions:
 
-| Setup | Docker Flags |
-|-------|--------------|
-| Recommended (fuse-overlayfs) | `--device /dev/fuse --security-opt seccomp=unconfined` |
-| Kernel overlayfs | `--cap-add=SYS_ADMIN --security-opt seccomp=unconfined` |
-| Simple (full access) | `--privileged` |
+| Setup                        | Docker Flags                                            |
+| ---------------------------- | ------------------------------------------------------- |
+| Recommended (fuse-overlayfs) | `--device /dev/fuse --security-opt seccomp=unconfined`  |
+| Kernel overlayfs             | `--cap-add=SYS_ADMIN --security-opt seccomp=unconfined` |
+| Simple (full access)         | `--privileged`                                          |
 
 Example docker-compose:
 
@@ -75,28 +75,28 @@ services:
     devices:
       - /dev/fuse
     cap_add:
-      - SYS_ADMIN  # Only if not using fuse-overlayfs
+      - SYS_ADMIN # Only if not using fuse-overlayfs
 ```
 
 ## Configuration
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ORCH_USE_POOF=1` | Enable poof isolation for agent waves | Disabled |
-| `ORCH_POOF_PROFILE` | Default resource profile | `standard` |
-| `POOF_BIN` | Override poof binary path | Search PATH |
+| Variable            | Description                           | Default     |
+| ------------------- | ------------------------------------- | ----------- |
+| `ORCH_USE_POOF=1`   | Enable poof isolation for agent waves | Disabled    |
+| `ORCH_POOF_PROFILE` | Default resource profile              | `standard`  |
+| `POOF_BIN`          | Override poof binary path             | Search PATH |
 
 ### Resource Profiles
 
 ALFRED provides predefined resource profiles:
 
-| Profile | Memory | PIDs | Timeout | Use Case |
-|---------|--------|------|---------|----------|
-| `minimal` | 256M | 20 | 60s | Simple file operations |
-| `standard` | 1G | 100 | 300s | Build/test tasks |
-| `intensive` | 4G | 500 | 600s | Large builds, ML inference |
+| Profile     | Memory | PIDs | Timeout | Use Case                   |
+| ----------- | ------ | ---- | ------- | -------------------------- |
+| `minimal`   | 256M   | 20   | 60s     | Simple file operations     |
+| `standard`  | 1G     | 100  | 300s    | Build/test tasks           |
+| `intensive` | 4G     | 500  | 600s    | Large builds, ML inference |
 
 ## Usage
 
@@ -154,10 +154,27 @@ import { createWaveHandoff } from "@alfred/agent/spawn";
 const handoff = createWaveHandoff("/path/to/repo");
 
 // Record completed wave
-handoff.recordWave("wave_0", [
-  { agentId: "agent-1", upperDir: "/tmp/upper-1", exitCode: 0, timedOut: false, durationMs: 1000 },
-  { agentId: "agent-2", upperDir: "/tmp/upper-2", exitCode: 0, timedOut: false, durationMs: 1500 },
-], startTime, endTime);
+handoff.recordWave(
+  "wave_0",
+  [
+    {
+      agentId: "agent-1",
+      upperDir: "/tmp/upper-1",
+      exitCode: 0,
+      timedOut: false,
+      durationMs: 1000,
+    },
+    {
+      agentId: "agent-2",
+      upperDir: "/tmp/upper-2",
+      exitCode: 0,
+      timedOut: false,
+      durationMs: 1500,
+    },
+  ],
+  startTime,
+  endTime
+);
 
 // Synthesis agent reviews all changes
 const report = await handoff.generateSynthesisReport();
@@ -171,13 +188,13 @@ await handoff.applyAgentChanges("agent-1");
 
 ## What Poof Isolates
 
-| Isolated | Not Isolated |
-|----------|--------------|
-| Filesystem writes | Network access |
-| Filesystem deletes | Environment variables |
-| Process tree (PID namespace) | GPU/hardware access |
-| Hostname (UTS namespace) | System time |
-| System V IPC | User credentials |
+| Isolated                     | Not Isolated          |
+| ---------------------------- | --------------------- |
+| Filesystem writes            | Network access        |
+| Filesystem deletes           | Environment variables |
+| Process tree (PID namespace) | GPU/hardware access   |
+| Hostname (UTS namespace)     | System time           |
+| System V IPC                 | User credentials      |
 
 **Important**: Poof does NOT isolate network access. Agents can still make HTTP requests and access external services.
 

@@ -1,9 +1,10 @@
 ---
 title: Next.js integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Next.js.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Better Auth can be easily integrated with Next.js. Before you start, make sure you have a Better Auth instance configured. If you haven't done that yet, check out the [installation](https://www.better-auth.com/docs/installation).
 
-### [Create API Route](https://www.better-auth.com/docs/integrations/next\#create-api-route)
+### [Create API Route](https://www.better-auth.com/docs/integrations/next#create-api-route)
 
 We need to mount the handler to an API route. Create a route file inside `/api/auth/[...all]` directory. And add the following code:
 
@@ -57,7 +58,7 @@ export const config = { api: { bodyParser: false } }
 export default toNodeHandler(auth.handler)
 ```
 
-## [Create a client](https://www.better-auth.com/docs/integrations/next\#create-a-client)
+## [Create a client](https://www.better-auth.com/docs/integrations/next#create-a-client)
 
 Create a client instance. You can name the file anything you want. Here we are creating `client.ts` file inside the `lib/` directory.
 
@@ -76,7 +77,7 @@ Some of the actions are reactive. The client uses [nano-store](https://github.co
 
 The client also uses [better-fetch](https://github.com/bekacru/better-fetch) to make the requests. You can pass the fetch configuration to the client.
 
-## [RSC and Server actions](https://www.better-auth.com/docs/integrations/next\#rsc-and-server-actions)
+## [RSC and Server actions](https://www.better-auth.com/docs/integrations/next#rsc-and-server-actions)
 
 The `api` object exported from the auth instance contains all the actions that you can perform on the server. Every endpoint made inside Better Auth is a invocable as a function. Including plugins endpoints.
 
@@ -119,7 +120,7 @@ export async function ServerComponent() {
 
 As RSCs cannot set cookies, the [cookie cache](https://www.better-auth.com/docs/concepts/session-management#cookie-cache) will not be refreshed until the server is interacted with from the client via Server Actions or Route Handlers.
 
-### [Server Action Cookies](https://www.better-auth.com/docs/integrations/next\#server-action-cookies)
+### [Server Action Cookies](https://www.better-auth.com/docs/integrations/next#server-action-cookies)
 
 When you call a function that needs to set cookies, like `signInEmail` or `signUpEmail` in a server action, cookies won’t be set. This is because server actions need to use the `cookies` helper from Next.js to set cookies.
 
@@ -153,7 +154,7 @@ const signIn = async () => {
 }
 ```
 
-## [Middleware](https://www.better-auth.com/docs/integrations/next\#middleware)
+## [Middleware](https://www.better-auth.com/docs/integrations/next#middleware)
 
 In Next.js middleware, it's recommended to only check for the existence of a session cookie to handle redirection. To avoid blocking requests by making API or database calls.
 
@@ -212,7 +213,7 @@ export async function middleware(request: NextRequest) {
 }
 ```
 
-### [How to handle auth checks in each page/route](https://www.better-auth.com/docs/integrations/next\#how-to-handle-auth-checks-in-each-pageroute)
+### [How to handle auth checks in each page/route](https://www.better-auth.com/docs/integrations/next#how-to-handle-auth-checks-in-each-pageroute)
 
 In this example, we are using the `auth.api.getSession` function within a server component to get the session object,
 then we are checking if the session is valid. If it's not, we are redirecting the user to the sign-in page.
@@ -241,7 +242,7 @@ export default async function DashboardPage() {
 }
 ```
 
-### [For Next.js release `15.1.7` and below](https://www.better-auth.com/docs/integrations/next\#for-nextjs-release-1517-and-below)
+### [For Next.js release `15.1.7` and below](https://www.better-auth.com/docs/integrations/next#for-nextjs-release-1517-and-below)
 
 If you need the full session object, you'll have to fetch it from the `/get-session` API route. Since Next.js middleware doesn't support running Node.js APIs directly, you must make an HTTP request.
 
@@ -274,7 +275,7 @@ export const config = {
 };
 ```
 
-### [For Next.js release `15.2.0` and above](https://www.better-auth.com/docs/integrations/next\#for-nextjs-release-1520-and-above)
+### [For Next.js release `15.2.0` and above](https://www.better-auth.com/docs/integrations/next#for-nextjs-release-1520-and-above)
 
 From the version 15.2.0, Next.js allows you to use the `Node.js` runtime in middleware. This means you can use the `auth.api` object directly in middleware.
 

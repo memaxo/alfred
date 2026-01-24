@@ -1,9 +1,10 @@
 ---
 title: Options | Better Auth
-url: 
+url:
 description: Better Auth configuration options reference.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 List of all the available options for configuring Better Auth. See [Better Auth Options](https://github.com/better-auth/better-auth/blob/main/packages/better-auth/src/types/options.ts#L13).
 
-## [`appName`](https://www.better-auth.com/docs/reference/options\#appname)
+## [`appName`](https://www.better-auth.com/docs/reference/options#appname)
 
 The name of the application.
 
@@ -39,7 +40,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [`baseURL`](https://www.better-auth.com/docs/reference/options\#baseurl)
+## [`baseURL`](https://www.better-auth.com/docs/reference/options#baseurl)
 
 Base URL for Better Auth. This is typically the root URL where your application server is hosted. Note: If you include a path in the baseURL, it will take precedence over the default path.
 
@@ -52,7 +53,7 @@ export const auth = betterAuth({
 
 If not explicitly set, the system will check for the environment variable `process.env.BETTER_AUTH_URL`
 
-## [`basePath`](https://www.better-auth.com/docs/reference/options\#basepath)
+## [`basePath`](https://www.better-auth.com/docs/reference/options#basepath)
 
 Base path for Better Auth. This is typically the path where the Better Auth routes are mounted. It will be overridden if there is a path component within `baseURL`.
 
@@ -65,11 +66,11 @@ export const auth = betterAuth({
 
 Default: `/api/auth`
 
-## [`trustedOrigins`](https://www.better-auth.com/docs/reference/options\#trustedorigins)
+## [`trustedOrigins`](https://www.better-auth.com/docs/reference/options#trustedorigins)
 
 List of trusted origins. You can provide a static array of origins, a function that returns origins dynamically, or use wildcard patterns to match multiple domains.
 
-### [Static Origins](https://www.better-auth.com/docs/reference/options\#static-origins)
+### [Static Origins](https://www.better-auth.com/docs/reference/options#static-origins)
 
 You can provide a static array of origins:
 
@@ -80,7 +81,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Dynamic Origins](https://www.better-auth.com/docs/reference/options\#dynamic-origins)
+### [Dynamic Origins](https://www.better-auth.com/docs/reference/options#dynamic-origins)
 
 You can provide a function that returns origins dynamically:
 
@@ -93,7 +94,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Wildcard Support](https://www.better-auth.com/docs/reference/options\#wildcard-support)
+### [Wildcard Support](https://www.better-auth.com/docs/reference/options#wildcard-support)
 
 You can use wildcard patterns in trusted origins:
 
@@ -107,7 +108,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [`secret`](https://www.better-auth.com/docs/reference/options\#secret)
+## [`secret`](https://www.better-auth.com/docs/reference/options#secret)
 
 The secret used for encryption, signing, and hashing.
 
@@ -131,7 +132,7 @@ You can generate a good secret using the following command:
 openssl rand -base64 32
 ```
 
-## [`database`](https://www.better-auth.com/docs/reference/options\#database)
+## [`database`](https://www.better-auth.com/docs/reference/options#database)
 
 Database configuration for Better Auth.
 
@@ -150,7 +151,7 @@ Better Auth supports various database configurations including [PostgreSQL](http
 
 Read more about databases [here](https://www.better-auth.com/docs/concepts/database).
 
-## [`secondaryStorage`](https://www.better-auth.com/docs/reference/options\#secondarystorage)
+## [`secondaryStorage`](https://www.better-auth.com/docs/reference/options#secondarystorage)
 
 Secondary storage configuration used to store session and rate limit data.
 
@@ -167,7 +168,7 @@ export const auth = betterAuth({
 
 Read more about secondary storage [here](https://www.better-auth.com/docs/concepts/database#secondary-storage).
 
-## [`emailVerification`](https://www.better-auth.com/docs/reference/options\#emailverification)
+## [`emailVerification`](https://www.better-auth.com/docs/reference/options#emailverification)
 
 Email verification configuration.
 
@@ -191,7 +192,7 @@ export const auth = betterAuth({
 - `autoSignInAfterVerification`: Auto sign in the user after they verify their email
 - `expiresIn`: Number of seconds the verification token is valid for (default: `3600` seconds)
 
-## [`emailAndPassword`](https://www.better-auth.com/docs/reference/options\#emailandpassword)
+## [`emailAndPassword`](https://www.better-auth.com/docs/reference/options#emailandpassword)
 
 Email and password authentication configuration.
 
@@ -233,7 +234,7 @@ export const auth = betterAuth({
 - `resetPasswordTokenExpiresIn`: Number of seconds the reset password token is valid for (default: `3600` seconds)
 - `password`: Custom password hashing and verification functions
 
-## [`socialProviders`](https://www.better-auth.com/docs/reference/options\#socialproviders)
+## [`socialProviders`](https://www.better-auth.com/docs/reference/options#socialproviders)
 
 Configure social login providers.
 
@@ -255,7 +256,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [`plugins`](https://www.better-auth.com/docs/reference/options\#plugins)
+## [`plugins`](https://www.better-auth.com/docs/reference/options#plugins)
 
 List of Better Auth plugins.
 
@@ -274,7 +275,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [`user`](https://www.better-auth.com/docs/reference/options\#user)
+## [`user`](https://www.better-auth.com/docs/reference/options#user)
 
 User configuration options.
 
@@ -320,7 +321,7 @@ export const auth = betterAuth({
 - `changeEmail`: Configuration for changing email
 - `deleteUser`: Configuration for user deletion
 
-## [`session`](https://www.better-auth.com/docs/reference/options\#session)
+## [`session`](https://www.better-auth.com/docs/reference/options#session)
 
 Session configuration options.
 
@@ -359,7 +360,7 @@ export const auth = betterAuth({
 - `preserveSessionInDatabase`: Preserve session records in database when deleted from secondary storage (default: `false`)
 - `cookieCache`: Enable caching session in cookie
 
-## [`account`](https://www.better-auth.com/docs/reference/options\#account)
+## [`account`](https://www.better-auth.com/docs/reference/options#account)
 
 Account configuration options.
 
@@ -384,16 +385,16 @@ export const auth = betterAuth({
 - `modelName`: The model name for the account
 - `fields`: Map fields to different column names
 
-### [`encryptOAuthTokens`](https://www.better-auth.com/docs/reference/options\#encryptoauthtokens)
+### [`encryptOAuthTokens`](https://www.better-auth.com/docs/reference/options#encryptoauthtokens)
 
 Encrypt OAuth tokens before storing them in the database. Default: `false`.
 
-### [`updateAccountOnSignIn`](https://www.better-auth.com/docs/reference/options\#updateaccountonsignin)
+### [`updateAccountOnSignIn`](https://www.better-auth.com/docs/reference/options#updateaccountonsignin)
 
 If enabled (true), the user account data (accessToken, idToken, refreshToken, etc.)
 will be updated on sign in with the latest data from the provider.
 
-### [`accountLinking`](https://www.better-auth.com/docs/reference/options\#accountlinking)
+### [`accountLinking`](https://www.better-auth.com/docs/reference/options#accountlinking)
 
 Configuration for account linking.
 
@@ -402,7 +403,7 @@ Configuration for account linking.
 - `allowDifferentEmails`: Allow users to link accounts with different email addresses
 - `allowUnlinkingAll`: Allow users to unlink all accounts
 
-## [`verification`](https://www.better-auth.com/docs/reference/options\#verification)
+## [`verification`](https://www.better-auth.com/docs/reference/options#verification)
 
 Verification configuration options.
 
@@ -423,7 +424,7 @@ export const auth = betterAuth({
 - `fields`: Map fields to different column names
 - `disableCleanup`: Disable cleaning up expired values when a verification value is fetched
 
-## [`rateLimit`](https://www.better-auth.com/docs/reference/options\#ratelimit)
+## [`rateLimit`](https://www.better-auth.com/docs/reference/options#ratelimit)
 
 Rate limiting configuration.
 
@@ -453,7 +454,7 @@ export const auth = betterAuth({
 - `storage`: Storage configuration. If you passed a secondary storage, rate limiting will be stored in the secondary storage. (options: `"memory", "database", "secondary-storage"`, default: `"memory"`)
 - `modelName`: The name of the table to use for rate limiting if database is used as storage. (default: `"rateLimit"`)
 
-## [`advanced`](https://www.better-auth.com/docs/reference/options\#advanced)
+## [`advanced`](https://www.better-auth.com/docs/reference/options#advanced)
 
 Advanced configuration options.
 
@@ -511,7 +512,7 @@ export const auth = betterAuth({
 - `cookiePrefix`: Prefix for cookies
 - `generateId`: Function to generate a unique ID for a model
 
-## [`logger`](https://www.better-auth.com/docs/reference/options\#logger)
+## [`logger`](https://www.better-auth.com/docs/reference/options#logger)
 
 Logger configuration for Better Auth.
 
@@ -564,7 +565,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [`databaseHooks`](https://www.better-auth.com/docs/reference/options\#databasehooks)
+## [`databaseHooks`](https://www.better-auth.com/docs/reference/options#databasehooks)
 
 Database lifecycle hooks for core operations.
 
@@ -605,7 +606,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [`onAPIError`](https://www.better-auth.com/docs/reference/options\#onapierror)
+## [`onAPIError`](https://www.better-auth.com/docs/reference/options#onapierror)
 
 API error handling configuration.
 
@@ -627,7 +628,7 @@ export const auth = betterAuth({
 - `onError`: Custom error handler
 - `errorURL`: URL to redirect to on error (default: `/api/auth/error`)
 
-## [`hooks`](https://www.better-auth.com/docs/reference/options\#hooks)
+## [`hooks`](https://www.better-auth.com/docs/reference/options#hooks)
 
 Request lifecycle hooks.
 
@@ -651,7 +652,7 @@ export const auth = betterAuth({
 
 For more details and examples, see the [Hooks documentation](https://www.better-auth.com/docs/concepts/hooks).
 
-## [`disabledPaths`](https://www.better-auth.com/docs/reference/options\#disabledpaths)
+## [`disabledPaths`](https://www.better-auth.com/docs/reference/options#disabledpaths)
 
 Disable specific auth paths.
 
@@ -662,7 +663,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [`telemetry`](https://www.better-auth.com/docs/reference/options\#telemetry)
+## [`telemetry`](https://www.better-auth.com/docs/reference/options#telemetry)
 
 Enable or disable Better Auth's telemetry collection. (default: `false`)
 

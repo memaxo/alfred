@@ -1,9 +1,10 @@
 ---
 title: bun remove – Package manager | Bun Docs
-url: 
+url:
 description: Remove dependencies from your project.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -214,7 +215,7 @@ Full documentation is available at https://bun.sh/docs/cli/remove.
 \\
 `bun update`](https://bun.com/docs/cli/update)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/remove.md)
 
@@ -238,7 +239,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -21,40 +21,41 @@ It sequences typed stages, emits events, and provides extension points. Everythi
 ### `@alfred/pipeline` — Stage Orchestration
 
 #### Single-Sentence Responsibility
+
 > Pipeline sequences typed stages, manages stage transitions, and provides observer-based extensibility for workflow execution.
 
 #### IN SCOPE (Now and Forever)
 
-| Capability | Rationale |
-|------------|-----------|
-| Stage registration and ordering | Core orchestration responsibility |
-| Stage execution with timeouts | Core orchestration responsibility |
-| Event emission via `ctx.emit()` | Observability is core |
-| Observer pattern for extensibility | Extension model |
-| Typed stage boundaries (`PipelineStage<TInput, TOutput>`) | Type safety |
-| Context key-value storage (`ctx.get/set`) | Inter-stage communication |
-| AbortSignal propagation | Cancellation is core |
-| Stage-level error handling | Error boundaries |
-| Execution summary generation | Observability |
+| Capability                                                | Rationale                         |
+| --------------------------------------------------------- | --------------------------------- |
+| Stage registration and ordering                           | Core orchestration responsibility |
+| Stage execution with timeouts                             | Core orchestration responsibility |
+| Event emission via `ctx.emit()`                           | Observability is core             |
+| Observer pattern for extensibility                        | Extension model                   |
+| Typed stage boundaries (`PipelineStage<TInput, TOutput>`) | Type safety                       |
+| Context key-value storage (`ctx.get/set`)                 | Inter-stage communication         |
+| AbortSignal propagation                                   | Cancellation is core              |
+| Stage-level error handling                                | Error boundaries                  |
+| Execution summary generation                              | Observability                     |
 
 #### OUT OF SCOPE (Now and Forever)
 
-| Capability | Where It Belongs | Rationale |
-|------------|------------------|-----------|
-| Database persistence | Observers (`PersistenceObserver`) | Side effect, not orchestration |
-| Linear API integration | Observers (`LinearSyncObserver`) | External integration |
-| UI/presentation concerns | `@alfred/ui`, `apps/web` | Separation of concerns |
-| Agent implementation details | `@alfred/agent` | Implementation detail |
-| Authentication/authorization | `@alfred/auth`, `@alfred/policy` | Cross-cutting security |
-| HTTP/tRPC routing | `@alfred/api` | Transport layer |
-| Metrics collection | Observers (`MetricsObserver`) | Side effect |
-| Cost tracking | Observers (`CostObserver`) | Side effect |
-| Warm pool management | `@alfred/agent` | Agent lifecycle |
-| Specific executor logic (codex/opencode/droid) | `@alfred/agent` | Implementation detail |
-| Project detection | `@alfred/plan` | Domain logic |
-| Task decomposition | `@alfred/plan` | Domain logic |
-| Knowledge graph operations | `@alfred/knowledge` | Domain logic |
-| Learning/error analysis | `@alfred/learning` | Domain logic |
+| Capability                                     | Where It Belongs                  | Rationale                      |
+| ---------------------------------------------- | --------------------------------- | ------------------------------ |
+| Database persistence                           | Observers (`PersistenceObserver`) | Side effect, not orchestration |
+| Linear API integration                         | Observers (`LinearSyncObserver`)  | External integration           |
+| UI/presentation concerns                       | `@alfred/ui`, `apps/web`          | Separation of concerns         |
+| Agent implementation details                   | `@alfred/agent`                   | Implementation detail          |
+| Authentication/authorization                   | `@alfred/auth`, `@alfred/policy`  | Cross-cutting security         |
+| HTTP/tRPC routing                              | `@alfred/api`                     | Transport layer                |
+| Metrics collection                             | Observers (`MetricsObserver`)     | Side effect                    |
+| Cost tracking                                  | Observers (`CostObserver`)        | Side effect                    |
+| Warm pool management                           | `@alfred/agent`                   | Agent lifecycle                |
+| Specific executor logic (codex/opencode/droid) | `@alfred/agent`                   | Implementation detail          |
+| Project detection                              | `@alfred/plan`                    | Domain logic                   |
+| Task decomposition                             | `@alfred/plan`                    | Domain logic                   |
+| Knowledge graph operations                     | `@alfred/knowledge`               | Domain logic                   |
+| Learning/error analysis                        | `@alfred/learning`                | Domain logic                   |
 
 #### Extension Model
 
@@ -76,16 +77,20 @@ runner.addObserver(new SlackNotifierObserver());
 ### `@alfred/runtime` — Legacy + Utilities (DEPRECATED)
 
 #### Current State
+
 Contains the legacy orchestrator and workflow utilities. Being migrated to pipeline.
 
 #### Migration Target
+
 - `orchestrator.ts` → Replaced by `@alfred/pipeline`
 - `phases/*` → Logic moved to pipeline stages
 - `orchestrator/*` → Utilities extracted or deprecated
 - `workflow/*` → Utilities moved to appropriate packages
 
 #### Post-Migration Fate
+
 Package will contain only:
+
 - Utility functions that don't fit elsewhere
 - Backward-compatibility shims (temporary)
 - Eventually: Package deletion
@@ -95,107 +100,111 @@ Package will contain only:
 ### `@alfred/agent` — Agent Implementations
 
 #### Single-Sentence Responsibility
+
 > Agent provides executor implementations (codex, opencode, droid), workspace management, and agent-level lifecycle operations.
 
 #### IN SCOPE
 
-| Capability | Rationale |
-|------------|-----------|
-| Executor implementations (codex, opencode, droid) | Core agent functionality |
-| Workspace creation and management | Agent execution environment |
-| AgentFS integration | Agent filesystem |
-| Prompt construction | Agent input preparation |
-| Tool definitions | Agent capabilities |
-| Session management | Agent lifecycle |
-| Escalation file detection | Agent-level concern |
-| Agent-specific error handling | Agent lifecycle |
+| Capability                                        | Rationale                   |
+| ------------------------------------------------- | --------------------------- |
+| Executor implementations (codex, opencode, droid) | Core agent functionality    |
+| Workspace creation and management                 | Agent execution environment |
+| AgentFS integration                               | Agent filesystem            |
+| Prompt construction                               | Agent input preparation     |
+| Tool definitions                                  | Agent capabilities          |
+| Session management                                | Agent lifecycle             |
+| Escalation file detection                         | Agent-level concern         |
+| Agent-specific error handling                     | Agent lifecycle             |
 
 #### OUT OF SCOPE
 
-| Capability | Where It Belongs | Rationale |
-|------------|------------------|-----------|
-| Stage sequencing | `@alfred/pipeline` | Orchestration concern |
-| Wave planning | `@alfred/plan` | Planning concern |
+| Capability               | Where It Belongs       | Rationale             |
+| ------------------------ | ---------------------- | --------------------- |
+| Stage sequencing         | `@alfred/pipeline`     | Orchestration concern |
+| Wave planning            | `@alfred/plan`         | Planning concern      |
 | Multi-agent coordination | Pipeline execute stage | Orchestration concern |
-| Workflow-level events | `@alfred/pipeline` | Pipeline concern |
-| Linear integration | Pipeline observers | Integration concern |
+| Workflow-level events    | `@alfred/pipeline`     | Pipeline concern      |
+| Linear integration       | Pipeline observers     | Integration concern   |
 
 ---
 
 ### `@alfred/plan` — Planning & Decomposition
 
 #### Single-Sentence Responsibility
+
 > Plan handles project detection, task decomposition, wave planning, and ExecPlan generation.
 
 #### IN SCOPE
 
-| Capability | Rationale |
-|------------|-----------|
-| Project detection (`detectProject`) | Planning prerequisite |
-| Task decomposition (`decomposeTask`) | Core planning |
-| Wave planning (`planWaves`) | Execution scheduling |
-| ExecPlan generation | Planning output |
-| Structured plan creation | Planning output |
-| Dependency analysis | Planning concern |
+| Capability                           | Rationale             |
+| ------------------------------------ | --------------------- |
+| Project detection (`detectProject`)  | Planning prerequisite |
+| Task decomposition (`decomposeTask`) | Core planning         |
+| Wave planning (`planWaves`)          | Execution scheduling  |
+| ExecPlan generation                  | Planning output       |
+| Structured plan creation             | Planning output       |
+| Dependency analysis                  | Planning concern      |
 
 #### OUT OF SCOPE
 
-| Capability | Where It Belongs | Rationale |
-|------------|------------------|-----------|
-| Plan execution | `@alfred/pipeline` | Orchestration concern |
-| Agent spawning | `@alfred/agent` | Agent concern |
-| Linear ticket creation | Pipeline observers | Integration concern |
+| Capability             | Where It Belongs   | Rationale             |
+| ---------------------- | ------------------ | --------------------- |
+| Plan execution         | `@alfred/pipeline` | Orchestration concern |
+| Agent spawning         | `@alfred/agent`    | Agent concern         |
+| Linear ticket creation | Pipeline observers | Integration concern   |
 
 ---
 
 ### `@alfred/db` — Persistence Layer
 
 #### Single-Sentence Responsibility
+
 > DB provides schema definitions, migrations, and repository functions for all persistent data.
 
 #### IN SCOPE
 
-| Capability | Rationale |
-|------------|-----------|
-| Drizzle schema definitions | Persistence |
-| SQL migrations | Persistence |
-| Repository functions (CRUD) | Data access |
-| Transaction management | Data integrity |
+| Capability                  | Rationale      |
+| --------------------------- | -------------- |
+| Drizzle schema definitions  | Persistence    |
+| SQL migrations              | Persistence    |
+| Repository functions (CRUD) | Data access    |
+| Transaction management      | Data integrity |
 
 #### OUT OF SCOPE
 
-| Capability | Where It Belongs | Rationale |
-|------------|------------------|-----------|
-| Business logic | Domain packages | Separation of concerns |
-| Event handling | Pipeline/observers | Orchestration concern |
-| Caching strategies | Calling code | Implementation detail |
+| Capability         | Where It Belongs   | Rationale              |
+| ------------------ | ------------------ | ---------------------- |
+| Business logic     | Domain packages    | Separation of concerns |
+| Event handling     | Pipeline/observers | Orchestration concern  |
+| Caching strategies | Calling code       | Implementation detail  |
 
 ---
 
 ### `@alfred/api` — HTTP/tRPC Interface
 
 #### Single-Sentence Responsibility
+
 > API exposes tRPC routers and HTTP endpoints that wire together domain packages for external consumption.
 
 #### IN SCOPE
 
-| Capability | Rationale |
-|------------|-----------|
-| tRPC router definitions | API surface |
-| HTTP endpoint handlers | API surface |
-| Request validation | API boundary |
-| Authentication checks | API security |
-| Response formatting | API contract |
+| Capability              | Rationale     |
+| ----------------------- | ------------- |
+| tRPC router definitions | API surface   |
+| HTTP endpoint handlers  | API surface   |
+| Request validation      | API boundary  |
+| Authentication checks   | API security  |
+| Response formatting     | API contract  |
 | SSE/streaming endpoints | API transport |
 
 #### OUT OF SCOPE
 
-| Capability | Where It Belongs | Rationale |
-|------------|------------------|-----------|
-| Business logic | Domain packages | Separation of concerns |
-| Persistence | `@alfred/db` | Layer separation |
-| Agent execution | `@alfred/agent` | Domain concern |
-| Pipeline orchestration | `@alfred/pipeline` | Orchestration concern |
+| Capability             | Where It Belongs   | Rationale              |
+| ---------------------- | ------------------ | ---------------------- |
+| Business logic         | Domain packages    | Separation of concerns |
+| Persistence            | `@alfred/db`       | Layer separation       |
+| Agent execution        | `@alfred/agent`    | Domain concern         |
+| Pipeline orchestration | `@alfred/pipeline` | Orchestration concern  |
 
 ---
 
@@ -203,22 +212,22 @@ Package will contain only:
 
 ### Features to Port from Orchestrator to Pipeline
 
-| Feature | Current Location | Target Location | Priority | Complexity |
-|---------|-----------------|-----------------|----------|------------|
-| **Resume/Suspend** | `workflow/orchestrator.ts`, `workflow/reconstruct.ts` | New: `PipelineReconstructor` class + `resume()` method | **CRITICAL** | High |
-| **Event Replay** | `workflow/reconstruct.ts` | `PipelineReconstructor.reconstruct()` | **CRITICAL** | Medium |
-| **State Hydration** | `orchestrator/hydrate.ts`, `workflow/history.ts` | Execute stage + context persistence | **HIGH** | Medium |
-| **Stuck Detection** | `orchestrator/agent.ts` (`detectStuckWithContext`) | Execute stage (import from `@alfred/agent`) | **HIGH** | Low |
-| **Escalation Handling** | `orchestrator/agent.ts` (escalation file) | Execute stage (import from `@alfred/agent`) | **HIGH** | Low |
-| **Agent Retries** | `orchestrator/review.ts` (MAX_FIX_ATTEMPTS) | Execute stage config + Review stage | **MEDIUM** | Medium |
-| **Review Fixer Loop** | `orchestrator/review.ts` | Review stage | **MEDIUM** | Medium |
-| **Wave Abort Logic** | `orchestrator/waves.ts` (failure thresholds) | Execute stage | **MEDIUM** | Low |
-| **Context Caching** | `orchestrator/waves.ts` (cachedExecutionContext) | Context stage | **LOW** | Low |
-| **Executor Fallback** | `orchestrator/agent.ts` (server profile fallback) | `@alfred/agent` (already there) | **LOW** | N/A |
-| **Cost Tracking** | `workflow/cost-tracker.ts` | New: `CostObserver` | **LOW** | Low |
-| **Warm Pool** | `workflow/agent-warm-pool.ts` | `@alfred/agent` | **LOW** | N/A |
-| **TrackerContext** | `orchestrator/agent.ts`, `orchestrator/waves.ts` | Execute stage (import type) | **MEDIUM** | Low |
-| **ReviewGate** | `agent/workflow/review-gate.ts` | Review stage (import from `@alfred/agent`) | **MEDIUM** | Low |
+| Feature                 | Current Location                                      | Target Location                                        | Priority     | Complexity |
+| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------ | ------------ | ---------- |
+| **Resume/Suspend**      | `workflow/orchestrator.ts`, `workflow/reconstruct.ts` | New: `PipelineReconstructor` class + `resume()` method | **CRITICAL** | High       |
+| **Event Replay**        | `workflow/reconstruct.ts`                             | `PipelineReconstructor.reconstruct()`                  | **CRITICAL** | Medium     |
+| **State Hydration**     | `orchestrator/hydrate.ts`, `workflow/history.ts`      | Execute stage + context persistence                    | **HIGH**     | Medium     |
+| **Stuck Detection**     | `orchestrator/agent.ts` (`detectStuckWithContext`)    | Execute stage (import from `@alfred/agent`)            | **HIGH**     | Low        |
+| **Escalation Handling** | `orchestrator/agent.ts` (escalation file)             | Execute stage (import from `@alfred/agent`)            | **HIGH**     | Low        |
+| **Agent Retries**       | `orchestrator/review.ts` (MAX_FIX_ATTEMPTS)           | Execute stage config + Review stage                    | **MEDIUM**   | Medium     |
+| **Review Fixer Loop**   | `orchestrator/review.ts`                              | Review stage                                           | **MEDIUM**   | Medium     |
+| **Wave Abort Logic**    | `orchestrator/waves.ts` (failure thresholds)          | Execute stage                                          | **MEDIUM**   | Low        |
+| **Context Caching**     | `orchestrator/waves.ts` (cachedExecutionContext)      | Context stage                                          | **LOW**      | Low        |
+| **Executor Fallback**   | `orchestrator/agent.ts` (server profile fallback)     | `@alfred/agent` (already there)                        | **LOW**      | N/A        |
+| **Cost Tracking**       | `workflow/cost-tracker.ts`                            | New: `CostObserver`                                    | **LOW**      | Low        |
+| **Warm Pool**           | `workflow/agent-warm-pool.ts`                         | `@alfred/agent`                                        | **LOW**      | N/A        |
+| **TrackerContext**      | `orchestrator/agent.ts`, `orchestrator/waves.ts`      | Execute stage (import type)                            | **MEDIUM**   | Low        |
+| **ReviewGate**          | `agent/workflow/review-gate.ts`                       | Review stage (import from `@alfred/agent`)             | **MEDIUM**   | Low        |
 
 ---
 
@@ -240,7 +249,7 @@ import { detectStuckWithContext } from "@alfred/agent/orchestrator/tracker";
 
 async execute(input: ScheduleOutput, ctx: PipelineContext): Promise<ExecuteOutput> {
   // ... agent execution ...
-  
+
   const stuck = detectStuckWithContext(trackerContext, agentId, options);
   if (stuck) {
     ctx.emit(createEvent("agent:stuck", { agentId }));
@@ -272,20 +281,26 @@ For complex logic that spans multiple concerns:
 ```typescript
 // stages/review.ts
 import { ReviewGate } from "@alfred/agent/workflow/review-gate";
-import { buildReviewPlan, runFixerAgent } from "@alfred/agent/orchestrator/multi/review";
+import {
+  buildReviewPlan,
+  runFixerAgent,
+} from "@alfred/agent/orchestrator/multi/review";
 
 export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
-  async execute(input: ExecuteOutput, ctx: PipelineContext): Promise<ReviewOutput> {
+  async execute(
+    input: ExecuteOutput,
+    ctx: PipelineContext
+  ): Promise<ReviewOutput> {
     const gate = new ReviewGate();
-    
+
     // Import and use existing review logic
     const plan = buildReviewPlan(input.outcomes);
-    
+
     // Run fixer if needed (delegates to @alfred/agent)
     if (!gate.isSatisfied() && ctx.config.enableFixerLoop) {
       await this.runFixerLoop(plan, ctx);
     }
-    
+
     return { checks: gate.summary(), allPassed: gate.isSatisfied() };
   }
 }
@@ -330,7 +345,7 @@ export class PipelineReconstructor {
 
   reduce(snapshot: PipelineSnapshot, event: PipelineEvent): PipelineSnapshot {
     const next = { ...snapshot, context: new Map(snapshot.context) };
-    
+
     switch (event.type) {
       case "pipeline:start":
         next.runId = event.runId;
@@ -343,7 +358,7 @@ export class PipelineReconstructor {
         next.context.set(event.key, event.value);
         break;
     }
-    
+
     return next;
   }
 

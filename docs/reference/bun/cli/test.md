@@ -1,9 +1,10 @@
 ---
 title: Testing – API | Bun Docs
-url: 
+url:
 description: Bun's built-in test runner is fast and uses Jest-compatible syntax.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -67,7 +68,7 @@ Bun ships with a fast, built-in, Jest-compatible test runner. Tests are executed
 
 Bun aims for compatibility with Jest, but not everything is implemented. To track compatibility, see [this tracking issue](https://github.com/oven-sh/bun/issues/1825).
 
-## [Run tests](https://bun.com/docs/cli/test\#run-tests)
+## [Run tests](https://bun.com/docs/cli/test#run-tests)
 
 ```
 bun test
@@ -117,11 +118,11 @@ bun test ./test/specific-file.test.ts
 
 The test runner runs all tests in a single process. It loads all `--preload` scripts (see [Lifecycle](https://bun.com/docs/test/lifecycle) for details), then runs all tests. If a test fails, the test runner will exit with a non-zero exit code.
 
-## [CI/CD integration](https://bun.com/docs/cli/test\#ci-cd-integration)
+## [CI/CD integration](https://bun.com/docs/cli/test#ci-cd-integration)
 
 `bun test` supports a variety of CI/CD integrations.
 
-### [GitHub Actions](https://bun.com/docs/cli/test\#github-actions)
+### [GitHub Actions](https://bun.com/docs/cli/test#github-actions)
 
 `bun test` automatically detects if it's running inside GitHub Actions and will emit GitHub Actions annotations to the console directly.
 
@@ -150,7 +151,7 @@ jobs:
 
 From there, you'll get GitHub Actions annotations.
 
-### [JUnit XML reports (GitLab, etc.)](https://bun.com/docs/cli/test\#junit-xml-reports-gitlab-etc)
+### [JUnit XML reports (GitLab, etc.)](https://bun.com/docs/cli/test#junit-xml-reports-gitlab-etc)
 
 To use `bun test` with a JUnit XML reporter, you can use the `--reporter=junit` in combination with `--reporter-outfile`.
 
@@ -162,7 +163,7 @@ This will continue to output to stdout/stderr as usual, and also write a JUnitXM
 
 JUnit XML is a popular format for reporting test results in CI/CD pipelines.
 
-## [Timeouts](https://bun.com/docs/cli/test\#timeouts)
+## [Timeouts](https://bun.com/docs/cli/test#timeouts)
 
 Use the `--timeout` flag to specify a _per-test_ timeout in milliseconds. If a test times out, it will be marked as failed. The default value is `5000`.
 
@@ -174,7 +175,7 @@ Use the `--timeout` flag to specify a _per-test_ timeout in milliseconds. If a t
 bun test --timeout 20
 ```
 
-## [Rerun tests](https://bun.com/docs/cli/test\#rerun-tests)
+## [Rerun tests](https://bun.com/docs/cli/test#rerun-tests)
 
 Use the `--rerun-each` flag to run each test multiple times. This is useful for detecting flaky or non-deterministic test failures.
 
@@ -182,7 +183,7 @@ Use the `--rerun-each` flag to run each test multiple times. This is useful for 
 bun test --rerun-each 100
 ```
 
-## [Bail out with `--bail`](https://bun.com/docs/cli/test\#bail-out-with-bail)
+## [Bail out with `--bail`](https://bun.com/docs/cli/test#bail-out-with-bail)
 
 Use the `--bail` flag to abort the test run early after a pre-determined number of test failures. By default Bun will run all tests and report all failures, but sometimes in CI environments it's preferable to terminate earlier to reduce CPU usage.
 
@@ -203,7 +204,7 @@ bun test --bail
 bun test --bail=10
 ```
 
-## [Watch mode](https://bun.com/docs/cli/test\#watch-mode)
+## [Watch mode](https://bun.com/docs/cli/test#watch-mode)
 
 Similar to `bun run`, you can pass the `--watch` flag to `bun test` to watch for changes and re-run tests.
 
@@ -211,16 +212,16 @@ Similar to `bun run`, you can pass the `--watch` flag to `bun test` to watch for
 bun test --watch
 ```
 
-## [Lifecycle hooks](https://bun.com/docs/cli/test\#lifecycle-hooks)
+## [Lifecycle hooks](https://bun.com/docs/cli/test#lifecycle-hooks)
 
 Bun supports the following lifecycle hooks:
 
-| Hook | Description |
-| --- | --- |
-| `beforeAll` | Runs once before all tests. |
-| `beforeEach` | Runs before each test. |
-| `afterEach` | Runs after each test. |
-| `afterAll` | Runs once after all tests. |
+| Hook         | Description                 |
+| ------------ | --------------------------- |
+| `beforeAll`  | Runs once before all tests. |
+| `beforeEach` | Runs before each test.      |
+| `afterEach`  | Runs after each test.       |
+| `afterAll`   | Runs once after all tests.  |
 
 These hooks can be defined inside test files, or in a separate file that is preloaded with the `--preload` flag.
 
@@ -231,7 +232,7 @@ $ bun test --preload ./setup.ts
 
 See [Test > Lifecycle](https://bun.com/docs/test/lifecycle) for complete documentation.
 
-## [Mocks](https://bun.com/docs/cli/test\#mocks)
+## [Mocks](https://bun.com/docs/cli/test#mocks)
 
 Create mock functions with the `mock` function.
 
@@ -260,7 +261,7 @@ const random = jest.fn(() => Math.random());
 
 See [Test > Mocks](https://bun.com/docs/test/mocks) for complete documentation.
 
-## [Snapshot testing](https://bun.com/docs/cli/test\#snapshot-testing)
+## [Snapshot testing](https://bun.com/docs/cli/test#snapshot-testing)
 
 Snapshots are supported by `bun test`.
 
@@ -282,7 +283,7 @@ bun test --update-snapshots
 
 See [Test > Snapshots](https://bun.com/docs/test/snapshots) for complete documentation.
 
-## [UI & DOM testing](https://bun.com/docs/cli/test\#ui-dom-testing)
+## [UI & DOM testing](https://bun.com/docs/cli/test#ui-dom-testing)
 
 Bun is compatible with popular UI testing libraries:
 
@@ -292,17 +293,17 @@ Bun is compatible with popular UI testing libraries:
 
 See [Test > DOM Testing](https://bun.com/docs/test/dom) for complete documentation.
 
-## [Performance](https://bun.com/docs/cli/test\#performance)
+## [Performance](https://bun.com/docs/cli/test#performance)
 
 Bun's test runner is fast.
 
 [![](https://bun.com/images/buntest.jpeg)](https://bun.com/images/buntest.jpeg) Running 266 React SSR tests faster than Jest can print its version number.
 
-## [AI Agent Integration](https://bun.com/docs/cli/test\#ai-agent-integration)
+## [AI Agent Integration](https://bun.com/docs/cli/test#ai-agent-integration)
 
 When using Bun's test runner with AI coding assistants, you can enable quieter output to improve readability and reduce context noise. This feature minimizes test output verbosity while preserving essential failure information.
 
-### [Environment Variables](https://bun.com/docs/cli/test\#environment-variables)
+### [Environment Variables](https://bun.com/docs/cli/test#environment-variables)
 
 Set any of the following environment variables to enable AI-friendly output:
 
@@ -310,7 +311,7 @@ Set any of the following environment variables to enable AI-friendly output:
 - `REPL_ID=1` \- For Replit
 - `AGENT=1` \- Generic AI agent flag
 
-### [Behavior](https://bun.com/docs/cli/test\#behavior)
+### [Behavior](https://bun.com/docs/cli/test#behavior)
 
 When an AI agent environment is detected:
 
@@ -419,7 +420,7 @@ Secrets](https://bun.com/docs/api/secrets) [Next\\
 \\
 Utils](https://bun.com/docs/api/utils)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/test.md)
 
@@ -443,7 +444,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

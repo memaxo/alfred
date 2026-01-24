@@ -53,6 +53,7 @@ Harden SSR build process to prevent server-only code leakage into client bundles
 ## .ruler/21-tanstack-start.md (Additions)
 
 21. **Variable-Based Dynamic Imports.** To prevent server-only code leakage into client bundles, imports of server packages (db, agent, policy) in API routes MUST use variable-based dynamic imports:
+
     ```typescript
     // ✅ CORRECT
     const dbPkg = "@alfred/db";

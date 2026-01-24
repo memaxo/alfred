@@ -28,4 +28,3 @@ These are security / edge controls and should remain purpose-built for now:
 
 - TanStack Pacer overview: `https://tanstack.com/pacer/latest/docs/overview`
 - Utility selection: `https://tanstack.com/pacer/latest/docs/guides/which-pacer-utility-should-i-choose`
-

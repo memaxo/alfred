@@ -1,9 +1,10 @@
 ---
 title: Child processes – API | Bun Docs
-url: 
+url:
 description: Spawn sync and async child processes with easily configurable input and output streams.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Spawn child processes with `Bun.spawn` or `Bun.spawnSync`.
 
-## [Spawn a process ( `Bun.spawn()`)](https://bun.com/docs/api/spawn\#spawn-a-process-bun-spawn)
+## [Spawn a process ( `Bun.spawn()`)](https://bun.com/docs/api/spawn#spawn-a-process-bun-spawn)
 
 Provide a command as an array of strings. The result of `Bun.spawn()` is a `Bun.Subprocess` object.
 
@@ -79,7 +80,7 @@ proc.pid; // process ID of subprocess
 
 ```
 
-## [Input stream](https://bun.com/docs/api/spawn\#input-stream)
+## [Input stream](https://bun.com/docs/api/spawn#input-stream)
 
 By default, the input stream of the subprocess is undefined; it can be configured with the `stdin` parameter.
 
@@ -149,7 +150,7 @@ console.log(output); // "Hello from ReadableStream!"
 
 ```
 
-## [Output streams](https://bun.com/docs/api/spawn\#output-streams)
+## [Output streams](https://bun.com/docs/api/spawn#output-streams)
 
 You can read results from the subprocess via the `stdout` and `stderr` properties. By default these are instances of `ReadableStream`.
 
@@ -168,7 +169,7 @@ Configure the output stream by passing one of the following values to `stdout/st
 | `Bun.file()` | Write to the specified file. |
 | `number` | Write to the file with the given file descriptor. |
 
-## [Exit handling](https://bun.com/docs/api/spawn\#exit-handling)
+## [Exit handling](https://bun.com/docs/api/spawn#exit-handling)
 
 Use the `onExit` callback to listen for the process exiting or being killed.
 
@@ -213,7 +214,7 @@ proc.unref();
 
 ```
 
-## [Resource usage](https://bun.com/docs/api/spawn\#resource-usage)
+## [Resource usage](https://bun.com/docs/api/spawn#resource-usage)
 
 You can get information about the process's resource usage after it has exited:
 
@@ -228,7 +229,7 @@ console.log(`CPU time (system): ${usage.cpuTime.system} µs`);
 
 ```
 
-## [Using AbortSignal](https://bun.com/docs/api/spawn\#using-abortsignal)
+## [Using AbortSignal](https://bun.com/docs/api/spawn#using-abortsignal)
 
 You can abort a subprocess using an `AbortSignal`:
 
@@ -246,7 +247,7 @@ controller.abort();
 
 ```
 
-## [Using timeout and killSignal](https://bun.com/docs/api/spawn\#using-timeout-and-killsignal)
+## [Using timeout and killSignal](https://bun.com/docs/api/spawn#using-timeout-and-killsignal)
 
 You can set a timeout for a subprocess to automatically terminate after a specific duration:
 
@@ -275,7 +276,7 @@ const proc = Bun.spawn({
 
 The `killSignal` option also controls which signal is sent when an AbortSignal is aborted.
 
-## [Using maxBuffer](https://bun.com/docs/api/spawn\#using-maxbuffer)
+## [Using maxBuffer](https://bun.com/docs/api/spawn#using-maxbuffer)
 
 For spawnSync, you can limit the maximum number of bytes of output before the process is killed:
 
@@ -289,7 +290,7 @@ const result = Bun.spawnSync({
 
 ```
 
-## [Inter-process communication (IPC)](https://bun.com/docs/api/spawn\#inter-process-communication-ipc)
+## [Inter-process communication (IPC)](https://bun.com/docs/api/spawn#inter-process-communication-ipc)
 
 Bun supports direct inter-process communication channel between two `bun` processes. To receive messages from a spawned Bun subprocess, specify an `ipc` handler.
 
@@ -362,7 +363,7 @@ childProc.disconnect();
 
 ```
 
-### [IPC between Bun & Node.js](https://bun.com/docs/api/spawn\#ipc-between-bun-node-js)
+### [IPC between Bun & Node.js](https://bun.com/docs/api/spawn#ipc-between-bun-node-js)
 
 To use IPC between a `bun` process and a Node.js process, set `serialization: "json"` in `Bun.spawn`. This is because Node.js and Bun use different JavaScript engines with different object serialization formats.
 
@@ -393,7 +394,7 @@ if (typeof Bun !== "undefined") {
 
 ```
 
-## [Blocking API ( `Bun.spawnSync()`)](https://bun.com/docs/api/spawn\#blocking-api-bun-spawnsync)
+## [Blocking API ( `Bun.spawnSync()`)](https://bun.com/docs/api/spawn#blocking-api-bun-spawnsync)
 
 Bun provides a synchronous equivalent of `Bun.spawn` called `Bun.spawnSync`. This is a blocking API that supports the same inputs and parameters as `Bun.spawn`. It returns a `SyncSubprocess` object, which differs from `Subprocess` in a few ways.
 
@@ -411,7 +412,7 @@ console.log(proc.stdout.toString());
 
 As a rule of thumb, the asynchronous `Bun.spawn` API is better for HTTP servers and apps, and `Bun.spawnSync` is better for building command-line tools.
 
-## [Benchmarks](https://bun.com/docs/api/spawn\#benchmarks)
+## [Benchmarks](https://bun.com/docs/api/spawn#benchmarks)
 
 ⚡️ Under the hood, `Bun.spawn` and `Bun.spawnSync` use [`posix_spawn(3)`](https://man7.org/linux/man-pages/man3/posix_spawn.3.html).
 
@@ -443,7 +444,7 @@ benchmark              time (avg)             (min … max)       p75       p99 
 spawnSync echo hi    1.47 ms/iter     (1.14 ms … 2.64 ms)   1.57 ms   2.37 ms   2.52 ms
 ```
 
-## [Reference](https://bun.com/docs/api/spawn\#reference)
+## [Reference](https://bun.com/docs/api/spawn#reference)
 
 A reference of the Spawn API and types are shown below. The real types have complex generics to strongly type the `Subprocess` streams with the options passed to `Bun.spawn` and `Bun.spawnSync`. For full details, find these types as defined [bun.d.ts](https://github.com/oven-sh/bun/blob/main/packages/bun-types/bun.d.ts).
 
@@ -615,7 +616,7 @@ $ Shell](https://bun.com/docs/runtime/shell) [Next\\
 \\
 YAML](https://bun.com/docs/api/yaml)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/spawn.md)
 
@@ -639,7 +640,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

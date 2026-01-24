@@ -1,8 +1,9 @@
 ---
 title: Browser agent observability - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/browser-agent-observability#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -27,17 +28,17 @@ On this page
 - [How does it work?](https://docs.lmnr.ai/tracing/browser-agent-observability#how-does-it-work%3F)
 - [Example](https://docs.lmnr.ai/tracing/browser-agent-observability#example)
 
-## [​](https://docs.lmnr.ai/tracing/browser-agent-observability\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/browser-agent-observability#overview) Overview
 
 Laminar has an extensive observability suite for browser agents. If you are
 building browser agents, you can use Laminar to trace them and record the browser sessions.That is, by default, you will get both the LLM calls traces and a session recording of
 the browser sessions.
 
-## [​](https://docs.lmnr.ai/tracing/browser-agent-observability\#how-does-it-work%3F)  How does it work?
+## [​](https://docs.lmnr.ai/tracing/browser-agent-observability#how-does-it-work%3F) How does it work?
 
 Laminar traces the LLM calls using automatic instrumentations provided by OpenLLMetry.In addition, Laminar instruments popular browser automation frameworks (integrations with [Puppeteer](https://docs.lmnr.ai/tracing/integrations/puppeteer), [Playwright](https://docs.lmnr.ai/tracing/integrations/playwright), [Stagehand](https://docs.lmnr.ai/tracing/integrations/stagehand), [BrowserUse](https://docs.lmnr.ai/tracing/integrations/browser-use), and [Skyvern](https://docs.lmnr.ai/tracing/integrations/skyvern)) and records the browser sessions.
 
-## [​](https://docs.lmnr.ai/tracing/browser-agent-observability\#example)  Example
+## [​](https://docs.lmnr.ai/tracing/browser-agent-observability#example) Example
 
 Here is an example of a simple browser agent that uses Playwright to navigate to a website and extract the title.
 
@@ -46,7 +47,6 @@ If you don’t have a project API key, you can get one by signing up on [Laminar
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 

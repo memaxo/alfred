@@ -1,9 +1,10 @@
 ---
 title: Catalogs – Package manager | Bun Docs
-url: 
+url:
 description: Use catalogs to share dependency versions between packages in a monorepo.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Catalogs in Bun provide a straightforward way to share common dependency versions across multiple packages in a monorepo. Rather than specifying the same versions repeatedly in each workspace package, you define them once in the root package.json and reference them consistently throughout your project.
 
-## [Overview](https://bun.com/docs/install/catalogs\#overview)
+## [Overview](https://bun.com/docs/install/catalogs#overview)
 
 Unlike traditional dependency management where each workspace package needs to independently specify versions, catalogs let you:
 
@@ -64,9 +65,9 @@ Unlike traditional dependency management where each workspace package needs to i
 
 This is especially useful in large monorepos where dozens of packages need to use the same version of key dependencies.
 
-## [How to Use Catalogs](https://bun.com/docs/install/catalogs\#how-to-use-catalogs)
+## [How to Use Catalogs](https://bun.com/docs/install/catalogs#how-to-use-catalogs)
 
-### [Directory Structure Example](https://bun.com/docs/install/catalogs\#directory-structure-example)
+### [Directory Structure Example](https://bun.com/docs/install/catalogs#directory-structure-example)
 
 Consider a monorepo with the following structure:
 
@@ -84,7 +85,7 @@ my-monorepo/
 
 ```
 
-### [1\. Define Catalogs in Root package.json](https://bun.com/docs/install/catalogs\#1-define-catalogs-in-root-package-json)
+### [1\. Define Catalogs in Root package.json](https://bun.com/docs/install/catalogs#1-define-catalogs-in-root-package-json)
 
 In your root-level `package.json`, add a `catalog` or `catalogs` field within the `workspaces` object:
 
@@ -110,7 +111,7 @@ In your root-level `package.json`, add a `catalog` or `catalogs` field within th
 
 If you put `catalog` or `catalogs` at the top level of the `package.json` file, that will work too.
 
-### [2\. Reference Catalog Versions in Workspace Packages](https://bun.com/docs/install/catalogs\#2-reference-catalog-versions-in-workspace-packages)
+### [2\. Reference Catalog Versions in Workspace Packages](https://bun.com/docs/install/catalogs#2-reference-catalog-versions-in-workspace-packages)
 
 In your workspace packages, use the `catalog:` protocol to reference versions:
 
@@ -145,21 +146,15 @@ In your workspace packages, use the `catalog:` protocol to reference versions:
 
 ```
 
-### [3\. Run Bun Install](https://bun.com/docs/install/catalogs\#3-run-bun-install)
+### [3\. Run Bun Install](https://bun.com/docs/install/catalogs#3-run-bun-install)
 
 Run `bun install` to install all dependencies according to the catalog versions.
 
-## [Catalog vs Catalogs](https://bun.com/docs/install/catalogs\#catalog-vs-catalogs)
+## [Catalog vs Catalogs](https://bun.com/docs/install/catalogs#catalog-vs-catalogs)
 
 Bun supports two ways to define catalogs:
 
 1. **`catalog`** (singular): A single default catalog for commonly used dependencies
-
-
-
-
-
-
 
 ```
 "catalog": {
@@ -169,23 +164,7 @@ Bun supports two ways to define catalogs:
 
 ```
 
-
-
-
-
-
-
-
-
-
-
 Reference with simply `catalog:`:
-
-
-
-
-
-
 
 ```
 "dependencies": {
@@ -195,12 +174,6 @@ Reference with simply `catalog:`:
 ```
 
 2. **`catalogs`** (plural): Multiple named catalogs for grouping dependencies
-
-
-
-
-
-
 
 ```
 "catalogs": {
@@ -214,23 +187,7 @@ Reference with simply `catalog:`:
 
 ```
 
-
-
-
-
-
-
-
-
-
-
 Reference with `catalog:<name>`:
-
-
-
-
-
-
 
 ```
 "dependencies": {
@@ -240,15 +197,14 @@ Reference with `catalog:<name>`:
 
 ```
 
-
-## [Benefits of Using Catalogs](https://bun.com/docs/install/catalogs\#benefits-of-using-catalogs)
+## [Benefits of Using Catalogs](https://bun.com/docs/install/catalogs#benefits-of-using-catalogs)
 
 - **Consistency**: Ensures all packages use the same version of critical dependencies
 - **Maintenance**: Update a dependency version in one place instead of across multiple package.json files
 - **Clarity**: Makes it obvious which dependencies are standardized across your monorepo
 - **Simplicity**: No need for complex version resolution strategies or external tools
 
-## [Real-World Example](https://bun.com/docs/install/catalogs\#real-world-example)
+## [Real-World Example](https://bun.com/docs/install/catalogs#real-world-example)
 
 Here's a more comprehensive example for a React application:
 
@@ -336,7 +292,7 @@ Here's a more comprehensive example for a React application:
 
 ```
 
-## [Updating Versions](https://bun.com/docs/install/catalogs\#updating-versions)
+## [Updating Versions](https://bun.com/docs/install/catalogs#updating-versions)
 
 To update versions across all packages, simply change the version in the root package.json:
 
@@ -350,7 +306,7 @@ To update versions across all packages, simply change the version in the root pa
 
 Then run `bun install` to update all packages.
 
-## [Lockfile Integration](https://bun.com/docs/install/catalogs\#lockfile-integration)
+## [Lockfile Integration](https://bun.com/docs/install/catalogs#lockfile-integration)
 
 Bun's lockfile tracks catalog versions, making it easy to ensure consistent installations across different environments. The lockfile includes:
 
@@ -394,7 +350,7 @@ Bun's lockfile tracks catalog versions, making it easy to ensure consistent inst
 
 ```
 
-## [Limitations and Edge Cases](https://bun.com/docs/install/catalogs\#limitations-and-edge-cases)
+## [Limitations and Edge Cases](https://bun.com/docs/install/catalogs#limitations-and-edge-cases)
 
 - Catalog references must match a dependency defined in either `catalog` or one of the named `catalogs`
 - Empty strings and whitespace in catalog names are ignored (treated as default catalog)
@@ -403,7 +359,7 @@ Bun's lockfile tracks catalog versions, making it easy to ensure consistent inst
 
 Bun's catalog system provides a powerful yet simple way to maintain consistency across your monorepo without introducing additional complexity to your workflow.
 
-## [Publishing](https://bun.com/docs/install/catalogs\#publishing)
+## [Publishing](https://bun.com/docs/install/catalogs#publishing)
 
 When you run `bun publish` or `bun pm pack`, Bun automatically replaces `catalog:` references in your `package.json` with the resolved version numbers.The published package includes regular semver strings and no longer depends onyour catalog definitions.
 
@@ -413,7 +369,7 @@ Workspaces](https://bun.com/docs/install/workspaces) [Next\\
 \\
 Lifecycle scripts](https://bun.com/docs/install/lifecycle)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/catalogs.md)
 
@@ -437,7 +393,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

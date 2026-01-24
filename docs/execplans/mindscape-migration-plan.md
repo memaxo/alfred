@@ -57,7 +57,7 @@ Non-functional requirements:
 - Observation: Existing Mindscape Initializer already hydrates notes (list) and due reminders (subset) as nodes; CRUD flows remain in routes.
   Evidence: apps/web/src/components/mindscape/initializer.tsx creates note/reminder nodes but does not provide create/update interactions.
 - Observation: tRPC APIs exist for timers, bookmarks, todos; node UIs can reuse them directly.
-  Evidence: routes `_authed/timer.tsx` and `_authed/book.tsx` use trpc.timer.*, trpc.book.*.
+  Evidence: routes `_authed/timer.tsx` and `_authed/book.tsx` use trpc.timer._, trpc.book._.
 - Observation: Workflow stream-to-UI translation already exists for Orchestrator route and Mindscape WorkflowManager; consolidation is feasible.
   Evidence: apps/web/src/components/mindscape/workflow-manager.tsx and `_authed/orchestrator/run.tsx`.
 - Observation: Zustand persist currently saves entire node arrays (data + edges) but omits focus metadata and sanitisation, so Phase 0 will trim persisted payloads while guaranteeing `position` survives reloads.
@@ -184,6 +184,7 @@ Non-functional requirements:
 ## Outcomes & Retrospective
 
 (Will be updated each phase)
+
 - Expected at end: Users can do core work in `/mindscape`; the legacy route-based UI is fully removed. Performance target: smooth panning/zooming at 60fps with 100+ nodes. Accessibility: keyboard navigation and command palette operational. Rollback now requires reverting to a commit prior to the removal.
 
 ### Phase 0 (Enablement) — 2025-11-20
@@ -218,6 +219,7 @@ Two UIs previously existed, but the legacy one has now been removed:
 - New system (Symbiotic Mindscape): `/mindscape` route uses React Flow canvas + Zustand store in `apps/web/src/store/mindscape.ts`, nodes in `apps/web/src/components/mindscape/nodes/*`, plus WorkflowManager for streaming.
 
 Key files (mindscape):
+
 - Canvas: apps/web/src/components/mindscape/canvas.tsx
 - Store: apps/web/src/store/mindscape.ts (Zustand with persist)
 - Initializer: apps/web/src/components/mindscape/initializer.tsx (hydrates orb + chat + notes/reminders)
@@ -225,13 +227,14 @@ Key files (mindscape):
 - Node types: chat-node.tsx, workflow-node.tsx, note-node.tsx, reminder-node.tsx, terminal-node.tsx, code-node.tsx, ticket-node.tsx, artifact-node.tsx, orb-node.tsx
 
 Key files (routes, examples):
-- Chat: apps/web/src/routes/_authed/ai.tsx
-- Notes: apps/web/src/routes/_authed/note.tsx
-- Reminders: apps/web/src/routes/_authed/remind.tsx
-- Timers: apps/web/src/routes/_authed/timer.tsx
-- Bookmarks: apps/web/src/routes/_authed/book.tsx
-- Workflows: apps/web/src/routes/_authed/workflows.tsx
-- Orchestrator Run: apps/web/src/routes/_authed/orchestrator/run.tsx
+
+- Chat: apps/web/src/routes/\_authed/ai.tsx
+- Notes: apps/web/src/routes/\_authed/note.tsx
+- Reminders: apps/web/src/routes/\_authed/remind.tsx
+- Timers: apps/web/src/routes/\_authed/timer.tsx
+- Bookmarks: apps/web/src/routes/\_authed/book.tsx
+- Workflows: apps/web/src/routes/\_authed/workflows.tsx
+- Orchestrator Run: apps/web/src/routes/\_authed/orchestrator/run.tsx
 - Preferences/Privacy/Profile/Integrations/Deployments: see matching routes in the repo tree
 
 ### Route-by-Route Migration Feasibility Matrix
@@ -340,7 +343,7 @@ Key files (routes, examples):
 - Spatial graph/UI: Zustand store at apps/web/src/store/mindscape.ts continues to own nodes, edges, focus, and layout.
 - Sync patterns:
   1. Hydration-in: MindscapeInitializer pulls summaries (notes, reminders due) and spawns nodes. Extend to hydrate additional artifacts lazily when needed.
-  2. Node-local actions: Node UIs call tRPC mutations; upon success, update both TanStack Query cache (via utils.*.setData/invalidate) and Zustand node.data to stay in sync.
+  2. Node-local actions: Node UIs call tRPC mutations; upon success, update both TanStack Query cache (via utils.\*.setData/invalidate) and Zustand node.data to stay in sync.
   3. Streaming: WorkflowManager already updates nodes from `workflow.stream`; keep this single source for live UI-message events.
   4. Position persistence: Extend Zustand persist to include `position` and node-specific UI flags. Persist key: "mindscape-storage".
   5. Deep linking: `/mindscape?nodeId=...` restores focus; `/mindscape?spawn=note` creates a new node with defaults.
@@ -350,6 +353,7 @@ Key files (routes, examples):
 We execute in **Core** then **Enhancements**, phased to reduce risk.
 
 Core (minimal steps):
+
 1. Add deep linking and spawn mechanics (query params → node add/focus).
 2. Persist node positions/layout across sessions.
 3. Implement CRUD inside NoteNode and ReminderNode; support creation via palette.
@@ -357,6 +361,7 @@ Core (minimal steps):
 5. Provide Command Palette (Cmd+K) to spawn nodes and search artifacts.
 
 Enhancements (gap-fixing, parity polish):
+
 1. Add Settings/Privacy/Profile/Integrations/Deployments nodes.
 2. Add Workflow list node; embed detail modal; unify Orchestrator run UI inside a node panel.
 3. Improve accessibility: keyboard nav between nodes, focus rings, shortcuts.
@@ -384,7 +389,7 @@ All commands run from repository root unless noted.
 
 Core:
 
-1) Deep link and spawn:
+1. Deep link and spawn:
    - Accept URL parameters:
      - `nodeId`: focus existing node.
      - `spawn`: one of ["chat","note","reminder","timer","bookmark","todo","workflow"].
@@ -393,15 +398,15 @@ Core:
 
    Edge cases:
    <edge-cases>
-     <edge-case><input>Unknown spawn value</input><expected>Ignore; no crash</expected></edge-case>
-     <edge-case><input>Malformed nodeId</input><expected>Ignore; no crash</expected></edge-case>
+   <edge-case><input>Unknown spawn value</input><expected>Ignore; no crash</expected></edge-case>
+   <edge-case><input>Malformed nodeId</input><expected>Ignore; no crash</expected></edge-case>
    </edge-cases>
 
-2) Persist node positions:
+2. Persist node positions:
    - In Zustand persist partialize, include nodes with id, type, position, and strategic UI flags; exclude heavy streaming buffers.
    - Validate restore: after refresh, nodes appear at last positions; orb at center (draggable: false).
 
-3) Note/Reminder CRUD in nodes:
+3. Note/Reminder CRUD in nodes:
    - NoteNode:
      - Add "Edit" and "Delete" actions; "New Note" available from palette that spawns an empty NoteNode with form.
      - On save, call `trpc.note.create` or `trpc.note.update` (if update exists; otherwise implement via delete+create as interim), invalidate caches, and `updateArtifactData`.
@@ -410,24 +415,24 @@ Core:
 
    Validation rules (examples):
    <validation>
-     <rule entity="note"><field>title</field><requirement>optional string <= 120 chars</requirement></rule>
-     <rule entity="note"><field>content</field><requirement>required non-empty</requirement></rule>
-     <rule entity="reminder"><field>title</field><requirement>required non-empty</requirement></rule>
-     <rule entity="reminder"><field>due</field><requirement>required ISO 8601; must be in future</requirement></rule>
+   <rule entity="note"><field>title</field><requirement>optional string <= 120 chars</requirement></rule>
+   <rule entity="note"><field>content</field><requirement>required non-empty</requirement></rule>
+   <rule entity="reminder"><field>title</field><requirement>required non-empty</requirement></rule>
+   <rule entity="reminder"><field>due</field><requirement>required ISO 8601; must be in future</requirement></rule>
    </validation>
 
-4) Implement TimerNode, BookmarkNode, TodoNode:
+4. Implement TimerNode, BookmarkNode, TodoNode:
    - TimerNode: start (minutes → seconds), complete, cancel using `trpc.timer.*`.
    - BookmarkNode: create with URL validation, delete using `trpc.book.*`.
    - TodoNode: list/add/toggle complete using `trpc.todo.*` (assumes similar API; if missing, define minimal server endpoint or limit to client list until available).
 
    Edge cases:
    <edge-cases>
-     <edge-case><input>Timer duration <= 0</input><expected>Disable create; show validation message</expected></edge-case>
-     <edge-case><input>Bookmark URL invalid</input><expected>Reject; tooltip feedback</expected></edge-case>
+   <edge-case><input>Timer duration <= 0</input><expected>Disable create; show validation message</expected></edge-case>
+   <edge-case><input>Bookmark URL invalid</input><expected>Reject; tooltip feedback</expected></edge-case>
    </edge-cases>
 
-5) Command Palette (Cmd+K):
+5. Command Palette (Cmd+K):
    - Provide quick actions:
      - "New Chat / Note / Reminder / Timer / Bookmark / Todo / Workflow"
      - "Search: {artifact title} → focus node"
@@ -435,19 +440,19 @@ Core:
 
 Enhancements:
 
-6) Settings/Privacy/Profile/Integrations Nodes:
+6. Settings/Privacy/Profile/Integrations Nodes:
    - Embed pure components (AutonomySlider, PrivacyControls, profile form, integrations cards).
    - TanStack Query/tRPC wiring same as routes.
 
-7) Workflows:
+7. Workflows:
    - Add WorkflowListNode that lists runs using `trpc.workflow.listRuns`; clicking a row opens WorkflowDetail inside the node or spawns a WorkflowNode focused on that run.
    - Orchestrator run form embedded in a WorkflowStarter panel; stream to node using existing stream subscription pattern; reuse BiometricChallengeDialog for high-risk actions.
 
-8) Deployments:
+8. Deployments:
    - DeploymentNode lists deployments, shows live health (read token) toggle, promote/remove actions with dialogs.
    - Copy host button remains.
 
-9) Mindscape cutover (final):
+9. Mindscape cutover (final):
    - Hard-code SignInForm, SignUpForm, and onboarding completion to route to `/mindscape`.
    - Remove all navigation affordances pointing to `/dashboard`, `/ai`, `/note`, `/remind`, `/timer`, `/book`, `/workflows`, `/integrations`, and `/preferences` so the route-based UI is no longer exposed.
    - Delete the temporary helper/env var so only one code path governs navigation.
@@ -464,10 +469,10 @@ Enhancements:
 
 Expected console/log excerpts (abridged):
 
-  addArtifact: note-abc123
-  setNodes: persisted restore (7 nodes)
-  trpc.note.create: success 201
-  trpc.timer.create: duration=1500 ok
+addArtifact: note-abc123
+setNodes: persisted restore (7 nodes)
+trpc.note.create: success 201
+trpc.timer.create: duration=1500 ok
 
 ## Validation and Acceptance
 
@@ -518,8 +523,8 @@ Enhancement acceptance:
 3. **Full E2E (nightly + release)**  
    Command: `bun run test:mindscape:e2e`. Launches the full stack (server, Postgres, background workers) and reenacts login → chat → note/reminder → workflow run → deployment promote → health toggle, capturing HAR + logs for triage.
 
-4. **Cutover verification**  
-   - Start `bun --filter @alfred/web dev`, sign in via `/login`, confirm landing on `/mindscape` with header/user menu containing only Mindscape navigation.  
+4. **Cutover verification**
+   - Start `bun --filter @alfred/web dev`, sign in via `/login`, confirm landing on `/mindscape` with header/user menu containing only Mindscape navigation.
    - Attempt to visit `/dashboard` (or other legacy URLs) directly; ensure they 404/redirect, proving the route-based UI is inaccessible.
 
 ## Idempotence and Recovery

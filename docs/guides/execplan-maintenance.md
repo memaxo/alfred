@@ -10,6 +10,7 @@ This guide explains how to create, update, and maintain ExecPlans. ExecPlans are
 ## What is an ExecPlan?
 
 An ExecPlan is a living document that tracks:
+
 - **Purpose** - What problem it solves
 - **Plan** - Step-by-step implementation plan
 - **Progress** - Current status of each step
@@ -22,12 +23,14 @@ An ExecPlan is a living document that tracks:
 ## When to Create an ExecPlan
 
 Create ExecPlans for:
+
 - Significant features (multi-day effort)
 - Major refactors
 - Cross-cutting initiatives
 - Complex integrations
 
 **Don't create ExecPlans for:**
+
 - Small bug fixes
 - Simple feature additions (<1 day)
 - Routine maintenance
@@ -56,21 +59,26 @@ Copy `.agent/PLANS.md` template structure:
 ## Plan
 
 ### Phase 1: [Description]
+
 - [ ] Task 1
 - [ ] Task 2
 
 ## Progress
+
 - [ ] Phase 1
 - [ ] Phase 2
 
 ## Surprises & Discoveries
-*(To be filled during execution)*
+
+_(To be filled during execution)_
 
 ## Decision Log
-*(To be filled during execution)*
+
+_(To be filled during execution)_
 
 ## Outcomes & Retrospective
-*(To be filled upon completion)*
+
+_(To be filled upon completion)_
 ```
 
 ### 3. Fill Initial Sections
@@ -82,6 +90,7 @@ Copy `.agent/PLANS.md` template structure:
 ### 4. Create Linear Issue
 
 Create corresponding Linear issue:
+
 - Project: "ExecPlans Tracking"
 - Link to ExecPlan file path
 - Copy Purpose as description
@@ -92,14 +101,17 @@ Create corresponding Linear issue:
 ### During Implementation
 
 **After each subtask:**
+
 1. Mark checkbox complete in `Progress`
 2. Add to `Surprises & Discoveries` if unexpected
 3. Log decisions in `Decision Log`
 4. Update Linear issue if status changes
 
 **Example:**
+
 ```markdown
 ## Progress
+
 - [x] Phase 1: Event Persistence ✅
 - [ ] Phase 2: Runtime Loop
 
@@ -116,23 +128,27 @@ Create corresponding Linear issue:
 ### On Completion
 
 1. **Mark all items complete:**
+
    ```markdown
    ## Progress
+
    - [x] Phase 1 ✅
    - [x] Phase 2 ✅
    ```
 
 2. **Update status:**
+
    ```markdown
    **Status:** Complete ✅
    ```
 
 3. **Fill Outcomes:**
+
    ```markdown
    ## Outcomes & Retrospective
-   
+
    **Status**: ✅ Complete
-   
+
    - Feature implemented in `packages/agent/src/feature.ts`
    - Integrated into workflow runner (`packages/api/src/routers/workflow.ts`)
    - Test coverage: `packages/agent/test/feature.test.ts`
@@ -224,4 +240,3 @@ When verifying ExecPlan completion:
 - [Verification Patterns](./verification-patterns.md) - How to verify completion
 - [Developer Onboarding](./developer-onboarding.md) - Getting started
 - [ExecPlan Verification Rules](../../.ruler/32-execplan-verification.md) - Detailed rules
-

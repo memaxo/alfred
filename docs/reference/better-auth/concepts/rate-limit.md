@@ -1,9 +1,10 @@
 ---
 title: Rate Limit | Better Auth
-url: 
+url:
 description: How to limit the number of requests a user can make to the server in a given time period.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -71,9 +72,9 @@ In addition, plugins also define custom rules for specific paths. For example, `
 
 These custom rules ensure that sensitive operations are protected with stricter limits.
 
-## [Configuring Rate Limit](https://www.better-auth.com/docs/concepts/rate-limit\#configuring-rate-limit)
+## [Configuring Rate Limit](https://www.better-auth.com/docs/concepts/rate-limit#configuring-rate-limit)
 
-### [Connecting IP Address](https://www.better-auth.com/docs/concepts/rate-limit\#connecting-ip-address)
+### [Connecting IP Address](https://www.better-auth.com/docs/concepts/rate-limit#connecting-ip-address)
 
 Rate limiting uses the connecting IP address to track the number of requests made by a user. The
 default header checked is `x-forwarded-for`, which is commonly used in production environments. If
@@ -97,7 +98,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Rate Limit Window](https://www.better-auth.com/docs/concepts/rate-limit\#rate-limit-window)
+### [Rate Limit Window](https://www.better-auth.com/docs/concepts/rate-limit#rate-limit-window)
 
 auth.ts
 
@@ -159,7 +160,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Storage](https://www.better-auth.com/docs/concepts/rate-limit\#storage)
+### [Storage](https://www.better-auth.com/docs/concepts/rate-limit#storage)
 
 By default, rate limit data is stored in memory, which may not be suitable for many use cases, particularly in serverless environments. To address this, you can use a database, secondary storage, or custom storage for storing rate limit data.
 
@@ -226,7 +227,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [Handling Rate Limit Errors](https://www.better-auth.com/docs/concepts/rate-limit\#handling-rate-limit-errors)
+## [Handling Rate Limit Errors](https://www.better-auth.com/docs/concepts/rate-limit#handling-rate-limit-errors)
 
 When a request exceeds the rate limit, Better Auth returns the following header:
 
@@ -274,18 +275,18 @@ await authClient.signIn.email({
 })
 ```
 
-### [Schema](https://www.better-auth.com/docs/concepts/rate-limit\#schema)
+### [Schema](https://www.better-auth.com/docs/concepts/rate-limit#schema)
 
 If you are using a database to store rate limit data you need this schema:
 
 Table Name: `rateLimit`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Database ID |
-| key | string | - | Unique identifier for each rate limit key |
-| count | integer | - | Time window in seconds |
-| lastRequest | bigint | - | Max requests in the window |
+| Field Name  | Type    | Key | Description                               |
+| ----------- | ------- | --- | ----------------------------------------- |
+| id          | string  | PK  | Database ID                               |
+| key         | string  | -   | Unique identifier for each rate limit key |
+| count       | integer | -   | Time window in seconds                    |
+| lastRequest | bigint  | -   | Max requests in the window                |
 
 [Edit on GitHub](https://github.com/better-auth/better-auth/blob/main/docs/content/docs/concepts/rate-limit.mdx)
 

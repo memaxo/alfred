@@ -1,9 +1,10 @@
 ---
 title: JWT | Better Auth
-url: 
+url:
 description: Authenticate users with JWT tokens in services that can't use the session
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,9 +31,9 @@ The JWT plugin provides endpoints to retrieve a JWT token and a JWKS endpoint to
 
 This plugin is not meant as a replacement for the session. It's meant to be used for services that require JWT tokens. If you're looking to use JWT tokens for authentication, check out the [Bearer Plugin](https://www.better-auth.com/docs/plugins/bearer).
 
-## [Installation](https://www.better-auth.com/docs/plugins/jwt\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/jwt#installation)
 
-### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/jwt\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/jwt#add-the-plugin-to-your-auth-config)
 
 auth.ts
 
@@ -47,7 +48,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/jwt\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/jwt#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -63,13 +64,13 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/jwt#schema) section to add the fields manually.
 
-## [Usage](https://www.better-auth.com/docs/plugins/jwt\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/jwt#usage)
 
 Once you've installed the plugin, you can start using the JWT & JWKS plugin to get the token and the JWKS through their respective endpoints.
 
-## [JWT](https://www.better-auth.com/docs/plugins/jwt\#jwt)
+## [JWT](https://www.better-auth.com/docs/plugins/jwt#jwt)
 
-### [Retrieve the token](https://www.better-auth.com/docs/plugins/jwt\#retrieve-the-token)
+### [Retrieve the token](https://www.better-auth.com/docs/plugins/jwt#retrieve-the-token)
 
 1. Using your session token
 
@@ -105,7 +106,7 @@ await authClient.getSession({
 })
 ```
 
-### [Verifying the token](https://www.better-auth.com/docs/plugins/jwt\#verifying-the-token)
+### [Verifying the token](https://www.better-auth.com/docs/plugins/jwt#verifying-the-token)
 
 The token can be verified in your own service, without the need for an additional verify call or database check.
 For this JWKS is used. The public key can be fetched from the `/api/auth/jwks` endpoint.
@@ -127,7 +128,7 @@ In case a JWT with a different `kid` is received, it is recommended to fetch the
   }
 ```
 
-### [OAuth Provider Mode](https://www.better-auth.com/docs/plugins/jwt\#oauth-provider-mode)
+### [OAuth Provider Mode](https://www.better-auth.com/docs/plugins/jwt#oauth-provider-mode)
 
 If you are making your system oAuth compliant (such as when utilizing the OIDC or MCP plugins), you **MUST** disable the `/token` endpoint (oAuth equivalent `/oauth2/token`) and disable setting the jwt header (oAuth equivalent `/oauth2/userinfo`).
 
@@ -144,7 +145,7 @@ betterAuth({
 })
 ```
 
-#### [Example using jose with remote JWKS](https://www.better-auth.com/docs/plugins/jwt\#example-using-jose-with-remote-jwks)
+#### [Example using jose with remote JWKS](https://www.better-auth.com/docs/plugins/jwt#example-using-jose-with-remote-jwks)
 
 ```
 import { jwtVerify, createRemoteJWKSet } from 'jose'
@@ -170,7 +171,7 @@ const token = 'your.jwt.token' // this is the token you get from the /api/auth/t
 const payload = await validateToken(token)
 ```
 
-#### [Example with local JWKS](https://www.better-auth.com/docs/plugins/jwt\#example-with-local-jwks)
+#### [Example with local JWKS](https://www.better-auth.com/docs/plugins/jwt#example-with-local-jwks)
 
 ```
 import { jwtVerify, createLocalJWKSet } from 'jose'
@@ -205,7 +206,7 @@ const token = 'your.jwt.token' // this is the token you get from the /api/auth/t
 const payload = await validateToken(token)
 ```
 
-### [Remote JWKS Url](https://www.better-auth.com/docs/plugins/jwt\#remote-jwks-url)
+### [Remote JWKS Url](https://www.better-auth.com/docs/plugins/jwt#remote-jwks-url)
 
 Disables the `/jwks` endpoint and uses this endpoint in any discovery such as OIDC.
 
@@ -226,7 +227,7 @@ jwt({
 })
 ```
 
-### [Custom Signing](https://www.better-auth.com/docs/plugins/jwt\#custom-signing)
+### [Custom Signing](https://www.better-auth.com/docs/plugins/jwt#custom-signing)
 
 This is an advanced feature. Configuration outside of this plugin **MUST** be provided.
 
@@ -236,7 +237,7 @@ Implementers:
 - If using localized approach, ensure server uses the latest private key when rotated. Depending on deployment, the server may need to be restarted.
 - When using remote approach, verify the payload is unchanged after transit. Use integrity validation like CRC32 or SHA256 checks if available.
 
-#### [Localized Signing](https://www.better-auth.com/docs/plugins/jwt\#localized-signing)
+#### [Localized Signing](https://www.better-auth.com/docs/plugins/jwt#localized-signing)
 
 auth.ts
 
@@ -263,7 +264,7 @@ jwt({
 })
 ```
 
-#### [Remote Signing](https://www.better-auth.com/docs/plugins/jwt\#remote-signing)
+#### [Remote Signing](https://www.better-auth.com/docs/plugins/jwt#remote-signing)
 
 Useful if you are using a remote Key Management Service such as [Google KMS](https://cloud.google.com/kms/docs/encrypt-decrypt-rsa#kms-encrypt-asymmetric-nodejs), [Amazon KMS](https://docs.aws.amazon.com/kms/latest/APIReference/API_Sign.html), or [Azure Key Vault](https://learn.microsoft.com/en-us/rest/api/keyvault/keys/sign/sign?view=rest-keyvault-keys-7.4&tabs=HTTP).
 
@@ -298,26 +299,26 @@ jwt({
 })
 ```
 
-## [Schema](https://www.better-auth.com/docs/plugins/jwt\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/jwt#schema)
 
 The JWT plugin adds the following tables to the database:
 
-### [JWKS](https://www.better-auth.com/docs/plugins/jwt\#jwks)
+### [JWKS](https://www.better-auth.com/docs/plugins/jwt#jwks)
 
 Table Name: `jwks`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each web key |
-| publicKey | string | - | The public part of the web key |
-| privateKey | string | - | The private part of the web key |
-| createdAt | Date | - | Timestamp of when the web key was created |
+| Field Name | Type   | Key | Description                               |
+| ---------- | ------ | --- | ----------------------------------------- |
+| id         | string | PK  | Unique identifier for each web key        |
+| publicKey  | string | -   | The public part of the web key            |
+| privateKey | string | -   | The private part of the web key           |
+| createdAt  | Date   | -   | Timestamp of when the web key was created |
 
 You can customize the table name and fields for the `jwks` table. See the [Database concept documentation](https://www.better-auth.com/docs/concepts/database#custom-table-names) for more information on how to customize plugin schema.
 
-## [Options](https://www.better-auth.com/docs/plugins/jwt\#options)
+## [Options](https://www.better-auth.com/docs/plugins/jwt#options)
 
-### [Algorithm of the Key Pair](https://www.better-auth.com/docs/plugins/jwt\#algorithm-of-the-key-pair)
+### [Algorithm of the Key Pair](https://www.better-auth.com/docs/plugins/jwt#algorithm-of-the-key-pair)
 
 The algorithm used for the generation of the key pair. The default is **EdDSA** with the **Ed25519** curve. Below are the available options:
 
@@ -334,40 +335,40 @@ jwt({
 })
 ```
 
-#### [EdDSA](https://www.better-auth.com/docs/plugins/jwt\#eddsa)
+#### [EdDSA](https://www.better-auth.com/docs/plugins/jwt#eddsa)
 
 - **Default Curve**: `Ed25519`
 - **Optional Property**: `crv`
   - Available options: `Ed25519`, `Ed448`
   - Default: `Ed25519`
 
-#### [ES256](https://www.better-auth.com/docs/plugins/jwt\#es256)
+#### [ES256](https://www.better-auth.com/docs/plugins/jwt#es256)
 
 - No additional properties
 
-#### [RSA256](https://www.better-auth.com/docs/plugins/jwt\#rsa256)
+#### [RSA256](https://www.better-auth.com/docs/plugins/jwt#rsa256)
 
 - **Optional Property**: `modulusLength`
   - Expects a number
   - Default: `2048`
 
-#### [PS256](https://www.better-auth.com/docs/plugins/jwt\#ps256)
+#### [PS256](https://www.better-auth.com/docs/plugins/jwt#ps256)
 
 - **Optional Property**: `modulusLength`
   - Expects a number
   - Default: `2048`
 
-#### [ECDH-ES](https://www.better-auth.com/docs/plugins/jwt\#ecdh-es)
+#### [ECDH-ES](https://www.better-auth.com/docs/plugins/jwt#ecdh-es)
 
 - **Optional Property**: `crv`
   - Available options: `P-256`, `P-384`, `P-521`
   - Default: `P-256`
 
-#### [ES512](https://www.better-auth.com/docs/plugins/jwt\#es512)
+#### [ES512](https://www.better-auth.com/docs/plugins/jwt#es512)
 
 - No additional properties
 
-### [Disable private key encryption](https://www.better-auth.com/docs/plugins/jwt\#disable-private-key-encryption)
+### [Disable private key encryption](https://www.better-auth.com/docs/plugins/jwt#disable-private-key-encryption)
 
 By default, the private key is encrypted using AES256 GCM. You can disable this by setting the `disablePrivateKeyEncryption` option to `true`.
 
@@ -383,7 +384,7 @@ jwt({
 })
 ```
 
-### [Modify JWT payload](https://www.better-auth.com/docs/plugins/jwt\#modify-jwt-payload)
+### [Modify JWT payload](https://www.better-auth.com/docs/plugins/jwt#modify-jwt-payload)
 
 By default the entire user object is added to the JWT payload. You can modify the payload by providing a function to the `definePayload` option.
 
@@ -403,7 +404,7 @@ jwt({
 })
 ```
 
-### [Modify Issuer, Audience, Subject or Expiration time](https://www.better-auth.com/docs/plugins/jwt\#modify-issuer-audience-subject-or-expiration-time)
+### [Modify Issuer, Audience, Subject or Expiration time](https://www.better-auth.com/docs/plugins/jwt#modify-issuer-audience-subject-or-expiration-time)
 
 If none is given, the `BASE_URL` is used as the issuer and the audience is set to the `BASE_URL`. The expiration time is set to 15 minutes.
 

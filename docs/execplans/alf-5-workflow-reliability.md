@@ -32,7 +32,7 @@ Success is demonstrated by deterministic tests that cover normal success, escala
 
 - Observation: `git fetch` is denied in this sandbox because it cannot write `.git/FETCH_HEAD`, so “diff vs main” uses the existing local `main` ref (may be stale vs remote).
   Evidence:
-    error: cannot open '.git/FETCH_HEAD': Operation not permitted
+  error: cannot open '.git/FETCH_HEAD': Operation not permitted
 - Observation: `scripts/test-bun.ts` deliberately bypasses wrapper features when explicit file patterns are passed, so `ALFRED_TEST_ISOLATE_FILES=1` will not isolate `mock.module()` across multiple files unless tests are run per-file (or via package discovery).
   Evidence: `scripts/test-bun.ts` short-circuits on `patterns.length > 0` and runs `bun test ...patterns` directly.
 
@@ -60,6 +60,7 @@ Success is demonstrated by deterministic tests that cover normal success, escala
 - Deterministic tests cover success, escalation, MAX_TRANSITIONS, abort propagation, and restart recovery; workflow router tests cover cancel propagation at the API boundary.
 
 **Follow-ups (not required for ALF-5 closure)**
+
 - Either re-introduce a real `USE_WORKFLOW_RUNTIME` toggle or remove the env var and its compatibility tests once rollout is finalized (documented in `config/env.example`).
 - Resolve unrelated typecheck failures noted during the audit (outside ALF-5 scope).
 

@@ -1,9 +1,10 @@
 ---
 title: Anonymous | Better Auth
-url: 
+url:
 description: Anonymous plugin for Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The Anonymous plugin allows users to have an authenticated experience without requiring them to provide an email address, password, OAuth provider, or any other Personally Identifiable Information (PII). Users can later link an authentication method to their account when ready.
 
-## [Installation](https://www.better-auth.com/docs/plugins/anonymous\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/anonymous#installation)
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/anonymous\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/anonymous#add-the-plugin-to-your-auth-config)
 
 To enable anonymous authentication, add the anonymous plugin to your authentication configuration.
 
@@ -48,7 +49,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/anonymous\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/anonymous#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -64,7 +65,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/anonymous#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/anonymous\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/anonymous#add-the-client-plugin)
 
 Next, include the anonymous client plugin in your authentication client instance.
 
@@ -81,9 +82,9 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/anonymous\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/anonymous#usage)
 
-### [Sign In](https://www.better-auth.com/docs/plugins/anonymous\#sign-in)
+### [Sign In](https://www.better-auth.com/docs/plugins/anonymous#sign-in)
 
 To sign in a user anonymously, use the `signIn.anonymous()` method.
 
@@ -93,7 +94,7 @@ example.ts
 const user = await authClient.signIn.anonymous()
 ```
 
-### [Link Account](https://www.better-auth.com/docs/plugins/anonymous\#link-account)
+### [Link Account](https://www.better-auth.com/docs/plugins/anonymous#link-account)
 
 If a user is already signed in anonymously and tries to `signIn` or `signUp` with another method, their anonymous activities can be linked to the new account.
 
@@ -124,7 +125,7 @@ const user = await authClient.signIn.email({
 })
 ```
 
-## [Options](https://www.better-auth.com/docs/plugins/anonymous\#options)
+## [Options](https://www.better-auth.com/docs/plugins/anonymous#options)
 
 - `emailDomainName`: The domain name to use when generating an email address for anonymous users. Defaults to the domain name of the current site.
 
@@ -148,14 +149,13 @@ export const auth = betterAuth({
 
 - `generateName`: A callback function that is called to generate a name for the anonymous user. Useful if you want to have random names for anonymous users, or if `name` is unique in your database.
 
-
-## [Schema](https://www.better-auth.com/docs/plugins/anonymous\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/anonymous#schema)
 
 The anonymous plugin requires an additional field in the user table:
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| isAnonymous | boolean | ? | Indicates whether the user is anonymous. |
+| Field Name  | Type    | Key | Description                              |
+| ----------- | ------- | --- | ---------------------------------------- |
+| isAnonymous | boolean | ?   | Indicates whether the user is anonymous. |
 
 [Edit on GitHub](https://github.com/better-auth/better-auth/blob/main/docs/content/docs/plugins/anonymous.mdx)
 

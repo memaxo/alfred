@@ -24,7 +24,10 @@ export type CognitiveDeps = {
 };
 
 export type PolicyDeps = {
-  evaluate: (resource: unknown, context: unknown) => Promise<{ allow: boolean; obligations: unknown[] }>;
+  evaluate: (
+    resource: unknown,
+    context: unknown
+  ) => Promise<{ allow: boolean; obligations: unknown[] }>;
 };
 
 // Combined type
@@ -49,7 +52,7 @@ export type Context = {
   runtime: RuntimeMetadata;
   runtimeContext: RuntimeContext;
   policy?: { obligations: Obligation[] };
-  deps?: RouterDeps;  // Injectable dependencies
+  deps?: RouterDeps; // Injectable dependencies
 };
 ```
 
@@ -58,7 +61,7 @@ export type Context = {
 ```typescript
 type CreateCallerOptions = {
   userId?: string;
-  deps?: RouterDeps;  // Pass deps here
+  deps?: RouterDeps; // Pass deps here
 };
 
 const caller = await createTestCaller({
@@ -76,13 +79,12 @@ const caller = await createTestCaller({
 ```typescript
 // In router: Use ctx.deps with fallback to direct import
 export const cognitiveRouter = router({
-  feedback: authedProcedure
-    .mutation(async ({ ctx, input }) => {
-      // Use injected dep or fall back to direct import
-      const embedFn = ctx.deps?.embed?.embedMany ?? embedMany;
-      const vectors = await embedFn([input.expected, input.actual]);
-      // ...
-    }),
+  feedback: authedProcedure.mutation(async ({ ctx, input }) => {
+    // Use injected dep or fall back to direct import
+    const embedFn = ctx.deps?.embed?.embedMany ?? embedMany;
+    const vectors = await embedFn([input.expected, input.actual]);
+    // ...
+  }),
 });
 ```
 
@@ -90,14 +92,14 @@ export const cognitiveRouter = router({
 
 Skipped tests that need DI migration (in priority order):
 
-| Package | Test File | Dependencies to Inject |
-|---------|-----------|----------------------|
-| `@alfred/api` | `cognitive.router.test.ts` | `@alfred/runtime`, `@alfred/policy`, `@alfred/embed` |
-| `@alfred/api` | `deploy.router.test.ts` | `@alfred/db/repo/deploy`, `@alfred/agent/orchestrator/tool/*` |
-| `@alfred/api` | `workflow.runtime-stream-provenance.integration.test.ts` | `@alfred/runtime`, `@alfred/rag` |
-| `@alfred/runtime` | `lifecycle-learning.test.ts` | `@alfred/db`, `@alfred/plan` |
-| `@alfred/runtime` | `supervisor.integration.test.ts` | Cognitive/workflow modules |
-| `@alfred/runtime` | `review.persistence.test.ts` | `@alfred/db`, `@alfred/plan` |
+| Package           | Test File                                                | Dependencies to Inject                                        |
+| ----------------- | -------------------------------------------------------- | ------------------------------------------------------------- |
+| `@alfred/api`     | `cognitive.router.test.ts`                               | `@alfred/runtime`, `@alfred/policy`, `@alfred/embed`          |
+| `@alfred/api`     | `deploy.router.test.ts`                                  | `@alfred/db/repo/deploy`, `@alfred/agent/orchestrator/tool/*` |
+| `@alfred/api`     | `workflow.runtime-stream-provenance.integration.test.ts` | `@alfred/runtime`, `@alfred/rag`                              |
+| `@alfred/runtime` | `lifecycle-learning.test.ts`                             | `@alfred/db`, `@alfred/plan`                                  |
+| `@alfred/runtime` | `supervisor.integration.test.ts`                         | Cognitive/workflow modules                                    |
+| `@alfred/runtime` | `review.persistence.test.ts`                             | `@alfred/db`, `@alfred/plan`                                  |
 
 ## Alternative: File Isolation
 

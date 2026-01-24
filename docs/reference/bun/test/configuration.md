@@ -1,9 +1,10 @@
 ---
 title: Test configuration – Test runner | Bun Docs
-url: 
+url:
 description: Configure the test runner with bunfig.toml
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Configure `bun test` via `bunfig.toml` file and command-line options. This page documents the available configuration options for `bun test`.
 
-## [bunfig.toml options](https://bun.com/docs/test/configuration\#bunfig-toml-options)
+## [bunfig.toml options](https://bun.com/docs/test/configuration#bunfig-toml-options)
 
 You can configure `bun test` behavior by adding a `[test]` section to your `bunfig.toml` file:
 
@@ -64,7 +65,7 @@ You can configure `bun test` behavior by adding a `[test]` section to your `bunf
 
 ```
 
-### [Test discovery](https://bun.com/docs/test/configuration\#test-discovery)
+### [Test discovery](https://bun.com/docs/test/configuration#test-discovery)
 
 #### root
 
@@ -76,7 +77,7 @@ root = "src"  # Only scan for tests in the src directory
 
 ```
 
-### [Reporters](https://bun.com/docs/test/configuration\#reporters)
+### [Reporters](https://bun.com/docs/test/configuration#reporters)
 
 #### reporter.junit
 
@@ -90,7 +91,7 @@ junit = "path/to/junit.xml"  # Output path for JUnit XML report
 
 This complements the `--reporter=junit` and `--reporter-outfile` CLI flags.
 
-### [Memory usage](https://bun.com/docs/test/configuration\#memory-usage)
+### [Memory usage](https://bun.com/docs/test/configuration#memory-usage)
 
 #### smol
 
@@ -104,7 +105,7 @@ smol = true  # Reduce memory usage during test runs
 
 This is equivalent to using the `--smol` flag on the command line.
 
-### [Coverage options](https://bun.com/docs/test/configuration\#coverage-options)
+### [Coverage options](https://bun.com/docs/test/configuration#coverage-options)
 
 In addition to the options documented in the [coverage documentation](https://bun.com/docs/test/coverage.md), the following options are available:
 
@@ -164,7 +165,7 @@ coverageIgnoreSourcemaps = true  # Don't use sourcemaps for coverage analysis
 
 When using this option, you probably want to stick a `// @bun` comment at the top of the source file to opt out of the transpilation process.
 
-### [Install settings inheritance](https://bun.com/docs/test/configuration\#install-settings-inheritance)
+### [Install settings inheritance](https://bun.com/docs/test/configuration#install-settings-inheritance)
 
 The `bun test` command inherits relevant network and installation configuration (registry, cafile, prefer, exact, etc.) from the `[install]` section of bunfig.toml. This is important if tests need to interact with private registries or require specific install behaviors triggered during the test run.
 
@@ -174,7 +175,7 @@ Test reporters](https://bun.com/docs/test/reporters) [Next\\
 \\
 Runtime behavior](https://bun.com/docs/test/runtime-behavior)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/configuration.md)
 
@@ -198,7 +199,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -29,7 +29,7 @@ pipeline_workflow_start { runId: "...", requirement: "...", mode: "sequential" }
 The new pipeline consists of 8 sequential stages:
 
 1. **init** - Project detection, Linear integration
-2. **context** - Code/web/RAG context gathering  
+2. **context** - Code/web/RAG context gathering
 3. **plan** - Task decomposition, ExecPlan generation
 4. **schedule** - Wave planning (sequential/parallel)
 5. **execute** - Agent spawning and execution
@@ -38,6 +38,7 @@ The new pipeline consists of 8 sequential stages:
 8. **summarize** - Summary generation, Linear updates
 
 Each stage emits typed events that observers can consume for:
+
 - Console logging
 - Prometheus metrics
 - Linear progress updates
@@ -65,6 +66,7 @@ The pipeline bridge maintains full compatibility with the existing WorkflowEvent
 ```
 
 This means:
+
 - ✅ Existing UI components work unchanged
 - ✅ Database persistence continues working
 - ✅ Linear integration maintains compatibility
@@ -76,13 +78,14 @@ Pipeline behavior can be configured via `PipelineConfig`:
 
 ```typescript
 const runner = new PipelineRunner({
-  maxParallel: 1,              // Sequential execution (POC default)
-  maxAgentAttempts: 3,         // Retries per agent
-  maxReviewAttempts: 3,        // Review fix attempts
-  enableLearning: true,        // Enable learning stage
-  enableLinearSync: false,     // Linear progress updates
-  linearSyncInterval: 30_000,  // Batch interval (ms)
-  phaseTimeouts: {             // Per-stage timeouts
+  maxParallel: 1, // Sequential execution (POC default)
+  maxAgentAttempts: 3, // Retries per agent
+  maxReviewAttempts: 3, // Review fix attempts
+  enableLearning: true, // Enable learning stage
+  enableLinearSync: false, // Linear progress updates
+  linearSyncInterval: 30_000, // Batch interval (ms)
+  phaseTimeouts: {
+    // Per-stage timeouts
     init: 30_000,
     context: 120_000,
     plan: 120_000,
@@ -123,7 +126,7 @@ Automatic metrics collection via MetricsObserver:
 When configured, LinearSyncObserver batches updates to respect rate limits (55 req/min):
 
 - Stage progress → Linear comments
-- Agent completion → Linear comments  
+- Agent completion → Linear comments
 - Pipeline completion → Status "Done"
 - Pipeline failure → Status "Cancelled" + error comment
 
@@ -176,8 +179,9 @@ if (shouldUsePipeline(input)) {
 ### Phase 3: Full Migration (Future)
 
 Once validated:
+
 1. Remove legacy orchestrator code
-2. Remove pipeline bridge  
+2. Remove pipeline bridge
 3. Remove feature flag
 4. Update docs to remove "new" terminology
 

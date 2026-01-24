@@ -9,31 +9,33 @@ We will give users the power to **correct** ALFRED's semantic classification. If
 ## Progress
 
 - [ ] **Backend: Mutation**
-    - [ ] Create `trpc.graph.updateNodeTopics` mutation in `packages/api/src/routers/graph.ts`.
-    - [ ] Logic: Update the `properties` column in Postgres.
+  - [ ] Create `trpc.graph.updateNodeTopics` mutation in `packages/api/src/routers/graph.ts`.
+  - [ ] Logic: Update the `properties` column in Postgres.
 - [ ] **Frontend: Interaction**
-    - [ ] Update `ConceptNode` and `KnowledgeNode` to support interaction on badges.
-    - [ ] Implement a context menu (or "X" button on hover) for `TopicBadge`.
-    - [ ] Wire the "Remove" action to the mutation.
+  - [ ] Update `ConceptNode` and `KnowledgeNode` to support interaction on badges.
+  - [ ] Implement a context menu (or "X" button on hover) for `TopicBadge`.
+  - [ ] Wire the "Remove" action to the mutation.
 - [ ] **Testing**
-    - [ ] Verify that removing a topic persists after refresh.
+  - [ ] Verify that removing a topic persists after refresh.
 
 ## Surprises & Discoveries
 
-*(Populate during execution)*
+_(Populate during execution)_
 
 ## Decision Log
 
-- **Scope**: Phase 1 is "Correction" (removing/adding tags). We are *not* yet implementing "Negative Training" (updating the vector classifier itself), as that is complex. We are just fixing the DB record.
+- **Scope**: Phase 1 is "Correction" (removing/adding tags). We are _not_ yet implementing "Negative Training" (updating the vector classifier itself), as that is complex. We are just fixing the DB record.
 
 ## Outcomes & Retrospective
 
-*(Populate during execution)*
+_(Populate during execution)_
 
 ## Plan of Work
 
 ### 1. Backend
+
 Add `updateTopics` mutation.
+
 ```typescript
 updateTopics: authedProcedure
   .input(z.object({ nodeId: z.string(), topics: z.array(z.string()) }))
@@ -41,6 +43,7 @@ updateTopics: authedProcedure
 ```
 
 ### 2. Frontend
+
 Make `TopicBadge` interactive.
 On click/hover -> Show "Remove".
 On remove -> Call mutation -> Optimistic UI update.

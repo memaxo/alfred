@@ -1,9 +1,10 @@
 ---
 title: TypeScript | Bun Docs
-url: 
+url:
 description: Install and configure type declarations for Bun's APIs
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -63,7 +64,7 @@ console.log(Bun.version);
 
 ```
 
-## [Suggested `compilerOptions`](https://bun.com/docs/typescript\#suggested-compileroptions)
+## [Suggested `compilerOptions`](https://bun.com/docs/typescript#suggested-compileroptions)
 
 Bun supports things like top-level await, JSX, and extensioned `.ts` imports, which TypeScript doesn't allow by default. Below is a set of recommended `compilerOptions` for a Bun project, so you can use these features without seeing compiler warnings from TypeScript.
 
@@ -112,7 +113,7 @@ Quickstart](https://bun.com/docs/quickstart) [Next\\
 \\
 `bun init`](https://bun.com/docs/cli/init)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/typescript.md)
 
@@ -136,7 +137,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

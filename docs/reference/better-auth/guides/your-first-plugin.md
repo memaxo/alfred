@@ -1,9 +1,10 @@
 ---
 title: Create your first plugin | Better Auth
-url: 
+url:
 description: A step-by-step guide to creating your first Better Auth plugin.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,20 +31,20 @@ In this guide, we’ll walk you through the steps of creating your first Better 
 
 This guide assumes you have [setup the basics](https://www.better-auth.com/docs/installation) of Better Auth and are ready to create your first plugin.
 
-## [Plan your idea](https://www.better-auth.com/docs/guides/your-first-plugin\#plan-your-idea)
+## [Plan your idea](https://www.better-auth.com/docs/guides/your-first-plugin#plan-your-idea)
 
 Before beginning, you must know what plugin you intend to create.
 
 In this guide, we’ll create a **birthday plugin** to keep track of user birth dates.
 
-## [Server plugin first](https://www.better-auth.com/docs/guides/your-first-plugin\#server-plugin-first)
+## [Server plugin first](https://www.better-auth.com/docs/guides/your-first-plugin#server-plugin-first)
 
 Better Auth plugins operate as a pair: a [server plugin](https://www.better-auth.com/docs/concepts/plugins#create-a-server-plugin) and a [client plugin](https://www.better-auth.com/docs/concepts/plugins#create-a-client-plugin).
 The server plugin forms the foundation of your authentication system, while the client plugin provides convenient frontend APIs to interact with your server implementation.
 
 You can read more about server/client plugins in our [documentation](https://www.better-auth.com/docs/concepts/plugins#creating-a-plugin).
 
-### [Creating the server plugin](https://www.better-auth.com/docs/guides/your-first-plugin\#creating-the-server-plugin)
+### [Creating the server plugin](https://www.better-auth.com/docs/guides/your-first-plugin#creating-the-server-plugin)
 
 Go ahead and find a suitable location to create your birthday plugin folder, with an `index.ts` file within.
 
@@ -68,7 +69,7 @@ export const birthdayPlugin = () =>
 
 Although this does nothing, you have technically just made yourself your first plugin, congratulations! 🎉
 
-### [Defining a schema](https://www.better-auth.com/docs/guides/your-first-plugin\#defining-a-schema)
+### [Defining a schema](https://www.better-auth.com/docs/guides/your-first-plugin#defining-a-schema)
 
 In order to save each user’s birthday data, we must create a schema on top of the `user` model.
 
@@ -98,7 +99,7 @@ export const birthdayPlugin = () =>
   } satisfies BetterAuthPlugin);
 ```
 
-### [Authorization logic](https://www.better-auth.com/docs/guides/your-first-plugin\#authorization-logic)
+### [Authorization logic](https://www.better-auth.com/docs/guides/your-first-plugin#authorization-logic)
 
 For this example guide, we’ll set up authentication logic to check and ensure that the user who signs-up is older than 5.
 But the same concept could be applied for something like verifying users agreeing to the TOS or anything alike.
@@ -172,7 +173,7 @@ Before hook
 
 We’ve now successfully written code to ensure authorization for users above 5!
 
-## [Client Plugin](https://www.better-auth.com/docs/guides/your-first-plugin\#client-plugin)
+## [Client Plugin](https://www.better-auth.com/docs/guides/your-first-plugin#client-plugin)
 
 We’re close to the finish line! 🏁
 
@@ -209,11 +210,11 @@ What we’ve done is allow the client plugin to infer the types defined by our s
 
 And that’s it! This is all it takes for the birthday client plugin. 🎂
 
-## [Initiate your plugin!](https://www.better-auth.com/docs/guides/your-first-plugin\#initiate-your-plugin)
+## [Initiate your plugin!](https://www.better-auth.com/docs/guides/your-first-plugin#initiate-your-plugin)
 
 Both the `client` and `server` plugins are now ready, the last step is to import them to both your `auth-client.ts` and your `server.ts` files respectively to initiate the plugin.
 
-### [Server initiation](https://www.better-auth.com/docs/guides/your-first-plugin\#server-initiation)
+### [Server initiation](https://www.better-auth.com/docs/guides/your-first-plugin#server-initiation)
 
 server.ts
 
@@ -228,7 +229,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Client initiation](https://www.better-auth.com/docs/guides/your-first-plugin\#client-initiation)
+### [Client initiation](https://www.better-auth.com/docs/guides/your-first-plugin#client-initiation)
 
 auth-client.ts
 
@@ -243,7 +244,7 @@ const authClient = createAuthClient({
 });
 ```
 
-### [Oh yeah, the schemas!](https://www.better-auth.com/docs/guides/your-first-plugin\#oh-yeah-the-schemas)
+### [Oh yeah, the schemas!](https://www.better-auth.com/docs/guides/your-first-plugin#oh-yeah-the-schemas)
 
 Don’t forget to add your `birthday` field to your `user` table model!
 
@@ -253,7 +254,7 @@ Or, use the `generate` [CLI command](https://www.better-auth.com/docs/concepts/c
 npx @better-auth/cli@latest generate
 ```
 
-## [Wrapping Up](https://www.better-auth.com/docs/guides/your-first-plugin\#wrapping-up)
+## [Wrapping Up](https://www.better-auth.com/docs/guides/your-first-plugin#wrapping-up)
 
 Congratulations! You’ve successfully created your first ever Better Auth plugin.
 We highly recommend you visit our [plugins documentation](https://www.better-auth.com/docs/concepts/plugins) to learn more information.

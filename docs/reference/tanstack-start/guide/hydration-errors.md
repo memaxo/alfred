@@ -1,230 +1,193 @@
 Why it happens
 
- * **Mismatch** : Server HTML differs from client render during hydration
- * **Common causes** : Intl (locale/time zone), Date.now(), random IDs, responsive-only logic, feature flags, user prefs
+- **Mismatch** : Server HTML differs from client render during hydration
+- **Common causes** : Intl (locale/time zone), Date.now(), random IDs, responsive-only logic, feature flags, user prefs
 
 Strategy 1 — Make server and client match
 
- * **Pick a deterministic locale/time zone on the server** and use the same on the client
- * **Source of truth** : cookie (preferred) or Accept-Language header
- * **Compute once on the server** and hydrate as initial state
+- **Pick a deterministic locale/time zone on the server** and use the same on the client
+- **Source of truth** : cookie (preferred) or Accept-Language header
+- **Compute once on the server** and hydrate as initial state
 
+// src/start.ts
+import { createStart, createMiddleware } from '@tanstack/react-start'
+import {
+getRequestHeader,
+getCookie,
+setCookie,
+} from '@tanstack/react-start/server'
 
+const localeTzMiddleware = createMiddleware().server(async ({ next }) => {
+const header = getRequestHeader('accept-language')
+const headerLocale = header?.split(',')[0] || 'en-US'
+const cookieLocale = getCookie('locale')
+const cookieTz = getCookie('tz') // set by client later (see Strategy 2)
 
- // src/start.ts
- import { createStart, createMiddleware } from '@tanstack/react-start'
- import {
- getRequestHeader,
- getCookie,
- setCookie,
- } from '@tanstack/react-start/server'
+const locale = cookieLocale || headerLocale
+const timeZone = cookieTz || 'UTC' // deterministic until client sends tz
 
- const localeTzMiddleware = createMiddleware().server(async ({ next }) => {
- const header = getRequestHeader('accept-language')
- const headerLocale = header?.split(',')[0] || 'en-US'
- const cookieLocale = getCookie('locale')
- const cookieTz = getCookie('tz') // set by client later (see Strategy 2)
+// Persist locale for subsequent requests (optional)
+setCookie('locale', locale, { path: '/', maxAge: 60 _ 60 _ 24 \* 365 })
 
- const locale = cookieLocale || headerLocale
- const timeZone = cookieTz || 'UTC' // deterministic until client sends tz
+return next({ context: { locale, timeZone } })
+})
 
- // Persist locale for subsequent requests (optional)
- setCookie('locale', locale, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+export const startInstance = createStart(() => ({
+requestMiddleware: [localeTzMiddleware],
+}))
 
- return next({ context: { locale, timeZone } })
- })
+// src/start.ts
+import { createStart, createMiddleware } from '@tanstack/react-start'
+import {
+getRequestHeader,
+getCookie,
+setCookie,
+} from '@tanstack/react-start/server'
 
- export const startInstance = createStart(() => ({
- requestMiddleware: [localeTzMiddleware],
- }))
+const localeTzMiddleware = createMiddleware().server(async ({ next }) => {
+const header = getRequestHeader('accept-language')
+const headerLocale = header?.split(',')[0] || 'en-US'
+const cookieLocale = getCookie('locale')
+const cookieTz = getCookie('tz') // set by client later (see Strategy 2)
 
+const locale = cookieLocale || headerLocale
+const timeZone = cookieTz || 'UTC' // deterministic until client sends tz
 
+// Persist locale for subsequent requests (optional)
+setCookie('locale', locale, { path: '/', maxAge: 60 _ 60 _ 24 \* 365 })
 
- // src/start.ts
- import { createStart, createMiddleware } from '@tanstack/react-start'
- import {
- getRequestHeader,
- getCookie,
- setCookie,
- } from '@tanstack/react-start/server'
+return next({ context: { locale, timeZone } })
+})
 
- const localeTzMiddleware = createMiddleware().server(async ({ next }) => {
- const header = getRequestHeader('accept-language')
- const headerLocale = header?.split(',')[0] || 'en-US'
- const cookieLocale = getCookie('locale')
- const cookieTz = getCookie('tz') // set by client later (see Strategy 2)
+export const startInstance = createStart(() => ({
+requestMiddleware: [localeTzMiddleware],
+}))
 
- const locale = cookieLocale || headerLocale
- const timeZone = cookieTz || 'UTC' // deterministic until client sends tz
+// src/routes/index.tsx (example)
+import \* as React from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
+import { getCookie } from '@tanstack/react-start/server'
 
- // Persist locale for subsequent requests (optional)
- setCookie('locale', locale, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+export const getServerNow = createServerFn().handler(async () => {
+const locale = getCookie('locale') || 'en-US'
+const timeZone = getCookie('tz') || 'UTC'
+return new Intl.DateTimeFormat(locale, {
+dateStyle: 'medium',
+timeStyle: 'short',
+timeZone,
+}).format(new Date())
+})
 
- return next({ context: { locale, timeZone } })
- })
+export const Route = createFileRoute('/')({
+loader: () => getServerNow(),
+component: () => {
+const serverNow = Route.useLoaderData() as string
+return {serverNow}
+},
+})
 
- export const startInstance = createStart(() => ({
- requestMiddleware: [localeTzMiddleware],
- }))
+// src/routes/index.tsx (example)
+import \* as React from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
+import { getCookie } from '@tanstack/react-start/server'
 
+export const getServerNow = createServerFn().handler(async () => {
+const locale = getCookie('locale') || 'en-US'
+const timeZone = getCookie('tz') || 'UTC'
+return new Intl.DateTimeFormat(locale, {
+dateStyle: 'medium',
+timeStyle: 'short',
+timeZone,
+}).format(new Date())
+})
 
-
- // src/routes/index.tsx (example)
- import * as React from 'react'
- import { createFileRoute } from '@tanstack/react-router'
- import { createServerFn } from '@tanstack/react-start'
- import { getCookie } from '@tanstack/react-start/server'
-
- export const getServerNow = createServerFn().handler(async () => {
- const locale = getCookie('locale') || 'en-US'
- const timeZone = getCookie('tz') || 'UTC'
- return new Intl.DateTimeFormat(locale, {
- dateStyle: 'medium',
- timeStyle: 'short',
- timeZone,
- }).format(new Date())
- })
-
- export const Route = createFileRoute('/')({
- loader: () => getServerNow(),
- component: () => {
- const serverNow = Route.useLoaderData() as string
- return {serverNow}
- },
- })
-
-
-
- // src/routes/index.tsx (example)
- import * as React from 'react'
- import { createFileRoute } from '@tanstack/react-router'
- import { createServerFn } from '@tanstack/react-start'
- import { getCookie } from '@tanstack/react-start/server'
-
- export const getServerNow = createServerFn().handler(async () => {
- const locale = getCookie('locale') || 'en-US'
- const timeZone = getCookie('tz') || 'UTC'
- return new Intl.DateTimeFormat(locale, {
- dateStyle: 'medium',
- timeStyle: 'short',
- timeZone,
- }).format(new Date())
- })
-
- export const Route = createFileRoute('/')({
- loader: () => getServerNow(),
- component: () => {
- const serverNow = Route.useLoaderData() as string
- return {serverNow}
- },
- })
-
+export const Route = createFileRoute('/')({
+loader: () => getServerNow(),
+component: () => {
+const serverNow = Route.useLoaderData() as string
+return {serverNow}
+},
+})
 
 Strategy 2 — Let the client tell you its environment
 
- * On first visit, set a cookie with the client time zone; SSR uses UTC until then
- * Do this without risking mismatches
+- On first visit, set a cookie with the client time zone; SSR uses UTC until then
+- Do this without risking mismatches
 
+import \* as React from 'react'
+import { ClientOnly } from '@tanstack/react-router'
 
+function SetTimeZoneCookie() {
+React.useEffect(() => {
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+document.cookie = `tz=${tz}; path=/; max-age=31536000`
+}, [])
+return null
+}
 
- import * as React from 'react'
- import { ClientOnly } from '@tanstack/react-router'
+export function AppBoot() {
+return (
 
- function SetTimeZoneCookie() {
- React.useEffect(() => {
- const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
- document.cookie = `tz=${tz}; path=/; max-age=31536000`
- }, [])
- return null
- }
+)
+}
 
- export function AppBoot() {
- return (
+import \* as React from 'react'
+import { ClientOnly } from '@tanstack/react-router'
 
+function SetTimeZoneCookie() {
+React.useEffect(() => {
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+document.cookie = `tz=${tz}; path=/; max-age=31536000`
+}, [])
+return null
+}
 
+export function AppBoot() {
+return (
 
- )
- }
-
-
-
- import * as React from 'react'
- import { ClientOnly } from '@tanstack/react-router'
-
- function SetTimeZoneCookie() {
- React.useEffect(() => {
- const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
- document.cookie = `tz=${tz}; path=/; max-age=31536000`
- }, [])
- return null
- }
-
- export function AppBoot() {
- return (
-
-
-
- )
- }
-
+)
+}
 
 Strategy 3 — Make it client-only
 
- * Wrap unstable UI in to avoid SSR and mismatches
+- Wrap unstable UI in to avoid SSR and mismatches
 
+import { ClientOnly } from '@tanstack/react-router'
+;—}>
 
-
- import { ClientOnly } from '@tanstack/react-router'
- ;—}>
-
-
-
-
-
- import { ClientOnly } from '@tanstack/react-router'
- ;—}>
-
-
-
+import { ClientOnly } from '@tanstack/react-router'
+;—}>
 
 Strategy 4 — Disable or limit SSR for the route
 
- * Use Selective SSR to avoid rendering the component on the server
+- Use Selective SSR to avoid rendering the component on the server
 
+export const Route = createFileRoute('/unstable')({
+ssr: 'data-only', // or false
+component: () => ,
+})
 
-
- export const Route = createFileRoute('/unstable')({
- ssr: 'data-only', // or false
- component: () => ,
- })
-
-
-
- export const Route = createFileRoute('/unstable')({
- ssr: 'data-only', // or false
- component: () => ,
- })
-
+export const Route = createFileRoute('/unstable')({
+ssr: 'data-only', // or false
+component: () => ,
+})
 
 Strategy 5 — Last resort suppression
 
- * For small, known-different nodes, you can use React’s suppressHydrationWarning
+- For small, known-different nodes, you can use React’s suppressHydrationWarning
 
+{new Date().toLocaleString()}
 
-
- {new Date().toLocaleString()}
-
-
-
- {new Date().toLocaleString()}
-
+{new Date().toLocaleString()}
 
 Checklist
 
- * **Deterministic inputs** : locale, time zone, feature flags
- * **Prefer cookies** for client context; fallback to Accept-Language
- * **Use ** for inherently dynamic UI
- * **Use Selective SSR** when server HTML cannot be stable
- * **Avoid blind suppression** ; use suppressHydrationWarning sparingly
+- **Deterministic inputs** : locale, time zone, feature flags
+- **Prefer cookies** for client context; fallback to Accept-Language
+- **Use ** for inherently dynamic UI
+- **Use Selective SSR** when server HTML cannot be stable
+- **Avoid blind suppression** ; use suppressHydrationWarning sparingly
 
 See also: Execution Model, Code Execution Patterns, Selective SSR, Server Functions

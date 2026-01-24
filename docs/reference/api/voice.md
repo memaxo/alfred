@@ -11,21 +11,21 @@ This reference documents the backend voice endpoints exposed via the `voiceRoute
 
 ### Request shape
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `audioBase64` | string | Required. Base64 audio payload captured on the client. Containers such as WebM/Opus, MP3, WAV, or PCM are accepted. |
-| `mimeType` | string | Required. Accurate MIME type for the encoded audio (e.g., `audio/webm;codecs=opus`). Used for codec detection before ffmpeg decoding. |
-| `language` | string? | Optional ISO code forwarded to STT. Defaults to `en`. |
-| `prompt` | string? | Optional system hint for STT (passed to Faster-Whisper). |
-| `thread` | string? | Optional thread identifier. Defaults to `voice:${userId}` when omitted. |
-| `resource` | string? | Optional resource identifier for policy logging; mirrors `thread` by default. |
-| `ttsVoice` | string? | Optional override for TTS voice (e.g., `en_US-lessac-medium`, `M1`). |
-| `ttsFormat` | `"mp3" | "opus" | "wav"`? | Optional output format. If omitted, defaults to `mp3`. |
-| `model` | string? | Optional LLM model override. Uses assistant defaults when unset. |
-| `sessionId` | string? | Optional stable session identifier. If omitted, the server allocates one and returns it in the response. |
-| `surface` | `"drive" | "carplay" | "web" | "native" | "stream" | "unknown"`? | Optional hint describing the caller. Drives the session registry/metrics. Defaults to `web`. |
-| `inputCodec` | string? | Optional client-declared capture codec (e.g., `audio/webm;codecs=opus`). When omitted, the server infers it from `mimeType`. |
-| `outputCodec` | string? | Optional hint describing the desired synthesized format. Defaults to `ttsFormat`. |
+| Field         | Type     | Notes                                                                                                                                 |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ | -------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `audioBase64` | string   | Required. Base64 audio payload captured on the client. Containers such as WebM/Opus, MP3, WAV, or PCM are accepted.                   |
+| `mimeType`    | string   | Required. Accurate MIME type for the encoded audio (e.g., `audio/webm;codecs=opus`). Used for codec detection before ffmpeg decoding. |
+| `language`    | string?  | Optional ISO code forwarded to STT. Defaults to `en`.                                                                                 |
+| `prompt`      | string?  | Optional system hint for STT (passed to Faster-Whisper).                                                                              |
+| `thread`      | string?  | Optional thread identifier. Defaults to `voice:${userId}` when omitted.                                                               |
+| `resource`    | string?  | Optional resource identifier for policy logging; mirrors `thread` by default.                                                         |
+| `ttsVoice`    | string?  | Optional override for TTS voice (e.g., `en_US-lessac-medium`, `M1`).                                                                  |
+| `ttsFormat`   | `"mp3"   | "opus"                                                                                                                                | "wav"`? | Optional output format. If omitted, defaults to `mp3`. |
+| `model`       | string?  | Optional LLM model override. Uses assistant defaults when unset.                                                                      |
+| `sessionId`   | string?  | Optional stable session identifier. If omitted, the server allocates one and returns it in the response.                              |
+| `surface`     | `"drive" | "carplay"                                                                                                                             | "web"   | "native"                                               | "stream" | "unknown"`? | Optional hint describing the caller. Drives the session registry/metrics. Defaults to `web`. |
+| `inputCodec`  | string?  | Optional client-declared capture codec (e.g., `audio/webm;codecs=opus`). When omitted, the server infers it from `mimeType`.          |
+| `outputCodec` | string?  | Optional hint describing the desired synthesized format. Defaults to `ttsFormat`.                                                     |
 
 ### Response shape
 
@@ -83,14 +83,14 @@ curl \
 
 ### Tests
 
-| Command | Coverage |
-| --- | --- |
-| `bun test packages/api/test/voice.s2s.test.ts` | Mutation orchestration + error handling (OpenAI-mocked). |
-| `bun test apps/web/src/hooks/__tests__/use-voice-session-web.test.tsx` | Web adapter calling the mutation and auto-playing the response. |
-| `bun test apps/web/src/routes/__tests__/voice-s2s.route.test.tsx` | UI integration around `useVoiceSessionWeb`. |
-| `bun test apps/native/lib/voice/__tests__/queue.test.ts` | Drive Mode queue drain replaying `speechToSpeech` jobs. |
-| `bun test packages/api/test/voice.streaming.test.ts` | Streaming authorization helper (session/policy gating). |
-| `bun test packages/api/test/voice.session-registry.test.ts` | Session registry bookkeeping (claim/update/complete + conflict detection). |
+| Command                                                                | Coverage                                                                   |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `bun test packages/api/test/voice.s2s.test.ts`                         | Mutation orchestration + error handling (OpenAI-mocked).                   |
+| `bun test apps/web/src/hooks/__tests__/use-voice-session-web.test.tsx` | Web adapter calling the mutation and auto-playing the response.            |
+| `bun test apps/web/src/routes/__tests__/voice-s2s.route.test.tsx`      | UI integration around `useVoiceSessionWeb`.                                |
+| `bun test apps/native/lib/voice/__tests__/queue.test.ts`               | Drive Mode queue drain replaying `speechToSpeech` jobs.                    |
+| `bun test packages/api/test/voice.streaming.test.ts`                   | Streaming authorization helper (session/policy gating).                    |
+| `bun test packages/api/test/voice.session-registry.test.ts`            | Session registry bookkeeping (claim/update/complete + conflict detection). |
 
 ## sessions query
 

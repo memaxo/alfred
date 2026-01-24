@@ -12,13 +12,13 @@ This document provides a complete reference for ALFRED's workflow API, including
 All workflow endpoints are under the `workflow` tRPC router:
 
 ```typescript
-trpc.workflow.start()
-trpc.workflow.stream()
-trpc.workflow.resume()
-trpc.workflow.get()
-trpc.workflow.events()
-trpc.workflow.reasoning()
-trpc.workflow.listRuns()
+trpc.workflow.start();
+trpc.workflow.stream();
+trpc.workflow.resume();
+trpc.workflow.get();
+trpc.workflow.events();
+trpc.workflow.reasoning();
+trpc.workflow.listRuns();
 ```
 
 ## Endpoints
@@ -30,6 +30,7 @@ Creates a new workflow run and returns run metadata.
 **Type:** `mutation`
 
 **Input Schema:**
+
 ```typescript
 {
   requirement: string;        // User requirement/request
@@ -45,6 +46,7 @@ Creates a new workflow run and returns run metadata.
 ```
 
 **Response:**
+
 ```typescript
 {
   runId: string;              // Unique run identifier
@@ -61,6 +63,7 @@ Creates a new workflow run and returns run metadata.
 **Policy:** Requires `workflow.plan` permission
 
 **Example:**
+
 ```typescript
 const result = await trpc.workflow.start.mutate({
   requirement: "Deploy the latest changes to staging",
@@ -85,6 +88,7 @@ Subscribes to real-time workflow events via tRPC subscription.
 **Policy:** Policy check performed before streaming starts
 
 **Example:**
+
 ```typescript
 trpc.workflow.stream.useSubscription(
   {
@@ -112,15 +116,21 @@ Resumes a suspended workflow with authorization event.
 **Type:** `mutation`
 
 **Input Schema:**
+
 ```typescript
 {
-  runId: string;              // Workflow run ID
-  event: "deploy-authz" | "linear-authz" | "bio-authz" | "mfa-authz" | "human-authz";
-  authz: string;             // Authorization token (elevated)
+  runId: string; // Workflow run ID
+  event: "deploy-authz" |
+    "linear-authz" |
+    "bio-authz" |
+    "mfa-authz" |
+    "human-authz";
+  authz: string; // Authorization token (elevated)
 }
 ```
 
 **Response:**
+
 ```typescript
 {
   ok: boolean;
@@ -130,9 +140,11 @@ Resumes a suspended workflow with authorization event.
 **Authentication:** Required (authed procedure)
 
 **Error Codes:**
+
 - `NOT_FOUND` - Run not found or not suspended
 
 **Example:**
+
 ```typescript
 await trpc.workflow.resume.mutate({
   runId: "run-123",
@@ -148,6 +160,7 @@ Retrieves workflow run metadata.
 **Type:** `query`
 
 **Input Schema:**
+
 ```typescript
 {
   runId: string;
@@ -159,6 +172,7 @@ Retrieves workflow run metadata.
 **Authentication:** Required (authed procedure)
 
 **Error Codes:**
+
 - `NOT_FOUND` - Run doesn't exist
 
 ### `workflow.events`
@@ -168,6 +182,7 @@ Retrieves all events for a workflow run.
 **Type:** `query`
 
 **Input Schema:**
+
 ```typescript
 {
   runId: string;
@@ -187,6 +202,7 @@ Retrieves reasoning traces for a workflow run.
 **Type:** `query`
 
 **Input Schema:**
+
 ```typescript
 {
   runId: string;
@@ -209,6 +225,7 @@ Lists workflow runs with filtering and pagination.
 **Type:** `query`
 
 **Input Schema:**
+
 ```typescript
 {
   limit?: number;
@@ -282,7 +299,7 @@ Execution plan generated.
 {
   type: "plan";
   runId: string;
-  plan: Plan;               // Execution plan schema
+  plan: Plan; // Execution plan schema
 }
 ```
 
@@ -326,16 +343,19 @@ Workflow completed.
 ### Implementation
 
 **Server Side:**
+
 - `createWorkflowSuspension` manages suspension state
 - Run registered in `runRegistry` with resume handler
 - Suspended runs stored in `workflow_runs` table with `status='suspended'`
 
 **Client Side:**
+
 - Listen for `obligation` events
 - Show biometric challenge UI
 - Call `workflow.resume` with elevated token on completion
 
 **Example:**
+
 ```typescript
 // Client listens for obligation events
 trpc.workflow.stream.useSubscription(input, {
@@ -359,6 +379,7 @@ trpc.workflow.stream.useSubscription(input, {
 ### Error Types
 
 **tRPC Errors:**
+
 - `UNAUTHORIZED` - Session required
 - `FORBIDDEN` - Insufficient permissions
 - `NOT_FOUND` - Run doesn't exist
@@ -400,6 +421,7 @@ trpc.workflow.stream.useSubscription(input, {
 **Per-Step Timeout:** Enforced by runtime and tools
 
 **Timeout Handling:**
+
 - Workflow marked as `failed`
 - Error event emitted
 - Resources cleaned up
@@ -411,12 +433,14 @@ trpc.workflow.stream.useSubscription(input, {
 If `linear.issueId` not provided, workflow creates Linear issue automatically.
 
 **Response Fields:**
+
 - `ticketId` - Linear issue ID
 - `ticketUrl` - Linear issue URL
 
 ### Agent Activities
 
 Workflow emits Linear Agent Activities:
+
 - `thought` - Workflow started (within 10 seconds)
 - `action` - Tool executions (throttled)
 - `response` - Completion summary
@@ -429,4 +453,3 @@ Workflow emits Linear Agent Activities:
 - [Workflow Patterns](../../.ruler/17-workflow-patterns.md) - Development patterns
 - [Linear Integration](../guides/linear-integration.md) - Linear setup and usage
 - [Troubleshooting](../guides/troubleshooting.md) - Common issues
-

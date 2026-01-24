@@ -18,6 +18,7 @@ The cognitive runtime loop (`runCognitiveLoop`) is an event-sourced state machin
 All cognitive state changes are driven by events stored in `cognitive_events` table:
 
 **Event Types:**
+
 - `input` - User input received
 - `timeout` - Operation timed out
 - `feedback` - User feedback (positive/negative)
@@ -26,6 +27,7 @@ All cognitive state changes are driven by events stored in `cognitive_events` ta
 - `complete` - Operation completed
 
 **Storage:**
+
 - `cognitive_events` - Immutable event log
 - `cognitive_snapshots` - Periodic state checkpoints for fast hydration
 
@@ -55,6 +57,7 @@ Tracks cognitive "health" metrics:
 - **Frustration** (0..1) - Increases with errors
 
 Physiology updates based on event types:
+
 - `step` - Decreases energy
 - `success` - Increases energy, decreases frustration
 - `error` - Increases frustration
@@ -73,6 +76,7 @@ Bayesian system for autonomous decision-making:
 - **Confidence** - `1 - variance` of Beta distribution
 
 Autonomy updates:
+
 - On success → Increase `alpha`
 - On failure → Increase `beta`
 - On feedback → Weighted update based on `strength`
@@ -119,23 +123,23 @@ export async function runCognitiveLoop(
   const events = await cognitiveRepo.getAllEvents(streamId);
   let state = idle(Date.now());
   let autonomy = createInitialAutonomy();
-  
+
   // Replay history
   for (const record of events) {
     const result = applyTransition(state, autonomy, record.payload);
     state = result.state;
     autonomy = result.autonomy;
   }
-  
+
   // 2. Apply new event
   const transition = applyTransition(state, autonomy, incomingEvent);
-  
+
   // 3. Persist event
   await cognitiveRepo.appendEvent(streamId, incomingEvent._, incomingEvent);
-  
+
   // 4. Compute effects
   const effects = computeEffects(transition.state);
-  
+
   return { state: transition.state, effects };
 }
 ```
@@ -155,6 +159,7 @@ const events = await cognitiveRepo.getEventsSince(streamId, snapshot.createdAt);
 ```
 
 **Repository Functions:**
+
 - `getAllEvents(streamId)` - Get all events (current)
 - `getLatestSnapshot(streamId)` - Get latest snapshot (future)
 - `getEventsSince(streamId, since)` - Get events since timestamp (future)
@@ -183,6 +188,7 @@ reflecting → idle
 Effects are pure data structures returned for caller to execute:
 
 **Effect Types:**
+
 - `generate_response` - Generate AI response
 - `execute_plan` - Execute a multi-step plan
 - `log_reflection` - Record learning outcome
@@ -224,14 +230,17 @@ await handleVoiceCognitiveEffects({
 Cognitive effects are handled by voice assistant:
 
 **`generate_response` effect:**
+
 - Already handled (response generated before cognitive loop)
 - Emit `complete` event with outcome
 
 **`execute_plan` effect:**
+
 - Execute plan via `PlanRunner`
 - Emit `complete` event with outcome
 
 **`log_reflection` effect:**
+
 - Record outcome to learning system
 - Update knowledge graph
 
@@ -261,6 +270,7 @@ Prometheus metrics exposed on `/api/metrics`:
 ### Event Persistence Failures
 
 If event persistence fails:
+
 - Log error with structured context
 - Return effects anyway (non-blocking)
 - Caller can retry persistence
@@ -268,6 +278,7 @@ If event persistence fails:
 ### State Hydration Failures
 
 If state hydration fails:
+
 - Start with `idle` state
 - Log error with structured context
 - Continue with new event
@@ -275,6 +286,7 @@ If state hydration fails:
 ### Transition Failures
 
 If transition fails:
+
 - Log error with structured context
 - Return current state (no change)
 - Emit error effect
@@ -286,6 +298,7 @@ If transition fails:
 **File:** `packages/runtime/test/cognitive-loop.test.ts`
 
 Tests cover:
+
 - State hydration from events
 - Transition correctness
 - Effect computation
@@ -296,6 +309,7 @@ Tests cover:
 **File:** `packages/runtime/test/cognitive-loop.integration.test.ts`
 
 Tests cover:
+
 - Full loop execution
 - Event persistence
 - Voice integration
@@ -325,4 +339,3 @@ Tests cover:
 - [Cognitive Architecture Guide](../guides/cognitive-architecture.md) - High-level overview
 - [ExecPlan: Cognitive Runtime Loop](../execplans/cognitive-runtime-loop.md) - Implementation plan
 - [ExecPlan: Cognitive Architecture Maturity](../execplans/cognitive-architecture-maturity.md) - Maturity improvements
-

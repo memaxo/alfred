@@ -72,4 +72,3 @@ From `apps/web/`:
 ```bash
 bun run test
 ```
-

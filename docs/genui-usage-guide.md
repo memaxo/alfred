@@ -19,11 +19,14 @@ export const myTool = tool({
   execute: async ({ projectId }) => {
     const tasks = await getTasks(projectId);
     const data = [
-      { x: "Done", y: tasks.filter(t => t.status === "done").length },
-      { x: "In Progress", y: tasks.filter(t => t.status === "in_progress").length },
-      { x: "Blocked", y: tasks.filter(t => t.status === "blocked").length },
+      { x: "Done", y: tasks.filter((t) => t.status === "done").length },
+      {
+        x: "In Progress",
+        y: tasks.filter((t) => t.status === "in_progress").length,
+      },
+      { x: "Blocked", y: tasks.filter((t) => t.status === "blocked").length },
     ];
-    
+
     // Returns both UI and raw data
     return createChartResult("Task Progress", data, { tasks });
   },
@@ -82,23 +85,29 @@ return {
 ### Core Visualization Components
 
 **chart** - Data visualization
+
 - Props: `{ type, data, title, height?, width? }`
 - Types: `"line"`, `"bar"`, `"pie"`, `"area"`
 
 **grid** - Layout grid
+
 - Props: `{ columns, gap?, className? }`
 - Children: Any other components
 
 **list** - Animated list
+
 - Props: `{ items, animated? }`
 
 **number** - Sliding number display
+
 - Props: `{ value, label?, format?, duration? }`
 
 **term** - Terminal output
+
 - Props: `{ output, theme?, readOnly? }`
 
 **code** - Code block
+
 - Props: `{ code, language, fileName?, showLineNumbers? }`
 
 ### Orchestrator Components
@@ -106,24 +115,31 @@ return {
 For technical operations and workflow visualization:
 
 **streaming-terminal** - Real-time log streaming
+
 - Props: `{ stream, title, status }`
 
 **progress-window** - Long-running operation tracking
+
 - Props: `{ progress, total, message, status }`
 
 **workflow-timeline** - Workflow execution visualization
+
 - Props: `{ stages, currentStage, status }`
 
 **task-tracker** - Async task tracking (UPID, etc.)
+
 - Props: `{ taskId, status, progress, logs }`
 
 **error-panel** - Error visualization
+
 - Props: `{ error, stack, context }`
 
 **artifact-browser** - Output artifact management
+
 - Props: `{ artifacts, onSelect }`
 
 **resource-monitor** - Container/VM resource monitoring
+
 - Props: `{ cpu, memory, disk, network }`
 
 ## Patterns
@@ -135,7 +151,7 @@ For technical operations and workflow visualization:
 const result = await getTasks();
 return createChartResult(
   "Task Completion Rate",
-  result.map(r => ({ x: r.date, y: r.completionRate })),
+  result.map((r) => ({ x: r.date, y: r.completionRate })),
   { tasks: result }
 );
 ```
@@ -242,7 +258,7 @@ test("renders chart component", () => {
     component: "chart",
     props: { type: "bar", data: [{ x: "A", y: 10 }], title: "Test" },
   };
-  
+
   const { getByText } = render(<UISchemaRenderer schema={schema} />);
   expect(getByText("Test")).toBeInTheDocument();
 });
@@ -254,10 +270,11 @@ Enable debug mode to see schema validation and rendering details:
 
 ```typescript
 // In .env.local
-VITE_GENUI_DEBUG=1
+VITE_GENUI_DEBUG = 1;
 ```
 
 This will log:
+
 - Schema validation results
 - Component resolution attempts
 - Render failures with stack traces
@@ -268,6 +285,7 @@ This will log:
 If you have existing tools with hardcoded UI:
 
 **Before:**
+
 ```typescript
 // Tool with custom renderer
 export const weatherTool = tool({
@@ -281,6 +299,7 @@ if (part.toolName === "weather") {
 ```
 
 **After:**
+
 ```typescript
 // Tool with GenUI
 export const weatherTool = tool({
@@ -302,6 +321,7 @@ export const weatherTool = tool({
 ## Examples
 
 See `packages/ui/src/genui/__tests__/` for comprehensive examples of:
+
 - All core components
 - Nested layouts
 - Streaming updates

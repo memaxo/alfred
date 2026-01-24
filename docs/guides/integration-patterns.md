@@ -106,4 +106,3 @@ The UI layer consumes events and renders state. It doesn't contain intelligence�
 - [Knowledge Hypergraph](knowledge-hypergraph.md) — Knowledge system details
 - [Workflow Orchestration](workflow-orchestration.md) — Workflow execution details
 - [Learning System](learning-system.md) — Learning integration details
-

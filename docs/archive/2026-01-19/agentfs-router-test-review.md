@@ -1,17 +1,21 @@
 # Test Review: AgentFS Router
 
 ## Overview
+
 Review of `packages/api/test/agentfs.router.test.ts` for over-mocking, testing gaps, and anti-patterns.
 
 ## Over-Mocking Assessment
 
 ### ✅ Appropriate Mocks
+
 The test correctly mocks `@alfred/agent/agentfs` (external SDK boundary). This is appropriate since:
+
 - AgentFS SDK is an external dependency
 - Tests should not require actual SQLite databases
 - Mocking allows deterministic test behavior
 
 ### ⚠️ Minor Over-Mocking Concerns
+
 1. **Mock setup redundancy** - `afterEach` sets up mocks that are already configured in individual tests (lines 53-61)
    - Impact: Unnecessary complexity, potential confusion
    - Fix: Remove redundant setup from `afterEach`, rely on individual test setup
@@ -21,7 +25,9 @@ The test correctly mocks `@alfred/agent/agentfs` (external SDK boundary). This i
 ### Critical Missing Tests
 
 #### 1. **Path Validation Edge Cases** (`isSafeAgentfsDbPath`)
+
 Missing tests for:
+
 - Path traversal attacks: `".agentfs/run-1/../../etc/passwd.db"`
 - Wrong runId in path: `".agentfs/run-2/agent.db"` (when runId is "run-1")
 - Missing `.db` extension: `".agentfs/run-1/agent"`
@@ -33,6 +39,7 @@ Missing tests for:
 **Risk**: Security vulnerability - path traversal could allow accessing arbitrary database files.
 
 **Add tests for:**
+
 ```typescript
 it("rejects path traversal in dbPath", async () => {
   await expect(
@@ -63,7 +70,9 @@ it("rejects dbPath without .db extension", async () => {
 ```
 
 #### 2. **Error Handling**
+
 Missing tests for:
+
 - `loadAgentfs()` fails (SDK open throws)
 - `fsdb.fs.readdir()` fails
 - `fsdb.fs.stat()` fails (already handled, but not tested)
@@ -74,6 +83,7 @@ Missing tests for:
 **Risk**: Unhandled errors could crash the server or expose internal details.
 
 **Add tests for:**
+
 ```typescript
 it("handles AgentFS open failure gracefully", async () => {
   openMock.mockRejectedValue(new Error("db_open_failed"));
@@ -87,7 +97,10 @@ it("handles AgentFS open failure gracefully", async () => {
 
 it("handles readdir failure", async () => {
   openMock.mockResolvedValue({
-    fs: { readdir: vi.fn().mockRejectedValue(new Error("readdir_failed")), stat: statMock },
+    fs: {
+      readdir: vi.fn().mockRejectedValue(new Error("readdir_failed")),
+      stat: statMock,
+    },
     tools: { getRecent: getRecentMock },
     kv: { list: kvListMock },
     close: closeMock,
@@ -102,7 +115,9 @@ it("handles readdir failure", async () => {
 ```
 
 #### 3. **Schema Validation**
+
 Missing tests for:
+
 - Invalid `runId` (empty, too long, invalid chars)
 - Invalid `dbPath` (empty, too long)
 - Invalid `dir` (empty, too long, invalid format)
@@ -112,6 +127,7 @@ Missing tests for:
 **Risk**: Invalid input could cause runtime errors or security issues.
 
 **Add tests for:**
+
 ```typescript
 it("rejects empty runId", async () => {
   await expect(
@@ -143,7 +159,9 @@ it("rejects negative cursor values", async () => {
 ```
 
 #### 4. **Helper Function Tests**
+
 Missing unit tests for pure functions:
+
 - `sanitizeRunId()` - edge cases (special chars, unicode, empty)
 - `nextCursor()` - all update combinations, null handling
 - `toDirEntry()` - null stat, missing properties, type coercion
@@ -151,12 +169,13 @@ Missing unit tests for pure functions:
 **Risk**: Bugs in helper functions could cause subtle data corruption.
 
 **Add tests for:**
+
 ```typescript
 describe("sanitizeRunId", () => {
   it("sanitizes special characters", () => {
     expect(sanitizeRunId("run@123#test")).toBe("run-123-test");
   });
-  
+
   it("handles unicode characters", () => {
     expect(sanitizeRunId("run-测试")).toBe("run--");
   });
@@ -167,7 +186,7 @@ describe("nextCursor", () => {
     const result = nextCursor({ toolCallId: 5 }, { toolCallId: 10 });
     expect(result.toolCallId).toBe(10);
   });
-  
+
   it("preserves existing values when update is undefined", () => {
     const result = nextCursor({ toolCallId: 5, toolCallSince: 100 }, {});
     expect(result.toolCallId).toBe(5);
@@ -177,7 +196,9 @@ describe("nextCursor", () => {
 ```
 
 #### 5. **Stream Subscription Edge Cases**
+
 Missing tests for:
+
 - Stream error recovery (emits error but continues)
 - Concurrent subscriptions to same dbPath
 - Subscription cleanup when dbPath becomes invalid
@@ -187,6 +208,7 @@ Missing tests for:
 **Risk**: Memory leaks, resource exhaustion, or incorrect behavior under load.
 
 **Add tests for:**
+
 ```typescript
 it("recovers from stream errors", async () => {
   let callCount = 0;
@@ -197,21 +219,23 @@ it("recovers from stream errors", async () => {
     }
     return ["a.txt"];
   });
-  
+
   // Should emit error but continue polling
   const sub = await caller.agentfs.stream({
     runId: "run-1",
     dbPath: ".agentfs/run-1/agent.db",
     pollMs: 200,
   });
-  
+
   // Verify error event then recovery
   // ... test implementation
 });
 ```
 
 #### 6. **Data Transformation Tests**
+
 Missing tests for:
+
 - Empty directories (`readdir` returns `[]`)
 - Empty tool calls (`getRecent` returns `[]`)
 - Empty KV store (`kv.list()` returns `[]`)
@@ -224,12 +248,15 @@ Missing tests for:
 ## Anti-Patterns
 
 ### 1. **Fragile Async Coordination** (Line 151)
+
 ```typescript
 await new Promise((r) => setTimeout(r, 10));
 ```
+
 **Issue**: Using `setTimeout` for async coordination is fragile and timing-dependent.
 
 **Fix**: Use proper promise-based coordination or event-driven approach:
+
 ```typescript
 // Better: Wait for actual close completion
 await new Promise<void>((resolve) => {
@@ -248,9 +275,11 @@ await new Promise<void>((resolve) => {
 ```
 
 ### 2. **Redundant Mock Setup** (Lines 53-61)
+
 The `afterEach` hook sets up mocks that are already configured in individual tests.
 
 **Fix**: Remove redundant setup, rely on individual test configuration:
+
 ```typescript
 afterEach(() => {
   vi.clearAllMocks();
@@ -259,9 +288,11 @@ afterEach(() => {
 ```
 
 ### 3. **Missing Environment Variable Cleanup** (Line 192-237)
+
 The MAX_EVENTS test modifies `process.env` but cleanup is in a `finally` block. This is correct, but could be extracted to a helper.
 
 **Suggestion**: Use `withEnv` helper from `test/utils/mocks.ts`:
+
 ```typescript
 it("enforces a MAX_EVENTS safeguard", async () => {
   await withEnv({ ALFRED_AGENTFS_MAX_EVENTS: "1" }, async () => {
@@ -271,12 +302,15 @@ it("enforces a MAX_EVENTS safeguard", async () => {
 ```
 
 ### 4. **Incomplete Assertions**
+
 Some tests don't verify all return fields:
+
 - Missing assertion for `ts` timestamp
 - Missing assertion for cursor structure completeness
 - Missing assertion for entry structure (ino, isDirectory, etc.)
 
 **Fix**: Add comprehensive assertions:
+
 ```typescript
 expect(res.ts).toBeGreaterThan(0);
 expect(res.cursor).toMatchObject({
@@ -294,17 +328,20 @@ expect(res.entries[0]).toMatchObject({
 ## Recommendations
 
 ### High Priority
+
 1. **Add path validation security tests** - Critical for preventing path traversal attacks
 2. **Add error handling tests** - Ensure graceful failure handling
 3. **Add schema validation tests** - Prevent invalid input from causing crashes
 4. **Fix fragile async coordination** - Use proper promise-based patterns
 
 ### Medium Priority
+
 5. **Add helper function unit tests** - Test pure functions in isolation
 6. **Add edge case tests** - Empty data, boundaries, null handling
 7. **Remove redundant mock setup** - Simplify test structure
 
 ### Low Priority
+
 8. **Extract environment variable helpers** - Use `withEnv` consistently
 9. **Add comprehensive assertions** - Verify all return fields
 10. **Add stream error recovery tests** - Test resilience under failure
@@ -312,6 +349,7 @@ expect(res.entries[0]).toMatchObject({
 ## Test Coverage Estimate
 
 **Current Coverage**: ~60%
+
 - ✅ Auth/scope enforcement
 - ✅ Basic happy path
 - ✅ Cursor filtering
@@ -323,17 +361,20 @@ expect(res.entries[0]).toMatchObject({
 - ❌ Stream error recovery
 
 **Target Coverage**: ~90%
+
 - Add missing categories above
 - Integration test with real AgentFS (optional, for critical paths)
 
 ## ALFRED Conventions Compliance
 
 ### ✅ Good Patterns Used
+
 - Proper auth/scope testing
 - Mock external boundaries appropriately
 - Test policy enforcement
 
 ### ⚠️ Areas for Improvement
+
 - Add more error case tests
 - Test pure helper functions directly
 - Use proper async coordination patterns

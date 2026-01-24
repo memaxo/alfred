@@ -1,9 +1,10 @@
 ---
 title: Admin | Better Auth
-url: 
+url:
 description: Admin plugin for Better Auth
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The Admin plugin provides a set of administrative functions for user management in your application. It allows administrators to perform various operations such as creating users, managing user roles, banning/unbanning users, impersonating users, and more.
 
-## [Installation](https://www.better-auth.com/docs/plugins/admin\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/admin#installation)
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/admin\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/admin#add-the-plugin-to-your-auth-config)
 
 To use the Admin plugin, add it to your auth config.
 
@@ -48,7 +49,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/admin\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/admin#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -64,7 +65,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/admin#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/admin\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/admin#add-the-client-plugin)
 
 Next, include the admin client plugin in your authentication client instance.
 
@@ -81,11 +82,11 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/admin\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/admin#usage)
 
 Before performing any admin operations, the user must be authenticated with an admin account. An admin is any user assigned the `admin` role or any user whose ID is included in the `adminUserIds` option.
 
-### [Create User](https://www.better-auth.com/docs/plugins/admin\#create-user)
+### [Create User](https://www.better-auth.com/docs/plugins/admin#create-user)
 
 Allows an admin to create a new user.
 
@@ -105,13 +106,13 @@ const { data: newUser, error } = await authClient.admin.createUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email of the user. | `string` |
-| `password` | The password of the user. | `string` |
-| `name` | The name of the user. | `string` |
-| `role?` | A string or array of strings representing the roles to apply to the new user. | `string | string[]` |
-| `data?` | Extra fields for the user. Including custom additional fields. | `Record<string, any>` |
+| Prop       | Description                                                                   | Type                  |
+| ---------- | ----------------------------------------------------------------------------- | --------------------- | --------- |
+| `email`    | The email of the user.                                                        | `string`              |
+| `password` | The password of the user.                                                     | `string`              |
+| `name`     | The name of the user.                                                         | `string`              |
+| `role?`    | A string or array of strings representing the roles to apply to the new user. | `string               | string[]` |
+| `data?`    | Extra fields for the user. Including custom additional fields.                | `Record<string, any>` |
 
 POST
 
@@ -129,15 +130,15 @@ const newUser = await auth.api.createUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email of the user. | `string` |
-| `password` | The password of the user. | `string` |
-| `name` | The name of the user. | `string` |
-| `role?` | A string or array of strings representing the roles to apply to the new user. | `string | string[]` |
-| `data?` | Extra fields for the user. Including custom additional fields. | `Record<string, any>` |
+| Prop       | Description                                                                   | Type                  |
+| ---------- | ----------------------------------------------------------------------------- | --------------------- | --------- |
+| `email`    | The email of the user.                                                        | `string`              |
+| `password` | The password of the user.                                                     | `string`              |
+| `name`     | The name of the user.                                                         | `string`              |
+| `role?`    | A string or array of strings representing the roles to apply to the new user. | `string               | string[]` |
+| `data?`    | Extra fields for the user. Including custom additional fields.                | `Record<string, any>` |
 
-### [List Users](https://www.better-auth.com/docs/plugins/admin\#list-users)
+### [List Users](https://www.better-auth.com/docs/plugins/admin#list-users)
 
 Allows an admin to list all users in the database.
 
@@ -168,19 +169,19 @@ const { data: users, error } = await authClient.admin.listUsers({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `query?` | Query parameters for filtering, searching, and pagination. | `Object` |
-| `query.searchValue?` | The value to search for. | `string` |
-| `query.searchField?` | The field to search in, defaults to email. Can be `email` or `name`. | `"email" | "name"` |
+| Prop                    | Description                                                                          | Type        |
+| ----------------------- | ------------------------------------------------------------------------------------ | ----------- | ------------- | ------------ | ----- | ---- | ------ |
+| `query?`                | Query parameters for filtering, searching, and pagination.                           | `Object`    |
+| `query.searchValue?`    | The value to search for.                                                             | `string`    |
+| `query.searchField?`    | The field to search in, defaults to email. Can be `email` or `name`.                 | `"email"    | "name"`       |
 | `query.searchOperator?` | The operator to use for the search. Can be `contains`, `starts_with` or `ends_with`. | `"contains" | "starts_with" | "ends_with"` |
-| `query.limit?` | The number of users to return. Defaults to 100. | `string | number` |
-| `query.offset?` | The offset to start from. | `string | number` |
-| `query.sortBy?` | The field to sort by. | `string` |
-| `query.sortDirection?` | The direction to sort by. | `"asc" | "desc"` |
-| `query.filterField?` | The field to filter by. | `string` |
-| `query.filterValue?` | The value to filter by. | `string | number | boolean` |
-| `query.filterOperator?` | The operator to use for the filter. | `"eq" | "ne" | "lt" | "lte" | "gt" | "gte"` |
+| `query.limit?`          | The number of users to return. Defaults to 100.                                      | `string     | number`       |
+| `query.offset?`         | The offset to start from.                                                            | `string     | number`       |
+| `query.sortBy?`         | The field to sort by.                                                                | `string`    |
+| `query.sortDirection?`  | The direction to sort by.                                                            | `"asc"      | "desc"`       |
+| `query.filterField?`    | The field to filter by.                                                              | `string`    |
+| `query.filterValue?`    | The value to filter by.                                                              | `string     | number        | boolean`     |
+| `query.filterOperator?` | The operator to use for the filter.                                                  | `"eq"       | "ne"          | "lt"         | "lte" | "gt" | "gte"` |
 
 GET
 
@@ -211,25 +212,25 @@ const users = await auth.api.listUsers({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `query?` | Query parameters for filtering, searching, and pagination. | `Object` |
-| `query.searchValue?` | The value to search for. | `string` |
-| `query.searchField?` | The field to search in, defaults to email. Can be `email` or `name`. | `"email" | "name"` |
+| Prop                    | Description                                                                          | Type        |
+| ----------------------- | ------------------------------------------------------------------------------------ | ----------- | ------------- | ------------ | ----- | ---- | ------ |
+| `query?`                | Query parameters for filtering, searching, and pagination.                           | `Object`    |
+| `query.searchValue?`    | The value to search for.                                                             | `string`    |
+| `query.searchField?`    | The field to search in, defaults to email. Can be `email` or `name`.                 | `"email"    | "name"`       |
 | `query.searchOperator?` | The operator to use for the search. Can be `contains`, `starts_with` or `ends_with`. | `"contains" | "starts_with" | "ends_with"` |
-| `query.limit?` | The number of users to return. Defaults to 100. | `string | number` |
-| `query.offset?` | The offset to start from. | `string | number` |
-| `query.sortBy?` | The field to sort by. | `string` |
-| `query.sortDirection?` | The direction to sort by. | `"asc" | "desc"` |
-| `query.filterField?` | The field to filter by. | `string` |
-| `query.filterValue?` | The value to filter by. | `string | number | boolean` |
-| `query.filterOperator?` | The operator to use for the filter. | `"eq" | "ne" | "lt" | "lte" | "gt" | "gte"` |
+| `query.limit?`          | The number of users to return. Defaults to 100.                                      | `string     | number`       |
+| `query.offset?`         | The offset to start from.                                                            | `string     | number`       |
+| `query.sortBy?`         | The field to sort by.                                                                | `string`    |
+| `query.sortDirection?`  | The direction to sort by.                                                            | `"asc"      | "desc"`       |
+| `query.filterField?`    | The field to filter by.                                                              | `string`    |
+| `query.filterValue?`    | The value to filter by.                                                              | `string     | number        | boolean`     |
+| `query.filterOperator?` | The operator to use for the filter.                                                  | `"eq"       | "ne"          | "lt"         | "lte" | "gt" | "gte"` |
 
-#### [Query Filtering](https://www.better-auth.com/docs/plugins/admin\#query-filtering)
+#### [Query Filtering](https://www.better-auth.com/docs/plugins/admin#query-filtering)
 
 The `listUsers` function supports various filter operators including `eq`, `contains`, `starts_with`, and `ends_with`.
 
-#### [Pagination](https://www.better-auth.com/docs/plugins/admin\#pagination)
+#### [Pagination](https://www.better-auth.com/docs/plugins/admin#pagination)
 
 The `listUsers` function supports pagination by returning metadata alongside the user list. The response includes the following fields:
 
@@ -242,7 +243,7 @@ The `listUsers` function supports pagination by returning metadata alongside the
 }
 ```
 
-##### [How to Implement Pagination](https://www.better-auth.com/docs/plugins/admin\#how-to-implement-pagination)
+##### [How to Implement Pagination](https://www.better-auth.com/docs/plugins/admin#how-to-implement-pagination)
 
 To paginate results, use the `total`, `limit`, and `offset` values to calculate:
 
@@ -251,7 +252,7 @@ To paginate results, use the `total`, `limit`, and `offset` values to calculate:
 - **Next page offset:** `Math.min(offset + limit, (total - 1))` – The value to use as `offset` for the next page, ensuring it does not exceed the total number of pages.
 - **Previous page offset:** `Math.max(0, offset - limit)` – The value to use as `offset` for the previous page (ensuring it doesn’t go below zero).
 
-##### [Example Usage](https://www.better-auth.com/docs/plugins/admin\#example-usage)
+##### [Example Usage](https://www.better-auth.com/docs/plugins/admin#example-usage)
 
 Fetching the second page with 10 users per page:
 
@@ -272,7 +273,7 @@ const totalUsers = users.total;
 const totalPages = Math.ceil(totalUsers / pageSize)
 ```
 
-### [Set User Role](https://www.better-auth.com/docs/plugins/admin\#set-user-role)
+### [Set User Role](https://www.better-auth.com/docs/plugins/admin#set-user-role)
 
 Changes the role of a user.
 
@@ -289,10 +290,10 @@ const { data, error } = await authClient.admin.setRole({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `userId?` | The user id which you want to set the role for. | `string` |
-| `role` | The role to set, this can be a string or an array of strings. | `string | string[]` |
+| Prop      | Description                                                   | Type     |
+| --------- | ------------------------------------------------------------- | -------- | --------- |
+| `userId?` | The user id which you want to set the role for.               | `string` |
+| `role`    | The role to set, this can be a string or an array of strings. | `string  | string[]` |
 
 POST
 
@@ -309,12 +310,12 @@ const data = await auth.api.setRole({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `userId?` | The user id which you want to set the role for. | `string` |
-| `role` | The role to set, this can be a string or an array of strings. | `string | string[]` |
+| Prop      | Description                                                   | Type     |
+| --------- | ------------------------------------------------------------- | -------- | --------- |
+| `userId?` | The user id which you want to set the role for.               | `string` |
+| `role`    | The role to set, this can be a string or an array of strings. | `string  | string[]` |
 
-### [Set User Password](https://www.better-auth.com/docs/plugins/admin\#set-user-password)
+### [Set User Password](https://www.better-auth.com/docs/plugins/admin#set-user-password)
 
 Changes the password of a user.
 
@@ -331,10 +332,10 @@ const { data, error } = await authClient.admin.setUserPassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password. | `string` |
-| `userId` | The user id which you want to set the password for. | `string` |
+| Prop          | Description                                         | Type     |
+| ------------- | --------------------------------------------------- | -------- |
+| `newPassword` | The new password.                                   | `string` |
+| `userId`      | The user id which you want to set the password for. | `string` |
 
 POST
 
@@ -351,12 +352,12 @@ const data = await auth.api.setUserPassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password. | `string` |
-| `userId` | The user id which you want to set the password for. | `string` |
+| Prop          | Description                                         | Type     |
+| ------------- | --------------------------------------------------- | -------- |
+| `newPassword` | The new password.                                   | `string` |
+| `userId`      | The user id which you want to set the password for. | `string` |
 
-### [Ban User](https://www.better-auth.com/docs/plugins/admin\#ban-user)
+### [Ban User](https://www.better-auth.com/docs/plugins/admin#ban-user)
 
 Bans a user, preventing them from signing in and revokes all of their existing sessions.
 
@@ -374,10 +375,10 @@ await authClient.admin.banUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `userId` | The user id which you want to ban. | `string` |
-| `banReason?` | The reason for the ban. | `string` |
+| Prop            | Description                                                                              | Type     |
+| --------------- | ---------------------------------------------------------------------------------------- | -------- |
+| `userId`        | The user id which you want to ban.                                                       | `string` |
+| `banReason?`    | The reason for the ban.                                                                  | `string` |
 | `banExpiresIn?` | The number of seconds until the ban expires. If not provided, the ban will never expire. | `number` |
 
 POST
@@ -396,13 +397,13 @@ await auth.api.banUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `userId` | The user id which you want to ban. | `string` |
-| `banReason?` | The reason for the ban. | `string` |
+| Prop            | Description                                                                              | Type     |
+| --------------- | ---------------------------------------------------------------------------------------- | -------- |
+| `userId`        | The user id which you want to ban.                                                       | `string` |
+| `banReason?`    | The reason for the ban.                                                                  | `string` |
 | `banExpiresIn?` | The number of seconds until the ban expires. If not provided, the ban will never expire. | `number` |
 
-### [Unban User](https://www.better-auth.com/docs/plugins/admin\#unban-user)
+### [Unban User](https://www.better-auth.com/docs/plugins/admin#unban-user)
 
 Removes the ban from a user, allowing them to sign in again.
 
@@ -418,8 +419,8 @@ await authClient.admin.unbanUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                          | Type     |
+| -------- | ------------------------------------ | -------- |
 | `userId` | The user id which you want to unban. | `string` |
 
 POST
@@ -436,11 +437,11 @@ await auth.api.unbanUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                          | Type     |
+| -------- | ------------------------------------ | -------- |
 | `userId` | The user id which you want to unban. | `string` |
 
-### [List User Sessions](https://www.better-auth.com/docs/plugins/admin\#list-user-sessions)
+### [List User Sessions](https://www.better-auth.com/docs/plugins/admin#list-user-sessions)
 
 Lists all sessions for a user.
 
@@ -456,8 +457,8 @@ const { data, error } = await authClient.admin.listUserSessions({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description  | Type     |
+| -------- | ------------ | -------- |
 | `userId` | The user id. | `string` |
 
 POST
@@ -474,11 +475,11 @@ const data = await auth.api.listUserSessions({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description  | Type     |
+| -------- | ------------ | -------- |
 | `userId` | The user id. | `string` |
 
-### [Revoke User Session](https://www.better-auth.com/docs/plugins/admin\#revoke-user-session)
+### [Revoke User Session](https://www.better-auth.com/docs/plugins/admin#revoke-user-session)
 
 Revokes a specific session for a user.
 
@@ -494,8 +495,8 @@ const { data, error } = await authClient.admin.revokeUserSession({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                                 | Type     |
+| -------------- | ------------------------------------------- | -------- |
 | `sessionToken` | The session token which you want to revoke. | `string` |
 
 POST
@@ -512,11 +513,11 @@ const data = await auth.api.revokeUserSession({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                                 | Type     |
+| -------------- | ------------------------------------------- | -------- |
 | `sessionToken` | The session token which you want to revoke. | `string` |
 
-### [Revoke All Sessions for a User](https://www.better-auth.com/docs/plugins/admin\#revoke-all-sessions-for-a-user)
+### [Revoke All Sessions for a User](https://www.better-auth.com/docs/plugins/admin#revoke-all-sessions-for-a-user)
 
 Revokes all sessions for a user.
 
@@ -532,8 +533,8 @@ const { data, error } = await authClient.admin.revokeUserSessions({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                                            | Type     |
+| -------- | ------------------------------------------------------ | -------- |
 | `userId` | The user id which you want to revoke all sessions for. | `string` |
 
 POST
@@ -550,11 +551,11 @@ const data = await auth.api.revokeUserSessions({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                                            | Type     |
+| -------- | ------------------------------------------------------ | -------- |
 | `userId` | The user id which you want to revoke all sessions for. | `string` |
 
-### [Impersonate User](https://www.better-auth.com/docs/plugins/admin\#impersonate-user)
+### [Impersonate User](https://www.better-auth.com/docs/plugins/admin#impersonate-user)
 
 This feature allows an admin to create a session that mimics the specified user. The session will remain active until either the browser session ends or it reaches 1 hour. You can change this duration by setting the `impersonationSessionDuration` option.
 
@@ -570,8 +571,8 @@ const { data, error } = await authClient.admin.impersonateUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                                | Type     |
+| -------- | ------------------------------------------ | -------- |
 | `userId` | The user id which you want to impersonate. | `string` |
 
 POST
@@ -588,11 +589,11 @@ const data = await auth.api.impersonateUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                                | Type     |
+| -------- | ------------------------------------------ | -------- |
 | `userId` | The user id which you want to impersonate. | `string` |
 
-### [Stop Impersonating User](https://www.better-auth.com/docs/plugins/admin\#stop-impersonating-user)
+### [Stop Impersonating User](https://www.better-auth.com/docs/plugins/admin#stop-impersonating-user)
 
 To stop impersonating a user and continue with the admin account, you can use `stopImpersonating`
 
@@ -617,7 +618,7 @@ await auth.api.stopImpersonating({
 });
 ```
 
-### [Remove User](https://www.better-auth.com/docs/plugins/admin\#remove-user)
+### [Remove User](https://www.better-auth.com/docs/plugins/admin#remove-user)
 
 Hard deletes a user from the database.
 
@@ -633,8 +634,8 @@ const { data: deletedUser, error } = await authClient.admin.removeUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                           | Type     |
+| -------- | ------------------------------------- | -------- |
 | `userId` | The user id which you want to remove. | `string` |
 
 POST
@@ -651,15 +652,15 @@ const deletedUser = await auth.api.removeUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop     | Description                           | Type     |
+| -------- | ------------------------------------- | -------- |
 | `userId` | The user id which you want to remove. | `string` |
 
-## [Access Control](https://www.better-auth.com/docs/plugins/admin\#access-control)
+## [Access Control](https://www.better-auth.com/docs/plugins/admin#access-control)
 
 The admin plugin offers a highly flexible access control system, allowing you to manage user permissions based on their role. You can define custom permission sets to fit your needs.
 
-### [Roles](https://www.better-auth.com/docs/plugins/admin\#roles)
+### [Roles](https://www.better-auth.com/docs/plugins/admin#roles)
 
 By default, there are two roles:
 
@@ -669,7 +670,7 @@ By default, there are two roles:
 
 A user can have multiple roles. Multiple roles are stored as string separated by comma (",").
 
-### [Permissions](https://www.better-auth.com/docs/plugins/admin\#permissions)
+### [Permissions](https://www.better-auth.com/docs/plugins/admin#permissions)
 
 By default, there are two resources with up to six permissions.
 
@@ -681,11 +682,11 @@ By default, there are two resources with up to six permissions.
 
 Users with the admin role have full control over all the resources and actions. Users with the user role have no control over any of those actions.
 
-### [Custom Permissions](https://www.better-auth.com/docs/plugins/admin\#custom-permissions)
+### [Custom Permissions](https://www.better-auth.com/docs/plugins/admin#custom-permissions)
 
 The plugin provides an easy way to define your own set of permissions for each role.
 
-#### [Create Access Control](https://www.better-auth.com/docs/plugins/admin\#create-access-control)
+#### [Create Access Control](https://www.better-auth.com/docs/plugins/admin#create-access-control)
 
 You first need to create an access controller by calling the `createAccessControl` function and passing the statement object. The statement object should have the resource name as the key and the array of actions as the value.
 
@@ -704,7 +705,7 @@ const statement = {
 const ac = createAccessControl(statement);
 ```
 
-#### [Create Roles](https://www.better-auth.com/docs/plugins/admin\#create-roles)
+#### [Create Roles](https://www.better-auth.com/docs/plugins/admin#create-roles)
 
 Once you have created the access controller you can create roles with the permissions you have defined.
 
@@ -754,7 +755,7 @@ const admin = ac.newRole({
 });
 ```
 
-#### [Pass Roles to the Plugin](https://www.better-auth.com/docs/plugins/admin\#pass-roles-to-the-plugin)
+#### [Pass Roles to the Plugin](https://www.better-auth.com/docs/plugins/admin#pass-roles-to-the-plugin)
 
 Once you have created the roles you can pass them to the admin plugin both on the client and the server.
 
@@ -802,7 +803,7 @@ export const client = createAuthClient({
 })
 ```
 
-### [Access Control Usage](https://www.better-auth.com/docs/plugins/admin\#access-control-usage)
+### [Access Control Usage](https://www.better-auth.com/docs/plugins/admin#access-control-usage)
 
 **Has Permission**:
 
@@ -822,10 +823,10 @@ const { data, error } = await authClient.admin.hasPermission({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `userId?` | The user id which you want to check the permissions for. | `string` |
-| `permission?` | Optionally check if a single permission is granted. Must use this, or permissions. | `Record<string, string[]>` |
+| Prop           | Description                                                                         | Type                       |
+| -------------- | ----------------------------------------------------------------------------------- | -------------------------- |
+| `userId?`      | The user id which you want to check the permissions for.                            | `string`                   |
+| `permission?`  | Optionally check if a single permission is granted. Must use this, or permissions.  | `Record<string, string[]>` |
 | `permissions?` | Optionally check if multiple permissions are granted. Must use this, or permission. | `Record<string, string[]>` |
 
 POST
@@ -843,12 +844,12 @@ const data = await auth.api.userHasPermission({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `userId?` | The user id which you want to check the permissions for. | `string` |
-| `role?`(server-only) | Check role permissions. | `string` |
-| `permission?` | Optionally check if a single permission is granted. Must use this, or permissions. | `Record<string, string[]>` |
-| `permissions?` | Optionally check if multiple permissions are granted. Must use this, or permission. | `Record<string, string[]>` |
+| Prop                 | Description                                                                         | Type                       |
+| -------------------- | ----------------------------------------------------------------------------------- | -------------------------- |
+| `userId?`            | The user id which you want to check the permissions for.                            | `string`                   |
+| `role?`(server-only) | Check role permissions.                                                             | `string`                   |
+| `permission?`        | Optionally check if a single permission is granted. Must use this, or permissions.  | `Record<string, string[]>` |
+| `permissions?`       | Optionally check if multiple permissions are granted. Must use this, or permission. | `Record<string, string[]>` |
 
 Example usage:
 
@@ -934,26 +935,26 @@ const canDeleteUserAndRevokeSession = authClient.admin.checkRolePermission({
 });
 ```
 
-## [Schema](https://www.better-auth.com/docs/plugins/admin\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/admin#schema)
 
 This plugin adds the following fields to the `user` table:
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| role | string | ? | The user's role. Defaults to \`user\`. Admins will have the \`admin\` role. |
-| banned | boolean | ? | Indicates whether the user is banned. |
-| banReason | string | ? | The reason for the user's ban. |
-| banExpires | date | ? | The date when the user's ban will expire. |
+| Field Name | Type    | Key | Description                                                                 |
+| ---------- | ------- | --- | --------------------------------------------------------------------------- |
+| role       | string  | ?   | The user's role. Defaults to \`user\`. Admins will have the \`admin\` role. |
+| banned     | boolean | ?   | Indicates whether the user is banned.                                       |
+| banReason  | string  | ?   | The reason for the user's ban.                                              |
+| banExpires | date    | ?   | The date when the user's ban will expire.                                   |
 
 And adds one field in the `session` table:
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| impersonatedBy | string | ? | The ID of the admin that is impersonating this session. |
+| Field Name     | Type   | Key | Description                                             |
+| -------------- | ------ | --- | ------------------------------------------------------- |
+| impersonatedBy | string | ?   | The ID of the admin that is impersonating this session. |
 
-## [Options](https://www.better-auth.com/docs/plugins/admin\#options)
+## [Options](https://www.better-auth.com/docs/plugins/admin#options)
 
-### [Default Role](https://www.better-auth.com/docs/plugins/admin\#default-role)
+### [Default Role](https://www.better-auth.com/docs/plugins/admin#default-role)
 
 The default role for a user. Defaults to `user`.
 
@@ -965,7 +966,7 @@ admin({
 });
 ```
 
-### [Admin Roles](https://www.better-auth.com/docs/plugins/admin\#admin-roles)
+### [Admin Roles](https://www.better-auth.com/docs/plugins/admin#admin-roles)
 
 The roles that are considered admin roles. Defaults to `["admin"]`.
 
@@ -980,7 +981,7 @@ admin({
 Any role that isn't in the `adminRoles` list, even if they have the permission,
 will not be considered an admin.
 
-### [Admin userIds](https://www.better-auth.com/docs/plugins/admin\#admin-userids)
+### [Admin userIds](https://www.better-auth.com/docs/plugins/admin#admin-userids)
 
 You can pass an array of userIds that should be considered as admin. Default to `[]`
 
@@ -994,7 +995,7 @@ admin({
 
 If a user is in the `adminUserIds` list, they will be able to perform any admin operation.
 
-### [impersonationSessionDuration](https://www.better-auth.com/docs/plugins/admin\#impersonationsessionduration)
+### [impersonationSessionDuration](https://www.better-auth.com/docs/plugins/admin#impersonationsessionduration)
 
 The duration of the impersonation session in seconds. Defaults to 1 hour.
 
@@ -1006,7 +1007,7 @@ admin({
 });
 ```
 
-### [Default Ban Reason](https://www.better-auth.com/docs/plugins/admin\#default-ban-reason)
+### [Default Ban Reason](https://www.better-auth.com/docs/plugins/admin#default-ban-reason)
 
 The default ban reason for a user created by the admin. Defaults to `No reason`.
 
@@ -1018,7 +1019,7 @@ admin({
 });
 ```
 
-### [Default Ban Expires In](https://www.better-auth.com/docs/plugins/admin\#default-ban-expires-in)
+### [Default Ban Expires In](https://www.better-auth.com/docs/plugins/admin#default-ban-expires-in)
 
 The default ban expires in for a user created by the admin in seconds. Defaults to `undefined` (meaning the ban never expires).
 
@@ -1030,7 +1031,7 @@ admin({
 });
 ```
 
-### [bannedUserMessage](https://www.better-auth.com/docs/plugins/admin\#bannedusermessage)
+### [bannedUserMessage](https://www.better-auth.com/docs/plugins/admin#bannedusermessage)
 
 The message to show when a banned user tries to sign in. Defaults to "You have been banned from this application. Please contact support if you believe this is an error."
 

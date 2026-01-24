@@ -1,9 +1,10 @@
 ---
 title: Cookies | Better Auth
-url: 
+url:
 description: Learn how cookies are used in Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Cookies are used to store data such as session tokens, OAuth state, and more. All cookies are signed using the `secret` key provided in the auth options.
 
-### [Cookie Prefix](https://www.better-auth.com/docs/concepts/cookies\#cookie-prefix)
+### [Cookie Prefix](https://www.better-auth.com/docs/concepts/cookies#cookie-prefix)
 
 By default, Better Auth cookies follow the format `${prefix}.${cookie_name}`. The default prefix is "better-auth". You can change the prefix by setting `cookiePrefix` in the `advanced` object of the auth options.
 
@@ -44,7 +45,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Custom Cookies](https://www.better-auth.com/docs/concepts/cookies\#custom-cookies)
+### [Custom Cookies](https://www.better-auth.com/docs/concepts/cookies#custom-cookies)
 
 All cookies are `httpOnly` and `secure` when the server is running in production mode.
 
@@ -77,7 +78,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Cross Subdomain Cookies](https://www.better-auth.com/docs/concepts/cookies\#cross-subdomain-cookies)
+### [Cross Subdomain Cookies](https://www.better-auth.com/docs/concepts/cookies#cross-subdomain-cookies)
 
 Sometimes you may need to share cookies across subdomains.
 For example, if you authenticate on `auth.example.com`, you may also want to access the same session on `app.example.com`.
@@ -109,7 +110,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Secure Cookies](https://www.better-auth.com/docs/concepts/cookies\#secure-cookies)
+### [Secure Cookies](https://www.better-auth.com/docs/concepts/cookies#secure-cookies)
 
 By default, cookies are secure only when the server is running in production mode. You can force cookies to be always secure by setting `useSecureCookies` to `true` in the `advanced` object in the auth options.
 

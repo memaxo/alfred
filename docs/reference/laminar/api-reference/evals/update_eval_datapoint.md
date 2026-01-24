@@ -1,8 +1,9 @@
 ---
 title: Update Evaluation Datapoint - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/api-reference/evals/update_eval_datapoint#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -64,7 +65,7 @@ evals
 
 /
 
-{eval\_id}
+{eval_id}
 
 /
 
@@ -72,7 +73,7 @@ datapoints
 
 /
 
-{datapoint\_id}
+{datapoint_id}
 
 Try it
 
@@ -107,7 +108,7 @@ Copy
 "3c90c3cc-0d44-4b50-8888-8dd25736052a"
 ```
 
-### [​](https://docs.lmnr.ai/api-reference/evals/update_eval_datapoint\#description)  Description
+### [​](https://docs.lmnr.ai/api-reference/evals/update_eval_datapoint#description) Description
 
 Update a specific evaluation datapoint with new executor output and scores.
 
@@ -129,7 +130,7 @@ Bearer authentication header of the form `Bearer <token>`, where `<token>` is yo
 
 [​](https://docs.lmnr.ai/api-reference/evals/update_eval_datapoint#parameter-eval-id)
 
-eval\_id
+eval_id
 
 string<uuid>
 
@@ -139,7 +140,7 @@ The UUID of the evaluation
 
 [​](https://docs.lmnr.ai/api-reference/evals/update_eval_datapoint#parameter-datapoint-id)
 
-datapoint\_id
+datapoint_id
 
 string<uuid>
 

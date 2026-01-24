@@ -25,12 +25,14 @@ export const manifest: CliManifest = {
   name: "@alfred/your-package",
   version: "0.1.0",
   description: "Brief description of your package",
-  commands: [],           // Optional
-  panels: [],             // Optional
-  shortcuts: [],          // Optional
-  subscriptions: [],      // Optional
-  healthCheck: async () => { /* ... */ }, // Optional
-  dependencies: [],       // Optional
+  commands: [], // Optional
+  panels: [], // Optional
+  shortcuts: [], // Optional
+  subscriptions: [], // Optional
+  healthCheck: async () => {
+    /* ... */
+  }, // Optional
+  dependencies: [], // Optional
 };
 ```
 
@@ -46,10 +48,20 @@ const myCommand = {
   description: "Brief description of what this command does",
   args: z.object({
     required: z.string().min(1).describe("A required string argument"),
-    optional: z.number().int().positive().optional().default(10).describe("Optional number"),
+    optional: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .default(10)
+      .describe("Optional number"),
     flag: z.boolean().optional().default(false).describe("Boolean flag"),
   }),
-  handler: async (args: { required: string; optional: number; flag: boolean }) => {
+  handler: async (args: {
+    required: string;
+    optional: number;
+    flag: boolean;
+  }) => {
     console.log(`Running command with args:`, args);
     // Command implementation
   },
@@ -94,7 +106,7 @@ export const manifest: CliManifest = {
   healthCheck: async () => {
     try {
       const start = performance.now();
-      
+
       // Check your package's health
       const isHealthy = await checkSomething();
       const latency = performance.now() - start;
@@ -115,6 +127,7 @@ export const manifest: CliManifest = {
 ```
 
 **Status Values**:
+
 - `"healthy"` - Package is fully operational
 - `"degraded"` - Partial functionality available
 - `"unhealthy"` - Package is not functional
@@ -158,7 +171,11 @@ const clearCommand = {
   name: "clear",
   description: "Clear analytics data",
   args: z.object({
-    confirm: z.boolean().optional().default(false).describe("Confirmation flag"),
+    confirm: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Confirmation flag"),
   }),
   handler: async (args: { confirm: boolean }) => {
     if (!args.confirm) {
@@ -173,21 +190,22 @@ export const manifest: CliManifest = {
   name: "@alfred/analytics",
   version: "0.1.0",
   description: "Analytics and reporting for ALFRED",
-  
+
   commands: [reportCommand, clearCommand],
-  
+
   panels: [
     {
       id: "analytics-panel",
       name: "Analytics",
       component: async () => {
-        const { createAnalyticsPanel } = await import("@alfred/tui/panels/analytics");
+        const { createAnalyticsPanel } =
+          await import("@alfred/tui/panels/analytics");
         return createAnalyticsPanel();
       },
       shortcuts: ["a"],
     },
   ],
-  
+
   healthCheck: async () => {
     try {
       const start = performance.now();
@@ -197,7 +215,9 @@ export const manifest: CliManifest = {
 
       return {
         status: dbOk ? "healthy" : "unhealthy",
-        message: dbOk ? "Analytics service operational" : "Database connection failed",
+        message: dbOk
+          ? "Analytics service operational"
+          : "Database connection failed",
         latency,
       };
     } catch (error) {
@@ -207,7 +227,7 @@ export const manifest: CliManifest = {
       };
     }
   },
-  
+
   dependencies: ["@alfred/db"],
 };
 ```
@@ -359,16 +379,16 @@ Panels are loaded asynchronously when the dashboard starts:
 
 ```typescript
 interface CliManifest {
-  name: string;                    // Package name (e.g., "@alfred/db")
-  version: string;                 // Semantic version
-  description: string;             // Brief package description
-  router?: AnyRouter;              // Optional tRPC router
-  commands?: CommandDef[];         // CLI commands
-  panels?: TuiPanelDef[];          // TUI panels
-  shortcuts?: ShortcutDef[];       // Global keyboard shortcuts
+  name: string; // Package name (e.g., "@alfred/db")
+  version: string; // Semantic version
+  description: string; // Brief package description
+  router?: AnyRouter; // Optional tRPC router
+  commands?: CommandDef[]; // CLI commands
+  panels?: TuiPanelDef[]; // TUI panels
+  shortcuts?: ShortcutDef[]; // Global keyboard shortcuts
   subscriptions?: SubscriptionDef[]; // tRPC subscriptions
   healthCheck?: () => Promise<HealthStatus>; // Health check function
-  dependencies?: string[];         // Package dependencies
+  dependencies?: string[]; // Package dependencies
 }
 ```
 
@@ -376,9 +396,9 @@ interface CliManifest {
 
 ```typescript
 interface CommandDef {
-  name: string;                    // Command name (no spaces)
-  description: string;             // Brief description
-  args?: ZodSchema;                // Zod schema for arguments
+  name: string; // Command name (no spaces)
+  description: string; // Brief description
+  args?: ZodSchema; // Zod schema for arguments
   handler: (args: any) => Promise<void>; // Async handler function
 }
 ```
@@ -387,10 +407,10 @@ interface CommandDef {
 
 ```typescript
 interface TuiPanelDef {
-  id: string;                      // Unique panel identifier
-  name: string;                    // Display name
+  id: string; // Unique panel identifier
+  name: string; // Display name
   component: () => Promise<BasePanel>; // Lazy factory function
-  shortcuts?: string[];            // Keyboard shortcuts
+  shortcuts?: string[]; // Keyboard shortcuts
 }
 ```
 
@@ -399,8 +419,8 @@ interface TuiPanelDef {
 ```typescript
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
-  message?: string;                // Optional status message
-  latency?: number;                // Check latency in milliseconds
+  message?: string; // Optional status message
+  latency?: number; // Check latency in milliseconds
 }
 ```
 

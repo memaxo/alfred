@@ -1,8 +1,9 @@
 ---
 title: Playground Tools and Features - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/playground/tools#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -28,7 +29,7 @@ On this page
 
 The Laminar Playground provides the ability to add tools to your LLM calls. The playground supports configuring custom tools that AI models can call during conversations.
 
-## [​](https://docs.lmnr.ai/playground/tools\#tool-definition-structure)  Tool Definition Structure
+## [​](https://docs.lmnr.ai/playground/tools#tool-definition-structure) Tool Definition Structure
 
 ![Laminar Playground Tools](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/playground/tools.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=b0feb8531f8059d0388cb6d514f03a45)
 
@@ -42,7 +43,7 @@ Tools in the playground have the following structure:
 
 Learn more about tool choice options in the [AI SDK documentation](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling#tool-choice).
 
-## [​](https://docs.lmnr.ai/playground/tools\#example-tool-configuration)  Example Tool Configuration
+## [​](https://docs.lmnr.ai/playground/tools#example-tool-configuration) Example Tool Configuration
 
 Copy
 

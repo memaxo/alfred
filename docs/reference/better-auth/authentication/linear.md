@@ -1,9 +1,10 @@
 ---
 title: Linear | Better Auth
-url: 
+url:
 description: Linear provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Linear credentials](https://www.better-auth.com/docs/authentication/linear\#get-your-linear-credentials)
+### [Get your Linear credentials](https://www.better-auth.com/docs/authentication/linear#get-your-linear-credentials)
 
 To use Linear sign in, you need a client ID and client secret. You can get them from the [Linear Developer Portal](https://linear.app/settings/api).
 
@@ -34,7 +35,7 @@ Make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/li
 
 When creating your OAuth application in Linear, you'll need to specify the required scopes. The default scope is `read`, but you can also request additional scopes like `write` if needed.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/linear\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/linear#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -53,7 +54,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Sign In with Linear](https://www.better-auth.com/docs/authentication/linear\#sign-in-with-linear)
+### [Sign In with Linear](https://www.better-auth.com/docs/authentication/linear#sign-in-with-linear)
 
 To sign in with Linear, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 
@@ -72,7 +73,7 @@ const signIn = async () => {
 }
 ```
 
-### [Available scopes](https://www.better-auth.com/docs/authentication/linear\#available-scopes)
+### [Available scopes](https://www.better-auth.com/docs/authentication/linear#available-scopes)
 
 Linear OAuth supports the following scopes:
 

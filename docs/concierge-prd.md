@@ -507,4 +507,3 @@ This section lists the **exact modules** that would be added to implement Concie
     - `packages/tui/src/tui/react/panels/focus.tsx`
     - wire into `packages/tui/src/tui/react/dashboard.tsx`
   - **Pattern from**: existing panel system in `packages/tui/src/tui/react/dashboard.tsx` (panel layout + mode priority).
-

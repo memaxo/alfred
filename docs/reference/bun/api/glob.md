@@ -1,9 +1,10 @@
 ---
 title: Glob – API | Bun Docs
-url: 
+url:
 description: Bun includes a fast native Glob implementation for matching file paths.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Bun includes a fast native implementation of file globbing.
 
-## [Quickstart](https://bun.com/docs/api/glob\#quickstart)
+## [Quickstart](https://bun.com/docs/api/glob#quickstart)
 
 **Scan a directory for files matching `*.ts`**:
 
@@ -136,11 +137,11 @@ interface ScanOptions {
 
 ```
 
-## [Supported Glob Patterns](https://bun.com/docs/api/glob\#supported-glob-patterns)
+## [Supported Glob Patterns](https://bun.com/docs/api/glob#supported-glob-patterns)
 
 Bun supports the following glob patterns:
 
-### [`?` \- Match any single character](https://bun.com/docs/api/glob\#match-any-single-character)
+### [`?` \- Match any single character](https://bun.com/docs/api/glob#match-any-single-character)
 
 ```
 const glob = new Glob("???.ts");
@@ -149,7 +150,7 @@ glob.match("foobar.ts"); // => false
 
 ```
 
-### [`*` \- Matches zero or more characters, except for path separators ( `/` or `\`)](https://bun.com/docs/api/glob\#matches-zero-or-more-characters-except-for-path-separators-or)
+### [`*` \- Matches zero or more characters, except for path separators ( `/` or `\`)](https://bun.com/docs/api/glob#matches-zero-or-more-characters-except-for-path-separators-or)
 
 ```
 const glob = new Glob("*.ts");
@@ -158,7 +159,7 @@ glob.match("src/index.ts"); // => false
 
 ```
 
-### [`**` \- Match any number of characters including `/`](https://bun.com/docs/api/glob\#match-any-number-of-characters-including)
+### [`**` \- Match any number of characters including `/`](https://bun.com/docs/api/glob#match-any-number-of-characters-including)
 
 ```
 const glob = new Glob("**/*.ts");
@@ -168,7 +169,7 @@ glob.match("src/index.js"); // => false
 
 ```
 
-### [`[ab]` \- Matches one of the characters contained in the brackets, as well as character ranges](https://bun.com/docs/api/glob\#ab-matches-one-of-the-characters-contained-in-the-brackets-as-well-as-character-ranges)
+### [`[ab]` \- Matches one of the characters contained in the brackets, as well as character ranges](https://bun.com/docs/api/glob#ab-matches-one-of-the-characters-contained-in-the-brackets-as-well-as-character-ranges)
 
 ```
 const glob = new Glob("ba[rz].ts");
@@ -190,7 +191,7 @@ glob.match("ba0a8.ts"); // => false
 
 ```
 
-### [`{a,b,c}` \- Match any of the given patterns](https://bun.com/docs/api/glob\#a-b-c-match-any-of-the-given-patterns)
+### [`{a,b,c}` \- Match any of the given patterns](https://bun.com/docs/api/glob#a-b-c-match-any-of-the-given-patterns)
 
 ```
 const glob = new Glob("{a,b,c}.ts");
@@ -203,7 +204,7 @@ glob.match("d.ts"); // => false
 
 These match patterns can be deeply nested (up to 10 levels), and contain any of the wildcards from above.
 
-### [`!` \- Negates the result at the start of a pattern](https://bun.com/docs/api/glob\#negates-the-result-at-the-start-of-a-pattern)
+### [`!` \- Negates the result at the start of a pattern](https://bun.com/docs/api/glob#negates-the-result-at-the-start-of-a-pattern)
 
 ```
 const glob = new Glob("!index.ts");
@@ -212,7 +213,7 @@ glob.match("foo.ts"); // => true
 
 ```
 
-### [`\` \- Escapes any of the special characters above](https://bun.com/docs/api/glob\#escapes-any-of-the-special-characters-above)
+### [`\` \- Escapes any of the special characters above](https://bun.com/docs/api/glob#escapes-any-of-the-special-characters-above)
 
 ```
 const glob = new Glob("\\!index.ts");
@@ -227,7 +228,7 @@ Node-API](https://bun.com/docs/api/node-api) [Next\\
 \\
 DNS](https://bun.com/docs/api/dns)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/glob.md)
 
@@ -251,7 +252,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

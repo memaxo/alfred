@@ -15,8 +15,7 @@ The AI SDK has switched to the stream data protocol in version `3.0.20`. `useCha
 ## Solution
 
 You can switch `useChat` and `useCompletion` to raw text stream processing with the `streamProtocol` parameter. Set it to `text` as follows:
-    
-    
+
     const { messages, append } = useChat({ streamProtocol: 'text' });
 
 Previous

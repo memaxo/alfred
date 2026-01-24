@@ -8,12 +8,11 @@ The `@ai-sdk/llamaindex` package provides helper functions to transform LlamaInd
 
 It supports:
 
-  * LlamaIndex ChatEngine streams
-  * LlamaIndex QueryEngine streams
+- LlamaIndex ChatEngine streams
+- LlamaIndex QueryEngine streams
 
 ## Import
-    
-    
+
     import { toDataResponse } from "@ai-sdk/llamaindex"
 
 ## API Signature
@@ -43,42 +42,41 @@ Merges LlamaIndex output streams into an existing data stream.
 ### Convert LlamaIndex ChatEngine Stream
 
 app/api/completion/route.ts
-    
-    
+
     import { OpenAI, SimpleChatEngine } from 'llamaindex';
-    
+
     import { toDataStreamResponse } from '@ai-sdk/llamaindex';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { prompt } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const llm = new OpenAI({ model: 'gpt-4o' });
-    
+
       const chatEngine = new SimpleChatEngine({ llm });
-    
-    
-    
-    
+
+
+
+
       const stream = await chatEngine.chat({
-    
+
         message: prompt,
-    
+
         stream: true,
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return toDataStreamResponse(stream);
-    
+
     }
 
 Previous

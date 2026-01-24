@@ -7,48 +7,46 @@ Copy markdown
 Creates a reusable AI agent capable of generating text, streaming responses, and using tools over multiple steps (a reasoning-and-acting loop). `ToolLoopAgent` is ideal for building autonomous, multi-step agents that can take actions, call tools, and reason over the results until a stop condition is reached.
 
 Unlike single-step calls like `generateText()`, an agent can iteratively invoke tools, collect tool results, and decide next actions until completion or user approval is required.
-    
-    
+
     import { ToolLoopAgent } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const agent = new ToolLoopAgent({
-    
+
       model: 'openai/gpt-4o',
-    
+
       instructions: 'You are a helpful assistant.',
-    
+
       tools: {
-    
+
         weather: weatherTool,
-    
+
         calculator: calculatorTool,
-    
+
       },
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const result = await agent.generate({
-    
+
       prompt: 'What is the weather in NYC?',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(result.text);
 
 To see `ToolLoopAgent` in action, check out these examples.
 
 ## Import
-    
-    
+
     import { ToolLoopAgent } from "ai"
 
 ## Constructor
@@ -204,12 +202,11 @@ Custom agent identifier.
 ### `generate()`
 
 Generates a response and triggers tool calls as needed, running the agent loop and returning the final result. Returns a promise resolving to a `GenerateTextResult`.
-    
-    
+
     const result = await agent.generate({
-    
+
       prompt: 'What is the weather like?',
-    
+
     });
 
 ### prompt:
@@ -231,21 +228,20 @@ The `generate()` method returns a `GenerateTextResult` object (see `generateText
 ### `stream()`
 
 Streams a response from the agent, including agent reasoning and tool calls, as they occur. Returns a `StreamTextResult`.
-    
-    
+
     const stream = agent.stream({
-    
+
       prompt: 'Tell me a story about a robot.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     for await (const chunk of stream.textStream) {
-    
+
       console.log(chunk);
-    
+
     }
 
 ### prompt:
@@ -269,184 +265,179 @@ The `stream()` method returns a `StreamTextResult` object (see `streamText` for 
 ### `InferAgentUIMessage`
 
 Infers the UI message type for the given agent instance. Useful for type-safe UI and message exchanges.
-    
-    
+
     import { ToolLoopAgent, InferAgentUIMessage } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const weatherAgent = new ToolLoopAgent({
-    
+
       model: 'openai/gpt-4o',
-    
+
       tools: { weather: weatherTool },
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     type WeatherAgentUIMessage = InferAgentUIMessage;
 
 ## Examples
 
 ### Basic Agent with Tools
-    
-    
+
     import { ToolLoopAgent, stepCountIs } from 'ai';
-    
+
     import { weatherTool, calculatorTool } from './tools';
-    
-    
-    
-    
+
+
+
+
     const assistant = new ToolLoopAgent({
-    
+
       model: 'openai/gpt-4o',
-    
+
       instructions: 'You are a helpful assistant.',
-    
+
       tools: {
-    
+
         weather: weatherTool,
-    
+
         calculator: calculatorTool,
-    
+
       },
-    
+
       stopWhen: stepCountIs(3),
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const result = await assistant.generate({
-    
+
       prompt: 'What is the weather in NYC and what is 100 * 25?',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(result.text);
-    
+
     console.log(result.steps); // Array of all steps taken by the agent
 
 ### Streaming Agent Response
-    
-    
+
     const agent = new ToolLoopAgent({
-    
+
       model: 'openai/gpt-4o',
-    
+
       instructions: 'You are a creative storyteller.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const stream = agent.stream({
-    
+
       prompt: 'Tell me a short story about a time traveler.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     for await (const chunk of stream.textStream) {
-    
+
       process.stdout.write(chunk);
-    
+
     }
 
 ### Agent with Output Parsing
-    
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     const analysisAgent = new ToolLoopAgent({
-    
+
       model: 'openai/gpt-4o',
-    
+
       output: {
-    
+
         schema: z.object({
-    
+
           sentiment: z.enum(['positive', 'negative', 'neutral']),
-    
+
           score: z.number(),
-    
+
           summary: z.string(),
-    
+
         }),
-    
+
       },
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const result = await analysisAgent.generate({
-    
+
       prompt: 'Analyze this review: "The product exceeded my expectations!"',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(result.output);
-    
+
     // Typed as { sentiment: 'positive' | 'negative' | 'neutral', score: number, summary: string }
 
 ### Example: Approved Tool Execution
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { ToolLoopAgent } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const agent = new ToolLoopAgent({
-    
+
       model: openai('gpt-4o'),
-    
+
       instructions: 'You are an agent with access to a weather API.',
-    
+
       tools: {
-    
+
         weather: openai.tools.weather({
-    
+
           /* ... */
-    
+
         }),
-    
+
       },
-    
+
       // Optionally require approval, etc.
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const result = await agent.generate({
-    
+
       prompt: 'Is it raining in Paris today?',
-    
+
     });
-    
+
     console.log(result.text);
 
 Previous

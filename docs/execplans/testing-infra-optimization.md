@@ -101,32 +101,32 @@ Definitions used in this plan:
 
 First, implement shared infrastructure:
 
-1) Extend `scripts/test-bun.ts` into a scope-aware runner:
+1. Extend `scripts/test-bun.ts` into a scope-aware runner:
    - When invoked from a package test script, discover all test files in that package (respecting Bun’s conventions).
    - Filter discovered files by `process.env.ALFRED_TEST_SCOPE` (default `unit`).
    - Run `bun test` with provided flags (including `--timeout`) and an explicit list of files so excluded tests do not run.
 
-2) Add `packages/test-kit/src/bun/preload.ts`:
+2. Add `packages/test-kit/src/bun/preload.ts`:
    - Install watchdog timer (default 300000ms) that calls `process.exit(1)` if the process stays alive too long.
    - Add `afterEach` to restore/clear function mocks and reset selected env var keys.
    - Provide a global registration API so other preloads can register “module mock resetters” that re-apply baseline `mock.module()` mocks after each test.
 
 Then wire it everywhere:
 
-3) Update each `packages/*/package.json` `test` script to:
+3. Update each `packages/*/package.json` `test` script to:
    - call `bun ../../scripts/test-bun.ts` instead of `bun test`,
    - pass `--timeout 60000`,
    - include `--preload ../test-kit/src/bun/preload.ts` first,
    - retain existing package-specific preloads and concurrency flags.
 
-4) Update `lefthook.yml`:
+4. Update `lefthook.yml`:
    - ensure `ALFRED_TEST_SCOPE=unit` is set for pre-push tests,
    - pass `-- --bail=3` through Turbo to Bun test runner.
 
-5) Update `turbo.json`:
+5. Update `turbo.json`:
    - add `ALFRED_TEST_SCOPE`, `ALFRED_TEST_WATCHDOG_MS`, `ALFRED_TEST_TIMEOUT_MS` to `tasks.test.env`.
 
-6) Document the categorization and commands:
+6. Document the categorization and commands:
    - add `docs/testing/test-categories.md` describing naming conventions and how to run unit/integration/e2e/perf suites.
 
 ## Concrete Steps
@@ -137,12 +137,12 @@ All commands are run from:
 
 Implementation steps:
 
-1) Edit `scripts/test-bun.ts` and add `packages/test-kit/src/bun/preload.ts`.
-2) Update package scripts and config files (`package.json`, `lefthook.yml`, `turbo.json`).
-3) Run:
+1. Edit `scripts/test-bun.ts` and add `packages/test-kit/src/bun/preload.ts`.
+2. Update package scripts and config files (`package.json`, `lefthook.yml`, `turbo.json`).
+3. Run:
 
-    bun run test:fast
-    bunx lefthook run pre-push
+   bun run test:fast
+   bunx lefthook run pre-push
 
 If anything hangs, the watchdog should terminate the run and the failing command should show which package/test was last executing.
 
@@ -165,11 +165,10 @@ These changes are safe to apply repeatedly:
 - Preload changes are test-only and do not impact production builds.
 - If a package’s tests unexpectedly rely on integration behavior, run them explicitly with:
 
-    ALFRED_TEST_SCOPE=integration bun run --filter <pkg> test
+  ALFRED_TEST_SCOPE=integration bun run --filter <pkg> test
 
 or use the repo-level integration scripts.
 
 ## Artifacts and Notes
 
 Key reference: `docs/reference/bun/test/mocks.md` documents that `mock.restore()` does not reset `mock.module()` overrides, so module reset requires explicit re-application.
-

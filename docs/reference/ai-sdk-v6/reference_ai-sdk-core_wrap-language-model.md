@@ -5,24 +5,22 @@ Copy markdown
 # `wrapLanguageModel()`
 
 The `wrapLanguageModel` function provides a way to enhance the behavior of language models by wrapping them with middleware. See Language Model Middleware for more information on middleware.
-    
-    
+
     import { wrapLanguageModel } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const wrappedLanguageModel = wrapLanguageModel({
-    
+
       model: 'openai/gpt-4.1',
-    
+
       middleware: yourLanguageModelMiddleware,
-    
+
     });
 
 ## Import
-    
-    
+
     import { wrapLanguageModel } from "ai"
 
 ## API Signature

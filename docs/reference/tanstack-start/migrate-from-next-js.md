@@ -8,55 +8,47 @@ Prerequisites
 
 Before we begin, this guide assumes your project structure looks like this:
 
+├── next.config.ts
+├── package.json
+├── postcss.config.mjs
+├── public
+│ ├── file.svg
+│ ├── globe.svg
+│ ├── next.svg
+│ ├── vercel.svg
+│ └── window.svg
+├── README.md
+├── src
+│ └── app
+│ ├── favicon.ico
+│ ├── globals.css
+│ ├── layout.tsx
+│ └── page.tsx
+└── tsconfig.json
 
- ├── next.config.ts
- ├── package.json
- ├── postcss.config.mjs
- ├── public
- │ ├── file.svg
- │ ├── globe.svg
- │ ├── next.svg
- │ ├── vercel.svg
- │ └── window.svg
- ├── README.md
- ├── src
- │ └── app
- │ ├── favicon.ico
- │ ├── globals.css
- │ ├── layout.tsx
- │ └── page.tsx
- └── tsconfig.json
-
-
-
- ├── next.config.ts
- ├── package.json
- ├── postcss.config.mjs
- ├── public
- │ ├── file.svg
- │ ├── globe.svg
- │ ├── next.svg
- │ ├── vercel.svg
- │ └── window.svg
- ├── README.md
- ├── src
- │ └── app
- │ ├── favicon.ico
- │ ├── globals.css
- │ ├── layout.tsx
- │ └── page.tsx
- └── tsconfig.json
-
+├── next.config.ts
+├── package.json
+├── postcss.config.mjs
+├── public
+│ ├── file.svg
+│ ├── globe.svg
+│ ├── next.svg
+│ ├── vercel.svg
+│ └── window.svg
+├── README.md
+├── src
+│ └── app
+│ ├── favicon.ico
+│ ├── globals.css
+│ ├── layout.tsx
+│ └── page.tsx
+└── tsconfig.json
 
 Alternatively, you can follow along by cloning the following starter template:
 
+npx gitpick nrjdalal/awesome-templates/tree/main/next.js-apps/next.js-start next.js-start-er
 
- npx gitpick nrjdalal/awesome-templates/tree/main/next.js-apps/next.js-start next.js-start-er
-
-
-
- npx gitpick nrjdalal/awesome-templates/tree/main/next.js-apps/next.js-start next.js-start-er
-
+npx gitpick nrjdalal/awesome-templates/tree/main/next.js-apps/next.js-start next.js-start-er
 
 This structure is a basic Next.js application using the App Router, which we will migrate to TanStack Start.
 
@@ -64,119 +56,99 @@ This structure is a basic Next.js application using the App Router, which we wil
 
 First, uninstall Next.js and remove related configuration files:
 
+npm uninstall @tailwindcss/postcss next
+rm postcss.config._ next.config._
 
- npm uninstall @tailwindcss/postcss next
- rm postcss.config.* next.config.*
-
-
-
- npm uninstall @tailwindcss/postcss next
- rm postcss.config.* next.config.*
-
+npm uninstall @tailwindcss/postcss next
+rm postcss.config._ next.config._
 
 2\. Install Required Dependencies
 
 TanStack Start leverages Vite and TanStack Router:
 
+npm i @tanstack/react-router @tanstack/react-start
 
- npm i @tanstack/react-router @tanstack/react-start
-
-
-
- npm i @tanstack/react-router @tanstack/react-start
-
+npm i @tanstack/react-router @tanstack/react-start
 
 For Tailwind CSS and resolving imports using path aliases:
 
+npm i -D vite @vitejs/plugin-react @tailwindcss/vite tailwindcss vite-tsconfig-paths
 
- npm i -D vite @vitejs/plugin-react @tailwindcss/vite tailwindcss vite-tsconfig-paths
-
-
-
- npm i -D vite @vitejs/plugin-react @tailwindcss/vite tailwindcss vite-tsconfig-paths
-
+npm i -D vite @vitejs/plugin-react @tailwindcss/vite tailwindcss vite-tsconfig-paths
 
 3\. Update Project Configuration
 
 Now that you've installed the necessary dependencies, update your project configuration files to work with TanStack Start.
 
+{
+"type": "module",
+"scripts": {
+"dev": "vite dev",
+"build": "vite build",
+"start": "node .output/server/index.mjs"
+}
+}
 
- {
- "type": "module",
- "scripts": {
- "dev": "vite dev",
- "build": "vite build",
- "start": "node .output/server/index.mjs"
- }
- }
+{
+"type": "module",
+"scripts": {
+"dev": "vite dev",
+"build": "vite build",
+"start": "node .output/server/index.mjs"
+}
+}
 
+// vite.config.ts
+import { defineConfig } from 'vite'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import viteReact from '@vitejs/plugin-react'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import tailwindcss from '@tailwindcss/vite'
 
+export default defineConfig({
+server: {
+port: 3000,
+},
+plugins: [
+tailwindcss(),
+// Enables Vite to resolve imports using path aliases.
+tsconfigPaths(),
+tanstackStart({
+srcDirectory: 'src', // This is the default
+router: {
+// Specifies the directory TanStack Router uses for your routes.
+routesDirectory: 'app', // Defaults to "routes", relative to srcDirectory
+},
+}),
+viteReact(),
+],
+})
 
- {
- "type": "module",
- "scripts": {
- "dev": "vite dev",
- "build": "vite build",
- "start": "node .output/server/index.mjs"
- }
- }
+// vite.config.ts
+import { defineConfig } from 'vite'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import viteReact from '@vitejs/plugin-react'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import tailwindcss from '@tailwindcss/vite'
 
-
-
- // vite.config.ts
- import { defineConfig } from 'vite'
- import { tanstackStart } from '@tanstack/react-start/plugin/vite'
- import viteReact from '@vitejs/plugin-react'
- import tsconfigPaths from 'vite-tsconfig-paths'
- import tailwindcss from '@tailwindcss/vite'
-
- export default defineConfig({
- server: {
- port: 3000,
- },
- plugins: [
- tailwindcss(),
- // Enables Vite to resolve imports using path aliases.
- tsconfigPaths(),
- tanstackStart({
- srcDirectory: 'src', // This is the default
- router: {
- // Specifies the directory TanStack Router uses for your routes.
- routesDirectory: 'app', // Defaults to "routes", relative to srcDirectory
- },
- }),
- viteReact(),
- ],
- })
-
-
-
- // vite.config.ts
- import { defineConfig } from 'vite'
- import { tanstackStart } from '@tanstack/react-start/plugin/vite'
- import viteReact from '@vitejs/plugin-react'
- import tsconfigPaths from 'vite-tsconfig-paths'
- import tailwindcss from '@tailwindcss/vite'
-
- export default defineConfig({
- server: {
- port: 3000,
- },
- plugins: [
- tailwindcss(),
- // Enables Vite to resolve imports using path aliases.
- tsconfigPaths(),
- tanstackStart({
- srcDirectory: 'src', // This is the default
- router: {
- // Specifies the directory TanStack Router uses for your routes.
- routesDirectory: 'app', // Defaults to "routes", relative to srcDirectory
- },
- }),
- viteReact(),
- ],
- })
-
+export default defineConfig({
+server: {
+port: 3000,
+},
+plugins: [
+tailwindcss(),
+// Enables Vite to resolve imports using path aliases.
+tsconfigPaths(),
+tanstackStart({
+srcDirectory: 'src', // This is the default
+router: {
+// Specifies the directory TanStack Router uses for your routes.
+routesDirectory: 'app', // Defaults to "routes", relative to srcDirectory
+},
+}),
+viteReact(),
+],
+})
 
 By default, routesDirectory is set to routes. To maintain consistency with Next.js App Router conventions, you can set it to app instead.
 
@@ -184,211 +156,175 @@ By default, routesDirectory is set to routes. To maintain consistency with Next.
 
 > TanStack Start uses a routing approach similar to Remix, with some changes to support nested structures and special features using tokens. Learn more about it at Routing Concepts guide.
 
-Instead of layout.tsx, create a file named __root.tsx in the src/app directory. This file will serve as the root layout for your application.
+Instead of layout.tsx, create a file named \_\_root.tsx in the src/app directory. This file will serve as the root layout for your application.
 
- * src/app/layout.tsx to src/app/__root.tsx
+- src/app/layout.tsx to src/app/\_\_root.tsx
 
+* import type { Metadata } from "next" // [!code --]
+  import {
+  Outlet,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  } from "@tanstack/react-router"
+  import appCss from "./globals.css?url"
 
+* export const metadata: Metadata = { // [!code --]
+* title: "Create Next App", // [!code --]
+* description: "Generated by create next app", // [!code --]
+* } // [!code --]
+  export const Route = createRootRoute({
+  head: () => ({
+  meta: [
+  { charSet: "utf-8" },
+  {
+  name: "viewport",
+  content: "width=device-width, initial-scale=1",
+  },
+  { title: "TanStack Start Starter" }
+  ],
+  links: [
+  {
+  rel: 'stylesheet',
+  href: appCss,
+  },
+  ],
+  }),
+  component: RootLayout,
+  })
 
- - import type { Metadata } from "next" // [!code --]
- import {
- Outlet,
- createRootRoute,
- HeadContent,
- Scripts,
- } from "@tanstack/react-router"
- import appCss from "./globals.css?url"
+* export default function RootLayout({ // [!code --]
+* children, // [!code --]
+* }: Readonly) { // [!code --]
+* return ( // [!code --]
+* // [!code --]
+* {children} // [!code --]
+* // [!code --]
+* ) // [!code --]
+* } // [!code --]
+  function RootLayout() {
+  return (
 
- - export const metadata: Metadata = { // [!code --]
- - title: "Create Next App", // [!code --]
- - description: "Generated by create next app", // [!code --]
- - } // [!code --]
- export const Route = createRootRoute({
- head: () => ({
- meta: [
- { charSet: "utf-8" },
- {
- name: "viewport",
- content: "width=device-width, initial-scale=1",
- },
- { title: "TanStack Start Starter" }
- ],
- links: [
- {
- rel: 'stylesheet',
- href: appCss,
- },
- ],
- }),
- component: RootLayout,
- })
+)
+}
 
- - export default function RootLayout({ // [!code --]
- - children, // [!code --]
- - }: Readonly) { // [!code --]
- - return ( // [!code --]
- - // [!code --]
- - {children} // [!code --]
- - // [!code --]
- - ) // [!code --]
- - } // [!code --]
- function RootLayout() {
- return (
+- import type { Metadata } from "next" // [!code --]
+  import {
+  Outlet,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  } from "@tanstack/react-router"
+  import appCss from "./globals.css?url"
 
+- export const metadata: Metadata = { // [!code --]
+- title: "Create Next App", // [!code --]
+- description: "Generated by create next app", // [!code --]
+- } // [!code --]
+  export const Route = createRootRoute({
+  head: () => ({
+  meta: [
+  { charSet: "utf-8" },
+  {
+  name: "viewport",
+  content: "width=device-width, initial-scale=1",
+  },
+  { title: "TanStack Start Starter" }
+  ],
+  links: [
+  {
+  rel: 'stylesheet',
+  href: appCss,
+  },
+  ],
+  }),
+  component: RootLayout,
+  })
 
+- export default function RootLayout({ // [!code --]
+- children, // [!code --]
+- }: Readonly) { // [!code --]
+- return ( // [!code --]
+- // [!code --]
+- {children} // [!code --]
+- // [!code --]
+- ) // [!code --]
+- } // [!code --]
+  function RootLayout() {
+  return (
 
-
-
-
-
-
-
- )
- }
-
-
-
- - import type { Metadata } from "next" // [!code --]
- import {
- Outlet,
- createRootRoute,
- HeadContent,
- Scripts,
- } from "@tanstack/react-router"
- import appCss from "./globals.css?url"
-
- - export const metadata: Metadata = { // [!code --]
- - title: "Create Next App", // [!code --]
- - description: "Generated by create next app", // [!code --]
- - } // [!code --]
- export const Route = createRootRoute({
- head: () => ({
- meta: [
- { charSet: "utf-8" },
- {
- name: "viewport",
- content: "width=device-width, initial-scale=1",
- },
- { title: "TanStack Start Starter" }
- ],
- links: [
- {
- rel: 'stylesheet',
- href: appCss,
- },
- ],
- }),
- component: RootLayout,
- })
-
- - export default function RootLayout({ // [!code --]
- - children, // [!code --]
- - }: Readonly) { // [!code --]
- - return ( // [!code --]
- - // [!code --]
- - {children} // [!code --]
- - // [!code --]
- - ) // [!code --]
- - } // [!code --]
- function RootLayout() {
- return (
-
-
-
-
-
-
-
-
-
- )
- }
-
+)
+}
 
 5\. Adapt the Home Page
 
 Instead of page.tsx, create an index.tsx file for the / route.
 
- * src/app/page.tsx to src/app/index.tsx
+- src/app/page.tsx to src/app/index.tsx
 
+* import { createFileRoute } from '@tanstack/react-router' // [!code ++]
 
+- export default function Home() { // [!code --]
 
- + import { createFileRoute } from '@tanstack/react-router' // [!code ++]
+* export const Route = createFileRoute('/')({ // [!code ++]
+* component: Home, // [!code ++]
+* }) // [!code ++]
 
- - export default function Home() { // [!code --]
- + export const Route = createFileRoute('/')({ // [!code ++]
- + component: Home, // [!code ++]
- + }) // [!code ++]
+* function Home() { // [!code ++]
+  return (
 
- + function Home() { // [!code ++]
- return (
+Next.js TanStack Start
 
+Docs
 
+)
+}
 
- Next.js TanStack Start
+- import { createFileRoute } from '@tanstack/react-router' // [!code ++]
 
+* export default function Home() { // [!code --]
 
- Docs
+- export const Route = createFileRoute('/')({ // [!code ++]
+- component: Home, // [!code ++]
+- }) // [!code ++]
 
+- function Home() { // [!code ++]
+  return (
 
- )
- }
+Next.js TanStack Start
 
+Docs
 
-
- + import { createFileRoute } from '@tanstack/react-router' // [!code ++]
-
- - export default function Home() { // [!code --]
- + export const Route = createFileRoute('/')({ // [!code ++]
- + component: Home, // [!code ++]
- + }) // [!code ++]
-
- + function Home() { // [!code ++]
- return (
-
-
-
- Next.js TanStack Start
-
-
- Docs
-
-
- )
- }
-
+)
+}
 
 6\. Are we migrated yet?
 
 Before you can run the development server, you need to create a file that will define the behavior of TanStack Router within TanStack Start.
 
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
 
- import { createRouter } from '@tanstack/react-router'
- import { routeTree } from './routeTree.gen'
+export function getRouter() {
+const router = createRouter({
+routeTree,
+scrollRestoration: true,
+})
 
- export function getRouter() {
- const router = createRouter({
- routeTree,
- scrollRestoration: true,
- })
+return router
+}
 
- return router
- }
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
 
+export function getRouter() {
+const router = createRouter({
+routeTree,
+scrollRestoration: true,
+})
 
-
- import { createRouter } from '@tanstack/react-router'
- import { routeTree } from './routeTree.gen'
-
- export function getRouter() {
- const router = createRouter({
- routeTree,
- scrollRestoration: true,
- })
-
- return router
- }
-
+return router
+}
 
 > 🧠 Here you can configure everything from the default preloading functionality to caching staleness.
 
@@ -406,14 +342,14 @@ Next Steps (Advanced)
 
 Now that you have migrated the basic structure of your Next.js application to TanStack Start, you can explore more advanced features and concepts.
 
-Routing Concepts Route Example| Next.js| TanStack Start
----|---|---
-Root Layout| src/app/layout.tsx| src/app/__root.tsx
-/ (Home Page)| src/app/page.tsx| src/app/index.tsx
-/posts (Static Route)| src/app/posts/page.tsx| src/app/posts.tsx
-/posts/[slug] (Dynamic)| src/app/posts/[slug]/page.tsx| src/app/posts/$slug.tsx
-/posts/[...slug] (Catch-All)| src/app/posts/[...slug]/page.tsx| src/app/posts/$.tsx
-/api/endpoint (API Route)| src/app/api/endpoint/route.ts| src/app/api/endpoint.ts
+| Routing Concepts Route Example | Next.js                          | TanStack Start          |
+| ------------------------------ | -------------------------------- | ----------------------- |
+| Root Layout                    | src/app/layout.tsx               | src/app/\_\_root.tsx    |
+| / (Home Page)                  | src/app/page.tsx                 | src/app/index.tsx       |
+| /posts (Static Route)          | src/app/posts/page.tsx           | src/app/posts.tsx       |
+| /posts/[slug] (Dynamic)        | src/app/posts/[slug]/page.tsx    | src/app/posts/$slug.tsx |
+| /posts/[...slug] (Catch-All)   | src/app/posts/[...slug]/page.tsx | src/app/posts/$.tsx     |
+| /api/endpoint (API Route)      | src/app/api/endpoint/route.ts    | src/app/api/endpoint.ts |
 
 Learn more about the Routing Concepts.
 
@@ -421,41 +357,43 @@ Dynamic and Catch-All Routes
 
 Retrieving dynamic route parameters in TanStack Start is straightforward.
 
+- export default async function Page({ // [!code --]
+- params, // [!code --]
+- }: { // [!code --]
+- params: Promise // [!code --]
+- }) { // [!code --]
 
- - export default async function Page({ // [!code --]
- - params, // [!code --]
- - }: { // [!code --]
- - params: Promise // [!code --]
- - }) { // [!code --]
- + export const Route = createFileRoute('/app/posts/$slug')({ // [!code ++]
- + component: Page, // [!code ++]
- + }) // [!code ++]
+* export const Route = createFileRoute('/app/posts/$slug')({ // [!code ++]
+* component: Page, // [!code ++]
+* }) // [!code ++]
 
- + function Page() { // [!code ++]
- - const { slug } = await params // [!code --]
- + const { slug } = Route.useParams() // [!code ++]
- return My Post: {slug}
- }
+* function Page() { // [!code ++]
 
+- const { slug } = await params // [!code --]
 
+* const { slug } = Route.useParams() // [!code ++]
+  return My Post: {slug}
+  }
 
- - export default async function Page({ // [!code --]
- - params, // [!code --]
- - }: { // [!code --]
- - params: Promise // [!code --]
- - }) { // [!code --]
- + export const Route = createFileRoute('/app/posts/$slug')({ // [!code ++]
- + component: Page, // [!code ++]
- + }) // [!code ++]
+- export default async function Page({ // [!code --]
+- params, // [!code --]
+- }: { // [!code --]
+- params: Promise // [!code --]
+- }) { // [!code --]
 
- + function Page() { // [!code ++]
- - const { slug } = await params // [!code --]
- + const { slug } = Route.useParams() // [!code ++]
- return My Post: {slug}
- }
+* export const Route = createFileRoute('/app/posts/$slug')({ // [!code ++]
+* component: Page, // [!code ++]
+* }) // [!code ++]
 
+* function Page() { // [!code ++]
 
-> Note: If you've made a catch-all route (like src/app/posts/$.tsx), you can access the parameters via const { _splat } = Route.useParams().
+- const { slug } = await params // [!code --]
+
+* const { slug } = Route.useParams() // [!code ++]
+  return My Post: {slug}
+  }
+
+> Note: If you've made a catch-all route (like src/app/posts/$.tsx), you can access the parameters via const { \_splat } = Route.useParams().
 
 Similarly, you can access searchParams using const { page, filter, sort } = Route.useSearch().
 
@@ -463,25 +401,27 @@ Learn more about the Dynamic and Catch-All Routes.
 
 Links
 
+- import Link from "next/link" // [!code --]
 
- - import Link from "next/link" // [!code --]
- + import { Link } from "@tanstack/react-router" // [!code ++]
+* import { Link } from "@tanstack/react-router" // [!code ++]
 
- function Component() {
- - return Dashboard // [!code --]
- + return Dashboard // [!code ++]
- }
+function Component() {
 
+- return Dashboard // [!code --]
 
+* return Dashboard // [!code ++]
+  }
 
- - import Link from "next/link" // [!code --]
- + import { Link } from "@tanstack/react-router" // [!code ++]
+- import Link from "next/link" // [!code --]
 
- function Component() {
- - return Dashboard // [!code --]
- + return Dashboard // [!code ++]
- }
+* import { Link } from "@tanstack/react-router" // [!code ++]
 
+function Component() {
+
+- return Dashboard // [!code --]
+
+* return Dashboard // [!code ++]
+  }
 
 Learn more about the Links.
 
@@ -489,199 +429,188 @@ Images
 
 Next.js uses the next/image component for optimized images. In TanStack Start, you can use the package called Unpic for similar functionality and almost a drop-in replacement.
 
+import Image from 'next/image' // [!code --]
+import { Image } from '@unpic/react' // [!code ++]
+function Component() {
+return (
 
- import Image from 'next/image' // [!code --]
- import { Image } from '@unpic/react' // [!code ++]
- function Component() {
- return (
+)
+}
 
- )
- }
+import Image from 'next/image' // [!code --]
+import { Image } from '@unpic/react' // [!code ++]
+function Component() {
+return (
 
-
-
- import Image from 'next/image' // [!code --]
- import { Image } from '@unpic/react' // [!code ++]
- function Component() {
- return (
-
- )
- }
-
+)
+}
 
 Server ~~Actions~~ Functions
 
+- 'use server' // [!code --]
 
- - 'use server' // [!code --]
- + import { createServerFn } from "@tanstack/react-start" // [!code ++]
+* import { createServerFn } from "@tanstack/react-start" // [!code ++]
 
- - export const create = async () => { // [!code --]
- + export const create = createServerFn().handler(async () => { // [!code ++]
- return true
- - } // [!code --]
- + }) // [!code ++]
+- export const create = async () => { // [!code --]
 
+* export const create = createServerFn().handler(async () => { // [!code ++]
+  return true
 
+- } // [!code --]
 
- - 'use server' // [!code --]
- + import { createServerFn } from "@tanstack/react-start" // [!code ++]
+* }) // [!code ++]
 
- - export const create = async () => { // [!code --]
- + export const create = createServerFn().handler(async () => { // [!code ++]
- return true
- - } // [!code --]
- + }) // [!code ++]
+- 'use server' // [!code --]
 
+* import { createServerFn } from "@tanstack/react-start" // [!code ++]
+
+- export const create = async () => { // [!code --]
+
+* export const create = createServerFn().handler(async () => { // [!code ++]
+  return true
+
+- } // [!code --]
+
+* }) // [!code ++]
 
 Learn more about the Server Functions.
 
 Server Routes ~~Handlers~~
 
+- export async function GET() { // [!code --]
 
- - export async function GET() { // [!code --]
- + export const Route = createFileRoute('/api/hello')({ // [!code ++]
- + server: { // [!code ++]
- + handlers: { // [!code ++]
- + GET: async () => { // [!code ++]
- + return Response.json("Hello, World!")
- + } // [!code ++]
- + } // [!code ++]
- + } // [!code ++]
- + }) // [!code ++]
+* export const Route = createFileRoute('/api/hello')({ // [!code ++]
+* server: { // [!code ++]
+* handlers: { // [!code ++]
+* GET: async () => { // [!code ++]
+* return Response.json("Hello, World!")
+* } // [!code ++]
+* } // [!code ++]
+* } // [!code ++]
+* }) // [!code ++]
 
+- export async function GET() { // [!code --]
 
-
- - export async function GET() { // [!code --]
- + export const Route = createFileRoute('/api/hello')({ // [!code ++]
- + server: { // [!code ++]
- + handlers: { // [!code ++]
- + GET: async () => { // [!code ++]
- + return Response.json("Hello, World!")
- + } // [!code ++]
- + } // [!code ++]
- + } // [!code ++]
- + }) // [!code ++]
-
+* export const Route = createFileRoute('/api/hello')({ // [!code ++]
+* server: { // [!code ++]
+* handlers: { // [!code ++]
+* GET: async () => { // [!code ++]
+* return Response.json("Hello, World!")
+* } // [!code ++]
+* } // [!code ++]
+* } // [!code ++]
+* }) // [!code ++]
 
 Learn more about the Server Routes.
 
 Fonts
 
+- import { Inter } from "next/font/google" // [!code --]
 
- - import { Inter } from "next/font/google" // [!code --]
+- const inter = Inter({ // [!code --]
+- subsets: ["latin"], // [!code --]
+- display: "swap", // [!code --]
+- }) // [!code --]
 
- - const inter = Inter({ // [!code --]
- - subsets: ["latin"], // [!code --]
- - display: "swap", // [!code --]
- - }) // [!code --]
+- export default function Page() { // [!code --]
+- return Font Sans // [!code --]
+- } // [!code --]
 
- - export default function Page() { // [!code --]
- - return Font Sans // [!code --]
- - } // [!code --]
+- import { Inter } from "next/font/google" // [!code --]
 
+- const inter = Inter({ // [!code --]
+- subsets: ["latin"], // [!code --]
+- display: "swap", // [!code --]
+- }) // [!code --]
 
-
- - import { Inter } from "next/font/google" // [!code --]
-
- - const inter = Inter({ // [!code --]
- - subsets: ["latin"], // [!code --]
- - display: "swap", // [!code --]
- - }) // [!code --]
-
- - export default function Page() { // [!code --]
- - return Font Sans // [!code --]
- - } // [!code --]
-
+- export default function Page() { // [!code --]
+- return Font Sans // [!code --]
+- } // [!code --]
 
 Instead of next/font, use Tailwind CSS’s CSS-first approach. Install fonts (for example, from Fontsource):
 
+npm i -D @fontsource-variable/dm-sans @fontsource-variable/jetbrains-mono
 
- npm i -D @fontsource-variable/dm-sans @fontsource-variable/jetbrains-mono
-
-
-
- npm i -D @fontsource-variable/dm-sans @fontsource-variable/jetbrains-mono
-
+npm i -D @fontsource-variable/dm-sans @fontsource-variable/jetbrains-mono
 
 Add the following to src/app/globals.css:
 
+@import 'tailwindcss';
 
- @import 'tailwindcss';
+@import '@fontsource-variable/dm-sans'; /_ [!code ++] _/
+@import '@fontsource-variable/jetbrains-mono'; /_ [!code ++] _/
 
- @import '@fontsource-variable/dm-sans'; /* [!code ++] */
- @import '@fontsource-variable/jetbrains-mono'; /* [!code ++] */
+@theme inline {
+--font-sans: 'DM Sans Variable', sans-serif; /_ [!code ++] _/
+--font-mono: 'JetBrains Mono Variable', monospace; /_ [!code ++] _/
+/_ ... _/
+}
 
- @theme inline {
- --font-sans: 'DM Sans Variable', sans-serif; /* [!code ++] */
- --font-mono: 'JetBrains Mono Variable', monospace; /* [!code ++] */
- /* ... */
- }
+/_ ... _/
 
- /* ... */
+@import 'tailwindcss';
 
+@import '@fontsource-variable/dm-sans'; /_ [!code ++] _/
+@import '@fontsource-variable/jetbrains-mono'; /_ [!code ++] _/
 
+@theme inline {
+--font-sans: 'DM Sans Variable', sans-serif; /_ [!code ++] _/
+--font-mono: 'JetBrains Mono Variable', monospace; /_ [!code ++] _/
+/_ ... _/
+}
 
- @import 'tailwindcss';
-
- @import '@fontsource-variable/dm-sans'; /* [!code ++] */
- @import '@fontsource-variable/jetbrains-mono'; /* [!code ++] */
-
- @theme inline {
- --font-sans: 'DM Sans Variable', sans-serif; /* [!code ++] */
- --font-mono: 'JetBrains Mono Variable', monospace; /* [!code ++] */
- /* ... */
- }
-
- /* ... */
-
+/_ ... _/
 
 Fetching Data
 
+- export default async function Page() { // [!code --]
 
- - export default async function Page() { // [!code --]
- + export const Route = createFileRoute('/')({ // [!code ++]
- + component: Page, // [!code ++]
- + loader: async () => { // [!code ++]
- + const res = await fetch('https://api.vercel.app/blog') // [!code ++]
- + return res.json() // [!code ++]
- + }, // [!code ++]
- + }) // [!code ++]
+* export const Route = createFileRoute('/')({ // [!code ++]
+* component: Page, // [!code ++]
+* loader: async () => { // [!code ++]
+* const res = await fetch('https://api.vercel.app/blog') // [!code ++]
+* return res.json() // [!code ++]
+* }, // [!code ++]
+* }) // [!code ++]
 
- + function Page() { // [!code ++]
- - const data = await fetch('https://api.vercel.app/blog') // [!code --]
- - const posts = await data.json() // [!code --]
- + const posts = Route.useLoaderData() // [!code ++]
+* function Page() { // [!code ++]
 
- return (
+- const data = await fetch('https://api.vercel.app/blog') // [!code --]
+- const posts = await data.json() // [!code --]
 
- {posts.map((post) => (
- {post.title}
- ))}
+* const posts = Route.useLoaderData() // [!code ++]
 
- )
- }
+return (
 
+{posts.map((post) => (
+{post.title}
+))}
 
+)
+}
 
- - export default async function Page() { // [!code --]
- + export const Route = createFileRoute('/')({ // [!code ++]
- + component: Page, // [!code ++]
- + loader: async () => { // [!code ++]
- + const res = await fetch('https://api.vercel.app/blog') // [!code ++]
- + return res.json() // [!code ++]
- + }, // [!code ++]
- + }) // [!code ++]
+- export default async function Page() { // [!code --]
 
- + function Page() { // [!code ++]
- - const data = await fetch('https://api.vercel.app/blog') // [!code --]
- - const posts = await data.json() // [!code --]
- + const posts = Route.useLoaderData() // [!code ++]
+* export const Route = createFileRoute('/')({ // [!code ++]
+* component: Page, // [!code ++]
+* loader: async () => { // [!code ++]
+* const res = await fetch('https://api.vercel.app/blog') // [!code ++]
+* return res.json() // [!code ++]
+* }, // [!code ++]
+* }) // [!code ++]
 
- return (
+* function Page() { // [!code ++]
 
- {posts.map((post) => (
- {post.title}
- ))}
+- const data = await fetch('https://api.vercel.app/blog') // [!code --]
+- const posts = await data.json() // [!code --]
 
- )
- }
+* const posts = Route.useLoaderData() // [!code ++]
+
+return (
+
+{posts.map((post) => (
+{post.title}
+))}
+
+)
+}

@@ -1,9 +1,10 @@
 ---
 title: Client | Better Auth
-url: 
+url:
 description: Better Auth client library for authentication.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Better Auth offers a client library compatible with popular frontend frameworks like React, Vue, Svelte, and more. This client library includes a set of functions for interacting with the Better Auth server. Each framework's client library is built on top of a core client library that is framework-agnostic, so that all methods and hooks are consistently available across all client libraries.
 
-## [Installation](https://www.better-auth.com/docs/concepts/client\#installation)
+## [Installation](https://www.better-auth.com/docs/concepts/client#installation)
 
 If you haven't already, install better-auth.
 
@@ -44,7 +45,7 @@ bun
 npm i better-auth
 ```
 
-## [Create Client Instance](https://www.better-auth.com/docs/concepts/client\#create-client-instance)
+## [Create Client Instance](https://www.better-auth.com/docs/concepts/client#create-client-instance)
 
 Import `createAuthClient` from the package for your framework (e.g., "better-auth/react" for React). Call the function to create your client. Pass the base URL of your auth server. If the auth server is running on the same domain as your client, you can skip this step.
 
@@ -97,7 +98,7 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/concepts/client\#usage)
+## [Usage](https://www.better-auth.com/docs/concepts/client#usage)
 
 Once you've created your client instance, you can use the client to interact with the Better Auth server. The client provides a set of functions by default and they can be extended with plugins.
 
@@ -115,7 +116,7 @@ await authClient.signIn.email({
 })
 ```
 
-### [Hooks](https://www.better-auth.com/docs/concepts/client\#hooks)
+### [Hooks](https://www.better-auth.com/docs/concepts/client#hooks)
 
 In addition to the standard methods, the client provides hooks to easily access different reactive data. Every hook is available in the root object of the client and they all start with `use`.
 
@@ -229,7 +230,7 @@ export default function Home() {
 }
 ```
 
-### [Fetch Options](https://www.better-auth.com/docs/concepts/client\#fetch-options)
+### [Fetch Options](https://www.better-auth.com/docs/concepts/client#fetch-options)
 
 The client uses a library called [better fetch](https://better-fetch.vercel.app/) to make requests to the server.
 
@@ -276,7 +277,7 @@ await authClient.signIn.email({
 })
 ```
 
-### [Handling Errors](https://www.better-auth.com/docs/concepts/client\#handling-errors)
+### [Handling Errors](https://www.better-auth.com/docs/concepts/client#handling-errors)
 
 Most of the client functions return a response object with the following properties:
 
@@ -339,9 +340,9 @@ if (error) {
 }
 ```
 
-#### [Error Codes](https://www.better-auth.com/docs/concepts/client\#error-codes)
+#### [Error Codes](https://www.better-auth.com/docs/concepts/client#error-codes)
 
-The client instance contains $ERROR\_CODES object that contains all the error codes returned by the server. You can use this to handle error translations or custom error messages.
+The client instance contains $ERROR_CODES object that contains all the error codes returned by the server. You can use this to handle error translations or custom error messages.
 
 auth-client.ts
 
@@ -382,7 +383,7 @@ if(error?.code){
 }
 ```
 
-### [Plugins](https://www.better-auth.com/docs/concepts/client\#plugins)
+### [Plugins](https://www.better-auth.com/docs/concepts/client#plugins)
 
 You can extend the client with plugins to add more functionality. Plugins can add new functions to the client or modify existing ones.
 

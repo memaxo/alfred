@@ -11,6 +11,7 @@ Found **9 distinct magic list patterns** across the codebase. These hardcoded wo
 ## Magic Lists Found
 
 ### 1. Risk Assessment Keywords
+
 **Location**: `packages/cognitive/src/logic/autonomy.ts:7-8`
 
 ```typescript
@@ -18,7 +19,8 @@ const highRiskKeywords = ["delete", "remove", "destroy", "purchase", "pay"];
 const mediumRiskKeywords = ["update", "modify", "change", "send", "email"];
 ```
 
-**Problem**: 
+**Problem**:
+
 - Misses synonyms ("erase", "terminate", "buy")
 - False positives ("delete" in "delete this file" vs "delete this comment")
 - No context awareness
@@ -28,6 +30,7 @@ const mediumRiskKeywords = ["update", "modify", "change", "send", "email"];
 ---
 
 ### 2. Preference Inference Hints
+
 **Location**: `packages/agent/src/preference/inference.ts:14-33`
 
 ```typescript
@@ -54,6 +57,7 @@ const FORMAT_HINTS: Record<ResponseFormat, string[]> = {
 ```
 
 **Problem**:
+
 - Limited vocabulary coverage
 - No semantic understanding
 - Brittle substring matching
@@ -63,6 +67,7 @@ const FORMAT_HINTS: Record<ResponseFormat, string[]> = {
 ---
 
 ### 3. Tone Detection Regex Patterns
+
 **Location**: `packages/agent/src/preference/inference.ts:40-45`
 
 ```typescript
@@ -75,6 +80,7 @@ const toneHeuristics = {
 ```
 
 **Problem**:
+
 - Extremely limited word coverage
 - Regex patterns are brittle
 - No context awareness
@@ -84,6 +90,7 @@ const toneHeuristics = {
 ---
 
 ### 4. Causal Markers
+
 **Location**: `packages/knowledge/src/extractor.ts:37-48`
 
 ```typescript
@@ -102,6 +109,7 @@ const CAUSAL_MARKERS = [
 ```
 
 **Problem**:
+
 - Misses implicit causality
 - No semantic understanding of causal relationships
 - Language-specific
@@ -111,6 +119,7 @@ const CAUSAL_MARKERS = [
 ---
 
 ### 5. Confidence Modifiers
+
 **Location**: `packages/knowledge/src/extractor.ts:51-58`
 
 ```typescript
@@ -125,6 +134,7 @@ const CONFIDENCE_MODIFIERS = {
 ```
 
 **Problem**:
+
 - Hardcoded confidence values
 - No context-dependent confidence
 - Limited vocabulary
@@ -134,6 +144,7 @@ const CONFIDENCE_MODIFIERS = {
 ---
 
 ### 6. Decision Markers
+
 **Location**: `packages/knowledge/src/extractor.ts:495-502`
 
 ```typescript
@@ -148,6 +159,7 @@ const DECISION_MARKERS = [
 ```
 
 **Problem**:
+
 - "will" is too generic (false positives)
 - Misses implicit decisions
 - No semantic understanding
@@ -157,6 +169,7 @@ const DECISION_MARKERS = [
 ---
 
 ### 7. Alternative Markers
+
 **Location**: `packages/knowledge/src/extractor.ts:520-526`
 
 ```typescript
@@ -170,6 +183,7 @@ const ALTERNATIVE_MARKERS = [
 ```
 
 **Problem**:
+
 - "but" and "though" are too generic
 - Misses implicit alternatives
 - No semantic understanding
@@ -179,6 +193,7 @@ const ALTERNATIVE_MARKERS = [
 ---
 
 ### 8. Negation Words
+
 **Location**: `packages/knowledge/src/extractor.ts:337`
 
 ```typescript
@@ -186,6 +201,7 @@ const negations = ["not", "no", "never", "none", "neither"];
 ```
 
 **Problem**:
+
 - Incomplete list (misses "nobody", "nothing", "nowhere", etc.)
 - No semantic negation understanding
 - Language-specific
@@ -195,17 +211,40 @@ const negations = ["not", "no", "never", "none", "neither"];
 ---
 
 ### 9. Stop Words
+
 **Location**: `packages/knowledge/src/query.ts:758-783`
 
 ```typescript
 const STOP_WORDS = new Set([
-  "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-  "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
-  "to", "was", "will", "with",
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "has",
+  "he",
+  "in",
+  "is",
+  "it",
+  "its",
+  "of",
+  "on",
+  "that",
+  "the",
+  "to",
+  "was",
+  "will",
+  "with",
 ]);
 ```
 
 **Problem**:
+
 - Incomplete list (only 24 words, standard lists have 100+)
 - No domain-specific stop words
 - Hardcoded English-only
@@ -217,16 +256,19 @@ const STOP_WORDS = new Set([
 ## Impact Assessment
 
 ### High Impact (User-Facing)
+
 1. **Risk Assessment Keywords** - Affects autonomy gating, security decisions
 2. **Preference Inference Hints** - Affects user experience, response quality
 3. **Tone Detection** - Affects response personalization
 
 ### Medium Impact (Internal Logic)
+
 4. **Causal Markers** - Affects knowledge extraction quality
 5. **Decision/Alternative Markers** - Affects reasoning trace extraction
 6. **Stop Words** - Affects query quality
 
 ### Low Impact (Edge Cases)
+
 7. **Confidence Modifiers** - Has fallback defaults
 8. **Negation Words** - Used in contradiction detection (rare)
 
@@ -235,19 +277,23 @@ const STOP_WORDS = new Set([
 ## Recommended Strategies
 
 ### Strategy 1: Semantic Embeddings (Preferred)
+
 **For**: Preference inference, tone detection, risk assessment
 
 **Approach**:
+
 - Use `@alfred/embed` to generate embeddings for user text
 - Compare against learned embeddings of preference examples
 - Use cosine similarity instead of keyword matching
 
 **Benefits**:
+
 - Handles synonyms and paraphrasing
 - Language-agnostic (with multilingual embeddings)
 - Learns from user behavior
 
 **Implementation**:
+
 - Create `packages/agent/src/preference/semantic.ts`
 - Replace keyword matching with embedding similarity
 - Cache preference embeddings in memory
@@ -255,19 +301,23 @@ const STOP_WORDS = new Set([
 ---
 
 ### Strategy 2: Graph-Based Classification (Emergent)
+
 **For**: Domain detection, risk assessment, causal relationships
 
 **Approach**:
+
 - Use knowledge graph topology instead of keyword lists
 - Seed graph with anchor concepts (e.g., `Concept:HighRisk`, `Concept:Coding`)
 - Classify by proximity to anchors in graph
 
 **Benefits**:
+
 - Self-improving (graph grows over time)
 - Context-aware (considers relationships)
 - No hardcoded lists
 
 **Implementation**:
+
 - Follow `docs/execplans/holonic-architecture-phase-2.md`
 - Replace keyword matching with graph traversal
 - Use `findNearestConcept()` from `packages/db/src/repo/graph/traverse.ts`
@@ -275,19 +325,23 @@ const STOP_WORDS = new Set([
 ---
 
 ### Strategy 3: Learned Patterns (ML-Based)
+
 **For**: Causal markers, decision markers, negation
 
 **Approach**:
+
 - Train small classifiers on labeled examples
 - Use compromise.js for syntactic patterns
 - Combine with semantic embeddings
 
 **Benefits**:
+
 - Learns from data
 - Handles edge cases
 - Improves over time
 
 **Implementation**:
+
 - Create `packages/knowledge/src/patterns/` module
 - Use compromise.js for syntactic extraction
 - Add semantic embeddings for disambiguation
@@ -295,19 +349,23 @@ const STOP_WORDS = new Set([
 ---
 
 ### Strategy 4: Hybrid Approach (Pragmatic)
+
 **For**: Stop words, confidence modifiers
 
 **Approach**:
+
 - Keep minimal lists as fallback
 - Add semantic filtering layer
 - Use TF-IDF for domain-specific stop words
 
 **Benefits**:
+
 - Fast fallback for common cases
 - Semantic layer handles edge cases
 - Domain-aware filtering
 
 **Implementation**:
+
 - Expand `STOP_WORDS` to standard English list (100+ words)
 - Add semantic filtering for domain-specific terms
 - Use TF-IDF to identify domain stop words dynamically
@@ -317,16 +375,19 @@ const STOP_WORDS = new Set([
 ## Migration Priority
 
 ### Phase 1: High-Impact Replacements (Q1)
+
 1. **Preference Inference** → Semantic embeddings
 2. **Risk Assessment** → Graph-based classification
 3. **Tone Detection** → Semantic embeddings
 
 ### Phase 2: Medium-Impact Improvements (Q2)
+
 4. **Causal Markers** → Learned patterns + embeddings
 5. **Decision/Alternative Markers** → Syntactic patterns + embeddings
 6. **Stop Words** → Expanded list + TF-IDF filtering
 
 ### Phase 3: Low-Impact Cleanup (Q3)
+
 7. **Confidence Modifiers** → Context-dependent confidence
 8. **Negation Words** → Syntactic negation detection
 
@@ -347,4 +408,3 @@ const STOP_WORDS = new Set([
 2. Implement graph-based risk assessment
 3. Expand stop words list as interim solution
 4. Add telemetry to measure magic list failure rates
-

@@ -1,9 +1,10 @@
 ---
 title: bun add – Package manager | Bun Docs
-url: 
+url:
 description: Add dependencies to your project.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -72,7 +73,7 @@ bun add zod@^3.0.0
 bun add zod@latest
 ```
 
-## [`--dev`](https://bun.com/docs/cli/add\#dev)
+## [`--dev`](https://bun.com/docs/cli/add#dev)
 
 **Alias** — `--development`, `-d`, `-D`
 
@@ -86,7 +87,7 @@ bun add --dev @types/react
 bun add -d @types/react
 ```
 
-## [`--optional`](https://bun.com/docs/cli/add\#optional)
+## [`--optional`](https://bun.com/docs/cli/add#optional)
 
 To add a package as an optional dependency ( `"optionalDependencies"`):
 
@@ -94,7 +95,7 @@ To add a package as an optional dependency ( `"optionalDependencies"`):
 bun add --optional lodash
 ```
 
-## [`--peer`](https://bun.com/docs/cli/add\#peer)
+## [`--peer`](https://bun.com/docs/cli/add#peer)
 
 To add a package as a peer dependency ( `"peerDependencies"`):
 
@@ -102,7 +103,7 @@ To add a package as a peer dependency ( `"peerDependencies"`):
 bun add --peer @types/bun
 ```
 
-## [`--exact`](https://bun.com/docs/cli/add\#exact)
+## [`--exact`](https://bun.com/docs/cli/add#exact)
 
 **Alias** — `-E`
 
@@ -137,7 +138,7 @@ To view a complete list of options for this command:
 bun add --help
 ```
 
-## [`--global`](https://bun.com/docs/cli/add\#global)
+## [`--global`](https://bun.com/docs/cli/add#global)
 
 **Note** — This would not modify package.json of your current project folder. **Alias** \- `bun add --global`, `bun add -g`, `bun install --global` and `bun install -g`
 
@@ -174,7 +175,7 @@ globalBinDir = "~/.bun/bin"
 
 ```
 
-## [Trusted dependencies](https://bun.com/docs/cli/add\#trusted-dependencies)
+## [Trusted dependencies](https://bun.com/docs/cli/add#trusted-dependencies)
 
 Unlike other npm clients, Bun does not execute arbitrary lifecycle scripts for installed dependencies, such as `postinstall`. These scripts represent a potential security risk, as they can execute arbitrary code on your machine.
 
@@ -190,7 +191,7 @@ To tell Bun to allow lifecycle scripts for a particular package, add the package
 
 Bun reads this field and will run lifecycle scripts for `my-trusted-package`.
 
-## [Git dependencies](https://bun.com/docs/cli/add\#git-dependencies)
+## [Git dependencies](https://bun.com/docs/cli/add#git-dependencies)
 
 To add a dependency from a public or private git repository:
 
@@ -214,7 +215,7 @@ Bun supports a variety of protocols, including [`github`](https://docs.npmjs.com
 
 ```
 
-## [Tarball dependencies](https://bun.com/docs/cli/add\#tarball-dependencies)
+## [Tarball dependencies](https://bun.com/docs/cli/add#tarball-dependencies)
 
 A package name can correspond to a publicly hosted `.tgz` file. During installation, Bun will download and install the package from the specified tarball URL, rather than from the package registry.
 
@@ -421,7 +422,7 @@ Full documentation is available at https://bun.sh/docs/cli/add.
 \\
 `bun remove`](https://bun.com/docs/cli/remove)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/add.md)
 
@@ -445,7 +446,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

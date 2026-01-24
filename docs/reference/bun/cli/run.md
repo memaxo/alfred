@@ -1,9 +1,10 @@
 ---
 title: bun run – Runtime | Bun Docs
-url: 
+url:
 description: Use `bun run` to execute JavaScript/TypeScript files and package.json scripts.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 The `bun` CLI can be used to execute JavaScript/TypeScript files, `package.json` scripts, and [executable packages](https://docs.npmjs.com/cli/v9/configuring-npm/package-json#bin).
 
-## [Performance](https://bun.com/docs/cli/run\#performance)
+## [Performance](https://bun.com/docs/cli/run#performance)
 
 Bun is designed to start fast and run fast.
 
@@ -65,7 +66,7 @@ Under the hood Bun uses the [JavaScriptCore engine](https://developer.apple.com/
 
 Running a simple Hello World script on Linux
 
-## [Run a file](https://bun.com/docs/cli/run\#run-a-file)
+## [Run a file](https://bun.com/docs/cli/run#run-a-file)
 
 Compare to `node <file>`
 
@@ -103,7 +104,7 @@ bun index.tsx
 bun index.js
 ```
 
-### [`--watch`](https://bun.com/docs/cli/run\#watch)
+### [`--watch`](https://bun.com/docs/cli/run#watch)
 
 To run a file in watch mode, use the `--watch` flag.
 
@@ -123,7 +124,7 @@ bun run dev --watch # ❌ don't do this
 
 Flags that occur at the end of the command will be ignored and passed through to the `"dev"` script itself.
 
-## [Run a `package.json` script](https://bun.com/docs/cli/run\#run-a-package-json-script)
+## [Run a `package.json` script](https://bun.com/docs/cli/run#run-a-package-json-script)
 
 Compare to `npm run <script>` or `yarn <script>`
 
@@ -186,9 +187,9 @@ quickstart scripts:
 
 Bun respects lifecycle hooks. For instance, `bun run clean` will execute `preclean` and `postclean`, if defined. If the `pre<script>` fails, Bun will not execute the script itself.
 
-### [`--bun`](https://bun.com/docs/cli/run\#bun)
+### [`--bun`](https://bun.com/docs/cli/run#bun)
 
-It's common for `package.json` scripts to reference locally-installed CLIs like `vite` or `next`. These CLIs are often JavaScript files marked with a [shebang](https://en.wikipedia.org/wiki/Shebang_(Unix)) to indicate that they should be executed with `node`.
+It's common for `package.json` scripts to reference locally-installed CLIs like `vite` or `next`. These CLIs are often JavaScript files marked with a [shebang](<https://en.wikipedia.org/wiki/Shebang_(Unix)>) to indicate that they should be executed with `node`.
 
 ```
 #!/usr/bin/env node
@@ -203,7 +204,7 @@ By default, Bun respects this shebang and executes the script with `node`. Howev
 bun run --bun vite
 ```
 
-### [Filtering](https://bun.com/docs/cli/run\#filtering)
+### [Filtering](https://bun.com/docs/cli/run#filtering)
 
 In monorepos containing multiple packages, you can use the `--filter` argument to execute scripts in many packages at once.
 
@@ -218,7 +219,7 @@ will execute `<script>` in both `bar` and `baz`, but not in `foo`.
 
 Find more details in the docs page for [filter](https://bun.com/docs/cli/filter#running-scripts-with-filter).
 
-## [`bun run -` to pipe code from stdin](https://bun.com/docs/cli/run\#bun-run-to-pipe-code-from-stdin)
+## [`bun run -` to pipe code from stdin](https://bun.com/docs/cli/run#bun-run-to-pipe-code-from-stdin)
 
 `bun run -` lets you read JavaScript, TypeScript, TSX, or JSX from stdin and execute it without writing to a temporary file first.
 
@@ -246,7 +247,7 @@ This is TypeScript!
 
 For convenience, all code is treated as TypeScript with JSX support when using `bun run -`.
 
-## [`bun run --console-depth`](https://bun.com/docs/cli/run\#bun-run-console-depth)
+## [`bun run --console-depth`](https://bun.com/docs/cli/run#bun-run-console-depth)
 
 Control the depth of object inspection in console output with the `--console-depth` flag.
 
@@ -264,7 +265,7 @@ console.log(nested);
 
 ```
 
-## [`bun run --smol`](https://bun.com/docs/cli/run\#bun-run-smol)
+## [`bun run --smol`](https://bun.com/docs/cli/run#bun-run-smol)
 
 In memory-constrained environments, use the `--smol` flag to reduce memory usage at a cost to performance.
 
@@ -274,7 +275,7 @@ bun --smol run index.tsx
 
 This causes the garbage collector to run more frequently, which can slow down execution. However, it can be useful in environments with limited memory. Bun automatically adjusts the garbage collector's heap size based on the available memory (accounting for cgroups and other memory limits) with and without the `--smol` flag, so this is mostly useful for cases where you want to make the heap size grow more slowly.
 
-## [Resolution order](https://bun.com/docs/cli/run\#resolution-order)
+## [Resolution order](https://bun.com/docs/cli/run#resolution-order)
 
 Absolute paths and paths starting with `./` or `.\\` are always executed as source files. Unless using `bun run`, running a file with an allowed extension will prefer the file over a package.json script.
 
@@ -367,7 +368,7 @@ Disable auto install in the Bun runtime
 
 --install=<val>
 
-Configure auto-install behavior. One of "auto" (default, auto-installs when no node\_modules), "fallback" (missing packages only), "force" (always).
+Configure auto-install behavior. One of "auto" (default, auto-installs when no node_modules), "fallback" (missing packages only), "force" (always).
 
 -i
 
@@ -423,7 +424,7 @@ Specify custom tsconfig.json. Default <d>$cwd<r>/tsconfig.json
 
 -d,--define=<val>
 
-Substitute K:V while parsing, e.g. --define process.env.NODE\_ENV:"development". Values are parsed as JSON.
+Substitute K:V while parsing, e.g. --define process.env.NODE_ENV:"development". Values are parsed as JSON.
 
 --drop=<val>
 
@@ -507,7 +508,7 @@ Set the default order of DNS lookup results. Valid orders: verbatim (default), i
 
 --redis-preconnect
 
-Preconnect to $REDIS\_URL at startup
+Preconnect to $REDIS_URL at startup
 
 #### Global Configuration
 
@@ -551,7 +552,7 @@ Full documentation is available at https://bun.sh/docs/cli/run
 \\
 File types](https://bun.com/docs/runtime/loaders)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/run.md)
 
@@ -575,7 +576,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -113,13 +113,13 @@ Important constraints (what makes Harbor evals tricky here):
 
 We will implement four Harbor eval “suites” (one per ROI category), each represented by at least one Harbor task directory produced by `bun harbor:dataset`:
 
-1) Harness correctness: `atif`
+1. Harness correctness: `atif`
 
-2) SWE-bench-like patch tasks: `failtest` and `regress`
+2. SWE-bench-like patch tasks: `failtest` and `regress`
 
-3) ALFRED-runtime behaviors: `stuck` (plus an optional second task for a safety cap if we can make it deterministic)
+3. ALFRED-runtime behaviors: `stuck` (plus an optional second task for a safety cap if we can make it deterministic)
 
-4) Context / retrieval: `context` (local-only, no network)
+4. Context / retrieval: `context` (local-only, no network)
 
 The work will be done by extending the dataset generator to produce these tasks, and by adding fixture workspaces under `harbor/fixtures/<taskId>/workspace/` that get copied into each generated task’s `workspace/` directory.
 
@@ -268,4 +268,3 @@ ALFRED-side implementation building blocks to reuse:
 - Orchestrator runner (yields `WorkflowEvent`): `packages/runtime/src/orchestrator/index.ts` (`runOrchestrator`)
 
 When changing any of the above contracts, update this ExecPlan’s `Decision Log` and add evidence in `Surprises & Discoveries`.
-

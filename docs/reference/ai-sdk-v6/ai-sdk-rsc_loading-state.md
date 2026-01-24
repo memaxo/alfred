@@ -10,9 +10,9 @@ Given that responses from language models can often take a while to complete, it
 
 There are three approaches you can take to handle loading state with the AI SDK RSC:
 
-  * Managing loading state similar to how you would in a traditional Next.js application. This involves setting a loading state variable in the client and updating it when the response is received.
-  * Streaming loading state from the server to the client. This approach allows you to track loading state on a more granular level and provide more detailed feedback to the user.
-  * Streaming loading component from the server to the client. This approach allows you to stream a React Server Component to the client while awaiting the model's response.
+- Managing loading state similar to how you would in a traditional Next.js application. This involves setting a loading state variable in the client and updating it when the response is received.
+- Streaming loading state from the server to the client. This approach allows you to track loading state on a more granular level and provide more detailed feedback to the user.
+- Streaming loading component from the server to the client. This approach allows you to stream a React Server Component to the client while awaiting the model's response.
 
 ## Handling Loading State on the Client
 
@@ -21,94 +21,93 @@ There are three approaches you can take to handle loading state with the AI SDK 
 Let's create a simple Next.js page that will call the `generateResponse` function when the form is submitted. The function will take in the user's prompt (`input`) and then generate a response (`response`). To handle the loading state, use the `loading` state variable. When the form is submitted, set `loading` to `true`, and when the response is received, set it back to `false`. While the response is being streamed, the input field will be disabled.
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useState } from 'react';
-    
+
     import { generateResponse } from './actions';
-    
+
     import { readStreamableValue } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     // Force the page to be dynamic and allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export default function Home() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const [generation, setGeneration] = useState('');
-    
+
       const [loading, setLoading] = useState(false);
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {generation}
-    
+
            {
-    
+
               e.preventDefault();
-    
+
               setLoading(true);
-    
+
               const response = await generateResponse(input);
-    
-    
-    
-    
+
+
+
+
               let textContent = '';
-    
-    
-    
-    
+
+
+
+
               for await (const delta of readStreamableValue(response)) {
-    
+
                 textContent = `${textContent}${delta}`;
-    
+
                 setGeneration(textContent);
-    
+
               }
-    
+
               setInput('');
-    
+
               setLoading(false);
-    
+
             }}
-    
+
           >
-    
+
              {
-    
+
                 setInput(event.target.value);
-    
+
               }}
-    
+
             />
-    
+
             Send Message
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 ### Server
@@ -116,60 +115,59 @@ app/page.tsx
 Now let's implement the `generateResponse` function. Use the `streamText` function to generate a response to the input.
 
 app/actions.ts
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import { streamText } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { createStreamableValue } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export async function generateResponse(prompt: string) {
-    
+
       const stream = createStreamableValue();
-    
-    
-    
-    
+
+
+
+
       (async () => {
-    
+
         const { textStream } = streamText({
-    
+
           model: openai('gpt-4o'),
-    
+
           prompt,
-    
+
         });
-    
-    
-    
-    
+
+
+
+
         for await (const text of textStream) {
-    
+
           stream.update(text);
-    
+
         }
-    
-    
-    
-    
+
+
+
+
         stream.done();
-    
+
       })();
-    
-    
-    
-    
+
+
+
+
       return stream.value;
-    
+
     }
 
 ## Streaming Loading State from the Server
@@ -179,286 +177,282 @@ If you are looking to track loading state on a more granular level, you can crea
 ### Server
 
 app/actions.ts
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import { streamText } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { createStreamableValue } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export async function generateResponse(prompt: string) {
-    
+
       const stream = createStreamableValue();
-    
+
       const loadingState = createStreamableValue({ loading: true });
-    
-    
-    
-    
+
+
+
+
       (async () => {
-    
+
         const { textStream } = streamText({
-    
+
           model: openai('gpt-4o'),
-    
+
           prompt,
-    
+
         });
-    
-    
-    
-    
+
+
+
+
         for await (const text of textStream) {
-    
+
           stream.update(text);
-    
+
         }
-    
-    
-    
-    
+
+
+
+
         stream.done();
-    
+
         loadingState.done({ loading: false });
-    
+
       })();
-    
-    
-    
-    
+
+
+
+
       return { response: stream.value, loadingState: loadingState.value };
-    
+
     }
 
 ### Client
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useState } from 'react';
-    
+
     import { generateResponse } from './actions';
-    
+
     import { readStreamableValue } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     // Force the page to be dynamic and allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export default function Home() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const [generation, setGeneration] = useState('');
-    
+
       const [loading, setLoading] = useState(false);
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {generation}
-    
+
            {
-    
+
               e.preventDefault();
-    
+
               setLoading(true);
-    
+
               const { response, loadingState } = await generateResponse(input);
-    
-    
-    
-    
+
+
+
+
               let textContent = '';
-    
-    
-    
-    
+
+
+
+
               for await (const responseDelta of readStreamableValue(response)) {
-    
+
                 textContent = `${textContent}${responseDelta}`;
-    
+
                 setGeneration(textContent);
-    
+
               }
-    
+
               for await (const loadingDelta of readStreamableValue(loadingState)) {
-    
+
                 if (loadingDelta) {
-    
+
                   setLoading(loadingDelta.loading);
-    
+
                 }
-    
+
               }
-    
+
               setInput('');
-    
+
               setLoading(false);
-    
+
             }}
-    
+
           >
-    
+
              {
-    
+
                 setInput(event.target.value);
-    
+
               }}
-    
+
             />
-    
+
             Send Message
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 This allows you to provide more detailed feedback about the generation process to your users.
 
 ## Streaming Loading Components with `streamUI`
 
-If you are using the  `streamUI` function, you can stream the loading state to the client in the form of a React component. `streamUI` supports the usage of  JavaScript generator functions , which allow you to yield some value (in this case a React component) while some other blocking work completes.
+If you are using the `streamUI` function, you can stream the loading state to the client in the form of a React component. `streamUI` supports the usage of JavaScript generator functions , which allow you to yield some value (in this case a React component) while some other blocking work completes.
 
 ## Server
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamUI } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export async function generateResponse(prompt: string) {
-    
+
       const result = await streamUI({
-    
+
         model: openai('gpt-4o'),
-    
+
         prompt,
-    
+
         text: async function* ({ content }) {
-    
+
           yield loading...;
-    
+
           return {content};
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.value;
-    
+
     }
 
 Remember to update the file from `.ts` to `.tsx` because you are defining a React component in the `streamUI` function.
 
 ## Client
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useState } from 'react';
-    
+
     import { generateResponse } from './actions';
-    
+
     import { readStreamableValue } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     // Force the page to be dynamic and allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export default function Home() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const [generation, setGeneration] = useState();
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {generation}
-    
+
            {
-    
+
               e.preventDefault();
-    
+
               const result = await generateResponse(input);
-    
+
               setGeneration(result);
-    
+
               setInput('');
-    
+
             }}
-    
+
           >
-    
+
              {
-    
+
                 setInput(event.target.value);
-    
+
               }}
-    
+
             />
-    
+
             Send Message
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 Previous

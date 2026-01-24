@@ -9,40 +9,38 @@ Tool is a helper function that infers the tool input for its `execute` method.
 It does not have any runtime behavior, but it helps TypeScript infer the types of the input for the `execute` method.
 
 Without this helper function, TypeScript is unable to connect the `inputSchema` property to the `execute` method, and the argument types of `execute` cannot be inferred.
-    
-    
+
     import { tool } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     export const weatherTool = tool({
-    
+
       description: 'Get the weather in a location',
-    
+
       inputSchema: z.object({
-    
+
         location: z.string().describe('The location to get the weather for'),
-    
+
       }),
-    
+
       // location below is inferred to be a string:
-    
+
       execute: async ({ location }) => ({
-    
+
         location,
-    
+
         temperature: 72 + Math.floor(Math.random() * 21) - 10,
-    
+
       }),
-    
+
     });
 
 ## Import
-    
-    
+
     import { tool } from "ai"
 
 ## API Signature

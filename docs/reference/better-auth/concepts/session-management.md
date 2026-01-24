@@ -1,9 +1,10 @@
 ---
 title: Session Management | Better Auth
-url: 
+url:
 description: Better Auth session management.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Better Auth manages session using a traditional cookie-based session management. The session is stored in a cookie and is sent to the server on every request. The server then verifies the session and returns the user data if the session is valid.
 
-## [Session table](https://www.better-auth.com/docs/concepts/session-management\#session-table)
+## [Session table](https://www.better-auth.com/docs/concepts/session-management#session-table)
 
 The session table stores the session data. The session table has the following fields:
 
@@ -38,7 +39,7 @@ The session table stores the session data. The session table has the following f
 - `ipAddress`: The IP address of the user.
 - `userAgent`: The user agent of the user. It stores the user agent header from the request.
 
-## [Session Expiration](https://www.better-auth.com/docs/concepts/session-management\#session-expiration)
+## [Session Expiration](https://www.better-auth.com/docs/concepts/session-management#session-expiration)
 
 The session expires after 7 days by default. But whenever the session is used and the `updateAge` is reached, the session expiration is updated to the current time plus the `expiresIn` value.
 
@@ -58,7 +59,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Disable Session Refresh](https://www.better-auth.com/docs/concepts/session-management\#disable-session-refresh)
+### [Disable Session Refresh](https://www.better-auth.com/docs/concepts/session-management#disable-session-refresh)
 
 You can disable session refresh so that the session is not updated regardless of the `updateAge` option.
 
@@ -75,7 +76,7 @@ export const auth = betterAuth({
 })
 ```
 
-## [Session Freshness](https://www.better-auth.com/docs/concepts/session-management\#session-freshness)
+## [Session Freshness](https://www.better-auth.com/docs/concepts/session-management#session-freshness)
 
 Some endpoints in Better Auth require the session to be **fresh**. A session is considered fresh if its `createdAt` is within the `freshAge` limit. By default, the `freshAge` is set to **1 day** (60 \* 60 \* 24).
 
@@ -109,11 +110,11 @@ export const auth = betterAuth({
 })
 ```
 
-## [Session Management](https://www.better-auth.com/docs/concepts/session-management\#session-management)
+## [Session Management](https://www.better-auth.com/docs/concepts/session-management#session-management)
 
 Better Auth provides a set of functions to manage sessions.
 
-### [Get Session](https://www.better-auth.com/docs/concepts/session-management\#get-session)
+### [Get Session](https://www.better-auth.com/docs/concepts/session-management#get-session)
 
 The `getSession` function retrieves the current active session.
 
@@ -125,7 +126,7 @@ const { data: session } = await authClient.getSession()
 
 To learn how to customize the session response check the [Customizing Session Response](https://www.better-auth.com/docs/concepts/session-management#customizing-session-response) section.
 
-### [Use Session](https://www.better-auth.com/docs/concepts/session-management\#use-session)
+### [Use Session](https://www.better-auth.com/docs/concepts/session-management#use-session)
 
 The `useSession` action provides a reactive way to access the current session.
 
@@ -135,7 +136,7 @@ import { authClient } from "@/lib/client"
 const { data: session } = authClient.useSession()
 ```
 
-### [List Sessions](https://www.better-auth.com/docs/concepts/session-management\#list-sessions)
+### [List Sessions](https://www.better-auth.com/docs/concepts/session-management#list-sessions)
 
 The `listSessions` function returns a list of sessions that are active for the user.
 
@@ -147,7 +148,7 @@ import { authClient } from "@/lib/client"
 const sessions = await authClient.listSessions()
 ```
 
-### [Revoke Session](https://www.better-auth.com/docs/concepts/session-management\#revoke-session)
+### [Revoke Session](https://www.better-auth.com/docs/concepts/session-management#revoke-session)
 
 When a user signs out of a device, the session is automatically ended. However, you can also end a session manually from any device the user is signed into.
 
@@ -161,7 +162,7 @@ await authClient.revokeSession({
 })
 ```
 
-### [Revoke Other Sessions](https://www.better-auth.com/docs/concepts/session-management\#revoke-other-sessions)
+### [Revoke Other Sessions](https://www.better-auth.com/docs/concepts/session-management#revoke-other-sessions)
 
 To revoke all other sessions except the current session, you can use the `revokeOtherSessions` function.
 
@@ -171,7 +172,7 @@ auth-client.ts
 await authClient.revokeOtherSessions()
 ```
 
-### [Revoke All Sessions](https://www.better-auth.com/docs/concepts/session-management\#revoke-all-sessions)
+### [Revoke All Sessions](https://www.better-auth.com/docs/concepts/session-management#revoke-all-sessions)
 
 To revoke all sessions, you can use the `revokeSessions` function.
 
@@ -181,7 +182,7 @@ auth-client.ts
 await authClient.revokeSessions()
 ```
 
-### [Revoking Sessions on Password Change](https://www.better-auth.com/docs/concepts/session-management\#revoking-sessions-on-password-change)
+### [Revoking Sessions on Password Change](https://www.better-auth.com/docs/concepts/session-management#revoking-sessions-on-password-change)
 
 You can revoke all sessions when the user changes their password by passing `revokeOtherSessions` as true on `changePassword` function.
 
@@ -195,9 +196,9 @@ await authClient.changePassword({
 })
 ```
 
-## [Session Caching](https://www.better-auth.com/docs/concepts/session-management\#session-caching)
+## [Session Caching](https://www.better-auth.com/docs/concepts/session-management#session-caching)
 
-### [Cookie Cache](https://www.better-auth.com/docs/concepts/session-management\#cookie-cache)
+### [Cookie Cache](https://www.better-auth.com/docs/concepts/session-management#cookie-cache)
 
 Calling your database every time `useSession` or `getSession` invoked isn’t ideal, especially if sessions don’t change frequently. Cookie caching handles this by storing session data in a short-lived, signed cookie—similar to how JWT access tokens are used with refresh tokens.
 
@@ -243,7 +244,7 @@ await auth.api.getSession({
 });
 ```
 
-## [Customizing Session Response](https://www.better-auth.com/docs/concepts/session-management\#customizing-session-response)
+## [Customizing Session Response](https://www.better-auth.com/docs/concepts/session-management#customizing-session-response)
 
 When you call `getSession` or `useSession`, the session data is returned as a `user` and `session` object. You can customize this response using the `customSession` plugin.
 
@@ -289,7 +290,7 @@ const { data: sessionData } = await authClient.getSession();
 // data.user.newField
 ```
 
-### [Caveats on Customizing Session Response](https://www.better-auth.com/docs/concepts/session-management\#caveats-on-customizing-session-response)
+### [Caveats on Customizing Session Response](https://www.better-auth.com/docs/concepts/session-management#caveats-on-customizing-session-response)
 
 1. The passed `session` object to the callback does not infer fields added by plugins.
 

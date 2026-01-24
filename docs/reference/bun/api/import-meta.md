@@ -1,9 +1,10 @@
 ---
 title: import.meta – API | Bun Docs
-url: 
+url:
 description: Module-scoped metadata and utilities
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -74,7 +75,7 @@ import.meta.resolve("zod"); // => "file:///path/to/project/node_modules/zod/inde
 | `import.meta.path` | Absolute path to the current file, e.g. `/path/to/project/index.ts`. Equivalent to `__filename` in CommonJS modules (and Node.js) |
 | `import.meta.filename` | An alias to `import.meta.path`, for Node.js compatibility |
 | `import.meta.main` | Indicates whether the current file is the entrypoint to the current `bun` process. Is the file being directly executed by `bun run` or is it being imported? |
-| `import.meta.resolve` | Resolve a module specifier (e.g. `"zod"` or `"./file.tsx"`) to a url. Equivalent to [`import.meta.resolve` in browsers](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import.meta#resolve)<br>```<br>import.meta.resolve("zod");<br>// => "file:///path/to/project/node_modules/zod/index.ts"<br>``` |
+| `import.meta.resolve` | Resolve a module specifier (e.g. `"zod"` or `"./file.tsx"`) to a url. Equivalent to [`import.meta.resolve` in browsers](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import.meta#resolve)<br>`<br>import.meta.resolve("zod");<br>// => "file:///path/to/project/node_modules/zod/index.ts"<br>` |
 | `import.meta.url` | A `string` url to the current file, e.g. `file:///path/to/project/index.ts`. Equivalent to [`import.meta.url` in browsers](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import.meta#url) |
 
 [Previous\\
@@ -83,7 +84,7 @@ Redis client](https://bun.com/docs/api/redis) [Next\\
 \\
 SQLite](https://bun.com/docs/api/sqlite)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/import-meta.md)
 
@@ -107,7 +108,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

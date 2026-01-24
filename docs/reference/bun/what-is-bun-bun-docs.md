@@ -1,9 +1,10 @@
 ---
 title: What is Bun? | Bun Docs
-url: 
+url:
 description: Bun is an all-in-one runtime for JavaScript and TypeScript apps. Build, run, and test apps with one fast tool.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -86,23 +87,23 @@ Get started with one of the quick links below, or read on to learn more about Bu
 
 [Install Bun](https://bun.com/docs/installation) [Do the quickstart](https://bun.com/docs/quickstart) [Install a package](https://bun.com/docs/cli/install) [Use a project template](https://bun.com/docs/cli/bun-create) [Bundle code for production](https://bun.com/docs/bundler) [Build an HTTP server](https://bun.com/docs/api/http) [Build a Websocket server](https://bun.com/docs/api/websockets) [Read and write files](https://bun.com/docs/api/file-io) [Run SQLite queries](https://bun.com/docs/api/sqlite) [Write and run tests](https://bun.com/docs/cli/test)
 
-## [What is a runtime?](https://bun.com/docs\#what-is-a-runtime)
+## [What is a runtime?](https://bun.com/docs#what-is-a-runtime)
 
 JavaScript (or, more formally, ECMAScript) is just a _specification_ for a programming language. Anyone can write a JavaScript _engine_ that ingests a valid JavaScript program and executes it. The two most popular engines in use today are V8 (developed by Google)and JavaScriptCore (developed by Apple). Both are open source.
 
 But most JavaScript programs don't run in a vacuum. They need a way to access the outside world to perform useful tasks. This is where _runtimes_ come in. They implement additional APIs that are then made available to the JavaScript programs they execute.
 
-### [Browsers](https://bun.com/docs\#browsers)
+### [Browsers](https://bun.com/docs#browsers)
 
 Notably, browsers ship with JavaScript runtimes that implement a set of Web-specific APIs that are exposed via the global `window` object. Any JavaScript code executed by the browser can use these APIs to implement interactive or dynamic behavior in the context of the current webpage.
 
-### [Node.js](https://bun.com/docs\#node-js)
+### [Node.js](https://bun.com/docs#node-js)
 
 Similarly, Node.js is a JavaScript runtime that can be used in non-browser environments, like servers. JavaScript programs executed by Node.js have access to a set of Node.js-specific [globals](https://nodejs.org/api/globals.html) like `Buffer`, `process`, and `__dirname` in addition to built-in modules for performing OS-level tasks like reading/writing files ( `node:fs`) and networking ( `node:net`, `node:http`). Node.js also implements a CommonJS-based module system and resolution algorithm that pre-dates JavaScript's native module system.
 
 Bun is designed as a faster, leaner, more modern replacement for Node.js.
 
-## [Design goals](https://bun.com/docs\#design-goals)
+## [Design goals](https://bun.com/docs#design-goals)
 
 Bun is designed from the ground-up with today's JavaScript ecosystem in mind.
 
@@ -118,7 +119,7 @@ Bun is more than a runtime. The long-term goal is to be a cohesive, infrastructu
 \\
 Installation](https://bun.com/docs/installation)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/index.md)
 
@@ -142,7 +143,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

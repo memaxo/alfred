@@ -1,9 +1,10 @@
 ---
 title: bun create – Templating | Bun Docs
-url: 
+url:
 description: Scaffold a new Bun project from an official template or GitHub repo.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Template a new Bun project with `bun create`. This is a flexible command that ca
 
 If you're looking to create a brand new empty project, use [`bun init`](https://bun.com/docs/cli/init).
 
-## [From a React component](https://bun.com/docs/cli/bun-create\#from-a-react-component)
+## [From a React component](https://bun.com/docs/cli/bun-create#from-a-react-component)
 
 `bun create ./MyComponent.tsx` turns an existing React component into a complete dev environment with hot reload and production builds in one command.
 
@@ -81,7 +82,7 @@ When you run `bun create <component>`, Bun:
    - `${component}.css` (css file)
 7. Starts a frontend dev server automatically.
 
-### [Using TailwindCSS with Bun](https://bun.com/docs/cli/bun-create\#using-tailwindcss-with-bun)
+### [Using TailwindCSS with Bun](https://bun.com/docs/cli/bun-create#using-tailwindcss-with-bun)
 
 [TailwindCSS](https://tailwindcss.com/) is an extremely popular utility-first CSS framework used to style web applications.
 
@@ -118,7 +119,7 @@ MyComponent.css
 
 ```
 
-### [Using `shadcn/ui` with Bun](https://bun.com/docs/cli/bun-create\#using-shadcn-ui-with-bun)
+### [Using `shadcn/ui` with Bun](https://bun.com/docs/cli/bun-create#using-shadcn-ui-with-bun)
 
 [`shadcn/ui`](https://ui.shadcn.com/) is an extremely popular component library tool for building web applications.
 
@@ -145,7 +146,7 @@ Additionally, we setup the following:
 
 `bun create ./MyComponent.jsx` is one of the easiest ways to run code generated from LLMs like [Claude](https://claude.ai/) or ChatGPT locally.
 
-## [From `npm`](https://bun.com/docs/cli/bun-create\#from-npm)
+## [From `npm`](https://bun.com/docs/cli/bun-create#from-npm)
 
 ```
 bun create <template> [<destination>]
@@ -163,7 +164,7 @@ bunx create-remix
 
 Refer to the documentation of the associated `create-<template>` package for complete documentation and usage instructions.
 
-## [From GitHub](https://bun.com/docs/cli/bun-create\#from-github)
+## [From GitHub](https://bun.com/docs/cli/bun-create#from-github)
 
 This will download the contents of the GitHub repo to disk.
 
@@ -195,7 +196,7 @@ Bun will perform the following steps:
 
 By default Bun will _not overwrite_ any existing files. Use the `--force` flag to overwrite existing files.
 
-## [From a local template](https://bun.com/docs/cli/bun-create\#from-a-local-template)
+## [From a local template](https://bun.com/docs/cli/bun-create#from-a-local-template)
 
 **⚠️ Warning** — Unlike remote templates, running `bun create` with a local template will delete the entire destination folder if it already exists! Be careful.
 
@@ -260,22 +261,22 @@ The following fields are supported. Each of these can correspond to a string or 
 
 After cloning a template, `bun create` will automatically remove the `"bun-create"` section from `package.json` before writing it to the destination folder.
 
-## [Reference](https://bun.com/docs/cli/bun-create\#reference)
+## [Reference](https://bun.com/docs/cli/bun-create#reference)
 
-### [CLI flags](https://bun.com/docs/cli/bun-create\#cli-flags)
+### [CLI flags](https://bun.com/docs/cli/bun-create#cli-flags)
 
-| Flag | Description |
-| --- | --- |
-| `--force` | Overwrite existing files |
+| Flag           | Description                            |
+| -------------- | -------------------------------------- |
+| `--force`      | Overwrite existing files               |
 | `--no-install` | Skip installing `node_modules` & tasks |
-| `--no-git` | Don’t initialize a git repository |
-| `--open` | Start & open in-browser after finish |
+| `--no-git`     | Don’t initialize a git repository      |
+| `--open`       | Start & open in-browser after finish   |
 
-### [Environment variables](https://bun.com/docs/cli/bun-create\#environment-variables)
+### [Environment variables](https://bun.com/docs/cli/bun-create#environment-variables)
 
-| Name | Description |
-| --- | --- |
-| `GITHUB_API_DOMAIN` | If you’re using a GitHub enterprise or a proxy, you can customize the GitHub domain Bun pings for downloads |
+| Name                                      | Description                                                                                                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GITHUB_API_DOMAIN`                       | If you’re using a GitHub enterprise or a proxy, you can customize the GitHub domain Bun pings for downloads                                          |
 | `GITHUB_TOKEN` (or `GITHUB_ACCESS_TOKEN`) | This lets `bun create` work with private repositories or if you get rate-limited. `GITHUB_TOKEN` is chosen over `GITHUB_ACCESS_TOKEN` if both exist. |
 
 How `bun create` works
@@ -304,10 +305,10 @@ ELSE IF local template
 3. Copy files recursively using the fastest system calls available (on macOS `fcopyfile` and Linux, `copy_file_range`). Do not copy or traverse into `node_modules` folder if exists (this alone makes it faster than `cp`)
 
 4. Parse the `package.json` (again!), update `name` to be `${basename(destination)}`, remove the `bun-create` section from the `package.json` and save the updated `package.json` to disk.
-
    - IF Next.js is detected, add `bun-framework-next` to the list of dependencies
    - IF Create React App is detected, add the entry point in /src/index.{js,jsx,ts,tsx} to `public/index.html`
    - IF Relay is detected, add `bun-macro-relay` so that Relay works
+
 5. Auto-detect the npm client, preferring `pnpm`, `yarn` (v1), and lastly `npm`
 
 6. Run any tasks defined in `"bun-create": { "preinstall" }` with the npm client
@@ -317,9 +318,8 @@ ELSE IF local template
 8. Run any tasks defined in `"bun-create": { "postinstall" }` with the npm client
 
 9. Run `git init; git add -A .; git commit -am "Initial Commit";`
-
    - Rename `gitignore` to `.gitignore`. NPM automatically removes `.gitignore` files from appearing in packages.
-   - If there are dependencies, this runs in a separate thread concurrently while node\_modules are being installed
+   - If there are dependencies, this runs in a separate thread concurrently while node_modules are being installed
    - Using libgit2 if available was tested and performed 3x slower in microbenchmarks
 
 [Previous\\
@@ -328,7 +328,7 @@ ELSE IF local template
 \\
 `bun run`](https://bun.com/docs/cli/run)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/bun-create.md)
 
@@ -352,7 +352,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

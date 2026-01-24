@@ -49,11 +49,13 @@ Each stage completes before the next starts. Stage outputs persist as artifacts 
 ## Contrast with Planned Wave
 
 Sequential:
+
 ```
 A → B → C → D
 ```
 
 Planned Wave:
+
 ```
 [A, B] → [C, D]
 ```

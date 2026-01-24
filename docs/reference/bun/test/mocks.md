@@ -1,9 +1,10 @@
 ---
 title: Mocks – Test runner | Bun Docs
-url: 
+url:
 description: Mocks functions and track method calls
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -144,7 +145,7 @@ The following properties and methods are implemented on mock functions.
 
 [mockFn.withImplementation(fn, callback)](https://jestjs.io/docs/mock-function-api#mockfnwithimplementationfn-callback)
 
-## [`.spyOn()`](https://bun.com/docs/test/mocks\#spyon)
+## [`.spyOn()`](https://bun.com/docs/test/mocks#spyon)
 
 It's possible to track calls to a function without replacing it with a mock. Use `spyOn()` to create a spy; these spies can be passed to `.toHaveBeenCalled()` and `.toHaveBeenCalledTimes()`.
 
@@ -168,7 +169,7 @@ test("spyon", () => {
 
 ```
 
-## [Module mocks with `mock.module()`](https://bun.com/docs/test/mocks\#module-mocks-with-mock-module)
+## [Module mocks with `mock.module()`](https://bun.com/docs/test/mocks#module-mocks-with-mock-module)
 
 Module mocking lets you override the behavior of a module. Use `mock.module(path: string, callback: () => Object)` to mock a module.
 
@@ -193,7 +194,7 @@ test("mock.module", async () => {
 
 Like the rest of Bun, module mocks support both `import` and `require`.
 
-### [Overriding already imported modules](https://bun.com/docs/test/mocks\#overriding-already-imported-modules)
+### [Overriding already imported modules](https://bun.com/docs/test/mocks#overriding-already-imported-modules)
 
 If you need to override a module that's already been imported, there's nothing special you need to do. Just call `mock.module()` and the module will be overridden.
 
@@ -224,7 +225,7 @@ test("mock.module", async () => {
 
 ```
 
-### [Hoisting & preloading](https://bun.com/docs/test/mocks\#hoisting-preloading)
+### [Hoisting & preloading](https://bun.com/docs/test/mocks#hoisting-preloading)
 
 If you need to ensure a module is mocked before it's imported, you should use `--preload` to load your mocks before your tests run.
 
@@ -261,11 +262,11 @@ If you mock a module that's already been imported, the module will be updated in
 
 If you want to prevent the original module from being evaluated, you should use `--preload` to load your mocks before your tests run.
 
-### [`__mocks__` directory and auto-mocking](https://bun.com/docs/test/mocks\#mocks-directory-and-auto-mocking)
+### [`__mocks__` directory and auto-mocking](https://bun.com/docs/test/mocks#mocks-directory-and-auto-mocking)
 
 Auto-mocking is not supported yet. If this is blocking you from switching to Bun, please file an issue.
 
-### [Implementation details](https://bun.com/docs/test/mocks\#implementation-details)
+### [Implementation details](https://bun.com/docs/test/mocks#implementation-details)
 
 Module mocks have different implementations for ESM and CommonJS modules. For ES Modules, we've added patches to JavaScriptCore that allow Bun to override export values at runtime and update live bindings recursively.
 
@@ -275,7 +276,7 @@ After resolution, the mocked module is stored in the ES Module registry **and** 
 
 The callback function is called lazily, only if the module is imported or required. This means that you can use `mock.module()` to mock modules that don't exist yet, and it means that you can use `mock.module()` to mock modules that are imported by other modules.
 
-### [Module Mock Implementation Details](https://bun.com/docs/test/mocks\#module-mock-implementation-details)
+### [Module Mock Implementation Details](https://bun.com/docs/test/mocks#module-mock-implementation-details)
 
 Understanding how `mock.module()` works helps you use it more effectively:
 
@@ -284,21 +285,20 @@ Understanding how `mock.module()` works helps you use it more effectively:
 2. **Lazy Evaluation**: The mock factory callback is only evaluated when the module is actually imported or required.
 
 3. **Path Resolution**: Bun automatically resolves the module specifier as though you were doing an import, supporting:
-
    - Relative paths ( `'./module'`)
    - Absolute paths ( `'/path/to/module'`)
    - Package names ( `'lodash'`)
-4. **Import Timing Effects**:
 
+4. **Import Timing Effects**:
    - When mocking before first import: No side effects from the original module occur
    - When mocking after import: The original module's side effects have already happened
    - For this reason, using `--preload` is recommended for mocks that need to prevent side effects
+
 5. **Live Bindings**: Mocked ESM modules maintain live bindings, so changing the mock will update all existing imports
 
+## [Global Mock Functions](https://bun.com/docs/test/mocks#global-mock-functions)
 
-## [Global Mock Functions](https://bun.com/docs/test/mocks\#global-mock-functions)
-
-### [Clear all mocks with `mock.clearAllMocks()`](https://bun.com/docs/test/mocks\#clear-all-mocks-with-mock-clearallmocks)
+### [Clear all mocks with `mock.clearAllMocks()`](https://bun.com/docs/test/mocks#clear-all-mocks-with-mock-clearallmocks)
 
 Reset all mock function state (calls, results, etc.) without restoring their original implementation:
 
@@ -329,7 +329,7 @@ test("clearing all mocks", () => {
 
 This resets the `.mock.calls`, `.mock.instances`, `.mock.contexts`, and `.mock.results` properties of all mocks, but unlike `mock.restore()`, it does not restore the original implementation.
 
-### [Restore all function mocks with `mock.restore()`](https://bun.com/docs/test/mocks\#restore-all-function-mocks-with-mock-restore)
+### [Restore all function mocks with `mock.restore()`](https://bun.com/docs/test/mocks#restore-all-function-mocks-with-mock-restore)
 
 Instead of manually restoring each mock individually with `mockFn.mockRestore()`, restore all mocks with one command by calling `mock.restore()`. Doing so does not reset the value of modules overridden with `mock.module()`.
 
@@ -368,7 +368,7 @@ test("foo, bar, baz", () => {
 
 ```
 
-## [Vitest Compatibility](https://bun.com/docs/test/mocks\#vitest-compatibility)
+## [Vitest Compatibility](https://bun.com/docs/test/mocks#vitest-compatibility)
 
 For added compatibility with tests written for [Vitest](https://vitest.dev/), Bun provides the `vi` global object as an alias for parts of the Jest mocking API:
 
@@ -400,7 +400,7 @@ Lifecycle hooks](https://bun.com/docs/test/lifecycle) [Next\\
 \\
 Snapshots](https://bun.com/docs/test/snapshots)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/mocks.md)
 
@@ -424,7 +424,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

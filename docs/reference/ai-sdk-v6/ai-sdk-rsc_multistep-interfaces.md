@@ -10,9 +10,9 @@ Multistep interfaces refer to user interfaces that require multiple independent 
 
 For example, if you wanted to build a Generative UI chatbot capable of booking flights, it could have three steps:
 
-  * Search all flights
-  * Pick flight
-  * Check availability
+- Search all flights
+- Pick flight
+- Check availability
 
 To build this kind of application you will leverage two concepts, **tool composition** and **application context**.
 
@@ -24,18 +24,18 @@ To build this kind of application you will leverage two concepts, **tool composi
 
 In order to build a multistep interface with `@ai-sdk/rsc`, you will need a few things:
 
-  * A Server Action that calls and returns the result from the `streamUI` function
-  * Tool(s) (sub-tasks necessary to complete your overall task)
-  * React component(s) that should be rendered when the tool is called
-  * A page to render your chatbot
+- A Server Action that calls and returns the result from the `streamUI` function
+- Tool(s) (sub-tasks necessary to complete your overall task)
+- React component(s) that should be rendered when the tool is called
+- A page to render your chatbot
 
 The general flow that you will follow is:
 
-  * User sends a message (calls your Server Action with `useActions`, passing the message as an input)
-  * Message is appended to the AI State and then passed to the model alongside a number of tools
-  * Model can decide to call a tool, which will render the `` component
-  * Within that component, you can add interactivity by using `useActions` to call the model with your Server Action and `useUIState` to append the model's response (``) to the UI State
-  * And so on...
+- User sends a message (calls your Server Action with `useActions`, passing the message as an input)
+- Message is appended to the AI State and then passed to the model alongside a number of tools
+- Model can decide to call a tool, which will render the `` component
+- Within that component, you can add interactivity by using `useActions` to call the model with your Server Action and `useUIState` to append the model's response (``) to the UI State
+- And so on...
 
 ## Implementation
 
@@ -44,326 +44,322 @@ The turn-by-turn implementation is the simplest form of multistep interfaces. In
 In the following example, you specify two tools (`searchFlights` and `lookupFlight`) that the model can use to search for flights and lookup details for a specific flight.
 
 app/actions.tsx
-    
-    
+
     import { streamUI } from '@ai-sdk/rsc';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     const searchFlights = async (
-    
+
       source: string,
-    
+
       destination: string,
-    
+
       date: string,
-    
+
     ) => {
-    
+
       return [
-    
+
         {
-    
+
           id: '1',
-    
+
           flightNumber: 'AA123',
-    
+
         },
-    
+
         {
-    
+
           id: '2',
-    
+
           flightNumber: 'AA456',
-    
+
         },
-    
+
       ];
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     const lookupFlight = async (flightNumber: string) => {
-    
+
       return {
-    
+
         flightNumber: flightNumber,
-    
+
         departureTime: '10:00 AM',
-    
+
         arrivalTime: '12:00 PM',
-    
+
       };
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export async function submitUserMessage(input: string) {
-    
+
       'use server';
-    
-    
-    
-    
+
+
+
+
       const ui = await streamUI({
-    
+
         model: openai('gpt-4o'),
-    
+
         system: 'you are a flight booking assistant',
-    
+
         prompt: input,
-    
+
         text: async ({ content }) => {content},
-    
+
         tools: {
-    
+
           searchFlights: {
-    
+
             description: 'search for flights',
-    
+
             inputSchema: z.object({
-    
+
               source: z.string().describe('The origin of the flight'),
-    
+
               destination: z.string().describe('The destination of the flight'),
-    
+
               date: z.string().describe('The date of the flight'),
-    
+
             }),
-    
+
             generate: async function* ({ source, destination, date }) {
-    
+
               yield `Searching for flights from ${source} to ${destination} on ${date}...`;
-    
+
               const results = await searchFlights(source, destination, date);
-    
-    
-    
-    
+
+
+
+
               return (
-    
-                
-    
+
+
+
                   {results.map(result => (
-    
-                    
-    
+
+
+
                       {result.flightNumber}
-    
-                    
-    
+
+
+
                   ))}
-    
-                
-    
+
+
+
               );
-    
+
             },
-    
+
           },
-    
+
           lookupFlight: {
-    
+
             description: 'lookup details for a flight',
-    
+
             parameters: z.object({
-    
+
               flightNumber: z.string().describe('The flight number'),
-    
+
             }),
-    
+
             generate: async function* ({ flightNumber }) {
-    
+
               yield `Looking up details for flight ${flightNumber}...`;
-    
+
               const details = await lookupFlight(flightNumber);
-    
-    
-    
-    
+
+
+
+
               return (
-    
-                
-    
+
+
+
                   Flight Number: {details.flightNumber}
-    
+
                   Departure Time: {details.departureTime}
-    
+
                   Arrival Time: {details.arrivalTime}
-    
-                
-    
+
+
+
               );
-    
+
             },
-    
+
           },
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return ui.value;
-    
+
     }
 
 Next, create an AI context that will hold the UI State and AI State.
 
 app/ai.ts
-    
-    
+
     import { createAI } from '@ai-sdk/rsc';
-    
+
     import { submitUserMessage } from './actions';
-    
-    
-    
-    
+
+
+
+
     export const AI = createAI({
-    
+
       initialUIState: [],
-    
+
       initialAIState: [],
-    
+
       actions: {
-    
+
         submitUserMessage,
-    
+
       },
-    
+
     });
 
 Next, wrap your application with your newly created context.
 
 app/layout.tsx
-    
-    
+
     import { type ReactNode } from 'react';
-    
+
     import { AI } from './ai';
-    
-    
-    
-    
+
+
+
+
     export default function RootLayout({
-    
+
       children,
-    
+
     }: Readonly) {
-    
+
       return (
-    
-        
-    
-          
-    
+
+
+
+
+
             {children}
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 To call your Server Action, update your root page with the following:
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useState } from 'react';
-    
+
     import { AI } from './ai';
-    
+
     import { useActions, useUIState } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const [conversation, setConversation] = useUIState();
-    
+
       const { submitUserMessage } = useActions();
-    
-    
-    
-    
+
+
+
+
       const handleSubmit = async (e: React.FormEvent) => {
-    
+
         e.preventDefault();
-    
+
         setInput('');
-    
+
         setConversation(currentConversation => [
-    
+
           ...currentConversation,
-    
+
           {input},
-    
+
         ]);
-    
+
         const message = await submitUserMessage(input);
-    
+
         setConversation(currentConversation => [...currentConversation, message]);
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
-          
-    
+
+
+
+
+
             {conversation.map((message, i) => (
-    
+
               {message}
-    
+
             ))}
-    
-          
-    
-          
-    
-            
-    
+
+
+
+
+
+
+
                setInput(e.target.value)}
-    
+
               />
-    
+
               Send Message
-    
-            
-    
-          
-    
-        
-    
+
+
+
+
+
+
+
       );
-    
+
     }
 
 This page pulls in the current UI State using the `useUIState` hook, which is then mapped over and rendered in the UI. To access the Server Action, you use the `useActions` hook which will return all actions that were passed to the `actions` key of the `createAI` function in your `actions.tsx` file. Finally, you call the `submitUserMessage` function like any other TypeScript function. This function returns a React component (`message`) that is then rendered in the UI by updating the UI State with `setConversation`.
@@ -373,110 +369,108 @@ In this example, to call the next tool, the user must respond with plain text. *
 To add user interaction, you will have to convert the component into a client component and use the `useAction` hook to trigger the next step in the conversation.
 
 components/flights.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useActions, useUIState } from '@ai-sdk/rsc';
-    
+
     import { ReactNode } from 'react';
-    
-    
-    
-    
+
+
+
+
     interface FlightsProps {
-    
+
       flights: { id: string; flightNumber: string }[];
-    
+
     }
-    
-    
-    
-    
+
+
+
+
     export const Flights = ({ flights }: FlightsProps) => {
-    
+
       const { submitUserMessage } = useActions();
-    
+
       const [_, setMessages] = useUIState();
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {flights.map(result => (
-    
-            
-    
+
+
+
                {
-    
+
                   const display = await submitUserMessage(
-    
+
                     `lookupFlight ${result.flightNumber}`,
-    
+
                   );
-    
-    
-    
-    
+
+
+
+
                   setMessages((messages: ReactNode[]) => [...messages, display]);
-    
+
                 }}
-    
+
               >
-    
+
                 {result.flightNumber}
-    
-              
-    
-            
-    
+
+
+
+
+
           ))}
-    
-        
-    
+
+
+
       );
-    
+
     };
 
 Now, update your `searchFlights` tool to render the new `` component.
 
 actions.tsx
-    
-    
+
     ...
-    
+
     searchFlights: {
-    
+
       description: 'search for flights',
-    
+
       parameters: z.object({
-    
+
         source: z.string().describe('The origin of the flight'),
-    
+
         destination: z.string().describe('The destination of the flight'),
-    
+
         date: z.string().describe('The date of the flight'),
-    
+
       }),
-    
+
       generate: async function* ({ source, destination, date }) {
-    
+
         yield `Searching for flights from ${source} to ${destination} on ${date}...`;
-    
+
         const results = await searchFlights(source, destination, date);
-    
+
         return ();
-    
+
       },
-    
+
     }
-    
+
     ...
 
 In the above example, the `Flights` component is used to display the search results. When the user clicks on a flight number, the `lookupFlight` tool is called with the flight number as a parameter. The `submitUserMessage` action is then called to trigger the next step in the conversation.

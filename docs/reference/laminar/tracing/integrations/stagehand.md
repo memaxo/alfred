@@ -1,8 +1,9 @@
 ---
 title: Observability for Stagehand - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/stagehand#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -28,7 +29,7 @@ On this page
 - [Step-by-step guide](https://docs.lmnr.ai/tracing/integrations/stagehand#step-by-step-guide)
 - [Example of a Stagehand trace](https://docs.lmnr.ai/tracing/integrations/stagehand#example-of-a-stagehand-trace)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/stagehand\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/stagehand#overview) Overview
 
 [Stagehand](https://github.com/browserbase/stagehand) is an AI Browser Automation Framework developed by [Browserbase](https://browserbase.com/).Laminar provides native integration with Stagehand, allowing you to trace your Stagehand code with just a few lines of code.Laminar observability captures:
 
@@ -37,7 +38,7 @@ On this page
 - LLM cost of the execution steps
 - Latency of the execution steps and LLM calls
 
-## [​](https://docs.lmnr.ai/tracing/integrations/stagehand\#quickstart)  Quickstart
+## [​](https://docs.lmnr.ai/tracing/integrations/stagehand#quickstart) Quickstart
 
 Below is an example of a simple Stagehand script. Highlighted lines are the ones that are required to trace Stagehand with Laminar.
 
@@ -84,7 +85,7 @@ main().then(console.log).catch(console.error);
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/stagehand\#step-by-step-guide)  Step-by-step guide
+### [​](https://docs.lmnr.ai/tracing/integrations/stagehand#step-by-step-guide) Step-by-step guide
 
 1
 
@@ -153,7 +154,7 @@ await Laminar.flush(); // sends any remaining spans to Laminar
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/integrations/stagehand\#example-of-a-stagehand-trace)  Example of a Stagehand trace
+## [​](https://docs.lmnr.ai/tracing/integrations/stagehand#example-of-a-stagehand-trace) Example of a Stagehand trace
 
 You can see entire session recording of a browser window while the code was running, along with execution steps, such as `act` and `extract`. You can also see LLM cost of the entire execution and of each execution step. For LLM spans you can see the prompt, the response and the model name.
 

@@ -29,53 +29,53 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 
 ### Epic Level
 
-| Field | Value | Notes |
-|-------|-------|-------|
-| **Title** | `Epic: TUI Package — Unified CLI/TUI Infrastructure` | |
-| **Description** | Full ExecPlan summary + link to `docs/execplans/tui-package-ideation.md` | |
-| **Team** | `Alfred-ops` | |
-| **Project** | `ExecPlans Tracking` | Links to ExecPlans Tracking project |
-| **Priority** | `High` (P2) | |
-| **Status** | `Backlog` → `Todo` → `In Progress` → `Done` | |
-| **Labels** | `["epic", "infrastructure", "Feature"]` | |
-| **Estimate** | `13` (Fibonacci: large epic) | |
-| **Assignee** | `Jack M` (or infra owner) | |
-| **Delegate** | `Cursor` | For AI assistance |
-| **Due Date** | 7 weeks from start | |
+| Field           | Value                                                                    | Notes                               |
+| --------------- | ------------------------------------------------------------------------ | ----------------------------------- |
+| **Title**       | `Epic: TUI Package — Unified CLI/TUI Infrastructure`                     |                                     |
+| **Description** | Full ExecPlan summary + link to `docs/execplans/tui-package-ideation.md` |                                     |
+| **Team**        | `Alfred-ops`                                                             |                                     |
+| **Project**     | `ExecPlans Tracking`                                                     | Links to ExecPlans Tracking project |
+| **Priority**    | `High` (P2)                                                              |                                     |
+| **Status**      | `Backlog` → `Todo` → `In Progress` → `Done`                              |                                     |
+| **Labels**      | `["epic", "infrastructure", "Feature"]`                                  |                                     |
+| **Estimate**    | `13` (Fibonacci: large epic)                                             |                                     |
+| **Assignee**    | `Jack M` (or infra owner)                                                |                                     |
+| **Delegate**    | `Cursor`                                                                 | For AI assistance                   |
+| **Due Date**    | 7 weeks from start                                                       |                                     |
 
 ### Phase Issue Level
 
-| Field | Value | Notes |
-|-------|-------|-------|
-| **Title** | `Phase N: [Phase Name]` | e.g., "Phase 0: Debugger Foundations" |
-| **Description** | Phase checklist + dependencies | |
-| **Team** | `Alfred-ops` | |
-| **Project** | `ExecPlans Tracking` | |
-| **Priority** | `High` (P2) | |
-| **Status** | `Backlog` → `Todo` → `In Progress` → `Done` | |
-| **Labels** | `["infrastructure"]` + phase-specific labels | |
-| **Estimate** | `5` or `8` (Fibonacci) | Based on task count |
-| **Parent** | Epic issue ID | Links to parent epic |
-| **Blocks** | Next phase issue ID | Sequential dependencies |
-| **Assignee** | `Jack M` | |
-| **Delegate** | `Cursor` | |
+| Field           | Value                                        | Notes                                 |
+| --------------- | -------------------------------------------- | ------------------------------------- |
+| **Title**       | `Phase N: [Phase Name]`                      | e.g., "Phase 0: Debugger Foundations" |
+| **Description** | Phase checklist + dependencies               |                                       |
+| **Team**        | `Alfred-ops`                                 |                                       |
+| **Project**     | `ExecPlans Tracking`                         |                                       |
+| **Priority**    | `High` (P2)                                  |                                       |
+| **Status**      | `Backlog` → `Todo` → `In Progress` → `Done`  |                                       |
+| **Labels**      | `["infrastructure"]` + phase-specific labels |                                       |
+| **Estimate**    | `5` or `8` (Fibonacci)                       | Based on task count                   |
+| **Parent**      | Epic issue ID                                | Links to parent epic                  |
+| **Blocks**      | Next phase issue ID                          | Sequential dependencies               |
+| **Assignee**    | `Jack M`                                     |                                       |
+| **Delegate**    | `Cursor`                                     |                                       |
 
 ### Task Issue Level
 
-| Field | Value | Notes |
-|-------|-------|-------|
-| **Title** | Specific task description | e.g., "Add parentId to EventEnvelope" |
-| **Description** | Task details + acceptance criteria | |
-| **Team** | `Alfred-ops` | |
-| **Project** | `ExecPlans Tracking` | |
-| **Priority** | `High` or `Medium` | Based on phase priority |
-| **Status** | `Backlog` → `Todo` → `In Progress` → `Done` | |
-| **Labels** | `["infrastructure"]` + domain labels | e.g., `["database"]` for migrations |
-| **Estimate** | `1`, `2`, `3`, or `5` (Fibonacci) | Most tasks: 1-2 points |
-| **Parent** | Phase issue ID | Links to parent phase |
-| **Blocks** | Dependent task IDs | If any |
-| **Assignee** | `Jack M` | |
-| **Delegate** | `Cursor` | |
+| Field           | Value                                       | Notes                                 |
+| --------------- | ------------------------------------------- | ------------------------------------- |
+| **Title**       | Specific task description                   | e.g., "Add parentId to EventEnvelope" |
+| **Description** | Task details + acceptance criteria          |                                       |
+| **Team**        | `Alfred-ops`                                |                                       |
+| **Project**     | `ExecPlans Tracking`                        |                                       |
+| **Priority**    | `High` or `Medium`                          | Based on phase priority               |
+| **Status**      | `Backlog` → `Todo` → `In Progress` → `Done` |                                       |
+| **Labels**      | `["infrastructure"]` + domain labels        | e.g., `["database"]` for migrations   |
+| **Estimate**    | `1`, `2`, `3`, or `5` (Fibonacci)           | Most tasks: 1-2 points                |
+| **Parent**      | Phase issue ID                              | Links to parent phase                 |
+| **Blocks**      | Dependent task IDs                          | If any                                |
+| **Assignee**    | `Jack M`                                    |                                       |
+| **Delegate**    | `Cursor`                                    |                                       |
 
 ---
 
@@ -86,6 +86,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Issue**: `Epic: TUI Package — Unified CLI/TUI Infrastructure`
 
 **Metadata**:
+
 - **Estimate**: `13` (large epic)
 - **Labels**: `["epic", "infrastructure", "Feature"]`
 - **Description**: Link to ExecPlan + summary
@@ -97,6 +98,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 0: Debugger Foundations`
 
 **Metadata**:
+
 - **Estimate**: `8` (9 tasks, foundational work)
 - **Labels**: `["infrastructure", "database", "cognitive"]`
 - **Blocks**: Phase 0.5, Phase 1
@@ -157,6 +159,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 0.5: Better Auth Setup`
 
 **Metadata**:
+
 - **Estimate**: `8` (8 tasks, auth integration)
 - **Labels**: `["infrastructure", "api", "security"]`
 - **Blocks**: Phase 1
@@ -212,6 +215,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 1: CLI Foundation`
 
 **Metadata**:
+
 - **Estimate**: `8` (7 tasks, core CLI)
 - **Labels**: `["infrastructure", "Feature"]`
 - **Blocks**: Phase 2
@@ -262,6 +266,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 2: TUI Core`
 
 **Metadata**:
+
 - **Estimate**: `5` (5 tasks, TUI infrastructure)
 - **Labels**: `["infrastructure", "ui", "Feature"]`
 - **Blocks**: Phase 3
@@ -302,6 +307,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 3: Package Panels`
 
 **Metadata**:
+
 - **Estimate**: `8` (5 panels, substantial UI work)
 - **Labels**: `["infrastructure", "ui", "Feature"]`
 - **Blocks**: Phase 4
@@ -342,6 +348,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 4: Interactive Modes`
 
 **Metadata**:
+
 - **Estimate**: `5` (3 modes, interactive features)
 - **Labels**: `["infrastructure", "ui", "Feature"]`
 - **Blocks**: Phase 5
@@ -372,6 +379,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 5: Package Integration`
 
 **Metadata**:
+
 - **Estimate**: `5` (4 tasks, integration work)
 - **Labels**: `["infrastructure", "Feature"]`
 - **Blocks**: Phase 6
@@ -407,6 +415,7 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Phase Issue**: `Phase 6: MCP Integration`
 
 **Metadata**:
+
 - **Estimate**: `5` (5 tasks, OAuth/MCP)
 - **Labels**: `["infrastructure", "security", "Feature"]`
 
@@ -443,12 +452,12 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 
 ## Summary Statistics
 
-| Level | Count | Total Estimate |
-|-------|-------|----------------|
-| **Epic** | 1 | 13 |
-| **Phase Issues** | 8 | 52 (avg 6.5) |
-| **Task Issues** | 46 | 136 (avg 2.96) |
-| **TOTAL** | **55** | **201 points** |
+| Level            | Count  | Total Estimate |
+| ---------------- | ------ | -------------- |
+| **Epic**         | 1      | 13             |
+| **Phase Issues** | 8      | 52 (avg 6.5)   |
+| **Task Issues**  | 46     | 136 (avg 2.96) |
+| **TOTAL**        | **55** | **201 points** |
 
 **Estimated Velocity**: ~30 points/week (based on 2-week cycles)  
 **Estimated Duration**: ~7 weeks (201 points ÷ 30 points/week)
@@ -482,13 +491,16 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Title**: Phase N: [Phase Name]
 
 **Description**:
+
 ## Phase Overview
+
 [Phase description from ExecPlan]
 
 ## Tasks
+
 - [ ] Task 1
 - [ ] Task 2
-...
+      ...
 
 **Team**: Alfred-ops
 **Project**: ExecPlans Tracking
@@ -508,14 +520,18 @@ Total: 1 Epic + 8 Phase Issues + 46 Task Issues = 55 Linear Issues
 **Title**: [Specific task description]
 
 **Description**:
+
 ## Task
+
 [Task details from ExecPlan checklist]
 
 ## Acceptance Criteria
+
 - [ ] Criterion 1
 - [ ] Criterion 2
 
 ## Files
+
 - `path/to/file.ts`
 
 **Team**: Alfred-ops

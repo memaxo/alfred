@@ -16,9 +16,9 @@ A tool is an object that can be called by the model to perform a specific task. 
 
 A tool consists of three properties:
 
-  * **`description`** : An optional description of the tool that can influence when the tool is picked.
-  * **`inputSchema`** : A Zod schema or a JSON schema that defines the input required for the tool to run. The schema is consumed by the LLM, and also used to validate the LLM tool calls.
-  * **`execute`** : An optional async function that is called with the arguments from the tool call.
+- **`description`** : An optional description of the tool that can influence when the tool is picked.
+- **`inputSchema`** : A Zod schema or a JSON schema that defines the input required for the tool to run. The schema is consumed by the LLM, and also used to validate the LLM tool calls.
+- **`execute`** : An optional async function that is called with the arguments from the tool call.
 
 `streamUI` uses UI generator tools with a `generate` function that can return React components.
 
@@ -41,40 +41,38 @@ npm
 yarn
 
 bun
-    
-    
+
     pnpm add zod
 
 You can then specify a Zod schema, for example:
-    
-    
+
     import z from 'zod';
-    
-    
-    
-    
+
+
+
+
     const recipeSchema = z.object({
-    
+
       recipe: z.object({
-    
+
         name: z.string(),
-    
+
         ingredients: z.array(
-    
+
           z.object({
-    
+
             name: z.string(),
-    
+
             amount: z.string(),
-    
+
           }),
-    
+
         ),
-    
+
         steps: z.array(z.string()),
-    
+
       }),
-    
+
     });
 
 You can also use schemas for structured output generation with `generateObject` and `streamObject`.
@@ -83,21 +81,21 @@ You can also use schemas for structured output generation with `generateObject` 
 
 When you work with tools, you typically need a mix of application specific tools and general purpose tools. There are several providers that offer pre-built tools as **toolkits** that you can use out of the box:
 
-  * **agentic** \- A collection of 20+ tools. Most tools connect to access external APIs such as Exa or E2B.
-  * **browserbase** \- Browser tool that runs a headless browser
-  * **browserless** \- Browser automation service with AI integration - self hosted or cloud based
-  * **Stripe agent tools** \- Tools for interacting with Stripe.
-  * **StackOne ToolSet** \- Agentic integrations for hundreds of enterprise SaaS
-  * **Toolhouse** \- AI function-calling in 3 lines of code for over 25 different actions.
-  * **Agent Tools** \- A collection of tools for agents.
-  * **AI Tool Maker** \- A CLI utility to generate AI SDK tools from OpenAPI specs.
-  * **Composio** \- Composio provides 250+ tools like GitHub, Gmail, Salesforce and more.
-  * **Interlify** \- Convert APIs into tools so that AI can connect to your backend in minutes.
-  * **JigsawStack** \- JigsawStack provides over 30+ small custom fine tuned models available for specific uses.
-  * **Pipedream** \- Pipedream Connect provides a developer toolkit that lets you easily add 3,000+ integrations to your app or AI agent.
-  * **AI Tools Registry** \- A Shadcn compatible tool definitions and components registry for the AI SDK.
-  * **DeepAgent** \- A powerful suite of 50+ AI tools and integrations, seamlessly connecting with APIs like Tavily, E2B, Airtable and more to build enterprise-ready AI agents.
-  * **Smithery** \- Smithery provides an open marketplace of 6K+ MCPs, including Browserbase and Exa.
+- **agentic** \- A collection of 20+ tools. Most tools connect to access external APIs such as Exa or E2B.
+- **browserbase** \- Browser tool that runs a headless browser
+- **browserless** \- Browser automation service with AI integration - self hosted or cloud based
+- **Stripe agent tools** \- Tools for interacting with Stripe.
+- **StackOne ToolSet** \- Agentic integrations for hundreds of enterprise SaaS
+- **Toolhouse** \- AI function-calling in 3 lines of code for over 25 different actions.
+- **Agent Tools** \- A collection of tools for agents.
+- **AI Tool Maker** \- A CLI utility to generate AI SDK tools from OpenAPI specs.
+- **Composio** \- Composio provides 250+ tools like GitHub, Gmail, Salesforce and more.
+- **Interlify** \- Convert APIs into tools so that AI can connect to your backend in minutes.
+- **JigsawStack** \- JigsawStack provides over 30+ small custom fine tuned models available for specific uses.
+- **Pipedream** \- Pipedream Connect provides a developer toolkit that lets you easily add 3,000+ integrations to your app or AI agent.
+- **AI Tools Registry** \- A Shadcn compatible tool definitions and components registry for the AI SDK.
+- **DeepAgent** \- A powerful suite of 50+ AI tools and integrations, seamlessly connecting with APIs like Tavily, E2B, Airtable and more to build enterprise-ready AI agents.
+- **Smithery** \- Smithery provides an open marketplace of 6K+ MCPs, including Browserbase and Exa.
 
 Do you have open source tools or tool libraries that are compatible with the AI SDK? Please file a pull request to add them to this list.
 

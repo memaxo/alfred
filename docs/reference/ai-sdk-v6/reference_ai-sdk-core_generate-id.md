@@ -7,18 +7,16 @@ Copy markdown
 Generates a unique identifier. You can optionally provide the length of the ID.
 
 This is the same id generator used by the AI SDK.
-    
-    
+
     import { generateId } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const id = generateId();
 
 ## Import
-    
-    
+
     import { generateId } from "ai"
 
 ## API Signature
@@ -37,7 +35,7 @@ A string representing the generated ID.
 
 ## See also
 
-  * `createIdGenerator()`
+- `createIdGenerator()`
 
 Previous
 

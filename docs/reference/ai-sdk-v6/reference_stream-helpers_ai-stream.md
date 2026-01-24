@@ -13,8 +13,7 @@ AIStream will throw an error if response doesn't have a 2xx status code. This is
 ## Import
 
 ### React
-    
-    
+
     import { AIStream } from "ai"
 
 ## API Signature
@@ -33,7 +32,7 @@ This is a function that is used to parse the events in the stream. It should ret
 
 AIStreamParser
 
-### 
+###
 
 (data: string) => string | void
 

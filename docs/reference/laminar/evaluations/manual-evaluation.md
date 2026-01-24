@@ -1,8 +1,9 @@
 ---
 title: Laminar Manual Evaluation - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/manual-evaluation#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -35,7 +36,7 @@ On this page
 
 The Laminar Manual Evaluation SDK and API provide you with **granular control** over the evaluation process, allowing you to integrate Laminar directly into your existing evaluation pipeline or create flexible and complex evaluation workflows.
 
-## [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#manual-vs-sdk-evaluation)  Manual vs. SDK Evaluation
+## [​](https://docs.lmnr.ai/evaluations/manual-evaluation#manual-vs-sdk-evaluation) Manual vs. SDK Evaluation
 
 Use manual evaluation when you need granular control over the evaluation lifecycle, custom tracing, or want to integrate evaluations with complex workflows.
 
@@ -45,22 +46,22 @@ The manual evaluation approach gives you fine-grained control over:
 - **Flexible evaluation logic** and scoring
 - **Integration** with existing systems and workflows
 
-## [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#how-manual-evaluation-works)  How Manual Evaluation Works
+## [​](https://docs.lmnr.ai/evaluations/manual-evaluation#how-manual-evaluation-works) How Manual Evaluation Works
 
 Manual evaluation follows a structured workflow with three core components:
 
 1. **Create Evaluation** \- Initialize a new evaluation
 2. **Execute and Evaluate** \- Run your logic and evaluate it
-
    - Run your core logic
    - Run your evaluation logic
+
 3. **Save and Update** \- Store datapoints and evaluation results
 
-## [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#quickstart)  Quickstart
+## [​](https://docs.lmnr.ai/evaluations/manual-evaluation#quickstart) Quickstart
 
 Let’s walk through implementing manual evaluation with tracing, breaking down each component:
 
-### [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#step-1%3A-setup-and-initialization)  Step 1: Setup and Initialization
+### [​](https://docs.lmnr.ai/evaluations/manual-evaluation#step-1%3A-setup-and-initialization) Step 1: Setup and Initialization
 
 First, initialize Laminar and create your evaluation clients:
 
@@ -89,7 +90,7 @@ const openai = new OpenAI({ apiKey: 'your_openai_api_key' });
 
 ```
 
-### [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#step-2%3A-create-your-executor-and-evaluation-logic)  Step 2: Create Your Executor and Evaluation logic
+### [​](https://docs.lmnr.ai/evaluations/manual-evaluation#step-2%3A-create-your-executor-and-evaluation-logic) Step 2: Create Your Executor and Evaluation logic
 
 - Our executor function makes a call to OpenAI and is wrapped with tracing:
 
@@ -142,7 +143,7 @@ const accuracy = async (output, target) => {
 
 ```
 
-### [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#step-3%3A-create-evaluation-and-datapoints)  Step 3: Create Evaluation and Datapoints
+### [​](https://docs.lmnr.ai/evaluations/manual-evaluation#step-3%3A-create-evaluation-and-datapoints) Step 3: Create Evaluation and Datapoints
 
 First, you need to create an evaluation session, then create datapoints with test data and update them with execution results and scores.**Create Evaluation**Before creating datapoints, you must initialize an evaluation session:
 
@@ -196,7 +197,7 @@ await client.evals.updateDatapoint({
 
 ```
 
-## [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#complete-example)  Complete Example
+## [​](https://docs.lmnr.ai/evaluations/manual-evaluation#complete-example) Complete Example
 
 JavaScript
 
@@ -313,13 +314,13 @@ runEvaluation();
 
 See all 103 lines
 
-## [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#evaluation-results)  Evaluation Results
+## [​](https://docs.lmnr.ai/evaluations/manual-evaluation#evaluation-results) Evaluation Results
 
 When you run the following example of manual evaluation, you’ll see detailed tracing and evaluation results in your Laminar dashboard:
 
 ![Manual evaluation results showing tracing hierarchy with evaluation, executor, and evaluator spans, along with datapoint scores and metadata](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/evaluations/manual-evaluation.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=988df4183b96716a82365619b92d9b98)
 
-## [​](https://docs.lmnr.ai/evaluations/manual-evaluation\#api-reference)  API Reference
+## [​](https://docs.lmnr.ai/evaluations/manual-evaluation#api-reference) API Reference
 
 For detailed API specifications including request/response schemas, visit:
 

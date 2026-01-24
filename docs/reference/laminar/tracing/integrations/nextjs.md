@@ -1,9 +1,10 @@
 ---
 title: Observability for Next.js - Laminar documentation
-url: 
+url:
 description: Instrument your Next.js app based on App Router with Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/nextjs#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -32,15 +33,15 @@ On this page
 - [4\. Patch LLM SDKs](https://docs.lmnr.ai/tracing/integrations/nextjs#4-patch-llm-sdks)
 - [5\. Grouping traces within one route](https://docs.lmnr.ai/tracing/integrations/nextjs#5-grouping-traces-within-one-route)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/nextjs\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/nextjs#overview) Overview
 
 [Next.js](https://nextjs.org/) is a popular React framework for building web applications.
 
 For a full example app, see [the Next.js guide](https://docs.lmnr.ai/guides/nextjs) and the [Next.js + AI SDK guide](https://docs.lmnr.ai/guides/nextjs-aisdk).
 
-## [​](https://docs.lmnr.ai/tracing/integrations/nextjs\#getting-started)  Getting Started
+## [​](https://docs.lmnr.ai/tracing/integrations/nextjs#getting-started) Getting Started
 
-### [​](https://docs.lmnr.ai/tracing/integrations/nextjs\#1-install-laminar)  1\. Install Laminar
+### [​](https://docs.lmnr.ai/tracing/integrations/nextjs#1-install-laminar) 1\. Install Laminar
 
 Copy
 
@@ -49,7 +50,7 @@ npm add @lmnr-ai/lmnr
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/nextjs\#2-update-your-next-config-ts)  2\. Update your next.config.ts
+### [​](https://docs.lmnr.ai/tracing/integrations/nextjs#2-update-your-next-config-ts) 2\. Update your next.config.ts
 
 Add the following to your `next.config.ts` file:
 
@@ -68,7 +69,7 @@ export default nextConfig;
 
 This is because Laminar depends on OpenTelemetry, which uses some Node.js-specific functionality, and we need to inform Next.js about it. Learn more in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
 
-### [​](https://docs.lmnr.ai/tracing/integrations/nextjs\#3-initialize-laminar)  3\. Initialize Laminar
+### [​](https://docs.lmnr.ai/tracing/integrations/nextjs#3-initialize-laminar) 3\. Initialize Laminar
 
 To instrument your entire Next.js app, place Laminar initialization in `instrumentation.{ts,js}` file. Learn more about `instrumentation.{ts,js}` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
 
@@ -103,12 +104,11 @@ module.exports = {
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/nextjs\#4-patch-llm-sdks)  4\. Patch LLM SDKs
+### [​](https://docs.lmnr.ai/tracing/integrations/nextjs#4-patch-llm-sdks) 4\. Patch LLM SDKs
 
 - AI SDKs
 
 - Other LLM SDKs
-
 
 AI SDK is already instrumented implicitly, but you need to direct it to use Laminar tracer.
 
@@ -130,7 +130,7 @@ const { text } = await generateText({
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/nextjs\#5-grouping-traces-within-one-route)  5\. Grouping traces within one route
+### [​](https://docs.lmnr.ai/tracing/integrations/nextjs#5-grouping-traces-within-one-route) 5\. Grouping traces within one route
 
 If your app makes multiple LLM calls within one route, you may want to group them together.You might get this functionality by default, if your app is instrumented with OpenTelemetry and
 some Next.js instrumentation, e.g. `@vercel/otel` or `@sentry/nextjs`.Otherwise, you can achieve this by using `observe` function wrapper, e.g. something like

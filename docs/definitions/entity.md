@@ -4,14 +4,14 @@ An entity is a discrete, identifiable object in ALFRED's domain. Entities are th
 
 ## Examples
 
-| Entity | Description | Schema Location |
-|--------|-------------|-----------------|
-| Note | User-created text content | `packages/db/src/schema/note.ts` |
-| Reminder | Time-triggered alert | `packages/db/src/schema/remind.ts` |
-| Timer | Duration tracker | `packages/db/src/schema/timer.ts` |
-| Book | Library item | `packages/db/src/schema/book.ts` |
-| Fact | Knowledge graph node | `packages/knowledge/` |
-| Preference | User setting | `packages/db/src/schema/preference.ts` |
+| Entity     | Description               | Schema Location                        |
+| ---------- | ------------------------- | -------------------------------------- |
+| Note       | User-created text content | `packages/db/src/schema/note.ts`       |
+| Reminder   | Time-triggered alert      | `packages/db/src/schema/remind.ts`     |
+| Timer      | Duration tracker          | `packages/db/src/schema/timer.ts`      |
+| Book       | Library item              | `packages/db/src/schema/book.ts`       |
+| Fact       | Knowledge graph node      | `packages/knowledge/`                  |
+| Preference | User setting              | `packages/db/src/schema/preference.ts` |
 
 ## Structure
 
@@ -38,6 +38,7 @@ Artifacts may reference entities by ID. Agents reading artifacts can follow up w
 ## Naming Convention
 
 Entity names are single lowercase words following ALFRED's naming convention (`.ruler/01-naming-conventions.md`). This carries through to:
+
 - Table names (`note`, `remind`, `timer`)
 - Schema files (`note.ts`, `remind.ts`)
 - Repository functions (`noteRepo.list()`)

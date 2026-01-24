@@ -1,9 +1,10 @@
 ---
 title: Watch mode – Test runner | Bun Docs
-url: 
+url:
 description: Reload your tests automatically on change.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -100,7 +101,7 @@ Writing tests](https://bun.com/docs/test/writing) [Next\\
 \\
 Lifecycle hooks](https://bun.com/docs/test/lifecycle)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/hot.md)
 
@@ -126,7 +127,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

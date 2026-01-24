@@ -1,9 +1,10 @@
 ---
 title: Apple | Better Auth
-url: 
+url:
 description: Apple provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your OAuth credentials](https://www.better-auth.com/docs/authentication/apple\#get-your-oauth-credentials)
+### [Get your OAuth credentials](https://www.better-auth.com/docs/authentication/apple#get-your-oauth-credentials)
 
 To use Apple sign in, you need a client ID and client secret. You can get them from the [Apple Developer Portal](https://developer.apple.com/account/resources/authkeys/list).
 
@@ -35,7 +36,7 @@ You will need an active **Apple Developer account** to access the developer port
 Follow these steps to set up your App ID, Service ID, and generate the key needed for your client secret:
 
 1. **Navigate to Certificates, Identifiers & Profiles:**
-In the Apple Developer Portal, go to the "Certificates, Identifiers & Profiles" section.
+   In the Apple Developer Portal, go to the "Certificates, Identifiers & Profiles" section.
 
 2. **Create an App ID:**
    - Go to the `Identifiers` tab.
@@ -71,12 +72,11 @@ In the Apple Developer Portal, go to the "Certificates, Identifiers & Profiles" 
    - Click `Save`, then `Continue`, then `Register`.
    - **Download the Key:** Immediately download the `.p8` key file. **This file is only available for download once.** Note the Key ID (available on the Keys page after creation) and your Team ID (available in your Apple Developer Account settings).
 6. **Generate the Client Secret (JWT):**
-Apple requires a JSON Web Token (JWT) to be generated dynamically using the downloaded `.p8` key, the Key ID, and your Team ID. This JWT serves as your `clientSecret`.
+   Apple requires a JSON Web Token (JWT) to be generated dynamically using the downloaded `.p8` key, the Key ID, and your Team ID. This JWT serves as your `clientSecret`.
 
 You can use the guide below from [Apple's documentation](https://developer.apple.com/documentation/accountorganizationaldatasharing/creating-a-client-secret) to understand how to generate this client secret. You can also use our built in generator [below](https://www.better-auth.com/docs/authentication/apple#generate-apple-client-secret-jwt) to generate the client secret JWT required for 'Sign in with Apple'.
 
-
-### [Configure the provider](https://www.better-auth.com/docs/authentication/apple\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/apple#configure-the-provider)
 
 To configure the provider, you need to add it to the `socialProviders` option of the auth instance.
 
@@ -103,9 +103,9 @@ export const auth = betterAuth({
 
 On native iOS, it doesn't use the service ID but the app ID (bundle ID) as client ID, so if using the service ID as `clientId` in `signIn.social` with `idToken`, it throws an error: `JWTClaimValidationFailed: unexpected "aud" claim value`. So you need to provide the `appBundleIdentifier` when you want to sign in with Apple using the ID Token.
 
-## [Usage](https://www.better-auth.com/docs/authentication/apple\#usage)
+## [Usage](https://www.better-auth.com/docs/authentication/apple#usage)
 
-### [Sign In with Apple](https://www.better-auth.com/docs/authentication/apple\#sign-in-with-apple)
+### [Sign In with Apple](https://www.better-auth.com/docs/authentication/apple#sign-in-with-apple)
 
 To sign in with Apple, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 
@@ -124,7 +124,7 @@ const signIn = async () => {
 }
 ```
 
-### [Sign In with Apple With ID Token](https://www.better-auth.com/docs/authentication/apple\#sign-in-with-apple-with-id-token)
+### [Sign In with Apple With ID Token](https://www.better-auth.com/docs/authentication/apple#sign-in-with-apple-with-id-token)
 
 To sign in with Apple using the ID Token, you can use the `signIn.social` function to pass the ID Token.
 
@@ -145,7 +145,7 @@ await authClient.signIn.social({
 })
 ```
 
-## [Generate Apple Client Secret (JWT)](https://www.better-auth.com/docs/authentication/apple\#generate-apple-client-secret-jwt)
+## [Generate Apple Client Secret (JWT)](https://www.better-auth.com/docs/authentication/apple#generate-apple-client-secret-jwt)
 
 Apple Team ID
 

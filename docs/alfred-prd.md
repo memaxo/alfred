@@ -50,8 +50,8 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - Add packages/api/src/routers/token.ts token exchange router skeleton
 - Add packages/api/src/metrics.ts prom-client registry skeleton and metric declarations
 - Add packages/agent/src/v6.ts AI SDK tool registry helpers
-- Add packages/agent/assistant/src/tool/* skeletons for note, remind, timer, book, focus, web, handoff, home, preference
-- Add packages/agent/src/orchestrator/tool/* skeletons for droid, git, router, ticket, web
+- Add packages/agent/assistant/src/tool/\* skeletons for note, remind, timer, book, focus, web, handoff, home, preference
+- Add packages/agent/src/orchestrator/tool/\* skeletons for droid, git, router, ticket, web
 - Add packages/auth/src/auth.ts Better Auth instance scaffold (drizzle adapter + passkey) with placeholders
 - Add packages/auth/src/token.ts Ed25519 issuance/verification and claims skeleton
 - Add packages/auth/src/jwks.ts JWKS generator skeleton
@@ -61,7 +61,7 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - Add packages/policy/src/load.ts YAML loader signatures
 - Add packages/policy/src/decide.ts evaluation composition skeleton
 - Add packages/db/src/client.ts drizzle client bootstrap skeleton
-- Add packages/db/src/schema/* skeletons (user, rag, graph, assistant, workflow, deploy, eval)
+- Add packages/db/src/schema/\* skeletons (user, rag, graph, assistant, workflow, deploy, eval)
 - Add packages/db/test harness skeleton
 - Add packages/ui/src/chat/chat.tsx shared chat component skeleton
 
@@ -496,4 +496,3 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - Documentation: See `docs/guides/runtime-migration-phase-3-6.md` for deployment plan
 - Documentation: See `docs/observability/runtime-dashboard.md` for Grafana setup
 - Documentation: See `docs/execplans/runtime-integration.md` for technical details
-

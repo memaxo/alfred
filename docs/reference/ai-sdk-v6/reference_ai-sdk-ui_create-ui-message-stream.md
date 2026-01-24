@@ -7,98 +7,96 @@ Copy markdown
 The `createUIMessageStream` function allows you to create a readable stream for UI messages with advanced features like message merging, error handling, and finish callbacks.
 
 ## Import
-    
-    
+
     import { createUIMessageStream } from "ai"
 
 ## Example
-    
-    
+
     const existingMessages: UIMessage[] = [
-    
+
       /* ... */
-    
+
     ];
-    
-    
-    
-    
+
+
+
+
     const stream = createUIMessageStream({
-    
+
       async execute({ writer }) {
-    
+
         // Start a text message
-    
+
         // Note: The id must be consistent across text-start, text-delta, and text-end steps
-    
+
         // This allows the system to correctly identify they belong to the same text block
-    
+
         writer.write({
-    
+
           type: 'text-start',
-    
+
           id: 'example-text',
-    
+
         });
-    
-    
-    
-    
+
+
+
+
         // Write a message chunk
-    
+
         writer.write({
-    
+
           type: 'text-delta',
-    
+
           id: 'example-text',
-    
+
           delta: 'Hello',
-    
+
         });
-    
-    
-    
-    
+
+
+
+
         // End the text message
-    
+
         writer.write({
-    
+
           type: 'text-end',
-    
+
           id: 'example-text',
-    
+
         });
-    
-    
-    
-    
+
+
+
+
         // Merge another stream from streamText
-    
+
         const result = streamText({
-    
+
           model: openai('gpt-4o'),
-    
+
           prompt: 'Write a haiku about AI',
-    
+
         });
-    
-    
-    
-    
+
+
+
+
         writer.merge(result.toUIMessageStream());
-    
+
       },
-    
+
       onError: error => `Custom error: ${error.message}`,
-    
+
       originalMessages: existingMessages,
-    
+
       onFinish: ({ messages, isContinuation, responseMessage }) => {
-    
+
         console.log('Stream finished with messages:', messages);
-    
+
       },
-    
+
     });
 
 ## API Signature

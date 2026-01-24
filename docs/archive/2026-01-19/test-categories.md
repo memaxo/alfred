@@ -20,23 +20,18 @@ ALFRED uses **filename conventions** and an explicit opt-in policy for slow suit
 From repo root (`/Users/jackmazac/Development/alfred`):
 
 - **Fast (unit-only, default for pre-push)**:
-
   - `bun run test:fast`
 
 - **Unit-only across all packages**:
-
   - `bun run test:unit`
 
 - **Integration-only (Bun)**:
-
   - `bun run test:integration:bun`
 
 - **E2E-only (Bun)**:
-
   - `bun run test:e2e:bun`
 
 - **Perf-only (Bun)**:
-
   - `bun run test:perf:bun`
 
 Playwright E2E lives under `apps/web/.tests/` and is run separately via the existing scripts (`test:mindscape:*`).
@@ -46,4 +41,3 @@ Playwright E2E lives under `apps/web/.tests/` and is run separately via the exis
 - All package test scripts run with `--timeout 60000` (per-test timeout).
 - A process watchdog (`ALFRED_TEST_WATCHDOG_MS`, default 5 minutes) terminates stuck test processes.
 - `@alfred/runtime` runs tests **one file per process** (`ALFRED_TEST_ISOLATE_FILES=1`) to prevent `mock.module()` cross-file pollution.
-

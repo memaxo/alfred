@@ -1,9 +1,10 @@
 ---
 title: Tracing LLM calls in FastAPI with Laminar - Laminar documentation
-url: 
+url:
 description: FastAPI Integration with Laminar Tracing
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/guides/fastapi#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -34,7 +35,7 @@ On this page
 - [Key Features Demonstrated](https://docs.lmnr.ai/guides/fastapi#key-features-demonstrated)
 - [Troubleshooting](https://docs.lmnr.ai/guides/fastapi#troubleshooting)
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#overview)  Overview
+## [​](https://docs.lmnr.ai/guides/fastapi#overview) Overview
 
 We’ll create a FastAPI application that:
 
@@ -43,7 +44,7 @@ We’ll create a FastAPI application that:
 3. Returns the classification result
 4. Traces the entire process with Laminar
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#setup)  Setup
+## [​](https://docs.lmnr.ai/guides/fastapi#setup) Setup
 
 You can also use the example app from our GitHub [repo](https://github.com/lmnr-ai/lmnr-python/tree/main/examples/fastapi-app).Alternatively, for a clean install, follow the steps below:
 
@@ -93,11 +94,11 @@ fastapi-app/
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#implementation)  Implementation
+## [​](https://docs.lmnr.ai/guides/fastapi#implementation) Implementation
 
 Let’s create our FastAPI application with Laminar tracing. We’ll split the code into three files:
 
-### [​](https://docs.lmnr.ai/guides/fastapi\#1-schemas-py)  1\. schemas.py
+### [​](https://docs.lmnr.ai/guides/fastapi#1-schemas-py) 1\. schemas.py
 
 This file will contain the Pydantic models for the request and response.
 
@@ -126,7 +127,7 @@ class TicketClassification(BaseModel):
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/fastapi\#2-llm-py)  2\. llm.py
+### [​](https://docs.lmnr.ai/guides/fastapi#2-llm-py) 2\. llm.py
 
 This file will contain the logic that handles the LLM. In a production app,
 this will likely be a much bigger module with classes, routing, etc.For now, we’ll just have a function that handles an OpenAI call.
@@ -174,7 +175,7 @@ Customer Email: {ticket.customer_email}""",\
 
 ```
 
-### [​](https://docs.lmnr.ai/guides/fastapi\#3-main-py)  3\. main.py
+### [​](https://docs.lmnr.ai/guides/fastapi#3-main-py) 3\. main.py
 
 This file will contain the logic that handles the FastAPI app.
 
@@ -210,7 +211,7 @@ async def classify_ticket(ticket: Ticket):
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#running-the-application)  Running the Application
+## [​](https://docs.lmnr.ai/guides/fastapi#running-the-application) Running the Application
 
 Start the FastAPI server:
 
@@ -221,7 +222,7 @@ uvicorn src.main:app --reload --port 8011
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#testing-the-api)  Testing the API
+## [​](https://docs.lmnr.ai/guides/fastapi#testing-the-api) Testing the API
 
 You can test the API using curl:
 
@@ -238,20 +239,20 @@ curl --location 'localhost:8011/api/v1/tickets/classify' \
 
 ```
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#viewing-traces)  Viewing Traces
+## [​](https://docs.lmnr.ai/guides/fastapi#viewing-traces) Viewing Traces
 
 After making a request, you can view the traces in your Laminar dashboard at [https://www.lmnr.ai](https://www.lmnr.ai/). The trace will show:
 
 1. The ticket classification function execution
 2. The OpenAI API call
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#key-features-demonstrated)  Key Features Demonstrated
+## [​](https://docs.lmnr.ai/guides/fastapi#key-features-demonstrated) Key Features Demonstrated
 
 1. **Automatic Tracing**: Laminar automatically traces OpenAI calls and functions marked with `@observe`
 2. **Tokens Usage**: Laminar automatically calculates the tokens used for each OpenAI call
 3. **Cost Estimation**: Laminar automatically estimates the cost of each OpenAI call
 
-## [​](https://docs.lmnr.ai/guides/fastapi\#troubleshooting)  Troubleshooting
+## [​](https://docs.lmnr.ai/guides/fastapi#troubleshooting) Troubleshooting
 
 If you encounter issues:
 

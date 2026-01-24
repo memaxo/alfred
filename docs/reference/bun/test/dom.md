@@ -1,9 +1,10 @@
 ---
 title: DOM testing – Test runner | Bun Docs
-url: 
+url:
 description: Write headless tests for UI and React/Vue/Svelte/Lit components with happy-dom
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -52,7 +53,7 @@ Project
 
 Bun's test runner plays well with existing component and DOM testing libraries, including React Testing Library and [`happy-dom`](https://github.com/capricorn86/happy-dom).
 
-## [`happy-dom`](https://bun.com/docs/test/dom\#happy-dom)
+## [`happy-dom`](https://bun.com/docs/test/dom#happy-dom)
 
 For writing headless tests for your frontend code and components, we recommend [`happy-dom`](https://github.com/capricorn86/happy-dom). Happy DOM implements a complete set of HTML and DOM APIs in plain JavaScript, making it possible to simulate a browser environment with high fidelity.
 
@@ -134,7 +135,7 @@ Finding tests](https://bun.com/docs/test/discovery) [Next\\
 \\
 `bunx`](https://bun.com/docs/cli/bunx)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/dom.md)
 
@@ -158,7 +159,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -1,9 +1,10 @@
 ---
 title: Scoring with SDK - Laminar documentation
-url: 
+url:
 description: Programmatically create evaluator scores using our SDK
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -29,11 +30,11 @@ On this page
 - [Viewing Scores in UI](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk#viewing-scores-in-ui)
 - [API Reference](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk#api-reference)
 
-## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk\#create-evaluator-score)  Create Evaluator Score
+## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk#create-evaluator-score) Create Evaluator Score
 
 Create a score for a span using either a trace ID or span ID. When using a trace ID, the score will be attached to the root span of that trace.
 
-### [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk\#code-examples)  Code Examples
+### [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk#code-examples) Code Examples
 
 TypeScript
 
@@ -97,13 +98,13 @@ await laminarClient.evaluators.score({
 
 ```
 
-## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk\#viewing-scores-in-ui)  Viewing Scores in UI
+## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk#viewing-scores-in-ui) Viewing Scores in UI
 
 When you create evaluator scores, they will appear in your Laminar dashboard attached to the corresponding spans:
 
 ![Evaluator scores displayed in span details](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/evaluations/online-evaluators/score.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=91c3b78db2de15668309053d8645afed)
 
-## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk\#api-reference)  API Reference
+## [​](https://docs.lmnr.ai/evaluations/online-evaluators/scoring-with-sdk#api-reference) API Reference
 
 For detailed API specifications including request/response schemas, visit: [**Create Evaluator Score** \\
 \\

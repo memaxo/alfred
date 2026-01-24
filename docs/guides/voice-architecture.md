@@ -81,4 +81,3 @@ The admin dashboard exposes voice telemetry and controls. Operators can view ses
 - [Voice Architecture Reference](../architecture/voice.md) — Implementation details and configuration
 - [Cognitive State Machine](cognitive-state-machine.md) — How voice input triggers cognitive events
 - [Integration Patterns](integration-patterns.md) — How voice composes with other systems
-

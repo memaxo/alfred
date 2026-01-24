@@ -1,9 +1,10 @@
 ---
 title: LLM Observability for Anthropic SDK - Laminar documentation
-url: 
+url:
 description: Instrument your Anthropic API calls with Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/anthropic#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -33,18 +34,17 @@ On this page
 - [Monitoring Your Anthropic Usage](https://docs.lmnr.ai/tracing/integrations/anthropic#monitoring-your-anthropic-usage)
 - [Advanced Features](https://docs.lmnr.ai/tracing/integrations/anthropic#advanced-features)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/anthropic#overview) Overview
 
 Laminar automatically instruments the official Anthropic package with a single line of code, allowing you to trace and monitor all your Anthropic API calls without modifying your existing code. This provides complete visibility into your AI application’s performance, costs, and behavior.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#getting-started)  Getting Started
+## [​](https://docs.lmnr.ai/tracing/integrations/anthropic#getting-started) Getting Started
 
 - TypeScript
 
 - Python
 
-
-### [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#1-install-laminar-and-anthropic)  1\. Install Laminar and Anthropic
+### [​](https://docs.lmnr.ai/tracing/integrations/anthropic#1-install-laminar-and-anthropic) 1\. Install Laminar and Anthropic
 
 Copy
 
@@ -53,7 +53,7 @@ npm install @lmnr-ai/lmnr @anthropic-ai/sdk
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#2-set-up-your-environment-variables)  2\. Set up your environment variables
+### [​](https://docs.lmnr.ai/tracing/integrations/anthropic#2-set-up-your-environment-variables) 2\. Set up your environment variables
 
 Store your API keys in a `.env` file:
 
@@ -70,7 +70,7 @@ Then load them in your application using a package like [dotenv](https://www.npm
 
 If you are using Anthropic with Next.js, please follow the [Next.js integration guide](https://docs.lmnr.ai/tracing/integrations/nextjs) for best practices and setup instructions.
 
-### [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#3-initialize-laminar)  3\. Initialize Laminar
+### [​](https://docs.lmnr.ai/tracing/integrations/anthropic#3-initialize-laminar) 3\. Initialize Laminar
 
 Just add a single line at the start of your application or file to instrument Anthropic with Laminar.
 
@@ -93,7 +93,7 @@ const anthropic = new Anthropic();
 
 It is important to pass `Anthropic` to `instrumentModules` as a named export.
 
-### [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#4-use-anthropic-as-usual)  4\. Use Anthropic as usual
+### [​](https://docs.lmnr.ai/tracing/integrations/anthropic#4-use-anthropic-as-usual) 4\. Use Anthropic as usual
 
 Copy
 
@@ -115,7 +115,7 @@ All Anthropic API calls are now automatically traced in Laminar.
 
 These features allow you to build more structured traces, add context to your LLM calls, and gain deeper insights into your AI application’s performance.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#monitoring-your-anthropic-usage)  Monitoring Your Anthropic Usage
+## [​](https://docs.lmnr.ai/tracing/integrations/anthropic#monitoring-your-anthropic-usage) Monitoring Your Anthropic Usage
 
 After instrumenting your Anthropic calls with Laminar, you’ll be able to:
 
@@ -127,7 +127,7 @@ After instrumenting your Anthropic calls with Laminar, you’ll be able to:
 
 Visit your Laminar dashboard to view your Anthropic traces and analytics.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/anthropic\#advanced-features)  Advanced Features
+## [​](https://docs.lmnr.ai/tracing/integrations/anthropic#advanced-features) Advanced Features
 
 - [Sessions](https://docs.lmnr.ai/tracing/structure/session) \- Learn how to add session structure to your traces
 - [Metadata](https://docs.lmnr.ai/tracing/structure/metadata) \- Discover how to add additional context to your LLM spans

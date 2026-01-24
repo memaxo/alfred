@@ -12,28 +12,26 @@ If you are unfamiliar with the concepts of Prompt Engineering and HTTP Streaming
 
 To follow this quickstart, you'll need:
 
-  * Node.js 18+ and pnpm installed on your local development machine.
-  * An OpenAI API key.
+- Node.js 18+ and pnpm installed on your local development machine.
+- An OpenAI API key.
 
 If you haven't obtained your OpenAI API key, you can do so by signing up on the OpenAI website.
 
 ## Create Your Application
 
 Start by creating a new Expo application. This command will create a new directory named `my-ai-app` and set up a basic Expo application inside it.
-    
-    
+
     pnpm create expo-app@latest my-ai-app
 
 Navigate to the newly created directory:
-    
-    
+
     cd my-ai-app
 
 This guide requires Expo 52 or higher.
 
 ### Install dependencies
 
-Install `ai`, `@ai-sdk/react` and `@ai-sdk/openai`, the AI package, the AI React package and AI SDK's  OpenAI provider  respectively.
+Install `ai`, `@ai-sdk/react` and `@ai-sdk/openai`, the AI package, the AI React package and AI SDK's OpenAI provider respectively.
 
 The AI SDK is designed to be a unified interface to interact with any large language model. This means that you can change model and providers with just one line of code! Learn more about available providers and building custom providers in the providers section.
 
@@ -44,22 +42,19 @@ npm
 yarn
 
 bun
-    
-    
+
     pnpm add ai @ai-sdk/openai @ai-sdk/react zod
 
 ### Configure OpenAI API key
 
 Create a `.env.local` file in your project root and add your OpenAI API Key. This key is used to authenticate your application with the OpenAI service.
-    
-    
+
     touch .env.local
 
 Edit the `.env.local` file:
 
 .env.local
-    
-    
+
     OPENAI_API_KEY=xxxxxxxxx
 
 Replace `xxxxxxxxx` with your actual OpenAI API key.
@@ -71,177 +66,175 @@ The AI SDK's OpenAI Provider will default to using the `OPENAI_API_KEY` environm
 Create a route handler, `app/api/chat+api.ts` and add the following code:
 
 app/api/chat+api.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamText, UIMessage, convertToModelMessages } from 'ai';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse({
-    
+
         headers: {
-    
+
           'Content-Type': 'application/octet-stream',
-    
+
           'Content-Encoding': 'none',
-    
+
         },
-    
+
       });
-    
+
     }
 
 Let's take a look at what is happening in this code:
 
-  1. Define an asynchronous `POST` request handler and extract `messages` from the body of the request. The `messages` variable contains a history of the conversation between you and the chatbot and provides the chatbot with the necessary context to make the next generation.
-  2. Call `streamText`, which is imported from the `ai` package. This function accepts a configuration object that contains a `model` provider (imported from `@ai-sdk/openai`) and `messages` (defined in step 1). You can pass additional settings to further customise the model's behaviour.
-  3. The `streamText` function returns a `StreamTextResult`. This result object contains the  `toDataStreamResponse` function which converts the result to a streamed response object.
-  4. Finally, return the result to the client to stream the response.
+1. Define an asynchronous `POST` request handler and extract `messages` from the body of the request. The `messages` variable contains a history of the conversation between you and the chatbot and provides the chatbot with the necessary context to make the next generation.
+2. Call `streamText`, which is imported from the `ai` package. This function accepts a configuration object that contains a `model` provider (imported from `@ai-sdk/openai`) and `messages` (defined in step 1). You can pass additional settings to further customise the model's behaviour.
+3. The `streamText` function returns a `StreamTextResult`. This result object contains the `toDataStreamResponse` function which converts the result to a streamed response object.
+4. Finally, return the result to the client to stream the response.
 
 This API route creates a POST request endpoint at `/api/chat`.
 
 ## Wire up the UI
 
-Now that you have an API route that can query an LLM, it's time to setup your frontend. The AI SDK's  UI  package abstracts the complexity of a chat interface into one hook, `useChat`.
+Now that you have an API route that can query an LLM, it's time to setup your frontend. The AI SDK's UI package abstracts the complexity of a chat interface into one hook, `useChat`.
 
 Update your root page (`app/(tabs)/index.tsx`) with the following code to show a list of chat messages and provide a user message input:
 
 app/(tabs)/index.tsx
-    
-    
+
     import { generateAPIUrl } from '@/utils';
-    
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { DefaultChatTransport } from 'ai';
-    
+
     import { fetch as expoFetch } from 'expo/fetch';
-    
+
     import { useState } from 'react';
-    
+
     import { View, TextInput, ScrollView, Text, SafeAreaView } from 'react-native';
-    
-    
-    
-    
+
+
+
+
     export default function App() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, error, sendMessage } = useChat({
-    
+
         transport: new DefaultChatTransport({
-    
+
           fetch: expoFetch as unknown as typeof globalThis.fetch,
-    
+
           api: generateAPIUrl('/api/chat'),
-    
+
         }),
-    
+
         onError: error => console.error(error, 'ERROR'),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       if (error) return {error.message};
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
-          
-    
-            
-    
+
+
+
+
+
+
+
               {messages.map(m => (
-    
-                
-    
-                  
-    
+
+
+
+
+
                     {m.role}
-    
+
                     {m.parts.map((part, i) => {
-    
+
                       switch (part.type) {
-    
+
                         case 'text':
-    
+
                           return {part.text};
-    
+
                       }
-    
+
                     })}
-    
-                  
-    
-                
-    
+
+
+
+
+
               ))}
-    
-            
-    
-    
-    
-    
-            
-    
+
+
+
+
+
+
+
+
                setInput(e.nativeEvent.text)}
-    
+
                 onSubmitEditing={e => {
-    
+
                   e.preventDefault();
-    
+
                   sendMessage({ text: input });
-    
+
                   setInput('');
-    
+
                 }}
-    
+
                 autoFocus={true}
-    
+
               />
-    
-            
-    
-          
-    
-        
-    
+
+
+
+
+
+
+
       );
-    
+
     }
 
 This page utilizes the `useChat` hook, which will, by default, use the `POST` API route you created earlier (`/api/chat`). The hook provides functions and state for handling user input and form submission. The `useChat` hook provides multiple utility functions and state variables:
 
-  * `messages` \- the current chat messages (an array of objects with `id`, `role`, and `parts` properties).
-  * `sendMessage` \- a function to send a message to the chat API.
+- `messages` \- the current chat messages (an array of objects with `id`, `role`, and `parts` properties).
+- `sendMessage` \- a function to send a message to the chat API.
 
 The component uses local state (`useState`) to manage the input field value, and handles form submission by calling `sendMessage` with the input text and then clearing the input field.
 
@@ -254,49 +247,48 @@ You use the expo/fetch function instead of the native node fetch to enable strea
 Because you're using expo/fetch for streaming responses instead of the native fetch function, you'll need an API URL generator to ensure you are using the correct base url and format depending on the client environment (e.g. web or mobile). Create a new file called `utils.ts` in the root of your project and add the following code:
 
 utils.ts
-    
-    
+
     import Constants from 'expo-constants';
-    
-    
-    
-    
+
+
+
+
     export const generateAPIUrl = (relativePath: string) => {
-    
+
       const origin = Constants.experienceUrl.replace('exp://', 'http://');
-    
-    
-    
-    
+
+
+
+
       const path = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
-    
-    
-    
-    
+
+
+
+
       if (process.env.NODE_ENV === 'development') {
-    
+
         return origin.concat(path);
-    
+
       }
-    
-    
-    
-    
+
+
+
+
       if (!process.env.EXPO_PUBLIC_API_BASE_URL) {
-    
+
         throw new Error(
-    
+
           'EXPO_PUBLIC_API_BASE_URL environment variable is not defined',
-    
+
         );
-    
+
       }
-    
-    
-    
-    
+
+
+
+
       return process.env.EXPO_PUBLIC_API_BASE_URL.concat(path);
-    
+
     };
 
 This utility function handles URL generation for both development and production environments, ensuring your API calls work correctly across different devices and configurations.
@@ -306,8 +298,7 @@ Before deploying to production, you must set the `EXPO_PUBLIC_API_BASE_URL` envi
 ## Running Your Application
 
 With that, you have built everything you need for your chatbot! To start your application, use the command:
-    
-    
+
     pnpm expo
 
 Head to your browser and open http://localhost:8081. You should see an input field. Test it out by entering a message and see the AI chatbot respond in real-time! The AI SDK makes it fast and easy to build AI chat interfaces with Expo.
@@ -329,88 +320,86 @@ Let's enhance your chatbot by adding a simple weather tool.
 Modify your `app/api/chat+api.ts` file to include the new weather tool:
 
 app/api/chat+api.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { streamText, UIMessage, convertToModelMessages, tool } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         tools: {
-    
+
           weather: tool({
-    
+
             description: 'Get the weather in a location (fahrenheit)',
-    
+
             inputSchema: z.object({
-    
+
               location: z.string().describe('The location to get the weather for'),
-    
+
             }),
-    
+
             execute: async ({ location }) => {
-    
+
               const temperature = Math.round(Math.random() * (90 - 32) + 32);
-    
+
               return {
-    
+
                 location,
-    
+
                 temperature,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse({
-    
+
         headers: {
-    
+
           'Content-Type': 'application/octet-stream',
-    
+
           'Content-Encoding': 'none',
-    
+
         },
-    
+
       });
-    
+
     }
 
 In this updated code:
 
-  1. You import the `tool` function from the `ai` package and `z` from `zod` for schema validation.
+1. You import the `tool` function from the `ai` package and `z` from `zod` for schema validation.
 
-  2. You define a `tools` object with a `weather` tool. This tool:
-
-     * Has a description that helps the model understand when to use it.
-     * Defines `inputSchema` using a Zod schema, specifying that it requires a `location` string to execute this tool. The model will attempt to extract this input from the context of the conversation. If it can't, it will ask the user for the missing information.
-     * Defines an `execute` function that simulates getting weather data (in this case, it returns a random temperature). This is an asynchronous function running on the server so you can fetch real data from an external API.
+2. You define a `tools` object with a `weather` tool. This tool:
+   - Has a description that helps the model understand when to use it.
+   - Defines `inputSchema` using a Zod schema, specifying that it requires a `location` string to execute this tool. The model will attempt to extract this input from the context of the conversation. If it can't, it will ask the user for the missing information.
+   - Defines an `execute` function that simulates getting weather data (in this case, it returns a random temperature). This is an asynchronous function running on the server so you can fetch real data from an external API.
 
 Now your chatbot can "fetch" weather information for any location the user asks about. When the model determines it needs to use the weather tool, it will generate a tool call with the necessary input. The `execute` function will then be automatically run, and the tool output will be added to the `messages` as a `tool` message.
 
@@ -427,126 +416,125 @@ Tool parts are always named `tool-{toolName}`, where `{toolName}` is the key you
 To display the weather tool invocation in your UI, update your `app/(tabs)/index.tsx` file:
 
 app/(tabs)/index.tsx
-    
-    
+
     import { generateAPIUrl } from '@/utils';
-    
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { DefaultChatTransport } from 'ai';
-    
+
     import { fetch as expoFetch } from 'expo/fetch';
-    
+
     import { useState } from 'react';
-    
+
     import { View, TextInput, ScrollView, Text, SafeAreaView } from 'react-native';
-    
-    
-    
-    
+
+
+
+
     export default function App() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, error, sendMessage } = useChat({
-    
+
         transport: new DefaultChatTransport({
-    
+
           fetch: expoFetch as unknown as typeof globalThis.fetch,
-    
+
           api: generateAPIUrl('/api/chat'),
-    
+
         }),
-    
+
         onError: error => console.error(error, 'ERROR'),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       if (error) return {error.message};
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
-          
-    
-            
-    
+
+
+
+
+
+
+
               {messages.map(m => (
-    
-                
-    
-                  
-    
+
+
+
+
+
                     {m.role}
-    
+
                     {m.parts.map((part, i) => {
-    
+
                       switch (part.type) {
-    
+
                         case 'text':
-    
+
                           return {part.text};
-    
+
                         case 'tool-weather':
-    
+
                           return (
-    
-                            
-    
+
+
+
                               {JSON.stringify(part, null, 2)}
-    
-                            
-    
+
+
+
                           );
-    
+
                       }
-    
+
                     })}
-    
-                  
-    
-                
-    
+
+
+
+
+
               ))}
-    
-            
-    
-    
-    
-    
-            
-    
+
+
+
+
+
+
+
+
                setInput(e.nativeEvent.text)}
-    
+
                 onSubmitEditing={e => {
-    
+
                   e.preventDefault();
-    
+
                   sendMessage({ text: input });
-    
+
                   setInput('');
-    
+
                 }}
-    
+
                 autoFocus={true}
-    
+
               />
-    
-            
-    
-          
-    
-        
-    
+
+
+
+
+
+
+
       );
-    
+
     }
 
 You may need to restart your development server for the changes to take effect.
@@ -566,91 +554,90 @@ To solve this, you can enable multi-step tool calls using `stopWhen`. By default
 Modify your `app/api/chat+api.ts` file to include the `stopWhen` condition:
 
 app/api/chat+api.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       streamText,
-    
+
       UIMessage,
-    
+
       convertToModelMessages,
-    
+
       tool,
-    
+
       stepCountIs,
-    
+
     } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
         tools: {
-    
+
           weather: tool({
-    
+
             description: 'Get the weather in a location (fahrenheit)',
-    
+
             inputSchema: z.object({
-    
+
               location: z.string().describe('The location to get the weather for'),
-    
+
             }),
-    
+
             execute: async ({ location }) => {
-    
+
               const temperature = Math.round(Math.random() * (90 - 32) + 32);
-    
+
               return {
-    
+
                 location,
-    
+
                 temperature,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse({
-    
+
         headers: {
-    
+
           'Content-Type': 'application/octet-stream',
-    
+
           'Content-Encoding': 'none',
-    
+
         },
-    
+
       });
-    
+
     }
 
 You may need to restart your development server for the changes to take effect.
@@ -664,119 +651,118 @@ By setting `stopWhen: stepCountIs(5)`, you're allowing the model to use up to 5 
 Update your `app/api/chat+api.ts` file to add a new tool to convert the temperature from Fahrenheit to Celsius:
 
 app/api/chat+api.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       streamText,
-    
+
       UIMessage,
-    
+
       convertToModelMessages,
-    
+
       tool,
-    
+
       stepCountIs,
-    
+
     } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
         tools: {
-    
+
           weather: tool({
-    
+
             description: 'Get the weather in a location (fahrenheit)',
-    
+
             inputSchema: z.object({
-    
+
               location: z.string().describe('The location to get the weather for'),
-    
+
             }),
-    
+
             execute: async ({ location }) => {
-    
+
               const temperature = Math.round(Math.random() * (90 - 32) + 32);
-    
+
               return {
-    
+
                 location,
-    
+
                 temperature,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
           convertFahrenheitToCelsius: tool({
-    
+
             description: 'Convert a temperature in fahrenheit to celsius',
-    
+
             inputSchema: z.object({
-    
+
               temperature: z
-    
+
                 .number()
-    
+
                 .describe('The temperature in fahrenheit to convert'),
-    
+
             }),
-    
+
             execute: async ({ temperature }) => {
-    
+
               const celsius = Math.round((temperature - 32) * (5 / 9));
-    
+
               return {
-    
+
                 celsius,
-    
+
               };
-    
+
             },
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse({
-    
+
         headers: {
-    
+
           'Content-Type': 'application/octet-stream',
-    
+
           'Content-Encoding': 'none',
-    
+
         },
-    
+
       });
-    
+
     }
 
 You may need to restart your development server for the changes to take effect.
@@ -786,138 +772,137 @@ You may need to restart your development server for the changes to take effect.
 To display the temperature conversion tool invocation in your UI, update your `app/(tabs)/index.tsx` file to handle the new tool part:
 
 app/(tabs)/index.tsx
-    
-    
+
     import { generateAPIUrl } from '@/utils';
-    
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { DefaultChatTransport } from 'ai';
-    
+
     import { fetch as expoFetch } from 'expo/fetch';
-    
+
     import { useState } from 'react';
-    
+
     import { View, TextInput, ScrollView, Text, SafeAreaView } from 'react-native';
-    
-    
-    
-    
+
+
+
+
     export default function App() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, error, sendMessage } = useChat({
-    
+
         transport: new DefaultChatTransport({
-    
+
           fetch: expoFetch as unknown as typeof globalThis.fetch,
-    
+
           api: generateAPIUrl('/api/chat'),
-    
+
         }),
-    
+
         onError: error => console.error(error, 'ERROR'),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       if (error) return {error.message};
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
-          
-    
-            
-    
+
+
+
+
+
+
+
               {messages.map(m => (
-    
-                
-    
-                  
-    
+
+
+
+
+
                     {m.role}
-    
+
                     {m.parts.map((part, i) => {
-    
+
                       switch (part.type) {
-    
+
                         case 'text':
-    
+
                           return {part.text};
-    
+
                         case 'tool-weather':
-    
+
                         case 'tool-convertFahrenheitToCelsius':
-    
+
                           return (
-    
-                            
-    
+
+
+
                               {JSON.stringify(part, null, 2)}
-    
-                            
-    
+
+
+
                           );
-    
+
                       }
-    
+
                     })}
-    
-                  
-    
-                
-    
+
+
+
+
+
               ))}
-    
-            
-    
-    
-    
-    
-            
-    
+
+
+
+
+
+
+
+
                setInput(e.nativeEvent.text)}
-    
+
                 onSubmitEditing={e => {
-    
+
                   e.preventDefault();
-    
+
                   sendMessage({ text: input });
-    
+
                   setInput('');
-    
+
                 }}
-    
+
                 autoFocus={true}
-    
+
               />
-    
-            
-    
-          
-    
-        
-    
+
+
+
+
+
+
+
       );
-    
+
     }
 
 You may need to restart your development server for the changes to take effect.
 
 Now, when you ask "What's the weather in New York in celsius?", you should see a more complete interaction:
 
-  1. The model will call the weather tool for New York.
-  2. You'll see the tool result displayed.
-  3. It will then call the temperature conversion tool to convert the temperature from Fahrenheit to Celsius.
-  4. The model will then use that information to provide a natural language response about the weather in New York.
+1. The model will call the weather tool for New York.
+2. You'll see the tool result displayed.
+3. It will then call the temperature conversion tool to convert the temperature from Fahrenheit to Celsius.
+4. The model will then use that information to provide a natural language response about the weather in New York.
 
 This multi-step approach allows the model to gather information and use it to provide more accurate and contextual responses, making your chatbot considerably more useful.
 
@@ -936,85 +921,82 @@ npm
 yarn
 
 bun
-    
-    
+
     pnpm add @ungap/structured-clone @stardazed/streams-text-encoding
 
 Then create a new file in the root of your project with the following polyfills:
 
 polyfills.js
-    
-    
+
     import { Platform } from 'react-native';
-    
+
     import structuredClone from '@ungap/structured-clone';
-    
-    
-    
-    
+
+
+
+
     if (Platform.OS !== 'web') {
-    
+
       const setupPolyfills = async () => {
-    
+
         const { polyfillGlobal } = await import(
-    
+
           'react-native/Libraries/Utilities/PolyfillFunctions'
-    
+
         );
-    
-    
-    
-    
+
+
+
+
         const { TextEncoderStream, TextDecoderStream } = await import(
-    
+
           '@stardazed/streams-text-encoding'
-    
+
         );
-    
-    
-    
-    
+
+
+
+
         if (!('structuredClone' in global)) {
-    
+
           polyfillGlobal('structuredClone', () => structuredClone);
-    
+
         }
-    
-    
-    
-    
+
+
+
+
         polyfillGlobal('TextEncoderStream', () => TextEncoderStream);
-    
+
         polyfillGlobal('TextDecoderStream', () => TextDecoderStream);
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       setupPolyfills();
-    
+
     }
-    
-    
-    
-    
+
+
+
+
     export {};
 
 Finally, import the polyfills in your root `_layout.tsx`:
 
-_layout.tsx
-    
-    
+\_layout.tsx
+
     import '@/polyfills';
 
 ## Where to Next?
 
 You've built an AI chatbot using the AI SDK! From here, you have several paths to explore:
 
-  * To learn more about the AI SDK, read through the documentation.
-  * If you're interested in diving deeper with guides, check out the RAG (retrieval-augmented generation) and multi-modal chatbot guides.
-  * To jumpstart your first AI project, explore available templates.
+- To learn more about the AI SDK, read through the documentation.
+- If you're interested in diving deeper with guides, check out the RAG (retrieval-augmented generation) and multi-modal chatbot guides.
+- To jumpstart your first AI project, explore available templates.
 
 Previous
 

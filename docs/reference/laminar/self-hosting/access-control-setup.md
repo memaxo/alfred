@@ -1,9 +1,10 @@
 ---
 title: Access Control Setup - Laminar documentation
-url: 
+url:
 description: GitHub based access control for restricted users
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/self-hosting/access-control-setup#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -30,11 +31,11 @@ On this page
 - [Default Behavior](https://docs.lmnr.ai/self-hosting/access-control-setup#default-behavior)
 - [Restricted Access](https://docs.lmnr.ai/self-hosting/access-control-setup#restricted-access)
 
-## [​](https://docs.lmnr.ai/self-hosting/access-control-setup\#overview)  Overview
+## [​](https://docs.lmnr.ai/self-hosting/access-control-setup#overview) Overview
 
 Laminar supports optional GitHub authentication for controlling access to your self-hosted instance.
 
-## [​](https://docs.lmnr.ai/self-hosting/access-control-setup\#github-authentication-setup)  GitHub Authentication Setup
+## [​](https://docs.lmnr.ai/self-hosting/access-control-setup#github-authentication-setup) GitHub Authentication Setup
 
 To enable GitHub authentication, configure these environment variables in your frontend:
 
@@ -46,13 +47,13 @@ AUTH_GITHUB_SECRET=your_github_oauth_app_secret
 
 ```
 
-## [​](https://docs.lmnr.ai/self-hosting/access-control-setup\#access-control)  Access Control
+## [​](https://docs.lmnr.ai/self-hosting/access-control-setup#access-control) Access Control
 
-### [​](https://docs.lmnr.ai/self-hosting/access-control-setup\#default-behavior)  Default Behavior
+### [​](https://docs.lmnr.ai/self-hosting/access-control-setup#default-behavior) Default Behavior
 
 By default (without an `allowed-emails.json` file), any GitHub user can access your platform after authentication.
 
-### [​](https://docs.lmnr.ai/self-hosting/access-control-setup\#restricted-access)  Restricted Access
+### [​](https://docs.lmnr.ai/self-hosting/access-control-setup#restricted-access) Restricted Access
 
 To limit access to specific users, create an `allowed-emails.json` file in your project root:
 

@@ -40,8 +40,8 @@ Love is a universal emotion that is characterized by feelings of affection, atta
 
 The AI SDK has two main libraries:
 
-  * **AI SDK Core:** A unified API for generating text, structured objects, tool calls, and building agents with LLMs.
-  * **AI SDK UI:** A set of framework-agnostic hooks for quickly building chat and generative user interface.
+- **AI SDK Core:** A unified API for generating text, structured objects, tool calls, and building agents with LLMs.
+- **AI SDK UI:** A set of framework-agnostic hooks for quickly building chat and generative user interface.
 
 ## Model Providers
 
@@ -215,20 +215,18 @@ You can access the entire AI SDK documentation in Markdown format at ai-sdk.dev/
 
 For instance, to prompt an LLM with questions about the AI SDK:
 
-  1. Copy the documentation contents from ai-sdk.dev/llms.txt
-  2. Use the following prompt format:
+1. Copy the documentation contents from ai-sdk.dev/llms.txt
+2. Use the following prompt format:
 
-    
-    
-    Documentation:
-    
-    {paste documentation here}
-    
-    ---
-    
-    Based on the above documentation, answer the following:
-    
-    {your question}
+   Documentation:
+
+   {paste documentation here}
+
+   ***
+
+   Based on the above documentation, answer the following:
+
+   {your question}
 
 Next
 

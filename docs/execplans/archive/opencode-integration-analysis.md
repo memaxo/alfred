@@ -208,7 +208,7 @@ The original analysis references an external repo at `/Users/jackmazac/Developme
 - **New tool**: `packages/agent/src/orchestrator/tool/opencode/` (folder structure; multiple execution paths + policy)
   - `definition.ts`: Zod input/output schemas (include `authz`)
   - `policy.ts`: policy + scope checks
-  - `exec.ts`: execution logic (SDK mode via `@agentclientprotocol/sdk` *or* spawned mode)
+  - `exec.ts`: execution logic (SDK mode via `@agentclientprotocol/sdk` _or_ spawned mode)
   - `index.ts`: legacy-tool export to match `orchestratorToolSources`
 - **Register**: add `toolOpenCode` to `orchestratorToolSources` in `packages/agent/src/v6.ts`.
 
@@ -231,7 +231,7 @@ Target file: `packages/agent/src/orchestrator/loops/ralph.ts`
 
 Target file: `packages/protocol/src/acp.ts` (exists today)
 
-- **Proposed**: treat ACP as a *transport/types* dependency, not as the orchestrator’s internal abstraction boundary.
+- **Proposed**: treat ACP as a _transport/types_ dependency, not as the orchestrator’s internal abstraction boundary.
 - **Avoid**: shipping large “AgentBackend/AgentPool” abstractions in one step unless we prove they reduce duplication versus today’s `runAgent` + tool-based execution.
 
 ## Testing requirements (non-negotiable)
@@ -263,6 +263,7 @@ Comprehensive analysis of the OpenCode orchestrator codebase (`/Users/jackmazac/
 ## Executive Summary
 
 The OpenCode orchestrator provides sophisticated multi-agent coordination with:
+
 - **Worker Pool** for lifecycle management and spawn deduplication
 - **Backend Resolution** (agent/server) for in-process vs spawned execution
 - **Profile System** for declarative worker configuration
@@ -280,6 +281,7 @@ Before proposing integration, we must understand ALFRED's current multi-agent co
 ALFRED implements sophisticated wave-based parallel execution (`packages/runtime/src/orchestrator/waves.ts`):
 
 **Wave Planning:**
+
 - Dependency graph construction from `SubTask[]` with `deps` arrays
 - Topological sorting via in-degree calculation
 - Wave grouping: up to `maxParallel` agents per wave
@@ -287,6 +289,7 @@ ALFRED implements sophisticated wave-based parallel execution (`packages/runtime
 - Priority-based ordering within waves
 
 **Execution Model:**
+
 ```typescript
 // packages/agent/src/orchestrator/multi/spawn.ts
 export function planWaves(
@@ -299,6 +302,7 @@ async function* runWaves(ctx: OrchestratorContext): AsyncGenerator<WorkflowEvent
 ```
 
 **Key Features:**
+
 - Concurrent execution using `pLimit` for concurrency control
 - AsyncQueue for event streaming
 - Per-agent workspace isolation (AgentFS)
@@ -306,6 +310,7 @@ async function* runWaves(ctx: OrchestratorContext): AsyncGenerator<WorkflowEvent
 - Escalation detection (ESCALATION-{agentId}.md files)
 
 **Comparison with OpenCode:**
+
 - OpenCode: Sequential workflow steps with carry-forward
 - ALFRED: Parallel waves with dependency resolution
 - **Integration Opportunity**: Combine both patterns—use waves for parallel execution, workflows for sequential refinement
@@ -315,6 +320,7 @@ async function* runWaves(ctx: OrchestratorContext): AsyncGenerator<WorkflowEvent
 ALFRED uses a discriminated union state machine (`packages/agent/src/orchestrator/multi/pipeline.ts`):
 
 **Pipeline Stages:**
+
 ```typescript
 type PipelineStage =
   | { stage: "init"; requirement: string; workspace: string }
@@ -327,12 +333,14 @@ type PipelineStage =
 ```
 
 **State Transitions:**
+
 - Type-safe transitions via `transitionPipeline()`
 - Immutable updates (new pipeline instance per transition)
 - Phase timing metrics tracked per stage
 - ExecPlan tracking integrated at each stage
 
 **Comparison with OpenCode:**
+
 - OpenCode: Linear workflow steps (no state machine)
 - ALFRED: Rich state machine with escalation/abort paths
 - **Integration Opportunity**: OpenCode workflows can map to ALFRED pipeline stages
@@ -342,11 +350,12 @@ type PipelineStage =
 ALFRED implements sophisticated Codex session persistence (`packages/agent/src/orchestrator/codex-session.ts`):
 
 **Session State:**
+
 ```typescript
 type CodexSessionState = {
   sessionId: string;
   userId: string;
-  threadId: string;  // Codex thread ID for continuity
+  threadId: string; // Codex thread ID for continuity
   workingDirectory: string;
   projectId?: string;
   status: "active" | "completed" | "failed";
@@ -354,10 +363,11 @@ type CodexSessionState = {
   createdAt: number;
   lastAccessedAt: number;
   expiresAt: number;
-}
+};
 ```
 
 **Features:**
+
 - LRU cache for hot session lookups
 - Database persistence via `@alfred/db/repo/codex-session`
 - Session resume eligibility assessment
@@ -366,15 +376,17 @@ type CodexSessionState = {
 - User isolation (session ownership validation)
 
 **Resume Logic:**
+
 ```typescript
 async function assessSessionResumeEligibility(params: {
   session?: CodexSessionState;
   workingDirectory: string;
   validateThread?: (threadId: string) => Promise<boolean>;
-}): Promise<SessionResumeAssessment>
+}): Promise<SessionResumeAssessment>;
 ```
 
 **Comparison with OpenCode:**
+
 - OpenCode: Session per worker instance (in-memory or via SDK)
 - ALFRED: Persistent sessions with thread continuity
 - **Integration Opportunity**: Extend session manager to support OpenCode sessions
@@ -384,6 +396,7 @@ async function assessSessionResumeEligibility(params: {
 ALFRED uses Docker-based AgentFS for complete isolation (`packages/agent/src/environment/agentfs.ts`):
 
 **AgentFSWorkspace:**
+
 - Docker container shared per orchestration run (not per agent)
 - SQLite audit trail for all filesystem operations
 - Copy-on-write overlay mode (`agentfsOverlay`)
@@ -391,23 +404,26 @@ ALFRED uses Docker-based AgentFS for complete isolation (`packages/agent/src/env
 - Container reuse across agents in same runId (named `alfred-agentfs-{runId}`)
 
 **Key Methods:**
+
 ```typescript
 class AgentFSWorkspace implements Workspace {
-  initialize(): Promise<void>;  // docker run (or reuse existing)
-  cleanup(): Promise<void>;     // docker rm (unless retainContainer=true)
-  checkpoint(label: string): Promise<void>;  // SQLite VACUUM INTO snapshot
-  restore(label: string): Promise<void>;      // Open snapshot database
+  initialize(): Promise<void>; // docker run (or reuse existing)
+  cleanup(): Promise<void>; // docker rm (unless retainContainer=true)
+  checkpoint(label: string): Promise<void>; // SQLite VACUUM INTO snapshot
+  restore(label: string): Promise<void>; // Open snapshot database
   exec(command: string, options?: ExecOptions): Promise<ExecResult>;
 }
 ```
 
 **Integration Points:**
+
 - Codex runs inside container (`containerName`, `containerCw`)
 - All file operations recorded in SQLite
 - Learning extraction from audit trail
 - Run-level container sharing (same runId = same container)
 
 **Comparison with OpenCode:**
+
 - OpenCode: Spawned `opencode serve` processes (no Docker)
 - ALFRED: Docker containers with audit trail
 - **Integration Opportunity**: OpenCode can run inside AgentFS containers
@@ -417,6 +433,7 @@ class AgentFSWorkspace implements Workspace {
 ALFRED implements multi-phase conflict resolution (`packages/agent/src/orchestrator/multi/conflict.ts`, `merge.ts`):
 
 **Conflict Scanning:**
+
 ```typescript
 function countConflictMarkers(content: string): number {
   // Detects <<<<<<<, =======, >>>>>>>
@@ -426,28 +443,31 @@ type ConflictScanResult = {
   files: string[];
   totalMarkers: number;
   counts: Record<string, number>;
-}
+};
 ```
 
 **Merge Planning:**
+
 ```typescript
 type MergePlan = {
   summary: string;
-  branches: string[];  // Feature branches from agents
+  branches: string[]; // Feature branches from agents
   expectedFiles: string[];
   strategy: "worktree" | "branch" | "direct";
   targetBranch: string;
   changedPackages: string[];
-}
+};
 ```
 
 **Merge Phases:**
+
 1. **Merge Execution** (`runMergePhase`): Collect agent outcomes, build merge plan
 2. **Conflict Analysis** (`runConflictPhase`): Scan for conflict markers, generate ExecPlan
 3. **Merge Analysis** (`runMergeAnalysis`): Validate merged changes
 4. **Review** (`runReviewPhase`): Automated checks, self-correction
 
 **Comparison with OpenCode:**
+
 - OpenCode: No conflict detection (sequential workflows)
 - ALFRED: Sophisticated conflict scanning and resolution
 - **Integration Opportunity**: Apply ALFRED's conflict detection to OpenCode workflows
@@ -457,22 +477,31 @@ type MergePlan = {
 ALFRED implements automated review with fixer loops (`packages/agent/src/orchestrator/multi/review.ts`):
 
 **Review Checks:**
+
 ```typescript
-type ReviewCheckType = "tests" | "lint" | "static" | "scenario" | "smoke" | "verify";
+type ReviewCheckType =
+  | "tests"
+  | "lint"
+  | "static"
+  | "scenario"
+  | "smoke"
+  | "verify";
 
 type ReviewPlan = {
   summary: string;
   checks: ReviewCheck[];
-}
+};
 ```
 
 **Fixer Agent:**
+
 - Automatically spawned on review failure
 - Receives failure details and relevant files
 - Uses `buildFixerAgentSpec()` for specialized prompt
 - Iterates up to max attempts
 
 **Review Flow:**
+
 1. Build review plan from changed files
 2. Execute checks (tests, lint, verify scripts)
 3. On failure: spawn fixer agent with failure context
@@ -480,6 +509,7 @@ type ReviewPlan = {
 5. Loop until pass or max attempts
 
 **Comparison with OpenCode:**
+
 - OpenCode: No built-in review/fix loop
 - ALFRED: Automated review with self-correction
 - **Integration Opportunity**: Add review phase to OpenCode workflows
@@ -489,31 +519,47 @@ type ReviewPlan = {
 ALFRED tracks agent progress with cognitive loop detection (`packages/agent/src/orchestrator/multi/tracker.ts`):
 
 **Tracker Context:**
+
 ```typescript
 type TrackerContext = {
-  state: TrackerState;  // Agent/wave status
-  blockedBy: Map<SubTaskId, Set<SubTaskId>>;  // Reverse deps
-  dependsOn: Map<SubTaskId, Set<SubTaskId>>;  // Forward deps
-  detectors: Map<AgentId, LoopDetector>;  // Per-agent loop detection
+  state: TrackerState; // Agent/wave status
+  blockedBy: Map<SubTaskId, Set<SubTaskId>>; // Reverse deps
+  dependsOn: Map<SubTaskId, Set<SubTaskId>>; // Forward deps
+  detectors: Map<AgentId, LoopDetector>; // Per-agent loop detection
   options: StuckDetectionOptions;
-}
+};
 ```
 
 **Stuck Detection:**
+
 - Time-based: `noProgressMs` threshold
 - Count-based: `maxTransitions` limit
 - Semantic: Embedding similarity via `LoopDetector`
 - Hash-based: Repeated state detection
 
 **Event Tracking:**
+
 ```typescript
 type AgentEvent =
   | { type: "codex/thought"; agentId: AgentId; text: string; ts: number }
-  | { type: "codex/command"; agentId: AgentId; command: string; status: string; ts: number }
-  | { type: "codex/file"; agentId: AgentId; path: string; kind: string; ts: number }
+  | {
+      type: "codex/command";
+      agentId: AgentId;
+      command: string;
+      status: string;
+      ts: number;
+    }
+  | {
+      type: "codex/file";
+      agentId: AgentId;
+      path: string;
+      kind: string;
+      ts: number;
+    };
 ```
 
 **Comparison with OpenCode:**
+
 - OpenCode: No stuck detection (relies on timeouts)
 - ALFRED: Multi-layer cognitive loop detection
 - **Integration Opportunity**: Apply ALFRED's stuck detection to OpenCode workers
@@ -523,11 +569,13 @@ type AgentEvent =
 ALFRED uses ExecPlans for agent guidance and progress tracking:
 
 **ExecPlan Structure:**
+
 - Root plan: `.agent/plans/<runId>/plan.md`
 - Subtask plans: `.agent/plans/<runId>/<subTaskId>.md`
 - Sections: Purpose, Plan, Progress, Surprises, Decision Log, Outcomes
 
 **Agent Prompting:**
+
 ```typescript
 function buildAgentPrompt(spec: AgentSpec, task: SubTask | undefined): string {
   // Includes ExecPlan path, instructions to update Progress/Decision Log
@@ -538,12 +586,14 @@ function buildAgentPrompt(spec: AgentSpec, task: SubTask | undefined): string {
 ```
 
 **Progress Tracking:**
+
 - Agents update ExecPlan files as they work
 - Progress entries appended via `appendPlanProgressEntry()`
 - Decision log captures rationale
 - Surprises logged for learning
 
 **Comparison with OpenCode:**
+
 - OpenCode: No ExecPlan pattern (relies on worker output contracts)
 - ALFRED: Rich ExecPlan system for agent guidance
 - **Integration Opportunity**: OpenCode workers can read/update ExecPlans
@@ -553,6 +603,7 @@ function buildAgentPrompt(spec: AgentSpec, task: SubTask | undefined): string {
 ALFRED deeply integrates with Linear for issue tracking:
 
 **Codex Context:**
+
 ```typescript
 context: {
   linearIssueId?: string;
@@ -564,12 +615,14 @@ context: {
 ```
 
 **Features:**
+
 - Codex events mapped to Linear activity (`packages/agent/src/orchestrator/tool/codex-linear.ts`)
 - Session binding to Linear issues
 - Issue status updates on completion
 - PR linking via Linear issue IDs
 
 **Comparison with OpenCode:**
+
 - OpenCode: No Linear integration
 - ALFRED: Deep Linear integration for issue tracking
 - **Integration Opportunity**: Extend Linear integration to OpenCode agents
@@ -579,20 +632,27 @@ context: {
 ALFRED injects learning context into Codex prompts (`packages/agent/src/orchestrator/tool/codex/exec.ts`):
 
 **Learning Sources:**
+
 - Similar past executions (`buildCodexLearningContext`)
 - Heuristic context from failures (`buildCodexHeuristicContext`)
 - Project-level learning resources
 - AgentFS audit trail extraction
 
 **Injection Flow:**
+
 ```typescript
 // Enrich prompt with learning context
-const learningContext = await buildCodexLearningContext(learningResource, prompt, 2000);
+const learningContext = await buildCodexLearningContext(
+  learningResource,
+  prompt,
+  2000
+);
 const heuristicContext = await buildCodexHeuristicContext(prompt, 1200);
 const enrichedPrompt = `${learningContext}\n\n${heuristicContext}\n\n${prompt}`;
 ```
 
 **Comparison with OpenCode:**
+
 - OpenCode: No learning context injection
 - ALFRED: Sophisticated learning from past executions
 - **Integration Opportunity**: Extend learning injection to OpenCode
@@ -624,6 +684,7 @@ interface WorkerProfile {
 ```
 
 **Learnings for ALFRED:**
+
 - Standardize agent configuration via profiles
 - Include purpose/whenToUse for intelligent routing
 - Support capability flags (vision, web, tools)
@@ -632,6 +693,7 @@ interface WorkerProfile {
 ### 2. Worker Pool Pattern
 
 Centralized lifecycle management with:
+
 - In-memory worker registry
 - Spawn deduplication (in-flight promise tracking)
 - Status updates via events
@@ -643,7 +705,7 @@ class WorkerPool {
   workers: Map<string, WorkerInstance>;
   inFlightSpawns: Map<string, Promise<WorkerInstance>>;
   sessionWorkers: Map<string, Set<string>>;
-  
+
   async getOrSpawn(profile, options, spawnFn): Promise<WorkerInstance>;
   updateStatus(id, status, error?): void;
   trackOwnership(sessionId, workerId): void;
@@ -651,6 +713,7 @@ class WorkerPool {
 ```
 
 **Learnings for ALFRED:**
+
 - Create AgentPool for managing Codex/Droid/OpenCode instances
 - Prevent duplicate spawns via promise tracking
 - Track agent-session associations
@@ -659,6 +722,7 @@ class WorkerPool {
 ### 3. Backend Resolution
 
 Workers can run via different backends:
+
 - **agent**: In-process SDK client (faster, shared context)
 - **server**: Spawned `opencode serve` process (isolated, more resources)
 
@@ -671,6 +735,7 @@ function resolveWorkerBackend(profile): "agent" | "server" {
 ```
 
 **Learnings for ALFRED:**
+
 - Codex: Always spawned process (Rust binary)
 - Droid: Spawned process (droid CLI)
 - OpenCode: Can be in-process (SDK) or spawned (opencode serve)
@@ -679,6 +744,7 @@ function resolveWorkerBackend(profile): "agent" | "server" {
 ### 4. Workflow Engine
 
 Multi-step orchestration with:
+
 - Step definitions (worker, prompt, carry flag)
 - Context carry-forward between steps
 - Handoff sections (Summary, Actions, Artifacts, Risks, Next)
@@ -706,6 +772,7 @@ async function runWorkflow(input, deps): Promise<WorkflowRunResult> {
 ```
 
 **Learnings for ALFRED:**
+
 - Port workflow engine for multi-agent coordination
 - Standardize handoff format between agents
 - Support iterative refinement loops (like Ralph)
@@ -714,6 +781,7 @@ async function runWorkflow(input, deps): Promise<WorkflowRunResult> {
 ### 5. Job Registry
 
 Async task management:
+
 - Create jobs with unique IDs
 - Track status (running, succeeded, failed, canceled)
 - Wait/await pattern for results
@@ -729,6 +797,7 @@ class WorkerJobRegistry {
 ```
 
 **Learnings for ALFRED:**
+
 - Enhance existing Ralph loop with job tracking
 - Support async agent delegation
 - Allow multiple concurrent agent tasks
@@ -738,10 +807,15 @@ class WorkerJobRegistry {
 Workers receive identity injection:
 
 ```typescript
-async function buildWorkerBootstrapPrompt({ profile, directory }): Promise<string> {
+async function buildWorkerBootstrapPrompt({
+  profile,
+  directory,
+}): Promise<string> {
   const profilePrompt = await resolveProfilePrompt(profile);
-  const outputContract = await loadPromptFile("snippets/worker-output-contract.md");
-  
+  const outputContract = await loadPromptFile(
+    "snippets/worker-output-contract.md"
+  );
+
   return `
 <system-context>${profilePrompt}</system-context>
 <worker-identity>
@@ -756,6 +830,7 @@ ${behaviorSection}
 ```
 
 **Learnings for ALFRED:**
+
 - Standardize agent initialization prompts
 - Include capability metadata in prompts
 - Define output contracts for structured handoffs
@@ -773,6 +848,7 @@ ALFRED implements sophisticated multi-layer isolation combining Docker container
 **Key Features:**
 
 **Container Lifecycle:**
+
 ```typescript
 class AgentFSWorkspace implements Workspace {
   // Container naming: alfred-agentfs-{runId}
@@ -787,12 +863,14 @@ class AgentFSWorkspace implements Workspace {
 ```
 
 **Volume Mount Pattern:**
+
 - Repository mounted at `/workspace` inside container
 - All `exec()` calls run with `cwd=/workspace`
 - Container persists across agent executions in same run
 - Cleanup removes container unless `retainContainer=true`
 
 **SQLite Audit Trail:**
+
 - Database path: `.agentfs/{runId}/{agentId}.db`
 - Structured audit of all filesystem operations
 - Queryable tool call history
@@ -800,6 +878,7 @@ class AgentFSWorkspace implements Workspace {
 - Metrics: `agentfsDbSizeBytes`, `agentfsExecutionsTotal`, `agentfsCheckpointsTotal`
 
 **Checkpoint System:**
+
 ```typescript
 async checkpoint(label: string): Promise<void> {
   // Creates atomic snapshot via SQLite VACUUM INTO
@@ -811,6 +890,7 @@ async checkpoint(label: string): Promise<void> {
 ```
 
 **Comparison with OpenCode:**
+
 - OpenCode: No workspace isolation (process-level only)
 - ALFRED: Docker + SQLite audit trail
 - **Integration Opportunity**: OpenCode agents should use AgentFSWorkspace for isolation and audit
@@ -822,6 +902,7 @@ async checkpoint(label: string): Promise<void> {
 **Implementation:** `packages/agent/src/orchestrator/tool/worktree.ts`
 
 **Worktree Creation:**
+
 ```typescript
 export const worktreeManager = {
   create: async (
@@ -833,19 +914,21 @@ export const worktreeManager = {
     // Branch: agent/{runId}/{agentId}
     // Path: .agent/worktrees/{runId}/{agentId}
     // Metadata: .alfred-worktree.json
-  }
-}
+  },
+};
 ```
 
 **Key Features:**
 
 **Isolation Strategy:**
+
 - Each agent gets isolated worktree + branch tuple
 - Branch naming: `agent/{sanitizedRunId}/{sanitizedAgentId}`
 - Path structure: `.agent/worktrees/{runId}/{agentId}`
 - Metadata file: `.alfred-worktree.json` (runId, agentId, branch, baseRef)
 
 **Safe Merge Preview:**
+
 ```typescript
 safeMerge: async (
   repoRoot: string,
@@ -856,16 +939,18 @@ safeMerge: async (
   // 2. Attempt merge (--no-commit --no-ff)
   // 3. Collect conflict files (git diff --diff-filter=U)
   // 4. Cleanup preview worktree
-}
+};
 ```
 
 **Cleanup Backlog:**
+
 - Preview worktrees registered for deferred cleanup
 - Retry logic (3 attempts with exponential backoff)
 - Batch cleanup via `flushPreviewCleanupBacklog()`
 - Filesystem-level cleanup for orphaned previews
 
 **Comparison with OpenCode:**
+
 - OpenCode: No worktree isolation (single working directory)
 - ALFRED: Per-agent worktrees enable true parallel execution
 - **Integration Opportunity**: OpenCode agents should use worktrees when running in parallel
@@ -875,6 +960,7 @@ safeMerge: async (
 **Implementation:** `packages/agent/src/orchestrator/tool/docker.ts`
 
 **Docker Tool Actions:**
+
 - `build`: Build images from Dockerfile
 - `run`: Create containers with volume mounts, resource limits
 - `start`/`stop`: Container lifecycle management
@@ -887,6 +973,7 @@ safeMerge: async (
 **Security Features:**
 
 **Directory Sandboxing:**
+
 ```typescript
 function assertAllowedDirectory(candidate: string) {
   // Validates against DEFAULT_ALLOW_PREFIXES
@@ -896,6 +983,7 @@ function assertAllowedDirectory(candidate: string) {
 ```
 
 **Resource Limits:**
+
 ```typescript
 resources: {
   cpus: z.number().min(0.1).max(16),
@@ -904,16 +992,19 @@ resources: {
 ```
 
 **Policy Enforcement:**
+
 - `deploy.read` scope for `exec.probe`
 - `deploy.write` scope for all other actions
 - Policy checks via `requireToolScopesAndPolicy()`
 
 **Container Naming Convention:**
+
 - AgentFS containers: `alfred-agentfs-{runId}`
 - Shared across agents in same orchestration run
 - Project tracking: `upsertProjectContainer()` for metadata
 
 **Comparison with OpenCode:**
+
 - OpenCode: No Docker integration (spawns processes directly)
 - ALFRED: Full Docker lifecycle management with security policies
 - **Integration Opportunity**: OpenCode spawned mode should use Docker for isolation
@@ -923,16 +1014,18 @@ resources: {
 **Implementation:** `lefthook.yml` + `.github/workflows/`
 
 **Pre-Commit Hook:**
+
 ```yaml
 pre-commit:
   commands:
     format:
       glob: "*.{ts,tsx,js,jsx,json,jsonc,css,scss,md,mdx}"
       run: bun x ultracite fix {staged_files}
-      stage_fixed: true  # Auto-stage formatted files
+      stage_fixed: true # Auto-stage formatted files
 ```
 
 **Pre-Push Hook:**
+
 ```yaml
 pre-push:
   parallel: true
@@ -940,11 +1033,11 @@ pre-push:
     typecheck:
       run: bunx turbo typecheck --filter="[${UPSTREAM}...HEAD]"
       fail_text: "Type errors found - push blocked"
-    
+
     lint:
       run: bun x ultracite check {push_files} || true
-      skip_fail: true  # Warn but don't block
-    
+      skip_fail: true # Warn but don't block
+
     tests:
       run: ALFRED_TEST_SCOPE=unit bun run test:fast --filter="$FILTER"
       fail_text: "Tests failed - push blocked"
@@ -953,23 +1046,27 @@ pre-push:
 **Key Features:**
 
 **Turbo Filtering:**
+
 - Git-based filters: `[origin/main...HEAD]` for changed packages
 - Package exclusions: `--filter='!@alfred/voice'`
 - Fast feedback: Only test changed packages
 
 **Test Scope Control:**
+
 - `ALFRED_TEST_SCOPE=unit`: Fast unit tests only
 - Timeout protection: `ALFRED_TEST_TIMEOUT_MS=60000`
 - Watchdog: `ALFRED_TEST_WATCHDOG_MS=180000`
 - Bail early: `--bail=3` (stop after 3 failures)
 
 **CI/CD Workflow:**
+
 - 4 parallel jobs: lint, typecheck, tests, boundaries
 - Turbo caching via `rharkor/caching-for-turbo@v1.7`
 - Concurrency control: `cancel-in-progress: true`
 - Linear integration: Extract issue IDs from branch names
 
 **Comparison with OpenCode:**
+
 - OpenCode: No documented hooks/CI patterns
 - ALFRED: Comprehensive pre-commit/pre-push hooks with Turbo optimization
 - **Integration Opportunity**: OpenCode should adopt similar hook patterns for quality gates
@@ -977,11 +1074,13 @@ pre-push:
 ### 5. Branching and Worktree Patterns
 
 **Branch Naming Convention:**
+
 - Agent branches: `agent/{runId}/{agentId}`
 - Sanitization: Replace non-alphanumeric with `-`
 - Base ref: Defaults to `HEAD`, configurable
 
 **Worktree Metadata:**
+
 ```typescript
 type WorktreeMetadata = {
   runId: string;
@@ -989,28 +1088,32 @@ type WorktreeMetadata = {
   branch: string;
   baseRef: string;
   createdAt: string; // ISO timestamp
-}
+};
 ```
 
 **Conflict Resolution Flow:**
+
 1. **Safe Merge Preview:** `worktreeManager.safeMerge()` detects conflicts
 2. **Arbiter Agent:** Spawns specialized agent to resolve conflicts
 3. **Resolution Worktree:** Creates temporary worktree for resolution
 4. **Merge Completion:** Applies resolution and completes merge
 
 **Cleanup Patterns:**
+
 - Per-run cleanup: `worktreeManager.cleanup(repoRoot, runId)`
 - Per-worktree removal: `worktreeManager.remove(repoRoot, worktreePath)`
 - Prune stale references: `worktreeManager.prune(repoRoot)`
 - Preview backlog: Deferred cleanup with retry logic
 
 **Integration with AgentFS:**
+
 - Worktrees created on host filesystem (not inside containers)
 - Container mounts repository at `/workspace` (includes worktrees)
 - Worktree paths resolved relative to container `/workspace` when executing inside container
 - Metadata persisted in `.alfred-worktree.json` files on host
 
 **Comparison with OpenCode:**
+
 - OpenCode: No worktree/branching patterns documented
 - ALFRED: Sophisticated worktree management with conflict resolution
 - **Integration Opportunity**: OpenCode should use worktrees for parallel execution
@@ -1022,11 +1125,13 @@ Codex (`packages/agent/src/orchestrator/tool/codex/`) has extensive integrations
 ### 1. Event Processing Pipeline
 
 **Event Types:**
+
 - `thread.started`, `turn.started`, `turn.completed`, `turn.failed`
 - `item.started`, `item.updated`, `item.completed` (reasoning, commands, file changes, MCP tool calls)
 - Structured NDJSON streaming from Codex CLI
 
 **Event Processor:**
+
 ```typescript
 // packages/agent/src/orchestrator/tool/codex/event-processor.ts
 function processThreadEvent(
@@ -1040,6 +1145,7 @@ function processThreadEvent(
 ```
 
 **Integration Points:**
+
 - Reasoning accumulation for knowledge graph
 - Artifact extraction for merge planning
 - Token usage tracking for cost optimization
@@ -1048,12 +1154,14 @@ function processThreadEvent(
 ### 2. Session Continuity
 
 **Resume Logic:**
+
 - Validates thread ID exists in filesystem (`~/.codex/sessions/{threadId}.json`)
 - Checks working directory match
 - Validates thread file accessibility
 - Falls back to new thread on validation failure
 
 **Session State:**
+
 - Thread ID persistence across executions
 - Project-level session binding
 - Linear issue association
@@ -1062,12 +1170,14 @@ function processThreadEvent(
 ### 3. Output Schema Validation
 
 **Structured Outputs:**
+
 - Zod schema validation for `outputSchema`
 - Complexity limits (max depth, properties)
 - External ref detection
 - Multiple validator fallbacks (Ajv2020, Ajv2019, Ajv)
 
 **Usage:**
+
 - Codex can return structured JSON matching schema
 - Enables type-safe agent responses
 - Supports complex nested structures
@@ -1075,6 +1185,7 @@ function processThreadEvent(
 ### 4. Metrics & Observability
 
 **Metrics Tracked:**
+
 - Session validation timeouts
 - Writer errors (disconnect vs write failure)
 - Tool execution duration
@@ -1082,6 +1193,7 @@ function processThreadEvent(
 - Session continuity success/failure
 
 **Integration:**
+
 - Prometheus metrics via `@alfred/metrics`
 - Logging via `@alfred/logger`
 - Event streaming via `ToolWriter`
@@ -1089,12 +1201,14 @@ function processThreadEvent(
 ### 5. Policy & Security
 
 **Policy Enforcement:**
+
 - Autonomy level → sandbox mapping (`read-only` vs `workspace-write`)
 - Approval mode selection (`untrusted`, `on-failure`, `on-request`, `never`)
 - Environment variable allowlists
 - Executable resolution with security checks
 
 **Security Features:**
+
 - Directory handle pinning (TOCTOU protection)
 - Secure spawn wrapper
 - Container execution support
@@ -1103,12 +1217,14 @@ function processThreadEvent(
 ### 6. Learning Integration
 
 **Learning Sources:**
+
 - Codex execution persistence (`persistCodexExecution`)
 - Reasoning trace persistence (`persistReasoning`)
 - AgentFS audit trail processing
 - Project-level learning aggregation
 
 **Context Building:**
+
 - Similar execution retrieval
 - Failure pattern matching
 - Heuristic context from corrections
@@ -1164,6 +1280,7 @@ Droid (`packages/agent/src/orchestrator/tool/droid.ts`) is simpler than Codex an
 ### Upgrade Path
 
 To achieve parity with Codex, Droid needs:
+
 - Session management (`droid-session.ts`)
 - Reasoning accumulator integration
 - Artifact extraction from output
@@ -1176,6 +1293,7 @@ To achieve parity with Codex, Droid needs:
 ### 1. Workspace Factory
 
 **Current:**
+
 ```typescript
 // packages/agent/src/environment/factory.ts
 export class WorkspaceFactory {
@@ -1185,11 +1303,12 @@ export class WorkspaceFactory {
     runId: string,
     repoBase: string,
     config?: AgentFSWorkspaceConfig
-  ): Promise<Workspace>
+  ): Promise<Workspace>;
 }
 ```
 
 **Integration:**
+
 - OpenCode agents need workspace isolation
 - Can reuse AgentFSWorkspace for OpenCode
 - Or create OpenCodeWorkspace adapter
@@ -1197,16 +1316,18 @@ export class WorkspaceFactory {
 ### 2. Agent Execution (`runAgent`)
 
 **Current:**
+
 ```typescript
 // packages/runtime/src/orchestrator/agent.ts
 export async function runAgent({
   spec: AgentSpec,
   workspace: Workspace,
   // ... other params
-}): Promise<AgentOutcome>
+}): Promise<AgentOutcome>;
 ```
 
 **Integration:**
+
 - Currently hardcoded to `toolCodex.execute()`
 - Needs abstraction for agent backend selection
 - Should support Codex/Droid/OpenCode dispatch
@@ -1214,6 +1335,7 @@ export async function runAgent({
 ### 3. Wave Execution
 
 **Current:**
+
 ```typescript
 // packages/runtime/src/orchestrator/waves.ts
 const agentPromises = agentSpecs.map((spec) =>
@@ -1224,6 +1346,7 @@ const agentPromises = agentSpecs.map((spec) =>
 ```
 
 **Integration:**
+
 - Wave planning already supports `agentType` field
 - Need to route to correct agent backend based on `spec.agentType`
 - OpenCode agents can participate in waves
@@ -1231,6 +1354,7 @@ const agentPromises = agentSpecs.map((spec) =>
 ### 4. Ralph Loop Integration
 
 **Current:**
+
 ```typescript
 // packages/agent/src/orchestrator/loops/ralph.ts
 export async function runRalphLoop({
@@ -1241,6 +1365,7 @@ export async function runRalphLoop({
 ```
 
 **Integration:**
+
 - Already supports Codex and Droid
 - Need to add OpenCode executor
 - Unified interface enables all three agents
@@ -1248,6 +1373,7 @@ export async function runRalphLoop({
 ### 5. Tool Registration
 
 **Current:**
+
 ```typescript
 // packages/agent/src/v6.ts
 const orchestratorToolSources: LegacyTool[] = [
@@ -1259,6 +1385,7 @@ const orchestratorToolSources: LegacyTool[] = [
 ```
 
 **Integration:**
+
 - Add `toolOpenCode` to tool sources
 - Register in orchestrator toolset
 - Enable via tRPC router
@@ -1300,58 +1427,58 @@ import type { ToolWriter } from "@alfred/agent/orchestrator/tool/shared";
 export interface AgentProfile {
   /** Unique identifier for this agent type (e.g., "codex", "droid", "opencode") */
   id: string;
-  
+
   /** Human-readable name */
   name: string;
-  
+
   /** Backend execution type */
   backend: "spawned" | "sdk" | "server";
-  
+
   /** Model identifier (if applicable) */
   model?: string;
-  
+
   /** Purpose description for intelligent routing */
   purpose: string;
-  
+
   /** When to use this agent */
   whenToUse: string;
-  
+
   /** ACP-compatible capabilities */
   capabilities: AgentCapabilities & {
     /** ALFRED-specific: Supports vision/image understanding */
     vision?: boolean;
-    
+
     /** ALFRED-specific: Supports web search/browsing */
     web?: boolean;
-    
+
     /** ALFRED-specific: Supports file editing */
     edit?: boolean;
-    
+
     /** ALFRED-specific: Supports terminal execution */
     terminal?: boolean;
-    
+
     /** ALFRED-specific: Supports structured output schemas */
     structuredOutput?: boolean;
-    
+
     /** ALFRED-specific: Supports reasoning traces */
     reasoning?: boolean;
-    
+
     /** ALFRED-specific: Supports session persistence */
     sessionPersistence?: boolean;
-    
+
     /** ALFRED-specific: Supports Ralph loop iterations */
     ralphLoop?: boolean;
   };
-  
+
   /** System prompt or prompt file path */
   systemPrompt?: string;
-  
+
   /** Tags for categorization */
   tags?: string[];
-  
+
   /** Required skills for this agent */
   requiredSkills?: string[];
-  
+
   /** Temperature setting (if applicable) */
   temperature?: number;
 }
@@ -1363,31 +1490,31 @@ export interface AgentProfile {
 export interface AgentInstance {
   /** Agent profile */
   profile: AgentProfile;
-  
+
   /** Current status */
   status: "starting" | "ready" | "busy" | "error" | "stopped";
-  
+
   /** ACP session ID */
   sessionId?: SessionId;
-  
+
   /** ALFRED session ID (may differ from ACP sessionId) */
   alfredSessionId?: string;
-  
+
   /** Thread ID for continuity (agent-specific) */
   threadId?: string;
-  
+
   /** Workspace isolation */
   workspace: Workspace;
-  
+
   /** Started timestamp */
   startedAt: Date;
-  
+
   /** Last activity timestamp */
   lastActivity?: Date;
-  
+
   /** Shutdown handler */
   shutdown?: () => Promise<void>;
-  
+
   /** ACP connection (if using ACP SDK) */
   acpConnection?: AgentSideConnection;
 }
@@ -1399,45 +1526,45 @@ export interface AgentInstance {
 export interface AgentExecuteInput {
   /** Main prompt/request text */
   prompt: string;
-  
+
   /** Working directory (resolved relative to workspace) */
   cw?: string;
-  
+
   /** Model override (if supported) */
   model?: string;
-  
+
   /** Timeout in seconds */
   timeout?: number;
-  
+
   /** Ralph loop configuration */
   ralph?: {
     maxIterations: number;
     completionPromise?: string;
     iteration?: number;
   };
-  
+
   /** ACP session mode */
   sessionMode?: AcpSessionMode;
-  
+
   /** ACP prompt capabilities */
   promptCapabilities?: {
     audio?: boolean;
     embeddedContext?: boolean;
     image?: boolean;
   };
-  
+
   /** Context for learning injection */
   learningContext?: string;
-  
+
   /** Linear issue context */
   linearIssueId?: string;
-  
+
   /** ExecPlan path for progress tracking */
   execPlanPath?: string;
-  
+
   /** Relevant files for context */
   relevantFiles?: string[];
-  
+
   /** Output schema (Zod schema for structured output) */
   outputSchema?: z.ZodType<unknown>;
 }
@@ -1449,40 +1576,40 @@ export interface AgentExecuteInput {
 export interface AgentExecuteOutput {
   /** Result text/content */
   result: string;
-  
+
   /** Artifacts produced (files, diffs, etc.) */
   artifacts?: Array<{
     path: string;
     kind: "add" | "delete" | "update" | "move";
     diff?: string;
   }>;
-  
+
   /** Reasoning traces (if supported) */
   reasoning?: string[];
-  
+
   /** Token usage */
   tokenUsage?: {
     input_tokens: number;
     cached_input_tokens: number;
     output_tokens: number;
   };
-  
+
   /** Ralph loop iteration state */
   iterationState?: {
     iteration: number;
     completed: boolean;
     promiseDetected?: string;
   };
-  
+
   /** ACP tool calls made during execution */
   toolCalls?: ToolCall[];
-  
+
   /** Structured output (if outputSchema was provided) */
   structuredOutput?: unknown;
-  
+
   /** Stop reason */
   stopReason?: "completed" | "cancelled" | "error" | "max_iterations" | "stuck";
-  
+
   /** Error details (if stopReason is "error") */
   error?: {
     message: string;
@@ -1497,7 +1624,7 @@ export interface AgentExecuteOutput {
 export interface AgentBackend {
   /** Agent profile */
   readonly profile: AgentProfile;
-  
+
   /**
    * Initialize the agent backend.
    * Sets up workspace, session, and ACP connection (if applicable).
@@ -1509,7 +1636,7 @@ export interface AgentBackend {
     userId: string;
     authz?: string;
   }): Promise<AgentInstance>;
-  
+
   /**
    * Execute a prompt/request.
    * Returns execution output and streams events via writer.
@@ -1522,7 +1649,7 @@ export interface AgentBackend {
       signal?: AbortSignal;
     }
   ): Promise<AgentExecuteOutput>;
-  
+
   /**
    * Handle ACP tool call updates.
    * Called when agent sends tool call updates during execution.
@@ -1534,7 +1661,7 @@ export interface AgentBackend {
       writer: ToolWriter;
     }
   ): Promise<void>;
-  
+
   /**
    * Handle ACP permission requests.
    * Called when agent requests permission for a tool call.
@@ -1546,13 +1673,13 @@ export interface AgentBackend {
       writer: ToolWriter;
     }
   ): Promise<RequestPermissionOutcome>;
-  
+
   /**
    * Shutdown the agent backend.
    * Cleans up resources, closes connections, persists state.
    */
   shutdown(instance: AgentInstance): Promise<void>;
-  
+
   /**
    * Check if agent supports a capability.
    */
@@ -1567,14 +1694,14 @@ export class AgentPool {
   private instances = new Map<string, AgentInstance>();
   private inFlightSpawns = new Map<string, Promise<AgentInstance>>();
   private backends = new Map<string, AgentBackend>();
-  
+
   /**
    * Register an agent backend.
    */
   registerBackend(backend: AgentBackend): void {
     this.backends.set(backend.profile.id, backend);
   }
-  
+
   /**
    * Get or spawn an agent instance.
    * Deduplicates concurrent spawn requests.
@@ -1590,28 +1717,28 @@ export class AgentPool {
     }
   ): Promise<AgentInstance> {
     const key = `${profileId}:${options.sessionId ?? "new"}`;
-    
+
     // Check if already spawning
     const inFlight = this.inFlightSpawns.get(key);
     if (inFlight) {
       return inFlight;
     }
-    
+
     // Check if already exists
     const existing = this.instances.get(key);
     if (existing && existing.status === "ready") {
       return existing;
     }
-    
+
     // Spawn new instance
     const backend = this.backends.get(profileId);
     if (!backend) {
       throw new Error(`agent_backend_not_found: ${profileId}`);
     }
-    
+
     const spawnPromise = backend.initialize(options);
     this.inFlightSpawns.set(key, spawnPromise);
-    
+
     try {
       const instance = await spawnPromise;
       this.instances.set(key, instance);
@@ -1620,7 +1747,7 @@ export class AgentPool {
       this.inFlightSpawns.delete(key);
     }
   }
-  
+
   /**
    * Execute a prompt on an agent instance.
    */
@@ -1636,19 +1763,19 @@ export class AgentPool {
     if (!instance) {
       throw new Error(`agent_instance_not_found: ${instanceId}`);
     }
-    
+
     const backend = this.backends.get(instance.profile.id);
     if (!backend) {
       throw new Error(`agent_backend_not_found: ${instance.profile.id}`);
     }
-    
+
     return backend.execute(input, {
       instance,
       writer: context.writer,
       signal: context.signal,
     });
   }
-  
+
   /**
    * Shutdown an agent instance.
    */
@@ -1657,15 +1784,15 @@ export class AgentPool {
     if (!instance) {
       return;
     }
-    
+
     const backend = this.backends.get(instance.profile.id);
     if (backend) {
       await backend.shutdown(instance);
     }
-    
+
     this.instances.delete(instanceId);
   }
-  
+
   /**
    * Shutdown all instances.
    */
@@ -1686,8 +1813,15 @@ ALFRED agents integrate with ACP at multiple levels:
 ```typescript
 // packages/agent/src/orchestrator/agent/acp-session.ts
 
-import { AgentSideConnection, ClientSideConnection } from "@agentclientprotocol/sdk";
-import type { SessionId, SessionMode, SessionInfo } from "@agentclientprotocol/sdk";
+import {
+  AgentSideConnection,
+  ClientSideConnection,
+} from "@agentclientprotocol/sdk";
+import type {
+  SessionId,
+  SessionMode,
+  SessionInfo,
+} from "@agentclientprotocol/sdk";
 
 /**
  * ACP session manager for ALFRED agents.
@@ -1708,17 +1842,17 @@ export class AcpSessionManager {
         capabilities: instance.profile.capabilities,
       });
     }
-    
+
     // Create ACP session
     const response = await instance.acpConnection.initialize({
       protocolVersion: PROTOCOL_VERSION,
       capabilities: instance.profile.capabilities,
       sessionMode: mode,
     });
-    
+
     return response.sessionId;
   }
-  
+
   /**
    * Load existing ACP session.
    * Restores session state from ALFRED persistence.
@@ -1730,7 +1864,7 @@ export class AcpSessionManager {
     if (!instance.acpConnection) {
       return null;
     }
-    
+
     try {
       const response = await instance.acpConnection.loadSession({
         sessionId,
@@ -1748,19 +1882,21 @@ export class AcpSessionManager {
 ```typescript
 // packages/agent/src/orchestrator/agent/acp-tools.ts
 
-import type { ToolCall, ToolCallUpdate, ToolKind } from "@agentclientprotocol/sdk";
+import type {
+  ToolCall,
+  ToolCallUpdate,
+  ToolKind,
+} from "@agentclientprotocol/sdk";
 
 /**
  * Map ALFRED tool calls to ACP ToolCall format.
  */
-export function mapToAcpToolCall(
-  alfredToolCall: {
-    id: string;
-    name: string;
-    input: unknown;
-    kind?: string;
-  }
-): ToolCall {
+export function mapToAcpToolCall(alfredToolCall: {
+  id: string;
+  name: string;
+  input: unknown;
+  kind?: string;
+}): ToolCall {
   return {
     toolCallId: alfredToolCall.id,
     toolName: alfredToolCall.name,
@@ -1821,7 +1957,7 @@ export function artifactsToAcpContent(
   if (!artifacts) {
     return [];
   }
-  
+
   return artifacts.map((artifact) => {
     if (artifact.diff) {
       return {
@@ -1833,7 +1969,7 @@ export function artifactsToAcpContent(
         },
       } as ContentBlock;
     }
-    
+
     return {
       type: "text",
       text: `File ${artifact.kind}: ${artifact.path}`,
@@ -1844,14 +1980,15 @@ export function artifactsToAcpContent(
 /**
  * Convert ALFRED reasoning traces to ACP ContentBlock format.
  */
-export function reasoningToAcpContent(
-  reasoning: string[]
-): ContentBlock[] {
-  return reasoning.map((text) => ({
-    type: "text",
-    text,
-    role: "assistant",
-  } as ContentBlock));
+export function reasoningToAcpContent(reasoning: string[]): ContentBlock[] {
+  return reasoning.map(
+    (text) =>
+      ({
+        type: "text",
+        text,
+        role: "assistant",
+      }) as ContentBlock
+  );
 }
 ```
 
@@ -1878,7 +2015,7 @@ export function threadEventToAcpNotification(
           mode: { id: "code", name: "Code" },
         },
       };
-    
+
     case "turn.completed":
       return {
         type: "session",
@@ -1890,7 +2027,7 @@ export function threadEventToAcpNotification(
           },
         },
       };
-    
+
     case "item.completed":
       // Map thread items to ACP content blocks
       return {
@@ -1899,7 +2036,7 @@ export function threadEventToAcpNotification(
           content: [threadItemToAcpContent(event.item)],
         },
       };
-    
+
     default:
       return null;
   }
@@ -1953,7 +2090,7 @@ export class CodexBackend implements AgentBackend {
       },
     },
   };
-  
+
   async initialize(options: InitializeOptions): Promise<AgentInstance> {
     // Create workspace
     const workspace = await WorkspaceFactory.create(
@@ -1962,14 +2099,14 @@ export class CodexBackend implements AgentBackend {
       options.runId,
       options.repoBase
     );
-    
+
     // Initialize Codex session
     const session = await CodexSessionManager.getOrCreate({
       sessionId: options.sessionId,
       userId: options.userId,
       workingDirectory: workspace.root,
     });
-    
+
     return {
       profile: this.profile,
       status: "ready",
@@ -1979,7 +2116,7 @@ export class CodexBackend implements AgentBackend {
       startedAt: new Date(),
     };
   }
-  
+
   async execute(
     input: AgentExecuteInput,
     context: ExecuteContext
@@ -1993,14 +2130,14 @@ export class CodexBackend implements AgentBackend {
       model: input.model,
       ralph: input.ralph,
     };
-    
+
     // Execute via Codex tool
     const output = await toolCodex.execute({
       input: codexInput,
       writer: context.writer,
       signal: context.signal,
     });
-    
+
     // Convert to unified output format
     return {
       result: output.result,
@@ -2010,7 +2147,7 @@ export class CodexBackend implements AgentBackend {
       iterationState: output.iterationState,
     };
   }
-  
+
   // ... other methods
 }
 ```
@@ -2040,19 +2177,19 @@ export class OpenCodeBackend implements AgentBackend {
       },
     },
   };
-  
+
   async initialize(options: InitializeOptions): Promise<AgentInstance> {
     // Create ACP connection
     const acpConnection = new AgentSideConnection({
       capabilities: this.profile.capabilities,
     });
-    
+
     // Initialize ACP session
     const initResponse = await acpConnection.initialize({
       protocolVersion: PROTOCOL_VERSION,
       capabilities: this.profile.capabilities,
     });
-    
+
     // Create workspace
     const workspace = await WorkspaceFactory.create(
       "agentfs",
@@ -2060,7 +2197,7 @@ export class OpenCodeBackend implements AgentBackend {
       options.runId,
       options.repoBase
     );
-    
+
     return {
       profile: this.profile,
       status: "ready",
@@ -2070,7 +2207,7 @@ export class OpenCodeBackend implements AgentBackend {
       startedAt: new Date(),
     };
   }
-  
+
   async execute(
     input: AgentExecuteInput,
     context: ExecuteContext
@@ -2081,7 +2218,7 @@ export class OpenCodeBackend implements AgentBackend {
       content: [{ type: "text", text: input.prompt }],
       capabilities: input.promptCapabilities,
     });
-    
+
     // Convert ACP response to unified format
     return {
       result: extractTextFromContent(response.content),
@@ -2089,7 +2226,7 @@ export class OpenCodeBackend implements AgentBackend {
       stopReason: mapAcpStopReason(response.stopReason),
     };
   }
-  
+
   // ... other methods
 }
 ```
@@ -2179,9 +2316,12 @@ interface AgentExecuteOutput {
 class AgentPool {
   private agents = new Map<string, AgentInstance>();
   private inFlight = new Map<string, Promise<AgentInstance>>();
-  
+
   async getOrSpawn(profile: AgentProfile): Promise<AgentInstance>;
-  async send(agentId: string, input: AgentExecuteInput): Promise<AgentExecuteOutput>;
+  async send(
+    agentId: string,
+    input: AgentExecuteInput
+  ): Promise<AgentExecuteOutput>;
   async stop(agentId: string): Promise<void>;
   async stopAll(): Promise<void>;
 }
@@ -2207,11 +2347,13 @@ export const toolOpenCode = {
 ### Phase 4: Droid Parity
 
 Upgrade Droid to folder structure matching Codex:
+
 - `packages/agent/src/orchestrator/tool/droid/definition.ts`
 - `packages/agent/src/orchestrator/tool/droid/exec.ts`
 - `packages/agent/src/orchestrator/tool/droid/index.ts`
 
 Add features:
+
 - Session management
 - Reasoning accumulation
 - Artifact extraction
@@ -2241,11 +2383,13 @@ async function runWorkflow(
 ### Workspace Isolation Strategy
 
 **Current State:**
+
 - Codex: AgentFSWorkspace (Docker + SQLite audit)
 - Droid: Secure directory handles (no Docker)
 - OpenCode: Process-level only (no isolation)
 
 **Target State:**
+
 - All agents use AgentFSWorkspace for consistency (requires Docker)
 - Docker containers provide process isolation
 - SQLite audit trail for all operations
@@ -2255,16 +2399,17 @@ async function runWorkflow(
 **Migration Path:**
 
 1. **OpenCode AgentFS Integration:**
+
 ```typescript
 // packages/agent/src/orchestrator/tool/opencode/exec.ts
 async function executeOpenCode(input: OpenCodeInput, workspace: Workspace) {
   if (workspace.kind !== "agentfs") {
     throw new Error("opencode_requires_agentfs");
   }
-  
+
   const agentfs = workspace as AgentFSWorkspace;
   const containerCw = agentfs.containerCw; // "/workspace"
-  
+
   // Execute OpenCode inside Docker container
   await agentfs.exec({
     cmd: "opencode",
@@ -2275,11 +2420,12 @@ async function executeOpenCode(input: OpenCodeInput, workspace: Workspace) {
 ```
 
 2. **Worktree Support for Parallel OpenCode:**
+
 ```typescript
 // When multiple OpenCode agents run in parallel
 // Worktrees created on host filesystem
 const worktree = await worktreeManager.create(
-  repoRoot,  // Host path
+  repoRoot, // Host path
   runId,
   agentId,
   "HEAD"
@@ -2291,6 +2437,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ```
 
 3. **Docker Container Sharing:**
+
 - OpenCode agents share containers with Codex (same runId)
 - Container name: `alfred-agentfs-{runId}`
 - Volume mount: `${repoBase}:/workspace`
@@ -2299,16 +2446,19 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### Hook Integration for OpenCode
 
 **Pre-Commit Hooks:**
+
 - Format OpenCode-generated code via Ultracite
 - Stage fixed files automatically
 - No blocking (formatting only)
 
 **Pre-Push Hooks:**
+
 - Typecheck OpenCode changes
 - Run unit tests for modified packages
 - Block push on failures
 
 **CI/CD Integration:**
+
 - OpenCode agents trigger same CI pipeline
 - Turbo caching applies to OpenCode outputs
 - Linear issue tracking for OpenCode tasks
@@ -2316,62 +2466,65 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### Branching Strategy for OpenCode
 
 **Agent Branches:**
+
 - Pattern: `agent/{runId}/{opencode-{agentId}}`
 - Base ref: `HEAD` (configurable)
 - Metadata: `.alfred-worktree.json`
 
 **Merge Strategy:**
+
 - Use `worktreeManager.safeMerge()` for conflict detection
 - Arbiter agent resolves conflicts (if needed)
 - Fast-forward merge when possible
 
 **Cleanup:**
+
 - Per-run cleanup removes all OpenCode worktrees
 - Preview worktrees cleaned up via backlog
 - Branches deleted after successful merge
 
 ## Feature Comparison Matrix
 
-| Feature | OpenCode Orchestrator | ALFRED Codex | ALFRED Droid | Target (Unified) |
-|---------|----------------------|--------------|--------------|------------------|
+| Feature                  | OpenCode Orchestrator          | ALFRED Codex              | ALFRED Droid        | Target (Unified)             |
+| ------------------------ | ------------------------------ | ------------------------- | ------------------- | ---------------------------- |
 | **Lifecycle Management** |
-| Worker Pool | ✅ In-memory + device registry | ❌ Per-execution | ❌ Per-execution | ✅ Unified AgentPool |
-| Spawn Deduplication | ✅ Promise tracking | ❌ | ❌ | ✅ Promise tracking |
-| Status Events | ✅ Event-based | ✅ Writer-based | ✅ Writer-based | ✅ Unified events |
-| **Session Management** |
-| Session Persistence | ✅ SDK sessions | ✅ DB + LRU cache | ❌ | ✅ Unified session manager |
-| Thread Continuity | ✅ SDK threads | ✅ Filesystem validation | ❌ | ✅ Per-agent validation |
-| Resume Logic | ✅ SDK resume | ✅ Eligibility assessment | ❌ | ✅ Unified assessment |
-| **Execution Model** |
-| Backend Types | ✅ agent/server | ✅ spawned (Rust) | ✅ spawned (CLI) | ✅ Abstract backend |
-| Workspace Isolation | ❌ Process-level | ✅ Docker (AgentFS) | ✅ Secure handles | ✅ AgentFS for all |
-| Docker Integration | ❌ | ✅ Full lifecycle | ❌ | ✅ Unified Docker tool |
-| Worktree Isolation | ❌ | ✅ Per-agent worktrees | ❌ | ✅ Unified worktree manager |
-| SQLite Audit Trail | ❌ | ✅ AgentFS database | ❌ | ✅ Unified audit |
-| Checkpoint/Restore | ❌ | ✅ SQLite snapshots | ❌ | ✅ Unified checkpoint |
-| Git Hooks | ❌ | ✅ Lefthook + CI/CD | ❌ | ✅ Unified hooks |
-| Conflict Resolution | ❌ | ✅ Safe merge + Arbiter | ❌ | ✅ Unified conflict handling |
-| **Orchestration** |
-| Wave Planning | ❌ | ✅ Dependency graph | ✅ Dependency graph | ✅ Unified wave planner |
-| Workflow Engine | ✅ Sequential steps | ❌ | ❌ | ✅ Port workflow engine |
-| Conflict Detection | ❌ | ✅ Marker scanning | ❌ | ✅ Unified conflict scan |
-| Review/Fix Loop | ❌ | ✅ Automated review | ❌ | ✅ Unified review |
-| **Observability** |
-| Event Processing | ✅ SDK events | ✅ NDJSON parsing | ❌ Basic streaming | ✅ Unified event types |
-| Reasoning Traces | ❌ | ✅ Accumulation | ❌ Basic extraction | ✅ Unified reasoning |
-| Metrics | ✅ Telemetry (PostHog) | ✅ Prometheus | ✅ Basic metrics | ✅ Unified metrics |
-| Stuck Detection | ❌ Timeout only | ✅ Multi-layer cognitive | ❌ | ✅ Unified detection |
-| **Learning** |
-| Context Injection | ❌ | ✅ Learning/heuristic | ❌ | ✅ Unified learning |
-| Execution Persistence | ❌ | ✅ DB persistence | ❌ | ✅ Unified persistence |
-| **Integration** |
-| Linear Integration | ❌ | ✅ Deep integration | ❌ | ✅ Unified Linear |
-| ExecPlan Support | ❌ | ✅ Full integration | ❌ | ✅ Unified ExecPlan |
-| Ralph Loop | ❌ | ✅ Supported | ✅ Supported | ✅ All agents |
-| **Configuration** |
-| Profile System | ✅ Declarative profiles | ❌ Inline config | ❌ Inline config | ✅ Unified profiles |
-| Capability Flags | ✅ vision/web/tools | ❌ | ❌ | ✅ Unified capabilities |
-| Prompt Customization | ✅ Prompt files | ✅ Learning injection | ❌ | ✅ Unified prompts |
+| Worker Pool              | ✅ In-memory + device registry | ❌ Per-execution          | ❌ Per-execution    | ✅ Unified AgentPool         |
+| Spawn Deduplication      | ✅ Promise tracking            | ❌                        | ❌                  | ✅ Promise tracking          |
+| Status Events            | ✅ Event-based                 | ✅ Writer-based           | ✅ Writer-based     | ✅ Unified events            |
+| **Session Management**   |
+| Session Persistence      | ✅ SDK sessions                | ✅ DB + LRU cache         | ❌                  | ✅ Unified session manager   |
+| Thread Continuity        | ✅ SDK threads                 | ✅ Filesystem validation  | ❌                  | ✅ Per-agent validation      |
+| Resume Logic             | ✅ SDK resume                  | ✅ Eligibility assessment | ❌                  | ✅ Unified assessment        |
+| **Execution Model**      |
+| Backend Types            | ✅ agent/server                | ✅ spawned (Rust)         | ✅ spawned (CLI)    | ✅ Abstract backend          |
+| Workspace Isolation      | ❌ Process-level               | ✅ Docker (AgentFS)       | ✅ Secure handles   | ✅ AgentFS for all           |
+| Docker Integration       | ❌                             | ✅ Full lifecycle         | ❌                  | ✅ Unified Docker tool       |
+| Worktree Isolation       | ❌                             | ✅ Per-agent worktrees    | ❌                  | ✅ Unified worktree manager  |
+| SQLite Audit Trail       | ❌                             | ✅ AgentFS database       | ❌                  | ✅ Unified audit             |
+| Checkpoint/Restore       | ❌                             | ✅ SQLite snapshots       | ❌                  | ✅ Unified checkpoint        |
+| Git Hooks                | ❌                             | ✅ Lefthook + CI/CD       | ❌                  | ✅ Unified hooks             |
+| Conflict Resolution      | ❌                             | ✅ Safe merge + Arbiter   | ❌                  | ✅ Unified conflict handling |
+| **Orchestration**        |
+| Wave Planning            | ❌                             | ✅ Dependency graph       | ✅ Dependency graph | ✅ Unified wave planner      |
+| Workflow Engine          | ✅ Sequential steps            | ❌                        | ❌                  | ✅ Port workflow engine      |
+| Conflict Detection       | ❌                             | ✅ Marker scanning        | ❌                  | ✅ Unified conflict scan     |
+| Review/Fix Loop          | ❌                             | ✅ Automated review       | ❌                  | ✅ Unified review            |
+| **Observability**        |
+| Event Processing         | ✅ SDK events                  | ✅ NDJSON parsing         | ❌ Basic streaming  | ✅ Unified event types       |
+| Reasoning Traces         | ❌                             | ✅ Accumulation           | ❌ Basic extraction | ✅ Unified reasoning         |
+| Metrics                  | ✅ Telemetry (PostHog)         | ✅ Prometheus             | ✅ Basic metrics    | ✅ Unified metrics           |
+| Stuck Detection          | ❌ Timeout only                | ✅ Multi-layer cognitive  | ❌                  | ✅ Unified detection         |
+| **Learning**             |
+| Context Injection        | ❌                             | ✅ Learning/heuristic     | ❌                  | ✅ Unified learning          |
+| Execution Persistence    | ❌                             | ✅ DB persistence         | ❌                  | ✅ Unified persistence       |
+| **Integration**          |
+| Linear Integration       | ❌                             | ✅ Deep integration       | ❌                  | ✅ Unified Linear            |
+| ExecPlan Support         | ❌                             | ✅ Full integration       | ❌                  | ✅ Unified ExecPlan          |
+| Ralph Loop               | ❌                             | ✅ Supported              | ✅ Supported        | ✅ All agents                |
+| **Configuration**        |
+| Profile System           | ✅ Declarative profiles        | ❌ Inline config          | ❌ Inline config    | ✅ Unified profiles          |
+| Capability Flags         | ✅ vision/web/tools            | ❌                        | ❌                  | ✅ Unified capabilities      |
+| Prompt Customization     | ✅ Prompt files                | ✅ Learning injection     | ❌                  | ✅ Unified prompts           |
 
 ## Migration Strategy
 
@@ -2380,6 +2533,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 **Goal:** Create unified types and interfaces without breaking existing code.
 
 **Steps:**
+
 1. Create `packages/agent/src/orchestrator/worker/types.ts`:
    - `AgentProfile` interface
    - `AgentInstance` interface
@@ -2398,6 +2552,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 **Goal:** Centralize agent lifecycle management.
 
 **Steps:**
+
 1. Create `packages/agent/src/orchestrator/worker/pool.ts`:
    - `AgentPool` class with spawn deduplication
    - Status event emitters
@@ -2415,6 +2570,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 **Goal:** Add OpenCode as first-class agent.
 
 **Steps:**
+
 1. Create `packages/agent/src/orchestrator/tool/opencode/`:
    - `definition.ts`: Input/output schemas
    - `exec.ts`: Execution logic (SDK + spawned)
@@ -2435,6 +2591,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 **Goal:** Bring Droid to Codex feature parity.
 
 **Steps:**
+
 1. Refactor to folder structure:
    - `packages/agent/src/orchestrator/tool/droid/definition.ts`
    - `packages/agent/src/orchestrator/tool/droid/exec.ts`
@@ -2454,6 +2611,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 **Goal:** Enable mixed agent types in waves.
 
 **Steps:**
+
 1. Update `runAgent()`:
    - Route to backend based on `spec.agentType`
    - Support Codex/Droid/OpenCode dispatch
@@ -2471,6 +2629,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 **Goal:** Add sequential workflow orchestration.
 
 **Steps:**
+
 1. Port workflow engine:
    - `packages/agent/src/orchestrator/workflow/engine.ts`
    - Step execution with carry-forward
@@ -2485,18 +2644,18 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 
 ## File Structure Comparison
 
-| OpenCode | ALFRED (Current) | ALFRED (Proposed) |
-|----------|------------------|-------------------|
-| `workers/spawner.ts` | N/A | `worker/spawner.ts` |
-| `workers/backends/agent.ts` | N/A | `worker/backends/agent.ts` |
-| `workers/backends/server.ts` | N/A | `worker/backends/server.ts` |
-| `core/worker-pool.ts` | N/A | `worker/pool.ts` |
-| `core/jobs.ts` | `loops/ralph.ts` | `worker/jobs.ts` |
-| `workflows/engine.ts` | N/A | `workflow/engine.ts` |
-| `types/index.ts` | `tool/shared/context.ts` | `worker/types.ts` |
-| N/A | `tool/codex/` | `tool/codex/` |
-| N/A | `tool/droid.ts` | `tool/droid/` |
-| N/A | N/A | `tool/opencode/` |
+| OpenCode                     | ALFRED (Current)         | ALFRED (Proposed)           |
+| ---------------------------- | ------------------------ | --------------------------- |
+| `workers/spawner.ts`         | N/A                      | `worker/spawner.ts`         |
+| `workers/backends/agent.ts`  | N/A                      | `worker/backends/agent.ts`  |
+| `workers/backends/server.ts` | N/A                      | `worker/backends/server.ts` |
+| `core/worker-pool.ts`        | N/A                      | `worker/pool.ts`            |
+| `core/jobs.ts`               | `loops/ralph.ts`         | `worker/jobs.ts`            |
+| `workflows/engine.ts`        | N/A                      | `workflow/engine.ts`        |
+| `types/index.ts`             | `tool/shared/context.ts` | `worker/types.ts`           |
+| N/A                          | `tool/codex/`            | `tool/codex/`               |
+| N/A                          | `tool/droid.ts`          | `tool/droid/`               |
+| N/A                          | N/A                      | `tool/opencode/`            |
 
 ## Key Files to Study/Port
 
@@ -2528,18 +2687,21 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### Docker Container Management
 
 **Container Lifecycle:**
+
 - Containers shared across agents in same runId
 - Race condition handling: Retry inspect after create failures
 - Cleanup: Remove containers unless `retainContainer=true`
 - Resource limits: Configurable per agent (default: 1 CPU, 1GB)
 
 **Volume Mounts:**
+
 - Pattern: `${repoBase}:/workspace`
 - All agent commands execute with `cwd=/workspace`
 - Worktree paths resolved relative to `/workspace`
 - AgentFS database persisted on host (`.agentfs/{runId}/{agentId}.db`)
 
 **Security:**
+
 - Directory sandboxing via `openDirectorySecure()`
 - Policy enforcement: `deploy.write` scope required
 - Resource limits prevent DoS attacks
@@ -2548,18 +2710,21 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### Worktree Management
 
 **Creation:**
+
 - Branch naming: `agent/{sanitizedRunId}/{sanitizedAgentId}`
 - Path structure: `.agent/worktrees/{runId}/{agentId}`
 - Metadata file: `.alfred-worktree.json`
 - Base ref: Defaults to `HEAD`, configurable
 
 **Cleanup:**
+
 - Per-run cleanup removes all worktrees for runId
 - Preview worktrees use deferred cleanup backlog
 - Retry logic: 3 attempts with exponential backoff
 - Prune stale references: `git worktree prune --expire=now`
 
 **Conflict Detection:**
+
 - Safe merge preview: Detached worktree + `git merge --no-commit`
 - Conflict file collection: `git diff --diff-filter=U`
 - Arbiter agent spawns for resolution
@@ -2568,18 +2733,21 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### AgentFS Integration
 
 **Database Management:**
+
 - Path: `.agentfs/{runId}/{agentId}.db`
 - SQLite with WAL mode
 - Checkpoint snapshots: `VACUUM INTO` or logical copy
 - Metrics: Size tracking, execution counts, checkpoint counts
 
 **Audit Trail:**
+
 - Structured tool call history
 - Queryable via AgentFS SDK
 - Learning system integration
 - Replay/debug capabilities
 
 **Checkpoint/Restore:**
+
 - Atomic snapshots via SQLite `VACUUM INTO`
 - Fallback: Logical snapshot (copy all tables)
 - Snapshot path: `{dbPath}.checkpoint-{label}`
@@ -2588,17 +2756,20 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### Git Hooks Integration
 
 **Pre-Commit:**
+
 - Format staged files via Ultracite
 - Auto-stage fixed files (`stage_fixed: true`)
 - Non-blocking (formatting only)
 
 **Pre-Push:**
+
 - Typecheck: Blocks push on errors
 - Lint: Warns but doesn't block
 - Tests: Blocks push on failures
 - Parallel execution for speed
 
 **CI/CD:**
+
 - Turbo filtering: `[origin/main...HEAD]`
 - Test scope: `ALFRED_TEST_SCOPE=unit`
 - Timeout protection: Multiple watchdog layers
@@ -2607,26 +2778,31 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### Risks and Mitigations
 
 **Container Leaks:**
+
 - Risk: Containers not cleaned up on crash
 - Mitigation: `afterEach` cleanup in tests, `retainContainer` flag for debugging
 - Monitoring: Container count metrics
 
 **Worktree Accumulation:**
+
 - Risk: Orphaned worktrees consume disk space
 - Mitigation: Preview cleanup backlog, per-run cleanup, prune stale references
 - Monitoring: Worktree count metrics
 
 **SQLite Database Growth:**
+
 - Risk: Audit databases grow unbounded
 - Mitigation: Checkpoint snapshots, periodic cleanup, size limits
 - Monitoring: `agentfsDbSizeBytes` metric
 
 **Race Conditions:**
+
 - Risk: Multiple agents create containers simultaneously
 - Mitigation: Retry inspect after create failures, shared container names
 - Monitoring: Race condition detection logs
 
 **Conflict Resolution Failures:**
+
 - Risk: Arbiter agent fails to resolve conflicts
 - Mitigation: Escalation to human, fallback to manual merge
 - Monitoring: Conflict resolution success rate
@@ -2636,14 +2812,17 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### OpenCode SDK
 
 **Required:**
+
 - `@opencode-ai/sdk` package (dynamic import recommended)
 - `opencode` CLI binary (for spawned mode)
 
 **Installation:**
+
 - SDK: `bun add @opencode-ai/sdk` (optional dependency)
 - CLI: User-installed or bundled
 
 **Fallback Strategy:**
+
 - Graceful degradation if SDK unavailable
 - Tool returns error with installation instructions
 - No breaking changes to existing agents
@@ -2651,11 +2830,13 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### AgentFS Integration
 
 **Current State:**
+
 - AgentFSWorkspace already supports Docker containers
 - Codex runs inside containers via `containerName` / `containerCw`
 - OpenCode can reuse same pattern
 
 **Requirements:**
+
 - Docker runtime (already required for Codex)
 - Container image with OpenCode CLI
 - Or: SDK mode doesn't require container
@@ -2663,11 +2844,13 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### Session Database
 
 **Current State:**
+
 - Codex sessions stored in `@alfred/db/repo/codex-session`
 - Schema supports threadId, workingDirectory, projectId
 - OpenCode sessions can reuse same schema
 
 **Schema Extension:**
+
 - Add `agentType` field to distinguish Codex/OpenCode
 - Or: Separate table for OpenCode sessions
 - Or: Reuse with agent type in sessionId prefix
@@ -2677,6 +2860,7 @@ const containerWorktreePath = `/workspace/${path.relative(repoRoot, worktree.pat
 ### 1. Backend Resolution Strategy
 
 **OpenCode Backend Selection:**
+
 ```typescript
 function resolveOpenCodeBackend(profile: AgentProfile): "sdk" | "spawned" {
   // Prefer SDK for in-process execution (faster, shared context)
@@ -2687,6 +2871,7 @@ function resolveOpenCodeBackend(profile: AgentProfile): "sdk" | "spawned" {
 ```
 
 **Codex/Droid:**
+
 - Always spawned (no SDK option)
 - Codex: Rust binary execution
 - Droid: CLI execution
@@ -2694,6 +2879,7 @@ function resolveOpenCodeBackend(profile: AgentProfile): "sdk" | "spawned" {
 ### 2. Session Management Unification
 
 **Unified Session Manager:**
+
 ```typescript
 class UnifiedSessionManager {
   async getSession(agentType: "codex" | "droid" | "opencode", sessionId: string, userId: string): Promise<SessionState>;
@@ -2703,6 +2889,7 @@ class UnifiedSessionManager {
 ```
 
 **Agent-Specific Logic:**
+
 - Codex: Thread ID validation (filesystem)
 - OpenCode: SDK session validation
 - Droid: No session (stateless)
@@ -2710,16 +2897,30 @@ class UnifiedSessionManager {
 ### 3. Event Type Unification
 
 **Unified Event Types:**
+
 ```typescript
 type UnifiedAgentEvent =
   | { type: "thought"; agentId: string; text: string; ts: number }
-  | { type: "command"; agentId: string; command: string; status: string; ts: number }
-  | { type: "artifact"; agentId: string; path: string; kind: string; ts: number }
+  | {
+      type: "command";
+      agentId: string;
+      command: string;
+      status: string;
+      ts: number;
+    }
+  | {
+      type: "artifact";
+      agentId: string;
+      path: string;
+      kind: string;
+      ts: number;
+    }
   | { type: "output"; agentId: string; chunk: string; ts: number }
-  | { type: "turn_completed"; agentId: string; usage?: TokenUsage; ts: number }
+  | { type: "turn_completed"; agentId: string; usage?: TokenUsage; ts: number };
 ```
 
 **Event Adapters:**
+
 - Codex: NDJSON parser → Unified events
 - OpenCode: SDK events → Unified events
 - Droid: stdout/stderr → Unified events
@@ -2727,11 +2928,13 @@ type UnifiedAgentEvent =
 ### 4. Workspace Integration
 
 **AgentFS for OpenCode:**
+
 - Reuse existing `AgentFSWorkspace` class
 - OpenCode SDK client runs inside container
 - Or: SDK mode uses host filesystem (less isolation)
 
 **Container Configuration:**
+
 - OpenCode container image: `alfred-agentfs:opencode`
 - Or: Reuse Codex image, install OpenCode CLI
 - Container sharing: Per-runId containers (same as Codex: `alfred-agentfs-{runId}`)
@@ -2739,11 +2942,13 @@ type UnifiedAgentEvent =
 ### 5. Ralph Loop Enhancement
 
 **Current Implementation:**
+
 - Supports Codex and Droid executors
 - Promise detection via `<promise>` tags
 - Loop detection via `LoopDetector`
 
 **OpenCode Integration:**
+
 - Add OpenCode executor to `runRalphLoop()`
 - OpenCode workers can output `<promise>` tags
 - Unified loop detection across all agents
@@ -2751,6 +2956,7 @@ type UnifiedAgentEvent =
 ### 6. Wave Planning Enhancement
 
 **Agent Type Assignment:**
+
 ```typescript
 // Current: agentType from spec
 // Enhanced: agentType from profile
@@ -2764,6 +2970,7 @@ function assignAgentTypeFromProfile(
 ```
 
 **Capability-Based Routing:**
+
 - Vision tasks → agents with `capabilities.vision`
 - Web tasks → agents with `capabilities.web`
 - Code tasks → Codex/OpenCode
@@ -2771,53 +2978,60 @@ function assignAgentTypeFromProfile(
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| **OpenCode SDK dependency** | High | Dynamic import, graceful fallback, optional dependency |
-| **Different execution models** | Medium | Abstract via backend interface, adapter pattern |
-| **Breaking existing Codex/Droid** | High | Incremental migration, maintain API compatibility, feature flags |
-| **Session management complexity** | Medium | Reuse ALFRED's session system, extend gradually |
-| **Workspace isolation differences** | Low | AgentFS already supports containers, OpenCode can reuse |
-| **Event format differences** | Medium | Unified event adapter layer, normalize at boundary |
-| **Performance overhead** | Low | SDK mode is fast, spawned mode matches Codex |
-| **Container resource usage** | Low | Reuse containers per project, same as Codex |
-| **Learning context mismatch** | Low | Extend learning system to support OpenCode events |
-| **Workflow engine complexity** | Medium | Port incrementally, test with simple workflows first |
+| Risk                                | Impact | Mitigation                                                       |
+| ----------------------------------- | ------ | ---------------------------------------------------------------- |
+| **OpenCode SDK dependency**         | High   | Dynamic import, graceful fallback, optional dependency           |
+| **Different execution models**      | Medium | Abstract via backend interface, adapter pattern                  |
+| **Breaking existing Codex/Droid**   | High   | Incremental migration, maintain API compatibility, feature flags |
+| **Session management complexity**   | Medium | Reuse ALFRED's session system, extend gradually                  |
+| **Workspace isolation differences** | Low    | AgentFS already supports containers, OpenCode can reuse          |
+| **Event format differences**        | Medium | Unified event adapter layer, normalize at boundary               |
+| **Performance overhead**            | Low    | SDK mode is fast, spawned mode matches Codex                     |
+| **Container resource usage**        | Low    | Reuse containers per project, same as Codex                      |
+| **Learning context mismatch**       | Low    | Extend learning system to support OpenCode events                |
+| **Workflow engine complexity**      | Medium | Port incrementally, test with simple workflows first             |
 
 ## Churn Management & Package Integration
 
 To minimize regression risks and ensure smooth integration across the monorepo:
 
 ### 1. Regression Prevention
+
 - **Interface Compliance Tests**: Create `verify-agent-interface.test.ts` to ensure `CodexBackend` and `OpenCodeBackend` strictly adhere to `AgentBackend`.
 - **Shadow Mode**: Implement a flag `AGENT_SHADOW_MODE=1` to run the new `AgentPool` logic alongside legacy direct calls in non-production environments to compare outcomes.
 - **Mocking Strategy**: Update `@alfred/test-kit` to provide a `MockAgentBackend` factory, allowing downstream packages (api, runtime) to test orchestration without spawning real processes.
 
 ### 2. Extensibility Pattern
+
 - **Capability Plugins**: Use the `_meta` field in `AgentCapabilities` for experimental or agent-specific features (e.g., `_alfred_vision_v2`).
 - **Dynamic Profiles**: Allow `AgentProfile` to be loaded from `agent.json` files at runtime, enabling new agent types without code changes.
 
 ### 3. Cross-Package Integration Checklist
 
 **`packages/api` (tRPC Routers):**
+
 - [ ] Update `workflowRouter` to accept `agentType` and pass it to `orchestrateWorkflowStream`.
 - [ ] Expose `agent.listProfiles` procedure for UI to discover available agents.
 
 **`packages/cognitive` (Brainstem):**
+
 - [ ] Update `LoopDetector` to handle unified `AgentEvent` types.
 - [ ] Extend `Brainstem` supervisor to monitor `AgentInstance` status from `AgentPool`.
 
 **`packages/db` (Persistence):**
+
 - [ ] Add `agent_type` column to `sessions` and `workflow_runs` tables.
 - [ ] Ensure `AgentFS` metrics (`agentfs_db_size_bytes`) are tagged with `agent_type`.
 
 **`packages/runtime` (Execution):**
+
 - [ ] Refactor `runAgent` to use `AgentPool.execute` instead of direct `toolCodex.execute`.
 - [ ] Update `EventProcessor` to handle ACP-style events from all backends.
 
 ## Success Criteria
 
 ### Phase 1: Foundation
+
 - [ ] `AgentProfile` and `AgentInstance` types defined
 - [ ] `AgentBackend` interface abstracted
 - [ ] `AgentPool` class implemented with spawn deduplication
@@ -2825,6 +3039,7 @@ To minimize regression risks and ensure smooth integration across the monorepo:
 - [ ] Existing Codex/Droid continue working unchanged (verified via regression tests)
 
 ### Phase 2: OpenCode Integration
+
 - [ ] `toolOpenCode` registered and callable via tRPC
 - [ ] OpenCode SDK mode working (in-process)
 - [ ] OpenCode spawned mode working (`opencode serve`)
@@ -2832,6 +3047,7 @@ To minimize regression risks and ensure smooth integration across the monorepo:
 - [ ] Ralph loop supports OpenCode executor
 
 ### Phase 3: Droid Parity
+
 - [ ] Droid refactored to folder structure
 - [ ] Session management added to Droid
 - [ ] Reasoning accumulation integrated
@@ -2839,12 +3055,14 @@ To minimize regression risks and ensure smooth integration across the monorepo:
 - [ ] Learning context injection added
 
 ### Phase 4: Unified Execution
+
 - [ ] `runAgent()` routes to correct backend
 - [ ] Mixed agent waves execute successfully
 - [ ] Unified event streaming works
 - [ ] All agents support Ralph loop
 
 ### Phase 5: Workflow Engine (Optional)
+
 - [ ] Workflow engine ported from OpenCode
 - [ ] Sequential workflows execute
 - [ ] Handoff context carries between steps
@@ -2853,18 +3071,21 @@ To minimize regression risks and ensure smooth integration across the monorepo:
 ## Testing Strategy
 
 ### Unit Tests
+
 - AgentPool spawn deduplication
 - Backend resolution logic
 - Session manager extensions
 - Event adapter transformations
 
 ### Integration Tests
+
 - OpenCode SDK mode execution
 - OpenCode spawned mode execution
 - Ralph loop with OpenCode
 - Mixed agent wave execution
 
 ### E2E Tests
+
 - Full workflow with Codex/Droid/OpenCode
 - Session persistence across agents
 - Conflict detection with mixed agents
@@ -2881,6 +3102,7 @@ To minimize regression risks and ensure smooth integration across the monorepo:
 ## References
 
 ### Agent Client Protocol (ACP)
+
 - **Protocol Specification**: [agentclientprotocol.com](https://agentclientprotocol.com/)
 - **Schema Definition**: [schema.json](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/schema.json)
 - **TypeScript SDK**: `@agentclientprotocol/sdk` (v0.12.0+)
@@ -2888,23 +3110,27 @@ To minimize regression risks and ensure smooth integration across the monorepo:
 - **ALFRED Integration**: `packages/protocol/src/acp.ts`
 
 ### OpenCode Orchestrator
+
 - Worker Pool: `/Users/jackmazac/Development/orchestra/packages/orchestrator/src/core/worker-pool.ts`
 - Backend Resolution: `/Users/jackmazac/Development/orchestra/packages/orchestrator/src/workers/spawner.ts`
 - Workflow Engine: `/Users/jackmazac/Development/orchestra/packages/orchestrator/src/workflows/engine.ts`
 - Job Registry: `/Users/jackmazac/Development/orchestra/packages/orchestrator/src/core/jobs.ts`
 
 ### ALFRED Orchestration
+
 - Wave Execution: `packages/runtime/src/orchestrator/waves.ts`
 - Agent Execution: `packages/runtime/src/orchestrator/agent.ts`
 - Pipeline State: `packages/agent/src/orchestrator/multi/pipeline.ts`
 - Tracker: `packages/agent/src/orchestrator/multi/tracker.ts`
 
 ### ALFRED Agent Tools
+
 - Codex Tool: `packages/agent/src/orchestrator/tool/codex/`
 - Droid Tool: `packages/agent/src/orchestrator/tool/droid.ts`
 - Ralph Loop: `packages/agent/src/orchestrator/loops/ralph.ts`
 
 ### ALFRED Infrastructure
+
 - Session Management: `packages/agent/src/orchestrator/codex-session.ts`
 - Workspace: `packages/agent/src/environment/agentfs.ts`
 - Conflict Detection: `packages/agent/src/orchestrator/multi/conflict.ts`

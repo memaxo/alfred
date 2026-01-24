@@ -86,8 +86,8 @@ All new tests run against ephemeral fixtures: cognitive transition tests use pur
 
 - New module `packages/cognitive/src/transition.ts` exposes:
 
-    export type TransitionResult = { state: CognitiveState; autonomy: AutonomyGradient };
-    export function applyTransition(state: CognitiveState, autonomy: AutonomyGradient, event: Event): TransitionResult;
+  export type TransitionResult = { state: CognitiveState; autonomy: AutonomyGradient };
+  export function applyTransition(state: CognitiveState, autonomy: AutonomyGradient, event: Event): TransitionResult;
 
   Update `packages/cognitive/src/index.ts` to export this helper.
 
@@ -100,6 +100,7 @@ All new tests run against ephemeral fixtures: cognitive transition tests use pur
 - Verification scripts rely on `@alfred/runtime`, `@alfred/auth/token`, `@alfred/api/metrics`, and the same mock AI model structure used in `scripts/verify-orchestrator.ts`.
 
 ---
+
 Revision 2025-11-24: Marked Milestone 1 complete after extracting `applyTransition`, relocating metrics instrumentation to the runtime loop, and adding the new transition unit tests.
 Revision 2025-11-24: Marked Milestone 2 complete with sqlite-backed runtime integration tests, documented the Postgres limitation, and added the lazy-DB decision.
 Revision 2025-11-24: Marked Milestone 3 complete after adding the cognitive router, Bun tests, and verification script; captured the runtime mock export surprise and associated decision.

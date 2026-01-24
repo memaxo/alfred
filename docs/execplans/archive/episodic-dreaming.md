@@ -4,6 +4,7 @@
 **Goal**: (Removed) Synthesize heuristic “intuitions” from past failures during idle time.
 
 ## Core Concept
+
 This subsystem was implemented experimentally and later removed because it introduced naive clustering + heuristic generation surface area that did not meet the repo’s “lean + embedding-centric” bar.
 
 ## Outcome

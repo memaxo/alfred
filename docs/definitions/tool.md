@@ -22,18 +22,19 @@ Every tool has:
 
 Tool annotations encode ontology metadata:
 
-| Annotation | Type | Purpose |
-|------------|------|---------|
-| `category` | ToolCategory | Organization (knowledge, action, reflection, integration, system) |
-| `readOnly` | boolean | True if tool has no side effects |
-| `destructive` | boolean | True if tool could cause data loss |
-| `idempotent` | boolean | True if same input always produces same output |
-| `requiresApproval` | boolean | True if user confirmation needed |
-| `outputFormat` | ToolOutputFormat | How to persist output (json, markdown, text, log) |
-| `artifactPath` | string? | Where to persist output |
-| `providesContext` | string? | Brief description of what context this tool provides |
+| Annotation         | Type             | Purpose                                                           |
+| ------------------ | ---------------- | ----------------------------------------------------------------- |
+| `category`         | ToolCategory     | Organization (knowledge, action, reflection, integration, system) |
+| `readOnly`         | boolean          | True if tool has no side effects                                  |
+| `destructive`      | boolean          | True if tool could cause data loss                                |
+| `idempotent`       | boolean          | True if same input always produces same output                    |
+| `requiresApproval` | boolean          | True if user confirmation needed                                  |
+| `outputFormat`     | ToolOutputFormat | How to persist output (json, markdown, text, log)                 |
+| `artifactPath`     | string?          | Where to persist output                                           |
+| `providesContext`  | string?          | Brief description of what context this tool provides              |
 
 Annotations drive:
+
 - CATALOG.md generation (what agents read to discover tools)
 - Artifact persistence (where outputs are written)
 - Approval workflows (which tools need user confirmation)
@@ -55,6 +56,7 @@ Annotations drive:
 Agents discover tools by reading `CATALOG.md`. This file is generated from tool annotations and lists all tools with descriptions, categories, and capabilities.
 
 The discovery flow:
+
 1. Workspace initialization generates CATALOG.md
 2. Agent reads CATALOG.md to understand available capabilities
 3. Agent reasons about what tools to call based on task requirements
@@ -66,10 +68,12 @@ This is organic discovery—agents reason about gaps, not hardcoded logic.
 ## Implementation
 
 Tools are defined in:
+
 - `packages/agent/src/orchestrator/tool/` — Orchestrator tools
 - `packages/agent/assistant/src/tool/` — Assistant tools
 
 Registration happens in `packages/agent/src/v6.ts`:
+
 - Tools are collected into arrays
 - Wrapped via `wrapLegacyToolToAISDK()` for AI SDK v6 compatibility
 - Exported as `ToolMap` (Record<string, Tool>)

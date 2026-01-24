@@ -42,18 +42,21 @@ The ALFRED build process follows this sequence:
 ### Build Steps by Location
 
 **Root `package.json` scripts:**
+
 - `setup`: `bun install && turbo run setup` (not automatically invoked)
 - `dev`: `turbo dev` (starts development servers)
 - `build`: `NODE_OPTIONS='--max-old-space-size=16384' turbo build`
 - `typecheck`: `tsc -b --pretty false` (solution-style TypeScript)
 
 **Turbo pipeline (`turbo.json`):**
+
 - `build`: Depends on `^build`, outputs to `dist/**`
 - `test`: Depends on `^build`
 - `dev`: Persistent task (no cache)
 - `setup`: Cache disabled, persistent false (only `@alfred/voice` defines this)
 
 **CI/CD (`.github/workflows/ci.yml`):**
+
 - Pre-flight checks: `bun scripts/preflight.ts`
 - Build verification: `bun run verify:build`
 - Typecheck: `bun run typecheck:workspace`
@@ -63,16 +66,19 @@ The ALFRED build process follows this sequence:
 ### Platform-Specific Requirements
 
 **Linux:**
+
 - Docker/Docker Compose for PostgreSQL
 - (Optional) poof for filesystem isolation
 - (Optional) UV for Python dependencies (voice/embed packages)
 
 **macOS:**
+
 - Docker Desktop or Docker CLI
 - (Optional) UV for Python dependencies
 - MPS backend for PyTorch (Apple Silicon)
 
 **Windows:**
+
 - Docker Desktop
 - WSL2 recommended for Linux compatibility
 - (Optional) UV for Python dependencies
@@ -93,8 +99,10 @@ The ALFRED build process follows this sequence:
    - **Issue**: `config/env.example` shows placeholder, but quickstart doesn't mention generating keys
    - **Location**: `README.md` line 58-63, `apps/web/content/docs/getting-started.mdx` line 34-36
    - **Fix**: Add step after copying `.env`:
+
      ```markdown
      # Generate auth keys
+
      bun scripts/gen-keys.ts >> .env
      ```
 
@@ -128,27 +136,41 @@ The ALFRED build process follows this sequence:
    - **Issue**: Voice features require manual setup (`bun run setup` in `packages/voice`) but not mentioned
    - **Location**: `packages/voice/package.json` line 18
    - **Fix**: Add optional section in quickstart:
-     ```markdown
+
+     ````markdown
      ### Optional: Voice Features
+
      If you want to use local voice models:
+
      ```bash
      cd packages/voice
      bun run setup
      ```
+     ````
+
+     ```
+
      ```
 
 2. **Embed Package Setup Not Documented**
    - **Issue**: Embed features require manual setup but not mentioned
    - **Location**: `packages/embed/package.json` line 29-30
    - **Fix**: Add optional section:
-     ```markdown
+
+     ````markdown
      ### Optional: Local Embeddings
+
      For local embeddings (KaLM model):
+
      ```bash
      cd packages/embed
      bun run install-deps
      bun run download-model
      ```
+     ````
+
+     ```
+
      ```
 
 3. **Poof Installation Error Handling**
@@ -170,7 +192,8 @@ The ALFRED build process follows this sequence:
 1. **File**: `README.md`, Line: 58-63
    - **Issue**: Environment setup step doesn't mention generating `BETTER_AUTH_SECRET` or setting `OPENAI_API_KEY`
    - **Fix**: Update Step 2:
-     ```markdown
+
+     ````markdown
      2. **Set up environment:**
         ```bash
         cp config/env.example .env
@@ -180,6 +203,10 @@ The ALFRED build process follows this sequence:
         # - OPENAI_API_KEY (required for AI features)
         # - DATABASE_URL (default: postgresql://alfred:alfred@localhost:5432/alfred)
         ```
+     ````
+
+     ```
+
      ```
 
 2. **File**: `README.md`, Line: 44-49
@@ -192,8 +219,10 @@ The ALFRED build process follows this sequence:
 3. **File**: `apps/web/content/docs/getting-started.mdx`, Line: 27-36
    - **Issue**: Missing `OPENAI_API_KEY` in minimum required settings
    - **Fix**: Add to Step 3:
+
      ```markdown
      **Minimum required settings:**
+
      - `DATABASE_URL` - PostgreSQL connection string
      - `BETTER_AUTH_SECRET` - Generate with `bun scripts/gen-keys.ts`
      - `OPENAI_API_KEY` - Required for AI SDK v6 model access
@@ -202,7 +231,8 @@ The ALFRED build process follows this sequence:
 4. **File**: `docs/guides/developer-onboarding.md`, Line: 29-33
    - **Issue**: Environment setup doesn't mention key generation or API keys
    - **Fix**: Update Step 2:
-     ```markdown
+
+     ````markdown
      2. **Configure environment:**
         ```bash
         cp config/env.example .env
@@ -210,6 +240,10 @@ The ALFRED build process follows this sequence:
         bun scripts/gen-keys.ts >> .env
         # Edit .env and set OPENAI_API_KEY (required for AI features)
         ```
+     ````
+
+     ```
+
      ```
 
 5. **File**: `apps/web/content/docs/getting-started.mdx`, Line: 14-17
@@ -247,21 +281,28 @@ The ALFRED build process follows this sequence:
 4. **Optional Features Setup**
    - **Issue**: Voice and embed packages require separate setup but not documented
    - **Fix**: Add optional section after Step 5:
-     ```markdown
+
+     ````markdown
      ### Optional: Enable Voice & Local Embeddings
-     
+
      **Voice Features:**
+
      ```bash
      cd packages/voice
      bun run setup
      ```
-     
+     ````
+
      **Local Embeddings:**
+
      ```bash
      cd packages/embed
      bun run install-deps
      bun run download-model
      ```
+
+     ```
+
      ```
 
 ### Command Verification Issues
@@ -279,14 +320,17 @@ The ALFRED build process follows this sequence:
 2. **Missing Error Handling in Quickstart**
    - **Issue**: No troubleshooting guidance if `bun run dev` fails
    - **Fix**: Add troubleshooting section:
+
      ```markdown
      ## Troubleshooting
-     
+
      **Database connection errors:**
+
      - Verify Docker is running: `docker ps`
      - Check `DATABASE_URL` in `.env` matches container settings
-     
+
      **Missing API keys:**
+
      - Ensure `OPENAI_API_KEY` is set in `.env`
      - Generate `BETTER_AUTH_SECRET` with `bun scripts/gen-keys.ts`
      ```

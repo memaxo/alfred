@@ -62,4 +62,3 @@ The correct posture is:
 - treat it as an external boundary,
 - keep subprocess execution simple (`Bun.spawn`, validated `cwd`, minimal env),
 - and keep the integration test opt-in.
-

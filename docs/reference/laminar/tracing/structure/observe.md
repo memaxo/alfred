@@ -1,9 +1,10 @@
 ---
 title: Observe Decorator/Wrapper - Laminar documentation
-url: 
+url:
 description: Using the observe decorator/wrapper to structure your traces
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/observe#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -34,7 +35,7 @@ On this page
 - [Grouping LLM Calls](https://docs.lmnr.ai/tracing/structure/observe#grouping-llm-calls)
 - [Alternative Methods](https://docs.lmnr.ai/tracing/structure/observe#alternative-methods)
 
-## [​](https://docs.lmnr.ai/tracing/structure/observe\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/structure/observe#overview) Overview
 
 The `observe` decorator (Python) or function wrapper (JavaScript/TypeScript) is the simplest way to structure your traces in Laminar. It allows you to:
 
@@ -42,12 +43,11 @@ The `observe` decorator (Python) or function wrapper (JavaScript/TypeScript) is 
 - Capture inputs and outputs of your functions automatically
 - Structure your application’s tracing in a logical way
 
-## [​](https://docs.lmnr.ai/tracing/structure/observe\#basic-usage)  Basic Usage
+## [​](https://docs.lmnr.ai/tracing/structure/observe#basic-usage) Basic Usage
 
 - JavaScript/TypeScript
 
 - Python
-
 
 You can instrument specific functions by wrapping them in `observe()`.
 This is especially helpful when you want to trace functions, or group
@@ -96,14 +96,13 @@ const myFunction = async () => observe(
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/observe\#detailed-reference)  Detailed Reference
+## [​](https://docs.lmnr.ai/tracing/structure/observe#detailed-reference) Detailed Reference
 
 - JavaScript/TypeScript
 
 - Python
 
-
-### [​](https://docs.lmnr.ai/tracing/structure/observe\#general-syntax)  General syntax
+### [​](https://docs.lmnr.ai/tracing/structure/observe#general-syntax) General syntax
 
 Copy
 
@@ -114,7 +113,7 @@ await observe({ ...options }, async (param1, param2) => {
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/observe\#parameters-observeoptions)  Parameters ( `ObserveOptions`)
+### [​](https://docs.lmnr.ai/tracing/structure/observe#parameters-observeoptions) Parameters ( `ObserveOptions`)
 
 - `name` ( `string`): name of the span. If not passed, and the function to observe is not an anonymous arrow function, the function name will be used.
 - `sessionId` ( `string`): session ID for the wrapped trace.
@@ -122,15 +121,15 @@ await observe({ ...options }, async (param1, param2) => {
 - `metadata` ( `Record<string, any>`): metadata for the wrapped trace, must be json serializable.
 - `traceType` ( `'DEFAULT'|'EVALUATION'`): Type of the trace. Unless it is within evaluation, it must be `'DEFAULT'`.
 - `spanType` ( `'DEFAULT'|'LLM'`) \- Type of the span. `'DEFAULT'` is used if not specified. If the type is `'LLM'`,
-you must manually specify some attributes. This translates to `lmnr.span.type` attribute on the span.
+  you must manually specify some attributes. This translates to `lmnr.span.type` attribute on the span.
 - `traceId` ( `string`): \[experimental\] trace ID for the current trace. This is useful if you want to continue an existing trace.
-IMPORTANT: must be a valid UUID, i.e. has to include 8-4-4-4-12 hex digits.
+  IMPORTANT: must be a valid UUID, i.e. has to include 8-4-4-4-12 hex digits.
 - `input`: a dictionary of input parameters. Is preferred over function parameters.
 - `ignoreInput` ( `boolean`): if `true`, the input will not be recorded.
 - `ignoreOutput` ( `boolean`): if `true`, the output will not be recorded.
 - `tags` ( `string[]`): array of tags to add to the span.
 
-### [​](https://docs.lmnr.ai/tracing/structure/observe\#inputs-and-outputs)  Inputs and outputs
+### [​](https://docs.lmnr.ai/tracing/structure/observe#inputs-and-outputs) Inputs and outputs
 
 - Function parameters and their values are serialized to JSON and recorded as span input.
 - Function return value is serialized to JSON and recorded as span output.
@@ -151,16 +150,15 @@ In this case, the span will have the following attributes:
 - Span input ( `lmnr.span.input`) will be `{"param1": 1, "param2": 2}`
 - Span output ( `lmnr.span.output`) will be `3`
 
-## [​](https://docs.lmnr.ai/tracing/structure/observe\#use-cases)  Use Cases
+## [​](https://docs.lmnr.ai/tracing/structure/observe#use-cases) Use Cases
 
-### [​](https://docs.lmnr.ai/tracing/structure/observe\#grouping-llm-calls)  Grouping LLM Calls
+### [​](https://docs.lmnr.ai/tracing/structure/observe#grouping-llm-calls) Grouping LLM Calls
 
 One of the most common use cases for `observe` is to group multiple LLM calls into a single trace:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -191,7 +189,7 @@ const handle = async (userMessage) =>
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/observe\#alternative-methods)  Alternative Methods
+## [​](https://docs.lmnr.ai/tracing/structure/observe#alternative-methods) Alternative Methods
 
 In Python, you can also use `Laminar.start_as_current_span` if you want to trace a specific block of code:
 

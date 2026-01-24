@@ -16,6 +16,7 @@ This guide documents common code patterns used throughout ALFRED. These patterns
 **Solution:** Use variable-based dynamic imports in API routes.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT
 const dbPkg = "@alfred/db";
@@ -26,11 +27,13 @@ const { db } = await import("@alfred/db");
 ```
 
 **Examples:**
+
 - `apps/web/src/routes/api/assistant/$.ts` - Uses `agentPkg` variable
 - `apps/web/src/routes/api/orchestrator/$.ts` - Uses `agentPkg` variable
 - `apps/web/src/routes/api/linear/webhook.ts` - Uses variable-based imports
 
 **Exception:** Local server-only files can use static strings:
+
 ```typescript
 // ✅ OK for local files
 const { helper } = await import("./helper");
@@ -43,9 +46,11 @@ const { helper } = await import("./helper");
 **Solution:** Use single SQL `UPDATE ... FROM (VALUES ...)` statement.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Single SQL statement
-await db.update(table)
+await db
+  .update(table)
   .set({
     properties: sql`
       CASE
@@ -55,16 +60,16 @@ await db.update(table)
     `,
     updated: sql`NOW()`,
   })
-  .from(sql`(VALUES ${sql.join(
-    updates.map(u => sql`(${u.id}::uuid, ${u.confidence})`),
-    sql`, `
-  )}) AS v(id, confidence)`)
+  .from(
+    sql`(VALUES ${sql.join(
+      updates.map((u) => sql`(${u.id}::uuid, ${u.confidence})`),
+      sql`, `
+    )}) AS v(id, confidence)`
+  )
   .where(sql`table.id = v.id`);
 
 // ❌ INCORRECT: Promise.all loop (many roundtrips)
-await Promise.all(
-  updates.map(u => updateNodeConfidence(u.id, u.confidence))
-);
+await Promise.all(updates.map((u) => updateNodeConfidence(u.id, u.confidence)));
 ```
 
 **Current Status:** Implemented. `updateNodeConfidenceBatch` uses a set-based bulk update (`UPDATE ... FROM (VALUES ...)`) in `packages/db/src/repo/graph/write.ts`.
@@ -78,6 +83,7 @@ await Promise.all(
 **Solution:** Lazy load metrics with try/catch guards.
 
 **Pattern:**
+
 ```typescript
 // Mock metrics for tests/circular dep avoidance
 const mockHistogram = { startTimer: () => () => {} };
@@ -102,6 +108,7 @@ void loadMetrics();
 ```
 
 **Examples:**
+
 - `packages/agent/src/orchestrator/learning-worker.ts` - Lazy loads memory metrics
 - `packages/agent/src/orchestrator/linear.ts` - Uses `getLinearMetrics()` adapter
 
@@ -114,30 +121,33 @@ void loadMetrics();
 **Solution:** Fire-and-forget with error logging.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Fire-and-forget
-emitLinearActivity("thought", params)
-  .catch((error) => {
-    logger.warn("linear_activity_failed", {
-      runId,
-      error: error instanceof Error ? error.message : String(error),
-    });
+emitLinearActivity("thought", params).catch((error) => {
+  logger.warn("linear_activity_failed", {
+    runId,
+    error: error instanceof Error ? error.message : String(error),
   });
+});
 
 // ❌ INCORRECT: Blocking await
 await emitLinearActivity("thought", params); // Blocks workflow
 ```
 
 **Examples:**
+
 - `packages/api/src/routers/workflow.ts` - Linear activity emissions
 - `packages/agent/src/orchestrator/linear.ts` - All helper functions are fire-and-forget
 
 **When to Use:**
+
 - Non-critical side effects (logging, metrics, notifications)
 - Operations that shouldn't block main flow
 - External API calls that may fail
 
 **When NOT to Use:**
+
 - Critical operations (DB writes, auth checks)
 - Operations that affect workflow outcome
 - Operations that must complete before continuing
@@ -149,6 +159,7 @@ await emitLinearActivity("thought", params); // Blocks workflow
 **Solution:** Keep pure functions separate from I/O boundaries.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Pure function
 export function applyTransition(
@@ -168,18 +179,19 @@ export async function runCognitiveLoop(
 ) {
   // Load from DB (I/O)
   const events = await cognitiveRepo.getAllEvents(streamId);
-  
+
   // Apply pure transition
   const result = applyTransition(state, autonomy, event);
-  
+
   // Persist to DB (I/O)
   await cognitiveRepo.appendEvent(streamId, event._, event);
-  
+
   return result;
 }
 ```
 
 **Layer Map:**
+
 - **Pure:** `packages/cognitive/`, `packages/knowledge/src/graph/`, flow functions
 - **Boundary:** `packages/api/src/routers/`, `packages/db/src/repos/`, schedulers
 
@@ -192,6 +204,7 @@ export async function runCognitiveLoop(
 **Solution:** Always include context in error messages.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Context included
 logger.error("workflow_failed", {
@@ -217,13 +230,15 @@ throw new Error("Failed");
 **Solution:** Instrument before optimizing.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Instrument first
 const start = performance.now();
 const result = applyTransition(state, autonomy, event);
 const duration = performance.now() - start;
 
-if (duration > 100) { // Budget: <100µs
+if (duration > 100) {
+  // Budget: <100µs
   logger.warn("cognitive_budget_exceeded", {
     duration,
     budget: 100,
@@ -242,12 +257,10 @@ if (duration > 100) { // Budget: <100µs
 **Solution:** Always propagate AbortSignal through async chains.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Propagate signal
-async function processWorkflow(
-  runId: string,
-  signal: AbortSignal
-) {
+async function processWorkflow(runId: string, signal: AbortSignal) {
   const result = await fetchData(signal); // Pass signal
   await processResult(result, signal); // Pass signal
 }
@@ -267,6 +280,7 @@ if (signal.aborted) {
 **Solution:** Use `useCallback` and `useMemo` for stable references.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Stable callback
 const handleClick = useCallback(() => {
@@ -292,6 +306,7 @@ const filteredItems = useMemo(
 **Solution:** Always use Drizzle query builder.
 
 **Pattern:**
+
 ```typescript
 // ✅ CORRECT: Type-safe query
 const [row] = await db
@@ -334,4 +349,3 @@ await db.execute(sql`SELECT * FROM memory_nodes WHERE id = ${nodeId}`);
 - [Drizzle Patterns](../../.ruler/19-drizzle-patterns.md)
 - [TanStack Start Rules](../../.ruler/21-tanstack-start.md)
 - [Component Development Rules](../../.ruler/12-component-development.md)
-

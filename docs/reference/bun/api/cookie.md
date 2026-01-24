@@ -1,9 +1,10 @@
 ---
 title: Cookie – API | Bun Docs
-url: 
+url:
 description: Bun's native Cookie API simplifies working with HTTP cookies.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Bun provides native APIs for working with HTTP cookies through `Bun.Cookie` and `Bun.CookieMap`. These APIs offer fast, easy-to-use methods for parsing, generating, and manipulating cookies in HTTP requests and responses.
 
-## [CookieMap class](https://bun.com/docs/api/cookie\#cookiemap-class)
+## [CookieMap class](https://bun.com/docs/api/cookie#cookiemap-class)
 
 `Bun.CookieMap` provides a Map-like interface for working with collections of cookies. It implements the `Iterable` interface, allowing you to use it with `for...of` loops and other iteration methods.
 
@@ -79,7 +80,7 @@ const cookies3 = new Bun.CookieMap([\
 
 ```
 
-### [In HTTP servers](https://bun.com/docs/api/cookie\#in-http-servers)
+### [In HTTP servers](https://bun.com/docs/api/cookie#in-http-servers)
 
 In Bun's HTTP server, the `cookies` property on the request object (in `routes`) is an instance of `CookieMap`:
 
@@ -113,7 +114,7 @@ console.log("Server listening at: " + server.url);
 
 ```
 
-### [Methods](https://bun.com/docs/api/cookie\#methods)
+### [Methods](https://bun.com/docs/api/cookie#methods)
 
 #### `get(name: string): string | null`
 
@@ -225,7 +226,7 @@ server.listen(3000, () => {
 
 ```
 
-### [Iteration](https://bun.com/docs/api/cookie\#iteration)
+### [Iteration](https://bun.com/docs/api/cookie#iteration)
 
 `CookieMap` provides several methods for iteration:
 
@@ -257,7 +258,7 @@ cookies.forEach((value, name) => {
 
 ```
 
-### [Properties](https://bun.com/docs/api/cookie\#properties)
+### [Properties](https://bun.com/docs/api/cookie#properties)
 
 #### `size: number`
 
@@ -268,7 +269,7 @@ console.log(cookies.size); // Number of cookies
 
 ```
 
-## [Cookie class](https://bun.com/docs/api/cookie\#cookie-class)
+## [Cookie class](https://bun.com/docs/api/cookie#cookie-class)
 
 `Bun.Cookie` represents an HTTP cookie with its name, value, and attributes.
 
@@ -301,7 +302,7 @@ const objCookie = new Bun.Cookie({
 
 ```
 
-### [Constructors](https://bun.com/docs/api/cookie\#constructors)
+### [Constructors](https://bun.com/docs/api/cookie#constructors)
 
 ```
 // Basic constructor with name/value
@@ -318,7 +319,7 @@ new Bun.Cookie(options: CookieInit);
 
 ```
 
-### [Properties](https://bun.com/docs/api/cookie\#properties)
+### [Properties](https://bun.com/docs/api/cookie#properties)
 
 ```
 cookie.name; // string - Cookie name
@@ -334,7 +335,7 @@ cookie.httpOnly; // boolean - Accessible only via HTTP (not JavaScript)
 
 ```
 
-### [Methods](https://bun.com/docs/api/cookie\#methods)
+### [Methods](https://bun.com/docs/api/cookie#methods)
 
 #### `isExpired(): boolean`
 
@@ -408,7 +409,7 @@ const jsonString = JSON.stringify(cookie);
 
 ```
 
-### [Static methods](https://bun.com/docs/api/cookie\#static-methods)
+### [Static methods](https://bun.com/docs/api/cookie#static-methods)
 
 #### `Cookie.parse(cookieString: string): Cookie`
 
@@ -438,7 +439,7 @@ const cookie = Bun.Cookie.from("session", "abc123", {
 
 ```
 
-## [Types](https://bun.com/docs/api/cookie\#types)
+## [Types](https://bun.com/docs/api/cookie#types)
 
 ```
 interface CookieInit {
@@ -527,7 +528,7 @@ Console](https://bun.com/docs/api/console) [Next\\
 \\
 FFI](https://bun.com/docs/api/ffi)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/cookie.md)
 
@@ -551,7 +552,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

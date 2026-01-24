@@ -1,9 +1,10 @@
 ---
 title: Username | Better Auth
-url: 
+url:
 description: Username plugin
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The username plugin is a lightweight plugin that adds username support to the email and password authenticator. This allows users to sign in and sign up with their username instead of their email.
 
-## [Installation](https://www.better-auth.com/docs/plugins/username\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/username#installation)
 
-### [Add Plugin to the server](https://www.better-auth.com/docs/plugins/username\#add-plugin-to-the-server)
+### [Add Plugin to the server](https://www.better-auth.com/docs/plugins/username#add-plugin-to-the-server)
 
 auth.ts
 
@@ -45,7 +46,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/username\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/username#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -61,7 +62,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/username#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/username\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/username#add-the-client-plugin)
 
 auth-client.ts
 
@@ -76,9 +77,9 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/username\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/username#usage)
 
-### [Sign up](https://www.better-auth.com/docs/plugins/username\#sign-up)
+### [Sign up](https://www.better-auth.com/docs/plugins/username#sign-up)
 
 To sign up a user with username, you can use the existing `signUp.email` function provided by the client.
 The `signUp` function should take a new `username` property in the object.
@@ -99,12 +100,12 @@ const { data, error } = await authClient.signUp.email({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email of the user. | `string` |
-| `name` | The name of the user. | `string` |
-| `password` | The password of the user. | `string` |
-| `username` | The username of the user. | `string` |
+| Prop               | Description                               | Type     |
+| ------------------ | ----------------------------------------- | -------- |
+| `email`            | The email of the user.                    | `string` |
+| `name`             | The name of the user.                     | `string` |
+| `password`         | The password of the user.                 | `string` |
+| `username`         | The username of the user.                 | `string` |
 | `displayUsername?` | An optional display username of the user. | `string` |
 
 POST
@@ -123,17 +124,17 @@ const data = await auth.api.signUpEmail({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email of the user. | `string` |
-| `name` | The name of the user. | `string` |
-| `password` | The password of the user. | `string` |
-| `username` | The username of the user. | `string` |
+| Prop               | Description                               | Type     |
+| ------------------ | ----------------------------------------- | -------- |
+| `email`            | The email of the user.                    | `string` |
+| `name`             | The name of the user.                     | `string` |
+| `password`         | The password of the user.                 | `string` |
+| `username`         | The username of the user.                 | `string` |
 | `displayUsername?` | An optional display username of the user. | `string` |
 
 If only `username` is provided, the `displayUsername` will be set to the pre normalized version of the `username`. You can see the [Username Normalization](https://www.better-auth.com/docs/plugins/username#username-normalization) and [Display Username Normalization](https://www.better-auth.com/docs/plugins/username#display-username-normalization) sections for more details.
 
-### [Sign in](https://www.better-auth.com/docs/plugins/username\#sign-in)
+### [Sign in](https://www.better-auth.com/docs/plugins/username#sign-in)
 
 To sign in a user with username, you can use the `signIn.username` function provided by the client.
 
@@ -150,8 +151,8 @@ const { data, error } = await authClient.signIn.username({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description               | Type     |
+| ---------- | ------------------------- | -------- |
 | `username` | The username of the user. | `string` |
 | `password` | The password of the user. | `string` |
 
@@ -168,12 +169,12 @@ const data = await auth.api.signInUsername({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description               | Type     |
+| ---------- | ------------------------- | -------- |
 | `username` | The username of the user. | `string` |
 | `password` | The password of the user. | `string` |
 
-### [Update username](https://www.better-auth.com/docs/plugins/username\#update-username)
+### [Update username](https://www.better-auth.com/docs/plugins/username#update-username)
 
 To update the username of a user, you can use the `updateUser` function provided by the client.
 
@@ -189,8 +190,8 @@ const { data, error } = await authClient.updateUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop        | Description             | Type     |
+| ----------- | ----------------------- | -------- |
 | `username?` | The username to update. | `string` |
 
 POST
@@ -205,11 +206,11 @@ const data = await auth.api.updateUser({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop        | Description             | Type     |
+| ----------- | ----------------------- | -------- |
 | `username?` | The username to update. | `string` |
 
-### [Check if username is available](https://www.better-auth.com/docs/plugins/username\#check-if-username-is-available)
+### [Check if username is available](https://www.better-auth.com/docs/plugins/username#check-if-username-is-available)
 
 To check if a username is available, you can use the `isUsernameAvailable` function provided by the client.
 
@@ -231,8 +232,8 @@ if(response?.available) {
 }
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description            | Type     |
+| ---------- | ---------------------- | -------- |
 | `username` | The username to check. | `string` |
 
 POST
@@ -253,13 +254,13 @@ if(response?.available) {
 }
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop       | Description            | Type     |
+| ---------- | ---------------------- | -------- |
 | `username` | The username to check. | `string` |
 
-## [Options](https://www.better-auth.com/docs/plugins/username\#options)
+## [Options](https://www.better-auth.com/docs/plugins/username#options)
 
-### [Min Username Length](https://www.better-auth.com/docs/plugins/username\#min-username-length)
+### [Min Username Length](https://www.better-auth.com/docs/plugins/username#min-username-length)
 
 The minimum length of the username. Default is `3`.
 
@@ -278,7 +279,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Max Username Length](https://www.better-auth.com/docs/plugins/username\#max-username-length)
+### [Max Username Length](https://www.better-auth.com/docs/plugins/username#max-username-length)
 
 The maximum length of the username. Default is `30`.
 
@@ -297,7 +298,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Username Validator](https://www.better-auth.com/docs/plugins/username\#username-validator)
+### [Username Validator](https://www.better-auth.com/docs/plugins/username#username-validator)
 
 A function that validates the username. The function should return false if the username is invalid. By default, the username should only contain alphanumeric characters, underscores, and dots.
 
@@ -321,7 +322,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Display Username Validator](https://www.better-auth.com/docs/plugins/username\#display-username-validator)
+### [Display Username Validator](https://www.better-auth.com/docs/plugins/username#display-username-validator)
 
 A function that validates the display username. The function should return false if the display username is invalid. By default, no validation is applied to display username.
 
@@ -343,7 +344,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Username Normalization](https://www.better-auth.com/docs/plugins/username\#username-normalization)
+### [Username Normalization](https://www.better-auth.com/docs/plugins/username#username-normalization)
 
 A function that normalizes the username, or `false` if you want to disable normalization.
 
@@ -369,7 +370,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Display Username Normalization](https://www.better-auth.com/docs/plugins/username\#display-username-normalization)
+### [Display Username Normalization](https://www.better-auth.com/docs/plugins/username#display-username-normalization)
 
 A function that normalizes the display username, or `false` to disable normalization.
 
@@ -390,7 +391,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Validation Order](https://www.better-auth.com/docs/plugins/username\#validation-order)
+### [Validation Order](https://www.better-auth.com/docs/plugins/username#validation-order)
 
 By default, username and display username are validated before normalization. You can change this behavior by setting `validationOrder` to `post-normalization`.
 
@@ -412,14 +413,14 @@ const auth = betterAuth({
 })
 ```
 
-## [Schema](https://www.better-auth.com/docs/plugins/username\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/username#schema)
 
 The plugin requires 2 fields to be added to the user table:
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| username | string | - | The username of the user |
-| displayUsername | string | - | Non normalized username of the user |
+| Field Name      | Type   | Key | Description                         |
+| --------------- | ------ | --- | ----------------------------------- |
+| username        | string | -   | The username of the user            |
+| displayUsername | string | -   | Non normalized username of the user |
 
 [Edit on GitHub](https://github.com/better-auth/better-auth/blob/main/docs/content/docs/plugins/username.mdx)
 

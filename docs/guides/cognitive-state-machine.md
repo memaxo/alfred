@@ -77,4 +77,3 @@ Learning systems connect through the reflection state, which provides structured
 - [Architecture Overview](../architecture/overview.md) — System-wide architecture context
 - [Learning System](learning-system.md) — How reflection feeds into learning
 - [Integration Patterns](integration-patterns.md) — How cognitive state composes with other systems
-

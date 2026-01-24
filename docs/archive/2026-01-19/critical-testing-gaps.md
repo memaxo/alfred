@@ -11,6 +11,7 @@ This document identifies critical testing gaps across the ALFRED codebase. While
 ### Recent Progress (2025-01-27)
 
 ✅ **Completed:**
+
 - Note router tests (18 tests) - Full CRUD coverage with auth guards
 - Remind router tests (19 tests) - Full CRUD coverage with due reminders
 - Timer router tests (14 tests) - Full CRUD coverage
@@ -27,24 +28,24 @@ This document identifies critical testing gaps across the ALFRED codebase. While
 
 #### Missing Router Tests
 
-| Router | Procedures | Criticality | Notes |
-|--------|-----------|-------------|-------|
-| `note.ts` | `create`, `list`, `update`, `delete` | **HIGH** | ✅ **COMPLETE** - 18 tests (`packages/api/test/note.router.test.ts`) |
-| `remind.ts` | `create`, `list`, `due`, `fire`, `delete` | **HIGH** | ✅ **COMPLETE** - 19 tests (`packages/api/test/remind.router.test.ts`) |
-| `timer.ts` | `create`, `active`, `done`, `cancel` | **MEDIUM** | ✅ **COMPLETE** - 14 tests (`packages/api/test/timer.router.test.ts`) |
-| `book.ts` | `create`, `list`, `delete` | **MEDIUM** | Bookmark management, no tests found |
-| `todo.ts` | `getAll`, `create`, `toggle`, `delete` | **LOW** | Public procedure (no auth), but should still test |
-| `preference.ts` | `set`, `get`, `list`, `delete`, `correct` | **HIGH** | Policy enforcement, preference inference, no tests |
-| `privacy.ts` | `facts`, `purge`, `export`, `events` | **CRITICAL** | Privacy controls, data deletion, no tests |
-| `profile.ts` | `get`, `update` | **MEDIUM** | User profile management, no tests |
-| `graph.ts` | Multiple graph operations | **MEDIUM** | Some integration tests exist, but no router-level tests |
-| `fs.ts` | File system operations | **HIGH** | Security-sensitive, needs auth/policy tests |
-| `terminal.ts` | Terminal operations | **HIGH** | Security-sensitive, needs auth/policy tests |
-| `tune.ts` | Model tuning operations | **LOW** | Experimental feature |
-| `deploy.ts` | Deployment operations | **CRITICAL** | Production deployments, needs comprehensive tests |
-| `eval.ts` | Eval operations | **MEDIUM** | Some tests exist, but router-level coverage incomplete |
-| `linear.ts` | Linear integration | **MEDIUM** | Webhook handling needs tests |
-| `home.ts` | Home operations | **LOW** | Minimal functionality |
+| Router          | Procedures                                | Criticality  | Notes                                                                  |
+| --------------- | ----------------------------------------- | ------------ | ---------------------------------------------------------------------- |
+| `note.ts`       | `create`, `list`, `update`, `delete`      | **HIGH**     | ✅ **COMPLETE** - 18 tests (`packages/api/test/note.router.test.ts`)   |
+| `remind.ts`     | `create`, `list`, `due`, `fire`, `delete` | **HIGH**     | ✅ **COMPLETE** - 19 tests (`packages/api/test/remind.router.test.ts`) |
+| `timer.ts`      | `create`, `active`, `done`, `cancel`      | **MEDIUM**   | ✅ **COMPLETE** - 14 tests (`packages/api/test/timer.router.test.ts`)  |
+| `book.ts`       | `create`, `list`, `delete`                | **MEDIUM**   | Bookmark management, no tests found                                    |
+| `todo.ts`       | `getAll`, `create`, `toggle`, `delete`    | **LOW**      | Public procedure (no auth), but should still test                      |
+| `preference.ts` | `set`, `get`, `list`, `delete`, `correct` | **HIGH**     | Policy enforcement, preference inference, no tests                     |
+| `privacy.ts`    | `facts`, `purge`, `export`, `events`      | **CRITICAL** | Privacy controls, data deletion, no tests                              |
+| `profile.ts`    | `get`, `update`                           | **MEDIUM**   | User profile management, no tests                                      |
+| `graph.ts`      | Multiple graph operations                 | **MEDIUM**   | Some integration tests exist, but no router-level tests                |
+| `fs.ts`         | File system operations                    | **HIGH**     | Security-sensitive, needs auth/policy tests                            |
+| `terminal.ts`   | Terminal operations                       | **HIGH**     | Security-sensitive, needs auth/policy tests                            |
+| `tune.ts`       | Model tuning operations                   | **LOW**      | Experimental feature                                                   |
+| `deploy.ts`     | Deployment operations                     | **CRITICAL** | Production deployments, needs comprehensive tests                      |
+| `eval.ts`       | Eval operations                           | **MEDIUM**   | Some tests exist, but router-level coverage incomplete                 |
+| `linear.ts`     | Linear integration                        | **MEDIUM**   | Webhook handling needs tests                                           |
+| `home.ts`       | Home operations                           | **LOW**      | Minimal functionality                                                  |
 
 #### Existing Router Tests (for reference)
 
@@ -68,17 +69,18 @@ Each router test should verify:
 6. **Success paths** - Representative CRUD operations succeed
 
 **Example pattern:**
+
 ```typescript
 describe("noteRouter", () => {
   it("rejects unauthenticated create", async () => {
     await expect(caller.note.create({...})).rejects.toThrow("UNAUTHORIZED");
   });
-  
+
   it("creates note with valid input", async () => {
     const result = await authedCaller.note.create({ title: "Test", content: "..." });
     expect(result.id).toBeDefined();
   });
-  
+
   it("scopes list to user", async () => {
     const notes = await authedCaller.note.list({});
     expect(notes.every(n => n.userId === userId)).toBe(true);
@@ -92,16 +94,16 @@ describe("noteRouter", () => {
 
 #### Missing Repository Tests
 
-| Repository | Functions | Criticality | Notes |
-|-----------|-----------|-------------|-------|
-| `assistant.ts` | `createNote`, `getNotes`, `updateNote`, `deleteNote`, `createReminder`, `getReminders`, `getDueReminders`, `createTimer`, `getActiveTimers`, `createBookmark`, `getBookmarks`, `createTask`, `getTasks` | **HIGH** | ✅ **COMPLETE** - 19 tests with performance assertions (`packages/db/test/repo.assistant.test.ts`) |
-| `conversation.ts` | Conversation management | **MEDIUM** | Some usage in integration tests, but no dedicated repo tests |
-| `deploy/` | Deployment lifecycle | **CRITICAL** | Production deployments, needs comprehensive tests |
-| `graph/write.ts` | Graph mutations | **MEDIUM** | Some traversal tests exist, but write operations need coverage |
-| `graph/scoring.ts` | Confidence scoring | **MEDIUM** | Critical for knowledge graph quality |
-| `graph/temporal.ts` | Temporal edge operations | **MEDIUM** | Bitemporal graph operations |
-| `policy.ts` | Policy audit logging | **HIGH** | Security-critical audit trail |
-| `sanitize.ts` | Content sanitization | **CRITICAL** | Security-critical, prevents XSS/injection |
+| Repository          | Functions                                                                                                                                                                                               | Criticality  | Notes                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| `assistant.ts`      | `createNote`, `getNotes`, `updateNote`, `deleteNote`, `createReminder`, `getReminders`, `getDueReminders`, `createTimer`, `getActiveTimers`, `createBookmark`, `getBookmarks`, `createTask`, `getTasks` | **HIGH**     | ✅ **COMPLETE** - 19 tests with performance assertions (`packages/db/test/repo.assistant.test.ts`) |
+| `conversation.ts`   | Conversation management                                                                                                                                                                                 | **MEDIUM**   | Some usage in integration tests, but no dedicated repo tests                                       |
+| `deploy/`           | Deployment lifecycle                                                                                                                                                                                    | **CRITICAL** | Production deployments, needs comprehensive tests                                                  |
+| `graph/write.ts`    | Graph mutations                                                                                                                                                                                         | **MEDIUM**   | Some traversal tests exist, but write operations need coverage                                     |
+| `graph/scoring.ts`  | Confidence scoring                                                                                                                                                                                      | **MEDIUM**   | Critical for knowledge graph quality                                                               |
+| `graph/temporal.ts` | Temporal edge operations                                                                                                                                                                                | **MEDIUM**   | Bitemporal graph operations                                                                        |
+| `policy.ts`         | Policy audit logging                                                                                                                                                                                    | **HIGH**     | Security-critical audit trail                                                                      |
+| `sanitize.ts`       | Content sanitization                                                                                                                                                                                    | **CRITICAL** | Security-critical, prevents XSS/injection                                                          |
 
 #### Existing Repository Tests
 
@@ -127,18 +129,18 @@ Each repo test should:
 
 #### Missing Component Tests
 
-| Component/Route | Criticality | Notes |
-|----------------|-------------|-------|
-| `apps/web/src/routes/note.tsx` | **HIGH** | Notes pane - core productivity feature |
-| `apps/web/src/routes/remind.tsx` | **HIGH** | Reminders pane - core productivity feature |
-| Timer UI components | **MEDIUM** | No timer route found, but timer-node exists in Mindscape |
-| Bookmark UI components | **MEDIUM** | No bookmark route found |
-| `apps/web/src/routes/profile.tsx` | **MEDIUM** | Profile management |
-| `apps/web/src/routes/preferences.tsx` | **MEDIUM** | Preferences management |
-| `apps/web/src/routes/privacy.tsx` | **HIGH** | Privacy controls - critical for user trust |
-| `apps/web/src/components/pane-layout.tsx` | **MEDIUM** | Shared pane component used by notes/reminders |
-| `apps/web/src/components/sign-in-form.tsx` | **HIGH** | Authentication entry point |
-| `apps/web/src/components/sign-up-form.tsx` | **HIGH** | User registration |
+| Component/Route                            | Criticality | Notes                                                    |
+| ------------------------------------------ | ----------- | -------------------------------------------------------- |
+| `apps/web/src/routes/note.tsx`             | **HIGH**    | Notes pane - core productivity feature                   |
+| `apps/web/src/routes/remind.tsx`           | **HIGH**    | Reminders pane - core productivity feature               |
+| Timer UI components                        | **MEDIUM**  | No timer route found, but timer-node exists in Mindscape |
+| Bookmark UI components                     | **MEDIUM**  | No bookmark route found                                  |
+| `apps/web/src/routes/profile.tsx`          | **MEDIUM**  | Profile management                                       |
+| `apps/web/src/routes/preferences.tsx`      | **MEDIUM**  | Preferences management                                   |
+| `apps/web/src/routes/privacy.tsx`          | **HIGH**    | Privacy controls - critical for user trust               |
+| `apps/web/src/components/pane-layout.tsx`  | **MEDIUM**  | Shared pane component used by notes/reminders            |
+| `apps/web/src/components/sign-in-form.tsx` | **HIGH**    | Authentication entry point                               |
+| `apps/web/src/components/sign-up-form.tsx` | **HIGH**    | User registration                                        |
 
 #### Existing Component Tests
 
@@ -159,13 +161,14 @@ Each component test should:
 6. **Mock tRPC calls** - Use `createRouteTrpcMock` or real tRPC with test DB
 
 **Example pattern:**
+
 ```typescript
 describe("NotePane", () => {
   it("renders empty state when no notes", async () => {
     const { getByText } = render(<NotePane />, { trpc: mockTrpc({ noteList: [] }) });
     expect(getByText("No notes yet")).toBeInTheDocument();
   });
-  
+
   it("creates note optimistically", async () => {
     const { getByPlaceholder, getByRole } = render(<NotePane />);
     await user.type(getByPlaceholder("Title"), "Test Note");
@@ -181,13 +184,13 @@ describe("NotePane", () => {
 
 #### Missing Scheduler Tests
 
-| Scheduler | Location | Criticality | Notes |
-|-----------|----------|-------------|-------|
-| `remind.ts` | `packages/api/src/scheduler/remind.ts` | **HIGH** | ✅ **COMPLETE** - 6/7 tests (`packages/api/test/scheduler/remind.scheduler.test.ts`) |
-| `preference-decay.ts` | `packages/api/src/scheduler/preference-decay.ts` | **MEDIUM** | Preference confidence decay, no tests found |
-| `preference-inference.ts` | `packages/api/src/scheduler/preference-inference.ts` | **MEDIUM** | Background preference inference, no tests found |
-| Learning worker | `packages/agent/src/orchestrator/learning-worker.ts` | **MEDIUM** | Tests exist but may need scheduler-specific tests |
-| Codex session cleanup | Background workers | **MEDIUM** | Session timeout handling |
+| Scheduler                 | Location                                             | Criticality | Notes                                                                                |
+| ------------------------- | ---------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `remind.ts`               | `packages/api/src/scheduler/remind.ts`               | **HIGH**    | ✅ **COMPLETE** - 6/7 tests (`packages/api/test/scheduler/remind.scheduler.test.ts`) |
+| `preference-decay.ts`     | `packages/api/src/scheduler/preference-decay.ts`     | **MEDIUM**  | Preference confidence decay, no tests found                                          |
+| `preference-inference.ts` | `packages/api/src/scheduler/preference-inference.ts` | **MEDIUM**  | Background preference inference, no tests found                                      |
+| Learning worker           | `packages/agent/src/orchestrator/learning-worker.ts` | **MEDIUM**  | Tests exist but may need scheduler-specific tests                                    |
+| Codex session cleanup     | Background workers                                   | **MEDIUM**  | Session timeout handling                                                             |
 
 #### Required Test Patterns
 
@@ -201,19 +204,23 @@ Each scheduler test should:
 6. **Use deterministic time** - Mock `Date.now()` for predictable behavior
 
 **Example pattern:**
+
 ```typescript
 describe("ReminderScheduler", () => {
   it("does not start when SCHED_REMIND is unset", () => {
     startReminderScheduler();
     expect(schedulerHandle).toBeNull();
   });
-  
+
   it("processes due reminders", async () => {
     const onFire = vi.fn();
-    startReminderScheduler({ onFire, now: () => new Date("2025-01-27T12:00:00Z") });
+    startReminderScheduler({
+      onFire,
+      now: () => new Date("2025-01-27T12:00:00Z"),
+    });
     await waitFor(() => expect(onFire).toHaveBeenCalled());
   });
-  
+
   it("skips tick if previous run still in progress", async () => {
     // Test concurrency guard
   });

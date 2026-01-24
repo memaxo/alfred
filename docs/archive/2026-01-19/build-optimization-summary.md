@@ -18,12 +18,14 @@ ALFRED is a **Bun-based monorepo** with:
 ### What Needs to be Packaged
 
 #### Core Application
+
 - ✅ Web app (TanStack Start SSR bundle)
 - ✅ API layer (tRPC routers)
 - ✅ All TypeScript packages (runtime, agent, cognitive, knowledge, etc.)
 - ✅ Bun runtime (embedded in executable)
 
 #### External Dependencies (Cannot be packaged)
+
 - ❌ PostgreSQL 16 + pgvector (separate container/VM)
 - ❌ Redis (optional, separate container)
 - ❌ Python 3.10+ runtime (for subprocesses)
@@ -37,6 +39,7 @@ ALFRED is a **Bun-based monorepo** with:
 **Best for**: Single-user deployment, LXC containers, minimal overhead
 
 **Build Command**:
+
 ```bash
 bun build --compile \
   --minify \
@@ -48,18 +51,21 @@ bun build --compile \
 ```
 
 **Deployment**:
+
 - Single binary (~50-100MB)
 - No Bun installation needed on target
 - Fast startup with bytecode
 - Python runtime installed separately (if using local models)
 
 **Pros**:
+
 - ✅ Minimal dependencies
 - ✅ Fast startup
 - ✅ Easy deployment
 - ✅ Small footprint
 
 **Cons**:
+
 - ❌ Python subprocesses require separate Python installation
 - ❌ Cannot embed PostgreSQL/Redis
 - ❌ Larger binary size than source code
@@ -69,17 +75,20 @@ bun build --compile \
 **Best for**: Multi-instance scaling, standardized deployment
 
 **Structure**:
+
 - Multi-stage Dockerfile
 - Includes Python runtime
 - Separate containers for PostgreSQL/Redis
 
 **Pros**:
+
 - ✅ Complete isolation
 - ✅ Includes Python runtime
 - ✅ Easy to scale horizontally
 - ✅ Standard deployment pattern
 
 **Cons**:
+
 - ❌ Larger image size (~500MB+)
 - ❌ Slower startup
 - ❌ Requires Docker runtime
@@ -89,16 +98,19 @@ bun build --compile \
 **Best for**: Lightweight virtualization, direct host access
 
 **Setup**:
+
 - LXC container with Bun installed
 - System Python for subprocesses
 - Shared PostgreSQL/Redis with host
 
 **Pros**:
+
 - ✅ Minimal overhead
 - ✅ Direct resource access
 - ✅ Easy Proxmox management
 
 **Cons**:
+
 - ❌ Manual setup required
 - ❌ Less isolation than Docker
 
@@ -124,12 +136,14 @@ export { getRouter };
 ### 2. Optimize Build Process
 
 **Pre-build**:
+
 - ✅ Use `bun run build` to compile all packages
 - ✅ Enable minification (`--minify`)
 - ✅ Enable sourcemaps (`--sourcemap`) for debugging
 - ✅ Use bytecode compilation (`--bytecode`) for faster startup
 
 **Build**:
+
 - ✅ Single entry point compilation
 - ✅ Cross-compile for different architectures
 - ✅ Include all dependencies in bundle
@@ -137,11 +151,13 @@ export { getRouter };
 ### 3. Handle Python Dependencies
 
 **Option A**: System Python (LXC/VM)
+
 - Install Python 3.10+ on container/host
 - Install dependencies via `uv` or `pip`
 - Models in persistent volume
 
 **Option B**: Python Container (Docker)
+
 - Separate Python container
 - IPC via HTTP or shared volume
 - Better isolation
@@ -149,6 +165,7 @@ export { getRouter };
 ### 4. Model Storage Strategy
 
 **Recommended**: Persistent Volume
+
 - Store models in `/opt/alfred/models/`
 - Download during deployment or first run
 - Cache to avoid re-downloading
@@ -177,6 +194,7 @@ Proxmox Host
 ### Deployment Steps
 
 1. **Build executable**:
+
    ```bash
    bun run build
    bun build --compile --minify --sourcemap --target=bun-linux-x64 \
@@ -197,11 +215,13 @@ Proxmox Host
 ## Resource Requirements
 
 ### Minimum (Cloud Models)
+
 - CPU: 2 cores
 - RAM: 2GB
 - Storage: 10GB
 
 ### With Local Models
+
 - CPU: 4+ cores
 - RAM: 8GB+
 - Storage: 50GB+
@@ -307,10 +327,10 @@ ENTRY_POINT=apps/web/src/server.ts ./scripts/build-executable.sh
 **Recommended approach**: **Single Bun Executable + LXC Container**
 
 This provides the best balance of:
+
 - ✅ Minimal overhead
 - ✅ Fast startup
 - ✅ Easy deployment
 - ✅ Sufficient for single-user workload
 
 For future scaling, migrate to Docker Compose stack for better isolation and horizontal scaling.
-

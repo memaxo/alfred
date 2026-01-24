@@ -12,6 +12,7 @@ ALFRED exposes an orchestrator tool named `browser` (implemented in `packages/ag
 - **Why it works well for agents**: refs (`@e1`, `@e2`, …) from snapshots are deterministic and avoid brittle CSS selectors.
 
 Upstream references:
+
 - [`vercel-labs/agent-browser`](https://github.com/vercel-labs/agent-browser)
 - [`agent-browser` agent mode docs](https://agent-browser.dev/agent-mode)
 - [`agent-browser` snapshots docs](https://agent-browser.dev/snapshots)
@@ -47,6 +48,7 @@ The `browser` tool is intentionally small:
   - state-based: `state.save` / `state.load`
 
 Policy scopes:
+
 - read-only actions require `web.read`
 - state-changing actions require `web.write`
 
@@ -55,10 +57,12 @@ Policy scopes:
 The tool runs `agent-browser` in `--json` mode and returns the parsed `data` payload when available.
 
 On failures it attempts to capture:
+
 - a screenshot, and
 - a compact interactive snapshot
 
 Default artifact location:
+
 - `.agent/artifacts/browser/<runIdOrSession>/`
 
 ## Best practices
@@ -67,4 +71,3 @@ Default artifact location:
 - Re-snapshot after navigation or significant DOM changes.
 - Scope snapshots to your app shell (usually `snapshot.scope: "#main"`) to keep outputs stable and small.
 - Use per-run sessions (via `runId`) to avoid cross-run cookie/localStorage collisions.
-

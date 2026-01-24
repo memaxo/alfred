@@ -37,6 +37,7 @@ The `@alfred/runtime` implementation is well-structured with clean architecture 
 ### Go/No-Go Recommendation: **🟢 GO (with fixes)**
 
 Foundation is strong, but address critical issues before Phase 3.3:
+
 1. **MUST FIX:** Lazy generator initialization
 2. **MUST FIX:** Add bounds to learning outcomes
 3. **SHOULD FIX:** Timeout cleanup logic
@@ -51,12 +52,14 @@ Foundation is strong, but address critical issues before Phase 3.3:
 #### Package Boundaries: ⭐⭐⭐⭐⭐ (5/5)
 
 **✅ Strengths:**
+
 - Runtime is truly a leaf package (verified via dependency graph)
 - Dependencies appropriate (domain packages, AI SDK, type definitions)
 - No circular dependencies
 - Clean exports via `index.ts`
 
 **Dependencies Analysis:**
+
 ```json
 // packages/runtime/package.json
 "dependencies": {
@@ -79,12 +82,14 @@ Foundation is strong, but address critical issues before Phase 3.3:
 #### Separation of Concerns: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Strengths:**
+
 - WorkflowRuntime focuses solely on execution orchestration
 - Domain logic delegated to engine wrappers
 - Persistence abstracted via StorageAdapter
 - No HTTP/tRPC concerns in runtime
 
 **🟡 Issue #1: Eager Generator Initialization**
+
 - **Location:** `packages/runtime/src/core.ts:77`
 - **Severity:** CRITICAL
 - **Problem:** `this.stream = this.execute()` starts generator in constructor
@@ -93,15 +98,16 @@ Foundation is strong, but address critical issues before Phase 3.3:
 // ❌ Current (CRITICAL ISSUE)
 export class WorkflowRuntime {
   public readonly stream: AsyncGenerator<WorkflowEvent, void, void>;
-  
+
   constructor(options: RuntimeOptions) {
     // ... initialization
-    this.stream = this.execute();  // ⚠️ Generator starts immediately!
+    this.stream = this.execute(); // ⚠️ Generator starts immediately!
   }
 }
 ```
 
 **Why This Is Critical:**
+
 1. AsyncGenerator starts executing when created (not when consumed)
 2. Constructor becomes async-like but can't be awaited
 3. Events may be emitted before router subscribes
@@ -114,14 +120,15 @@ export class WorkflowRuntime {
 // Option 1: Lazy generator property
 export class WorkflowRuntime {
   public get stream(): AsyncGenerator<WorkflowEvent, void, void> {
-    return this.execute();  // Create on-demand
+    return this.execute(); // Create on-demand
   }
 }
 
 // Option 2: Explicit start method (better for control)
 export class WorkflowRuntime {
-  public readonly stream: AsyncGenerator<WorkflowEvent, void, void> | null = null;
-  
+  public readonly stream: AsyncGenerator<WorkflowEvent, void, void> | null =
+    null;
+
   start(): AsyncGenerator<WorkflowEvent, void, void> {
     if (this.stream) {
       throw new Error("Workflow already started");
@@ -138,7 +145,9 @@ export function createRuntime(options: RuntimeOptions): IWorkflowRuntime {
   return {
     runId: runtime.runId,
     summary: runtime.summary,
-    get stream() { return runtime.execute(); },  // Lazy
+    get stream() {
+      return runtime.execute();
+    }, // Lazy
     resume: runtime.resume.bind(runtime),
     cancel: runtime.cancel.bind(runtime),
   };
@@ -152,11 +161,13 @@ export function createRuntime(options: RuntimeOptions): IWorkflowRuntime {
 #### State Management: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Strengths:**
+
 - Hybrid approach (memory + database) is sound
 - State transitions are explicit
 - Resume queue pattern is reasonable
 
 **🟡 Issue #2: Race Condition in Resume Logic**
+
 - **Location:** `packages/runtime/src/core.ts:278-286`
 - **Severity:** MEDIUM
 - **Problem:** No synchronization between `resume()` calls and `_waitForResume()`
@@ -175,6 +186,7 @@ public async resume(payload: ResumePayload): Promise<void> {
 ```
 
 **Scenario:**
+
 1. Thread A calls `resume()`, checks `resumeResolver` (exists)
 2. Thread B's timeout fires, sets `resumeResolver = null`
 3. Thread A calls `null(payload)` → crash
@@ -203,12 +215,14 @@ public async resume(payload: ResumePayload): Promise<void> {
 #### A. Type Safety: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Strengths:**
+
 - Minimal `any` usage (only for `messages` in AISDKAdapter - acceptable)
 - Type imports from domain packages are correct
 - LanguageModel type properly imported from `ai`
 - Interface segregation is good
 
 **🟡 Issue #3: Unsafe Type Assertions**
+
 - **Location:** Multiple files
 - **Severity:** MEDIUM
 - **Problem:** `as WorkflowEvent` and `as any` bypass type safety
@@ -221,6 +235,7 @@ yield { type: "step-start", phase } as any;  // ⚠️ Even worse - as any
 ```
 
 **Why This Matters:**
+
 - Type assertions hide potential type mismatches
 - If WorkflowEvent union doesn't include these shapes, runtime error
 - `as any` completely disables type checking
@@ -252,6 +267,7 @@ export type WorkflowEvent =
 ---
 
 **🟡 Issue #4: `any` Type for Messages**
+
 - **Location:** `packages/runtime/src/adapters/ai.ts:14`
 - **Severity:** LOW
 - **Problem:** `messages: any[]` loses type safety
@@ -260,9 +276,9 @@ export type WorkflowEvent =
 // ❌ Current
 export type StreamOptions = {
   model: LanguageModel;
-  messages: any[];  // ⚠️ Should be typed
+  messages: any[]; // ⚠️ Should be typed
   tools?: Record<string, CoreTool>;
-}
+};
 ```
 
 **✅ Recommended Fix:**
@@ -272,9 +288,9 @@ import type { CoreMessage } from "ai";
 
 export type StreamOptions = {
   model: LanguageModel;
-  messages: CoreMessage[];  // Type-safe
+  messages: CoreMessage[]; // Type-safe
   tools?: Record<string, CoreTool>;
-}
+};
 ```
 
 ---
@@ -282,12 +298,14 @@ export type StreamOptions = {
 #### B. Performance: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Strengths:**
+
 - AsyncGenerator is efficient (zero-copy streaming)
 - Context caching reduces redundant work
 - No obvious N+1 patterns
 - Engine wrappers are lightweight
 
 **🔴 Issue #5: Unbounded Memory Growth in LearningEngine**
+
 - **Location:** `packages/runtime/src/engines/learning.ts:37`
 - **Severity:** CRITICAL
 - **Problem:** Outcomes array grows without limit
@@ -295,15 +313,16 @@ export type StreamOptions = {
 ```typescript
 // ❌ Current (CRITICAL: Memory leak)
 export class LearningEngine {
-  private outcomes: SupervisionEvent[] = [];  // ⚠️ Unbounded growth!
-  
+  private outcomes: SupervisionEvent[] = []; // ⚠️ Unbounded growth!
+
   recordOutcome(outcome: SupervisionEvent): void {
-    this.outcomes.push(outcome);  // Never cleared during execution
+    this.outcomes.push(outcome); // Never cleared during execution
   }
 }
 ```
 
 **Exploitation Scenario:**
+
 - Long-running workflow with 1000 phases
 - Each phase records outcome (~1KB)
 - Total: 1MB+ accumulated in memory
@@ -312,11 +331,11 @@ export class LearningEngine {
 **✅ Recommended Fix:**
 
 ```typescript
-const MAX_OUTCOMES = 1000;  // Bound the array
+const MAX_OUTCOMES = 1000; // Bound the array
 
 export class LearningEngine {
   private outcomes: SupervisionEvent[] = [];
-  
+
   recordOutcome(outcome: SupervisionEvent): void {
     if (this.outcomes.length >= MAX_OUTCOMES) {
       // Evict oldest (FIFO)
@@ -330,6 +349,7 @@ export class LearningEngine {
 ---
 
 **🟡 Issue #6: Unbounded Cache Growth**
+
 - **Location:** `packages/runtime/src/context.ts:54`
 - **Severity:** HIGH
 - **Problem:** No cache eviction policy (only time-based expiry)
@@ -337,8 +357,8 @@ export class LearningEngine {
 ```typescript
 // ❌ Current (HIGH: Potential memory leak)
 export class ContextBuilder {
-  private cache: Map<string, CachedContext> = new Map();  // ⚠️ Never evicted!
-  
+  private cache: Map<string, CachedContext> = new Map(); // ⚠️ Never evicted!
+
   async build(input: ContextBuildInput): Promise<ExecutionContext> {
     // ... caching logic
     this.cache.set(cacheKey, { context, expires: Date.now() + CACHE_TTL_MS });
@@ -348,6 +368,7 @@ export class ContextBuilder {
 ```
 
 **Exploitation Scenario:**
+
 - 1000 unique requirements over time
 - Each context ~10KB
 - Total: 10MB+ accumulated
@@ -356,34 +377,34 @@ export class ContextBuilder {
 **✅ Recommended Fix:**
 
 ```typescript
-const MAX_CACHE_SIZE = 100;  // LRU eviction
+const MAX_CACHE_SIZE = 100; // LRU eviction
 
 export class ContextBuilder {
   private cache: Map<string, CachedContext> = new Map();
-  
+
   async build(input: ContextBuildInput): Promise<ExecutionContext> {
     const cacheKey = this.computeKey(input);
     const cached = this.cache.get(cacheKey);
-    
+
     if (cached && cached.expires > Date.now()) {
       // Move to end (LRU touch)
       this.cache.delete(cacheKey);
       this.cache.set(cacheKey, cached);
       return cached.context;
     }
-    
+
     // Evict expired entries
     this.evictExpired();
-    
+
     // Evict oldest if at capacity
     if (this.cache.size >= MAX_CACHE_SIZE) {
       const firstKey = this.cache.keys().next().value;
       if (firstKey) this.cache.delete(firstKey);
     }
-    
+
     // ... build and cache
   }
-  
+
   private evictExpired(): void {
     const now = Date.now();
     for (const [key, value] of this.cache.entries()) {
@@ -398,6 +419,7 @@ export class ContextBuilder {
 ---
 
 **🟡 Issue #7: Timeout Check Allocation**
+
 - **Location:** `packages/runtime/src/core.ts:100-104`
 - **Severity:** LOW
 - **Problem:** Function allocation in hot path
@@ -411,7 +433,7 @@ const checkTimeout = () => {
 };
 
 for (const phase of phases) {
-  checkTimeout();  // Called in loop
+  checkTimeout(); // Called in loop
 }
 ```
 
@@ -433,11 +455,13 @@ for (const phase of phases) {
 #### C. Error Handling: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Strengths:**
+
 - All error paths caught and converted to events
 - Errors provide actionable messages
 - Error classification matches plan
 
 **🟡 Issue #8: Missing Resource Cleanup on Error**
+
 - **Location:** `packages/runtime/src/core.ts:126-136`
 - **Severity:** MEDIUM
 - **Problem:** No finally block to clean up resources
@@ -464,12 +488,12 @@ private async *execute(): AsyncGenerator<WorkflowEvent, void, void> {
   } catch (error) {
     this.state.finalStatus = "failed";
     this.state.finalMessage = error instanceof Error ? error.message : String(error);
-    
+
     yield {
       type: "error",
       message: this.state.finalMessage,
     } as WorkflowEvent;
-    
+
     throw error;
   } finally {
     // Clean up resources
@@ -483,10 +507,10 @@ private cleanup(): void {
     this.state.resumeResolver(null);
     this.state.resumeResolver = null;
   }
-  
+
   // Clear resume queue
   this.state.resumeQueue = [];
-  
+
   // Remove abort listener if possible
   // (Note: AbortSignal doesn't expose removeEventListener in all envs)
 }
@@ -495,6 +519,7 @@ private cleanup(): void {
 ---
 
 **🟡 Issue #9: Phase Timeout Logic Flaw**
+
 - **Location:** `packages/runtime/src/core.ts:165-170`
 - **Severity:** MEDIUM
 - **Problem:** Timeout check happens AFTER phase completes
@@ -519,6 +544,7 @@ try {
 ```
 
 **Why This Matters:**
+
 - Phase can run indefinitely before timeout check
 - Timeout only detected after phase completes
 - User expects timeout to abort execution, not just report after
@@ -530,15 +556,15 @@ try {
 private async *executePhase(phase: WorkflowPhase): AsyncGenerator<WorkflowEvent, void, void> {
   const startTime = Date.now();
   const phaseAbort = new AbortController();
-  
+
   // Set timeout to abort phase
   const timeout = setTimeout(() => {
     phaseAbort.abort();
   }, this.stepTimeoutMs);
-  
+
   try {
     yield { type: "step-start", phase } as any;
-    
+
     // Pass abort signal to phase execution
     switch (phase) {
       case "scan":
@@ -546,7 +572,7 @@ private async *executePhase(phase: WorkflowPhase): AsyncGenerator<WorkflowEvent,
         break;
       // ... other phases
     }
-    
+
     yield { type: "step-complete", phase } as any;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
@@ -566,6 +592,7 @@ private async *executePhase(phase: WorkflowPhase): AsyncGenerator<WorkflowEvent,
 #### D. Pure Functions: ⭐⭐⭐⭐⭐ (5/5)
 
 **✅ Strengths:**
+
 - All engine wrappers are pure (verified)
 - No side effects in domain function calls
 - Business logic separated from side effects
@@ -577,7 +604,7 @@ private async *executePhase(phase: WorkflowPhase): AsyncGenerator<WorkflowEvent,
 // packages/runtime/src/engines/cognitive.ts
 export class CognitiveEngine {
   capture(input: string, conf = 0.8): CognitiveState {
-    return capturing(input, conf);  // ✅ Pure delegation
+    return capturing(input, conf); // ✅ Pure delegation
   }
 }
 ```
@@ -589,12 +616,14 @@ export class CognitiveEngine {
 #### E. AI SDK v6 Compliance: ⭐⭐⭐⭐⭐ (5/5)
 
 **✅ Strengths:**
+
 - All property names correct (`delta`, `input`, `output`)
 - Event types match AI SDK v6 specification
 - fullStream consumption pattern correct
 - Additional event types handled (text lifecycle, reasoning, steps)
 
 **Verification:**
+
 ```typescript
 // packages/runtime/src/adapters/ai.ts:62-84
 case "text-delta":
@@ -626,6 +655,7 @@ case "tool-result":
 #### Coverage Completeness: **85%** (estimated)
 
 **✅ Covered:**
+
 - Phase execution order ✓
 - Progress calculation ✓
 - Cancellation (before start, during execution) ✓
@@ -638,53 +668,57 @@ case "tool-result":
 **🟡 Missing Test Scenarios:**
 
 **Missing #1: Resume Timeout**
+
 ```typescript
 // Should test: _waitForResume times out after 10 seconds
 it("times out resume wait after 10 seconds", async () => {
   const runtime = createRuntime({ input: baseInput, model: mockModel });
-  
+
   // Don't call resume(), let it timeout
   const start = Date.now();
-  
+
   // This requires integration with actual waitForResume usage
   // Will add in Phase 3.3 integration tests
 });
 ```
 
 **Missing #2: Workflow Timeout**
+
 ```typescript
 it("enforces workflow timeout", async () => {
   const runtime = createRuntime({
     input: baseInput,
     model: mockModel,
-    workflowTimeoutMs: 100,  // 100ms timeout
+    workflowTimeoutMs: 100, // 100ms timeout
   });
-  
+
   // Mock slow phase execution
   // Should timeout and emit error event
 });
 ```
 
 **Missing #3: Concurrent Resume Calls**
+
 ```typescript
 it("handles concurrent resume calls safely", async () => {
   const runtime = createRuntime({ input: baseInput, model: mockModel });
-  
+
   // Call resume() multiple times concurrently
   await Promise.all([
     runtime.resume({ event: "bio-authz", authz: "token-1" }),
     runtime.resume({ event: "bio-authz", authz: "token-2" }),
   ]);
-  
+
   // Should queue both without race condition
 });
 ```
 
 **Missing #4: Stream Consumption Error**
+
 ```typescript
 it("handles errors during stream consumption", async () => {
   const runtime = createRuntime({ input: baseInput, model: mockModel });
-  
+
   const events: WorkflowEvent[] = [];
   try {
     for await (const event of runtime.stream) {
@@ -696,7 +730,7 @@ it("handles errors during stream consumption", async () => {
   } catch (error) {
     // Should not leak resources
   }
-  
+
   // Verify cleanup happened
 });
 ```
@@ -706,12 +740,14 @@ it("handles errors during stream consumption", async () => {
 #### Test Quality: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Strengths:**
+
 - Tests verify behavior, not implementation
 - Tests are isolated (no shared state)
 - Test names are descriptive
 - Uses Bun test runner as required
 
 **🟡 Issue #10: Placeholder Tests**
+
 - **Location:** `packages/runtime/test/core.test.ts:167, 181`
 - **Severity:** LOW
 - **Problem:** Tests that don't verify anything
@@ -720,14 +756,14 @@ it("handles errors during stream consumption", async () => {
 // ❌ Current (placeholder test)
 it("queues resume payload when not waiting", async () => {
   const runtime = createRuntime({ input: baseInput, model: mockModel });
-  
+
   await runtime.resume({
     event: "bio-authz",
     authz: "test-token",
   });
-  
+
   // Should queue the payload (tested indirectly via future implementation)
-  expect(true).toBe(true);  // ⚠️ Meaningless assertion
+  expect(true).toBe(true); // ⚠️ Meaningless assertion
 });
 ```
 
@@ -736,17 +772,17 @@ it("queues resume payload when not waiting", async () => {
 ```typescript
 it("queues resume payload when not waiting", async () => {
   const runtime = createRuntime({ input: baseInput, model: mockModel });
-  
+
   // Access private state for verification (test-only)
   const state = (runtime as any).state;
-  
+
   expect(state.resumeQueue.length).toBe(0);
-  
+
   await runtime.resume({
     event: "bio-authz",
     authz: "test-token",
   });
-  
+
   expect(state.resumeQueue.length).toBe(1);
   expect(state.resumeQueue[0]).toMatchObject({
     event: "bio-authz",
@@ -762,6 +798,7 @@ it("queues resume payload when not waiting", async () => {
 #### .ruler/01-naming-conventions.md: ⭐⭐⭐⭐⭐ (5/5)
 
 **✅ Compliant:**
+
 - ✓ Single-word filenames: `core.ts`, `types.ts`, `context.ts`
 - ✓ Domain folders: `engines/`, `adapters/`
 - ✓ Exports named correctly: `createRuntime`, `WorkflowRuntime`
@@ -773,6 +810,7 @@ it("queues resume payload when not waiting", async () => {
 #### .ruler/09-purity-and-performance.md: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Compliant:**
+
 - ✓ Pure functions in domain logic (engine wrappers)
 - ✓ State transitions are explicit
 - ✓ No hidden mutations
@@ -780,6 +818,7 @@ it("queues resume payload when not waiting", async () => {
 **🟡 Violations:**
 
 **Violation #1: No Performance Budgets Declared**
+
 - **Rule:** "Functions that must meet performance budgets get prefixed with `fast_` (< 1ms)"
 - **Location:** All engine methods
 - **Severity:** LOW
@@ -805,6 +844,7 @@ export class CognitiveEngine {
 #### .ruler/15-ai-sdk-v6.md: ⭐⭐⭐⭐⭐ (5/5)
 
 **✅ Compliant:**
+
 - ✓ Native AI SDK v6 usage (no custom conversion)
 - ✓ Correct part types (verified via audit)
 - ✓ No type suppressions for AI SDK types
@@ -816,6 +856,7 @@ export class CognitiveEngine {
 #### .ruler/05-testing.md: ⭐⭐⭐⭐⭐ (5/5)
 
 **✅ Compliant:**
+
 - ✓ Bun test runner used
 - ✓ Tests isolated
 - ✓ No implicit globals
@@ -830,6 +871,7 @@ export class CognitiveEngine {
 #### Input Validation: ⭐⭐⭐☆☆ (3/5)
 
 **🟡 Issue #11: No Input Validation**
+
 - **Location:** `packages/runtime/src/core.ts:45-53`
 - **Severity:** MEDIUM
 - **Problem:** Constructor accepts options without validation
@@ -864,7 +906,7 @@ const runtimeOptionsSchema = z.object({
 constructor(options: RuntimeOptions) {
   // Validate options
   const validated = runtimeOptionsSchema.parse(options);
-  
+
   this.runId = randomUUID();
   this.summary = `Workflow initialized for ${validated.input.requirement}`;
   // ... rest
@@ -876,6 +918,7 @@ constructor(options: RuntimeOptions) {
 #### Resource Management: ⭐⭐⭐☆☆ (3/5)
 
 **🔴 Issue #12: Timer Leak in waitForResume**
+
 - **Location:** `packages/runtime/src/core.ts:264-269`
 - **Severity:** HIGH
 - **Problem:** setTimeout not cleared if resume arrives before timeout
@@ -885,7 +928,8 @@ constructor(options: RuntimeOptions) {
 return new Promise<ResumePayload | null>((resolve) => {
   this.state.resumeResolver = resolve;
 
-  setTimeout(() => {  // ⚠️ No handle stored, can't clear!
+  setTimeout(() => {
+    // ⚠️ No handle stored, can't clear!
     if (this.state.resumeResolver === resolve) {
       this.state.resumeResolver = null;
       resolve(null);
@@ -895,6 +939,7 @@ return new Promise<ResumePayload | null>((resolve) => {
 ```
 
 **Scenario:**
+
 1. Runtime calls `_waitForResume()`
 2. Sets 10s timeout
 3. Resume arrives after 1s
@@ -934,13 +979,13 @@ public async resume(payload: ResumePayload): Promise<void> {
   const resolver = this.state.resumeResolver;
   if (resolver) {
     this.state.resumeResolver = null;
-    
+
     // Clear timeout when resume arrives
     if (this.state.resumeTimeout) {
       clearTimeout(this.state.resumeTimeout);
       this.state.resumeTimeout = null;
     }
-    
+
     resolver(payload);
   } else {
     this.state.resumeQueue.push(payload);
@@ -959,11 +1004,13 @@ export type RuntimeState = {
 #### Concurrency Safety: ⭐⭐⭐⭐☆ (4/5)
 
 **✅ Strengths:**
+
 - Single-threaded execution model is sound
 - No shared mutable state between instances
 - Async operations sequenced correctly
 
 **🟡 Issue #13: Cancel Race Condition**
+
 - **Location:** `packages/runtime/src/core.ts:109-114`
 - **Severity:** LOW
 - **Problem:** State check and yield are not atomic
@@ -991,7 +1038,7 @@ private async *executePhase(phase: WorkflowPhase): AsyncGenerator<WorkflowEvent,
     yield { type: "notice", message: `phase_${phase}_cancelled` } as WorkflowEvent;
     return;
   }
-  
+
   // ... phase execution
 }
 ```
@@ -1016,15 +1063,16 @@ export type RunPlanV6 = {
 
 // WorkflowRuntime interface (packages/runtime/src/types.ts:112-124)
 export type WorkflowRuntime = {
-  runId: string;                                          // ✅ Match
-  summary: string;                                        // ✅ Match
-  stream: AsyncGenerator<WorkflowEvent, void, void>;      // ✅ Match
-  resume(payload: ResumePayload): Promise<void>;          // ✅ Match
-  cancel(): void;                                         // ✅ Match
+  runId: string; // ✅ Match
+  summary: string; // ✅ Match
+  stream: AsyncGenerator<WorkflowEvent, void, void>; // ✅ Match
+  resume(payload: ResumePayload): Promise<void>; // ✅ Match
+  cancel(): void; // ✅ Match
 };
 ```
 
 **Event Types Compatibility:**
+
 - ✅ All current events supported: `run`, `progress`, `notice`, `error`, `context`, `step-start`, `step-complete`
 - ✅ Additional events are additive (backward compatible)
 
@@ -1069,6 +1117,7 @@ export type WorkflowRuntime = {
 **LOW RISK - Controlled Cutover:**
 
 **✅ Mitigations in Place:**
+
 1. Feature flag approach (can toggle between runtime/runner)
 2. Identical interface (drop-in replacement)
 3. Comprehensive test coverage
@@ -1076,21 +1125,23 @@ export type WorkflowRuntime = {
 
 **Potential Risks:**
 
-| Risk | Severity | Likelihood | Mitigation |
-|------|----------|------------|------------|
-| Stream doesn't emit before subscription | HIGH | LOW | Fix eager initialization (Issue #1) |
-| Event schema mismatch | MEDIUM | LOW | Verified via audit + tests |
-| Resume logic differs from runner | MEDIUM | MEDIUM | Integration tests needed |
-| Performance regression | MEDIUM | MEDIUM | Add benchmarks in Phase 3.4 |
-| Memory leak from unbounded growth | HIGH | HIGH | Fix Issues #5, #6 before production |
+| Risk                                    | Severity | Likelihood | Mitigation                          |
+| --------------------------------------- | -------- | ---------- | ----------------------------------- |
+| Stream doesn't emit before subscription | HIGH     | LOW        | Fix eager initialization (Issue #1) |
+| Event schema mismatch                   | MEDIUM   | LOW        | Verified via audit + tests          |
+| Resume logic differs from runner        | MEDIUM   | MEDIUM     | Integration tests needed            |
+| Performance regression                  | MEDIUM   | MEDIUM     | Add benchmarks in Phase 3.4         |
+| Memory leak from unbounded growth       | HIGH     | HIGH       | Fix Issues #5, #6 before production |
 
 **Blockers for Phase 3.3:**
+
 - 🔴 MUST FIX: Issue #1 (eager generator initialization)
 - 🔴 MUST FIX: Issue #5 (unbounded learning outcomes)
 - 🔴 MUST FIX: Issue #6 (unbounded context cache)
 - 🟡 SHOULD FIX: Issue #12 (timer leak)
 
 **Non-Blockers:**
+
 - Placeholder TODOs (can integrate after router wiring)
 - Type assertions (can improve incrementally)
 - Missing test scenarios (can add during integration)
@@ -1105,24 +1156,24 @@ export type WorkflowRuntime = {
 // ❌ Current (packages/runtime/src/core.ts:31-78)
 export class WorkflowRuntime implements IWorkflowRuntime {
   public readonly stream: AsyncGenerator<WorkflowEvent, void, void>;
-  
+
   constructor(options: RuntimeOptions) {
     // ... initialization
-    this.stream = this.execute();  // ⚠️ CRITICAL: Eager execution!
+    this.stream = this.execute(); // ⚠️ CRITICAL: Eager execution!
   }
 }
 
 // ✅ Improved (lazy via getter)
 export class WorkflowRuntime implements IWorkflowRuntime {
   private _stream: AsyncGenerator<WorkflowEvent, void, void> | null = null;
-  
+
   public get stream(): AsyncGenerator<WorkflowEvent, void, void> {
     if (!this._stream) {
-      this._stream = this.execute();  // Create on first access
+      this._stream = this.execute(); // Create on first access
     }
     return this._stream;
   }
-  
+
   constructor(options: RuntimeOptions) {
     // ... initialization only, no execution
   }
@@ -1130,6 +1181,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 ```
 
 **Why This Matters:**
+
 - Prevents execution before router subscribes
 - Allows inspection before execution
 - Follows lazy evaluation principle
@@ -1143,18 +1195,18 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 // ❌ Current (packages/runtime/src/engines/learning.ts:36-44)
 export class LearningEngine {
   private outcomes: SupervisionEvent[] = [];
-  
+
   recordOutcome(outcome: SupervisionEvent): void {
-    this.outcomes.push(outcome);  // ⚠️ Unbounded
+    this.outcomes.push(outcome); // ⚠️ Unbounded
   }
 }
 
 // ✅ Improved (bounded with LRU eviction)
-const MAX_OUTCOMES = 1000;  // ~1MB max (1KB per outcome)
+const MAX_OUTCOMES = 1000; // ~1MB max (1KB per outcome)
 
 export class LearningEngine {
   private outcomes: SupervisionEvent[] = [];
-  
+
   recordOutcome(outcome: SupervisionEvent): void {
     // Evict oldest if at capacity (FIFO/LRU)
     if (this.outcomes.length >= MAX_OUTCOMES) {
@@ -1162,7 +1214,7 @@ export class LearningEngine {
     }
     this.outcomes.push(outcome);
   }
-  
+
   /**
    * Get max capacity
    */
@@ -1180,7 +1232,7 @@ export class LearningEngine {
 // ❌ Current (packages/runtime/src/context.ts:53-90)
 export class ContextBuilder {
   private cache: Map<string, CachedContext> = new Map();
-  
+
   async build(input: ContextBuildInput): Promise<ExecutionContext> {
     this.cache.set(cacheKey, { context, expires: Date.now() + CACHE_TTL_MS });
     // ⚠️ No eviction
@@ -1194,28 +1246,28 @@ const EVICTION_INTERVAL_MS = 60_000; // 1 minute
 export class ContextBuilder {
   private cache: Map<string, CachedContext> = new Map();
   private evictionTimer: NodeJS.Timeout | null = null;
-  
+
   constructor() {
     // Periodic cleanup of expired entries
     this.evictionTimer = setInterval(() => {
       this.evictExpired();
     }, EVICTION_INTERVAL_MS);
   }
-  
+
   async build(input: ContextBuildInput): Promise<ExecutionContext> {
     const cacheKey = this.computeKey(input);
     const cached = this.cache.get(cacheKey);
-    
+
     if (cached && cached.expires > Date.now()) {
       // LRU: Move to end
       this.cache.delete(cacheKey);
       this.cache.set(cacheKey, cached);
       return cached.context;
     }
-    
+
     // Evict expired entries
     this.evictExpired();
-    
+
     // LRU: Evict oldest if at capacity
     if (this.cache.size >= MAX_CACHE_ENTRIES) {
       const firstKey = this.cache.keys().next().value;
@@ -1223,17 +1275,17 @@ export class ContextBuilder {
         this.cache.delete(firstKey);
       }
     }
-    
+
     // Build and cache
     const context = await this.buildFresh(input);
     this.cache.set(cacheKey, {
       context,
       expires: Date.now() + CACHE_TTL_MS,
     });
-    
+
     return context;
   }
-  
+
   private evictExpired(): void {
     const now = Date.now();
     for (const [key, value] of this.cache.entries()) {
@@ -1242,7 +1294,7 @@ export class ContextBuilder {
       }
     }
   }
-  
+
   /**
    * Clean up resources (call on shutdown)
    */
@@ -1265,7 +1317,7 @@ export class ContextBuilder {
 private async _waitForResume(requiredEvent: ResumePayload["event"]): Promise<ResumePayload | null> {
   return new Promise<ResumePayload | null>((resolve) => {
     this.state.resumeResolver = resolve;
-    
+
     setTimeout(() => {  // ⚠️ Can't be cleared!
       if (this.state.resumeResolver === resolve) {
         this.state.resumeResolver = null;
@@ -1293,7 +1345,7 @@ private async _waitForResume(requiredEvent: ResumePayload["event"]): Promise<Res
         resolve(null);
       }
     }, RESUME_TIMEOUT_MS);
-    
+
     this.state.resumeTimeout = timeout;  // Store for cleanup
   });
 }
@@ -1310,13 +1362,13 @@ private async _waitForResume(requiredEvent: ResumePayload["event"]): Promise<Res
 it("times out resume wait after configured duration", async () => {
   // This requires actual integration with _waitForResume
   // Will be tested in Phase 3.3 when resume is actually used
-  
+
   // For now, test the public API behavior
   const runtime = createRuntime({ input: baseInput, model: mockModel });
-  
+
   // Resume should queue since not waiting
   await runtime.resume({ event: "bio-authz", authz: "token" });
-  
+
   const state = (runtime as any).state;
   expect(state.resumeQueue.length).toBe(1);
 });
@@ -1331,7 +1383,7 @@ it("times out resume wait after configured duration", async () => {
 it("enforces outcome limit to prevent memory leaks", () => {
   const engine = new LearningEngine();
   const MAX = 1000;
-  
+
   // Record more than max
   for (let i = 0; i < MAX + 100; i++) {
     engine.recordOutcome({
@@ -1343,7 +1395,7 @@ it("enforces outcome limit to prevent memory leaks", () => {
       ts: new Date().toISOString(),
     });
   }
-  
+
   // Should be capped at MAX
   expect(engine.getOutcomeCount()).toBeLessThanOrEqual(MAX);
 });
@@ -1357,25 +1409,25 @@ it("enforces outcome limit to prevent memory leaks", () => {
 // packages/runtime/test/context.test.ts (add to ContextBuilder)
 it("evicts expired cache entries", async () => {
   const builder = new ContextBuilder();
-  
+
   // Build context
   await builder.build({ requirement: "test", workspace: "/tmp" });
   expect(builder.getCacheSize()).toBe(1);
-  
+
   // Wait for expiration (5+ minutes)
   // Or mock Date.now() to simulate expiration
-  
+
   // Build different context (triggers eviction)
   await builder.build({ requirement: "different", workspace: "/tmp" });
-  
+
   // Should have evicted expired entry
-  expect(builder.getCacheSize()).toBe(1);  // Only new entry
+  expect(builder.getCacheSize()).toBe(1); // Only new entry
 });
 
 it("enforces cache size limit", async () => {
   const builder = new ContextBuilder();
   const MAX = 100;
-  
+
   // Fill cache beyond limit
   for (let i = 0; i < MAX + 10; i++) {
     await builder.build({
@@ -1383,7 +1435,7 @@ it("enforces cache size limit", async () => {
       workspace: "/tmp",
     });
   }
-  
+
   // Should be capped at MAX
   expect(builder.getCacheSize()).toBeLessThanOrEqual(MAX);
 });
@@ -1398,34 +1450,38 @@ it("enforces cache size limit", async () => {
 describe("Concurrent Operations", () => {
   it("handles concurrent resume calls", async () => {
     const runtime = createRuntime({ input: baseInput, model: mockModel });
-    
+
     const payloads = [
       { event: "bio-authz" as const, authz: "token-1" },
       { event: "deploy-authz" as const, authz: "token-2" },
       { event: "bio-authz" as const, authz: "token-3" },
     ];
-    
+
     // Call resume concurrently
-    await Promise.all(payloads.map(p => runtime.resume(p)));
-    
+    await Promise.all(payloads.map((p) => runtime.resume(p)));
+
     // All should be queued
     const state = (runtime as any).state;
     expect(state.resumeQueue.length).toBe(3);
   });
-  
+
   it("handles cancel during stream consumption", async () => {
     const runtime = createRuntime({ input: baseInput, model: mockModel });
-    
+
     const events: WorkflowEvent[] = [];
-    
-    setTimeout(() => runtime.cancel(), 50);  // Cancel after 50ms
-    
+
+    setTimeout(() => runtime.cancel(), 50); // Cancel after 50ms
+
     for await (const event of runtime.stream) {
       events.push(event);
     }
-    
+
     // Should have cancelled gracefully
-    expect(events.some(e => e.type === "notice" && (e as any).message?.includes("cancelled"))).toBe(true);
+    expect(
+      events.some(
+        (e) => e.type === "notice" && (e as any).message?.includes("cancelled")
+      )
+    ).toBe(true);
   });
 });
 ```
@@ -1440,12 +1496,10 @@ describe("Concurrent Operations", () => {
   - Status: BLOCKING
   - Blocker: Stream starts before router subscribes
   - Estimate: 30 minutes
-  
 - [ ] **Add bounds to LearningEngine outcomes** (Issue #5)
   - Status: BLOCKING
   - Blocker: Memory leak risk in production
   - Estimate: 15 minutes
-  
 - [ ] **Add cache eviction policy to ContextBuilder** (Issue #6)
   - Status: BLOCKING
   - Blocker: Memory leak risk in production
@@ -1457,12 +1511,10 @@ describe("Concurrent Operations", () => {
   - Status: RECOMMENDED
   - Blocker: Resource leak (minor)
   - Estimate: 20 minutes
-  
 - [ ] **Add input validation** (Issue #11)
   - Status: RECOMMENDED
   - Blocker: Better error messages
   - Estimate: 20 minutes
-  
 - [ ] **Fix phase timeout logic** (Issue #9)
   - Status: RECOMMENDED
   - Blocker: Timeout only detected after phase completes
@@ -1474,7 +1526,6 @@ describe("Concurrent Operations", () => {
   - Status: NICE TO HAVE
   - Blocker: None (works but not type-safe)
   - Estimate: 30 minutes
-  
 - [ ] **Type messages array** (Issue #4)
   - Status: NICE TO HAVE
   - Blocker: None
@@ -1493,12 +1544,14 @@ describe("Concurrent Operations", () => {
 ### Phase 3.3 Integration Strategy
 
 **Step 1: Apply Critical Fixes (2 hours)**
+
 1. Fix eager generator initialization
 2. Add bounds to LearningEngine
 3. Add cache eviction to ContextBuilder
 4. Fix timer leak in waitForResume
 
 **Step 2: Add Feature Flag (30 minutes)**
+
 ```typescript
 // packages/api/src/routers/workflow.ts
 const USE_RUNTIME = process.env.USE_WORKFLOW_RUNTIME === 'true';
@@ -1519,12 +1572,14 @@ if (USE_RUNTIME) {
 ```
 
 **Step 3: Integration Testing (2 hours)**
+
 1. Test with `USE_RUNTIME=false` (existing behavior)
 2. Test with `USE_RUNTIME=true` (new runtime)
 3. Verify identical event sequences
 4. Test resume/cancel in both modes
 
 **Step 4: Gradual Rollout (1 week)**
+
 1. Deploy with `USE_RUNTIME=false` (validate deployment)
 2. Enable for 10% (monitor metrics)
 3. Enable for 50% (monitor for 24h)
@@ -1537,17 +1592,20 @@ if (USE_RUNTIME) {
 ### Risk Assessment for Router Integration
 
 **🟢 LOW RISK:**
+
 - Interface compatibility (perfect match)
 - Event schema (verified identical)
 - Test coverage (comprehensive)
 - Rollback plan (feature flag)
 
 **🟡 MEDIUM RISK:**
+
 - Performance unknown (needs benchmarking)
 - Linear integration untested (needs validation)
 - Long-running workflows untested (needs soak test)
 
 **🔴 HIGH RISK IF NOT FIXED:**
+
 - Eager generator initialization (MUST FIX)
 - Memory leaks (MUST FIX)
 - Timer leaks (SHOULD FIX)
@@ -1557,18 +1615,21 @@ if (USE_RUNTIME) {
 ### Deployment Checklist
 
 **Pre-Deploy:**
+
 - [ ] Apply critical fixes (#1, #5, #6)
 - [ ] Add performance instrumentation
 - [ ] Create rollback runbook
 - [ ] Update monitoring dashboards
 
 **Deploy:**
+
 - [ ] Deploy with `USE_RUNTIME=false`
 - [ ] Verify no regressions
 - [ ] Enable for canary workflows (10%)
 - [ ] Monitor error rates, latency, memory
 
 **Post-Deploy:**
+
 - [ ] Gradual rollout to 100%
 - [ ] Monitor for 1 week
 - [ ] Document lessons learned
@@ -1581,6 +1642,7 @@ if (USE_RUNTIME) {
 ### Fix for core.ts (Complete File)
 
 **Lines to Change:**
+
 1. Line 34: Change stream initialization
 2. Line 77: Remove eager binding
 3. Add lazy getter
@@ -1639,7 +1701,7 @@ async build(input: ContextBuildInput): Promise<ExecutionContext> {
 
   // Evict expired
   this.evictExpired();
-  
+
   // Evict oldest if at capacity
   if (this.cache.size >= MAX_CACHE_ENTRIES) {
     const firstKey = this.cache.keys().next().value;
@@ -1682,7 +1744,7 @@ export type RuntimeState = {
   cancelled: boolean;
   resumeResolver: ((payload: ResumePayload | null) => void) | null;
   resumeQueue: ResumePayload[];
-  resumeTimeout: NodeJS.Timeout | null;  // ADD THIS
+  resumeTimeout: NodeJS.Timeout | null; // ADD THIS
   finalStatus: "completed" | "failed" | "cancelled" | null;
   finalMessage: string | null;
 };
@@ -1695,17 +1757,20 @@ export type RuntimeState = {
 ### Summary of Review
 
 **Code Quality:** HIGH
+
 - Well-structured architecture
 - Clean separation of concerns
 - Comprehensive test coverage
 - AI SDK v6 compliant
 
 **Production Readiness:** NEEDS FIXES
+
 - 3 critical issues (eager init, memory leaks)
 - 2 high priority issues (timer leak, validation)
 - Several nice-to-have improvements
 
 **Integration Readiness:** READY AFTER FIXES
+
 - Interface matches perfectly
 - Event schema compatible
 - Foundation is solid
@@ -1750,4 +1815,3 @@ export type RuntimeState = {
 **Test Lines:** ~400
 
 **Estimated Time to Production Ready:** 1 week (with fixes and Phase 3.3-3.5)
-

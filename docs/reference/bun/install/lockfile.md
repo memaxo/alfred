@@ -1,9 +1,10 @@
 ---
 title: Lockfile – Package manager | Bun Docs
-url: 
+url:
 description: Bun's lockfile `bun.lock` tracks your resolved dependency tree, making future installs fast and repeatable.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -106,7 +107,7 @@ Filter](https://bun.com/docs/cli/filter) [Next\\
 \\
 Scopes and registries](https://bun.com/docs/install/registries)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/lockfile.md)
 
@@ -130,7 +131,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

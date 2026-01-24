@@ -1,9 +1,10 @@
 ---
 title: bun update – Package manager | Bun Docs
-url: 
+url:
 description: Update your project's dependencies.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -64,7 +65,7 @@ To update a specific dependency to the latest version:
 bun update [package]
 ```
 
-## [`--interactive`](https://bun.com/docs/cli/update\#interactive)
+## [`--interactive`](https://bun.com/docs/cli/update#interactive)
 
 For a more controlled update experience, use the `--interactive` flag to select which packages to update:
 
@@ -78,7 +79,7 @@ bun update -i
 
 This launches an interactive terminal interface that shows all outdated packages with their current and target versions. You can then select which packages to update.
 
-### [Interactive Interface](https://bun.com/docs/cli/update\#interactive-interface)
+### [Interactive Interface](https://bun.com/docs/cli/update#interactive-interface)
 
 The interface displays packages grouped by dependency type:
 
@@ -110,7 +111,7 @@ The interface displays packages grouped by dependency type:
 - **Target**: Version that would be installed (respects semver constraints)
 - **Latest**: Latest available version
 
-### [Keyboard Controls](https://bun.com/docs/cli/update\#keyboard-controls)
+### [Keyboard Controls](https://bun.com/docs/cli/update#keyboard-controls)
 
 **Selection:**
 
@@ -129,7 +130,7 @@ The interface displays packages grouped by dependency type:
 
 - **Ctrl+C** or **Ctrl+D**: Cancel without updating
 
-### [Visual Indicators](https://bun.com/docs/cli/update\#visual-indicators)
+### [Visual Indicators](https://bun.com/docs/cli/update#visual-indicators)
 
 - **☑** Selected packages (will be updated)
 - **□** Unselected packages
@@ -137,7 +138,7 @@ The interface displays packages grouped by dependency type:
 - **Colors**: Red (major), yellow (minor), green (patch) version changes
 - **Underlined**: Currently selected update target
 
-### [Package Grouping](https://bun.com/docs/cli/update\#package-grouping)
+### [Package Grouping](https://bun.com/docs/cli/update#package-grouping)
 
 Packages are organized in sections by dependency type:
 
@@ -148,7 +149,7 @@ Packages are organized in sections by dependency type:
 
 Within each section, individual packages may have additional suffixes ( ` dev`, ` peer`, ` optional`) for extra clarity.
 
-## [`--latest`](https://bun.com/docs/cli/update\#latest)
+## [`--latest`](https://bun.com/docs/cli/update#latest)
 
 By default, `bun update` will update to the latest version of a dependency that satisfies the version range specified in your `package.json`.
 
@@ -340,7 +341,7 @@ Full documentation is available at https://bun.sh/docs/cli/update.
 \\
 `bun publish`](https://bun.com/docs/cli/publish)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/update.md)
 
@@ -364,7 +365,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

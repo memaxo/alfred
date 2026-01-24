@@ -10,7 +10,6 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 
 **How to see it working:** (1) Create a Linear issue in a team where Alfred is installed and has OAuth access. (2) Assign the issue to Alfred's app user. (3) Within 10 seconds, observe a "thought" activity appear in Linear's activity feed showing "Starting workflow: [issue title]". (4) Watch subsequent "action" activities as Alfred executes tools. (5) See a final "response" activity when the workflow completes with results. (6) Click the external URL link to view the full workflow run in ALFRED's web interface.
 
-
 ## Progress
 
 - [x] (2025-11-12 08:12Z) Read Linear SDK documentation and understand agent session lifecycle
@@ -50,11 +49,9 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 
 These steps remain blocked in this environment because the required Linear sandbox credentials are not available. Once access is granted, execute the runbook and record the observed timestamps here.
 
-
 ## Surprises & Discoveries
 
 - The agent package cannot import `@alfred/api/metrics` directly because of `tsc` composite rootDir limits. Introduced `configureLinearMetrics` to inject counters at runtime without cross-package build failures.
-
 
 ## Decision Log
 
@@ -62,30 +59,27 @@ These steps remain blocked in this environment because the required Linear sandb
 - (2025-11-12 07:51Z) Kept legacy VITE_APP_URL/APP_URL fallbacks when PUBLIC_URL is missing so existing workflow viewer links remain valid.
 - (2025-11-12 07:53Z) Added configureLinearMetrics adapter to inject API counters at runtime, resolving TypeScript rootDir conflicts caused by direct cross-package imports.
 
-
 ## Outcomes & Retrospective
 
 **Status: Mostly Complete ⚠️**
 
 ### What was achieved:
+
 - **Linear helper functions** fully implemented in `packages/agent/src/orchestrator/linear.ts`:
   - `emitLinearActivity()` with p-retry exponential backoff and rate limiting
   - `setLinearDelegate()`, `setLinearStarted()`, `setLinearCompleted()`, `setLinearCancelled()`
   - `setLinearSessionExternalUrl()`, `commentOnLinearIssue()`
   - `extractIssueIdFromSession()` for session parsing
-  
 - **Workflow runner integration** in `packages/agent/src/workflow/runner.ts`:
   - 10-second acknowledgment (thought activity with 9-second timeout via Promise.race)
   - Session initialization (delegate, state, external URL) - fire-and-forget
   - Action activity emissions during tool execution (30-second throttle, ephemeral)
   - Response/error activity emission on completion
-  
 - **Webhook handler** at `apps/web/src/routes/api/linear/webhook.ts`:
   - HMAC SHA256 signature verification using Linear SDK
   - Issue assignment handling → starts workflows
   - Issue state change handling → cancels workflows
   - Comment creation handling (logged, TODO for context enrichment)
-  
 - **Prometheus metrics** in `packages/agent/src/workflow/metrics.ts`:
   - `linear_activity_emissions_total` (type, status)
   - `linear_activity_duration_seconds` (type)
@@ -104,14 +98,15 @@ These steps remain blocked in this environment because the required Linear sandb
   - Rate limiter tests (`packages/agent/test/orchestrator/linear-rate-limiter*.test.ts`)
 
 ### What remains incomplete:
+
 - **Manual E2E testing** with real Linear workspace (blocked by missing sandbox credentials)
   - See Manual Validation Runbook section for steps when credentials become available
 
 ### Lessons learned:
+
 1. Cross-package TypeScript rootDir conflicts can be solved with runtime metric injection (`configureLinearMetrics`)
 2. Fire-and-forget patterns are essential for resilience - Linear failures should never break workflows
 3. The 10-second deadline for first activity requires aggressive timeout handling (9-second race)
-
 
 ## Context and Orientation
 
@@ -139,7 +134,6 @@ The database table `workflow_runs` has columns `linear_session_id` and `linear_s
 The workflow runner at `packages/api/src/workflow/runner.ts` executes workflows but does not emit any Linear activities. It needs to be modified to call the Linear helper functions at appropriate points in the workflow lifecycle.
 
 No webhook handler exists yet. When Linear sends webhook events (issue assigned, state changed, comment added), there is no endpoint to receive them.
-
 
 ## Plan of Work
 
@@ -219,7 +213,6 @@ We will write tests at three levels:
 
 For end-to-end testing, we need a Linear workspace with Alfred installed, OAuth credentials configured, and webhook endpoints accessible (may require ngrok for local development).
 
-
 ## Concrete Steps
 
 **Step 1: Install p-retry dependency**
@@ -267,7 +260,7 @@ Replace the stub implementation of `emitLinearActivity` with:
               | "activity.action"
               | "activity.response"
               | "activity.error";
-    
+
             const input = {
               space: params.space,
               action,
@@ -279,7 +272,7 @@ Replace the stub implementation of `emitLinearActivity` with:
               result: params.result,
               ephemeral: params.ephemeral,
             };
-    
+
             const result = await toolTicket.execute({ input });
             return { ok: result.ok, id: result.id };
           },
@@ -344,7 +337,7 @@ Replace the stub implementation:
               delegateId: params.delegateId,
               authz: params.authz,
             };
-    
+
             await toolTicket.execute({ input });
           },
           {
@@ -386,7 +379,7 @@ Replace the stub implementation:
               issueId: params.issueId,
               authz: params.authz,
             };
-    
+
             return await toolTicket.execute({ input });
           },
           {
@@ -433,7 +426,7 @@ Replace the stub implementation:
               url,
               authz,
             };
-    
+
             await toolTicket.execute({ input });
           },
           {
@@ -466,7 +459,7 @@ The current stub implementation is too simplistic. Linear session IDs have a spe
       if (!sessionId || typeof sessionId !== "string") {
         return null;
       }
-      
+
       // Linear session IDs typically contain the issue ID
       // Format: "session_{issueId}_{timestamp}" or similar
       // For now, we'll validate it's not empty and has reasonable length
@@ -474,7 +467,7 @@ The current stub implementation is too simplistic. Linear session IDs have a spe
       if (trimmed.length === 0 || trimmed.length > 255) {
         return null;
       }
-      
+
       // Return the session ID itself as the issue identifier
       // The webhook payload will contain the actual issue ID
       return trimmed;
@@ -496,7 +489,7 @@ Then scroll to the section where other metrics are defined (look for existing Co
       labelNames: ["type", "status"] as const,
       registers: [metricsRegistry],
     });
-    
+
     export const linearActivityDurationSeconds = new client.Histogram({
       name: "linear_activity_duration_seconds",
       help: "Duration of Linear activity emissions",
@@ -504,27 +497,27 @@ Then scroll to the section where other metrics are defined (look for existing Co
       buckets: [0.01, 0.05, 0.1, 0.5, 1, 5],
       registers: [metricsRegistry],
     });
-    
+
     export const linearSessionOperationsTotal = new client.Counter({
       name: "linear_session_operations_total",
       help: "Total Linear session operations (delegate, state, URL)",
       labelNames: ["operation"] as const,
       registers: [metricsRegistry],
     });
-    
+
     export const linearWebhookEventsTotal = new client.Counter({
       name: "linear_webhook_events_total",
       help: "Total Linear webhook events received",
       labelNames: ["event_type", "action"] as const,
       registers: [metricsRegistry],
     });
-    
+
     export const linearWebhookWorkflowStartsTotal = new client.Counter({
       name: "linear_webhook_workflow_starts_total",
       help: "Total workflows started from Linear webhooks",
       registers: [metricsRegistry],
     });
-    
+
     export const linearWebhookWorkflowCancelsTotal = new client.Counter({
       name: "linear_webhook_workflow_cancels_total",
       help: "Total workflows canceled from Linear webhooks",
@@ -586,7 +579,7 @@ Similarly, add metrics to the other helper functions:
         // ... (existing error handling)
       }
     }
-    
+
     export async function setLinearStarted(
       params: LinearSessionParams
     ): Promise<{ stateId: string }> {
@@ -597,7 +590,7 @@ Similarly, add metrics to the other helper functions:
         // ... (existing error handling)
       }
     }
-    
+
     export async function setLinearSessionExternalUrl(
       sessionId: string,
       space: string,
@@ -624,7 +617,7 @@ Open `packages/db/src/repo/workflow.ts`. Locate the existing repository function
         .from(workflowRuns)
         .where(eq(workflowRuns.linearSessionId, sessionId))
         .limit(1);
-      
+
       return row ?? null;
     }
 
@@ -719,7 +712,7 @@ Immediately after creating the workflow run and before starting execution, add t
         });
         return { ok: false };
       });
-      
+
       // Race with 9-second timeout to meet 10-second deadline
       Promise.race([
         thoughtActivityPromise,
@@ -755,7 +748,7 @@ After emitting the thought activity, add session initialization:
             error: error instanceof Error ? error.message : String(error),
           });
         });
-        
+
         // Move to started state
         setLinearStarted({
           space: input.linear.space,
@@ -767,7 +760,7 @@ After emitting the thought activity, add session initialization:
             error: error instanceof Error ? error.message : String(error),
           });
         });
-        
+
         // Set external URL to workflow viewer
         const workflowUrl = `${process.env.PUBLIC_URL}/workflow/${runId}`;
         setLinearSessionExternalUrl(
@@ -799,7 +792,7 @@ If the runner uses AI SDK v6's `streamText` or similar, tool calls are in the st
       const lastActivity = lastActivityTime.get(runId) ?? 0;
       if (now - lastActivity > 30000) {
         lastActivityTime.set(runId, now);
-        
+
         emitLinearActivity("action", {
           sessionId: input.linear.sessionId,
           space: input.linear.space,
@@ -854,7 +847,7 @@ At the end of the workflow execution, after updating the run status, add:
           });
         });
       }
-      
+
       // Cleanup throttle tracking
       lastActivityTime.delete(runId);
     }
@@ -866,7 +859,7 @@ Create a new file `apps/web/src/routes/api/linear/webhook.ts`. TanStack Start us
 The file structure should be:
 
     import { createFileRoute } from "@tanstack/react-router";
-    
+
     export const Route = createFileRoute("/api/linear/webhook")({
       // Route configuration
     });
@@ -875,7 +868,7 @@ However, for API endpoints, we use server routes instead. The correct structure 
 
     // apps/web/src/routes/api/linear/webhook.ts
     import { json } from "@tanstack/react-router";
-    
+
     export const handlers = {
       POST: async (req: Request) => {
         // Handle webhook
@@ -901,27 +894,27 @@ For now, I'll provide a generic implementation that should work:
       linearWebhookWorkflowCancelsTotal,
     } from "@alfred/api/metrics";
     import { logger } from "@alfred/metrics";
-    
+
     const WEBHOOK_SECRET = process.env.LINEAR_WEBHOOK_SECRET;
-    
+
     if (!WEBHOOK_SECRET) {
       throw new Error("LINEAR_WEBHOOK_SECRET environment variable is required");
     }
-    
+
     const webhookClient = new LinearWebhookClient(WEBHOOK_SECRET);
-    
+
     export async function POST(request: Request): Promise<Response> {
       try {
         // Read raw body for signature verification
         const body = await request.text();
         const signature = request.headers.get("linear-signature");
         const timestamp = JSON.parse(body).createdAt;
-        
+
         if (!signature) {
           logger.warn("linear_webhook_missing_signature");
           return new Response("Missing signature", { status: 400 });
         }
-        
+
         // Verify signature
         try {
           webhookClient.verify(body, signature, timestamp);
@@ -931,16 +924,16 @@ For now, I'll provide a generic implementation that should work:
           });
           return new Response("Invalid signature", { status: 401 });
         }
-        
+
         // Parse payload
         const payload = JSON.parse(body);
         const { type, action, data } = payload;
-        
+
         linearWebhookEventsTotal.inc({ event_type: type, action });
-        
+
         // Acknowledge immediately
         const response = new Response("OK", { status: 200 });
-        
+
         // Process event asynchronously (don't await)
         processWebhookEvent(type, action, data).catch((error) => {
           logger.error("linear_webhook_processing_failed", {
@@ -949,7 +942,7 @@ For now, I'll provide a generic implementation that should work:
             error: error instanceof Error ? error.message : String(error),
           });
         });
-        
+
         return response;
       } catch (error) {
         logger.error("linear_webhook_error", {
@@ -958,7 +951,7 @@ For now, I'll provide a generic implementation that should work:
         return new Response("Internal error", { status: 500 });
       }
     }
-    
+
     async function processWebhookEvent(
       type: string,
       action: string,
@@ -972,37 +965,37 @@ For now, I'll provide a generic implementation that should work:
         await handleCommentCreate(data);
       }
     }
-    
+
     async function handleIssueUpdate(data: any): Promise<void> {
       const issue = data;
       const state = issue.state;
-      
+
       // Check if issue moved to completed or canceled
       if (state?.type === "completed" || state?.type === "canceled") {
         const sessionId = issue.id; // Or extract from issue
         const workflow = await workflowRepo.findRunByLinearSession(sessionId);
-        
+
         if (workflow && workflow.status === "running") {
           logger.info("linear_webhook_canceling_workflow", {
             runId: workflow.id,
             issueId: issue.id,
           });
-          
+
           // Cancel workflow via run registry
           // Note: We need to import and use the run registry here
           // For now, just update the status
           await workflowRepo.updateRun(workflow.id, { status: "cancelled" });
-          
+
           linearWebhookWorkflowCancelsTotal.inc();
         }
       }
     }
-    
+
     async function handleIssueCreate(data: any): Promise<void> {
       // Not implemented yet: start workflow when issue assigned to Alfred
       logger.info("linear_webhook_issue_create", { issueId: data.id });
     }
-    
+
     async function handleCommentCreate(data: any): Promise<void> {
       // Not implemented yet: add comment to workflow context
       logger.info("linear_webhook_comment_create", {
@@ -1018,6 +1011,7 @@ Add to your `.env` file (or environment):
     LINEAR_WEBHOOK_SECRET=your_webhook_secret_from_linear
 
 To get this secret:
+
 1. Go to Linear Settings > API > Webhooks
 2. Create a new webhook pointing to `https://your-alfred-domain.com/api/linear/webhook`
 3. Copy the webhook secret
@@ -1034,22 +1028,22 @@ Create `packages/agent/test/linear.test.ts`:
 
     import { describe, test, expect, mock } from "bun:test";
     import * as linearModule from "../src/orchestrator/linear";
-    
+
     describe("Linear helper functions", () => {
       test("emitLinearActivity calls toolTicket with correct params", async () => {
         // Mock toolTicket
         const mockExecute = mock(() => Promise.resolve({ ok: true, id: "activity-123" }));
-        
+
         // ... test implementation
-        
+
         // This is a simplified example. Real tests need proper mocking.
       });
-      
+
       test("emitLinearActivity handles errors gracefully", async () => {
         // Mock toolTicket to throw error
         // Verify it returns { ok: false } without throwing
       });
-      
+
       test("extractIssueIdFromSession validates input", () => {
         expect(linearModule.extractIssueIdFromSession("")).toBeNull();
         expect(linearModule.extractIssueIdFromSession("valid-session-id")).toBe("valid-session-id");
@@ -1066,12 +1060,13 @@ Expected output:
     ✓ Linear helper functions > emitLinearActivity calls toolTicket with correct params
     ✓ Linear helper functions > emitLinearActivity handles errors gracefully
     ✓ Linear helper functions > extractIssueIdFromSession validates input
-    
+
     3 tests passed
 
 **Step 21: Manual end-to-end testing**
 
 Prerequisites:
+
 - Linear workspace with Alfred app installed
 - OAuth credentials configured in `.env`
 - Webhook endpoint accessible (use ngrok for local dev)
@@ -1079,35 +1074,36 @@ Prerequisites:
 
 Testing procedure:
 
-1. Start ALFRED in development mode:
+1.  Start ALFRED in development mode:
 
-       cd /Users/jackmazac/Development/alfred
-       bun run dev
+    cd /Users/jackmazac/Development/alfred
+    bun run dev
 
-2. Start ngrok (in another terminal):
+2.  Start ngrok (in another terminal):
 
-       ngrok http 3000
+    ngrok http 3000
 
-3. Configure Linear webhook to point to ngrok URL + `/api/linear/webhook`
+3.  Configure Linear webhook to point to ngrok URL + `/api/linear/webhook`
 
-4. In Linear, create a test issue with title "Test Alfred Integration"
+4.  In Linear, create a test issue with title "Test Alfred Integration"
 
-5. Assign the issue to Alfred's app user
+5.  Assign the issue to Alfred's app user
 
-6. Within 10 seconds, check Linear for a "thought" activity:
-   - Should see: "Starting workflow: Test Alfred Integration"
+6.  Within 10 seconds, check Linear for a "thought" activity:
+    - Should see: "Starting workflow: Test Alfred Integration"
 
-7. Check ALFRED logs for activity emission:
+7.  Check ALFRED logs for activity emission:
 
-       # Look for these log entries:
-       linear_thought_activity_succeeded
-       linear_delegate_setup_succeeded
-       linear_started_setup_succeeded
-       linear_external_url_setup_succeeded
+    # Look for these log entries:
 
-8. Watch Linear issue for subsequent "action" activities as workflow executes
+    linear_thought_activity_succeeded
+    linear_delegate_setup_succeeded
+    linear_started_setup_succeeded
+    linear_external_url_setup_succeeded
 
-9. When workflow completes, verify "response" activity appears
+8.  Watch Linear issue for subsequent "action" activities as workflow executes
+
+9.  When workflow completes, verify "response" activity appears
 
 10. Check metrics endpoint:
 
@@ -1126,7 +1122,6 @@ Testing procedure:
     - Start another workflow by assigning a new issue
     - Before it completes, mark the issue as "Done" in Linear
     - Verify workflow is canceled in ALFRED logs
-
 
 ## Validation and Acceptance
 
@@ -1171,38 +1166,38 @@ View logs (assuming structured JSON logging):
 
 **Acceptance tests:**
 
-1. Create a test script `scripts/test-linear-integration.ts`:
+1.  Create a test script `scripts/test-linear-integration.ts`:
 
-       import { LinearClient } from "@linear/sdk";
-       
-       const client = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
-       
-       async function testIntegration() {
-         // Create test issue
-         const team = (await client.teams()).nodes[0];
-         const issue = await client.createIssue({
-           teamId: team.id,
-           title: "Test Alfred Integration",
-           description: "This is a test issue for Alfred",
-         });
-         
+    import { LinearClient } from "@linear/sdk";
+
+    const client = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
+
+    async function testIntegration() {
+    // Create test issue
+    const team = (await client.teams()).nodes[0];
+    const issue = await client.createIssue({
+    teamId: team.id,
+    title: "Test Alfred Integration",
+    description: "This is a test issue for Alfred",
+    });
+
          console.log("Created issue:", issue.issue?.identifier);
-         
+
          // Assign to Alfred
          // ... (find Alfred user ID and assign)
-         
+
          // Wait and check for activities
          // ... (poll issue for activities)
-       }
-       
-       testIntegration();
 
-2. Run the test:
+    }
 
-       bun run scripts/test-linear-integration.ts
+    testIntegration();
 
-3. Observe output and verify all expected activities appear.
+2.  Run the test:
 
+    bun run scripts/test-linear-integration.ts
+
+3.  Observe output and verify all expected activities appear.
 
 ## Idempotence and Recovery
 
@@ -1215,17 +1210,20 @@ View logs (assuming structured JSON logging):
 **Recovery procedures:**
 
 If Linear helper implementation fails:
+
 1. Revert `packages/agent/src/orchestrator/linear.ts` to stub implementation
 2. Workflows will continue working without Linear integration
 3. Fix the issue and redeploy
 
 If webhook handler crashes:
+
 1. Linear will retry webhooks with exponential backoff
 2. Check logs for signature verification failures
 3. Verify `LINEAR_WEBHOOK_SECRET` environment variable is correct
 4. Restart the server
 
 If metrics dependency creates circular import:
+
 1. Move metrics to a separate `@alfred/linear-metrics` package
 2. Or pass metrics as parameters to helper functions
 3. Or use dynamic imports to break the cycle
@@ -1233,6 +1231,7 @@ If metrics dependency creates circular import:
 **Safe rollback:**
 
 To disable Linear integration without code changes:
+
 1. Set environment variable `LINEAR_INTEGRATION_ENABLED=false`
 2. Modify helper functions to check this flag and return early
 3. Workflows continue without Linear activities
@@ -1240,10 +1239,10 @@ To disable Linear integration without code changes:
 **Cleanup:**
 
 After successful implementation:
+
 1. Remove any test issues created in Linear
 2. Clear `lastActivityTime` Map if memory usage is a concern (though it's small)
 3. Archive ngrok tunnel if used for development
-
 
 ## Artifacts and Notes
 
@@ -1289,7 +1288,7 @@ Each activity has a timestamp and is attributed to "Alfred (Bot)".
     linear_activity_emissions_total{type="action",status="success"} 15
     linear_activity_emissions_total{type="response",status="success"} 4
     linear_activity_emissions_total{type="error",status="success"} 1
-    
+
     # HELP linear_activity_duration_seconds Duration of Linear activity emissions
     # TYPE linear_activity_duration_seconds histogram
     linear_activity_duration_seconds_bucket{type="thought",le="0.05"} 3
@@ -1320,7 +1319,6 @@ Each activity has a timestamp and is attributed to "Alfred (Bot)".
    - Linear orders activities by creation time, not emission time
    - Consider adding sequence numbers to activity bodies if order matters
 
-
 ## Interfaces and Dependencies
 
 **Key interfaces:**
@@ -1328,7 +1326,7 @@ Each activity has a timestamp and is attributed to "Alfred (Bot)".
 In `packages/agent/src/orchestrator/linear.ts`:
 
     export type LinearActivityType = "thought" | "action" | "response" | "error";
-    
+
     export type LinearActivityParams = {
       sessionId: string;
       space: string;
@@ -1339,34 +1337,34 @@ In `packages/agent/src/orchestrator/linear.ts`:
       result?: string;
       ephemeral?: boolean;
     };
-    
+
     export type LinearSessionParams = {
       space: string;
       issueId: string;
       authz: string;
       delegateId?: string;
     };
-    
+
     export async function emitLinearActivity(
       type: LinearActivityType,
       params: LinearActivityParams
     ): Promise<{ ok: boolean; id?: string }>;
-    
+
     export async function setLinearDelegate(
       params: LinearSessionParams
     ): Promise<void>;
-    
+
     export async function setLinearStarted(
       params: LinearSessionParams
     ): Promise<{ stateId: string }>;
-    
+
     export async function setLinearSessionExternalUrl(
       sessionId: string,
       space: string,
       authz: string,
       url: string
     ): Promise<void>;
-    
+
     export function extractIssueIdFromSession(sessionId: string): string | null;
 
 **Database schema additions:**
@@ -1376,7 +1374,7 @@ Already exists in migration 0022:
     ALTER TABLE workflow_runs
       ADD COLUMN IF NOT EXISTS linear_session_id TEXT,
       ADD COLUMN IF NOT EXISTS linear_space TEXT;
-    
+
     CREATE INDEX IF NOT EXISTS idx_workflow_runs_linear_session
       ON workflow_runs(linear_session_id)
       WHERE linear_session_id IS NOT NULL;
@@ -1412,7 +1410,6 @@ From `packages/api/src/metrics.ts`:
     export const linearWebhookWorkflowStartsTotal: Counter;
     export const linearWebhookWorkflowCancelsTotal: Counter;
 
-
 ## Additional Implementation Notes
 
 **Architecture decision: Why use toolTicket wrapper?**
@@ -1429,6 +1426,7 @@ The downside is an extra layer of indirection, but the benefits outweigh this co
 **Why 9-second timeout instead of 10 seconds?**
 
 Linear requires the first activity within 10 seconds. We use a 9-second timeout to leave a 1-second buffer for:
+
 - Network latency
 - Time spent in our code before starting the activity emission
 - Clock skew between our server and Linear's servers
@@ -1438,6 +1436,7 @@ This ensures we reliably meet the deadline even under adverse conditions.
 **Why throttle action activities to 30 seconds?**
 
 Linear has two rate limiting concerns:
+
 1. **API rate limits**: ~60 requests per minute across all operations
 2. **UX concerns**: Too many activities clutter the Linear UI
 
@@ -1446,6 +1445,7 @@ By throttling to max 1 activity per 30 seconds and marking intermediate activiti
 **Why fire-and-forget for session initialization?**
 
 Setting delegate, state, and external URL are not critical for workflow execution. If they fail, the workflow can still complete successfully. By making them fire-and-forget:
+
 1. We don't block workflow execution waiting for Linear
 2. We avoid cascading failures if Linear is slow
 3. We maintain low latency for workflow start
@@ -1462,17 +1462,18 @@ The tradeoff is that session initialization might fail silently. We mitigate thi
 **Alternative design: Separate Linear service**
 
 An alternative architecture would be to create a separate `@alfred/linear` package that handles all Linear integration. Benefits:
+
 - Clearer separation of concerns
 - Easier to test in isolation
 - Could be extracted as a reusable library
 
 We didn't pursue this because:
+
 - Current scale doesn't justify the complexity
 - Tight coupling with workflow lifecycle makes separation awkward
 - Single-user context means we don't need multi-tenant Linear handling
 
 If Linear integration grows significantly, consider refactoring to a separate service.
-
 
 ## Summary
 

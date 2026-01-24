@@ -1,27 +1,32 @@
 # ExecPlan: Memory System Hardening (Observability & Safety)
 
 ## Purpose
+
 Harden the Memory Maintenance system by adding Prometheus metrics for observability and safety rails to prevent accidental massive data loss or degradation during decay cycles.
 
 ## Plan
 
 ### 1. Observability (Metrics)
+
 - [x] **Define Metrics**: Register new metrics in `packages/api/src/metrics.ts` (lines 519-542):
-    - ✅ `alfred_memory_maintenance_duration_seconds`: Histogram of maintenance run time.
-    - ✅ `alfred_memory_nodes_decayed_total`: Counter of decayed nodes.
-    - ✅ `alfred_memory_nodes_pruned_total`: Counter of pruned nodes.
-    - ✅ `alfred_memory_nodes_cleaned_total`: Counter of permanently deleted nodes.
+  - ✅ `alfred_memory_maintenance_duration_seconds`: Histogram of maintenance run time.
+  - ✅ `alfred_memory_nodes_decayed_total`: Counter of decayed nodes.
+  - ✅ `alfred_memory_nodes_pruned_total`: Counter of pruned nodes.
+  - ✅ `alfred_memory_nodes_cleaned_total`: Counter of permanently deleted nodes.
 - [x] **Instrument Worker**: Update `packages/agent/src/orchestrator/learning-worker.ts` to record these metrics during `processMemoryMaintenance` (lines 268, 295, 309, 316).
 
 ### 2. Safety Rails
+
 - [x] **Decay Limit**: `decayLimit` (default 1000) exists in `LearningWorkerConfig` (`packages/agent/src/orchestrator/learning-worker.ts` line 96).
 - [x] **Confidence Floor**: `confidenceFloor` (0.01) exists in config and is applied in decay logic (lines 283-284).
 - [ ] **Circuit Breaker**: Timeout not explicitly implemented (but maintenance runs in try/catch, so failures don't hang worker).
 
 ### 3. Performance Optimization
+
 - [x] **Bulk Update**: `updateNodeConfidenceBatch` uses `UPDATE ... FROM (VALUES ...)` (`packages/db/src/repo/graph/write.ts` lines 288-349).
 
 ## Progress
+
 - [x] Define Metrics ✅
 - [x] Instrument Worker ✅
 - [x] Safety Rails - Decay Limit ✅

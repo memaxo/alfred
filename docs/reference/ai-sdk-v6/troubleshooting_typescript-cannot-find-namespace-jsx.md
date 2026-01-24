@@ -15,8 +15,7 @@ The AI SDK has a dependency on `@types/react` which defines the `JSX` namespace.
 ## Solution
 
 You can install the `@types/react` package as a dependency to fix the error.
-    
-    
+
     npm install @types/react
 
 Previous

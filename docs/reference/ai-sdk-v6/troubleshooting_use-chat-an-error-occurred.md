@@ -15,72 +15,70 @@ Error messages from `streamText` are masked by default when using `toDataStreamR
 ## Solution
 
 To forward error details to the client or to log errors, use the `getErrorMessage` function when calling `toDataStreamResponse`.
-    
-    
+
     export function errorHandler(error: unknown) {
-    
+
       if (error == null) {
-    
+
         return 'unknown error';
-    
+
       }
-    
-    
-    
-    
+
+
+
+
       if (typeof error === 'string') {
-    
+
         return error;
-    
+
       }
-    
-    
-    
-    
+
+
+
+
       if (error instanceof Error) {
-    
+
         return error.message;
-    
+
       }
-    
-    
-    
-    
+
+
+
+
       return JSON.stringify(error);
-    
+
     }
-    
-    
+
+
     const result = streamText({
-    
+
       // ...
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     return result.toUIMessageStreamResponse({
-    
+
       getErrorMessage: errorHandler,
-    
+
     });
 
 In case you are using `createDataStreamResponse`, you can use the `onError` function when calling `toDataStreamResponse`:
-    
-    
+
     const response = createDataStreamResponse({
-    
+
       // ...
-    
+
       async execute(dataStream) {
-    
+
         // ...
-    
+
       },
-    
+
       onError: errorHandler,
-    
+
     });
 
 Previous

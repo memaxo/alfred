@@ -1,9 +1,10 @@
 ---
 title: Expo Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with Expo.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 Expo is a popular framework for building cross-platform apps with React Native. Better Auth supports both Expo native and web apps.
 
-## [Installation](https://www.better-auth.com/docs/integrations/expo\#installation)
+## [Installation](https://www.better-auth.com/docs/integrations/expo#installation)
 
-## [Configure A Better Auth Backend](https://www.better-auth.com/docs/integrations/expo\#configure-a-better-auth-backend)
+## [Configure A Better Auth Backend](https://www.better-auth.com/docs/integrations/expo#configure-a-better-auth-backend)
 
 Before using Better Auth with Expo, make sure you have a Better Auth backend set up. You can either use a separate server or leverage Expo's new [API Routes](https://docs.expo.dev/router/reference/api-routes) feature to host your Better Auth instance.
 
@@ -47,7 +48,7 @@ const handler = auth.handler;
 export { handler as GET, handler as POST }; // export handler for both GET and POST requests
 ```
 
-## [Install Server Dependencies](https://www.better-auth.com/docs/integrations/expo\#install-server-dependencies)
+## [Install Server Dependencies](https://www.better-auth.com/docs/integrations/expo#install-server-dependencies)
 
 Install both the Better Auth package and Expo plugin into your server application.
 
@@ -63,7 +64,7 @@ bun
 npm install better-auth @better-auth/expo
 ```
 
-## [Install Client Dependencies](https://www.better-auth.com/docs/integrations/expo\#install-client-dependencies)
+## [Install Client Dependencies](https://www.better-auth.com/docs/integrations/expo#install-client-dependencies)
 
 You also need to install both the Better Auth package and Expo plugin into your Expo application.
 
@@ -93,7 +94,7 @@ bun
 npm install expo-linking expo-web-browser expo-constants
 ```
 
-## [Add the Expo Plugin on Your Server](https://www.better-auth.com/docs/integrations/expo\#add-the-expo-plugin-on-your-server)
+## [Add the Expo Plugin on Your Server](https://www.better-auth.com/docs/integrations/expo#add-the-expo-plugin-on-your-server)
 
 Add the Expo plugin to your Better Auth server.
 
@@ -111,7 +112,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [Initialize Better Auth Client](https://www.better-auth.com/docs/integrations/expo\#initialize-better-auth-client)
+## [Initialize Better Auth Client](https://www.better-auth.com/docs/integrations/expo#initialize-better-auth-client)
 
 To initialize Better Auth in your Expo app, you need to call `createAuthClient` with the base URL of your Better Auth backend. Make sure to import the client from `/react`.
 
@@ -157,7 +158,7 @@ export const authClient = createAuthClient({
 
 Be sure to include the full URL, including the path, if you've changed the default path from `/api/auth`.
 
-## [Scheme and Trusted Origins](https://www.better-auth.com/docs/integrations/expo\#scheme-and-trusted-origins)
+## [Scheme and Trusted Origins](https://www.better-auth.com/docs/integrations/expo#scheme-and-trusted-origins)
 
 Better Auth uses deep links to redirect users back to your app after authentication. To enable this, you need to add your app's scheme to the `trustedOrigins` list in your Better Auth config.
 
@@ -205,7 +206,7 @@ export const auth = betterAuth({
 
 The wildcard pattern can be particularly useful if your app uses different URL formats for deep linking based on features or screens.
 
-## [Configure Metro Bundler](https://www.better-auth.com/docs/integrations/expo\#configure-metro-bundler)
+## [Configure Metro Bundler](https://www.better-auth.com/docs/integrations/expo#configure-metro-bundler)
 
 To resolve Better Auth exports you'll need to enable `unstable_enablePackageExports` in your metro config.
 
@@ -256,9 +257,9 @@ Don't forget to clear the cache after making changes.
 npx expo start --clear
 ```
 
-## [Usage](https://www.better-auth.com/docs/integrations/expo\#usage)
+## [Usage](https://www.better-auth.com/docs/integrations/expo#usage)
 
-### [Authenticating Users](https://www.better-auth.com/docs/integrations/expo\#authenticating-users)
+### [Authenticating Users](https://www.better-auth.com/docs/integrations/expo#authenticating-users)
 
 With Better Auth initialized, you can now use the `authClient` to authenticate users in your Expo app.
 
@@ -343,7 +344,7 @@ export default function SignUp() {
 }
 ```
 
-#### [Social Sign-In](https://www.better-auth.com/docs/integrations/expo\#social-sign-in)
+#### [Social Sign-In](https://www.better-auth.com/docs/integrations/expo#social-sign-in)
 
 For social sign-in, you can use the `authClient.signIn.social` method with the provider name and a callback URL.
 
@@ -363,7 +364,7 @@ export default function SocialSignIn() {
 }
 ```
 
-#### [IdToken Sign-In](https://www.better-auth.com/docs/integrations/expo\#idtoken-sign-in)
+#### [IdToken Sign-In](https://www.better-auth.com/docs/integrations/expo#idtoken-sign-in)
 
 If you want to make provider request on the mobile device and then verify the ID token on the server, you can use the `authClient.signIn.social` method with the `idToken` option.
 
@@ -387,7 +388,7 @@ export default function SocialSignIn() {
 }
 ```
 
-### [Session](https://www.better-auth.com/docs/integrations/expo\#session)
+### [Session](https://www.better-auth.com/docs/integrations/expo#session)
 
 Better Auth provides a `useSession` hook to access the current user's session in your app.
 
@@ -406,7 +407,7 @@ export default function Index() {
 
 On native, the session data will be cached in SecureStore. This will allow you to remove the need for a loading spinner when the app is reloaded. You can disable this behavior by passing the `disableCache` option to the client.
 
-### [Making Authenticated Requests to Your Server](https://www.better-auth.com/docs/integrations/expo\#making-authenticated-requests-to-your-server)
+### [Making Authenticated Requests to Your Server](https://www.better-auth.com/docs/integrations/expo#making-authenticated-requests-to-your-server)
 
 To make authenticated requests to your server that require the user's session, you have to retrieve the session cookie from `SecureStore` and manually add it to your request headers.
 
@@ -468,9 +469,9 @@ export function TRPCProvider(props: { children: React.ReactNode }) {
 }
 ```
 
-## [Options](https://www.better-auth.com/docs/integrations/expo\#options)
+## [Options](https://www.better-auth.com/docs/integrations/expo#options)
 
-### [Expo Client](https://www.better-auth.com/docs/integrations/expo\#expo-client)
+### [Expo Client](https://www.better-auth.com/docs/integrations/expo#expo-client)
 
 **storage**: the storage mechanism used to cache the session data and cookies.
 
@@ -512,7 +513,7 @@ const authClient = createAuthClient({
 });
 ```
 
-### [Expo Servers](https://www.better-auth.com/docs/integrations/expo\#expo-servers)
+### [Expo Servers](https://www.better-auth.com/docs/integrations/expo#expo-servers)
 
 Server plugin options:
 

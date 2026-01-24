@@ -1,9 +1,10 @@
 ---
 title: Security Scanner API – Package manager | Bun Docs
-url: 
+url:
 description: Scan your project for vulnerabilities with Bun's security scanner API.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -52,7 +53,7 @@ Project
 
 Bun's package manager can scan packages for security vulnerabilities before installation, helping protect your applications from supply chain attacks and known vulnerabilities.
 
-## [Quick Start](https://bun.com/docs/install/security-scanner-api\#quick-start)
+## [Quick Start](https://bun.com/docs/install/security-scanner-api#quick-start)
 
 Configure a security scanner in your `bunfig.toml`:
 
@@ -69,7 +70,7 @@ When configured, Bun will:
 - Cancel installation if critical vulnerabilities are found
 - Automatically disable auto-install for security
 
-## [How It Works](https://bun.com/docs/install/security-scanner-api\#how-it-works)
+## [How It Works](https://bun.com/docs/install/security-scanner-api#how-it-works)
 
 Security scanners analyze packages during `bun install`, `bun add`, and other package operations. They can detect:
 
@@ -78,18 +79,18 @@ Security scanners analyze packages during `bun install`, `bun add`, and other pa
 - License compliance issues
 - ...and more!
 
-### [Security Levels](https://bun.com/docs/install/security-scanner-api\#security-levels)
+### [Security Levels](https://bun.com/docs/install/security-scanner-api#security-levels)
 
 Scanners report issues at two severity levels:
 
 - **`fatal`** \- Installation stops immediately, exits with non-zero code
 - **`warn`** \- In interactive terminals, prompts to continue; in CI, exits immediately
 
-## [Using Pre-built Scanners](https://bun.com/docs/install/security-scanner-api\#using-pre-built-scanners)
+## [Using Pre-built Scanners](https://bun.com/docs/install/security-scanner-api#using-pre-built-scanners)
 
 Many security companies publish Bun security scanners as npm packages that you can install and use immediately.
 
-### [Installing a Scanner](https://bun.com/docs/install/security-scanner-api\#installing-a-scanner)
+### [Installing a Scanner](https://bun.com/docs/install/security-scanner-api#installing-a-scanner)
 
 Install a security scanner from npm:
 
@@ -99,7 +100,7 @@ bun add -d @acme/bun-security-scanner
 
 **Note:** Consult your security scanner's documentation for their specific package name and installation instructions. Most scanners will be installed with `bun add`.
 
-### [Configuring the Scanner](https://bun.com/docs/install/security-scanner-api\#configuring-the-scanner)
+### [Configuring the Scanner](https://bun.com/docs/install/security-scanner-api#configuring-the-scanner)
 
 After installation, configure it in your `bunfig.toml`:
 
@@ -109,7 +110,7 @@ scanner = "@acme/bun-security-scanner"
 
 ```
 
-### [Enterprise Configuration](https://bun.com/docs/install/security-scanner-api\#enterprise-configuration)
+### [Enterprise Configuration](https://bun.com/docs/install/security-scanner-api#enterprise-configuration)
 
 Some enterprise scanners might support authentication and/or configuration through environment variables:
 
@@ -124,11 +125,11 @@ bun install
 
 Consult your security scanner's documentation to learn which environment variables to set and if any additional configuration is required.
 
-### [Authoring your own scanner](https://bun.com/docs/install/security-scanner-api\#authoring-your-own-scanner)
+### [Authoring your own scanner](https://bun.com/docs/install/security-scanner-api#authoring-your-own-scanner)
 
 For a complete example with tests and CI setup, see the official template: [github.com/oven-sh/security-scanner-template](https://github.com/oven-sh/security-scanner-template)
 
-## [Related](https://bun.com/docs/install/security-scanner-api\#related)
+## [Related](https://bun.com/docs/install/security-scanner-api#related)
 
 - [Configuration (bunfig.toml)](https://bun.com/docs/runtime/bunfig#install-security-scanner)
 - [Package Manager](https://bun.com/docs/install)
@@ -140,7 +141,7 @@ For a complete example with tests and CI setup, see the official template: [gith
 \\
 `Bun.build`](https://bun.com/docs/bundler)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/security-scanner-api.md)
 
@@ -164,7 +165,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

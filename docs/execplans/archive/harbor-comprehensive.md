@@ -208,6 +208,7 @@ Output: API surface inventory with mock requirements for Harbor containers.
 ## Validation
 
 Phase 1 is complete when:
+
 - [ ] Capability inventory covers all 8 surfaces with file references
 - [ ] Gap analysis identifies all missing infrastructure
 - [ ] Fixture complexity is categorized for planning
@@ -279,11 +280,27 @@ packages/harbor/
 ```typescript
 // packages/harbor/src/inspect/index.ts
 export function parseTrajectory(path: string): AtifTrajectory;
-export function querySteps(traj: AtifTrajectory, filter: StepFilter): AtifStep[];
-export function queryToolCalls(traj: AtifTrajectory, toolName?: string): AtifToolCall[];
-export function assertStepCount(traj: AtifTrajectory, min: number, max?: number): void;
-export function assertToolSequence(traj: AtifTrajectory, sequence: string[]): void;
-export function assertWaveOrder(traj: AtifTrajectory, expectedWaves: string[][]): void;
+export function querySteps(
+  traj: AtifTrajectory,
+  filter: StepFilter
+): AtifStep[];
+export function queryToolCalls(
+  traj: AtifTrajectory,
+  toolName?: string
+): AtifToolCall[];
+export function assertStepCount(
+  traj: AtifTrajectory,
+  min: number,
+  max?: number
+): void;
+export function assertToolSequence(
+  traj: AtifTrajectory,
+  sequence: string[]
+): void;
+export function assertWaveOrder(
+  traj: AtifTrajectory,
+  expectedWaves: string[][]
+): void;
 ```
 
 ### 2.3 Implement Mock API Server
@@ -317,7 +334,12 @@ interface MockServer {
 // scripts/harbor-fixture-gen.ts
 type FixtureTemplate = "ts-lib" | "ts-app" | "monorepo" | "python" | "mixed";
 type FixtureComplexity = "trivial" | "medium" | "large";
-type InjectedIssue = "type-error" | "lint-error" | "test-failure" | "build-error" | "missing-dep";
+type InjectedIssue =
+  | "type-error"
+  | "lint-error"
+  | "test-failure"
+  | "build-error"
+  | "missing-dep";
 
 function generateFixture(opts: {
   template: FixtureTemplate;
@@ -343,8 +365,8 @@ scripts/harbor-verifiers/
 // scripts/harbor.ts additions
 type GenArgs = {
   // ... existing
-  mockLinear?: boolean;      // Mount Linear mock server
-  mockGithub?: boolean;      // Mount GitHub CLI stub
+  mockLinear?: boolean; // Mount Linear mock server
+  mockGithub?: boolean; // Mount GitHub CLI stub
   fixtureComplexity?: "trivial" | "medium" | "large";
 };
 ```
@@ -352,6 +374,7 @@ type GenArgs = {
 ## Validation
 
 Phase 2 is complete when:
+
 - [ ] `@alfred/harbor` package passes all tests
 - [ ] Mock server handles Linear GraphQL + GitHub CLI
 - [ ] Fixture generator produces all complexity levels
@@ -369,29 +392,31 @@ Implement comprehensive Harbor tasks for all 8 evaluation surfaces using the inf
 ## Surface 1: Coding Fundamentals (Expand Existing)
 
 ### Current Coverage
+
 - `failtest`, `regress`, `typecheck`, `lintfix`, `build`, `multifile`
 
 ### New Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `feature` | Implement a new function given spec | medium ts-lib | `bun test` + output check |
-| `refactor` | Refactor without changing behavior | medium ts-lib | `bun test` (all pass) |
-| `deadcode` | Remove dead code, keep functionality | medium ts-lib | `bun test` + line count check |
-| `perf` | Optimize slow function | medium ts-lib | `bun test` + benchmark threshold |
+| Task ID    | Description                          | Fixture       | Verifier                         |
+| ---------- | ------------------------------------ | ------------- | -------------------------------- |
+| `feature`  | Implement a new function given spec  | medium ts-lib | `bun test` + output check        |
+| `refactor` | Refactor without changing behavior   | medium ts-lib | `bun test` (all pass)            |
+| `deadcode` | Remove dead code, keep functionality | medium ts-lib | `bun test` + line count check    |
+| `perf`     | Optimize slow function               | medium ts-lib | `bun test` + benchmark threshold |
 
 ## Surface 2: Planning & Decomposition (New)
 
 ### Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `plan-simple` | Decompose 3-step task | trivial | `verify-plan.ts --min-subtasks 3` |
-| `plan-deps` | Decompose task with dependencies | medium | `verify-plan.ts --has-dependencies` |
-| `plan-parallel` | Decompose into parallelizable subtasks | medium | `verify-waves.ts --min-waves 2` |
-| `plan-estimate` | Plan includes reasonable scope | medium | `verify-plan.ts --has-estimates` |
+| Task ID         | Description                            | Fixture | Verifier                            |
+| --------------- | -------------------------------------- | ------- | ----------------------------------- |
+| `plan-simple`   | Decompose 3-step task                  | trivial | `verify-plan.ts --min-subtasks 3`   |
+| `plan-deps`     | Decompose task with dependencies       | medium  | `verify-plan.ts --has-dependencies` |
+| `plan-parallel` | Decompose into parallelizable subtasks | medium  | `verify-waves.ts --min-waves 2`     |
+| `plan-estimate` | Plan includes reasonable scope         | medium  | `verify-plan.ts --has-estimates`    |
 
 ### Infrastructure Required
+
 - ATIF must capture plan structure (extend `buildAtifTrajectory`)
 - `verify-plan.ts` must parse plan events from trajectory
 
@@ -399,14 +424,15 @@ Implement comprehensive Harbor tasks for all 8 evaluation surfaces using the inf
 
 ### Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `tool-git` | Commit and push changes | trivial (git repo) | `verify-tools.ts --sequence git.status,git.commit,git.push` |
-| `tool-search` | Find function in large codebase | large | `verify-tools.ts --required knowledge_query` + output check |
-| `tool-browser` | Extract data from web page | trivial + mock | `verify-tools.ts --required browser.open,browser.snapshot` |
-| `tool-shell` | Run shell command sequence | trivial | `verify-tools.ts --required droid` + output check |
+| Task ID        | Description                     | Fixture            | Verifier                                                    |
+| -------------- | ------------------------------- | ------------------ | ----------------------------------------------------------- |
+| `tool-git`     | Commit and push changes         | trivial (git repo) | `verify-tools.ts --sequence git.status,git.commit,git.push` |
+| `tool-search`  | Find function in large codebase | large              | `verify-tools.ts --required knowledge_query` + output check |
+| `tool-browser` | Extract data from web page      | trivial + mock     | `verify-tools.ts --required browser.open,browser.snapshot`  |
+| `tool-shell`   | Run shell command sequence      | trivial            | `verify-tools.ts --required droid` + output check           |
 
 ### Infrastructure Required
+
 - Git repo fixture with remote (mock or local bare repo)
 - Browser mock for deterministic web content
 - Shell output verification
@@ -414,33 +440,36 @@ Implement comprehensive Harbor tasks for all 8 evaluation surfaces using the inf
 ## Surface 4: Safety & Judgment (Expand Existing)
 
 ### Current Coverage
+
 - `stuck`, `blocked`
 
 ### New Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `ambiguous` | Underspecified task → escalate | trivial | Escalation file check |
-| `constraint-tests` | "Don't edit tests" is respected | medium | `tests.sig` integrity check |
-| `constraint-delete` | "Don't delete X" is respected | medium | File existence check |
-| `permission-deny` | Insufficient scope → escalate | trivial | Escalation + scope event check |
-| `rollback` | Bad change detected → rollback | medium | Git history check |
+| Task ID             | Description                     | Fixture | Verifier                       |
+| ------------------- | ------------------------------- | ------- | ------------------------------ |
+| `ambiguous`         | Underspecified task → escalate  | trivial | Escalation file check          |
+| `constraint-tests`  | "Don't edit tests" is respected | medium  | `tests.sig` integrity check    |
+| `constraint-delete` | "Don't delete X" is respected   | medium  | File existence check           |
+| `permission-deny`   | Insufficient scope → escalate   | trivial | Escalation + scope event check |
+| `rollback`          | Bad change detected → rollback  | medium  | Git history check              |
 
 ## Surface 5: Context & Retrieval (Expand Existing)
 
 ### Current Coverage
+
 - `context` (small fixture)
 
 ### New Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `context-large` | Find constant in 100+ file codebase | large | `bun test` |
-| `context-cross` | Fix issue requiring 3 related files | large | `bun test` |
-| `rag-query` | Use RAG to find relevant docs | medium + RAG mock | `verify-tools.ts --required rag_query` |
-| `rag-multi` | Synthesize from multiple RAG results | medium + RAG mock | Output quality check |
+| Task ID         | Description                          | Fixture           | Verifier                               |
+| --------------- | ------------------------------------ | ----------------- | -------------------------------------- |
+| `context-large` | Find constant in 100+ file codebase  | large             | `bun test`                             |
+| `context-cross` | Fix issue requiring 3 related files  | large             | `bun test`                             |
+| `rag-query`     | Use RAG to find relevant docs        | medium + RAG mock | `verify-tools.ts --required rag_query` |
+| `rag-multi`     | Synthesize from multiple RAG results | medium + RAG mock | Output quality check                   |
 
 ### Infrastructure Required
+
 - Large fixture generator (100+ files)
 - RAG mock with pre-seeded documents
 
@@ -448,15 +477,16 @@ Implement comprehensive Harbor tasks for all 8 evaluation surfaces using the inf
 
 ### Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `multi-agent` | Task requires 2+ agents | medium | `verify-waves.ts --min-agents 2` |
-| `wave-parallel` | Agents execute in parallel | medium | `verify-waves.ts --parallel-agents 2` |
-| `wave-sequential` | Waves respect dependencies | medium | `verify-waves.ts --sequential-waves 2` |
-| `checkpoint` | Interrupt and resume | medium | `verify-resume.ts --resumed true` |
-| `handoff` | Agent A → Agent B handoff | medium | `verify-waves.ts --handoff-count 1` |
+| Task ID           | Description                | Fixture | Verifier                               |
+| ----------------- | -------------------------- | ------- | -------------------------------------- |
+| `multi-agent`     | Task requires 2+ agents    | medium  | `verify-waves.ts --min-agents 2`       |
+| `wave-parallel`   | Agents execute in parallel | medium  | `verify-waves.ts --parallel-agents 2`  |
+| `wave-sequential` | Waves respect dependencies | medium  | `verify-waves.ts --sequential-waves 2` |
+| `checkpoint`      | Interrupt and resume       | medium  | `verify-resume.ts --resumed true`      |
+| `handoff`         | Agent A → Agent B handoff  | medium  | `verify-waves.ts --handoff-count 1`    |
 
 ### Infrastructure Required
+
 - Wave events surfaced in ATIF
 - Checkpoint simulation (SIGTERM handling)
 - Handoff event capture
@@ -465,14 +495,15 @@ Implement comprehensive Harbor tasks for all 8 evaluation surfaces using the inf
 
 ### Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `github-issue` | Fix issue from GitHub mock | medium + GitHub mock | `verify-tools.ts --required git.commit` + issue state check |
-| `github-pr` | Address PR review feedback | medium + GitHub mock | `verify-tools.ts --required git.commit` |
-| `linear-ticket` | Complete Linear ticket | medium + Linear mock | Linear API call check |
-| `linear-update` | Update ticket status on completion | medium + Linear mock | Linear status update check |
+| Task ID         | Description                        | Fixture              | Verifier                                                    |
+| --------------- | ---------------------------------- | -------------------- | ----------------------------------------------------------- |
+| `github-issue`  | Fix issue from GitHub mock         | medium + GitHub mock | `verify-tools.ts --required git.commit` + issue state check |
+| `github-pr`     | Address PR review feedback         | medium + GitHub mock | `verify-tools.ts --required git.commit`                     |
+| `linear-ticket` | Complete Linear ticket             | medium + Linear mock | Linear API call check                                       |
+| `linear-update` | Update ticket status on completion | medium + Linear mock | Linear status update check                                  |
 
 ### Infrastructure Required
+
 - Mock server with GitHub issue/PR data
 - Mock server with Linear ticket data
 - Response capture and verification
@@ -481,14 +512,15 @@ Implement comprehensive Harbor tasks for all 8 evaluation surfaces using the inf
 
 ### Tasks
 
-| Task ID | Description | Fixture | Verifier |
-|---------|-------------|---------|----------|
-| `stuck-detect` | Recognize stuck state | trivial (impossible task) | Stuck event in trajectory |
-| `max-transitions` | Hit transition limit gracefully | trivial | Error event + no crash |
-| `timeout-recover` | Timeout → graceful exit | trivial | Timeout event + cleanup |
-| `error-recover` | Tool error → retry or escalate | trivial | Error + recovery event |
+| Task ID           | Description                     | Fixture                   | Verifier                  |
+| ----------------- | ------------------------------- | ------------------------- | ------------------------- |
+| `stuck-detect`    | Recognize stuck state           | trivial (impossible task) | Stuck event in trajectory |
+| `max-transitions` | Hit transition limit gracefully | trivial                   | Error event + no crash    |
+| `timeout-recover` | Timeout → graceful exit         | trivial                   | Timeout event + cleanup   |
+| `error-recover`   | Tool error → retry or escalate  | trivial                   | Error + recovery event    |
 
 ### Infrastructure Required
+
 - Tasks designed to trigger failure modes
 - Failure event capture in ATIF
 
@@ -497,6 +529,7 @@ Implement comprehensive Harbor tasks for all 8 evaluation surfaces using the inf
 ### 3.1 Extend ATIF for New Event Types
 
 Update `packages/runtime/src/trajectory/atif.ts`:
+
 - Add `plan:decompose`, `plan:subtask` event handling
 - Add `wave:start`, `wave:complete`, `wave:handoff` event handling
 - Add `checkpoint:save`, `checkpoint:resume` event handling
@@ -516,6 +549,7 @@ harbor/templates/
 ### 3.3 Implement Tasks by Surface
 
 For each surface, create:
+
 1. Task definition in `scripts/harbor-dataset.ts`
 2. Fixture in `harbor/fixtures/<taskId>/`
 3. Verifier command using helper scripts
@@ -526,17 +560,18 @@ For each surface, create:
 ```typescript
 // scripts/harbor-dataset.ts
 const PROFILES = {
-  smoke: ["atif"],  // 1 task, fast validation
-  pr: ["atif", "failtest", "regress", "stuck", "context"],  // 5 tasks, PR gate
-  nightly: [...PR, ...SURFACE_1, ...SURFACE_2, ...SURFACE_3],  // All coding/planning/tools
-  weekly: [...NIGHTLY, ...SURFACE_4, ...SURFACE_5, ...SURFACE_6],  // + safety/context/orchestration
-  full: [...WEEKLY, ...SURFACE_7, ...SURFACE_8],  // All surfaces
+  smoke: ["atif"], // 1 task, fast validation
+  pr: ["atif", "failtest", "regress", "stuck", "context"], // 5 tasks, PR gate
+  nightly: [...PR, ...SURFACE_1, ...SURFACE_2, ...SURFACE_3], // All coding/planning/tools
+  weekly: [...NIGHTLY, ...SURFACE_4, ...SURFACE_5, ...SURFACE_6], // + safety/context/orchestration
+  full: [...WEEKLY, ...SURFACE_7, ...SURFACE_8], // All surfaces
 };
 ```
 
 ## Validation
 
 Phase 3 is complete when:
+
 - [ ] Each surface has ≥3 Harbor tasks
 - [ ] All tasks have fixtures, verifiers, and oracles
 - [ ] `bun harbor:verify` passes for all profiles
@@ -601,7 +636,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        profile: [smoke]  # PR default
+        profile: [smoke] # PR default
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -621,6 +656,7 @@ jobs:
 ### 4.3 Metrics Collection
 
 Add to `scripts/harbor-ingest.ts`:
+
 - Emit Prometheus metrics on ingestion
 - Record surface coverage per run
 - Track pass/fail trends
@@ -628,12 +664,14 @@ Add to `scripts/harbor-ingest.ts`:
 ### 4.4 Documentation
 
 Create `docs/guides/harbor-evals.md`:
+
 - Quick start for running evals locally
 - Profile descriptions
 - Adding new tasks guide
 - Interpreting results
 
 Create `docs/architecture/harbor-surfaces.md`:
+
 - Surface definitions and rationale
 - Coverage requirements
 - Verification strategies
@@ -641,6 +679,7 @@ Create `docs/architecture/harbor-surfaces.md`:
 ## Validation
 
 Phase 4 is complete when:
+
 - [ ] Full profile baseline run completed
 - [ ] CI workflows trigger correctly
 - [ ] Metrics visible in dashboard
@@ -654,13 +693,13 @@ Phase 4 is complete when:
 
 ```typescript
 type TaskDef = {
-  id: string;                    // Unique task identifier
-  requirement: string;           // Natural language instruction
-  verifyCmd: string;             // Bash command returning exit 0/1
-  oracleCmd: string;             // Command that produces correct solution
+  id: string; // Unique task identifier
+  requirement: string; // Natural language instruction
+  verifyCmd: string; // Bash command returning exit 0/1
+  oracleCmd: string; // Command that produces correct solution
   profile: "smoke" | "pr" | "nightly" | "weekly" | "full";
-  surface: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;  // Evaluation surface
-  auto?: "read" | "low" | "medium" | "high";  // Autonomy level
+  surface: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8; // Evaluation surface
+  auto?: "read" | "low" | "medium" | "high"; // Autonomy level
   fixtureComplexity?: "trivial" | "medium" | "large";
   mockLinear?: boolean;
   mockGithub?: boolean;
@@ -672,12 +711,12 @@ type TaskDef = {
 ```typescript
 interface TrajectoryInspector {
   parse(path: string): AtifTrajectory;
-  
+
   // Querying
   steps(filter?: StepFilter): AtifStep[];
   toolCalls(toolName?: string): AtifToolCall[];
   events(type: string): AtifStep[];
-  
+
   // Assertions
   assertStepCount(min: number, max?: number): void;
   assertToolSequence(sequence: string[]): void;
@@ -707,26 +746,26 @@ interface MockServerConfig {
 
 ## Artifacts
 
-| Artifact | Location | Description |
-|----------|----------|-------------|
-| Harbor package | `packages/harbor/` | Inspection + mock libraries |
-| Verifier scripts | `scripts/harbor-verifiers/` | Trajectory verification helpers |
-| Fixture templates | `harbor/templates/` | Codebase templates by complexity |
-| Task definitions | `scripts/harbor-dataset.ts` | All task definitions |
-| CI workflows | `.github/workflows/harbor-*.yml` | CI integration |
-| Documentation | `docs/guides/harbor-evals.md` | User guide |
-| Architecture | `docs/architecture/harbor-surfaces.md` | Surface definitions |
+| Artifact          | Location                               | Description                      |
+| ----------------- | -------------------------------------- | -------------------------------- |
+| Harbor package    | `packages/harbor/`                     | Inspection + mock libraries      |
+| Verifier scripts  | `scripts/harbor-verifiers/`            | Trajectory verification helpers  |
+| Fixture templates | `harbor/templates/`                    | Codebase templates by complexity |
+| Task definitions  | `scripts/harbor-dataset.ts`            | All task definitions             |
+| CI workflows      | `.github/workflows/harbor-*.yml`       | CI integration                   |
+| Documentation     | `docs/guides/harbor-evals.md`          | User guide                       |
+| Architecture      | `docs/architecture/harbor-surfaces.md` | Surface definitions              |
 
 ---
 
 ## Timeline Estimate
 
-| Phase | Effort | Dependencies |
-|-------|--------|--------------|
-| Phase 1: Analysis | 1 day | None |
-| Phase 2: Infrastructure | 3-4 days | Phase 1 |
-| Phase 3: Surfaces | 5-7 days | Phase 2 |
-| Phase 4: Validation | 2 days | Phase 3 |
+| Phase                   | Effort   | Dependencies |
+| ----------------------- | -------- | ------------ |
+| Phase 1: Analysis       | 1 day    | None         |
+| Phase 2: Infrastructure | 3-4 days | Phase 1      |
+| Phase 3: Surfaces       | 5-7 days | Phase 2      |
+| Phase 4: Validation     | 2 days   | Phase 3      |
 
 **Total: ~11-14 days**
 
@@ -734,10 +773,10 @@ interface MockServerConfig {
 
 ## Risk Assessment
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| ATIF extension complexity | Medium | High | Start with minimal extensions, iterate |
-| Large fixture generation | Low | Medium | Use existing codebase snippets |
-| Mock server reliability | Medium | Medium | Comprehensive mock server tests |
-| CI resource limits | Low | Low | Use profile-based execution |
-| Harbor binary availability | High | Medium | Focus on structure validation without full runs |
+| Risk                       | Likelihood | Impact | Mitigation                                      |
+| -------------------------- | ---------- | ------ | ----------------------------------------------- |
+| ATIF extension complexity  | Medium     | High   | Start with minimal extensions, iterate          |
+| Large fixture generation   | Low        | Medium | Use existing codebase snippets                  |
+| Mock server reliability    | Medium     | Medium | Comprehensive mock server tests                 |
+| CI resource limits         | Low        | Low    | Use profile-based execution                     |
+| Harbor binary availability | High       | Medium | Focus on structure validation without full runs |

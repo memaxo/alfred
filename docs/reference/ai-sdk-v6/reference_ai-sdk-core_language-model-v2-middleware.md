@@ -11,8 +11,7 @@ Language model middleware provides a way to enhance the behavior of language mod
 See Language Model Middleware for more information.
 
 ## Import
-    
-    
+
     import { LanguageModelV3Middleware } from "ai"
 
 ## API Signature

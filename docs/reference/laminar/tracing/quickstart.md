@@ -1,8 +1,9 @@
 ---
 title: Get started with Laminar tracing. - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/quickstart#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -29,7 +30,7 @@ On this page
 - [Tracing Custom Functions](https://docs.lmnr.ai/tracing/quickstart#tracing-custom-functions)
 - [Next Steps](https://docs.lmnr.ai/tracing/quickstart#next-steps)
 
-### [​](https://docs.lmnr.ai/tracing/quickstart\#1-get-your-project-api-key)  1\. Get Your Project API Key
+### [​](https://docs.lmnr.ai/tracing/quickstart#1-get-your-project-api-key) 1\. Get Your Project API Key
 
 To get your Project API Key, navigate to your project settings page on the Laminar dashboard and create new project API key.Next, you’ll need to set this key as an environment variable in your project. Create a `.env` file in the root of your project (if you don’t have one already) and add the following line:
 
@@ -42,14 +43,13 @@ LMNR_PROJECT_API_KEY=your_project_api_key_here
 
 Replace `your_project_api_key_here` with the actual key you copied.
 
-### [​](https://docs.lmnr.ai/tracing/quickstart\#2-initialize-laminar-in-your-application)  2\. Initialize Laminar in Your Application
+### [​](https://docs.lmnr.ai/tracing/quickstart#2-initialize-laminar-in-your-application) 2\. Initialize Laminar in Your Application
 
 Adding just two lines to your application enables comprehensive tracing:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -77,14 +77,13 @@ See the section on [automatic instrumentation](https://docs.lmnr.ai/tracing/auto
 
 For more information, refer to the [instrumentation docs](https://docs.lmnr.ai/tracing/automatic-instrumentation).
 
-### [​](https://docs.lmnr.ai/tracing/quickstart\#3-that%E2%80%99s-it-your-llm-api-calls-are-now-traced)  3\. That’s it! Your LLM API Calls Are Now Traced
+### [​](https://docs.lmnr.ai/tracing/quickstart#3-that%E2%80%99s-it-your-llm-api-calls-are-now-traced) 3\. That’s it! Your LLM API Calls Are Now Traced
 
 Once initialized, Laminar automatically traces LLM API calls. For example, after initialization, this standard OpenAI call:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -108,14 +107,13 @@ Will automatically create a span in your Laminar dashboard:
 
 Laminar automatically captures important LLM metrics including latency, token usage, and cost calculations based on the specific model used.
 
-## [​](https://docs.lmnr.ai/tracing/quickstart\#tracing-custom-functions)  Tracing Custom Functions
+## [​](https://docs.lmnr.ai/tracing/quickstart#tracing-custom-functions) Tracing Custom Functions
 
 Beyond automatic LLM tracing, you can use the `observe` decorator/wrapper to trace specific functions in your application:
 
 - JavaScript/TypeScript
 
 - Python
-
 
 You can instrument specific functions by wrapping them in `observe()`.
 This is especially helpful when you want to trace functions, or group
@@ -164,7 +162,7 @@ const myFunction = async () => observe(
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/quickstart\#next-steps)  Next Steps
+## [​](https://docs.lmnr.ai/tracing/quickstart#next-steps) Next Steps
 
 - Explore our integrations to see how Laminar works with your favorite tools:
   - [OpenAI](https://docs.lmnr.ai/tracing/integrations/openai)

@@ -17,52 +17,51 @@ To use tool calling with structured outputs, use `generateText` or `streamText` 
 ## Solution
 
 When using `output` with tool calling, adjust your `stopWhen` condition to account for the additional step required for structured output generation:
-    
-    
+
     const result = await generateText({
-    
+
       model: openai('gpt-4o'),
-    
+
       output: Output.object({
-    
+
         schema: z.object({
-    
+
           summary: z.string(),
-    
+
           sentiment: z.enum(['positive', 'neutral', 'negative']),
-    
+
         }),
-    
+
       }),
-    
+
       tools: {
-    
+
         analyze: tool({
-    
+
           description: 'Analyze data',
-    
+
           inputSchema: z.object({
-    
+
             data: z.string(),
-    
+
           }),
-    
+
           execute: async ({ data }) => {
-    
+
             return { result: 'analyzed' };
-    
+
           }),
-    
+
         },
-    
+
       },
-    
+
       // Add at least 1 to your intended step count to account for structured output
-    
+
       stopWhen: stepCountIs(3), // Now accounts for: tool call + tool result + structured output
-    
+
       prompt: 'Analyze the data and provide a summary',
-    
+
     });
 
 For more information about using structured outputs with `generateText` and `streamText` see Generating Structured Data.

@@ -1,9 +1,10 @@
 ---
 title: Roblox | Better Auth
-url: 
+url:
 description: Roblox provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Roblox Credentials](https://www.better-auth.com/docs/authentication/roblox\#get-your-roblox-credentials)
+### [Get your Roblox Credentials](https://www.better-auth.com/docs/authentication/roblox#get-your-roblox-credentials)
 
 Get your Roblox credentials from the [Roblox Creator Hub](https://create.roblox.com/dashboard/credentials?activeTab=OAuthTab).
 
@@ -34,7 +35,7 @@ Make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/ro
 
 The Roblox API does not provide email addresses. As a workaround, the user's `email` field uses the `preferred_username` value instead.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/roblox\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/roblox#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -53,7 +54,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Sign In with Roblox](https://www.better-auth.com/docs/authentication/roblox\#sign-in-with-roblox)
+### [Sign In with Roblox](https://www.better-auth.com/docs/authentication/roblox#sign-in-with-roblox)
 
 To sign in with Roblox, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 

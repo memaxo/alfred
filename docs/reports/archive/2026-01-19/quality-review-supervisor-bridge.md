@@ -13,6 +13,7 @@ Suggestions: **2**
 ## Critical Issues
 
 ### 1. Unused Import in Transition File
+
 **File**: `packages/cognitive/src/transition.ts:11`  
 **Issue**: `deciding` is imported but never used  
 **Error**: `error TS6133: 'deciding' is declared but its value is never read.`
@@ -21,13 +22,14 @@ Suggestions: **2**
 // Current (line 11)
 import {
   capturing,
-  deciding,  // ❌ Unused
+  deciding, // ❌ Unused
   executing,
   // ...
 } from "./state";
 ```
 
 **Fix**: Remove unused import:
+
 ```typescript
 import {
   capturing,
@@ -53,6 +55,7 @@ import {
 - ✅ Error handling uses proper type guards (`error instanceof Error`)
 
 **Test Code** (`workflow-cognitive.integration.test.ts:382`):
+
 - Uses `as any` for test payload access - **Acceptable** for test code
 - Test code can use type assertions when testing implementation details
 
@@ -61,15 +64,18 @@ import {
 **Status**: Good
 
 **Function Length**:
+
 - `handleSupervisorObservation()`: ~44 lines ✅ (under 50 line limit)
 - Bridge code blocks: ~18 lines each ✅ (well within limits)
 
 **Naming**:
+
 - ✅ `handleSupervisorObservation` - descriptive, follows existing patterns
 - ✅ `interruptEvent` - clear variable name
 - ✅ Error log keys follow convention: `supervisor_cognitive_bridge_failed`
 
 **Single Responsibility**:
+
 - ✅ Each method has clear, single purpose
 - ✅ Bridge code is isolated in fire-and-forget blocks
 
@@ -84,6 +90,7 @@ import {
 
 **Pattern Consistency**:
 Matches existing fire-and-forget patterns in codebase:
+
 - `packages/rag/src/doc.ts:189` - Similar pattern for `touchNodes`
 - `packages/runtime/src/engines/knowledge.ts:164` - Similar pattern
 - `packages/api/src/routers/droids.ts:614` - Similar pattern
@@ -93,20 +100,24 @@ Matches existing fire-and-forget patterns in codebase:
 **Status**: Compliant
 
 **Fire-and-Forget Pattern**:
+
 - ✅ Uses `void (async () => { ... })()` pattern (matches codebase)
 - ✅ Non-blocking - doesn't delay workflow interruption
 - ✅ Errors logged but don't propagate
 
 **Structured Logging**:
+
 - ✅ Uses `logger.error()` with structured context object
 - ✅ Includes `runId`, `reason`, and `error` fields
 - ✅ Error codes follow convention: `supervisor_cognitive_bridge_failed`
 
 **Side Effects at Boundaries**:
+
 - ✅ Cognitive loop call is at runtime boundary (appropriate)
 - ✅ Fire-and-forget ensures supervisor's primary function isn't blocked
 
 **Import Patterns**:
+
 - ✅ Type imports use `import type`
 - ✅ Runtime imports use direct imports
 - ✅ No circular dependencies
@@ -143,6 +154,7 @@ private bridgeToCognitiveLoop(reason: string): void {
 ```
 
 **Benefits**:
+
 - Reduces duplication
 - Single source of truth for bridge logic
 - Easier to test and maintain
@@ -162,6 +174,7 @@ supervisorCognitiveBridgeFailuresTotal.inc({
 ```
 
 **Benefits**:
+
 - Observability into bridge reliability
 - Can detect if cognitive loop is consistently failing
 - Helps debug integration issues
@@ -194,6 +207,7 @@ supervisorCognitiveBridgeFailuresTotal.inc({
 The supervisor → cognitive loop bridge implementation is **high quality** and follows ALFRED conventions:
 
 ✅ **Strengths**:
+
 - Type-safe implementation
 - Proper error handling
 - Follows existing fire-and-forget patterns
@@ -201,6 +215,7 @@ The supervisor → cognitive loop bridge implementation is **high quality** and 
 - Well-structured logging
 
 ⚠️ **Minor Issues**:
+
 - Unused import in unrelated file (`transition.ts`)
 - Code duplication (acceptable for now, could be refactored)
 

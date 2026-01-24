@@ -1,8 +1,9 @@
 ---
 title: Playground History - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/playground/history#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -27,7 +28,7 @@ On this page
 
 The Playground automatically tracks all your runs, allowing you to review and revisit previous runs. You can access your history by clicking **History** in the playground interface.
 
-## [​](https://docs.lmnr.ai/playground/history\#what%E2%80%99s-included-in-history)  What’s Included in History
+## [​](https://docs.lmnr.ai/playground/history#what%E2%80%99s-included-in-history) What’s Included in History
 
 Your playground history contains the same detailed information you see in traces:
 

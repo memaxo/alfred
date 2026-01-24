@@ -10,11 +10,11 @@ The latency-intelligence tradeoff in voice AI is being solved through three dist
 
 **ElevenLabs Conversational AI** proves that optimized cascaded pipelines remain competitive. Their architecture chains specialized components: **75ms TTS inference** (Flash v2.5), **<100ms STT** (custom implementation vs 300ms+ for Whisper), achieving **sub-second total latency** with optimal LLM selection. The modular approach enables mixing best-in-class components and provides debuggable text transcripts.
 
-| System | Architecture | Claimed/Measured Latency | Key Trade-off |
-|--------|-------------|-------------------------|---------------|
-| OpenAI GPT-4o | Native speech-to-speech | 232ms min / ~500ms TTFB | Harder to debug, audio-in/audio-out |
-| Google Gemini Live | Native multimodal | ~280ms TTFT | Limited public benchmarks |
-| ElevenLabs | Optimized cascade | 525-1400ms total | Sequential processing, LLM flexibility |
+| System             | Architecture            | Claimed/Measured Latency | Key Trade-off                          |
+| ------------------ | ----------------------- | ------------------------ | -------------------------------------- |
+| OpenAI GPT-4o      | Native speech-to-speech | 232ms min / ~500ms TTFB  | Harder to debug, audio-in/audio-out    |
+| Google Gemini Live | Native multimodal       | ~280ms TTFT              | Limited public benchmarks              |
+| ElevenLabs         | Optimized cascade       | 525-1400ms total         | Sequential processing, LLM flexibility |
 
 The critical insight: **first-token latency determines perceived responsiveness**, not total generation time. Audio playback streams continuously once TTS begins, so LLM token generation (80-90 tok/s for GPT-4o) easily outpaces speech playback rate (~3 words/second).
 
@@ -25,6 +25,7 @@ Speculative decoding, proven in production at Google AI Overviews and available 
 The mechanism works through draft-then-verify: a small, fast model generates γ candidate tokens autoregressively, then the target model scores all candidates in a single forward pass. Modified rejection sampling accepts tokens matching the target distribution, with **70-80% acceptance rates** in practice. Mathematically, output quality is **provably identical** to standard autoregressive decoding—this is lossless acceleration.
 
 **Production implementations** demonstrate real-world viability:
+
 - **Google**: Deployed in AI Overviews for search, achieving "remarkable speedups while maintaining same quality"
 - **OpenAI Predicted Outputs**: Users provide expected output predictions for code editing; rejected tokens charged at completion rates
 - **vLLM**: Open-source implementation with continuous batching, achieving **1.5x on ShareGPT, 2.8x on summarization**
@@ -38,15 +39,16 @@ For voice AI specifically, speculative decoding reduces TTFT by generating multi
 
 Cerebras and Groq have fundamentally broken the GPU memory-bandwidth bottleneck that historically limited LLM inference. **Cerebras achieves 2,100 tokens/second** for Llama 3.1 70B—**16-68x faster than GPU hyperscalers**—through 21 PB/s memory bandwidth (7,000x more than H100) and 44GB on-chip SRAM storing entire models without transfer overhead.
 
-| Platform | Llama 70B tok/s | TTFT | Memory Bandwidth | Best For |
-|----------|-----------------|------|------------------|----------|
-| **Cerebras WSE-3** | 2,100 | 240ms | 21 PB/s | Throughput, large batches |
-| **Groq LPU** | 1,665 (w/spec dec) | 220ms | 80 TB/s | Latency consistency |
-| **NVIDIA H100** | 50-100 | 1,000-4,200ms | 3.3 TB/s | Flexibility, training |
+| Platform           | Llama 70B tok/s    | TTFT          | Memory Bandwidth | Best For                  |
+| ------------------ | ------------------ | ------------- | ---------------- | ------------------------- |
+| **Cerebras WSE-3** | 2,100              | 240ms         | 21 PB/s          | Throughput, large batches |
+| **Groq LPU**       | 1,665 (w/spec dec) | 220ms         | 80 TB/s          | Latency consistency       |
+| **NVIDIA H100**    | 50-100             | 1,000-4,200ms | 3.3 TB/s         | Flexibility, training     |
 
 The **LiveKit + Cerebras partnership** already demonstrates production voice AI viability. LiveKit's Agents framework directly integrates Cerebras inference, powering what they call the "world's fastest AI voice assistant" at cerebras.livekit.io. LiveKit CEO Russell d'Sa notes that "Cerebras' best-in-class compute with LiveKit's global edge network has allowed us to create AI experiences that feel more human."
 
 At **1,600+ tokens/second**, previously impossible capabilities become viable for real-time voice:
+
 - **1,050 tokens in 500ms**: A full reasoning chain completes within typical voice response latency budget
 - **10x more CoT steps**: Complex multi-step reasoning fits within interactive timeframes
 - **Agentic workflows**: Multi-tool sequences execute at conversation speed
@@ -58,6 +60,7 @@ The cost picture is equally compelling: Cerebras charges **$0.60/M output tokens
 Several architectural patterns enable sophisticated reasoning within voice latency budgets. These can be combined with Cerebras/Groq speed advantages to create systems that "think fast."
 
 **Pattern 1: Reasoning Preload During STT**
+
 ```
 [User speaking: 200-300ms STT processing]
     ↓
@@ -74,6 +77,7 @@ This exploits the observation that **STT processing and LLM reasoning can overla
 
 **Pattern 2: Speculative Thinking for Reasoning Models**
 Recent research (April 2025) proposes "Speculative Thinking" specifically for reasoning models:
+
 - Small model generates most reasoning steps speculatively
 - Larger "mentor" model handles only **difficult reflective steps** (identified by cues like "wait," "alternatively")
 - Target model modifies only ~20% of speculative output
@@ -81,12 +85,14 @@ Recent research (April 2025) proposes "Speculative Thinking" specifically for re
 
 **Pattern 3: Speculative Cascades**
 Google Research combines speculative decoding with model cascades:
+
 - Small model decides if it can handle the query or should defer
 - Speculative verification happens within each cascade level
 - Provides better cost-quality trade-offs than either technique alone
 
 **Pattern 4: KV-Cache Aware Routing**
 The llm-d project routes requests to pods with warm KV-caches:
+
 - Achieves **87% cache hit rate**
 - **88% faster TTFT** for warm cache hits
 - Critical for multi-turn conversation where context accumulates
@@ -132,13 +138,13 @@ Production voice systems employ multiple optimization layers that compound with 
 
 **Barge-in handling** requires immediate response—production systems flush audio buffers within **<200ms** of detecting user speech. OpenAI's Realtime API includes semantic VAD that chunks audio based on utterance completion rather than simple silence detection. Context preservation during interruption is critical: partial response context must be stored to resume naturally.
 
-| Optimization | Latency Impact | Implementation |
-|--------------|---------------|----------------|
-| KV-cache warming | Eliminates cold start (10-30s) | Pre-send dummy query at session start |
-| Prompt caching | Up to 80% TTFT reduction | Keep stable prefix, dynamic content at end |
-| Streaming TTS | ~135ms TTFB vs batch synthesis | ElevenLabs Flash, Cartesia |
-| CoT compression | 40-70% fewer reasoning tokens | TokenSkip, TALE budget-aware |
-| Semantic VAD | Reduce false turn-endings | OpenAI semantic_vad mode |
+| Optimization     | Latency Impact                 | Implementation                             |
+| ---------------- | ------------------------------ | ------------------------------------------ |
+| KV-cache warming | Eliminates cold start (10-30s) | Pre-send dummy query at session start      |
+| Prompt caching   | Up to 80% TTFT reduction       | Keep stable prefix, dynamic content at end |
+| Streaming TTS    | ~135ms TTFB vs batch synthesis | ElevenLabs Flash, Cartesia                 |
+| CoT compression  | 40-70% fewer reasoning tokens  | TokenSkip, TALE budget-aware               |
+| Semantic VAD     | Reduce false turn-endings      | OpenAI semantic_vad mode                   |
 
 ## Academic foundations inform production architectures
 
@@ -147,6 +153,7 @@ The academic literature provides rigorous foundations for these production techn
 **Speech-native LLM architectures** represent the frontier. **LLaMA-Omni** achieves **226ms latency** for simultaneous text and speech response using a non-autoregressive speech decoder with CTC for streaming speech unit prediction. **DiVA** (Distilled Voice Assistant) reaches **72% win rate** versus Qwen 2 Audio with **100x less training compute** through self-supervised distillation from text LLM transcripts.
 
 Key academic findings applicable to production voice AI:
+
 - **Speculative decoding preserves exact output distribution** (Leviathan et al., ICML 2023)—quality guarantees are mathematical, not empirical
 - **Continuous batching** (Orca, OSDI 2022) achieves **36.9x throughput** over static batching by dynamically adding/removing requests at each decoding step
 - **Reasoning tokens show diminishing returns** beyond ~500 tokens for most tasks; budget-aware approaches can reduce overhead by 40-70%
@@ -157,6 +164,7 @@ Key academic findings applicable to production voice AI:
 For a production system targeting **<500ms end-to-end latency** with Cerebras fast inference generating reasoning for voice:
 
 **Recommended Architecture Stack:**
+
 1. **Inference**: Cerebras Cloud API for Llama 70B at 2,100 tok/s
 2. **Serving framework**: vLLM with PagedAttention + automatic prefix caching
 3. **Speculative decoding**: EAGLE-3 or Cerebras native spec dec for additional 2-3x
@@ -177,12 +185,14 @@ For a production system targeting **<500ms end-to-end latency** with Cerebras fa
 | **Total** | **500ms** | |
 
 **Two-Stage Reasoning Implementation:**
+
 1. **During STT (200ms window)**: Cerebras generates ~400 speculative reasoning tokens based on partial transcript
 2. **On transcript finalization**: Single forward pass verifies reasoning, generates response tokens
 3. **Streaming to TTS**: First response tokens reach TTS within 50ms of reasoning completion
 4. **Audio playback begins**: Within 500ms of user finishing speech
 
 **Key Implementation Considerations:**
+
 - **Speculative reasoning accuracy**: Monitor acceptance rates; target 70%+ for optimal speedup
 - **Context window management**: Cerebras supports 128K context; use prefix caching for system prompts
 - **Fallback handling**: Implement graceful degradation when speculation fails

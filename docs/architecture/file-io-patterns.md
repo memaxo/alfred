@@ -283,9 +283,9 @@ async function appendRule(filePath: string, rules: string[]) {
   } else {
     content = "# Learned Rules\n\n";
   }
-  
+
   // ... mutate content ...
-  
+
   await Bun.write(filePath, content);
 }
 ```

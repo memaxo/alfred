@@ -25,6 +25,7 @@ ALFRED integrates with Linear through:
    - Note: Client ID, Client Secret, Redirect URI
 
 2. **Configure Environment Variables:**
+
    ```bash
    LINEAR_CLIENT_ID=your_client_id
    LINEAR_CLIENT_SECRET=your_client_secret
@@ -46,6 +47,7 @@ ALFRED integrates with Linear through:
    - Copy webhook secret
 
 2. **Configure Webhook Secret:**
+
    ```bash
    LINEAR_WEBHOOK_SECRET=your_webhook_secret
    ```
@@ -75,6 +77,7 @@ When a workflow runs with Linear context, Alfred emits activities:
 4. **Error** (on failure) - Error message with workflow link
 
 **Key Files:**
+
 - `packages/agent/src/orchestrator/linear.ts` - Helper functions
 - `packages/api/src/routers/workflow.ts` - Integration into workflow runner
 
@@ -83,6 +86,7 @@ When a workflow runs with Linear context, Alfred emits activities:
 Linear requires the first activity within 10 seconds or marks the agent as unresponsive.
 
 **Implementation:**
+
 - Uses `Promise.race` with 9-second timeout
 - Emits thought activity immediately on workflow start
 - Non-blocking (fire-and-forget pattern)
@@ -123,6 +127,7 @@ When running the **pipeline execution path** with Linear context, ALFRED can opt
 3. **Comment Creation** - Logs for future context addition
 
 **Signature Verification:**
+
 - Uses HMAC SHA256 signature in `linear-signature` header
 - Prevents spoofed webhook events
 
@@ -203,4 +208,3 @@ Prometheus metrics exposed on `/api/metrics`:
 - [ExecPlan: Linear Integration](../execplans/linear-integration.md) - Detailed implementation plan
 - [Linear Integration Rules](../../.ruler/24-linear-integration.md) - Development rules
 - [Linear API Reference](../reference/linear/graphql/) - Linear GraphQL API docs
-

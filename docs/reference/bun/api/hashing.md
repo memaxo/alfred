@@ -1,9 +1,10 @@
 ---
 title: Hashing – API | Bun Docs
-url: 
+url:
 description: Native support for a range of fast hashing algorithms.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 Bun implements the `createHash` and `createHmac` functions from [`node:crypto`](https://nodejs.org/api/crypto.html) in addition to the Bun-native APIs documented below.
 
-## [`Bun.password`](https://bun.com/docs/api/hashing\#bun-password)
+## [`Bun.password`](https://bun.com/docs/api/hashing#bun-password)
 
 `Bun.password` is a collection of utility functions for hashing and verifying passwords with various cryptographically secure algorithms.
 
@@ -119,11 +120,11 @@ const isMatch = Bun.password.verifySync(password, hash);
 
 ```
 
-### [Salt](https://bun.com/docs/api/hashing\#salt)
+### [Salt](https://bun.com/docs/api/hashing#salt)
 
 When you use `Bun.password.hash`, a salt is automatically generated and included in the hash.
 
-### [bcrypt - Modular Crypt Format](https://bun.com/docs/api/hashing\#bcrypt-modular-crypt-format)
+### [bcrypt - Modular Crypt Format](https://bun.com/docs/api/hashing#bcrypt-modular-crypt-format)
 
 In the following [Modular Crypt Format](https://passlib.readthedocs.io/en/stable/modular_crypt_format.html) hash (used by `bcrypt`):
 
@@ -160,7 +161,7 @@ await Bun.password.hash("hello".repeat(100), {
 
 So instead of sending bcrypt a 500-byte password silently truncated to 72 bytes, Bun will hash the password using SHA-512 and send the hashed password to bcrypt (only if it exceeds 72 bytes). This is a more secure default behavior.
 
-### [argon2 - PHC format](https://bun.com/docs/api/hashing\#argon2-phc-format)
+### [argon2 - PHC format](https://bun.com/docs/api/hashing#argon2-phc-format)
 
 In the following [PHC format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) hash (used by `argon2`):
 
@@ -189,7 +190,7 @@ The format is composed of:
 - `salt`: `$xXnlSvPh4ym5KYmxKAuuHVlDvy2QGHBNuI6bJJrRDOs`
 - `hash`: `$2YY6M48XmHn+s5NoBaL+ficzXajq2Yj8wut3r0vnrwI`
 
-## [`Bun.hash`](https://bun.com/docs/api/hashing\#bun-hash)
+## [`Bun.hash`](https://bun.com/docs/api/hashing#bun-hash)
 
 `Bun.hash` is a collection of utilities for _non-cryptographic_ hashing. Non-cryptographic hashing algorithms are optimized for speed of computation over collision-resistance or security.
 
@@ -239,7 +240,7 @@ Bun.hash.rapidhash("data", 1234);
 
 ```
 
-## [`Bun.CryptoHasher`](https://bun.com/docs/api/hashing\#bun-cryptohasher)
+## [`Bun.CryptoHasher`](https://bun.com/docs/api/hashing#bun-cryptohasher)
 
 `Bun.CryptoHasher` is a general-purpose utility class that lets you incrementally compute a hash of string or binary data using a range of cryptographic hash algorithms. The following algorithms are supported:
 
@@ -329,7 +330,7 @@ console.log(arr);
 
 ```
 
-### [HMAC in `Bun.CryptoHasher`](https://bun.com/docs/api/hashing\#hmac-in-bun-cryptohasher)
+### [HMAC in `Bun.CryptoHasher`](https://bun.com/docs/api/hashing#hmac-in-bun-cryptohasher)
 
 `Bun.CryptoHasher` can be used to compute HMAC digests. To do so, pass the key to the constructor.
 
@@ -377,7 +378,7 @@ HTMLRewriter](https://bun.com/docs/api/html-rewriter) [Next\\
 \\
 Console](https://bun.com/docs/api/console)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/hashing.md)
 
@@ -401,7 +402,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

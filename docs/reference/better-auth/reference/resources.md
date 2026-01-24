@@ -1,9 +1,10 @@
 ---
 title: Resources | Better Auth
-url: 
+url:
 description: A curated collection of resources to help you learn and master Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 A curated collection of resources to help you learn and master Better Auth. From blog posts to video tutorials, find everything you need to get started.
 
-## [Video tutorials](https://www.better-auth.com/docs/reference/resources\#video-tutorials)
+## [Video tutorials](https://www.better-auth.com/docs/reference/resources#video-tutorials)
 
 Alltrendsshowcasereviewimplementationnextjscomparisontutorialtanstackmigrationclerk
 
@@ -98,7 +99,7 @@ A comprehensive guide showing how to migrate your authentication from Clerk to B
 
 migrationclerktutorial
 
-## [Blog posts](https://www.better-auth.com/docs/reference/resources\#blog-posts)
+## [Blog posts](https://www.better-auth.com/docs/reference/resources#blog-posts)
 
 Alltypescriptreactbunviteorganizationsintegrationpaymentsastrotutorialmulti-tenantzenstackarchitecture
 

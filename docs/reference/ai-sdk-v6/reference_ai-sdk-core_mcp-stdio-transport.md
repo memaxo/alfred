@@ -9,8 +9,7 @@ Creates a transport for Model Context Protocol (MCP) clients to communicate with
 This feature is experimental and may change or be removed in the future.
 
 ## Import
-    
-    
+
     import { Experimental_StdioMCPTransport } from "ai/mcp-stdio"
 
 ## API Signature

@@ -13,8 +13,7 @@ The GoogleGenerativeAIStream function is a utility that transforms the output fr
 ## Import
 
 ### React
-    
-    
+
     import { GoogleGenerativeAIStream } from "ai"
 
 ## API Signature

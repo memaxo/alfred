@@ -1,9 +1,10 @@
 ---
 title: File types – Runtime | Bun Docs
-url: 
+url:
 description: Bun's runtime supports JavaScript/TypeScript files, JSX syntax, Wasm, JSON/TOML imports, and more.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -52,7 +53,7 @@ Project
 
 [Roadmap](https://bun.com/docs/project/roadmap) [Benchmarking](https://bun.com/docs/project/benchmarking) [Contributing](https://bun.com/docs/project/contributing) [Building Windows](https://bun.com/docs/project/building-windows) [Bindgen](https://bun.com/docs/project/bindgen) [License](https://bun.com/docs/project/licensing)
 
-## [TypeScript](https://bun.com/docs/runtime/loaders\#typescript)
+## [TypeScript](https://bun.com/docs/runtime/loaders#typescript)
 
 Bun natively supports TypeScript out of the box. All files are transpiled on the fly by Bun's fast native transpiler before being executed. Similar to other build tools, Bun does not perform typechecking; it simply removes type annotations from the file.
 
@@ -74,7 +75,7 @@ bun index.tsx
 
 Some aspects of Bun's runtime behavior are affected by the contents of your `tsconfig.json` file. Refer to [Runtime > TypeScript](https://bun.com/docs/runtime/typescript) page for details.
 
-## [JSX](https://bun.com/docs/runtime/loaders\#jsx)
+## [JSX](https://bun.com/docs/runtime/loaders#jsx)
 
 Bun supports `.jsx` and `.tsx` files out of the box. Bun's internal transpiler converts JSX syntax into vanilla JavaScript before execution.
 
@@ -103,7 +104,7 @@ bun run react.tsx
 <Component message="Hello world!" />
 ```
 
-## [Text files](https://bun.com/docs/runtime/loaders\#text-files)
+## [Text files](https://bun.com/docs/runtime/loaders#text-files)
 
 Text files can be imported as strings.
 
@@ -127,7 +128,7 @@ Hello world!
 
 ```
 
-## [JSON, TOML, and YAML](https://bun.com/docs/runtime/loaders\#json-toml-and-yaml)
+## [JSON, TOML, and YAML](https://bun.com/docs/runtime/loaders#json-toml-and-yaml)
 
 JSON, TOML, and YAML files can be directly imported from a source file. The contents will be loaded and returned as a JavaScript object.
 
@@ -140,7 +141,7 @@ import config from "./config.yaml";
 
 For more details on YAML support, see the [YAML API documentation](https://bun.com/docs/api/yaml).
 
-## [WASI](https://bun.com/docs/runtime/loaders\#wasi)
+## [WASI](https://bun.com/docs/runtime/loaders#wasi)
 
 🚧 **Experimental**
 
@@ -160,7 +161,7 @@ bun run ./my-wasm-app.whatever
 
 **Note** — WASI support is based on [wasi-js](https://github.com/sagemathinc/cowasm/tree/main/core/wasi-js). Currently, it only supports WASI binaries that use the `wasi_snapshot_preview1` or `wasi_unstable` APIs. Bun's implementation is not fully optimized for performance; this will become more of a priority as WASM grows in popularity.
 
-## [SQLite](https://bun.com/docs/runtime/loaders\#sqlite)
+## [SQLite](https://bun.com/docs/runtime/loaders#sqlite)
 
 You can import sqlite databases directly into your code. Bun will automatically load the database and return a `Database` object.
 
@@ -172,7 +173,7 @@ console.log(db.query("select * from users LIMIT 1").get());
 
 This uses [`bun:sqlite`](https://bun.com/docs/api/sqlite).
 
-## [Custom loaders](https://bun.com/docs/runtime/loaders\#custom-loaders)
+## [Custom loaders](https://bun.com/docs/runtime/loaders#custom-loaders)
 
 Support for additional file types can be implemented with plugins. Refer to [Runtime > Plugins](https://bun.com/docs/bundler/plugins) for full documentation.
 
@@ -182,7 +183,7 @@ Support for additional file types can be implemented with plugins. Refer to [Run
 \\
 TypeScript](https://bun.com/docs/runtime/typescript)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/loaders.md)
 
@@ -206,7 +207,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

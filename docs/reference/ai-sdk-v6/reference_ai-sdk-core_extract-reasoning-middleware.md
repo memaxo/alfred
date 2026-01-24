@@ -5,24 +5,22 @@ Copy markdown
 # `extractReasoningMiddleware()`
 
 `extractReasoningMiddleware` is a middleware function that extracts XML-tagged reasoning sections from generated text and exposes them separately from the main text content. This is particularly useful when you want to separate an AI model's reasoning process from its final output.
-    
-    
+
     import { extractReasoningMiddleware } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const middleware = extractReasoningMiddleware({
-    
+
       tagName: 'reasoning',
-    
+
       separator: '\n',
-    
+
     });
 
 ## Import
-    
-    
+
     import { extractReasoningMiddleware } from "ai"
 
 ## API Signature
@@ -51,11 +49,11 @@ Starts with reasoning tokens. Set to true when the response always starts with r
 
 Returns a middleware object that:
 
-  * Processes both streaming and non-streaming responses
-  * Extracts content between specified XML tags as reasoning
-  * Removes the XML tags and reasoning from the main text
-  * Adds a `reasoning` property to the result containing the extracted content
-  * Maintains proper separation between text sections using the specified separator
+- Processes both streaming and non-streaming responses
+- Extracts content between specified XML tags as reasoning
+- Removes the XML tags and reasoning from the main text
+- Adds a `reasoning` property to the result containing the extracted content
+- Maintains proper separation between text sections using the specified separator
 
 ### Type Parameters
 

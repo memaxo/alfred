@@ -1,9 +1,10 @@
 ---
 title: Browser Extension Guide | Better Auth
-url: 
+url:
 description: A step-by-step guide to creating a browser extension with Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -34,7 +35,7 @@ The Plasmo framework does not provide a backend for the browser extension.
 This guide assumes you have [a backend setup](https://www.better-auth.com/docs/integrations/hono) of Better Auth and
 are ready to create a browser extension to connect to it.
 
-## [Setup & Installations](https://www.better-auth.com/docs/guides/browser-extension-guide\#setup--installations)
+## [Setup & Installations](https://www.better-auth.com/docs/guides/browser-extension-guide#setup--installations)
 
 Initialize a new Plasmo project with TailwindCSS and a src directory.
 
@@ -54,7 +55,7 @@ To start the Plasmo development server, run the following command.
 pnpm dev
 ```
 
-## [Configure tsconfig](https://www.better-auth.com/docs/guides/browser-extension-guide\#configure-tsconfig)
+## [Configure tsconfig](https://www.better-auth.com/docs/guides/browser-extension-guide#configure-tsconfig)
 
 Configure the `tsconfig.json` file to include `strict` mode.
 
@@ -76,7 +77,7 @@ tsconfig.json
 }
 ```
 
-## [Create the client auth instance](https://www.better-auth.com/docs/guides/browser-extension-guide\#create-the-client-auth-instance)
+## [Create the client auth instance](https://www.better-auth.com/docs/guides/browser-extension-guide#create-the-client-auth-instance)
 
 Create a new file at `src/auth/auth-client.ts` and add the following code.
 
@@ -97,7 +98,7 @@ export const authClient = createAuthClient({
 });
 ```
 
-## [Configure the manifest](https://www.better-auth.com/docs/guides/browser-extension-guide\#configure-the-manifest)
+## [Configure the manifest](https://www.better-auth.com/docs/guides/browser-extension-guide#configure-the-manifest)
 
 We must ensure the extension knows the URL to the Better Auth backend.
 
@@ -116,7 +117,7 @@ package.json
 }
 ```
 
-## [You're now ready!](https://www.better-auth.com/docs/guides/browser-extension-guide\#youre-now-ready)
+## [You're now ready!](https://www.better-auth.com/docs/guides/browser-extension-guide#youre-now-ready)
 
 You have now set up Better Auth for your browser extension.
 
@@ -147,7 +148,7 @@ function IndexPopup() {
 export default IndexPopup;
 ```
 
-## [Bundle your extension](https://www.better-auth.com/docs/guides/browser-extension-guide\#bundle-your-extension)
+## [Bundle your extension](https://www.better-auth.com/docs/guides/browser-extension-guide#bundle-your-extension)
 
 To get a production build, run the following command.
 
@@ -165,7 +166,7 @@ To see your popup, click on the puzzle piece icon on the Chrome toolbar, and cli
 
 Learn more about [bundling your extension here.](https://docs.plasmo.com/framework#loading-the-extension-in-chrome)
 
-## [Configure the server auth instance](https://www.better-auth.com/docs/guides/browser-extension-guide\#configure-the-server-auth-instance)
+## [Configure the server auth instance](https://www.better-auth.com/docs/guides/browser-extension-guide#configure-the-server-auth-instance)
 
 First, we will need your extension URL.
 
@@ -207,11 +208,11 @@ export const auth = betterAuth({
 Using wildcards for extension origins ( `chrome-extension://*`) reduces security by trusting all extensions.
 It's safer to explicitly list each extension ID you trust. Only use wildcards for development and testing.
 
-## [That's it!](https://www.better-auth.com/docs/guides/browser-extension-guide\#thats-it)
+## [That's it!](https://www.better-auth.com/docs/guides/browser-extension-guide#thats-it)
 
 Everything is set up! You can now start developing your extension. 🎉
 
-## [Wrapping Up](https://www.better-auth.com/docs/guides/browser-extension-guide\#wrapping-up)
+## [Wrapping Up](https://www.better-auth.com/docs/guides/browser-extension-guide#wrapping-up)
 
 Congratulations! You've successfully created a browser extension using Better Auth and Plasmo.
 We highly recommend you visit the [Plasmo documentation](https://docs.plasmo.com/) to learn more about the framework.

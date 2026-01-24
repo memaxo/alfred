@@ -1,9 +1,10 @@
 ---
 title: User & Accounts | Better Auth
-url: 
+url:
 description: User and account management.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -32,9 +33,9 @@ The user table stores the authentication data of the user [Click here to view th
 
 The user table can be extended using [additional fields](https://www.better-auth.com/docs/concepts/database#extending-core-schema) or by plugins to store additional data.
 
-## [Update User](https://www.better-auth.com/docs/concepts/users-accounts\#update-user)
+## [Update User](https://www.better-auth.com/docs/concepts/users-accounts#update-user)
 
-### [Update User Information](https://www.better-auth.com/docs/concepts/users-accounts\#update-user-information)
+### [Update User Information](https://www.better-auth.com/docs/concepts/users-accounts#update-user-information)
 
 To update user information, you can use the `updateUser` function provided by the client. The `updateUser` function takes an object with the following properties:
 
@@ -45,7 +46,7 @@ await authClient.updateUser({
 })
 ```
 
-### [Change Email](https://www.better-auth.com/docs/concepts/users-accounts\#change-email)
+### [Change Email](https://www.better-auth.com/docs/concepts/users-accounts#change-email)
 
 To allow users to change their email, first enable the `changeEmail` feature, which is disabled by default. Set `changeEmail.enabled` to `true`:
 
@@ -91,7 +92,7 @@ After verification, the new email is updated in the user table, and a confirmati
 
 If the current email is unverified, the new email is updated without the verification step.
 
-### [Change Password](https://www.better-auth.com/docs/concepts/users-accounts\#change-password)
+### [Change Password](https://www.better-auth.com/docs/concepts/users-accounts#change-password)
 
 A user's password isn't stored in the user table. Instead, it's stored in the account table. To change the password of a user, you can use one of the following approaches:
 
@@ -109,10 +110,10 @@ const { data, error } = await authClient.changePassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password to set | `string` |
-| `currentPassword` | The current user password | `string` |
+| Prop                   | Description                                                                   | Type      |
+| ---------------------- | ----------------------------------------------------------------------------- | --------- |
+| `newPassword`          | The new password to set                                                       | `string`  |
+| `currentPassword`      | The current user password                                                     | `string`  |
 | `revokeOtherSessions?` | When set to true, all other active sessions for this user will be invalidated | `boolean` |
 
 POST
@@ -131,13 +132,13 @@ const data = await auth.api.changePassword({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `newPassword` | The new password to set | `string` |
-| `currentPassword` | The current user password | `string` |
+| Prop                   | Description                                                                   | Type      |
+| ---------------------- | ----------------------------------------------------------------------------- | --------- |
+| `newPassword`          | The new password to set                                                       | `string`  |
+| `currentPassword`      | The current user password                                                     | `string`  |
 | `revokeOtherSessions?` | When set to true, all other active sessions for this user will be invalidated | `boolean` |
 
-### [Set Password](https://www.better-auth.com/docs/concepts/users-accounts\#set-password)
+### [Set Password](https://www.better-auth.com/docs/concepts/users-accounts#set-password)
 
 If a user was registered using OAuth or other providers, they won't have a password or a credential account. In this case, you can use the `setPassword` action to set a password for the user. For security reasons, this function can only be called from the server. We recommend having users go through a 'forgot password' flow to set a password for their account.
 
@@ -148,7 +149,7 @@ await auth.api.setPassword({
 });
 ```
 
-## [Delete User](https://www.better-auth.com/docs/concepts/users-accounts\#delete-user)
+## [Delete User](https://www.better-auth.com/docs/concepts/users-accounts#delete-user)
 
 Better Auth provides a utility to hard delete a user from your database. It's disabled by default, but you can enable it easily by passing `enabled:true`
 
@@ -165,7 +166,7 @@ export const auth = betterAuth({
 
 Once enabled, you can call `authClient.deleteUser` to permanently delete user data from your database.
 
-### [Adding Verification Before Deletion](https://www.better-auth.com/docs/concepts/users-accounts\#adding-verification-before-deletion)
+### [Adding Verification Before Deletion](https://www.better-auth.com/docs/concepts/users-accounts#adding-verification-before-deletion)
 
 For added security, you’ll likely want to confirm the user’s intent before deleting their account. A common approach is to send a verification email. Better Auth provides a `sendDeleteAccountVerification` utility for this purpose.
 This is especially needed if you have OAuth setup and want them to be able to delete their account without forcing them to login again for a fresh session.
@@ -206,7 +207,7 @@ await authClient.deleteUser({
 ```
 
 - **Authentication Check**: The user must be signed in to the account they’re attempting to delete.
-If they aren’t signed in, the deletion process will fail.
+  If they aren’t signed in, the deletion process will fail.
 
 If you have sent a custom URL, you can use the `deleteUser` method with the token to delete the user.
 
@@ -218,7 +219,7 @@ await authClient.deleteUser({
 });
 ```
 
-### [Authentication Requirements](https://www.better-auth.com/docs/concepts/users-accounts\#authentication-requirements)
+### [Authentication Requirements](https://www.better-auth.com/docs/concepts/users-accounts#authentication-requirements)
 
 To delete a user, the user must meet one of the following requirements:
 
@@ -257,7 +258,7 @@ await authClient.deleteUser();
 ```
 
 4. If you have a custom delete account page and sent that url via the `sendDeleteAccountVerification` callback.
-Then you need to call the `deleteUser` method with the token to complete the deletion.
+   Then you need to call the `deleteUser` method with the token to complete the deletion.
 
 delete-user.ts
 
@@ -267,7 +268,7 @@ await authClient.deleteUser({
 });
 ```
 
-### [Callbacks](https://www.better-auth.com/docs/concepts/users-accounts\#callbacks)
+### [Callbacks](https://www.better-auth.com/docs/concepts/users-accounts#callbacks)
 
 **beforeDelete**: This callback is called before the user is deleted. You can use this callback to perform any cleanup or additional checks before deleting the user.
 
@@ -327,7 +328,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [Accounts](https://www.better-auth.com/docs/concepts/users-accounts\#accounts)
+## [Accounts](https://www.better-auth.com/docs/concepts/users-accounts#accounts)
 
 Better Auth supports multiple authentication methods. Each authentication method is called a provider. For example, email and password authentication is a provider, Google authentication is a provider, etc.
 
@@ -335,7 +336,7 @@ When a user signs in using a provider, an account is created for the user. The a
 
 The account table stores the authentication data of the user [Click here to view the schema](https://www.better-auth.com/docs/concepts/database#account)
 
-### [List User Accounts](https://www.better-auth.com/docs/concepts/users-accounts\#list-user-accounts)
+### [List User Accounts](https://www.better-auth.com/docs/concepts/users-accounts#list-user-accounts)
 
 To list user accounts you can use `client.user.listAccounts` method. Which will return all accounts associated with a user.
 
@@ -343,7 +344,7 @@ To list user accounts you can use `client.user.listAccounts` method. Which will 
 const accounts = await authClient.listAccounts();
 ```
 
-### [Token Encryption](https://www.better-auth.com/docs/concepts/users-accounts\#token-encryption)
+### [Token Encryption](https://www.better-auth.com/docs/concepts/users-accounts#token-encryption)
 
 Better Auth doesn’t encrypt tokens by default and that’s intentional. We want you to have full control over how encryption and decryption are handled, rather than baking in behavior that could be confusing or limiting. If you need to store encrypted tokens (like accessToken or refreshToken), you can use databaseHooks to encrypt them before they’re saved to your database.
 
@@ -374,7 +375,7 @@ export const auth = betterAuth({
 
 Then whenever you retrieve back the account make sure to decrypt the tokens before using them.
 
-### [Account Linking](https://www.better-auth.com/docs/concepts/users-accounts\#account-linking)
+### [Account Linking](https://www.better-auth.com/docs/concepts/users-accounts#account-linking)
 
 Account linking enables users to associate multiple authentication methods with a single account. With Better Auth, users can connect additional social sign-ons or OAuth providers to their existing accounts if the provider confirms the user's email as verified.
 
@@ -392,7 +393,7 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Forced Linking](https://www.better-auth.com/docs/concepts/users-accounts\#forced-linking)
+#### [Forced Linking](https://www.better-auth.com/docs/concepts/users-accounts#forced-linking)
 
 You can specify a list of "trusted providers." When a user logs in using a trusted provider, their account will be automatically linked even if the provider doesn’t confirm the email verification status. Use this with caution as it may increase the risk of account takeover.
 
@@ -409,20 +410,11 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Manually Linking Accounts](https://www.better-auth.com/docs/concepts/users-accounts\#manually-linking-accounts)
+#### [Manually Linking Accounts](https://www.better-auth.com/docs/concepts/users-accounts#manually-linking-accounts)
 
 Users already signed in can manually link their account to additional social providers or credential-based accounts.
 
 - **Linking Social Accounts:** Use the `linkSocial` method on the client to link a social provider to the user's account.
-
-
-
-
-
-
-
-
-
 
 ```
 await authClient.linkSocial({
@@ -431,21 +423,7 @@ await authClient.linkSocial({
 });
 ```
 
-
-
-
-
-
 You can also request specific scopes when linking a social account, which can be different from the scopes used during the initial authentication:
-
-
-
-
-
-
-
-
-
 
 ```
 await authClient.linkSocial({
@@ -455,21 +433,7 @@ await authClient.linkSocial({
 });
 ```
 
-
-
-
-
-
 You can also link accounts using ID tokens directly, without redirecting to the provider's OAuth flow:
-
-
-
-
-
-
-
-
-
 
 ```
 await authClient.linkSocial({
@@ -483,17 +447,11 @@ await authClient.linkSocial({
 });
 ```
 
-
-
-
-
-
 This is useful when you already have valid tokens from the provider, for example:
 
-
-  - After signing in with a native SDK
-  - When using a mobile app that handles authentication
-  - When implementing custom OAuth flows
+- After signing in with a native SDK
+- When using a mobile app that handles authentication
+- When implementing custom OAuth flows
 
 The ID token must be valid and the provider must support ID token verification.
 
@@ -527,15 +485,6 @@ export const auth = betterAuth({
 
 - **Linking Credential-Based Accounts:** To link a credential-based account (e.g., email and password), users can initiate a "forgot password" flow, or you can call the `setPassword` method on the server.
 
-
-
-
-
-
-
-
-
-
 ```
 await auth.api.setPassword({
       headers: /* headers containing the user's session token */,
@@ -543,10 +492,9 @@ await auth.api.setPassword({
 });
 ```
 
-
 `setPassword` can't be called from the client for security reasons.
 
-### [Account Unlinking](https://www.better-auth.com/docs/concepts/users-accounts\#account-unlinking)
+### [Account Unlinking](https://www.better-auth.com/docs/concepts/users-accounts#account-unlinking)
 
 You can unlink a user account by providing a `providerId`.
 

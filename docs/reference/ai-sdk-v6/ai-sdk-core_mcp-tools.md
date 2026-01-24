@@ -14,102 +14,99 @@ We recommend using HTTP transport (like `StreamableHTTPClientTransport`) for pro
 
 Create an MCP client using one of the following transport options:
 
-  * **HTTP transport (Recommended)** : Either configure HTTP directly via the client using `transport: { type: 'http', ... }`, or use MCP's official TypeScript SDK `StreamableHTTPClientTransport`
-  * SSE (Server-Sent Events): An alternative HTTP-based transport
-  * `stdio`: For local development only. Uses standard input/output streams for local MCP servers
+- **HTTP transport (Recommended)** : Either configure HTTP directly via the client using `transport: { type: 'http', ... }`, or use MCP's official TypeScript SDK `StreamableHTTPClientTransport`
+- SSE (Server-Sent Events): An alternative HTTP-based transport
+- `stdio`: For local development only. Uses standard input/output streams for local MCP servers
 
 ### HTTP Transport (Recommended)
 
 For production deployments, we recommend using the HTTP transport. You can configure it directly on the client:
-    
-    
+
     import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
-    
-    
-    
-    
+
+
+
+
     const mcpClient = await createMCPClient({
-    
+
       transport: {
-    
+
         type: 'http',
-    
+
         url: 'https://your-server.com/mcp',
-    
-    
-    
-    
+
+
+
+
         // optional: configure HTTP headers
-    
+
         headers: { Authorization: 'Bearer my-api-key' },
-    
-    
-    
-    
+
+
+
+
         // optional: provide an OAuth client provider for automatic authorization
-    
+
         authProvider: myOAuthClientProvider,
-    
+
       },
-    
+
     });
 
 Alternatively, you can use `StreamableHTTPClientTransport` from MCP's official TypeScript SDK:
-    
-    
+
     import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
-    
+
     import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-    
-    
-    
-    
+
+
+
+
     const url = new URL('https://your-server.com/mcp');
-    
+
     const mcpClient = await createMCPClient({
-    
+
       transport: new StreamableHTTPClientTransport(url, {
-    
+
         sessionId: 'session_123',
-    
+
       }),
-    
+
     });
 
 ### SSE Transport
 
 SSE provides an alternative HTTP-based transport option. Configure it with a `type` and `url` property. You can also provide an `authProvider` for OAuth:
-    
-    
+
     import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
-    
-    
-    
-    
+
+
+
+
     const mcpClient = await createMCPClient({
-    
+
       transport: {
-    
+
         type: 'sse',
-    
+
         url: 'https://my-server.com/sse',
-    
-    
-    
-    
+
+
+
+
         // optional: configure HTTP headers
-    
+
         headers: { Authorization: 'Bearer my-api-key' },
-    
-    
-    
-    
+
+
+
+
         // optional: provide an OAuth client provider for automatic authorization
-    
+
         authProvider: myOAuthClientProvider,
-    
+
       },
-    
+
     });
 
 ### Stdio Transport (Local Servers)
@@ -117,29 +114,28 @@ SSE provides an alternative HTTP-based transport option. Configure it with a `ty
 The stdio transport should only be used for local servers.
 
 The Stdio transport can be imported from either the MCP SDK or the AI SDK:
-    
-    
+
     import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
-    
+
     import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-    
+
     // Or use the AI SDK's stdio transport:
-    
+
     // import { Experimental_StdioMCPTransport as StdioClientTransport } from '@ai-sdk/mcp/mcp-stdio';
-    
-    
-    
-    
+
+
+
+
     const mcpClient = await createMCPClient({
-    
+
       transport: new StdioClientTransport({
-    
+
         command: 'node',
-    
+
         args: ['src/stdio/dist/server.js'],
-    
+
       }),
-    
+
     });
 
 ### Custom Transport
@@ -154,62 +150,60 @@ Authorization via OAuth is supported when using the AI SDK MCP HTTP or SSE trans
 
 After initialization, you should close the MCP client based on your usage pattern:
 
-  * For short-lived usage (e.g., single requests), close the client when the response is finished
-  * For long-running clients (e.g., command line apps), keep the client open but ensure it's closed when the application terminates
+- For short-lived usage (e.g., single requests), close the client when the response is finished
+- For long-running clients (e.g., command line apps), keep the client open but ensure it's closed when the application terminates
 
 When streaming responses, you can close the client when the LLM response has finished. For example, when using `streamText`, you should use the `onFinish` callback:
-    
-    
+
     const mcpClient = await experimental_createMCPClient({
-    
+
       // ...
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     const tools = await mcpClient.tools();
-    
-    
-    
-    
+
+
+
+
     const result = await streamText({
-    
+
       model: 'openai/gpt-4.1',
-    
+
       tools,
-    
+
       prompt: 'What is the weather in Brooklyn, New York?',
-    
+
       onFinish: async () => {
-    
+
         await mcpClient.close();
-    
+
       },
-    
+
     });
 
 When generating responses without streaming, you can use try/finally or cleanup functions in your framework:
-    
-    
+
     let mcpClient: MCPClient | undefined;
-    
-    
-    
-    
+
+
+
+
     try {
-    
+
       mcpClient = await experimental_createMCPClient({
-    
+
         // ...
-    
+
       });
-    
+
     } finally {
-    
+
       await mcpClient?.close();
-    
+
     }
 
 ## Using MCP Tools
@@ -219,8 +213,7 @@ The client's `tools` method acts as an adapter between MCP tools and AI SDK tool
 ### Schema Discovery
 
 With schema discovery, all tools offered by the server are automatically listed, and input parameter types are inferred based on the schemas provided by the server:
-    
-    
+
     const tools = await mcpClient.tools();
 
 This approach is simpler to implement and automatically stays in sync with server changes. However, you won't have TypeScript type safety during development, and all tools from the server will be loaded
@@ -228,39 +221,38 @@ This approach is simpler to implement and automatically stays in sync with serve
 ### Schema Definition
 
 For better type safety and control, you can define the tools and their input schemas explicitly in your client code:
-    
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     const tools = await mcpClient.tools({
-    
+
       schemas: {
-    
+
         'get-data': {
-    
+
           inputSchema: z.object({
-    
+
             query: z.string().describe('The data query'),
-    
+
             format: z.enum(['json', 'text']).optional(),
-    
+
           }),
-    
+
         },
-    
+
         // For tools with zero inputs, you should use an empty object:
-    
+
         'tool-with-no-args': {
-    
+
           inputSchema: z.object({}),
-    
+
         },
-    
+
       },
-    
+
     });
 
 This approach provides full TypeScript type safety and IDE autocompletion, letting you catch parameter mismatches during development. When you define `schemas`, the client only pulls the explicitly defined tools, keeping your application focused on the tools it needs
@@ -274,26 +266,23 @@ The MCP client provides three methods for working with resources:
 ### Listing Resources
 
 List all available resources from the MCP server:
-    
-    
+
     const resources = await mcpClient.listResources();
 
 ### Reading Resource Contents
 
 Read the contents of a specific resource by its URI:
-    
-    
+
     const resourceData = await mcpClient.readResource({
-    
+
       uri: 'file:///example/document.txt',
-    
+
     });
 
 ### Listing Resource Templates
 
 Resource templates are dynamic URI patterns that allow flexible queries. List all available templates:
-    
-    
+
     const templates = await mcpClient.listResourceTemplates();
 
 ## Using MCP Prompts
@@ -301,21 +290,19 @@ Resource templates are dynamic URI patterns that allow flexible queries. List al
 According to the MCP specification, prompts are user-controlled templates that servers expose for clients to list and retrieve with optional arguments.
 
 ### Listing Prompts
-    
-    
+
     const prompts = await mcpClient.listPrompts();
 
 ### Getting a Prompt
 
 Retrieve prompt messages, optionally passing arguments defined by the server:
-    
-    
+
     const prompt = await mcpClient.getPrompt({
-    
+
       name: 'code_review',
-    
+
       arguments: { code: 'function add(a, b) { return a + b; }' },
-    
+
     });
 
 ## Examples

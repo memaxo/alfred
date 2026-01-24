@@ -11,15 +11,15 @@ If the user is discussing "Cybersecurity", ALFRED should adopt a rigorous, secur
 ## Progress
 
 - [x] **Context Analysis Logic**
-    - [x] Create `packages/agent/src/assistant/src/adapter.ts`.
-    - [x] Implement `analyzeContext(messages, retrieval)` to extract dominant topics (uses `linkEntities`).
-    - [x] Define `Persona` templates for each domain (Coding, Security, AI, Politics, News).
+  - [x] Create `packages/agent/src/assistant/src/adapter.ts`.
+  - [x] Implement `analyzeContext(messages, retrieval)` to extract dominant topics (uses `linkEntities`).
+  - [x] Define `Persona` templates for each domain (Coding, Security, AI, Politics, News).
 - [x] **Router Integration**
-    - [x] Update `packages/api/src/routers/assistant.ts` (lines 118-123).
-    - [x] Inject the adapted system prompt *before* generating the response.
+  - [x] Update `packages/api/src/routers/assistant.ts` (lines 118-123).
+  - [x] Inject the adapted system prompt _before_ generating the response.
 - [ ] **Testing**
-    - [ ] Create `packages/api/test/assistant.adapter.test.ts`.
-    - [ ] Verify that a coding-heavy context triggers the Coding persona.
+  - [ ] Create `packages/api/test/assistant.adapter.test.ts`.
+  - [ ] Verify that a coding-heavy context triggers the Coding persona.
 
 ## Surprises & Discoveries
 
@@ -44,27 +44,34 @@ If the user is discussing "Cybersecurity", ALFRED should adopt a rigorous, secur
 
 ## Context and Orientation
 
--   **Extractor**: We already have `extract()` which returns topics.
--   **Classifier**: We have `VectorClassifier` for semantic matching.
--   **Router**: `assistantRouter` handles chat generation.
+- **Extractor**: We already have `extract()` which returns topics.
+- **Classifier**: We have `VectorClassifier` for semantic matching.
+- **Router**: `assistantRouter` handles chat generation.
 
 ## Plan of Work
 
 ### 1. Define Personas
+
 In `adapter.ts`:
+
 ```typescript
 const PERSONAS = {
-  coding: "You are a Senior Software Engineer. Prefer terse, efficient code. Use TypeScript/Bun patterns.",
-  cybersecurity: "You are a Security Researcher. Prioritize safety. Validate all inputs. Assume adversarial context.",
+  coding:
+    "You are a Senior Software Engineer. Prefer terse, efficient code. Use TypeScript/Bun patterns.",
+  cybersecurity:
+    "You are a Security Researcher. Prioritize safety. Validate all inputs. Assume adversarial context.",
   // ...
-}
+};
 ```
 
 ### 2. Implement Analyzer
+
 Using `detectDomains` and `classifier`, scan the last 3 user messages + retrieved RAG chunks to find the "weighted dominant topic".
 
 ### 3. Integrate
+
 In `assistant.generate`:
+
 ```typescript
 const topics = await analyzeContext(messages);
 const persona = getPersona(topics);

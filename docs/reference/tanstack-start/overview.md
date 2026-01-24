@@ -8,21 +8,21 @@ Dependencies
 
 TanStack Start is built on two key technologies:
 
- * **TanStack Router** : A type-safe router for building web applications with advanced features like nested routing, search params, and data loading
- * **Vite** : A modern build tool that provides fast development with hot module replacement and optimized production builds
+- **TanStack Router** : A type-safe router for building web applications with advanced features like nested routing, search params, and data loading
+- **Vite** : A modern build tool that provides fast development with hot module replacement and optimized production builds
 
 Should I use TanStack Start or just TanStack Router?
 
 90% of any framework usually comes down to the router, and TanStack Start is no different. **TanStack Start relies 100% on TanStack Router for its routing system.** In addition to TanStack Router's amazing features, Start enables even more powerful features:
 
- * **Full-document SSR** \- Server-side rendering for better performance and SEO
- * **Streaming** \- Progressive page loading for improved user experience
- * **Server Routes & API Routes** \- Build backend endpoints alongside your frontend
- * **Server Functions** \- Type-safe RPCs between client and server
- * **Middleware & Context** \- Powerful request/response handling and data injection
- * **Full-Stack Bundling** \- Optimized builds for both client and server code
- * **Universal Deployment** \- Deploy to any Vite-compatible hosting provider
- * **End-to-End Type Safety** \- Full TypeScript support across the entire stack
+- **Full-document SSR** \- Server-side rendering for better performance and SEO
+- **Streaming** \- Progressive page loading for improved user experience
+- **Server Routes & API Routes** \- Build backend endpoints alongside your frontend
+- **Server Functions** \- Type-safe RPCs between client and server
+- **Middleware & Context** \- Powerful request/response handling and data injection
+- **Full-Stack Bundling** \- Optimized builds for both client and server code
+- **Universal Deployment** \- Deploy to any Vite-compatible hosting provider
+- **End-to-End Type Safety** \- Full TypeScript support across the entire stack
 
 That said, if you **know with certainty** that you will not need any of the above features, then you may want to consider using TanStack Router alone, which is still a powerful and type-safe SPA routing upgrade over other routers and frameworks.
 

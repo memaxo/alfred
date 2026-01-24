@@ -99,4 +99,3 @@ Context building queries learned knowledge. Before generating responses or plann
 - [Cognitive State Machine](cognitive-state-machine.md) — How reflection produces learning inputs
 - [Knowledge Hypergraph](knowledge-hypergraph.md) — Where learning outputs are stored
 - [Integration Patterns](integration-patterns.md) — How learning composes with other systems
-

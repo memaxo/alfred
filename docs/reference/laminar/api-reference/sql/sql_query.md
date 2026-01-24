@@ -1,8 +1,9 @@
 ---
 title: SQL Query - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/api-reference/sql/sql_query#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -115,11 +116,11 @@ Copy
 }
 ```
 
-## [​](https://docs.lmnr.ai/api-reference/sql/sql_query\#sql-query)  SQL Query
+## [​](https://docs.lmnr.ai/api-reference/sql/sql_query#sql-query) SQL Query
 
 You can run SQL queries on your data stored in Laminar using the SQL query API. Learn more in the [SQL Editor](https://docs.lmnr.ai/sql-editor/introduction) reference.
 
-### [​](https://docs.lmnr.ai/api-reference/sql/sql_query\#example-request)  Example request
+### [​](https://docs.lmnr.ai/api-reference/sql/sql_query#example-request) Example request
 
 Copy
 

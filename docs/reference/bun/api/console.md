@@ -1,9 +1,10 @@
 ---
 title: Console – API | Bun Docs
-url: 
+url:
 description: Bun implements a Node.js-compatible `console` object with colorized output and deep pretty-printing.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 **Note** — Bun provides a browser- and Node.js-compatible [console](https://developer.mozilla.org/en-US/docs/Web/API/console) global. This page only documents Bun-native APIs.
 
-## [Object inspection depth](https://bun.com/docs/api/console\#object-inspection-depth)
+## [Object inspection depth](https://bun.com/docs/api/console#object-inspection-depth)
 
 Bun allows you to configure how deeply nested objects are displayed in `console.log()` output:
 
@@ -72,7 +73,7 @@ console.log(nested);
 
 The CLI flag takes precedence over the configuration file setting.
 
-## [Reading from stdin](https://bun.com/docs/api/console\#reading-from-stdin)
+## [Reading from stdin](https://bun.com/docs/api/console#reading-from-stdin)
 
 In Bun, the `console` object can be used as an `AsyncIterable` to sequentially read lines from `process.stdin`.
 
@@ -140,7 +141,7 @@ Hashing](https://bun.com/docs/api/hashing) [Next\\
 \\
 Cookie](https://bun.com/docs/api/cookie)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/console.md)
 
@@ -164,7 +165,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

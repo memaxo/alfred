@@ -1,9 +1,10 @@
 ---
 title: Create a Database Adapter | Better Auth
-url: 
+url:
 description: Learn how to create a custom database adapter for Better-Auth
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -34,9 +35,9 @@ Our hope is to allow you to focus on writing database logic, and not have to wor
 Anything from custom schema configurations, custom ID generation, safe JSON parsing, and more is handled by the `createAdapter` function.
 All you need to do is provide the database logic, and the `createAdapter` function will handle the rest.
 
-## [Quick Start](https://www.better-auth.com/docs/guides/create-a-db-adapter\#quick-start)
+## [Quick Start](https://www.better-auth.com/docs/guides/create-a-db-adapter#quick-start)
 
-### [Get things ready](https://www.better-auth.com/docs/guides/create-a-db-adapter\#get-things-ready)
+### [Get things ready](https://www.better-auth.com/docs/guides/create-a-db-adapter#get-things-ready)
 
 1. Import `createAdapter`.
 2. Create `CustomAdapterConfig` interface that represents your adapter config options.
@@ -63,7 +64,7 @@ export const myAdapter = (config: CustomAdapterConfig = {}) =>
   });
 ```
 
-### [Configure the adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter\#configure-the-adapter)
+### [Configure the adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter#configure-the-adapter)
 
 The `config` object is mostly used to provide information about the adapter to Better-Auth.
 We try to minimize the amount of code you need to write in your adapter functions, and these `config` options are used to help us do that.
@@ -86,7 +87,7 @@ export const myAdapter = (config: CustomAdapterConfig = {}) =>
   });
 ```
 
-### [Create the adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter\#create-the-adapter)
+### [Create the adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter#create-the-adapter)
 
 The `adapter` function is where you write the code that interacts with your database.
 
@@ -119,7 +120,7 @@ export const myAdapter = (config: CustomAdapterConfig = {}) =>
 
 Learn more about the `adapter` here [here](https://www.better-auth.com/docs/concepts/database#adapters).
 
-## [Adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter\#adapter)
+## [Adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter#adapter)
 
 The `adapter` function is where you write the code that interacts with your database.
 
@@ -152,14 +153,14 @@ adapter: ({
 };
 ```
 
-### [Adapter Methods](https://www.better-auth.com/docs/guides/create-a-db-adapter\#adapter-methods)
+### [Adapter Methods](https://www.better-auth.com/docs/guides/create-a-db-adapter#adapter-methods)
 
 - All `model` values are already transformed into the correct model name for the database based on the end-user's schema configuration.
   - This also means that if you need access to the `schema` version of a given model, you can't use this exact `model` value, you'll need to use the `getDefaultModelName` function provided in the options to convert the `model` to the `schema` version.
 - We will automatically fill in any missing fields you return based on the user's `schema` configuration.
 - Any method that includes a `select` parameter, is only for the purpose of getting data from your database more efficiently. You do not need to worry about only returning what the `select` parameter states, as we will handle that for you.
 
-### [`create` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#create-method)
+### [`create` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#create-method)
 
 The `create` method is used to create a new record in the database.
 
@@ -187,7 +188,7 @@ create: async ({ model, data, select }) => {
 };
 ```
 
-### [`update` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#update-method)
+### [`update` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#update-method)
 
 The `update` method is used to update a record in the database.
 
@@ -209,7 +210,7 @@ update: async ({ model, where, update }) => {
 };
 ```
 
-### [`updateMany` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#updatemany-method)
+### [`updateMany` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#updatemany-method)
 
 The `updateMany` method is used to update multiple records in the database.
 
@@ -230,7 +231,7 @@ updateMany: async ({ model, where, update }) => {
 };
 ```
 
-### [`delete` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#delete-method)
+### [`delete` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#delete-method)
 
 The `delete` method is used to delete a record from the database.
 
@@ -248,7 +249,7 @@ delete: async ({ model, where }) => {
 }
 ```
 
-### [`deleteMany` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#deletemany-method)
+### [`deleteMany` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#deletemany-method)
 
 The `deleteMany` method is used to delete multiple records from the database.
 
@@ -268,7 +269,7 @@ deleteMany: async ({ model, where }) => {
 };
 ```
 
-### [`findOne` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#findone-method)
+### [`findOne` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#findone-method)
 
 The `findOne` method is used to find a single record in the database.
 
@@ -289,7 +290,7 @@ findOne: async ({ model, where, select }) => {
 };
 ```
 
-### [`findMany` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#findmany-method)
+### [`findMany` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#findmany-method)
 
 The `findMany` method is used to find multiple records in the database.
 
@@ -318,7 +319,7 @@ findMany: async ({ model, where, limit, sortBy, offset }) => {
 };
 ```
 
-### [`count` method](https://www.better-auth.com/docs/guides/create-a-db-adapter\#count-method)
+### [`count` method](https://www.better-auth.com/docs/guides/create-a-db-adapter#count-method)
 
 The `count` method is used to count the number of records in the database.
 
@@ -338,7 +339,7 @@ count: async ({ model, where }) => {
 };
 ```
 
-### [`options` (optional)](https://www.better-auth.com/docs/guides/create-a-db-adapter\#options-optional)
+### [`options` (optional)](https://www.better-auth.com/docs/guides/create-a-db-adapter#options-optional)
 
 The `options` object is for any potential config that you got from your custom adapter options.
 
@@ -358,7 +359,7 @@ const myAdapter = (config: CustomAdapterConfig) =>
   });
 ```
 
-### [`createSchema` (optional)](https://www.better-auth.com/docs/guides/create-a-db-adapter\#createschema-optional)
+### [`createSchema` (optional)](https://www.better-auth.com/docs/guides/create-a-db-adapter#createschema-optional)
 
 The `createSchema` method allows the [Better Auth CLI](https://www.better-auth.com/docs/concepts/cli) to [generate](https://www.better-auth.com/docs/concepts/cli#generate) a schema for the database.
 
@@ -375,7 +376,7 @@ createSchema: async ({ file, tables }) => {
 };
 ```
 
-## [Test your adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter\#test-your-adapter)
+## [Test your adapter](https://www.better-auth.com/docs/guides/create-a-db-adapter#test-your-adapter)
 
 We've provided a test suite that you can use to test your adapter. It requires you to use `vitest`.
 
@@ -405,7 +406,7 @@ describe("My Adapter Tests", async () => {
 });
 ```
 
-### [Numeric ID tests](https://www.better-auth.com/docs/guides/create-a-db-adapter\#numeric-id-tests)
+### [Numeric ID tests](https://www.better-auth.com/docs/guides/create-a-db-adapter#numeric-id-tests)
 
 If your database supports numeric IDs, then you should run this test as well:
 
@@ -435,41 +436,41 @@ describe("My Adapter Numeric ID Tests", async () => {
 });
 ```
 
-## [Config](https://www.better-auth.com/docs/guides/create-a-db-adapter\#config)
+## [Config](https://www.better-auth.com/docs/guides/create-a-db-adapter#config)
 
 The `config` object is used to provide information about the adapter to Better-Auth.
 
 We **highly recommend** going through and reading each provided option below, as it will help you understand how to properly configure your adapter.
 
-### [Required Config](https://www.better-auth.com/docs/guides/create-a-db-adapter\#required-config)
+### [Required Config](https://www.better-auth.com/docs/guides/create-a-db-adapter#required-config)
 
-### [`adapterId`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#adapterid)
+### [`adapterId`](https://www.better-auth.com/docs/guides/create-a-db-adapter#adapterid)
 
 A unique identifier for the adapter.
 
-### [`adapterName`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#adaptername)
+### [`adapterName`](https://www.better-auth.com/docs/guides/create-a-db-adapter#adaptername)
 
 The name of the adapter.
 
-### [Optional Config](https://www.better-auth.com/docs/guides/create-a-db-adapter\#optional-config)
+### [Optional Config](https://www.better-auth.com/docs/guides/create-a-db-adapter#optional-config)
 
-### [`supportsNumericIds`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#supportsnumericids)
+### [`supportsNumericIds`](https://www.better-auth.com/docs/guides/create-a-db-adapter#supportsnumericids)
 
 Whether the database supports numeric IDs. If this is set to `false` and the user's config has enabled `useNumberId`, then we will throw an error.
 
-### [`supportsJSON`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#supportsjson)
+### [`supportsJSON`](https://www.better-auth.com/docs/guides/create-a-db-adapter#supportsjson)
 
 Whether the database supports JSON. If the database doesn't support JSON, we will use a `string` to save the JSON data.And when we retrieve the data, we will safely parse the `string` back into a JSON object.
 
-### [`supportsDates`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#supportsdates)
+### [`supportsDates`](https://www.better-auth.com/docs/guides/create-a-db-adapter#supportsdates)
 
 Whether the database supports dates. If the database doesn't support dates, we will use a `string` to save the date. (ISO string) When we retrieve the data, we will safely parse the `string` back into a `Date` object.
 
-### [`supportsBooleans`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#supportsbooleans)
+### [`supportsBooleans`](https://www.better-auth.com/docs/guides/create-a-db-adapter#supportsbooleans)
 
 Whether the database supports booleans. If the database doesn't support booleans, we will use a `0` or `1` to save the boolean value. When we retrieve the data, we will safely parse the `0` or `1` back into a boolean value.
 
-### [`usePlural`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#useplural)
+### [`usePlural`](https://www.better-auth.com/docs/guides/create-a-db-adapter#useplural)
 
 Whether the table names in the schema are plural. This is often defined by the user, and passed down through your custom adapter options. If you do not intend to allow the user to customize the table names, you can ignore this option, or set this to `false`.
 
@@ -483,7 +484,7 @@ const adapter = myAdapter({
 });
 ```
 
-### [`transaction`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#transaction)
+### [`transaction`](https://www.better-auth.com/docs/guides/create-a-db-adapter#transaction)
 
 Whether the adapter supports transactions. If `false`, operations run sequentially; otherwise provide a function that executes a callback with a `TransactionAdapter`.
 
@@ -491,7 +492,7 @@ If your database does not support transactions, the error handling and rollback
 will not be as robust. We recommend using a database that supports transactions
 for better data integrity.
 
-### [`debugLogs`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#debuglogs)
+### [`debugLogs`](https://www.better-auth.com/docs/guides/create-a-db-adapter#debuglogs)
 
 Used to enable debug logs for the adapter. You can pass in a boolean, or an object with the following keys: `create`, `update`, `updateMany`, `findOne`, `findMany`, `delete`, `deleteMany`, `count`.
 If any of the keys are `true`, the debug logs will be enabled for that method.
@@ -517,15 +518,15 @@ const adapter = myAdapter({
 });
 ```
 
-### [`disableIdGeneration`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#disableidgeneration)
+### [`disableIdGeneration`](https://www.better-auth.com/docs/guides/create-a-db-adapter#disableidgeneration)
 
 Whether to disable ID generation. If this is set to `true`, then the user's `generateId` option will be ignored.
 
-### [`customIdGenerator`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#customidgenerator)
+### [`customIdGenerator`](https://www.better-auth.com/docs/guides/create-a-db-adapter#customidgenerator)
 
 If your database only supports a specific custom ID generation, then you can use this option to generate your own IDs.
 
-### [`mapKeysTransformInput`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#mapkeystransforminput)
+### [`mapKeysTransformInput`](https://www.better-auth.com/docs/guides/create-a-db-adapter#mapkeystransforminput)
 
 If your database uses a different key name for a given situation, you can use this option to map the keys. This is useful for databases that expect a different key name for a given situation.
 For example, MongoDB uses `_id` while in Better-Auth we use `id`.
@@ -545,7 +546,7 @@ mapKeysTransformInput: () => {
 },
 ```
 
-### [`mapKeysTransformOutput`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#mapkeystransformoutput)
+### [`mapKeysTransformOutput`](https://www.better-auth.com/docs/guides/create-a-db-adapter#mapkeystransformoutput)
 
 If your database uses a different key name for a given situation, you can use this option to map the keys. This is useful for databases that use a different key name for a given situation.
 For example, MongoDB uses `_id` while in Better-Auth we use `id`.
@@ -565,7 +566,7 @@ mapKeysTransformOutput: () => {
 },
 ```
 
-### [`customTransformInput`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#customtransforminput)
+### [`customTransformInput`](https://www.better-auth.com/docs/guides/create-a-db-adapter#customtransforminput)
 
 If you need to transform the input data before it is saved to the database, you can use this option to transform the data.
 
@@ -597,7 +598,7 @@ customTransformInput: ({ field, data }) => {
 };
 ```
 
-### [`customTransformOutput`](https://www.better-auth.com/docs/guides/create-a-db-adapter\#customtransformoutput)
+### [`customTransformOutput`](https://www.better-auth.com/docs/guides/create-a-db-adapter#customtransformoutput)
 
 If you need to transform the output data before it is returned to the user, you can use this option to transform the data. The `customTransformOutput` function is used to transform the output data.
 Similar to the `customTransformInput` function, it runs at every key in the data object of a given action, but it runs after the data is retrieved from the database.

@@ -7,20 +7,19 @@ Copy markdown
 Large language models (LLMs) typically provide settings to augment their output.
 
 All AI SDK functions support the following common settings in addition to the model, the prompt, and additional provider-specific settings:
-    
-    
+
     const result = await generateText({
-    
+
       model: 'openai/gpt-4.1',
-    
+
       maxOutputTokens: 512,
-    
+
       temperature: 0.3,
-    
+
       maxRetries: 5,
-    
+
       prompt: 'Invent a new holiday and describe its traditions.',
-    
+
     });
 
 Some providers do not support all common settings. If you use a setting with a provider that does not support it, a warning will be generated. You can check the `warnings` property in the result object to see if any warnings were generated.
@@ -86,16 +85,15 @@ An optional abort signal that can be used to cancel the call.
 The abort signal can e.g. be forwarded from a user interface to cancel the call, or to define a timeout.
 
 #### Example: Timeout
-    
-    
+
     const result = await generateText({
-    
+
       model: openai('gpt-4o'),
-    
+
       prompt: 'Invent a new holiday and describe its traditions.',
-    
+
       abortSignal: AbortSignal.timeout(5000), // 5 seconds
-    
+
     });
 
 ### `headers`
@@ -103,27 +101,26 @@ The abort signal can e.g. be forwarded from a user interface to cancel the call,
 Additional HTTP headers to be sent with the request. Only applicable for HTTP-based providers.
 
 You can use the request headers to provide additional information to the provider, depending on what the provider supports. For example, some observability providers support headers such as `Prompt-Id`.
-    
-    
+
     import { generateText } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
-    
-    
-    
+
+
+
+
     const result = await generateText({
-    
+
       model: openai('gpt-4o'),
-    
+
       prompt: 'Invent a new holiday and describe its traditions.',
-    
+
       headers: {
-    
+
         'Prompt-Id': 'my-prompt-id',
-    
+
       },
-    
+
     });
 
 The `headers` setting is for request-specific headers. You can also set `headers` in the provider configuration. These headers will be sent with every request made by the provider.

@@ -1,9 +1,10 @@
 ---
 title: SQL – API | Bun Docs
-url: 
+url:
 description: Bun provides fast, native bindings for interacting with PostgreSQL databases.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -82,25 +83,25 @@ const sqliteResults = await sqlite`
 
 #### Features
 
-|     |     |
-| --- | --- |
-|  | Tagged template literals to protect against SQL injection |
-|  | Transactions |
-|  | Named & positional parameters |
-|  | Connection pooling |
-|  | `BigInt` support |
-|  | SASL Auth support (SCRAM-SHA-256), MD5, and Clear Text |
-|  | Connection timeouts |
-|  | Returning rows as data objects, arrays of arrays, or `Buffer` |
-|  | Binary protocol support makes it faster |
-|  | TLS support (and auth mode) |
-|  | Automatic configuration with environment variable |
+|     |                                                               |
+| --- | ------------------------------------------------------------- |
+|     | Tagged template literals to protect against SQL injection     |
+|     | Transactions                                                  |
+|     | Named & positional parameters                                 |
+|     | Connection pooling                                            |
+|     | `BigInt` support                                              |
+|     | SASL Auth support (SCRAM-SHA-256), MD5, and Clear Text        |
+|     | Connection timeouts                                           |
+|     | Returning rows as data objects, arrays of arrays, or `Buffer` |
+|     | Binary protocol support makes it faster                       |
+|     | TLS support (and auth mode)                                   |
+|     | Automatic configuration with environment variable             |
 
-## [Database Support](https://bun.com/docs/api/sql\#database-support)
+## [Database Support](https://bun.com/docs/api/sql#database-support)
 
 Bun.SQL provides a unified API for multiple database systems:
 
-### [PostgreSQL](https://bun.com/docs/api/sql\#postgresql)
+### [PostgreSQL](https://bun.com/docs/api/sql#postgresql)
 
 PostgreSQL is used when:
 
@@ -119,7 +120,7 @@ await pg`SELECT ...`;
 
 ```
 
-### [MySQL](https://bun.com/docs/api/sql\#mysql)
+### [MySQL](https://bun.com/docs/api/sql#mysql)
 
 MySQL support is built into Bun.SQL, providing the same tagged template literal interface with full compatibility for MySQL 5.7+ and MySQL 8.0+:
 
@@ -185,12 +186,12 @@ MySQL databases support:
 - **Prepared statements**: Automatically created for parameterized queries with statement caching
 - **Binary protocol**: For better performance with prepared statements and accurate type handling
 - **Multiple result sets**: Support for stored procedures returning multiple result sets
-- **Authentication plugins**: Support for mysql\_native\_password, caching\_sha2\_password (MySQL 8.0 default), and sha256\_password
+- **Authentication plugins**: Support for mysql_native_password, caching_sha2_password (MySQL 8.0 default), and sha256_password
 - **SSL/TLS connections**: Configurable SSL modes similar to PostgreSQL
 - **Connection attributes**: Client information sent to server for monitoring
 - **Query pipelining**: Execute multiple prepared statements without waiting for responses
 
-### [SQLite](https://bun.com/docs/api/sql\#sqlite)
+### [SQLite](https://bun.com/docs/api/sql#sqlite)
 
 SQLite support is built into Bun.SQL, providing the same tagged template literal interface:
 
@@ -274,7 +275,7 @@ Query parameters in the URL are parsed to set these options:
 - `?mode=rw` → `readonly: false, create: false`
 - `?mode=rwc` → `readonly: false, create: true` (default)
 
-### [Inserting data](https://bun.com/docs/api/sql\#inserting-data)
+### [Inserting data](https://bun.com/docs/api/sql#inserting-data)
 
 You can pass JavaScript values directly to the SQL template literal and escaping will be handled for you.
 
@@ -302,7 +303,7 @@ const [newUser] = await sql`
 
 ```
 
-### [Bulk Insert](https://bun.com/docs/api/sql\#bulk-insert)
+### [Bulk Insert](https://bun.com/docs/api/sql#bulk-insert)
 
 You can also pass arrays of objects to the SQL template literal and it will be expanded to a `INSERT INTO ... VALUES ...` statement.
 
@@ -317,7 +318,7 @@ await sql`INSERT INTO users ${sql(users)}`;
 
 ```
 
-### [Picking columns to insert](https://bun.com/docs/api/sql\#picking-columns-to-insert)
+### [Picking columns to insert](https://bun.com/docs/api/sql#picking-columns-to-insert)
 
 You can use `sql(object, ...string)` to pick which columns to insert. Each of the columns must be defined on the object.
 
@@ -333,13 +334,13 @@ await sql`INSERT INTO users ${sql(user, "name", "email")}`;
 
 ```
 
-## [Query Results](https://bun.com/docs/api/sql\#query-results)
+## [Query Results](https://bun.com/docs/api/sql#query-results)
 
 By default, Bun's SQL client returns query results as arrays of objects, where each object represents a row with column names as keys. However, there are cases where you might want the data in a different format. The client provides two additional methods for this purpose.
 
-### [```sql``.values()``` format](https://bun.com/docs/api/sql\#sql-values-format)
+### [`sql``.values()` format](https://bun.com/docs/api/sql#sql-values-format)
 
-The ```sql``.values()``` method returns rows as arrays of values rather than objects. Each row becomes an array where the values are in the same order as the columns in your query.
+The `sql``.values()` method returns rows as arrays of values rather than objects. Each row becomes an array where the values are in the same order as the columns in your query.
 
 ```
 const rows = await sql`SELECT * FROM users`.values();
@@ -357,9 +358,9 @@ This returns something like:
 
 ```
 
-```sql``.values()``` is especially useful if duplicate column names are returned in the query results. When using objects (the default), the last column name is used as the key in the object, which means duplicate column names overwrite each other — but when using ```sql``.values()```, each column is present in the array so you can access the values of duplicate columns by index.
+`sql``.values()` is especially useful if duplicate column names are returned in the query results. When using objects (the default), the last column name is used as the key in the object, which means duplicate column names overwrite each other — but when using `sql``.values()`, each column is present in the array so you can access the values of duplicate columns by index.
 
-### [```sql``.raw()``` format](https://bun.com/docs/api/sql\#sql-raw-format)
+### [`sql``.raw()` format](https://bun.com/docs/api/sql#sql-raw-format)
 
 The `.raw()` method returns rows as arrays of `Buffer` objects. This can be useful for working with binary data or for performance reasons.
 
@@ -369,11 +370,11 @@ console.log(rows); // [[Buffer, Buffer], [Buffer, Buffer], [Buffer, Buffer]]
 
 ```
 
-## [SQL Fragments](https://bun.com/docs/api/sql\#sql-fragments)
+## [SQL Fragments](https://bun.com/docs/api/sql#sql-fragments)
 
 A common need in database applications is the ability to construct queries dynamically based on runtime conditions. Bun provides safe ways to do this without risking SQL injection.
 
-### [Dynamic Table Names](https://bun.com/docs/api/sql\#dynamic-table-names)
+### [Dynamic Table Names](https://bun.com/docs/api/sql#dynamic-table-names)
 
 When you need to reference tables or schemas dynamically, use the `sql()` helper to ensure proper escaping:
 
@@ -386,7 +387,7 @@ await sql`SELECT * FROM ${sql("public.users")}`;
 
 ```
 
-### [Conditional Queries](https://bun.com/docs/api/sql\#conditional-queries)
+### [Conditional Queries](https://bun.com/docs/api/sql#conditional-queries)
 
 You can use the `sql()` helper to build queries with conditional clauses. This allows you to create flexible queries that adapt to your application's needs:
 
@@ -403,7 +404,7 @@ ${filterAge ? ageFilter : sql``}
 
 ```
 
-### [Dynamic columns in updates](https://bun.com/docs/api/sql\#dynamic-columns-in-updates)
+### [Dynamic columns in updates](https://bun.com/docs/api/sql#dynamic-columns-in-updates)
 
 You can use `sql(object, ...string)` to pick which columns to update. Each of the columns must be defined on the object. If the columns are not informed all keys will be used to update the row.
 
@@ -414,7 +415,7 @@ await sql`UPDATE users SET ${sql(user)} WHERE id = ${user.id}`;
 
 ```
 
-### [Dynamic values and `where in`](https://bun.com/docs/api/sql\#dynamic-values-and-where-in)
+### [Dynamic values and `where in`](https://bun.com/docs/api/sql#dynamic-values-and-where-in)
 
 Value lists can also be created dynamically, making where in queries simple too. Optionally you can pass a array of objects and inform what key to use to create the list.
 
@@ -430,11 +431,11 @@ await sql`SELECT * FROM users WHERE id IN ${sql(users, "id")}`;
 
 ```
 
-## [```sql``.simple()```](https://bun.com/docs/api/sql\#sql-simple)
+## [`sql``.simple()`](https://bun.com/docs/api/sql#sql-simple)
 
 The PostgreSQL wire protocol supports two types of queries: "simple" and "extended". Simple queries can contain multiple statements but don't support parameters, while extended queries (the default) support parameters but only allow one statement.
 
-To run multiple statements in a single query, use ```sql``.simple()```:
+To run multiple statements in a single query, use `sql``.simple()`:
 
 ```
 // Multiple statements in one query
@@ -449,7 +450,7 @@ Simple queries are often useful for database migrations and setup scripts.
 
 Note that simple queries cannot use parameters ( `${value}`). If you need parameters, you must split your query into separate statements.
 
-### [Queries in files](https://bun.com/docs/api/sql\#queries-in-files)
+### [Queries in files](https://bun.com/docs/api/sql#queries-in-files)
 
 You can use the `sql.file` method to read a query from a file and execute it, if the file includes $1, $2, etc you can pass parameters to the query. If no parameters are used it can execute multiple commands per file.
 
@@ -458,7 +459,7 @@ const result = await sql.file("query.sql", [1, 2, 3]);
 
 ```
 
-### [Unsafe Queries](https://bun.com/docs/api/sql\#unsafe-queries)
+### [Unsafe Queries](https://bun.com/docs/api/sql#unsafe-queries)
 
 You can use the `sql.unsafe` function to execute raw SQL strings. Use this with caution, as it will not escape user input. Executing more than one command per query is allowed if no parameters are used.
 
@@ -481,7 +482,7 @@ const result = await sql.unsafe(
 
 [![](https://imgs.xkcd.com/comics/exploits_of_a_mom.png)](https://xkcd.com/327/)
 
-### [Execute and Cancelling Queries](https://bun.com/docs/api/sql\#execute-and-cancelling-queries)
+### [Execute and Cancelling Queries](https://bun.com/docs/api/sql#execute-and-cancelling-queries)
 
 Bun's SQL is lazy, which means it will only start executing when awaited or executed with `.execute()`.You can cancel a query that is currently executing by calling the `cancel()` method on the query object.
 
@@ -492,11 +493,11 @@ await query;
 
 ```
 
-## [Database Environment Variables](https://bun.com/docs/api/sql\#database-environment-variables)
+## [Database Environment Variables](https://bun.com/docs/api/sql#database-environment-variables)
 
 `sql` connection parameters can be configured using environment variables. The client checks these variables in a specific order of precedence and automatically detects the database type based on the connection string format.
 
-### [Automatic Database Detection](https://bun.com/docs/api/sql\#automatic-database-detection)
+### [Automatic Database Detection](https://bun.com/docs/api/sql#automatic-database-detection)
 
 When using `Bun.sql()` without arguments or `new SQL()` with a connection string, the adapter is automatically detected based on the URL format:
 
@@ -555,7 +556,7 @@ DATABASE_URL="localhost:5432/mydb" bun run app.js
 
 ```
 
-### [MySQL Environment Variables](https://bun.com/docs/api/sql\#mysql-environment-variables)
+### [MySQL Environment Variables](https://bun.com/docs/api/sql#mysql-environment-variables)
 
 MySQL connections can be configured via environment variables:
 
@@ -571,40 +572,40 @@ DATABASE_URL="mysql2://user:pass@localhost:3306/mydb"
 
 If no connection URL is provided, MySQL checks these individual parameters:
 
-| Environment Variable | Default Value | Description |
-| --- | --- | --- |
-| `MYSQL_HOST` | `localhost` | Database host |
-| `MYSQL_PORT` | `3306` | Database port |
-| `MYSQL_USER` | `root` | Database user |
-| `MYSQL_PASSWORD` | (empty) | Database password |
-| `MYSQL_DATABASE` | `mysql` | Database name |
-| `MYSQL_URL` | (empty) | Primary connection URL for MySQL |
-| `TLS_MYSQL_DATABASE_URL` | (empty) | SSL/TLS-enabled connection URL |
+| Environment Variable     | Default Value | Description                      |
+| ------------------------ | ------------- | -------------------------------- |
+| `MYSQL_HOST`             | `localhost`   | Database host                    |
+| `MYSQL_PORT`             | `3306`        | Database port                    |
+| `MYSQL_USER`             | `root`        | Database user                    |
+| `MYSQL_PASSWORD`         | (empty)       | Database password                |
+| `MYSQL_DATABASE`         | `mysql`       | Database name                    |
+| `MYSQL_URL`              | (empty)       | Primary connection URL for MySQL |
+| `TLS_MYSQL_DATABASE_URL` | (empty)       | SSL/TLS-enabled connection URL   |
 
-### [PostgreSQL Environment Variables](https://bun.com/docs/api/sql\#postgresql-environment-variables)
+### [PostgreSQL Environment Variables](https://bun.com/docs/api/sql#postgresql-environment-variables)
 
 The following environment variables can be used to define the PostgreSQL connection:
 
-| Environment Variable | Description |
-| --- | --- |
-| `POSTGRES_URL` | Primary connection URL for PostgreSQL |
-| `DATABASE_URL` | Alternative connection URL (auto-detected) |
-| `PGURL` | Alternative connection URL |
-| `PG_URL` | Alternative connection URL |
-| `TLS_POSTGRES_DATABASE_URL` | SSL/TLS-enabled connection URL |
-| `TLS_DATABASE_URL` | Alternative SSL/TLS-enabled connection URL |
+| Environment Variable        | Description                                |
+| --------------------------- | ------------------------------------------ |
+| `POSTGRES_URL`              | Primary connection URL for PostgreSQL      |
+| `DATABASE_URL`              | Alternative connection URL (auto-detected) |
+| `PGURL`                     | Alternative connection URL                 |
+| `PG_URL`                    | Alternative connection URL                 |
+| `TLS_POSTGRES_DATABASE_URL` | SSL/TLS-enabled connection URL             |
+| `TLS_DATABASE_URL`          | Alternative SSL/TLS-enabled connection URL |
 
 If no connection URL is provided, the system checks for the following individual parameters:
 
-| Environment Variable | Fallback Variables | Default Value | Description |
-| --- | --- | --- | --- |
-| `PGHOST` | - | `localhost` | Database host |
-| `PGPORT` | - | `5432` | Database port |
-| `PGUSERNAME` | `PGUSER`, `USER`, `USERNAME` | `postgres` | Database user |
-| `PGPASSWORD` | - | (empty) | Database password |
-| `PGDATABASE` | - | username | Database name |
+| Environment Variable | Fallback Variables           | Default Value | Description       |
+| -------------------- | ---------------------------- | ------------- | ----------------- |
+| `PGHOST`             | -                            | `localhost`   | Database host     |
+| `PGPORT`             | -                            | `5432`        | Database port     |
+| `PGUSERNAME`         | `PGUSER`, `USER`, `USERNAME` | `postgres`    | Database user     |
+| `PGPASSWORD`         | -                            | (empty)       | Database password |
+| `PGDATABASE`         | -                            | username      | Database name     |
 
-### [SQLite Environment Variables](https://bun.com/docs/api/sql\#sqlite-environment-variables)
+### [SQLite Environment Variables](https://bun.com/docs/api/sql#sqlite-environment-variables)
 
 SQLite connections can be configured via `DATABASE_URL` when it contains a SQLite-compatible URL:
 
@@ -618,7 +619,7 @@ DATABASE_URL="file:///absolute/path/to/db.sqlite"
 
 **Note:** PostgreSQL-specific environment variables ( `POSTGRES_URL`, `PGHOST`, etc.) are ignored when using SQLite.
 
-## [Runtime Preconnection](https://bun.com/docs/api/sql\#runtime-preconnection)
+## [Runtime Preconnection](https://bun.com/docs/api/sql#runtime-preconnection)
 
 Bun can preconnect to PostgreSQL at startup to improve performance by establishing database connections before your application code runs. This is useful for reducing connection latency on the first database query.
 
@@ -636,11 +637,11 @@ bun --sql-preconnect --hot index.js
 
 The `--sql-preconnect` flag will automatically establish a PostgreSQL connection using your configured environment variables at startup. If the connection fails, it won't crash your application - the error will be handled gracefully.
 
-## [Connection Options](https://bun.com/docs/api/sql\#connection-options)
+## [Connection Options](https://bun.com/docs/api/sql#connection-options)
 
 You can configure your database connection manually by passing options to the SQL constructor. Options vary depending on the database adapter:
 
-### [MySQL Options](https://bun.com/docs/api/sql\#mysql-options)
+### [MySQL Options](https://bun.com/docs/api/sql#mysql-options)
 
 ```
 import { SQL } from "bun";
@@ -688,7 +689,7 @@ onclose: (client, err) => {
 
 ```
 
-### [PostgreSQL Options](https://bun.com/docs/api/sql\#postgresql-options)
+### [PostgreSQL Options](https://bun.com/docs/api/sql#postgresql-options)
 
 ```
 import { SQL } from "bun";
@@ -734,7 +735,7 @@ onclose: client => {
 
 ```
 
-### [SQLite Options](https://bun.com/docs/api/sql\#sqlite-options)
+### [SQLite Options](https://bun.com/docs/api/sql#sqlite-options)
 
 ```
 import { SQL } from "bun";
@@ -771,7 +772,7 @@ SQLite Connection Notes
 - **Concurrent Access**: SQLite handles concurrent access through file locking. Use WAL mode for better concurrency.
 - **Memory Databases**: Using `:memory:` creates a temporary database that exists only for the connection lifetime.
 
-## [Dynamic passwords](https://bun.com/docs/api/sql\#dynamic-passwords)
+## [Dynamic passwords](https://bun.com/docs/api/sql#dynamic-passwords)
 
 When clients need to use alternative authentication schemes such as access tokens or connections to databases with rotating passwords, provide either a synchronous or asynchronous function that will resolve the dynamic password value at connection time.
 
@@ -787,9 +788,9 @@ password: async () => await signer.getAuthToken(),
 
 ```
 
-## [SQLite-Specific Features](https://bun.com/docs/api/sql\#sqlite-specific-features)
+## [SQLite-Specific Features](https://bun.com/docs/api/sql#sqlite-specific-features)
 
-### [Query Execution](https://bun.com/docs/api/sql\#query-execution)
+### [Query Execution](https://bun.com/docs/api/sql#query-execution)
 
 SQLite executes queries synchronously, unlike PostgreSQL which uses asynchronous I/O. However, the API remains consistent using Promises:
 
@@ -804,7 +805,7 @@ const user = await sqlite`SELECT * FROM users WHERE id = ${userId}`;
 
 ```
 
-### [SQLite Pragmas](https://bun.com/docs/api/sql\#sqlite-pragmas)
+### [SQLite Pragmas](https://bun.com/docs/api/sql#sqlite-pragmas)
 
 You can use PRAGMA statements to configure SQLite behavior:
 
@@ -822,7 +823,7 @@ const integrity = await sqlite`PRAGMA integrity_check`;
 
 ```
 
-### [Data Type Differences](https://bun.com/docs/api/sql\#data-type-differences)
+### [Data Type Differences](https://bun.com/docs/api/sql#data-type-differences)
 
 SQLite has a more flexible type system than PostgreSQL:
 
@@ -845,13 +846,13 @@ await sqlite`INSERT INTO flexible VALUES (${1}, ${"text"}, ${123.45}, ${Buffer.f
 
 ```
 
-## [Transactions](https://bun.com/docs/api/sql\#transactions)
+## [Transactions](https://bun.com/docs/api/sql#transactions)
 
 To start a new transaction, use `sql.begin`. This method works for both PostgreSQL and SQLite. For PostgreSQL, it reserves a dedicated connection from the pool. For SQLite, it begins a transaction on the single connection.
 
 The `BEGIN` command is sent automatically, including any optional configurations you specify. If an error occurs during the transaction, a `ROLLBACK` is triggered to ensure the process continues smoothly.
 
-### [Basic Transactions](https://bun.com/docs/api/sql\#basic-transactions)
+### [Basic Transactions](https://bun.com/docs/api/sql#basic-transactions)
 
 ```
 await sql.begin(async tx => {
@@ -877,7 +878,7 @@ return [\
 
 ```
 
-### [Savepoints](https://bun.com/docs/api/sql\#savepoints)
+### [Savepoints](https://bun.com/docs/api/sql#savepoints)
 
 Savepoints in SQL create intermediate checkpoints within a transaction, enabling partial rollbacks without affecting the entire operation. They are useful in complex transactions, allowing error recovery and maintaining consistent results.
 
@@ -899,7 +900,7 @@ await tx`INSERT INTO audit_log (action) VALUES ('user_created')`;
 
 ```
 
-### [Distributed Transactions](https://bun.com/docs/api/sql\#distributed-transactions)
+### [Distributed Transactions](https://bun.com/docs/api/sql#distributed-transactions)
 
 Two-Phase Commit (2PC) is a distributed transaction protocol where Phase 1 has the coordinator preparing nodes by ensuring data is written and ready to commit, while Phase 2 finalizes with nodes either committing or rolling back based on the coordinator's decision. This process ensures data durability and proper lock management.
 
@@ -924,11 +925,11 @@ await sql.rollbackDistributed("tx1");
 
 ```
 
-## [Authentication](https://bun.com/docs/api/sql\#authentication)
+## [Authentication](https://bun.com/docs/api/sql#authentication)
 
 Bun supports SCRAM-SHA-256 (SASL), MD5, and Clear Text authentication. SASL is recommended for better security. Check [Postgres SASL Authentication](https://www.postgresql.org/docs/current/sasl-authentication.html) for more information.
 
-### [SSL Modes Overview](https://bun.com/docs/api/sql\#ssl-modes-overview)
+### [SSL Modes Overview](https://bun.com/docs/api/sql#ssl-modes-overview)
 
 PostgreSQL supports different SSL/TLS modes to control how secure connections are established. These modes determine the behavior when connecting and the level of certificate verification performed.
 
@@ -942,15 +943,15 @@ ssl: "disable", // | "prefer" | "require" | "verify-ca" | "verify-full"
 
 ```
 
-| SSL Mode | Description |
-| --- | --- |
-| `disable` | No SSL/TLS used. Connections fail if server requires SSL. |
-| `prefer` | Tries SSL first, falls back to non-SSL if SSL fails. Default mode if none specified. |
-| `require` | Requires SSL without certificate verification. Fails if SSL cannot be established. |
-| `verify-ca` | Verifies server certificate is signed by trusted CA. Fails if verification fails. |
+| SSL Mode      | Description                                                                                                          |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `disable`     | No SSL/TLS used. Connections fail if server requires SSL.                                                            |
+| `prefer`      | Tries SSL first, falls back to non-SSL if SSL fails. Default mode if none specified.                                 |
+| `require`     | Requires SSL without certificate verification. Fails if SSL cannot be established.                                   |
+| `verify-ca`   | Verifies server certificate is signed by trusted CA. Fails if verification fails.                                    |
 | `verify-full` | Most secure mode. Verifies certificate and hostname match. Protects against untrusted certificates and MITM attacks. |
 
-### [Using With Connection Strings](https://bun.com/docs/api/sql\#using-with-connection-strings)
+### [Using With Connection Strings](https://bun.com/docs/api/sql#using-with-connection-strings)
 
 The SSL mode can also be specified in connection strings:
 
@@ -965,7 +966,7 @@ const sql = new SQL(
 
 ```
 
-## [Connection Pooling](https://bun.com/docs/api/sql\#connection-pooling)
+## [Connection Pooling](https://bun.com/docs/api/sql#connection-pooling)
 
 Bun's SQL client automatically manages a connection pool, which is a pool of database connections that are reused for multiple queries. This helps to reduce the overhead of establishing and closing connections for each query, and it also helps to manage the number of concurrent connections to the database.
 
@@ -1000,7 +1001,7 @@ await sql.close({ timeout: 0 }); // close all connections from the pool immediat
 
 ```
 
-## [Reserved Connections](https://bun.com/docs/api/sql\#reserved-connections)
+## [Reserved Connections](https://bun.com/docs/api/sql#reserved-connections)
 
 Bun enables you to reserve a connection from the pool, and returns a client that wraps the single connection. This can be used for running queries on an isolated connection.
 
@@ -1023,7 +1024,7 @@ await reserved`SELECT 1`;
 
 ```
 
-## [Prepared Statements](https://bun.com/docs/api/sql\#prepared-statements)
+## [Prepared Statements](https://bun.com/docs/api/sql#prepared-statements)
 
 By default, Bun's SQL client automatically creates named prepared statements for queries where it can be inferred that the query is static. This provides better performance. However, you can change this behavior by setting `prepare: false` in the connection options:
 
@@ -1048,15 +1049,15 @@ You might want to use `prepare: false` when:
 - Using PGBouncer in transaction mode (though since PGBouncer 1.21.0, protocol-level named prepared statements are supported when configured properly)
 - Debugging query execution plans
 - Working with dynamic SQL where query plans need to be regenerated frequently
-- More than one command per query will not be supported (unless you use ```sql``.simple()```)
+- More than one command per query will not be supported (unless you use `sql``.simple()`)
 
 Note that disabling prepared statements may impact performance for queries that are executed frequently with different parameters, as the server needs to parse and plan each query from scratch.
 
-## [Error Handling](https://bun.com/docs/api/sql\#error-handling)
+## [Error Handling](https://bun.com/docs/api/sql#error-handling)
 
 The client provides typed errors for different failure scenarios. Errors are database-specific and extend from base error classes:
 
-### [Error Classes](https://bun.com/docs/api/sql\#error-classes)
+### [Error Classes](https://bun.com/docs/api/sql#error-classes)
 
 ```
 import { SQL } from "bun";
@@ -1084,93 +1085,93 @@ if (error instanceof SQL.PostgresError) {
 
 PostgreSQL-Specific Error Codes
 
-### [PostgreSQL Connection Errors](https://bun.com/docs/api/sql\#postgresql-connection-errors)
+### [PostgreSQL Connection Errors](https://bun.com/docs/api/sql#postgresql-connection-errors)
 
-| Connection Errors | Description |
-| --- | --- |
-| `ERR_POSTGRES_CONNECTION_CLOSED` | Connection was terminated or never established |
+| Connection Errors                 | Description                                          |
+| --------------------------------- | ---------------------------------------------------- |
+| `ERR_POSTGRES_CONNECTION_CLOSED`  | Connection was terminated or never established       |
 | `ERR_POSTGRES_CONNECTION_TIMEOUT` | Failed to establish connection within timeout period |
-| `ERR_POSTGRES_IDLE_TIMEOUT` | Connection closed due to inactivity |
-| `ERR_POSTGRES_LIFETIME_TIMEOUT` | Connection exceeded maximum lifetime |
-| `ERR_POSTGRES_TLS_NOT_AVAILABLE` | SSL/TLS connection not available |
-| `ERR_POSTGRES_TLS_UPGRADE_FAILED` | Failed to upgrade connection to SSL/TLS |
+| `ERR_POSTGRES_IDLE_TIMEOUT`       | Connection closed due to inactivity                  |
+| `ERR_POSTGRES_LIFETIME_TIMEOUT`   | Connection exceeded maximum lifetime                 |
+| `ERR_POSTGRES_TLS_NOT_AVAILABLE`  | SSL/TLS connection not available                     |
+| `ERR_POSTGRES_TLS_UPGRADE_FAILED` | Failed to upgrade connection to SSL/TLS              |
 
-### [Authentication Errors](https://bun.com/docs/api/sql\#authentication-errors)
+### [Authentication Errors](https://bun.com/docs/api/sql#authentication-errors)
 
-| Authentication Errors | Description |
-| --- | --- |
-| `ERR_POSTGRES_AUTHENTICATION_FAILED_PBKDF2` | Password authentication failed |
-| `ERR_POSTGRES_UNKNOWN_AUTHENTICATION_METHOD` | Server requested unknown auth method |
+| Authentication Errors                            | Description                              |
+| ------------------------------------------------ | ---------------------------------------- |
+| `ERR_POSTGRES_AUTHENTICATION_FAILED_PBKDF2`      | Password authentication failed           |
+| `ERR_POSTGRES_UNKNOWN_AUTHENTICATION_METHOD`     | Server requested unknown auth method     |
 | `ERR_POSTGRES_UNSUPPORTED_AUTHENTICATION_METHOD` | Server requested unsupported auth method |
-| `ERR_POSTGRES_INVALID_SERVER_KEY` | Invalid server key during authentication |
-| `ERR_POSTGRES_INVALID_SERVER_SIGNATURE` | Invalid server signature |
-| `ERR_POSTGRES_SASL_SIGNATURE_INVALID_BASE64` | Invalid SASL signature encoding |
-| `ERR_POSTGRES_SASL_SIGNATURE_MISMATCH` | SASL signature verification failed |
+| `ERR_POSTGRES_INVALID_SERVER_KEY`                | Invalid server key during authentication |
+| `ERR_POSTGRES_INVALID_SERVER_SIGNATURE`          | Invalid server signature                 |
+| `ERR_POSTGRES_SASL_SIGNATURE_INVALID_BASE64`     | Invalid SASL signature encoding          |
+| `ERR_POSTGRES_SASL_SIGNATURE_MISMATCH`           | SASL signature verification failed       |
 
-### [Query Errors](https://bun.com/docs/api/sql\#query-errors)
+### [Query Errors](https://bun.com/docs/api/sql#query-errors)
 
-| Query Errors | Description |
-| --- | --- |
-| `ERR_POSTGRES_SYNTAX_ERROR` | Invalid SQL syntax (extends `SyntaxError`) |
-| `ERR_POSTGRES_SERVER_ERROR` | General error from PostgreSQL server |
-| `ERR_POSTGRES_INVALID_QUERY_BINDING` | Invalid parameter binding |
-| `ERR_POSTGRES_QUERY_CANCELLED` | Query was cancelled |
-| `ERR_POSTGRES_NOT_TAGGED_CALL` | Query was called without a tagged call |
+| Query Errors                         | Description                                |
+| ------------------------------------ | ------------------------------------------ |
+| `ERR_POSTGRES_SYNTAX_ERROR`          | Invalid SQL syntax (extends `SyntaxError`) |
+| `ERR_POSTGRES_SERVER_ERROR`          | General error from PostgreSQL server       |
+| `ERR_POSTGRES_INVALID_QUERY_BINDING` | Invalid parameter binding                  |
+| `ERR_POSTGRES_QUERY_CANCELLED`       | Query was cancelled                        |
+| `ERR_POSTGRES_NOT_TAGGED_CALL`       | Query was called without a tagged call     |
 
-### [Data Type Errors](https://bun.com/docs/api/sql\#data-type-errors)
+### [Data Type Errors](https://bun.com/docs/api/sql#data-type-errors)
 
-| Data Type Errors | Description |
-| --- | --- |
-| `ERR_POSTGRES_INVALID_BINARY_DATA` | Invalid binary data format |
-| `ERR_POSTGRES_INVALID_BYTE_SEQUENCE` | Invalid byte sequence |
-| `ERR_POSTGRES_INVALID_BYTE_SEQUENCE_FOR_ENCODING` | Encoding error |
-| `ERR_POSTGRES_INVALID_CHARACTER` | Invalid character in data |
-| `ERR_POSTGRES_OVERFLOW` | Numeric overflow |
-| `ERR_POSTGRES_UNSUPPORTED_BYTEA_FORMAT` | Unsupported binary format |
-| `ERR_POSTGRES_UNSUPPORTED_INTEGER_SIZE` | Integer size not supported |
+| Data Type Errors                                        | Description                           |
+| ------------------------------------------------------- | ------------------------------------- |
+| `ERR_POSTGRES_INVALID_BINARY_DATA`                      | Invalid binary data format            |
+| `ERR_POSTGRES_INVALID_BYTE_SEQUENCE`                    | Invalid byte sequence                 |
+| `ERR_POSTGRES_INVALID_BYTE_SEQUENCE_FOR_ENCODING`       | Encoding error                        |
+| `ERR_POSTGRES_INVALID_CHARACTER`                        | Invalid character in data             |
+| `ERR_POSTGRES_OVERFLOW`                                 | Numeric overflow                      |
+| `ERR_POSTGRES_UNSUPPORTED_BYTEA_FORMAT`                 | Unsupported binary format             |
+| `ERR_POSTGRES_UNSUPPORTED_INTEGER_SIZE`                 | Integer size not supported            |
 | `ERR_POSTGRES_MULTIDIMENSIONAL_ARRAY_NOT_SUPPORTED_YET` | Multidimensional arrays not supported |
-| `ERR_POSTGRES_NULLS_IN_ARRAY_NOT_SUPPORTED_YET` | NULL values in arrays not supported |
+| `ERR_POSTGRES_NULLS_IN_ARRAY_NOT_SUPPORTED_YET`         | NULL values in arrays not supported   |
 
-### [Protocol Errors](https://bun.com/docs/api/sql\#protocol-errors)
+### [Protocol Errors](https://bun.com/docs/api/sql#protocol-errors)
 
-| Protocol Errors | Description |
-| --- | --- |
-| `ERR_POSTGRES_EXPECTED_REQUEST` | Expected client request |
-| `ERR_POSTGRES_EXPECTED_STATEMENT` | Expected prepared statement |
-| `ERR_POSTGRES_INVALID_BACKEND_KEY_DATA` | Invalid backend key data |
-| `ERR_POSTGRES_INVALID_MESSAGE` | Invalid protocol message |
-| `ERR_POSTGRES_INVALID_MESSAGE_LENGTH` | Invalid message length |
-| `ERR_POSTGRES_UNEXPECTED_MESSAGE` | Unexpected message type |
+| Protocol Errors                         | Description                 |
+| --------------------------------------- | --------------------------- |
+| `ERR_POSTGRES_EXPECTED_REQUEST`         | Expected client request     |
+| `ERR_POSTGRES_EXPECTED_STATEMENT`       | Expected prepared statement |
+| `ERR_POSTGRES_INVALID_BACKEND_KEY_DATA` | Invalid backend key data    |
+| `ERR_POSTGRES_INVALID_MESSAGE`          | Invalid protocol message    |
+| `ERR_POSTGRES_INVALID_MESSAGE_LENGTH`   | Invalid message length      |
+| `ERR_POSTGRES_UNEXPECTED_MESSAGE`       | Unexpected message type     |
 
-### [Transaction Errors](https://bun.com/docs/api/sql\#transaction-errors)
+### [Transaction Errors](https://bun.com/docs/api/sql#transaction-errors)
 
-| Transaction Errors | Description |
-| --- | --- |
-| `ERR_POSTGRES_UNSAFE_TRANSACTION` | Unsafe transaction operation detected |
-| `ERR_POSTGRES_INVALID_TRANSACTION_STATE` | Invalid transaction state |
+| Transaction Errors                       | Description                           |
+| ---------------------------------------- | ------------------------------------- |
+| `ERR_POSTGRES_UNSAFE_TRANSACTION`        | Unsafe transaction operation detected |
+| `ERR_POSTGRES_INVALID_TRANSACTION_STATE` | Invalid transaction state             |
 
-### [SQLite-Specific Errors](https://bun.com/docs/api/sql\#sqlite-specific-errors)
+### [SQLite-Specific Errors](https://bun.com/docs/api/sql#sqlite-specific-errors)
 
 SQLite errors provide error codes and numbers that correspond to SQLite's standard error codes:
 
 Common SQLite Error Codes
 
-| Error Code | errno | Description |
-| --- | --- | --- |
-| `SQLITE_CONSTRAINT` | 19 | Constraint violation (UNIQUE, CHECK, NOT NULL, etc.) |
-| `SQLITE_BUSY` | 5 | Database is locked |
-| `SQLITE_LOCKED` | 6 | Table in the database is locked |
-| `SQLITE_READONLY` | 8 | Attempt to write to a readonly database |
-| `SQLITE_IOERR` | 10 | Disk I/O error |
-| `SQLITE_CORRUPT` | 11 | Database disk image is malformed |
-| `SQLITE_FULL` | 13 | Database or disk is full |
-| `SQLITE_CANTOPEN` | 14 | Unable to open database file |
-| `SQLITE_PROTOCOL` | 15 | Database lock protocol error |
-| `SQLITE_SCHEMA` | 17 | Database schema has changed |
-| `SQLITE_TOOBIG` | 18 | String or BLOB exceeds size limit |
-| `SQLITE_MISMATCH` | 20 | Data type mismatch |
-| `SQLITE_MISUSE` | 21 | Library used incorrectly |
-| `SQLITE_AUTH` | 23 | Authorization denied |
+| Error Code          | errno | Description                                          |
+| ------------------- | ----- | ---------------------------------------------------- |
+| `SQLITE_CONSTRAINT` | 19    | Constraint violation (UNIQUE, CHECK, NOT NULL, etc.) |
+| `SQLITE_BUSY`       | 5     | Database is locked                                   |
+| `SQLITE_LOCKED`     | 6     | Table in the database is locked                      |
+| `SQLITE_READONLY`   | 8     | Attempt to write to a readonly database              |
+| `SQLITE_IOERR`      | 10    | Disk I/O error                                       |
+| `SQLITE_CORRUPT`    | 11    | Database disk image is malformed                     |
+| `SQLITE_FULL`       | 13    | Database or disk is full                             |
+| `SQLITE_CANTOPEN`   | 14    | Unable to open database file                         |
+| `SQLITE_PROTOCOL`   | 15    | Database lock protocol error                         |
+| `SQLITE_SCHEMA`     | 17    | Database schema has changed                          |
+| `SQLITE_TOOBIG`     | 18    | String or BLOB exceeds size limit                    |
+| `SQLITE_MISMATCH`   | 20    | Data type mismatch                                   |
+| `SQLITE_MISUSE`     | 21    | Library used incorrectly                             |
+| `SQLITE_AUTH`       | 23    | Authorization denied                                 |
 
 Example error handling:
 
@@ -1191,7 +1192,7 @@ if (error instanceof SQL.SQLiteError) {
 
 ```
 
-## [Numbers and BigInt](https://bun.com/docs/api/sql\#numbers-and-bigint)
+## [Numbers and BigInt](https://bun.com/docs/api/sql#numbers-and-bigint)
 
 Bun's SQL client includes special handling for large numbers that exceed the range of a 53-bit integer. Here's how it works:
 
@@ -1205,7 +1206,7 @@ console.log(typeof y, y); // "number" 12345
 
 ```
 
-## [BigInt Instead of Strings](https://bun.com/docs/api/sql\#bigint-instead-of-strings)
+## [BigInt Instead of Strings](https://bun.com/docs/api/sql#bigint-instead-of-strings)
 
 If you need large numbers as BigInt instead of strings, you can enable this by setting the `bigint` option to `true` when initializing the SQL client:
 
@@ -1220,7 +1221,7 @@ console.log(typeof x, x); // "bigint" 9223372036854777n
 
 ```
 
-## [Roadmap](https://bun.com/docs/api/sql\#roadmap)
+## [Roadmap](https://bun.com/docs/api/sql#roadmap)
 
 There's still some things we haven't finished yet.
 
@@ -1228,7 +1229,7 @@ There's still some things we haven't finished yet.
 - Column name transforms (e.g. `snake_case` to `camelCase`). This is mostly blocked on a unicode-aware implementation of changing the case in C++ using WebKit's `WTF::String`.
 - Column type transforms
 
-## [Database-Specific Features](https://bun.com/docs/api/sql\#database-specific-features)
+## [Database-Specific Features](https://bun.com/docs/api/sql#database-specific-features)
 
 #### Authentication Methods
 
@@ -1298,22 +1299,22 @@ Bun automatically sends client information to MySQL for better monitoring:
 
 MySQL types are automatically converted to JavaScript types:
 
-| MySQL Type | JavaScript Type | Notes |
-| --- | --- | --- |
-| INT, TINYINT, MEDIUMINT | number | Within safe integer range |
-| BIGINT | string, number or BigInt | If the value fits in i32/u32 size will be number otherwise string or BigInt Based on `bigint` option |
-| DECIMAL, NUMERIC | string | To preserve precision |
-| FLOAT, DOUBLE | number |  |
-| DATE | Date | JavaScript Date object |
-| DATETIME, TIMESTAMP | Date | With timezone handling |
-| TIME | number | Total of microseconds |
-| YEAR | number |  |
-| CHAR, VARCHAR, VARSTRING, STRING | string |  |
-| TINY TEXT, MEDIUM TEXT, TEXT, LONG TEXT | string |  |
-| TINY BLOB, MEDIUM BLOB, BLOG, LONG BLOB | string | BLOB Types are alias for TEXT types |
-| JSON | object/array | Automatically parsed |
-| BIT(1) | boolean | BIT(1) in MySQL |
-| GEOMETRY | string | Geometry data |
+| MySQL Type                              | JavaScript Type          | Notes                                                                                                |
+| --------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| INT, TINYINT, MEDIUMINT                 | number                   | Within safe integer range                                                                            |
+| BIGINT                                  | string, number or BigInt | If the value fits in i32/u32 size will be number otherwise string or BigInt Based on `bigint` option |
+| DECIMAL, NUMERIC                        | string                   | To preserve precision                                                                                |
+| FLOAT, DOUBLE                           | number                   |                                                                                                      |
+| DATE                                    | Date                     | JavaScript Date object                                                                               |
+| DATETIME, TIMESTAMP                     | Date                     | With timezone handling                                                                               |
+| TIME                                    | number                   | Total of microseconds                                                                                |
+| YEAR                                    | number                   |                                                                                                      |
+| CHAR, VARCHAR, VARSTRING, STRING        | string                   |                                                                                                      |
+| TINY TEXT, MEDIUM TEXT, TEXT, LONG TEXT | string                   |                                                                                                      |
+| TINY BLOB, MEDIUM BLOB, BLOG, LONG BLOB | string                   | BLOB Types are alias for TEXT types                                                                  |
+| JSON                                    | object/array             | Automatically parsed                                                                                 |
+| BIT(1)                                  | boolean                  | BIT(1) in MySQL                                                                                      |
+| GEOMETRY                                | string                   | Geometry data                                                                                        |
 
 #### Differences from PostgreSQL
 
@@ -1323,11 +1324,11 @@ While the API is unified, there are some behavioral differences:
 2. **RETURNING clause**: MySQL doesn't support RETURNING; use `result.lastInsertRowid` or a separate SELECT
 3. **Array types**: MySQL doesn't have native array types like PostgreSQL
 
-### [MySQL-Specific Features](https://bun.com/docs/api/sql\#mysql-specific-features)
+### [MySQL-Specific Features](https://bun.com/docs/api/sql#mysql-specific-features)
 
 We haven't implemented `LOAD DATA INFILE` support yet
 
-### [PostgreSQL-Specific Features](https://bun.com/docs/api/sql\#postgresql-specific-features)
+### [PostgreSQL-Specific Features](https://bun.com/docs/api/sql#postgresql-specific-features)
 
 We haven't implemented these yet:
 
@@ -1342,9 +1343,9 @@ We also haven't implemented some of the more uncommon features like:
 - Point & PostGIS types
 - All the multi-dimensional integer array types (only a couple of the types are supported)
 
-## [Common Patterns & Best Practices](https://bun.com/docs/api/sql\#common-patterns-best-practices)
+## [Common Patterns & Best Practices](https://bun.com/docs/api/sql#common-patterns-best-practices)
 
-### [Working with MySQL Result Sets](https://bun.com/docs/api/sql\#working-with-mysql-result-sets)
+### [Working with MySQL Result Sets](https://bun.com/docs/api/sql#working-with-mysql-result-sets)
 
 ```
 // Getting insert ID after INSERT
@@ -1362,7 +1363,7 @@ const uuid = await mysql`SELECT UUID() as id`;
 
 ```
 
-### [MySQL Error Handling](https://bun.com/docs/api/sql\#mysql-error-handling)
+### [MySQL Error Handling](https://bun.com/docs/api/sql#mysql-error-handling)
 
 ```
 try {
@@ -1380,7 +1381,7 @@ if (error.code === "ER_DUP_ENTRY") {
 
 ```
 
-### [Performance Tips for MySQL](https://bun.com/docs/api/sql\#performance-tips-for-mysql)
+### [Performance Tips for MySQL](https://bun.com/docs/api/sql#performance-tips-for-mysql)
 
 1. **Use connection pooling**: Set appropriate `max` pool size based on your workload
 2. **Enable prepared statements**: They're enabled by default and improve performance
@@ -1388,7 +1389,7 @@ if (error.code === "ER_DUP_ENTRY") {
 4. **Index properly**: MySQL relies heavily on indexes for query performance
 5. **Use `utf8mb4` charset**: It's set by default and handles all Unicode characters
 
-## [Frequently Asked Questions](https://bun.com/docs/api/sql\#frequently-asked-questions)
+## [Frequently Asked Questions](https://bun.com/docs/api/sql#frequently-asked-questions)
 
 Why is this `Bun.sql` and not `Bun.postgres`?
 
@@ -1428,7 +1429,7 @@ await mysql`EXPLAIN SELECT * FROM users WHERE id = ${id}`;
 
 ```
 
-## [Why not just use an existing library?](https://bun.com/docs/api/sql\#why-not-just-use-an-existing-library)
+## [Why not just use an existing library?](https://bun.com/docs/api/sql#why-not-just-use-an-existing-library)
 
 npm packages like postgres.js, pg, and node-postgres can be used in Bun too. They're great options.
 
@@ -1437,7 +1438,7 @@ Two reasons why:
 1. We think it's simpler for developers to have a database driver built into Bun. The time you spend library shopping is time you could be building your app.
 2. We leverage some JavaScriptCore engine internals to make it faster to create objects that would be difficult to implement in a library
 
-## [Credits](https://bun.com/docs/api/sql\#credits)
+## [Credits](https://bun.com/docs/api/sql#credits)
 
 Huge thanks to [@porsager](https://github.com/porsager)'s [postgres.js](https://github.com/porsager/postgres) for the inspiration for the API interface.
 
@@ -1447,7 +1448,7 @@ Streams](https://bun.com/docs/api/streams) [Next\\
 \\
 S3 Object Storage](https://bun.com/docs/api/s3)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/sql.md)
 
@@ -1471,7 +1472,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

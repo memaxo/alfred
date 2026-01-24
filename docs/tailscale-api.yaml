@@ -112,8 +112,8 @@ tags:
 paths:
   /tailnet/{tailnet}/devices:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/fields'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/fields"
       - in: query
         name: <field>=<value> filters
         description: |
@@ -140,7 +140,7 @@ paths:
       tags:
         - Devices
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -150,18 +150,18 @@ paths:
                   devices:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Device'
-        '404':
+                      $ref: "#/components/schemas/Device"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
           description: Request took too long to process, please try again later.
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/504"
   /device/{deviceId}:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     get:
       summary: Get a device
       description: |
@@ -172,24 +172,24 @@ paths:
       tags:
         - Devices
       parameters:
-        - $ref: '#/components/parameters/fields'
+        - $ref: "#/components/parameters/fields"
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Device'
-        '400':
+                $ref: "#/components/schemas/Device"
+        "400":
           description: Invalid ID supplied.
-          $ref: '#/components/responses/400'
-        '404':
+          $ref: "#/components/responses/400"
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
     delete:
       summary: Delete a device
       description: |
@@ -202,21 +202,21 @@ paths:
       tags:
         - Devices
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
+        "400":
           description: Invalid device value.
-          $ref: '#/components/responses/400'
-        '500':
-          $ref: '#/components/responses/500'
-        '501':
+          $ref: "#/components/responses/400"
+        "500":
+          $ref: "#/components/responses/500"
+        "501":
           description: Device not owned by tailnet.
-          $ref: '#/components/responses/501'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/501"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/expire:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     post:
       summary: Expire a device's key
       description: |
@@ -229,18 +229,18 @@ paths:
       tags:
         - Devices
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/routes:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     get:
       summary: List device routes
       description: |
@@ -258,19 +258,19 @@ paths:
       tags:
         - Devices
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeviceRoutes'
-        '404':
+                $ref: "#/components/schemas/DeviceRoutes"
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
     post:
       summary: Set device routes
       description: |
@@ -304,22 +304,22 @@ paths:
                     - 10.0.0.0/16
                     - 192.168.1.0/24
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeviceRoutes'
-        '404':
+                $ref: "#/components/schemas/DeviceRoutes"
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/authorized:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     post:
       summary: Authorize device
       description: |
@@ -344,18 +344,18 @@ paths:
               required:
                 - authorized
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/name:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     post:
       summary: Set device name
       description: |
@@ -388,18 +388,18 @@ paths:
               required:
                 - name
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/tags:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     post:
       summary: Set device tags
       description: |
@@ -433,17 +433,17 @@ paths:
                     - tag:foo
                     - tag:bar
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
-          $ref: '#/components/responses/400'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+        "400":
+          $ref: "#/components/responses/400"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/key:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     post:
       summary: Update device key
       description: |
@@ -469,18 +469,18 @@ paths:
               required:
                 - keyExpiryDisabled
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/ip:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     post:
       summary: Set device IPv4 address
       description: |
@@ -510,18 +510,18 @@ paths:
               required:
                 - ipv4
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/attributes:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     get:
       summary: Get device posture attributes
       description: |
@@ -533,23 +533,23 @@ paths:
       tags:
         - Devices
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DevicePostureAttributes'
-        '404':
+                $ref: "#/components/schemas/DevicePostureAttributes"
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/attributes/{attributeKey}:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
-      - $ref: '#/components/parameters/attributeKey'
+      - $ref: "#/components/parameters/deviceId"
+      - $ref: "#/components/parameters/attributeKey"
     post:
       summary: Set custom device posture attributes
       description: |
@@ -586,7 +586,7 @@ paths:
                 expiry:
                   type: string
                   format: date-time
-                  example: '2022-12-01T05:23:30Z'
+                  example: "2022-12-01T05:23:30Z"
                   description: |
                     An optional expiry time for a given posture attribute. If set, Tailscale
                     will automatically remove the attribute within a few minutes after the specified
@@ -598,19 +598,19 @@ paths:
                     An optional comment indicating a reason why an attribute is set,
                     which will be added to the audit log.
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DevicePostureAttributes'
-        '404':
+                $ref: "#/components/schemas/DevicePostureAttributes"
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
     delete:
       summary: Delete custom device posture attributes
       description: |
@@ -623,18 +623,18 @@ paths:
       tags:
         - Devices
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /device/{deviceId}/device-invites:
     parameters:
-      - $ref: '#/components/parameters/deviceId'
+      - $ref: "#/components/parameters/deviceId"
     get:
       summary: List device invites
       description: |
@@ -645,27 +645,27 @@ paths:
       tags:
         - DeviceInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/DeviceInvite'
+                  $ref: "#/components/schemas/DeviceInvite"
                 example:
-                  - id: '12345'
-                    created: '2024-05-08T20:19:51.777861756Z'
+                  - id: "12345"
+                    created: "2024-05-08T20:19:51.777861756Z"
                     tailnetId: 59954
                     deviceId: 11055
                     sharerId: 22011
                     allowExitNode: true
                     email: user@example.com
-                    lastEmailSentAt: '2024-05-08T20:19:51.777861756Z'
+                    lastEmailSentAt: "2024-05-08T20:19:51.777861756Z"
                     inviteUrl: https://login.tailscale.com/admin/invite/<code>
                     accepted: false
-                  - id: '12346'
-                    created: '2024-04-03T21:38:49.333829261Z'
+                  - id: "12346"
+                    created: "2024-04-03T21:38:49.333829261Z"
                     tailnetId: 59954
                     deviceId: 11055
                     sharerId: 22012
@@ -674,14 +674,14 @@ paths:
                     acceptedBy:
                       id: 33223
                       loginName: someone@example.com
-                      profilePicUrl: ''
-        '404':
+                      profilePicUrl: ""
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
     post:
       summary: Create device invites
       description: |
@@ -718,42 +718,42 @@ paths:
                       The email to send the created invite to.
                       If not set, the endpoint generates and returns an invite URL (but doesn't send it out).
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/DeviceInvite'
+                  $ref: "#/components/schemas/DeviceInvite"
                 example:
-                  - id: '12345'
-                    created: '2024-05-08T20:19:51.777861756Z'
+                  - id: "12345"
+                    created: "2024-05-08T20:19:51.777861756Z"
                     tailnetId: 59954
                     deviceId: 11055
                     sharerId: 22011
                     allowExitNode: true
                     email: user@example.com
-                    lastEmailSentAt: '2024-05-08T20:19:51.777861756Z'
+                    lastEmailSentAt: "2024-05-08T20:19:51.777861756Z"
                     inviteUrl: https://login.tailscale.com/admin/invite/<code>
                     accepted: false
-                  - id: '12346'
-                    created: '2024-04-03T21:38:49.333829261Z'
+                  - id: "12346"
+                    created: "2024-04-03T21:38:49.333829261Z"
                     tailnetId: 59954
                     deviceId: 11055
                     sharerId: 22012
                     inviteUrl: https://login.tailscale.com/admin/invite/<code>
                     accepted: false
-        '404':
+        "404":
           description: Device not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
-        '504':
-          $ref: '#/components/responses/504'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+        "504":
+          $ref: "#/components/responses/504"
   /tailnet/{tailnet}/user-invites:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: List user invites
       description: List all open (not yet accepted) user invites to the tailnet.
@@ -761,34 +761,34 @@ paths:
       tags:
         - UserInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UserInvite'
+                  $ref: "#/components/schemas/UserInvite"
                 example:
-                  - id: '29214'
+                  - id: "29214"
                     role: admin
                     tailnetId: 12345
                     inviterId: 34567
                     email: user@example.com
-                    lastEmailSentAt: '2024-05-09T16:23:26.91778771Z'
+                    lastEmailSentAt: "2024-05-09T16:23:26.91778771Z"
                     inviteUrl: https://login.tailscale.com/uinv/<code>
-                  - id: '29215'
+                  - id: "29215"
                     role: admin
                     tailnetId: 12345
                     inviterId: 34567
                     email: someoneelse@example.com
-                    lastEmailSentAt: '2024-05-09T17:23:30.91778771Z'
+                    lastEmailSentAt: "2024-05-09T17:23:30.91778771Z"
                     inviteUrl: https://login.tailscale.com/uinv/<code>
-        '404':
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Create user invites
       description: |
@@ -826,30 +826,30 @@ paths:
                       Optionally specifies the email to send the created invite.
                       If not set, the endpoint generates and returns an invite URL, but does not email it out.
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UserInvite'
+                  $ref: "#/components/schemas/UserInvite"
                 example:
-                  - id: '29214'
+                  - id: "29214"
                     role: admin
                     tailnetId: 12345
                     inviterId: 34567
                     email: user@example.com
-                    lastEmailSentAt: '2024-05-09T16:23:26.91778771Z'
+                    lastEmailSentAt: "2024-05-09T16:23:26.91778771Z"
                     inviteUrl: https://login.tailscale.com/uinv/<code>
-        '404':
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /user-invites/{userInviteId}:
     parameters:
-      - $ref: '#/components/parameters/userInviteId'
+      - $ref: "#/components/parameters/userInviteId"
     get:
       summary: Get a user invite
       description: |
@@ -858,17 +858,17 @@ paths:
       tags:
         - UserInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserInvite'
-        '404':
+                $ref: "#/components/schemas/UserInvite"
+        "404":
           description: User invite not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     delete:
       summary: Delete a user invite
       description: |
@@ -879,16 +879,16 @@ paths:
       tags:
         - UserInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: User invite not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /user-invites/{userInviteId}/resend:
     parameters:
-      - $ref: '#/components/parameters/userInviteId'
+      - $ref: "#/components/parameters/userInviteId"
     post:
       summary: Resend a user invite
       description: |
@@ -903,16 +903,16 @@ paths:
       tags:
         - UserInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: User invite not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /device-invites/{deviceInviteId}:
     parameters:
-      - $ref: '#/components/parameters/deviceInviteId'
+      - $ref: "#/components/parameters/deviceInviteId"
     get:
       summary: Get a device invite
       description: |
@@ -923,17 +923,17 @@ paths:
       tags:
         - DeviceInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeviceInvite'
-        '404':
+                $ref: "#/components/schemas/DeviceInvite"
+        "404":
           description: Device invite not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     delete:
       summary: Delete a device invite
       description: |
@@ -944,16 +944,16 @@ paths:
       tags:
         - DeviceInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device invite not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /device-invites/{deviceInviteId}/resend:
     parameters:
-      - $ref: '#/components/parameters/deviceInviteId'
+      - $ref: "#/components/parameters/deviceInviteId"
     post:
       summary: Resend a device invite
       description: |
@@ -968,13 +968,13 @@ paths:
       tags:
         - DeviceInvites
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '404':
+        "404":
           description: Device invite not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /device-invites/-/accept:
     post:
       summary: Accept a device invite
@@ -1008,7 +1008,7 @@ paths:
                 value:
                   invite: xxxxxx
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -1022,7 +1022,7 @@ paths:
                     properties:
                       id:
                         type: string
-                        example: '12346'
+                        example: "12346"
                         description: |
                           The `nodeId` for the device.
                       os:
@@ -1064,7 +1064,7 @@ paths:
                     properties:
                       id:
                         type: string
-                        example: '22012'
+                        example: "22012"
                         description: |
                           The ID of the user who created the share invite.
                       displayName:
@@ -1079,7 +1079,7 @@ paths:
                           The email address of the user who created the share invite.
                       profilePicURL:
                         type: string
-                        example: ''
+                        example: ""
                         description: |
                           The profile pic URL for the user who created the share invite.
                   acceptedBy:
@@ -1089,7 +1089,7 @@ paths:
                     properties:
                       id:
                         type: string
-                        example: '33233'
+                        example: "33233"
                         description: |
                           The ID of the user who accepted the share invite.
                       displayName:
@@ -1104,21 +1104,21 @@ paths:
                           The email address of the user who accepted the share invite.
                       profilePicURL:
                         type: string
-                        example: ''
+                        example: ""
                         description: |
                           The profile pic URL for the user who accepted the share invite.
-        '400':
-          $ref: '#/components/responses/400'
-        '500':
-          $ref: '#/components/responses/500'
+        "400":
+          $ref: "#/components/responses/400"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/logging/configuration:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/start'
-      - $ref: '#/components/parameters/end'
-      - $ref: '#/components/parameters/actor'
-      - $ref: '#/components/parameters/target'
-      - $ref: '#/components/parameters/event'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/start"
+      - $ref: "#/components/parameters/end"
+      - $ref: "#/components/parameters/actor"
+      - $ref: "#/components/parameters/target"
+      - $ref: "#/components/parameters/event"
     get:
       summary: List configuration audit logs
       description: |
@@ -1129,7 +1129,7 @@ paths:
       tags:
         - Logging
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -1140,7 +1140,7 @@ paths:
                   version:
                     type: string
                     description: Version of audit logs response.
-                    example: '1.1'
+                    example: "1.1"
                   tailnet:
                     type: string
                     example: example.com
@@ -1149,21 +1149,21 @@ paths:
                     type: array
                     description: Matching log entries, ordered chronologically.
                     items:
-                      $ref: '#/components/schemas/ConfigurationAuditLog'
-        '400':
+                      $ref: "#/components/schemas/ConfigurationAuditLog"
+        "400":
           description: Request has missing or invalid parameter(s).
-          $ref: '#/components/responses/400'
-        '403':
+          $ref: "#/components/responses/400"
+        "403":
           description: User does not have sufficient access to view configuration audit logs.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Logging is not supported on this deployment of Tailscale.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
   /tailnet/{tailnet}/logging/network:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/start'
-      - $ref: '#/components/parameters/end'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/start"
+      - $ref: "#/components/parameters/end"
     get:
       summary: List network flow logs
       description: |
@@ -1174,7 +1174,7 @@ paths:
       tags:
         - Logging
       responses:
-        '200':
+        "200":
           description: Successful operation. The `logs` field contains an array of [NetworkFlowLog](#model/networkflowlog) objects.
           content:
             application/json:
@@ -1186,23 +1186,23 @@ paths:
                     type: array
                     description: Matching log entries, ordered chronologically.
                     items:
-                      $ref: '#/components/schemas/NetworkFlowLog'
-        '400':
+                      $ref: "#/components/schemas/NetworkFlowLog"
+        "400":
           description: Request has missing or invalid parameter(s).
-          $ref: '#/components/responses/400'
-        '403':
+          $ref: "#/components/responses/400"
+        "403":
           description: User does not have sufficient access to view network flow logs.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Logging is not supported on this deployment of Tailscale.
-          $ref: '#/components/responses/404'
-        '502':
+          $ref: "#/components/responses/404"
+        "502":
           description: The system was unable to communicate with logging server.
-          $ref: '#/components/responses/502'
+          $ref: "#/components/responses/502"
   /tailnet/{tailnet}/logging/{logType}/stream/status:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/logType'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/logType"
     get:
       summary: Get log streaming status
       description: |
@@ -1213,22 +1213,22 @@ paths:
       tags:
         - Logging
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LogstreamEndpointPublishingStatus'
-        '404':
+                $ref: "#/components/schemas/LogstreamEndpointPublishingStatus"
+        "404":
           description: Log streaming has not been configured, this `logType` is not supported, or user does not have sufficient access to view log streaming status.
-          $ref: '#/components/responses/404'
-        '502':
+          $ref: "#/components/responses/404"
+        "502":
           description: The system was unable to communicate with logging server.
-          $ref: '#/components/responses/502'
+          $ref: "#/components/responses/502"
   /tailnet/{tailnet}/logging/{logType}/stream:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/logType'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/logType"
     get:
       summary: Get log streaming configuration
       description: |
@@ -1239,15 +1239,15 @@ paths:
       tags:
         - Logging
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LogstreamEndpointConfiguration'
-        '404':
+                $ref: "#/components/schemas/LogstreamEndpointConfiguration"
+        "404":
           description: Log streaming has not been configured, this `logType` is not supported, or user does not have sufficient access to view log streaming configuration.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
     put:
       summary: Set log streaming configuration
       description: |
@@ -1264,24 +1264,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LogstreamEndpointConfiguration'
+              $ref: "#/components/schemas/LogstreamEndpointConfiguration"
             example:
               destinationType: elastic
               url: http://100.71.134.73:80/config-log-datastream
               user: myusername
               token: mytoken
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
+        "400":
           description: Request has missing or invalid parameter(s).
-          $ref: '#/components/responses/400'
-        '403':
+          $ref: "#/components/responses/400"
+        "403":
           description: User does not have sufficient access to update log streaming configuration.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found, this `logType` is not supported, or user does not have sufficient access to view log streaming configuration.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
     delete:
       summary: Disable log streaming
       description: |
@@ -1292,17 +1292,17 @@ paths:
       tags:
         - Logging
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '403':
+        "403":
           description: User does not have sufficient access to update log streaming configuration.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Log streaming has not been configured, this `logType` is not supported, or user does not have sufficient access to view log streaming configuration.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
   /tailnet/{tailnet}/aws-external-id:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     post:
       summary: Create or get AWS external id
       description: |
@@ -1325,21 +1325,21 @@ paths:
             example:
               reusable: true
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AwsExternalId'
-        '403':
+                $ref: "#/components/schemas/AwsExternalId"
+        "403":
           description: User does not have sufficient access to obtain an AWS external id.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
   /tailnet/{tailnet}/aws-external-id/{id}/validate-aws-trust-policy:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
       - name: id
         in: path
         description: The AWS external ID to validate.
@@ -1369,15 +1369,15 @@ paths:
               example:
                 roleArn: arn:aws:iam::000000000000:role/tailscale-log-writer
       responses:
-        '200':
+        "200":
           description: Validation succeeded for this external ID and IAM role.
-        '403':
+        "403":
           description: User does not have sufficient access for this tailnet.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet or external ID not found.
-          $ref: '#/components/responses/404'
-        '422':
+          $ref: "#/components/responses/404"
+        "422":
           description: Validation failed for this external ID and IAM role.
           content:
             application/json:
@@ -1389,7 +1389,7 @@ paths:
                     description: The reason for validation failure.
   /tailnet/{tailnet}/dns/nameservers:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: List DNS nameservers
       description: |
@@ -1398,7 +1398,7 @@ paths:
       tags:
         - DNS
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -1414,11 +1414,11 @@ paths:
                       - 1.2.3.4
                     description: |
                       DNS nameservers.
-        '404':
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Set DNS nameservers
       description: |
@@ -1445,7 +1445,7 @@ paths:
                   description: |
                     DNS nameservers.
       responses:
-        '200':
+        "200":
           description: Succesful operation.
           content:
             application/json:
@@ -1466,14 +1466,14 @@ paths:
                     example: true
                     description: |
                       Whether MagicDNS is active for this tailnet.
-        '404':
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/dns/preferences:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: Get DNS preferences
       description: |
@@ -1482,17 +1482,17 @@ paths:
       tags:
         - DNS
       responses:
-        '200':
+        "200":
           description: Succesful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DnsPreferences'
-        '404':
+                $ref: "#/components/schemas/DnsPreferences"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Set DNS preferences
       description: |
@@ -1512,22 +1512,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DnsPreferences'
+              $ref: "#/components/schemas/DnsPreferences"
       responses:
-        '200':
+        "200":
           description: Succesful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DnsPreferences'
-        '404':
+                $ref: "#/components/schemas/DnsPreferences"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/dns/searchpaths:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: List DNS search paths
       description: |
@@ -1536,17 +1536,17 @@ paths:
       tags:
         - DNS
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DnsSearchPaths'
-        '404':
+                $ref: "#/components/schemas/DnsSearchPaths"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Set DNS search paths
       description: |
@@ -1558,22 +1558,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DnsSearchPaths'
+              $ref: "#/components/schemas/DnsSearchPaths"
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DnsSearchPaths'
-        '404':
+                $ref: "#/components/schemas/DnsSearchPaths"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/dns/split-dns:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: Get split DNS
       description: |
@@ -1582,17 +1582,17 @@ paths:
       tags:
         - DNS
       responses:
-        '200':
+        "200":
           description: Succesful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SplitDns'
-        '404':
+                $ref: "#/components/schemas/SplitDns"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     patch:
       summary: Update split DNS
       description: |
@@ -1606,19 +1606,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SplitDns'
+              $ref: "#/components/schemas/SplitDns"
       responses:
-        '200':
+        "200":
           description: Succesful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SplitDns'
-        '404':
+                $ref: "#/components/schemas/SplitDns"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     put:
       summary: Set split DNS
       description: |
@@ -1632,22 +1632,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SplitDns'
+              $ref: "#/components/schemas/SplitDns"
       responses:
-        '200':
+        "200":
           description: Succesful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SplitDns'
-        '404':
+                $ref: "#/components/schemas/SplitDns"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/dns/configuration:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: Get DNS configuration
       description: |
@@ -1656,17 +1656,17 @@ paths:
       tags:
         - DNS
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DnsConfiguration'
-        '404':
+                $ref: "#/components/schemas/DnsConfiguration"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Set DNS configuration
       description: |
@@ -1684,22 +1684,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DnsConfiguration'
+              $ref: "#/components/schemas/DnsConfiguration"
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DnsConfiguration'
-        '404':
+                $ref: "#/components/schemas/DnsConfiguration"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/keys:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: List tailnet keys
       description: |
@@ -1718,9 +1718,9 @@ paths:
       tags:
         - Keys
       parameters:
-        - $ref: '#/components/parameters/all'
+        - $ref: "#/components/parameters/all"
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -1731,7 +1731,7 @@ paths:
                     type: array
                     description: A list of the active keys.
                     items:
-                      $ref: '#/components/schemas/Key'
+                      $ref: "#/components/schemas/Key"
                     example:
                       - id: XXXX14CNTRL
                         keyType: client
@@ -1764,11 +1764,11 @@ paths:
                                 - tag:example
                         description: dev access
                         userId: uscwcTtzzo11DEVEL
-        '404':
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Create an auth key or OAuth client
       description: |
@@ -1811,7 +1811,7 @@ paths:
                     A short string specifying the purpose of the key. Can be a maximum of 50 alphanumeric characters. Hyphens and spaces are also allowed.
                   example: dev access
                 capabilities:
-                  $ref: '#/components/schemas/KeyCapabilities'
+                  $ref: "#/components/schemas/KeyCapabilities"
                 expirySeconds:
                   type: number
                   description: |
@@ -1842,21 +1842,21 @@ paths:
                 - capabilities
                 - scopes
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Key'
-        '404':
+                $ref: "#/components/schemas/Key"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/keys/{keyId}:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/keyId'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/keyId"
     get:
       summary: Get key
       description: |
@@ -1871,7 +1871,7 @@ paths:
       tags:
         - Keys
       responses:
-        '200':
+        "200":
           description: |
             Successful operation.
 
@@ -1879,12 +1879,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Key'
-        '404':
+                $ref: "#/components/schemas/Key"
+        "404":
           description: Tailnet or key not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     delete:
       summary: Delete key
       description: |
@@ -1899,20 +1899,20 @@ paths:
       tags:
         - Keys
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '403':
+        "403":
           description: User does not have sufficient access to delete this key.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/acl:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/AcceptHeaderParam'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/AcceptHeaderParam"
     get:
       summary: Get policy file
       description: |
@@ -1944,7 +1944,7 @@ paths:
             - `warnings`: array of strings for syntactically valid but nonsensical entries.
             - `errors`: an array of strings for parsing failures.
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -1953,7 +1953,7 @@ paths:
               examples:
                 exampleJSONPolicyFile:
                   summary: JSON response with details=false
-                  $ref: '#/components/examples/ExampleJSONPolicyFile'
+                  $ref: "#/components/examples/ExampleJSONPolicyFile"
                 exampleWithDetails:
                   summary: JSON response with details=true
                   value:
@@ -1967,16 +1967,16 @@ paths:
                 type: string
               examples:
                 exampleHuJSONPolicyFile:
-                  $ref: '#/components/examples/ExampleHuJSONPolicyFile'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                  $ref: "#/components/examples/ExampleHuJSONPolicyFile"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Set policy file
       description: |
@@ -2013,15 +2013,15 @@ paths:
               type: object
             examples:
               exampleJSONPolicyFile:
-                $ref: '#/components/examples/ExampleJSONPolicyFile'
+                $ref: "#/components/examples/ExampleJSONPolicyFile"
           application/hujson:
             schema:
               type: string
             examples:
               exampleHuJSONPolicyFile:
-                $ref: '#/components/examples/ExampleHuJSONPolicyFile'
+                $ref: "#/components/examples/ExampleHuJSONPolicyFile"
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -2029,31 +2029,31 @@ paths:
                 type: object
               examples:
                 exampleJSONPolicyFile:
-                  $ref: '#/components/examples/ExampleJSONPolicyFile'
+                  $ref: "#/components/examples/ExampleJSONPolicyFile"
             application/hujson:
               schema:
                 type: string
               examples:
                 exampleHuJSONPolicyFile:
-                  $ref: '#/components/examples/ExampleHuJSONPolicyFile'
-        '400':
+                  $ref: "#/components/examples/ExampleHuJSONPolicyFile"
+        "400":
           description: ACL validation or test error.
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '412':
+          $ref: "#/components/responses/404"
+        "412":
           description: If-Match hash mismatch.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
                 example:
                   message: precondition failed, invalid old hash
-        '500':
-          $ref: '#/components/responses/500'
+        "500":
+          $ref: "#/components/responses/500"
       x-codeSamples:
         - label: Shell cURL
           lang: shell
@@ -2085,7 +2085,7 @@ paths:
             }'
   /tailnet/{tailnet}/acl/preview:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
       - name: type
         in: query
         description: |
@@ -2136,15 +2136,15 @@ paths:
               type: object
             examples:
               exampleJSONPolicyFile:
-                $ref: '#/components/examples/ExampleJSONPolicyFile'
+                $ref: "#/components/examples/ExampleJSONPolicyFile"
           application/hujson:
             schema:
               type: string
             examples:
               exampleHuJSONPolicyFile:
-                $ref: '#/components/examples/ExampleHuJSONPolicyFile'
+                $ref: "#/components/examples/ExampleHuJSONPolicyFile"
       responses:
-        '200':
+        "200":
           description: The list of rules that apply to the resource.
           content:
             application/json:
@@ -2163,7 +2163,7 @@ paths:
                           description: |
                             Source entities affected by the rule.
                           example:
-                            - '*'
+                            - "*"
                         ports:
                           type: array
                           items:
@@ -2171,7 +2171,7 @@ paths:
                           description: |
                             Destinations that can be accessed.
                           example:
-                            - '*.*'
+                            - "*.*"
                         lineNumber:
                           type: number
                           description: |
@@ -2195,18 +2195,18 @@ paths:
                   - matches
                   - type
                   - previewFor
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/acl/validate:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     post:
       summary: Validate and test policy file
       description: |
@@ -2343,7 +2343,7 @@ paths:
                     ]
                   }
       responses:
-        '200':
+        "200":
           description: Validation or tests have run. An empty response body implies passing validation or tests.
           content:
             application/json:
@@ -2381,18 +2381,18 @@ paths:
                 testsOrValidationSuccess:
                   summary: Tests or validation succeeded
                   value: {}
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/posture/integrations:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: List all posture integrations
       description: |
@@ -2403,7 +2403,7 @@ paths:
       tags:
         - DevicePosture
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -2413,13 +2413,13 @@ paths:
                   integrations:
                     type: array
                     items:
-                      $ref: '#/components/schemas/PostureIntegration'
+                      $ref: "#/components/schemas/PostureIntegration"
                     description: List of PostureIntegrations.
               example:
                 integrations:
                   - clientId: myclientid
                     cloudId: us-1
-                    configUpdated: '2024-06-18T13:43:43.239839Z'
+                    configUpdated: "2024-06-18T13:43:43.239839Z"
                     id: pcBEPQVMpki7DEVEL
                     provider: falcon
                     status:
@@ -2438,53 +2438,53 @@ paths:
                           }
                          ]
                         }
-                      lastSync: '2024-06-18T08:43:43.777283-05:00'
+                      lastSync: "2024-06-18T08:43:43.777283-05:00"
                       matchedCount: 0
                       possibleMatchedCount: 0
                       providerHostCount: 0
                   - clientId: 93013672-b00c-4344-80ca-7ecf74f9dce1
                     cloudId: global
-                    configUpdated: '2024-06-18T13:44:28.250168Z'
+                    configUpdated: "2024-06-18T13:44:28.250168Z"
                     id: p56wQiqrn7mfDEVEL
                     provider: intune
                     status:
                       error: |-
                         Invalid Tenant ID.
                         Microsoft error: AADSTS90002: Tenant 'd1ae389b-5207-43a2-afca-2de6b03ac7e3' not found. Check to make sure you have the correct tenant ID and are signing into the correct cloud. Check with your subscription administrator, this may happen if there are no active subscriptions for the tenant. Trace ID: f6237360-98a2-4889-913b-e3d80aba7d00 Correlation ID: a2024a6e-7757-4406-8a8d-1b6ac2e03ad5 Timestamp: 2024-06-18 13:44:33Z
-                      lastSync: '2024-06-18T08:44:33.872282-05:00'
+                      lastSync: "2024-06-18T08:44:33.872282-05:00"
                       matchedCount: 0
                       possibleMatchedCount: 0
                       providerHostCount: 0
                     tenantId: d1ae389b-5207-43a2-afca-2de6b03ac7e3
                   - clientId: 6cabf059-21c9-44d6-bbde-02898f7430dd
                     cloudId: mysubdomain.jamfcloud.com
-                    configUpdated: '2024-06-18T13:44:56.333103Z'
+                    configUpdated: "2024-06-18T13:44:56.333103Z"
                     id: pFKyGf5YerWbDEVEL
                     provider: jamfpro
-                  - clientId: ''
+                  - clientId: ""
                     cloudId: mydomain.kandji.io
-                    configUpdated: '2024-06-18T13:45:13.631878Z'
+                    configUpdated: "2024-06-18T13:45:13.631878Z"
                     id: ph4mxtePUR2LDEVEL
                     provider: kandji
-                  - clientId: ''
-                    cloudId: ''
-                    configUpdated: '2024-06-18T13:45:20.919656Z'
+                  - clientId: ""
+                    cloudId: ""
+                    configUpdated: "2024-06-18T13:45:20.919656Z"
                     id: pvvTj3FGQAh8DEVEL
                     provider: kolide
                     status:
-                      error: 'Kolide returned unexpected status code: 401 Unauthorized'
-                      lastSync: '2024-06-18T08:45:23.74563-05:00'
+                      error: "Kolide returned unexpected status code: 401 Unauthorized"
+                      lastSync: "2024-06-18T08:45:23.74563-05:00"
                       matchedCount: 0
                       possibleMatchedCount: 0
                       providerHostCount: 0
-                  - clientId: ''
+                  - clientId: ""
                     cloudId: mydomain.sentinelone.net
-                    configUpdated: '2024-06-18T13:45:36.128461Z'
+                    configUpdated: "2024-06-18T13:45:36.128461Z"
                     id: pg9Wqc8sZW2TDEVEL
                     provider: sentinelone
-        '403':
+        "403":
           description: User does not have sufficient access to list posture integrations.
-          $ref: '#/components/responses/403'
+          $ref: "#/components/responses/403"
     post:
       summary: Create a posture integration
       description: |
@@ -2502,7 +2502,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PostureIntegration'
+              $ref: "#/components/schemas/PostureIntegration"
             example:
               provider: intune
               cloudId: global
@@ -2510,21 +2510,21 @@ paths:
               tenantId: d1ae389b-5207-43a2-afca-2de6b03ac7e3
               clientSecret: as32598d#@%asdf
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PostureIntegration'
-        '403':
+                $ref: "#/components/schemas/PostureIntegration"
+        "403":
           description: User does not have sufficient access to create posture integrations.
-          $ref: '#/components/responses/403'
-        '409':
+          $ref: "#/components/responses/403"
+        "409":
           description: A posture integration for the same provider already exists.
-          $ref: '#/components/responses/409'
+          $ref: "#/components/responses/409"
   /posture/integrations/{id}:
     parameters:
-      - $ref: '#/components/parameters/id'
+      - $ref: "#/components/parameters/id"
     get:
       summary: Get a posture integration
       description: |
@@ -2535,15 +2535,15 @@ paths:
       tags:
         - DevicePosture
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PostureIntegration'
-        '404':
+                $ref: "#/components/schemas/PostureIntegration"
+        "404":
           description: Posture integration not found, or user is not authorized to read it.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
     patch:
       summary: Update a posture integration
       description: |
@@ -2557,25 +2557,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PostureIntegration'
+              $ref: "#/components/schemas/PostureIntegration"
             example:
               cloudId: global
               clientId: 93013672-b00c-4344-80ca-7ecf74f9dce1
               tenantId: d1ae389b-5207-43a2-afca-2de6b03ac7e3
               clientSecret: as32598d#@%asdf
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PostureIntegration'
-        '403':
+                $ref: "#/components/schemas/PostureIntegration"
+        "403":
           description: User does not have sufficient access to update this posture integration.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Posture integration not found.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
     delete:
       summary: Delete a posture integration
       description: |
@@ -2586,17 +2586,17 @@ paths:
       tags:
         - DevicePosture
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '403':
+        "403":
           description: User does not have sufficient access to delete this posture integration.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Posture integration not found.
-          $ref: '#/components/responses/404'
+          $ref: "#/components/responses/404"
   /tailnet/{tailnet}/users:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
       - name: type
         in: query
         description: |
@@ -2638,7 +2638,7 @@ paths:
       tags:
         - Users
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -2648,19 +2648,19 @@ paths:
                   users:
                     type: array
                     items:
-                      $ref: '#/components/schemas/User'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                      $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found, or user does not have access to read users.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /users/{userId}:
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: "#/components/parameters/userId"
     get:
       summary: Get a user
       description: |
@@ -2671,24 +2671,24 @@ paths:
       tags:
         - Users
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: User not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /users/{userId}/role:
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: "#/components/parameters/userId"
     post:
       summary: Update user role
       description: |
@@ -2722,20 +2722,20 @@ paths:
                   description: |
                     The role of the user. Learn more about [user roles](kb/1138/user-roles).
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: User not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /users/{userId}/approve:
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: "#/components/parameters/userId"
     post:
       summary: Approve a user
       description: |
@@ -2753,20 +2753,20 @@ paths:
       tags:
         - Users
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: User not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /users/{userId}/suspend:
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: "#/components/parameters/userId"
     post:
       summary: Suspend a user
       description: |
@@ -2781,20 +2781,20 @@ paths:
       tags:
         - Users
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: User not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /users/{userId}/restore:
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: "#/components/parameters/userId"
     post:
       summary: Restore a user
       description: |
@@ -2809,20 +2809,20 @@ paths:
       tags:
         - Users
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: User not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /users/{userId}/delete:
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: "#/components/parameters/userId"
     post:
       summary: Delete a user
       description: |
@@ -2837,20 +2837,20 @@ paths:
       tags:
         - Users
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: User not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/contacts:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: Get contacts
       description: |
@@ -2861,7 +2861,7 @@ paths:
       tags:
         - Contacts
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -2869,11 +2869,11 @@ paths:
                 type: object
                 properties:
                   account:
-                    $ref: '#/components/schemas/Contact'
+                    $ref: "#/components/schemas/Contact"
                   support:
-                    $ref: '#/components/schemas/Contact'
+                    $ref: "#/components/schemas/Contact"
                   security:
-                    $ref: '#/components/schemas/Contact'
+                    $ref: "#/components/schemas/Contact"
               example:
                 account:
                   email: owner@example.com
@@ -2881,18 +2881,18 @@ paths:
                   email: support@example.com
                 security:
                   email: security@example.com
-        '403':
+        "403":
           description: User does not have sufficient access to view contacts on this tailnet.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/contacts/{contactType}:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/contactType'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/contactType"
     patch:
       summary: Update contact
       description: |
@@ -2917,20 +2917,20 @@ paths:
             example:
               email: newuser@example.com
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '403':
+        "403":
           description: User does not have sufficient access to update contacts for this tailnet.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/contacts/{contactType}/resend-verification-email:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
-      - $ref: '#/components/parameters/contactType'
+      - $ref: "#/components/parameters/tailnet"
+      - $ref: "#/components/parameters/contactType"
     post:
       summary: Resend verification email
       description: |
@@ -2941,22 +2941,22 @@ paths:
       tags:
         - Contacts
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
+        "400":
           description: Verification is not required, can't resend email.
-          $ref: '#/components/responses/400'
-        '403':
+          $ref: "#/components/responses/400"
+        "403":
           description: User does not have sufficient access to update contacts for this tailnet.
-          $ref: '#/components/responses/403'
-        '404':
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/webhooks:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: List webhooks
       description: |
@@ -2967,7 +2967,7 @@ paths:
       tags:
         - Webhooks
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
@@ -2977,16 +2977,16 @@ paths:
                   webhooks:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Webhook'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                      $ref: "#/components/schemas/Webhook"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     post:
       summary: Create a webhook
       description: |
@@ -3008,31 +3008,31 @@ paths:
                   description: |
                     The endpoint that events are sent to from Tailscale via POST requests.
                 providerType:
-                  $ref: '#/components/schemas/providerType'
+                  $ref: "#/components/schemas/providerType"
                 subscriptions:
-                  $ref: '#/components/schemas/subscriptions'
+                  $ref: "#/components/schemas/subscriptions"
               required:
                 - endpointUrl
                 - subscriptions
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Webhook'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /webhooks/{endpointId}:
     parameters:
-      - $ref: '#/components/parameters/endpointId'
+      - $ref: "#/components/parameters/endpointId"
     get:
       summary: Get webhook
       description: |
@@ -3043,21 +3043,21 @@ paths:
       tags:
         - Webhooks
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Webhook'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Webhook not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     patch:
       summary: Update webhook
       description: |
@@ -3074,23 +3074,23 @@ paths:
               type: object
               properties:
                 subscriptions:
-                  $ref: '#/components/schemas/subscriptions'
+                  $ref: "#/components/schemas/subscriptions"
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Webhook'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     delete:
       summary: Delete webhook
       description: |
@@ -3101,20 +3101,20 @@ paths:
       tags:
         - Webhooks
       responses:
-        '200':
+        "200":
           description: Successful operation.
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Webhook not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /webhooks/{endpointId}/test:
     parameters:
-      - $ref: '#/components/parameters/endpointId'
+      - $ref: "#/components/parameters/endpointId"
     post:
       summary: Test a webhook
       description: |
@@ -3128,20 +3128,20 @@ paths:
       tags:
         - Webhooks
       responses:
-        '202':
+        "202":
           description: Successfully queued test event.
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: User not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /webhooks/{endpointId}/rotate:
     parameters:
-      - $ref: '#/components/parameters/endpointId'
+      - $ref: "#/components/parameters/endpointId"
     post:
       summary: Rotate webhook secret
       description: |
@@ -3155,24 +3155,24 @@ paths:
       tags:
         - Webhooks
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Webhook'
-        '400':
-          $ref: '#/components/responses/400'
-        '403':
-          $ref: '#/components/responses/403'
-        '404':
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          $ref: "#/components/responses/400"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
           description: Webhook not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
   /tailnet/{tailnet}/settings:
     parameters:
-      - $ref: '#/components/parameters/tailnet'
+      - $ref: "#/components/parameters/tailnet"
     get:
       summary: Get tailnet settings
       description: |
@@ -3189,19 +3189,19 @@ paths:
       tags:
         - TailnetSettings
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TailnetSettings'
-        '400':
-          $ref: '#/components/responses/400'
-        '404':
+                $ref: "#/components/schemas/TailnetSettings"
+        "400":
+          $ref: "#/components/responses/400"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
     patch:
       summary: Update tailnet settings
       description: |
@@ -3221,21 +3221,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TailnetSettings'
+              $ref: "#/components/schemas/TailnetSettings"
       responses:
-        '200':
+        "200":
           description: Successful operation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TailnetSettings'
-        '400':
-          $ref: '#/components/responses/400'
-        '404':
+                $ref: "#/components/schemas/TailnetSettings"
+        "400":
+          $ref: "#/components/responses/400"
+        "404":
           description: Tailnet not found.
-          $ref: '#/components/responses/404'
-        '500':
-          $ref: '#/components/responses/500'
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
 components:
   securitySchemes:
     bearerAuth:
@@ -3366,7 +3366,7 @@ components:
       required: true
       schema:
         type: string
-        example: '2023-12-19T16:39:57-08:00'
+        example: "2023-12-19T16:39:57-08:00"
     end:
       name: end
       in: query
@@ -3374,7 +3374,7 @@ components:
       required: true
       schema:
         type: string
-        example: '2023-12-22T02:15:23-08:00'
+        example: "2023-12-22T02:15:23-08:00"
     actor:
       name: actor
       in: query
@@ -3534,7 +3534,7 @@ components:
       description: The type of log.
       required: true
       schema:
-        $ref: '#/components/schemas/LogType'
+        $ref: "#/components/schemas/LogType"
     all:
       in: query
       name: all
@@ -3620,7 +3620,7 @@ components:
             and IPv6 (formatted as fd7a:115c:a1e0:a:b:c:d:e) addresses.
         id:
           type: string
-          example: '92960230385'
+          example: "92960230385"
           description: |
             The legacy identifier for a device; you
             can supply this value wherever {deviceId} is indicated in the
@@ -3670,7 +3670,7 @@ components:
         created:
           type: string
           format: date-time
-          example: '2022-12-01T05:23:30Z'
+          example: "2022-12-01T05:23:30Z"
           description: |
             The date on which the device was added
             to the tailnet; this is empty for external devices.
@@ -3682,7 +3682,7 @@ components:
         lastSeen:
           type: string
           format: date-time
-          example: '2022-12-01T05:23:30Z'
+          example: "2022-12-01T05:23:30Z"
           description: |
             When the device was last connected to the Tailscale control server. Omitted if the device has never been online or `connectedToControl` is true.
         keyExpiryDisabled:
@@ -3694,7 +3694,7 @@ components:
         expires:
           type: string
           format: date-time
-          example: '2023-05-30T04:44:05Z'
+          example: "2023-05-30T04:44:05Z"
           description: |
             The expiration date of the device's auth key.
             Learn more about key expiry at https://tailscale.com/kb/1028/.
@@ -3720,7 +3720,7 @@ components:
             If the number of live connections goes back to 0 or 1, this field is also omitted, meaning it's not sticky. In case an attacker steals node state from a legitimate node, they can mask their activities by not connecting concurrently with the legitimate node.
         machineKey:
           type: string
-          example: ''
+          example: ""
           description: |
             For internal use and is not required for any API operations.
             This value is empty for external devices.
@@ -3868,13 +3868,13 @@ components:
             Learn more about tags at https://tailscale.com/kb/1068/.
         tailnetLockError:
           type: string
-          example: ''
+          example: ""
           description: |
             Indicates an issue with the tailnet lock node-key signature on this device.
             This field is only populated when tailnet lock is enabled.
         tailnetLockKey:
           type: string
-          example: ''
+          example: ""
           description: |
             The node's tailnet lock key.
             Every node generates a tailnet lock key (so the value will be present) even if tailnet lock is not enabled.
@@ -3960,7 +3960,7 @@ components:
           additionalProperties:
             type: string
             format: date-time
-            example: '2022-12-01T05:23:30Z'
+            example: "2022-12-01T05:23:30Z"
             description: Expiry time for a given posture attribute.
       example:
         attributes:
@@ -3974,7 +3974,7 @@ components:
           node:tsAutoUpdate: false
           node:tsStateEncrypted: false
         expiries:
-          custom:myScore: '2024-04-23T18:25:43.511Z'
+          custom:myScore: "2024-04-23T18:25:43.511Z"
     DeviceInvite:
       type: object
       description: |
@@ -3988,14 +3988,14 @@ components:
       properties:
         id:
           type: string
-          example: '12346'
+          example: "12346"
           description: |
             The unique identifier for the invite.
             Supply this value wherever {deviceInviteId} is indicated in the endpoint.
         created:
           type: string
           format: date-time
-          example: '2024-04-03T21:38:49.333829261Z'
+          example: "2024-04-03T21:38:49.333829261Z"
           description: |
             The creation time of the invite.
         tailnetId:
@@ -4035,7 +4035,7 @@ components:
         lastEmailSentAt:
           type: string
           format: date-time
-          example: '2024-04-03T21:38:49.333829261Z'
+          example: "2024-04-03T21:38:49.333829261Z"
           description: |
             The last time the invite was attempted to be sent to Email.
             Only ever set if `email` is not empty.
@@ -4069,7 +4069,7 @@ components:
                 The login name of the user who accepted the share invite.
             profilePicUrl:
               type: string
-              example: ''
+              example: ""
               description: |
                 The profile pic URL for the user who accepted the share invite.
     UserInvite:
@@ -4084,7 +4084,7 @@ components:
       properties:
         id:
           type: string
-          example: '12346'
+          example: "12346"
           description: |
             The unique identifier for the invite.
             Supply this value wherever `userInviteId` is indicated in the endpoint.
@@ -4120,7 +4120,7 @@ components:
         lastEmailSentAt:
           type: string
           format: date-time
-          example: '2024-04-03T21:38:49.333829261Z'
+          example: "2024-04-03T21:38:49.333829261Z"
           description: |
             The last time the invite was attempted to be sent to Email.
             Only ever set if `email` is not empty.
@@ -4150,7 +4150,7 @@ components:
         eventTime:
           type: string
           description: Timestamp of the audit log event, in RFC 3339 format.
-          example: '2024-06-06T15:25:26.583893Z'
+          example: "2024-06-06T15:25:26.583893Z"
         type:
           type: string
           enum:
@@ -4159,7 +4159,7 @@ components:
         deferredAt:
           type: string
           description: Timestamp recording the time that the audit log rate limiter enqueued the record to be logged at a future time, in RFC 3339 format.
-          example: '0001-01-01T00:00:00Z'
+          example: "0001-01-01T00:00:00Z"
         eventGroupID:
           type: string
           description: Identifier assigned to one or more audit log events, all of which are the result of a single operation.
@@ -4366,9 +4366,9 @@ components:
           id: uZKk3KSfrH11DEVEL
           loginName: lion.dahlia.armadillo@example.com
           type: USER
-        deferredAt: '0001-01-01T00:00:00Z'
+        deferredAt: "0001-01-01T00:00:00Z"
         eventGroupID: 0378d8f57300d172ef7ae3826e097ef0
-        eventTime: '2024-06-06T15:25:26.583893Z'
+        eventTime: "2024-06-06T15:25:26.583893Z"
         origin: ADMIN_CONSOLE
         target:
           id: nBLYviWLGB21DEVEL
@@ -4427,7 +4427,7 @@ components:
         logged:
           type: string
           description: Timestamp of the flow log, in RFC 3339 format.
-          example: '2024-06-06T15:27:26.583893Z'
+          example: "2024-06-06T15:27:26.583893Z"
         nodeId:
           type: string
           description: Identifier of the node.
@@ -4435,32 +4435,32 @@ components:
         start:
           type: string
           description: Time at which flow started, in RFC 3339 format.
-          example: '2024-06-06T15:25:26.583893Z'
+          example: "2024-06-06T15:25:26.583893Z"
         end:
           type: string
           description: Time at which flow ended, in RFC 3339 format.
-          example: '2024-06-06T15:26:26.583893Z'
+          example: "2024-06-06T15:26:26.583893Z"
         virtualTraffic:
           type: array
           items:
-            $ref: '#/components/schemas/ConnectionCounts'
+            $ref: "#/components/schemas/ConnectionCounts"
         subnetTraffic:
           type: array
           items:
-            $ref: '#/components/schemas/ConnectionCounts'
+            $ref: "#/components/schemas/ConnectionCounts"
         exitTraffic:
           type: array
           items:
-            $ref: '#/components/schemas/ConnectionCounts'
+            $ref: "#/components/schemas/ConnectionCounts"
         physicalTraffic:
           type: array
           items:
-            $ref: '#/components/schemas/ConnectionCounts'
+            $ref: "#/components/schemas/ConnectionCounts"
       example:
-        logged: '2024-06-06T15:27:26.583893Z'
+        logged: "2024-06-06T15:27:26.583893Z"
         nodeId: nBLYviWLGB21DEVEL
-        start: '2024-06-06T15:25:26.583893Z'
-        end: '2024-06-06T15:26:26.583893Z'
+        start: "2024-06-06T15:25:26.583893Z"
+        end: "2024-06-06T15:26:26.583893Z"
         virtualTraffic:
           - proto: ipv4
             src: 108.86.185.125:52343
@@ -4505,8 +4505,8 @@ components:
       type: object
       description: Latest status of log stream publishing for a specific type of log.
       example:
-        lastActivity: '2024-06-10T15:42:13.984555636Z'
-        lastError: ''
+        lastActivity: "2024-06-10T15:42:13.984555636Z"
+        lastError: ""
         maxBodySize: 524288
         numBytesSent: 17238983
         numEntriesSent: 8363
@@ -4521,7 +4521,7 @@ components:
         lastActivity:
           type: string
           description: Timestamp of the most recent publishing activity, in RFC 3339 format.
-          example: '2024-06-10T15:42:13.984555636Z'
+          example: "2024-06-10T15:42:13.984555636Z"
         lastError:
           type: string
           description: The most recent error (if any).
@@ -4591,7 +4591,7 @@ components:
         logType:
           description: The type of log that is streamed to this endpoint.
           readOnly: true
-          $ref: '#/components/schemas/LogType'
+          $ref: "#/components/schemas/LogType"
         destinationType:
           type: string
           enum:
@@ -4666,7 +4666,7 @@ components:
       description: An external ID for use in authenticating to AWS using role-based authentication.
       example:
         externalId: 60fe9ce7-7791-4ab3-ab34-4294f5972725
-        tailscaleAwsAccountId: '001234567890'
+        tailscaleAwsAccountId: "001234567890"
       properties:
         externalId:
           type: string
@@ -4675,7 +4675,7 @@ components:
         tailscaleAwsAccountId:
           type: string
           description: The AWS account id that Tailscale will supply to AWS when authenticating using role-based authentication.
-          example: '001234567890'
+          example: "001234567890"
     DnsPreferences:
       type: object
       properties:
@@ -4706,7 +4706,7 @@ components:
         x-additionalPropertiesName: Domain names to DNS
         type:
           - array
-          - 'null'
+          - "null"
         items:
           type: string
       example:
@@ -4751,7 +4751,7 @@ components:
           description: |
             Global DNS resolvers to use. If `preferences.overrideLocalDNS` is true, these override the local OS configuration; otherwise they are used as fallback resolvers.
           items:
-            $ref: '#/components/schemas/DnsConfigurationResolver'
+            $ref: "#/components/schemas/DnsConfigurationResolver"
           example:
             - address: 8.8.8.8
               useWithExitNode: true
@@ -4765,9 +4765,9 @@ components:
             x-additionalPropertiesName: Domain names to DNS resolvers
             type:
               - array
-              - 'null'
+              - "null"
             items:
-              $ref: '#/components/schemas/DnsConfigurationResolver'
+              $ref: "#/components/schemas/DnsConfigurationResolver"
           example:
             corp.example.com:
               - address: 10.0.0.53
@@ -4787,7 +4787,7 @@ components:
             - user1.example.com
             - user2.example.com
         preferences:
-          $ref: '#/components/schemas/DnsConfigurationPreferences'
+          $ref: "#/components/schemas/DnsConfigurationPreferences"
     KeyCapabilities:
       type: object
       description: |
@@ -4865,17 +4865,17 @@ components:
         created:
           type: string
           format: date-time
-          example: '2021-12-09T23:22:39Z'
+          example: "2021-12-09T23:22:39Z"
         expires:
           type: string
           format: date-time
-          example: '2022-03-09T23:22:39Z'
+          example: "2022-03-09T23:22:39Z"
         revoked:
           type: string
           format: date-time
-          example: '2022-03-12T23:22:39Z'
+          example: "2022-03-12T23:22:39Z"
         capabilities:
-          $ref: '#/components/schemas/KeyCapabilities'
+          $ref: "#/components/schemas/KeyCapabilities"
         scopes:
           type: array
           description: |
@@ -4967,7 +4967,7 @@ components:
           type: string
           readOnly: true
           description: Timestamp of the last time this configuration was updated, in RFC 3339 format.
-          example: '2024-06-18T13:43:43.239839Z'
+          example: "2024-06-18T13:43:43.239839Z"
         status:
           type: object
           readOnly: true
@@ -4976,7 +4976,7 @@ components:
             lastSync:
               type: string
               description: Timestamp of the last synchronization with the device posture provider, in RFC 3339 format.
-              example: '2024-06-18T08:44:33.872282-05:00'
+              example: "2024-06-18T08:44:33.872282-05:00"
             error:
               type: string
               description: If the last synchronization failed, this shows the error message associated with the failed synchronization.
@@ -5001,12 +5001,12 @@ components:
         cloudId: global
         clientId: 93013672-b00c-4344-80ca-7ecf74f9dce1
         tenantId: d1ae389b-5207-43a2-afca-2de6b03ac7e3
-        configUpdated: '2024-06-18T13:44:28.250168Z'
+        configUpdated: "2024-06-18T13:44:28.250168Z"
         status:
           error: |-
             Invalid Tenant ID.
             Microsoft error: AADSTS90002: Tenant 'd1ae389b-5207-43a2-afca-2de6b03ac7e3' not found. Check to make sure you have the correct tenant ID and are signing into the correct cloud. Check with your subscription administrator, this may happen if there are no active subscriptions for the tenant. Trace ID: f6237360-98a2-4889-913b-e3d80aba7d00 Correlation ID: a2024a6e-7757-4406-8a8d-1b6ac2e03ad5 Timestamp: 2024-06-18 13:44:33Z
-          lastSync: '2024-06-18T08:44:33.872282-05:00'
+          lastSync: "2024-06-18T08:44:33.872282-05:00"
           matchedCount: 0
           possibleMatchedCount: 0
           providerHostCount: 0
@@ -5017,7 +5017,7 @@ components:
       properties:
         id:
           type: string
-          example: '123456'
+          example: "123456"
           description: |
             The unique identifier for the user.
             Supply this value wherever {userId} is indicated in an endpoint.
@@ -5033,7 +5033,7 @@ components:
             The emailish login name of the user.
         profilePicUrl:
           type: string
-          example: ''
+          example: ""
           description: |
             The profile pic URL for the user.
         tailnetId:
@@ -5044,7 +5044,7 @@ components:
         created:
           type: string
           format: date-time
-          example: '2022-12-01T05:23:30Z'
+          example: "2022-12-01T05:23:30Z"
           description: |
             The time the user joined their tailnet.
         type:
@@ -5093,7 +5093,7 @@ components:
         lastSeen:
           type: string
           format: date-time
-          example: '2022-12-01T05:23:30Z'
+          example: "2022-12-01T05:23:30Z"
           description: |
             The later of either:
             - The last time any of the user's nodes were connected to the network.
@@ -5128,7 +5128,7 @@ components:
       properties:
         endpointId:
           type: string
-          example: '123456'
+          example: "123456"
           description: |
             ID of the webhook endpoint.
         endpointUrl:
@@ -5156,13 +5156,13 @@ components:
         created:
           type: string
           format: date-time
-          example: '2022-12-01T05:23:30Z'
+          example: "2022-12-01T05:23:30Z"
           description: |
             The time the webhook endpoint was created.
         lastModified:
           type: string
           format: date-time
-          example: '2022-12-01T05:23:30Z'
+          example: "2022-12-01T05:23:30Z"
           description: |
             The time the webhook endpoint was last modified.
         subscriptions:
@@ -5312,68 +5312,68 @@ components:
           description: |
             Whether provisioning of [HTTPS certificates](/kb/1153/enabling-https) is enabled for this tailnet.
   responses:
-    '400':
+    "400":
       description: Bad request.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: bad request
-    '403':
+    "403":
       description: Forbidden.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: forbidden
-    '404':
+    "404":
       description: Not found.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: not found
-    '409':
+    "409":
       description: Conflict.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: conflict
-    '500':
+    "500":
       description: Internal server error.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: internal server error
-    '501':
+    "501":
       description: Not implemented.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: not implemented
-    '502':
+    "502":
       description: Bad gateway.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: bad gateway
-    '504':
+    "504":
       description: Gateway timeout.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
             example:
               message: request took too long to process, please try again later
   examples:
@@ -5383,9 +5383,9 @@ components:
         acls:
           - action: accept
             ports:
-              - '*:*'
+              - "*:*"
             users:
-              - '*'
+              - "*"
         groups:
           group:example:
             - user1@example.com

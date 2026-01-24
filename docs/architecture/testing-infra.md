@@ -41,4 +41,3 @@ Use `ALFRED_TEST_SCOPE=unit|integration|e2e|perf|all`.
 ## Common hang source: stdin
 
 Completion/CLI libraries can resume stdin and keep the test process alive. Always pause stdin in teardown (`process.stdin.pause()`).
-

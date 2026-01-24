@@ -33,6 +33,7 @@ Agents are first-class citizens in ALFRED's infrastructure. They are equipped wi
 ### Recovery Tools
 
 The `runtime` router provides the foundation for agentic recovery:
+
 - **Status**: Inspects system dependencies (UV, Docker, DB) and feature flags.
 - **Logs**: Tails container logs to diagnose failures without human intervention.
 - **Recovery**: Executes safe recovery playbooks, such as restarting process pools or clearing stale state.
@@ -40,6 +41,7 @@ The `runtime` router provides the foundation for agentic recovery:
 ## Observability
 
 Standard observability is provided via Prometheus and Grafana.
+
 - **Metrics**: ALFRED exports metrics at `/api/metrics`.
 - **Dashboards**: Pre-provisioned dashboards in `infra/ansible/roles/monitoring/templates/dashboards/` provide a starting point for system monitoring.
 - **Logs**: Loki aggregates logs from all containers for centralized debugging.

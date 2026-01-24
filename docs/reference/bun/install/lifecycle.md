@@ -1,9 +1,10 @@
 ---
 title: Lifecycle scripts – Package manager | Bun Docs
-url: 
+url:
 description: How Bun handles package lifecycle scripts with trustedDependencies
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -61,7 +62,7 @@ Packages on `npm` can define _lifecycle scripts_ in their `package.json`. Some o
 
 These scripts are arbitrary shell commands that the package manager is expected to read and execute at the appropriate time. But executing arbitrary scripts represents a potential security risk, so—unlike other `npm` clients—Bun does not execute arbitrary lifecycle scripts by default.
 
-## [`postinstall`](https://bun.com/docs/install/lifecycle\#postinstall)
+## [`postinstall`](https://bun.com/docs/install/lifecycle#postinstall)
 
 The `postinstall` script is particularly important. It's widely used to build or install platform-specific binaries for packages that are implemented as [native Node.js add-ons](https://nodejs.org/api/addons.html). For example, `node-sass` is a popular package that uses `postinstall` to build a native binary for Sass.
 
@@ -76,7 +77,7 @@ The `postinstall` script is particularly important. It's widely used to build or
 
 ```
 
-## [`trustedDependencies`](https://bun.com/docs/install/lifecycle\#trusteddependencies)
+## [`trustedDependencies`](https://bun.com/docs/install/lifecycle#trusteddependencies)
 
 Instead of executing arbitrary scripts, Bun uses a "default-secure" approach. You can add certain packages to an allow list, and Bun will execute lifecycle scripts for those packages. To tell Bun to allow lifecycle scripts for a particular package, add the package name to `trustedDependencies` array in your `package.json`.
 
@@ -92,7 +93,7 @@ Once added to `trustedDependencies`, install/re-install the package. Bun will re
 
 As of Bun v1.0.16, the top 500 npm packages with lifecycle scripts are allowed by default. You can see the full list [here](https://github.com/oven-sh/bun/blob/main/src/install/default-trusted-dependencies.txt).
 
-## [`--ignore-scripts`](https://bun.com/docs/install/lifecycle\#ignore-scripts)
+## [`--ignore-scripts`](https://bun.com/docs/install/lifecycle#ignore-scripts)
 
 To disable lifecycle scripts for all packages, use the `--ignore-scripts` flag.
 
@@ -106,7 +107,7 @@ Catalogs](https://bun.com/docs/install/catalogs) [Next\\
 \\
 Filter](https://bun.com/docs/cli/filter)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/lifecycle.md)
 
@@ -130,7 +131,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

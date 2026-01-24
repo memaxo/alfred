@@ -1,9 +1,10 @@
 ---
 title: TanStack Start Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with TanStack Start.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,7 +31,7 @@ This integration guide is assuming you are using TanStack Start.
 
 Before you start, make sure you have a Better Auth instance configured. If you haven't done that yet, check out the [installation](https://www.better-auth.com/docs/installation).
 
-### [Mount the handler](https://www.better-auth.com/docs/integrations/tanstack\#mount-the-handler)
+### [Mount the handler](https://www.better-auth.com/docs/integrations/tanstack#mount-the-handler)
 
 We need to mount the handler to a TanStack API endpoint/Server Route.
 Create a new file: `/src/routes/api/auth/$.ts`
@@ -67,7 +68,7 @@ export default createStartHandler({
 })(defaultStreamHandler)
 ```
 
-### [Usage tips](https://www.better-auth.com/docs/integrations/tanstack\#usage-tips)
+### [Usage tips](https://www.better-auth.com/docs/integrations/tanstack#usage-tips)
 
 - We recommend using the client SDK or `authClient` to handle authentication, rather than server actions with `auth.api`.
 - When you call functions that need to set cookies (like `signInEmail` or `signUpEmail`), you'll need to handle cookie setting for TanStack Start. Better Auth provides a `tanstackStartCookies` plugin to automatically handle this for you.

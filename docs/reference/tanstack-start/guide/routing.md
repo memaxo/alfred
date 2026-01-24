@@ -8,51 +8,43 @@ The Router
 
 The router.tsx file is the file that will dictate the behavior of TanStack Router used within Start. It's located in the src directory of your project.
 
+src/
+├── router.tsx
 
- src/
- ├── router.tsx
-
-
-
- src/
- ├── router.tsx
-
+src/
+├── router.tsx
 
 Here, you can configure everything from the default preloading functionality to caching staleness.
 
+// src/router.tsx
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
 
- // src/router.tsx
- import { createRouter } from '@tanstack/react-router'
- import { routeTree } from './routeTree.gen'
+// You must export a getRouter function that
+// returns a new router instance each time
+export function getRouter() {
+const router = createRouter({
+routeTree,
+scrollRestoration: true,
+})
 
- // You must export a getRouter function that
- // returns a new router instance each time
- export function getRouter() {
- const router = createRouter({
- routeTree,
- scrollRestoration: true,
- })
+return router
+}
 
- return router
- }
+// src/router.tsx
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
 
+// You must export a getRouter function that
+// returns a new router instance each time
+export function getRouter() {
+const router = createRouter({
+routeTree,
+scrollRestoration: true,
+})
 
-
- // src/router.tsx
- import { createRouter } from '@tanstack/react-router'
- import { routeTree } from './routeTree.gen'
-
- // You must export a getRouter function that
- // returns a new router instance each time
- export function getRouter() {
- const router = createRouter({
- routeTree,
- scrollRestoration: true,
- })
-
- return router
- }
-
+return router
+}
 
 File-Based Routing
 
@@ -60,113 +52,92 @@ Start uses TanStack Router's file-based routing approach to ensure proper code-s
 
 You can find your routes in the src/routes directory.
 
+src/
+├── routes , , etc.
 
- src/
- ├── routes , , etc.
- * Because it is **always rendered** , it is the perfect place to construct your application shell and take care of any global logic
+- Because it is **always rendered** , it is the perfect place to construct your application shell and take care of any global logic
 
+// src/routes/\_\_root.tsx
+import {
+Outlet,
+createRootRoute,
+HeadContent,
+Scripts,
+} from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 
+export const Route = createRootRoute({
+head: () => ({
+meta: [
+{
+charSet: 'utf-8',
+},
+{
+name: 'viewport',
+content: 'width=device-width, initial-scale=1',
+},
+{
+title: 'TanStack Start Starter',
+},
+],
+}),
+component: RootComponent,
+})
 
- // src/routes/__root.tsx
- import {
- Outlet,
- createRootRoute,
- HeadContent,
- Scripts,
- } from '@tanstack/react-router'
- import type { ReactNode } from 'react'
+function RootComponent() {
+return (
 
- export const Route = createRootRoute({
- head: () => ({
- meta: [
- {
- charSet: 'utf-8',
- },
- {
- name: 'viewport',
- content: 'width=device-width, initial-scale=1',
- },
- {
- title: 'TanStack Start Starter',
- },
- ],
- }),
- component: RootComponent,
- })
+)
+}
 
- function RootComponent() {
- return (
+function RootDocument({ children }: Readonly) {
+return (
 
+{children}
 
+)
+}
 
- )
- }
+// src/routes/\_\_root.tsx
+import {
+Outlet,
+createRootRoute,
+HeadContent,
+Scripts,
+} from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 
- function RootDocument({ children }: Readonly) {
- return (
+export const Route = createRootRoute({
+head: () => ({
+meta: [
+{
+charSet: 'utf-8',
+},
+{
+name: 'viewport',
+content: 'width=device-width, initial-scale=1',
+},
+{
+title: 'TanStack Start Starter',
+},
+],
+}),
+component: RootComponent,
+})
 
+function RootComponent() {
+return (
 
+)
+}
 
+function RootDocument({ children }: Readonly) {
+return (
 
+{children}
 
- {children}
-
-
-
- )
- }
-
-
-
- // src/routes/__root.tsx
- import {
- Outlet,
- createRootRoute,
- HeadContent,
- Scripts,
- } from '@tanstack/react-router'
- import type { ReactNode } from 'react'
-
- export const Route = createRootRoute({
- head: () => ({
- meta: [
- {
- charSet: 'utf-8',
- },
- {
- name: 'viewport',
- content: 'width=device-width, initial-scale=1',
- },
- {
- title: 'TanStack Start Starter',
- },
- ],
- }),
- component: RootComponent,
- })
-
- function RootComponent() {
- return (
-
-
-
- )
- }
-
- function RootDocument({ children }: Readonly) {
- return (
-
-
-
-
-
- {children}
-
-
-
- )
- }
-
+)
+}
 
 Notice the Scripts component at the bottom of the tag. This is used to load all of the client-side JavaScript for the application and should always be included for proper functionality.
 
@@ -190,52 +161,32 @@ Route Tree Generation
 
 You may notice a routeTree.gen.ts file in your project.
 
+src/
+├── routeTree.gen.ts component
+├── posts.tsx component
+├── posts.$postId.tsx component
 
- src/
- ├── routeTree.gen.ts component
- ├── posts.tsx component
- ├── posts.$postId.tsx component
-
-
-
- routes/
- ├── __root.tsx component
- ├── posts.tsx component
- ├── posts.$postId.tsx component
-
+routes/
+├── \_\_root.tsx component
+├── posts.tsx component
+├── posts.$postId.tsx component
 
 And the URL: /posts/123
 
 The component tree would look like this:
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Types of Routes
 
 There are a few different types of routes that you can create in your project.
 
- * Index Routes - Matched when the URL is exactly the same as the route's path
- * Dynamic/Wildcard/Splat Routes - Dynamically capture part or all of the URL path into a variable to use in your application
+- Index Routes - Matched when the URL is exactly the same as the route's path
+- Dynamic/Wildcard/Splat Routes - Dynamically capture part or all of the URL path into a variable to use in your application
 
 There are also a few different utility route types that you can use to group and organize your routes
 
- * Pathless Layout Routes (Apply layout or logic to a group of routes without nesting them in a path)
- * Non-Nested Routes (Un-nest a route from its parents and render its own component tree)
- * Grouped Routes (Group routes together in a directory simply for organization, without affecting the path hierarchy)
+- Pathless Layout Routes (Apply layout or logic to a group of routes without nesting them in a path)
+- Non-Nested Routes (Un-nest a route from its parents and render its own component tree)
+- Grouped Routes (Group routes together in a directory simply for organization, without affecting the path hierarchy)
 
 Route Tree Configuration
 
@@ -245,51 +196,44 @@ Creating File Routes
 
 To create a route, create a new file that corresponds to the path of the route you want to create. For example:
 
-Path| Filename| Type
----|---|---
-/| index.tsx| Index Route
-/about| about.tsx| Static Route
-| posts.tsx| "Layout" Route
-/posts/| posts/index.tsx| Index Route
-/posts/:postId| posts/$postId.tsx| Dynamic Route
-/rest/*| rest/$.tsx| Wildcard Route
+| Path           | Filename          | Type           |
+| -------------- | ----------------- | -------------- |
+| /              | index.tsx         | Index Route    |
+| /about         | about.tsx         | Static Route   |
+| posts.tsx      | "Layout" Route    |
+| /posts/        | posts/index.tsx   | Index Route    |
+| /posts/:postId | posts/$postId.tsx | Dynamic Route  |
+| /rest/\*       | rest/$.tsx        | Wildcard Route |
+
 Defining Routes
 
 To define a route, use the createFileRoute function to export the route as the Route variable.
 
 For example, to handle the /posts/:postId route, you would create a file named posts/$postId.tsx here:
 
+src/
+├── routes
+│ ├── posts/$postId.tsx
 
- src/
- ├── routes
- │ ├── posts/$postId.tsx
-
-
-
- src/
- ├── routes
- │ ├── posts/$postId.tsx
-
+src/
+├── routes
+│ ├── posts/$postId.tsx
 
 Then, define the route like this:
 
+// src/routes/posts/$postId.tsx
+import { createFileRoute } from '@tanstack/react-router'
 
- // src/routes/posts/$postId.tsx
- import { createFileRoute } from '@tanstack/react-router'
+export const Route = createFileRoute('/posts/$postId')({
+component: PostComponent,
+})
 
- export const Route = createFileRoute('/posts/$postId')({
- component: PostComponent,
- })
+// src/routes/posts/$postId.tsx
+import { createFileRoute } from '@tanstack/react-router'
 
-
-
- // src/routes/posts/$postId.tsx
- import { createFileRoute } from '@tanstack/react-router'
-
- export const Route = createFileRoute('/posts/$postId')({
- component: PostComponent,
- })
-
+export const Route = createFileRoute('/posts/$postId')({
+component: PostComponent,
+})
 
 Note
 

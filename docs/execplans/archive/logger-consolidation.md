@@ -88,15 +88,12 @@ Third, migrate call sites:
 All commands are run from the repo root (`/Users/jackmazac/Development/alfred`).
 
 1. Search for direct console usage:
-
    - `rg -n "console\\.(log|error|warn|info)" apps/*/src packages/*/src`
 
 2. Typecheck:
-
    - `bun run typecheck`
 
 3. Run tests (scoped as needed if full suite is large):
-
    - `bun scripts/test-bun.ts` (or set `ALFRED_TEST_SCOPE=unit` for faster iteration)
 
 ## Validation and Acceptance

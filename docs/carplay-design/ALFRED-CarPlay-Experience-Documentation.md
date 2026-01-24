@@ -1,4 +1,5 @@
 # ALFRED CarPlay Experience
+
 ## Complete Design & Architecture Documentation
 
 ---
@@ -11,14 +12,14 @@
 
 CarPlay enforces strict UI templates, but ALFRED's "Signal in the Void" aesthetic translates through careful use of allowed customizations:
 
-| Design System Element | CarPlay Translation |
-|----------------------|---------------------|
-| Void background | CarPlay dark mode (system-enforced black) |
+| Design System Element | CarPlay Translation                               |
+| --------------------- | ------------------------------------------------- |
+| Void background       | CarPlay dark mode (system-enforced black)         |
 | Biolum text hierarchy | Template text styles (primary/secondary/tertiary) |
-| Glow effects | Tint color on icons and highlights |
-| Breathing animation | Not available (static templates) |
-| HUD surfaces | Card-based template layouts |
-| Orb | App icon + custom imagery in templates |
+| Glow effects          | Tint color on icons and highlights                |
+| Breathing animation   | Not available (static templates)                  |
+| HUD surfaces          | Card-based template layouts                       |
+| Orb                   | App icon + custom imagery in templates            |
 
 ### Tint Color Strategy
 
@@ -34,12 +35,12 @@ Rationale: Pure white (#FCFCFC) is too harsh in dark car environments.
 
 ### Typography Mapping
 
-| ALFRED System | CarPlay Equivalent | Usage |
-|---------------|-------------------|-------|
+| ALFRED System  | CarPlay Equivalent        | Usage                            |
+| -------------- | ------------------------- | -------------------------------- |
 | Display Medium | CPListItem.text (primary) | Workflow titles, alert headlines |
-| Body Large | CPListItem.detailText | Status descriptions, summaries |
-| Caption Medium | Tertiary text | Timestamps, metadata |
-| Mono Medium | Not available | N/A (no monospace in CarPlay) |
+| Body Large     | CPListItem.detailText     | Status descriptions, summaries   |
+| Caption Medium | Tertiary text             | Timestamps, metadata             |
+| Mono Medium    | Not available             | N/A (no monospace in CarPlay)    |
 
 ---
 
@@ -2534,6 +2535,6 @@ Rationale: Pure white (#FCFCFC) is too harsh in dark car environments.
 
 ---
 
-*Document: ALFRED CarPlay Experience*
-*Version: 1.0*
-*Sections: UI Specifications, Voice Scripts, Architecture, Wireframes*
+_Document: ALFRED CarPlay Experience_
+_Version: 1.0_
+_Sections: UI Specifications, Voice Scripts, Architecture, Wireframes_

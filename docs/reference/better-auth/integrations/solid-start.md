@@ -1,9 +1,10 @@
 ---
 title: SolidStart Integration | Better Auth
-url: 
+url:
 description: Integrate Better Auth with SolidStart.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 Before you start, make sure you have a Better Auth instance configured. If you haven't done that yet, check out the [installation](https://www.better-auth.com/docs/installation).
 
-### [Mount the handler](https://www.better-auth.com/docs/integrations/solid-start\#mount-the-handler)
+### [Mount the handler](https://www.better-auth.com/docs/integrations/solid-start#mount-the-handler)
 
 We need to mount the handler to SolidStart server. Put the following code in your `*auth.ts` file inside `/routes/api/auth` folder.
 

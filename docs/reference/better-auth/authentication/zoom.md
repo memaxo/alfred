@@ -1,9 +1,10 @@
 ---
 title: Zoom | Better Auth
-url: 
+url:
 description: Zoom provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Create a Zoom App from Marketplace](https://www.better-auth.com/docs/authentication/zoom\#create-a-zoom-app-from-marketplace)
+### [Create a Zoom App from Marketplace](https://www.better-auth.com/docs/authentication/zoom#create-a-zoom-app-from-marketplace)
 
 1. Visit [Zoom Marketplace](https://marketplace.zoom.us/).
 
@@ -34,8 +35,7 @@ Copy MarkdownOpen in
 
 3. Select `General App` and click `Create`
 
-
-### [Configure your Zoom App](https://www.better-auth.com/docs/authentication/zoom\#configure-your-zoom-app)
+### [Configure your Zoom App](https://www.better-auth.com/docs/authentication/zoom#configure-your-zoom-app)
 
 Ensure that you are in the `Basic Information` of your app settings.
 
@@ -45,33 +45,12 @@ Ensure that you are in the `Basic Information` of your app settings.
 
 3. Under `OAuth Information` -\> `OAuth Redirect URL`, add your Callback URL. For example,
 
-
-
-
-
-
-
-
-
-
 ```
 http://localhost:3000/api/auth/callback/zoom
 ```
 
-
-
-
-
-
-
-
-
-
-
-
 For production, you should set it to the URL of your application. If you change the base
 path of the auth routes, you should update the redirect URL accordingly.
-
 
 Skip to the `Scopes` section, then
 
@@ -79,7 +58,7 @@ Skip to the `Scopes` section, then
 2. Search for `user:read:user` (View a user) and select it
 3. Add any other scopes your applications needs and click `Done`
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/zoom\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/zoom#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -98,7 +77,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Sign In with Zoom](https://www.better-auth.com/docs/authentication/zoom\#sign-in-with-zoom)
+### [Sign In with Zoom](https://www.better-auth.com/docs/authentication/zoom#sign-in-with-zoom)
 
 To sign in with Zoom, you can use the `signIn.social` function provided by the client.
 You will need to specify `zoom` as the provider.

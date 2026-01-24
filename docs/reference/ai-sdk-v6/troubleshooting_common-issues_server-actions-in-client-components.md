@@ -14,45 +14,44 @@ It is not allowed to define inline `"use server"` annotated Server Actions in Cl
 
 To use Server Actions in a Client Component, you can either:
 
-  * Export them from a separate file with `"use server"` at the top.
-  * Pass them down through props from a Server Component.
-  * Implement a combination of `createAI` and `useActions` hooks to access them.
+- Export them from a separate file with `"use server"` at the top.
+- Pass them down through props from a Server Component.
+- Implement a combination of `createAI` and `useActions` hooks to access them.
 
 Learn more about Server Actions and Mutations.
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import { generateText } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
-    
-    
-    
+
+
+
+
     export async function getAnswer(question: string) {
-    
+
       'use server';
-    
-    
-    
-    
+
+
+
+
       const { text } = await generateText({
-    
+
         model: openai.chat('gpt-3.5-turbo'),
-    
+
         prompt: question,
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return { answer: text };
-    
+
     }
 
 Previous

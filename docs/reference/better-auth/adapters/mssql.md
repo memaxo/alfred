@@ -1,9 +1,10 @@
 ---
 title: MS SQL | Better Auth
-url: 
+url:
 description: Integrate Better Auth with MS SQL.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -29,7 +30,7 @@ Copy MarkdownOpen in
 Microsoft SQL Server is a relational database management system developed by Microsoft, designed for enterprise-level data storage, management, and analytics with robust security and scalability features.
 Read more [here](https://en.wikipedia.org/wiki/Microsoft_SQL_Server).
 
-## [Example Usage](https://www.better-auth.com/docs/adapters/mssql\#example-usage)
+## [Example Usage](https://www.better-auth.com/docs/adapters/mssql#example-usage)
 
 Make sure you have MS SQL installed and configured.
 Then, you can connect it straight into Better Auth.
@@ -81,14 +82,14 @@ export const auth = betterAuth({
 
 For more information, read Kysely's documentation to the [MssqlDialect](https://kysely-org.github.io/kysely-apidoc/classes/MssqlDialect.html).
 
-## [Schema generation & migration](https://www.better-auth.com/docs/adapters/mssql\#schema-generation--migration)
+## [Schema generation & migration](https://www.better-auth.com/docs/adapters/mssql#schema-generation--migration)
 
 The [Better Auth CLI](https://www.better-auth.com/docs/concepts/cli) allows you to generate or migrate
 your database schema based on your Better Auth configuration and plugins.
 
 | MS SQL Schema Generation | MS SQL Schema Migration |
-| --- | --- |
-| ✅ Supported | ✅ Supported |
+| ------------------------ | ----------------------- |
+| ✅ Supported             | ✅ Supported            |
 
 Schema Generation
 
@@ -102,7 +103,7 @@ Schema Migration
 npx @better-auth/cli@latest migrate
 ```
 
-## [Additional Information](https://www.better-auth.com/docs/adapters/mssql\#additional-information)
+## [Additional Information](https://www.better-auth.com/docs/adapters/mssql#additional-information)
 
 MS SQL is supported under the hood via the [Kysely](https://kysely.dev/) adapter, any database supported by Kysely would also be supported. ( [Read more here](https://www.better-auth.com/docs/adapters/other-relational-databases))
 

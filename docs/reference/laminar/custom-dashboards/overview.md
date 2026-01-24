@@ -1,8 +1,9 @@
 ---
 title: Custom Dashboards - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/custom-dashboards/overview#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -38,7 +39,7 @@ On this page
 Laminar Dashboards let you track key metrics and build visualizations from your trace, evaluation, and other data on the platform using SQL.
 Each project has pre-built dashboards that track key LLM metrics for your project. You can also create your own custom dashboards by writing custom SQL queries.
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#what-you-can-do)  What you can do
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#what-you-can-do) What you can do
 
 - Query your trace, evaluation, and other data using SQL
 - Resize and rearrange charts as you want
@@ -46,7 +47,7 @@ Each project has pre-built dashboards that track key LLM metrics for your projec
 
 ![Laminar Custom Dashboard Introduction](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/custom-dashboard/introduction.gif?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=7b8a2cf8fe2df29b18a6182368223a6b)
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#getting-started)  Getting Started
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#getting-started) Getting Started
 
 The Chart Builder workflow consists of the following steps:
 
@@ -58,7 +59,7 @@ The Chart Builder workflow consists of the following steps:
 
 ![Chart Builder overview](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/custom-dashboard/chart-builder-example.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=386093e2d38ac9886552d39fed81bc36)
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#query)  Query
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#query) Query
 
 Start by writing a Clickhouse SQL query that returns the data you want to visualize.
 Here is an example query that returns the number of traces created over the last 30 days grouped by day:
@@ -77,7 +78,7 @@ ORDER BY date
 
 ```
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#parameters)  Parameters
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#parameters) Parameters
 
 To make your chart interactive with dashboard controls, you can configure these in `Parameters` tab:
 
@@ -109,7 +110,7 @@ This can be useful if you want to see your query over different periods of time,
 
 ![dashboard-parameters](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/custom-dashboard/dashboard-parameters.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=3f935b900e6536d320fe7616617030a8)
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#chart-settings)  Chart Settings
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#chart-settings) Chart Settings
 
 - Ensure you run your query to retrieve the data before configuring your chart.
 
@@ -118,21 +119,21 @@ This can be useful if you want to see your query over different periods of time,
 Only Line Charts support multiple metrics visualization, using `Break down lines by` option. If you need to display multiple metrics,
 use a Line Chart or create separate charts for each metric.
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#export-to-dashboard)  Export to Dashboard
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#export-to-dashboard) Export to Dashboard
 
 - Once you’ve configured your chart, export it with a name to add it to your dashboard.
 
 ![chart-builder-export](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/custom-dashboard/chart-builder-export.png?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=6e3552e18d07cfc9f1d9a5b999656ec9)
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#customizing-charts)  Customizing Charts
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#customizing-charts) Customizing Charts
 
 After adding your chart to the dashboard, you can resize it to fit your layout needs. Simply click and drag the corners or edges of the chart to adjust its dimensions.
 
 ![Resizing charts on dashboard](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/custom-dashboard/chart-builder-resize.gif?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=920250ef6abdb2e4ceabf0e3db8b3bff)
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#more-examples)  More Examples
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#more-examples) More Examples
 
-#### [​](https://docs.lmnr.ai/custom-dashboards/overview\#trace-average-duration-over-time)  Trace average duration over time
+#### [​](https://docs.lmnr.ai/custom-dashboards/overview#trace-average-duration-over-time) Trace average duration over time
 
 Copy
 
@@ -157,7 +158,7 @@ FROM toStartOfInterval({start_time:DateTime64}, toInterval(1, {interval_unit:Str
 
 ```
 
-#### [​](https://docs.lmnr.ai/custom-dashboards/overview\#total-tokens-over-time)  Total tokens over time
+#### [​](https://docs.lmnr.ai/custom-dashboards/overview#total-tokens-over-time) Total tokens over time
 
 Copy
 
@@ -184,7 +185,7 @@ FROM toStartOfInterval({start_time:DateTime64}, toInterval(1, {interval_unit:Str
 
 ```
 
-## [​](https://docs.lmnr.ai/custom-dashboards/overview\#learn-more)  Learn More
+## [​](https://docs.lmnr.ai/custom-dashboards/overview#learn-more) Learn More
 
 For more advanced SQL capabilities, syntax references, and examples, check out the [SQL Editor documentation](https://docs.lmnr.ai/sql-editor/introduction).
 

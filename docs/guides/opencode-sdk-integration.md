@@ -16,6 +16,7 @@ ALFRED → spawn("opencode acp") → ACP stdio → OpenCode Agent
 ```
 
 The implementation:
+
 1. Spawns `opencode acp` command inside Docker containers (AgentFS)
 2. Uses `ClientSideConnection` from `@alfred/protocol/acp` for protocol handling
 3. Manages session lifecycle, file operations, and permission requests
@@ -38,6 +39,7 @@ ALFRED → createOpencodeClient() → HTTP → OpenCode Server
 ## When to Use Each Approach
 
 ### Use ACP stdio (current) when:
+
 - ✅ Running inside Docker containers (AgentFS)
 - ✅ Need process isolation per execution
 - ✅ Want standard ACP protocol compliance
@@ -45,6 +47,7 @@ ALFRED → createOpencodeClient() → HTTP → OpenCode Server
 - ✅ Simpler deployment (no port management)
 
 ### Use SDK (HTTP) when:
+
 - ✅ Need a long-lived server shared across multiple requests
 - ✅ Want to connect from multiple processes/clients
 - ✅ Prefer REST API semantics over stdio
@@ -120,7 +123,9 @@ export async function executeWithOpenCodeSDK({
     path: { id: sessionId },
     body: {
       parts: [{ type: "text", text: input.prompt }],
-      ...(input.model ? { model: { providerID: "anthropic", modelID: input.model } } : {}),
+      ...(input.model
+        ? { model: { providerID: "anthropic", modelID: input.model } }
+        : {}),
     },
   });
 
@@ -136,7 +141,9 @@ export async function executeWithOpenCodeSDK({
 
   // Extract text result
   const textParts = result.data.parts?.filter((p) => p.type === "text") || [];
-  const resultText = textParts.map((p) => (p as { text?: string }).text || "").join("\n");
+  const resultText = textParts
+    .map((p) => (p as { text?: string }).text || "")
+    .join("\n");
 
   return {
     result: resultText,
@@ -173,6 +180,7 @@ export async function executeWithOpenCode({
 If using SDK mode, you need a running OpenCode server. Options:
 
 **Option A: Start server via SDK**
+
 ```typescript
 import { createOpencode } from "@opencode-ai/sdk";
 
@@ -188,6 +196,7 @@ const { client, server } = await createOpencode({
 ```
 
 **Option B: Start server separately**
+
 ```bash
 opencode server --port 4096
 ```
@@ -206,11 +215,13 @@ Then connect via `createOpencodeClient({ baseUrl: "http://localhost:4096" })`.
 ### Container Environment
 
 For AgentFS containers, stdio is simpler:
+
 - No port forwarding needed
 - Process isolation per execution
 - Automatic cleanup on container exit
 
 For SDK in containers:
+
 - Need to expose ports or use Docker networking
 - Server lifecycle management
 - Potential port conflicts
@@ -228,6 +239,7 @@ For SDK in containers:
 ## Example Usage
 
 ### Current (stdio):
+
 ```typescript
 await toolOpenCode.execute({
   input: {
@@ -240,6 +252,7 @@ await toolOpenCode.execute({
 ```
 
 ### With SDK:
+
 ```typescript
 // Start server first
 const { client, server } = await createOpencode({ port: 4096 });

@@ -10,6 +10,7 @@ This guide documents systematic patterns for verifying ExecPlan completion statu
 ## When to Verify
 
 Verify ExecPlan status when:
+
 - Marking ExecPlans as complete
 - Updating Linear issue status
 - Before creating new features (check if already implemented)
@@ -20,6 +21,7 @@ Verify ExecPlan status when:
 ### 1. Read the ExecPlan
 
 Understand what needs to be verified:
+
 - Read `Purpose` and `Plan` sections
 - Note specific features/components mentioned
 - Identify key functions, files, or patterns
@@ -29,6 +31,7 @@ Understand what needs to be verified:
 Use systematic search patterns:
 
 **Find Files:**
+
 ```bash
 # Find files by name pattern
 fd "pattern" packages/
@@ -38,6 +41,7 @@ lsd packages/agent/src/
 ```
 
 **Search Code:**
+
 ```bash
 # Exact string search
 rg "functionName" packages/
@@ -50,11 +54,13 @@ rg -A 5 -B 5 "pattern" packages/
 ```
 
 **Semantic Search:**
+
 ```typescript
 codebase_search("What does X do?", target_directories: ["packages/agent"])
 ```
 
 **Find Tests:**
+
 ```bash
 # Find test files
 fd "*test.ts" packages/
@@ -88,21 +94,24 @@ For each ExecPlan item:
 Update the ExecPlan immediately:
 
 1. **Mark Progress:**
+
    ```markdown
    - [x] Feature implemented (`packages/agent/src/feature.ts` lines 10-50)
    ```
 
 2. **Update Status:**
+
    ```markdown
    **Status:** Complete ✅
    ```
 
 3. **Add to Outcomes:**
+
    ```markdown
    ## Outcomes & Retrospective
-   
+
    **Status**: ✅ Complete
-   
+
    - Feature implemented in `packages/agent/src/feature.ts`
    - Integrated into workflow runner (`packages/api/src/routers/workflow.ts` line 123)
    - Test coverage: `packages/agent/test/feature.test.ts`
@@ -118,9 +127,10 @@ Update corresponding Linear issue:
    - Update description with evidence
 
 2. **Add Evidence:**
+
    ```markdown
    ## Implementation
-   
+
    - ✅ Feature implemented (`packages/agent/src/feature.ts` lines 10-50)
    - ✅ Integrated (`packages/api/src/routers/workflow.ts` line 123)
    - ✅ Tests (`packages/agent/test/feature.test.ts`)
@@ -185,11 +195,13 @@ rg "export.*function.*name" packages/db/src/repo/
 ### File References
 
 Always include:
+
 - File path (relative to repo root)
 - Line numbers (if specific)
 - Function/class names
 
 **Example:**
+
 ```markdown
 - ✅ Implemented in `packages/agent/src/orchestrator/linear.ts` lines 30-93
 - ✅ Integrated into workflow runner (`packages/api/src/routers/workflow.ts` line 320)
@@ -198,6 +210,7 @@ Always include:
 ### Status Indicators
 
 Use consistent status markers:
+
 - ✅ Complete
 - ⚠️ Mostly Complete (with pending items listed)
 - ❌ Not Found / Not Implemented
@@ -219,6 +232,7 @@ Use consistent status markers:
 ### When to Sync
 
 Sync Linear issues when:
+
 - ExecPlan status changes
 - Implementation evidence is found
 - Features are completed
@@ -226,17 +240,19 @@ Sync Linear issues when:
 ### How to Sync
 
 1. **Get Linear Issue:**
+
    ```typescript
-   mcp_Linear_get_issue({ id: "issue-id" })
+   mcp_Linear_get_issue({ id: "issue-id" });
    ```
 
 2. **Update Status:**
+
    ```typescript
    mcp_Linear_update_issue({
      id: "issue-id",
      state: "Done", // or "In Progress"
-     description: "Updated description with evidence"
-   })
+     description: "Updated description with evidence",
+   });
    ```
 
 3. **Update Description:**
@@ -271,4 +287,3 @@ Sync Linear issues when:
 - [ExecPlan Verification Rules](../../.ruler/32-execplan-verification.md) - Detailed rules
 - [Developer Onboarding](./developer-onboarding.md) - Getting started guide
 - [ExecPlan Maintenance](./execplan-maintenance.md) - ExecPlan workflow
-

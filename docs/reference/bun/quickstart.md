@@ -1,9 +1,10 @@
 ---
 title: Quickstart | Bun Docs
-url: 
+url:
 description: Get started with Bun by building and running a simple HTTP server in 6 lines of TypeScript.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -87,7 +88,7 @@ To get started, run:
 
 Since our entry point is a `*.ts` file, Bun generates a `tsconfig.json` for you. If you're using plain JavaScript, it will generate a [`jsconfig.json`](https://code.visualstudio.com/docs/languages/jsconfig) instead.
 
-## [Run a file](https://bun.com/docs/quickstart\#run-a-file)
+## [Run a file](https://bun.com/docs/quickstart#run-a-file)
 
 Open `index.ts` and paste the following code snippet, which implements a simple HTTP server with [`Bun.serve`](https://bun.com/docs/api/http).
 
@@ -145,7 +146,7 @@ Listening on http://localhost:3000 ...
 
 Visit [http://localhost:3000](http://localhost:3000/) to test the server. You should see a simple page that says "Bun!".
 
-## [Run a script](https://bun.com/docs/quickstart\#run-a-script)
+## [Run a script](https://bun.com/docs/quickstart#run-a-script)
 
 Bun can also execute `"scripts"` from your `package.json`. Add the following script:
 
@@ -176,7 +177,7 @@ bun run start
 
 ⚡️ **Performance** — `bun run` is roughly 28x faster than `npm run` (6ms vs 170ms of overhead).
 
-## [Install a package](https://bun.com/docs/quickstart\#install-a-package)
+## [Install a package](https://bun.com/docs/quickstart#install-a-package)
 
 Let's make our server a little more interesting by installing a package. First install the `figlet` package and its type declarations. Figlet is a utility for converting strings into ASCII art.
 
@@ -220,7 +221,7 @@ Installation](https://bun.com/docs/installation) [Next\\
 \\
 TypeScript](https://bun.com/docs/typescript)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/quickstart.md)
 
@@ -244,7 +245,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

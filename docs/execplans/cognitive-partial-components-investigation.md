@@ -7,6 +7,7 @@
 ## Summary
 
 Investigation of two partial cognitive components:
+
 1. **Conflict Arbiter** - Implementation exists but not used by runtime
 2. **Dreaming/Heuristics** - Learning context injection works, automatic dreaming not implemented
 
@@ -15,6 +16,7 @@ Investigation of two partial cognitive components:
 ### Current State
 
 **Implementation**: `packages/agent/src/orchestrator/conflict.ts`
+
 - ✅ Fully implemented with tests
 - ✅ Creates isolated worktree for conflict resolution
 - ✅ Spawns Codex agent to resolve conflicts
@@ -22,6 +24,7 @@ Investigation of two partial cognitive components:
 - ✅ Comprehensive test coverage (`conflict.test.ts`, `conflict.arbiter.test.ts`)
 
 **Runtime Integration**: `packages/runtime/src/orchestrator/conflict.ts`
+
 - ✅ Handles conflicts that already exist in workspace (passive scanning)
 - ✅ Spawns Codex directly for analysis and resolution
 - ❌ Does NOT use `conflictArbiter.resolve()` abstraction
@@ -46,6 +49,7 @@ Investigation of two partial cognitive components:
 **Location**: `packages/runtime/src/orchestrator/merge.ts` → `executeMergePlan`
 
 **Current Flow**:
+
 ```typescript
 // executeMergePlan detects conflict
 if (mergeResult.status === "conflict") {
@@ -54,6 +58,7 @@ if (mergeResult.status === "conflict") {
 ```
 
 **Proposed Flow**:
+
 ```typescript
 if (mergeResult.status === "conflict") {
   // Try arbiter resolution if auto level allows
@@ -77,11 +82,13 @@ if (mergeResult.status === "conflict") {
 ### Recommendation
 
 **Option A: Integrate Arbiter** (Recommended)
+
 - Call `conflictArbiter.resolve()` from `executeMergePlan` when conflicts detected
 - Provides isolated worktree safety and proper abstraction
 - Maintains existing runtime conflict phase for workspace conflicts
 
 **Option B: Document as Separate Use Case**
+
 - Keep arbiter for future branch-to-branch merge scenarios
 - Runtime conflict phase handles workspace conflicts differently
 - Both approaches are valid for different contexts
@@ -93,16 +100,19 @@ if (mergeResult.status === "conflict") {
 ### Current State
 
 **Learning Context Injection**: ✅ Working
+
 - `buildCodexLearningContext()` retrieves similar Codex executions
 - Injects context into Codex prompts
 - Location: `packages/db/src/repo/codex-learning.ts`
 
 **Explicit Heuristic Creation**: ✅ Working
+
 - `learn_mistake` tool creates heuristics from explicit user input
 - Stores as `heuristic` nodes in knowledge graph
 - Location: `packages/agent/src/orchestrator/tool/learning/exec.ts`
 
 **Automatic Dreaming**: ❌ Not Implemented
+
 - `processUnlearnedRuns()` only processes `status = "completed"` runs
 - Extracts general knowledge (facts, insights, patterns), not failure-specific heuristics
 - Failed runs (`status = "failed"`) are never analyzed
@@ -111,6 +121,7 @@ if (mergeResult.status === "conflict") {
 ### The Gap
 
 **What "Dreaming" Should Do**:
+
 1. Process failed workflow runs (`status = "failed"`)
 2. Analyze `errorMessage` and execution context
 3. Extract failure patterns and root causes
@@ -118,6 +129,7 @@ if (mergeResult.status === "conflict") {
 5. Inject these heuristics into future similar workflows
 
 **Current Limitation**:
+
 ```typescript
 // packages/agent/src/orchestrator/learning-worker.ts:446
 .where(
@@ -130,12 +142,14 @@ Only completed runs are processed. Failed runs are ignored.
 ### Recommendation
 
 **Option A: Implement Automatic Dreaming** (Recommended)
+
 - Add `processFailedRuns()` function to analyze failed runs
 - Extract failure patterns from `errorMessage` and `stateData`
 - Create heuristic nodes automatically (similar to `learn_mistake` but automated)
 - Filter by failure patterns to avoid noise (e.g., transient errors)
 
 **Option B: Document as Future Enhancement**
+
 - Current learning system focuses on successful patterns
 - Failure analysis requires more sophisticated pattern detection
 - Keep explicit `learn_mistake` tool for now
@@ -188,6 +202,7 @@ Only completed runs are processed. Failed runs are ignored.
 ## Verification Checklist
 
 ### Conflict Arbiter
+
 - [ ] Arbiter called from `executeMergePlan` when conflicts detected
 - [ ] Worktree isolation maintained during resolution
 - [ ] Resolved branch merged successfully
@@ -195,6 +210,7 @@ Only completed runs are processed. Failed runs are ignored.
 - [ ] Documentation updated
 
 ### Automatic Dreaming
+
 - [ ] Failed runs processed by learning worker
 - [ ] Heuristics created from failure patterns
 - [ ] Heuristics retrieved by `buildCodexLearningContext()`

@@ -9,6 +9,7 @@ Alfred's "Emergent Intelligence" is the system by which the assistant dynamicall
 ## Core Components
 
 ### 1. Vector-Native Entity Linking
+
 Traditional entity linking relies on exact string matching, which fails on synonyms or fuzzy inputs. Alfred uses `pgvector` to embed extracted entities and find their nearest neighbors in the Knowledge Graph.
 
 - **Input**: "I'm debugging a segfault"
@@ -17,6 +18,7 @@ Traditional entity linking relies on exact string matching, which fails on synon
 - **Vector Search**: Finds `Node:C++` or `Node:Linux` based on semantic similarity.
 
 ### 2. Graph Propagation (Recursive CTEs)
+
 Once an entity is located in the graph, a recursive SQL query (Common Table Expression) traverses the graph edges to find the nearest "Anchor Concept".
 
 ```sql
@@ -36,14 +38,18 @@ SELECT * FROM traversal WHERE node_type = 'anchor' LIMIT 1;
 This allows "React" to activate "Coding" through the path: `React -> Frontend -> Coding`.
 
 ### 3. Adaptive Persona
+
 The detected Anchor Concepts trigger specific system instructions (Personas).
+
 - **Coding**: "You are a Senior Software Engineer. Prioritize terse, efficient code."
 - **Security**: "You are an Ethical Hacker. Warn about vulnerabilities."
 
 If multiple concepts are active (e.g., "Python script for network scanning"), Alfred merges the personas: "Senior Engineer + Ethical Hacker".
 
 ### 4. Mindscape Visualization
+
 The traversal paths are returned to the frontend and visualized in the "Mindscape" - a 3D force-directed graph.
+
 - **Active Path**: Glowing edges show the cognitive trace.
 - **Decay**: Paths fade out over time (10s) if not reinforced.
 
@@ -56,6 +62,7 @@ The traversal paths are returned to the frontend and visualized in the "Mindscap
 ## Database Schema
 
 `memory_nodes` table:
+
 - `embedding`: `vector(1024)` (KaLM-Embedding-Gemma3-12B-2511)
 - `label`: Text label
 - `kind`: `fact` | `anchor` | `cluster`

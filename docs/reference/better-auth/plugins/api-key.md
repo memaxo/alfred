@@ -1,9 +1,10 @@
 ---
 title: API Key | Better Auth
-url: 
+url:
 description: API Key plugin for Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,7 +29,7 @@ Copy MarkdownOpen in
 
 The API Key plugin allows you to create and manage API keys for your application. It provides a way to authenticate and authorize API requests by verifying API keys.
 
-## [Features](https://www.better-auth.com/docs/plugins/api-key\#features)
+## [Features](https://www.better-auth.com/docs/plugins/api-key#features)
 
 - Create, manage, and verify API keys
 - [Built-in rate limiting](https://www.better-auth.com/docs/plugins/api-key#rate-limiting)
@@ -37,9 +38,9 @@ The API Key plugin allows you to create and manage API keys for your application
 - Custom prefix
 - [Sessions from API keys](https://www.better-auth.com/docs/plugins/api-key#sessions-from-api-keys)
 
-## [Installation](https://www.better-auth.com/docs/plugins/api-key\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/api-key#installation)
 
-### [Add Plugin to the server](https://www.better-auth.com/docs/plugins/api-key\#add-plugin-to-the-server)
+### [Add Plugin to the server](https://www.better-auth.com/docs/plugins/api-key#add-plugin-to-the-server)
 
 auth.ts
 
@@ -54,7 +55,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/api-key\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/api-key#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -70,7 +71,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/api-key#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/api-key\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/api-key#add-the-client-plugin)
 
 auth-client.ts
 
@@ -85,11 +86,11 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/api-key\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/api-key#usage)
 
 You can view the list of API Key plugin options [here](https://www.better-auth.com/docs/plugins/api-key#api-key-plugin-options).
 
-### [Create an API key](https://www.better-auth.com/docs/plugins/api-key\#create-an-api-key)
+### [Create an API key](https://www.better-auth.com/docs/plugins/api-key#create-an-api-key)
 
 ClientServer
 
@@ -111,13 +112,13 @@ const { data, error } = await authClient.apiKey.create({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name?` | Name of the Api Key. | `string` |
-| `expiresIn?` | Expiration time of the Api Key in seconds. | `number` |
-| `prefix?` | Prefix of the Api Key. | `string` |
-| `metadata?` | Metadata of the Api Key. | `any | null` |
-| `permissions?` | Permissions of the Api Key. | `Record<string, string[]>` |
+| Prop           | Description                                | Type                       |
+| -------------- | ------------------------------------------ | -------------------------- | ----- |
+| `name?`        | Name of the Api Key.                       | `string`                   |
+| `expiresIn?`   | Expiration time of the Api Key in seconds. | `number`                   |
+| `prefix?`      | Prefix of the Api Key.                     | `string`                   |
+| `metadata?`    | Metadata of the Api Key.                   | `any                       | null` |
+| `permissions?` | Permissions of the Api Key.                | `Record<string, string[]>` |
 
 POST
 
@@ -146,31 +147,31 @@ const data = await auth.api.createApiKey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name?` | Name of the Api Key. | `string` |
-| `expiresIn?` | Expiration time of the Api Key in seconds. | `number` |
-| `userId?`(server-only) | User Id of the user that the Api Key belongs to. server-only. | `string` |
-| `prefix?` | Prefix of the Api Key. | `string` |
-| `remaining?`(server-only) | Remaining number of requests. server-only. | `number` |
-| `metadata?` | Metadata of the Api Key. | `any | null` |
-| `refillAmount?`(server-only) | Amount to refill the remaining count of the Api Key. server-only. | `number` |
-| `refillInterval?`(server-only) | Interval to refill the Api Key in milliseconds. server-only. | `number` |
-| `rateLimitTimeWindow?`(server-only) | The duration in milliseconds where each request is counted. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. | `number` |
-| `rateLimitMax?`(server-only) | Maximum amount of requests allowed within a window. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. | `number` |
-| `rateLimitEnabled?`(server-only) | Whether the key has rate limiting enabled. server-only. | `boolean` |
-| `permissions?` | Permissions of the Api Key. | `Record<string, string[]>` |
+| Prop                                | Description                                                                                                                                                                                                                | Type                       |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | ----- |
+| `name?`                             | Name of the Api Key.                                                                                                                                                                                                       | `string`                   |
+| `expiresIn?`                        | Expiration time of the Api Key in seconds.                                                                                                                                                                                 | `number`                   |
+| `userId?`(server-only)              | User Id of the user that the Api Key belongs to. server-only.                                                                                                                                                              | `string`                   |
+| `prefix?`                           | Prefix of the Api Key.                                                                                                                                                                                                     | `string`                   |
+| `remaining?`(server-only)           | Remaining number of requests. server-only.                                                                                                                                                                                 | `number`                   |
+| `metadata?`                         | Metadata of the Api Key.                                                                                                                                                                                                   | `any                       | null` |
+| `refillAmount?`(server-only)        | Amount to refill the remaining count of the Api Key. server-only.                                                                                                                                                          | `number`                   |
+| `refillInterval?`(server-only)      | Interval to refill the Api Key in milliseconds. server-only.                                                                                                                                                               | `number`                   |
+| `rateLimitTimeWindow?`(server-only) | The duration in milliseconds where each request is counted. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. | `number`                   |
+| `rateLimitMax?`(server-only)        | Maximum amount of requests allowed within a window. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only.         | `number`                   |
+| `rateLimitEnabled?`(server-only)    | Whether the key has rate limiting enabled. server-only.                                                                                                                                                                    | `boolean`                  |
+| `permissions?`                      | Permissions of the Api Key.                                                                                                                                                                                                | `Record<string, string[]>` |
 
 API keys are assigned to a user.
 
-#### [Result](https://www.better-auth.com/docs/plugins/api-key\#result)
+#### [Result](https://www.better-auth.com/docs/plugins/api-key#result)
 
 It'll return the `ApiKey` object which includes the `key` value for you to use.
 Otherwise if it throws, it will throw an `APIError`.
 
-* * *
+---
 
-### [Verify an API key](https://www.better-auth.com/docs/plugins/api-key\#verify-an-api-key)
+### [Verify an API key](https://www.better-auth.com/docs/plugins/api-key#verify-an-api-key)
 
 ClientServer
 
@@ -204,12 +205,12 @@ const data = await auth.api.verifyApiKey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `key` | The key to verify. | `string` |
+| Prop           | Description                          | Type                       |
+| -------------- | ------------------------------------ | -------------------------- |
+| `key`          | The key to verify.                   | `string`                   |
 | `permissions?` | The permissions to verify. Optional. | `Record<string, string[]>` |
 
-#### [Result](https://www.better-auth.com/docs/plugins/api-key\#result-1)
+#### [Result](https://www.better-auth.com/docs/plugins/api-key#result-1)
 
 ```
 type Result = {
@@ -219,9 +220,9 @@ type Result = {
 };
 ```
 
-* * *
+---
 
-### [Get an API key](https://www.better-auth.com/docs/plugins/api-key\#get-an-api-key)
+### [Get an API key](https://www.better-auth.com/docs/plugins/api-key#get-an-api-key)
 
 ClientServer
 
@@ -235,8 +236,8 @@ const { data, error } = await authClient.apiKey.get({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop | Description            | Type     |
+| ---- | ---------------------- | -------- |
 | `id` | The id of the Api Key. | `string` |
 
 GET
@@ -253,11 +254,11 @@ const data = await auth.api.getApiKey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop | Description            | Type     |
+| ---- | ---------------------- | -------- |
 | `id` | The id of the Api Key. | `string` |
 
-#### [Result](https://www.better-auth.com/docs/plugins/api-key\#result-2)
+#### [Result](https://www.better-auth.com/docs/plugins/api-key#result-2)
 
 You'll receive everything about the API key details, except for the `key` value itself.
 If it fails, it will throw an `APIError`.
@@ -266,9 +267,9 @@ If it fails, it will throw an `APIError`.
 type Result = Omit<ApiKey, "key">;
 ```
 
-* * *
+---
 
-### [Update an API key](https://www.better-auth.com/docs/plugins/api-key\#update-an-api-key)
+### [Update an API key](https://www.better-auth.com/docs/plugins/api-key#update-an-api-key)
 
 ClientServer
 
@@ -283,10 +284,10 @@ const { data, error } = await authClient.apiKey.update({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop    | Description                      | Type     |
+| ------- | -------------------------------- | -------- |
 | `keyId` | The id of the Api Key to update. | `string` |
-| `name?` | The name of the key. | `string` |
+| `name?` | The name of the key.             | `string` |
 
 POST
 
@@ -312,30 +313,30 @@ const data = await auth.api.updateApiKey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `keyId` | The id of the Api Key to update. | `string` |
-| `userId?`(server-only) | The id of the user which the api key belongs to. server-only. | `string` |
-| `name?` | The name of the key. | `string` |
-| `enabled?`(server-only) | Whether the Api Key is enabled or not. server-only. | `boolean` |
-| `remaining?`(server-only) | The number of remaining requests. server-only. | `number` |
-| `refillAmount?`(server-only) | The refill amount. server-only. | `number` |
-| `refillInterval?`(server-only) | The refill interval in milliseconds. server-only. | `number` |
-| `metadata?`(server-only) | The metadata of the Api Key. server-only. | `any | null` |
-| `expiresIn?`(server-only) | Expiration time of the Api Key in seconds. server-only. | `number` |
-| `rateLimitEnabled?`(server-only) | Whether the key has rate limiting enabled. server-only. | `boolean` |
-| `rateLimitTimeWindow?`(server-only) | The duration in milliseconds where each request is counted. server-only. | `number` |
-| `rateLimitMax?`(server-only) | Maximum amount of requests allowed within a window. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. | `number` |
-| `permissions?`(server-only) | Update the permissions on the API Key. server-only. | `Record<string, string[]>` |
+| Prop                                | Description                                                                                                                                                                                                        | Type                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ----- |
+| `keyId`                             | The id of the Api Key to update.                                                                                                                                                                                   | `string`                   |
+| `userId?`(server-only)              | The id of the user which the api key belongs to. server-only.                                                                                                                                                      | `string`                   |
+| `name?`                             | The name of the key.                                                                                                                                                                                               | `string`                   |
+| `enabled?`(server-only)             | Whether the Api Key is enabled or not. server-only.                                                                                                                                                                | `boolean`                  |
+| `remaining?`(server-only)           | The number of remaining requests. server-only.                                                                                                                                                                     | `number`                   |
+| `refillAmount?`(server-only)        | The refill amount. server-only.                                                                                                                                                                                    | `number`                   |
+| `refillInterval?`(server-only)      | The refill interval in milliseconds. server-only.                                                                                                                                                                  | `number`                   |
+| `metadata?`(server-only)            | The metadata of the Api Key. server-only.                                                                                                                                                                          | `any                       | null` |
+| `expiresIn?`(server-only)           | Expiration time of the Api Key in seconds. server-only.                                                                                                                                                            | `number`                   |
+| `rateLimitEnabled?`(server-only)    | Whether the key has rate limiting enabled. server-only.                                                                                                                                                            | `boolean`                  |
+| `rateLimitTimeWindow?`(server-only) | The duration in milliseconds where each request is counted. server-only.                                                                                                                                           | `number`                   |
+| `rateLimitMax?`(server-only)        | Maximum amount of requests allowed within a window. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. | `number`                   |
+| `permissions?`(server-only)         | Update the permissions on the API Key. server-only.                                                                                                                                                                | `Record<string, string[]>` |
 
-#### [Result](https://www.better-auth.com/docs/plugins/api-key\#result-3)
+#### [Result](https://www.better-auth.com/docs/plugins/api-key#result-3)
 
 If fails, throws `APIError`.
 Otherwise, you'll receive the API Key details, except for the `key` value itself.
 
-* * *
+---
 
-### [Delete an API Key](https://www.better-auth.com/docs/plugins/api-key\#delete-an-api-key)
+### [Delete an API Key](https://www.better-auth.com/docs/plugins/api-key#delete-an-api-key)
 
 ClientServer
 
@@ -353,8 +354,8 @@ const { data, error } = await authClient.apiKey.delete({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop    | Description                      | Type     |
+| ------- | -------------------------------- | -------- |
 | `keyId` | The id of the Api Key to delete. | `string` |
 
 POST
@@ -375,11 +376,11 @@ const data = await auth.api.deleteApiKey({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop    | Description                      | Type     |
+| ------- | -------------------------------- | -------- |
 | `keyId` | The id of the Api Key to delete. | `string` |
 
-#### [Result](https://www.better-auth.com/docs/plugins/api-key\#result-4)
+#### [Result](https://www.better-auth.com/docs/plugins/api-key#result-4)
 
 If fails, throws `APIError`.
 Otherwise, you'll receive:
@@ -390,9 +391,9 @@ type Result = {
 };
 ```
 
-* * *
+---
 
-### [List API keys](https://www.better-auth.com/docs/plugins/api-key\#list-api-keys)
+### [List API keys](https://www.better-auth.com/docs/plugins/api-key#list-api-keys)
 
 ClientServer
 
@@ -415,7 +416,7 @@ const data = await auth.api.listApiKeys({
 });
 ```
 
-#### [Result](https://www.better-auth.com/docs/plugins/api-key\#result-5)
+#### [Result](https://www.better-auth.com/docs/plugins/api-key#result-5)
 
 If fails, throws `APIError`.
 Otherwise, you'll receive:
@@ -424,9 +425,9 @@ Otherwise, you'll receive:
 type Result = ApiKey[];
 ```
 
-* * *
+---
 
-### [Delete all expired API keys](https://www.better-auth.com/docs/plugins/api-key\#delete-all-expired-api-keys)
+### [Delete all expired API keys](https://www.better-auth.com/docs/plugins/api-key#delete-all-expired-api-keys)
 
 This function will delete all API keys that have an expired expiration date.
 
@@ -450,9 +451,9 @@ We automatically delete expired API keys every time any apiKey plugin
 endpoints were called, however they are rate-limited to a 10 second cool down
 each call to prevent multiple calls to the database.
 
-* * *
+---
 
-## [Sessions from API keys](https://www.better-auth.com/docs/plugins/api-key\#sessions-from-api-keys)
+## [Sessions from API keys](https://www.better-auth.com/docs/plugins/api-key#sessions-from-api-keys)
 
 Any time an endpoint in Better Auth is called that has a valid API key in the headers, we will automatically create a mock session to represent the user.
 
@@ -494,7 +495,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [Rate Limiting](https://www.better-auth.com/docs/plugins/api-key\#rate-limiting)
+## [Rate Limiting](https://www.better-auth.com/docs/plugins/api-key#rate-limiting)
 
 Every API key can have its own rate limit settings, however, the built-in rate-limiting only applies to the verification process for a given API key.
 For every other endpoint/method, you should utilize Better Auth's [built-in rate-limiting](https://www.better-auth.com/docs/concepts/rate-limit).
@@ -532,13 +533,13 @@ const apiKey = await auth.api.createApiKey({
 });
 ```
 
-### [How does it work?](https://www.better-auth.com/docs/plugins/api-key\#how-does-it-work)
+### [How does it work?](https://www.better-auth.com/docs/plugins/api-key#how-does-it-work)
 
 For each request, a counter (internally called `requestCount`) is incremented.
 
 If the `rateLimitMax` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset.
 
-## [Remaining, refill, and expiration](https://www.better-auth.com/docs/plugins/api-key\#remaining-refill-and-expiration)
+## [Remaining, refill, and expiration](https://www.better-auth.com/docs/plugins/api-key#remaining-refill-and-expiration)
 
 The remaining count is the number of requests left before the API key is disabled.
 
@@ -546,9 +547,9 @@ The refill interval is the interval in milliseconds where the `remaining` count 
 
 The expiration time is the expiration date of the API key.
 
-### [How does it work?](https://www.better-auth.com/docs/plugins/api-key\#how-does-it-work-1)
+### [How does it work?](https://www.better-auth.com/docs/plugins/api-key#how-does-it-work-1)
 
-#### [Remaining:](https://www.better-auth.com/docs/plugins/api-key\#remaining)
+#### [Remaining:](https://www.better-auth.com/docs/plugins/api-key#remaining)
 
 Whenever an API key is used, the `remaining` count is updated.
 
@@ -558,7 +559,7 @@ Otherwise, the `remaining` count is decremented by 1.
 
 If the `remaining` count is 0, then the API key is disabled & removed.
 
-#### [refillInterval & refillAmount:](https://www.better-auth.com/docs/plugins/api-key\#refillinterval--refillamount)
+#### [refillInterval & refillAmount:](https://www.better-auth.com/docs/plugins/api-key#refillinterval--refillamount)
 
 Whenever an API key is created, the `refillInterval` and `refillAmount` are set to `null`.
 
@@ -566,7 +567,7 @@ This means that the API key will not be refilled automatically.
 
 However, if `refillInterval` & `refillAmount` are set, then the API key will be refilled accordingly.
 
-#### [Expiration:](https://www.better-auth.com/docs/plugins/api-key\#expiration)
+#### [Expiration:](https://www.better-auth.com/docs/plugins/api-key#expiration)
 
 Whenever an API key is created, the `expiresAt` is set to `null`.
 
@@ -574,7 +575,7 @@ This means that the API key will never expire.
 
 However, if the `expiresIn` is set, then the API key will expire after the `expiresIn` time.
 
-## [Custom Key generation & verification](https://www.better-auth.com/docs/plugins/api-key\#custom-key-generation--verification)
+## [Custom Key generation & verification](https://www.better-auth.com/docs/plugins/api-key#custom-key-generation--verification)
 
 You can customize the key generation and verification process straight from the plugin options.
 
@@ -622,7 +623,7 @@ If an API key is validated from your `customAPIKeyValidator`, we still must matc
 However, by providing this custom function, you can improve the performance of the API key verification process,
 as all failed keys can be invalidated without having to query your database.
 
-## [Metadata](https://www.better-auth.com/docs/plugins/api-key\#metadata)
+## [Metadata](https://www.better-auth.com/docs/plugins/api-key#metadata)
 
 We allow you to store metadata alongside your API keys. This is useful for storing information about the key, such as a subscription plan for example.
 
@@ -662,7 +663,7 @@ const apiKey = await auth.api.getApiKey({
 console.log(apiKey.metadata.plan); // "premium"
 ```
 
-## [API Key plugin options](https://www.better-auth.com/docs/plugins/api-key\#api-key-plugin-options)
+## [API Key plugin options](https://www.better-auth.com/docs/plugins/api-key#api-key-plugin-options)
 
 `apiKeyHeaders` `string | string[];`
 
@@ -755,13 +756,13 @@ Disable hashing of the API key.
 ⚠️ Security Warning: It's strongly recommended to not disable hashing.
 Storing API keys in plaintext makes them vulnerable to database breaches, potentially exposing all your users' API keys.
 
-* * *
+---
 
-## [Permissions](https://www.better-auth.com/docs/plugins/api-key\#permissions)
+## [Permissions](https://www.better-auth.com/docs/plugins/api-key#permissions)
 
 API keys can have permissions associated with them, allowing you to control access at a granular level. Permissions are structured as a record of resource types to arrays of allowed actions.
 
-### [Setting Default Permissions](https://www.better-auth.com/docs/plugins/api-key\#setting-default-permissions)
+### [Setting Default Permissions](https://www.better-auth.com/docs/plugins/api-key#setting-default-permissions)
 
 You can configure default permissions that will be applied to all newly created API keys:
 
@@ -800,7 +801,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Creating API Keys with Permissions](https://www.better-auth.com/docs/plugins/api-key\#creating-api-keys-with-permissions)
+### [Creating API Keys with Permissions](https://www.better-auth.com/docs/plugins/api-key#creating-api-keys-with-permissions)
 
 When creating an API key, you can specify custom permissions:
 
@@ -817,7 +818,7 @@ const apiKey = await auth.api.createApiKey({
 });
 ```
 
-### [Verifying API Keys with Required Permissions](https://www.better-auth.com/docs/plugins/api-key\#verifying-api-keys-with-required-permissions)
+### [Verifying API Keys with Required Permissions](https://www.better-auth.com/docs/plugins/api-key#verifying-api-keys-with-required-permissions)
 
 When verifying an API key, you can check if it has the required permissions:
 
@@ -838,7 +839,7 @@ if (result.valid) {
 }
 ```
 
-### [Updating API Key Permissions](https://www.better-auth.com/docs/plugins/api-key\#updating-api-key-permissions)
+### [Updating API Key Permissions](https://www.better-auth.com/docs/plugins/api-key#updating-api-key-permissions)
 
 You can update the permissions of an existing API key:
 
@@ -855,7 +856,7 @@ const apiKey = await auth.api.updateApiKey({
 });
 ```
 
-### [Permissions Structure](https://www.better-auth.com/docs/plugins/api-key\#permissions-structure)
+### [Permissions Structure](https://www.better-auth.com/docs/plugins/api-key#permissions-structure)
 
 Permissions follow a resource-based structure:
 
@@ -874,33 +875,33 @@ const permissions = {
 
 When verifying an API key, all required permissions must be present in the API key's permissions for validation to succeed.
 
-## [Schema](https://www.better-auth.com/docs/plugins/api-key\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/api-key#schema)
 
 Table: `apiKey`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | The ID of the API key. |
-| name | string | ? | The name of the API key. |
-| start | string | ? | The starting characters of the API key. Useful for showing the first few characters of the API key in the UI for the users to easily identify. |
-| prefix | string | ? | The API Key prefix. Stored as plain text. |
-| key | string | - | The hashed API key itself. |
-| userId | string | FK | The ID of the user associated with the API key. |
-| refillInterval | number | ? | The interval to refill the key in milliseconds. |
-| refillAmount | number | ? | The amount to refill the remaining count of the key. |
-| lastRefillAt | Date | ? | The date and time when the key was last refilled. |
-| enabled | boolean | - | Whether the API key is enabled. |
-| rateLimitEnabled | boolean | - | Whether the API key has rate limiting enabled. |
-| rateLimitTimeWindow | number | ? | The time window in milliseconds for the rate limit. |
-| rateLimitMax | number | ? | The maximum number of requests allowed within the \`rateLimitTimeWindow\`. |
-| requestCount | number | - | The number of requests made within the rate limit time window. |
-| remaining | number | ? | The number of requests remaining. |
-| lastRequest | Date | ? | The date and time of the last request made to the key. |
-| expiresAt | Date | ? | The date and time when the key will expire. |
-| createdAt | Date | - | The date and time the API key was created. |
-| updatedAt | Date | - | The date and time the API key was updated. |
-| permissions | string | ? | The permissions of the key. |
-| metadata | Object | ? | Any additional metadata you want to store with the key. |
+| Field Name          | Type    | Key | Description                                                                                                                                    |
+| ------------------- | ------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| id                  | string  | PK  | The ID of the API key.                                                                                                                         |
+| name                | string  | ?   | The name of the API key.                                                                                                                       |
+| start               | string  | ?   | The starting characters of the API key. Useful for showing the first few characters of the API key in the UI for the users to easily identify. |
+| prefix              | string  | ?   | The API Key prefix. Stored as plain text.                                                                                                      |
+| key                 | string  | -   | The hashed API key itself.                                                                                                                     |
+| userId              | string  | FK  | The ID of the user associated with the API key.                                                                                                |
+| refillInterval      | number  | ?   | The interval to refill the key in milliseconds.                                                                                                |
+| refillAmount        | number  | ?   | The amount to refill the remaining count of the key.                                                                                           |
+| lastRefillAt        | Date    | ?   | The date and time when the key was last refilled.                                                                                              |
+| enabled             | boolean | -   | Whether the API key is enabled.                                                                                                                |
+| rateLimitEnabled    | boolean | -   | Whether the API key has rate limiting enabled.                                                                                                 |
+| rateLimitTimeWindow | number  | ?   | The time window in milliseconds for the rate limit.                                                                                            |
+| rateLimitMax        | number  | ?   | The maximum number of requests allowed within the \`rateLimitTimeWindow\`.                                                                     |
+| requestCount        | number  | -   | The number of requests made within the rate limit time window.                                                                                 |
+| remaining           | number  | ?   | The number of requests remaining.                                                                                                              |
+| lastRequest         | Date    | ?   | The date and time of the last request made to the key.                                                                                         |
+| expiresAt           | Date    | ?   | The date and time when the key will expire.                                                                                                    |
+| createdAt           | Date    | -   | The date and time the API key was created.                                                                                                     |
+| updatedAt           | Date    | -   | The date and time the API key was updated.                                                                                                     |
+| permissions         | string  | ?   | The permissions of the key.                                                                                                                    |
+| metadata            | Object  | ?   | Any additional metadata you want to store with the key.                                                                                        |
 
 [Edit on GitHub](https://github.com/better-auth/better-auth/blob/main/docs/content/docs/plugins/api-key.mdx)
 

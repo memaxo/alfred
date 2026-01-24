@@ -1,9 +1,10 @@
 ---
 title: LLM Observability for Cohere SDK - Laminar documentation
-url: 
+url:
 description: Instrument your Cohere Chat, Embed, and Rerank API calls with Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/cohere#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -38,13 +39,13 @@ On this page
 - [Monitoring Your Cohere Usage](https://docs.lmnr.ai/tracing/integrations/cohere#monitoring-your-cohere-usage)
 - [Advanced Features](https://docs.lmnr.ai/tracing/integrations/cohere#advanced-features)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/cohere\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/cohere#overview) Overview
 
 Laminar automatically instruments the official Cohere Python SDK with a single line of code, allowing you to trace and monitor all your Cohere API calls without modifying your existing code. This provides complete visibility into your AI application’s performance, costs, and behavior.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/cohere\#getting-started-python)  Getting Started (Python)
+## [​](https://docs.lmnr.ai/tracing/integrations/cohere#getting-started-python) Getting Started (Python)
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#1-install-laminar-and-cohere)  1\. Install Laminar and Cohere
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#1-install-laminar-and-cohere) 1\. Install Laminar and Cohere
 
 Copy
 
@@ -53,7 +54,7 @@ pip install 'lmnr[all]' cohere python-dotenv
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#2-set-up-your-environment-variables)  2\. Set up your environment variables
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#2-set-up-your-environment-variables) 2\. Set up your environment variables
 
 Store your API keys in a `.env` file:
 
@@ -66,7 +67,7 @@ COHERE_API_KEY=your-cohere-api-key
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#3-initialize-laminar-and-cohere-client)  3\. Initialize Laminar and Cohere client
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#3-initialize-laminar-and-cohere-client) 3\. Initialize Laminar and Cohere client
 
 Just add a single line at the start of your application or file to instrument Cohere with Laminar.
 
@@ -89,11 +90,11 @@ co = cohere.ClientV2(os.environ["COHERE_API_KEY"])
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/integrations/cohere\#use-cohere-as-usual)  Use Cohere as usual
+## [​](https://docs.lmnr.ai/tracing/integrations/cohere#use-cohere-as-usual) Use Cohere as usual
 
 After initialization, make API calls to Cohere exactly as you normally would. Laminar will automatically capture traces for Chat, Embed, and Rerank endpoints.
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#chat-command-family)  Chat (Command family)
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#chat-command-family) Chat (Command family)
 
 Copy
 
@@ -109,7 +110,7 @@ print(response.message.content[0].text)
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#streaming-chat)  Streaming Chat
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#streaming-chat) Streaming Chat
 
 Copy
 
@@ -127,7 +128,7 @@ for chunk in res:
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#rag-with-documents-observed-pipeline)  RAG with Documents (Observed Pipeline)
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#rag-with-documents-observed-pipeline) RAG with Documents (Observed Pipeline)
 
 Copy
 
@@ -164,7 +165,7 @@ if resp.message.citations:
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#rerank)  Rerank
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#rerank) Rerank
 
 Copy
 
@@ -188,7 +189,7 @@ for result in rerank_response.results:
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/cohere\#semantic-search-embeddings)  Semantic Search (Embeddings)
+### [​](https://docs.lmnr.ai/tracing/integrations/cohere#semantic-search-embeddings) Semantic Search (Embeddings)
 
 Copy
 
@@ -229,7 +230,7 @@ for i, score in sorted(sims, key=lambda x: x[1], reverse=True):
 
 All Cohere API calls are now automatically traced in Laminar.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/cohere\#monitoring-your-cohere-usage)  Monitoring Your Cohere Usage
+## [​](https://docs.lmnr.ai/tracing/integrations/cohere#monitoring-your-cohere-usage) Monitoring Your Cohere Usage
 
 After instrumenting your Cohere calls with Laminar, you’ll be able to:
 
@@ -241,7 +242,7 @@ After instrumenting your Cohere calls with Laminar, you’ll be able to:
 
 Visit your Laminar dashboard to view your Cohere traces and analytics.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/cohere\#advanced-features)  Advanced Features
+## [​](https://docs.lmnr.ai/tracing/integrations/cohere#advanced-features) Advanced Features
 
 - [Sessions](https://docs.lmnr.ai/tracing/structure/session) \- Learn how to add session structure to your traces
 - [Metadata](https://docs.lmnr.ai/tracing/structure/metadata) \- Discover how to add additional context to your LLM spans

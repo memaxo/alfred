@@ -7,26 +7,24 @@ Copy markdown
 Generate an embedding for a single value using an embedding model.
 
 This is ideal for use cases where you need to embed a single value to e.g. retrieve similar items or to use the embedding in a downstream task.
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { embed } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { embedding } = await embed({
-    
+
       model: openai.textEmbeddingModel('text-embedding-3-small'),
-    
+
       value: 'sunny day at the beach',
-    
+
     });
 
 ## Import
-    
-    
+
     import { embed } from "ai"
 
 ## API Signature

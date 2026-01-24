@@ -44,4 +44,3 @@ If you deploy to a server behind a firewall/NAT, you must open the relay range i
 - **WebRTC works on LAN but not mobile network**: missing relay ports or no TURN configured.
 - **ICE stuck in `checking`**: `external-ip` wrong/missing on NATed hosts.
 - **Only TCP works**: UDP relay range not open.
-

@@ -8,7 +8,7 @@
 Overall integration quality: **Good with one critical gap**
 
 - ✅ **Dreaming → Learning Worker**: Fully integrated
-- ✅ **Physiology → Autonomy**: Fully integrated  
+- ✅ **Physiology → Autonomy**: Fully integrated
 - ⚠️ **Supervisor → Cognitive Loop**: Partial integration (workflow-level only, missing cognitive event bridge)
 
 ## Component Integration Analysis
@@ -18,32 +18,37 @@ Overall integration quality: **Good with one critical gap**
 **Status**: ⚠️ **Partial Integration**
 
 **Current Flow:**
+
 ```
-WorkflowRuntime.supervisor.observe() 
-  → detects loop 
+WorkflowRuntime.supervisor.observe()
+  → detects loop
   → throws Error("workflow_interrupted:reason")
   → WorkflowRuntime catches error
   → Workflow fails
 ```
 
 **Integration Points:**
+
 - ✅ Supervisor instantiated in `WorkflowRuntime` constructor (`packages/runtime/src/core.ts:84`)
 - ✅ Supervisor observes reasoning events via `handleSupervisorObservation()` (`packages/runtime/src/core.ts:483-506`)
 - ✅ Supervisor throws interrupt error which fails workflow (`packages/runtime/src/core.ts:504`)
 - ✅ Supervisor heartbeat monitoring via `checkPhysiology()` (`packages/runtime/src/core.ts:454-462`)
 
 **Gap Identified:**
+
 - ❌ **Supervisor interrupts do NOT create cognitive `interrupt` events**
 - ❌ **No bridge from workflow-level supervisor error to cognitive state machine**
 - ❌ **Cognitive loop never receives supervisor interrupt events**
 
 **Impact:**
+
 - Supervisor can kill workflows but doesn't update cognitive state
 - Cognitive physiology (boredom) doesn't get updated when supervisor detects loops
 - No cognitive state persistence of supervisor interventions
 
 **Recommendation:**
 Add bridge in `WorkflowRuntime` to convert supervisor interrupts to cognitive events:
+
 ```typescript
 // In WorkflowRuntime.handleSupervisorObservation()
 if (result.interrupt) {
@@ -64,6 +69,7 @@ if (result.interrupt) {
 **Status**: ✅ **Fully Integrated**
 
 **Current Flow:**
+
 ```
 startLearningWorker() (packages/api/src/init.ts:60)
   → processDreaming() runs every 6 hours (default)
@@ -73,6 +79,7 @@ startLearningWorker() (packages/api/src/init.ts:60)
 ```
 
 **Integration Points:**
+
 - ✅ Learning worker started in API init (`packages/api/src/init.ts:59-60`)
 - ✅ Dreaming runs in worker loop (`packages/agent/src/orchestrator/learning-worker.ts:145-151`)
 - ✅ Heuristics persisted to knowledge graph (`packages/agent/src/orchestrator/learning-worker.ts:247-262`)
@@ -81,6 +88,7 @@ startLearningWorker() (packages/api/src/init.ts:60)
 - ✅ Codex execution uses learning context (`packages/agent/src/orchestrator/tool/codex/exec.ts:558-570`)
 
 **Configuration:**
+
 - Gated by `ENABLE_LEARNING_WORKER=1` (default: disabled)
 - Dreaming interval: `DREAMING_INTERVAL_MS` (default: 6 hours)
 - Enabled by default: `DREAMING_ENABLED !== "false"`
@@ -92,6 +100,7 @@ startLearningWorker() (packages/api/src/init.ts:60)
 **Status**: ✅ **Fully Integrated**
 
 **Current Flow:**
+
 ```
 Cognitive State includes Physiology
   → updatePhysiology() updates on events
@@ -101,6 +110,7 @@ Cognitive State includes Physiology
 ```
 
 **Integration Points:**
+
 - ✅ Physiology in `CognitiveState` (`packages/cognitive/src/state.ts:120-124`)
 - ✅ `updatePhysiology()` called in transitions (`packages/cognitive/src/transition.ts:27-32`)
 - ✅ `updateAutonomy()` receives physiology (`packages/cognitive/src/state.ts:369-447`)
@@ -109,8 +119,9 @@ Cognitive State includes Physiology
 - ✅ Cognitive loop passes physiology to autonomy updates (`packages/runtime/src/loops/cognitive.ts:102, 106`)
 
 **Regulation Logic:**
+
 - Frustration > 0.7: 0.5x autonomy multiplier
-- Energy < 0.2: 0.8x autonomy multiplier  
+- Energy < 0.2: 0.8x autonomy multiplier
 - Boredom > 0.9: Blocks execution via `meetsConstraints()`
 - Frustration > 0.85: Blocks execution via `meetsConstraints()`
 - Energy < 0.1: Blocks execution via `meetsConstraints()`
@@ -119,11 +130,11 @@ Cognitive State includes Physiology
 
 ## Integration Quality Matrix
 
-| Component | Runtime | Cognitive | Learning | Overall |
-|-----------|---------|-----------|----------|---------|
-| **Supervisor** | ✅ Integrated | ⚠️ Partial | N/A | ⚠️ **Partial** |
-| **Dreaming** | N/A | N/A | ✅ Integrated | ✅ **Complete** |
-| **Physiology** | ✅ Integrated | ✅ Integrated | N/A | ✅ **Complete** |
+| Component      | Runtime       | Cognitive     | Learning      | Overall         |
+| -------------- | ------------- | ------------- | ------------- | --------------- |
+| **Supervisor** | ✅ Integrated | ⚠️ Partial    | N/A           | ⚠️ **Partial**  |
+| **Dreaming**   | N/A           | N/A           | ✅ Integrated | ✅ **Complete** |
+| **Physiology** | ✅ Integrated | ✅ Integrated | N/A           | ✅ **Complete** |
 
 ## Recommendations
 
@@ -156,6 +167,7 @@ The cognitive architecture components are **well-integrated** with two exception
 3. **Supervisor** has a critical gap: interrupts workflows but doesn't update cognitive state
 
 The supervisor gap prevents cognitive state from reflecting supervisor interventions, which means:
+
 - Cognitive boredom doesn't increase when supervisor detects loops
 - No cognitive event history of supervisor interventions
 - Cognitive state and workflow state can diverge

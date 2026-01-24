@@ -1,9 +1,10 @@
 ---
 title: Bun.build – Bundler | Bun Docs
-url: 
+url:
 description: Bundle code for consumption in the browser with Bun's native bundler.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -78,7 +79,7 @@ It's fast. The numbers below represent performance on esbuild's [three.js benchm
 
 [![](https://bun.com/images/bundler-speed.png)](https://bun.com/images/bundler-speed.png) Bundling 10 copies of three.js from scratch, with sourcemaps and minification
 
-## [Why bundle?](https://bun.com/docs/bundler\#why-bundle)
+## [Why bundle?](https://bun.com/docs/bundler#why-bundle)
 
 The bundler is a key piece of infrastructure in the JavaScript ecosystem. As a brief overview of why bundling is so important:
 
@@ -91,7 +92,7 @@ Let's jump into the bundler API.
 
 Note that the Bun bundler is not intended to replace `tsc` for typechecking or generating type declarations.
 
-## [Basic example](https://bun.com/docs/bundler\#basic-example)
+## [Basic example](https://bun.com/docs/bundler#basic-example)
 
 Let's build our first bundle. You have the following two files, which implement a simple client-side rendered React app.
 
@@ -208,7 +209,7 @@ bunx serve out
 
 Visit `http://localhost:5000` to see your bundled app in action.
 
-## [Watch mode](https://bun.com/docs/bundler\#watch-mode)
+## [Watch mode](https://bun.com/docs/bundler#watch-mode)
 
 Like the runtime and test runner, the bundler supports watch mode natively.
 
@@ -216,19 +217,19 @@ Like the runtime and test runner, the bundler supports watch mode natively.
 bun build ./index.tsx --outdir ./out --watch
 ```
 
-## [Content types](https://bun.com/docs/bundler\#content-types)
+## [Content types](https://bun.com/docs/bundler#content-types)
 
 Like the Bun runtime, the bundler supports an array of file types out of the box. The following table breaks down the bundler's set of standard "loaders". Refer to [Bundler > File types](https://bun.com/docs/runtime/loaders) for full documentation.
 
-| Extensions | Details |
-| --- | --- |
+| Extensions                                             | Details                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `.js` `.jsx`, `.cjs` `.mjs` `.mts` `.cts` `.ts` `.tsx` | Uses Bun's built-in transpiler to parse the file and transpile TypeScript/JSX syntax to vanilla JavaScript. The bundler executes a set of default transforms including dead code elimination and tree shaking. At the moment Bun does not attempt to down-convert syntax; if you use recently ECMAScript syntax, that will be reflected in the bundled code. |
-| `.json` | JSON files are parsed and inlined into the bundle as a JavaScript object.<br>```<br>import pkg from "./package.json";<br>pkg.name; // => "my-package"<br>``` |
-| `.toml` | TOML files are parsed and inlined into the bundle as a JavaScript object.<br>```<br>import config from "./bunfig.toml";<br>config.logLevel; // => "debug"<br>``` |
-| `.txt` | The contents of the text file are read and inlined into the bundle as a string.<br>```<br>import contents from "./file.txt";<br>console.log(contents); // => "Hello, world!"<br>``` |
-| `.node` `.wasm` | These files are supported by the Bun runtime, but during bundling they are treated as [assets](https://bun.com/docs/bundler#assets). |
+| `.json`                                                | JSON files are parsed and inlined into the bundle as a JavaScript object.<br>`<br>import pkg from "./package.json";<br>pkg.name; // => "my-package"<br>`                                                                                                                                                                                                     |
+| `.toml`                                                | TOML files are parsed and inlined into the bundle as a JavaScript object.<br>`<br>import config from "./bunfig.toml";<br>config.logLevel; // => "debug"<br>`                                                                                                                                                                                                 |
+| `.txt`                                                 | The contents of the text file are read and inlined into the bundle as a string.<br>`<br>import contents from "./file.txt";<br>console.log(contents); // => "Hello, world!"<br>`                                                                                                                                                                              |
+| `.node` `.wasm`                                        | These files are supported by the Bun runtime, but during bundling they are treated as [assets](https://bun.com/docs/bundler#assets).                                                                                                                                                                                                                         |
 
-### [Assets](https://bun.com/docs/bundler\#assets)
+### [Assets](https://bun.com/docs/bundler#assets)
 
 If the bundler encounters an import with an unrecognized extension, it treats the imported file as an _external file_. The referenced file is copied as-is into `outdir`, and the import is resolved as a _path_ to the file.
 
@@ -258,13 +259,13 @@ The exact behavior of the file loader is also impacted by [`naming`](https://bun
 
 Refer to the [Bundler > Loaders](https://bun.com/docs/bundler/loaders#file) page for more complete documentation on the file loader.
 
-### [Plugins](https://bun.com/docs/bundler\#plugins)
+### [Plugins](https://bun.com/docs/bundler#plugins)
 
 The behavior described in this table can be overridden or extended with [plugins](https://bun.com/docs/bundler/plugins). Refer to the [Bundler > Loaders](https://bun.com/docs/bundler/plugins) page for complete documentation.
 
-## [API](https://bun.com/docs/bundler\#api)
+## [API](https://bun.com/docs/bundler#api)
 
-### [`entrypoints`](https://bun.com/docs/bundler\#entrypoints)
+### [`entrypoints`](https://bun.com/docs/bundler#entrypoints)
 
 **Required.** An array of paths corresponding to the entrypoints of our application. One bundle will be generated for each entrypoint.
 
@@ -293,7 +294,7 @@ bun build --entrypoints ./index.ts
 # <bundled code>
 ```
 
-### [`outdir`](https://bun.com/docs/bundler\#outdir)
+### [`outdir`](https://bun.com/docs/bundler#outdir)
 
 The directory where output files will be written.
 
@@ -344,7 +345,7 @@ for (const res of result.outputs) {
 
 When `outdir` is set, the `path` property on a `BuildArtifact` will be the absolute path to where it was written to.
 
-### [`target`](https://bun.com/docs/bundler\#target)
+### [`target`](https://bun.com/docs/bundler#target)
 
 The intended execution environment for the bundle.
 
@@ -375,7 +376,7 @@ Depending on the target, Bun will apply different module resolution rules and op
 | `bun` | For generating bundles that are intended to be run by the Bun runtime. In many cases, it isn't necessary to bundle server-side code; you can directly execute the source code without modification. However, bundling your server code can reduce startup times and improve running performance. This is the target to use for building full-stack applications with build-time HTML imports, where both server and client code are bundled together.<br>All bundles generated with `target: "bun"` are marked with a special `// @bun` pragma, which indicates to the Bun runtime that there's no need to re-transpile the file before execution.<br>If any entrypoints contains a Bun shebang ( `#!/usr/bin/env bun`) the bundler will default to `target: "bun"` instead of `"browser"`.<br>When using `target: "bun"` and `format: "cjs"` together, the `// @bun @bun-cjs` pragma is added and the CommonJS wrapper function is not compatible with Node.js. |
 | `node` | For generating bundles that are intended to be run by Node.js. Prioritizes the `"node"` export condition when resolving imports, and outputs `.mjs`. In the future, this will automatically polyfill the `Bun` global and other built-in `bun:*` modules, though this is not yet implemented. |
 
-### [`format`](https://bun.com/docs/bundler\#format)
+### [`format`](https://bun.com/docs/bundler#format)
 
 Specifies the module format to be used in the generated bundles.
 
@@ -437,7 +438,7 @@ bun build ./index.tsx --outdir ./out --format cjs
 
 TODO: document IIFE once we support globalNames.
 
-### [`splitting`](https://bun.com/docs/bundler\#splitting)
+### [`splitting`](https://bun.com/docs/bundler#splitting)
 
 Whether to enable code splitting.
 
@@ -530,7 +531,7 @@ Running this build will result in the following files:
 
 The generated `chunk-2fce6291bf86559d.js` file contains the shared code. To avoid collisions, the file name automatically includes a content hash by default. This can be customized with [`naming`](https://bun.com/docs/bundler#naming).
 
-### [`plugins`](https://bun.com/docs/bundler\#plugins)
+### [`plugins`](https://bun.com/docs/bundler#plugins)
 
 A list of plugins to use during bundling.
 
@@ -558,7 +559,7 @@ n/a
 
 Bun implements a universal plugin system for both Bun's runtime and bundler. Refer to the [plugin documentation](https://bun.com/docs/bundler/plugins) for complete documentation.
 
-### [`env`](https://bun.com/docs/bundler\#env)
+### [`env`](https://bun.com/docs/bundler#env)
 
 Controls how environment variables are handled during bundling. Internally, this uses `define` to inject environment variables into the bundle, but makes it easier to specify the environment variables to inject.
 
@@ -689,7 +690,7 @@ console.log(process.env.BAZ);
 
 ```
 
-### [`sourcemap`](https://bun.com/docs/bundler\#sourcemap)
+### [`sourcemap`](https://bun.com/docs/bundler#sourcemap)
 
 Specifies the type of sourcemap to generate.
 
@@ -715,7 +716,7 @@ bun build ./index.tsx --outdir ./out --sourcemap=linked
 ```
 
 | `"none"` | _Default._ No sourcemap is generated. |
-| `"linked"` | A separate `*.js.map` file is created alongside each `*.js` bundle using a `//# sourceMappingURL` comment to link the two. Requires `--outdir` to be set. The base URL of this can be customized with `--public-path`.<br>```<br>// <bundled code here><br>//# sourceMappingURL=bundle.js.map<br>``` |
+| `"linked"` | A separate `*.js.map` file is created alongside each `*.js` bundle using a `//# sourceMappingURL` comment to link the two. Requires `--outdir` to be set. The base URL of this can be customized with `--public-path`.<br>`<br>// <bundled code here><br>//# sourceMappingURL=bundle.js.map<br>` |
 | `"external"` | A separate `*.js.map` file is created alongside each `*.js` bundle without inserting a `//# sourceMappingURL` comment. |
 
 Generated bundles contain a [debug id](https://sentry.engineering/blog/the-case-for-debug-ids) that can be used to associate a bundle with its corresponding sourcemap. This `debugId` is added as a comment at the bottom of the file.
@@ -727,17 +728,11 @@ Generated bundles contain a [debug id](https://sentry.engineering/blog/the-case-
 
 ```
 
-* * *
+---
 
 - `"inline"`
 
 - A sourcemap is generated and appended to the end of the generated bundle as a base64 payload.
-
-
-
-
-
-
 
 ```
 // <bundled code here>
@@ -746,20 +741,9 @@ Generated bundles contain a [debug id](https://sentry.engineering/blog/the-case-
 
 ```
 
-
-
-
-
-
-
-
-
-
-
 The associated `*.js.map` sourcemap will be a JSON file containing an equivalent `debugId` property.
 
-
-### [`minify`](https://bun.com/docs/bundler\#minify)
+### [`minify`](https://bun.com/docs/bundler#minify)
 
 Whether to enable minification. Default `false`.
 
@@ -827,7 +811,7 @@ bun build ./index.tsx --outdir ./out --minify-whitespace --minify-identifiers --
 bun build ./index.tsx --outdir ./out --minify --keep-names
 ```
 
-### [`external`](https://bun.com/docs/bundler\#external)
+### [`external`](https://bun.com/docs/bundler#external)
 
 A list of import paths to consider _external_. Defaults to `[]`.
 
@@ -929,7 +913,7 @@ CLI
 bun build ./index.tsx --outdir ./out --external '*'
 ```
 
-### [`packages`](https://bun.com/docs/bundler\#packages)
+### [`packages`](https://bun.com/docs/bundler#packages)
 
 Control whatever package dependencies are included to bundle or not. Possible values: `bundle` (default), `external`. Bun treats any import which path do not start with `.`, `..` or `/` as package.
 
@@ -953,7 +937,7 @@ CLI
 bun build ./index.ts --packages external
 ```
 
-### [`naming`](https://bun.com/docs/bundler\#naming)
+### [`naming`](https://bun.com/docs/bundler#naming)
 
 Customizes the generated file names. Defaults to `./[dir]/[name].[ext]`.
 
@@ -1011,10 +995,10 @@ The names and locations of the generated files can be customized with the `namin
 
 For example:
 
-| Token | `[name]` | `[ext]` | `[hash]` | `[dir]` |
-| --- | --- | --- | --- | --- |
-| `./index.tsx` | `index` | `js` | `a1b2c3d4` | `""` (empty string) |
-| `./nested/entry.ts` | `entry` | `js` | `c3d4e5f6` | `"nested"` |
+| Token               | `[name]` | `[ext]` | `[hash]`   | `[dir]`             |
+| ------------------- | -------- | ------- | ---------- | ------------------- |
+| `./index.tsx`       | `index`  | `js`    | `a1b2c3d4` | `""` (empty string) |
+| `./nested/entry.ts` | `entry`  | `js`    | `c3d4e5f6` | `"nested"`          |
 
 We can combine these tokens to create a template string. For instance, to include the hash in the generated bundle names:
 
@@ -1078,7 +1062,7 @@ CLI
 bun build ./index.tsx --outdir ./out --entry-naming "[dir]/[name].[ext]" --chunk-naming "[name]-[hash].[ext]" --asset-naming "[name]-[hash].[ext]"
 ```
 
-### [`root`](https://bun.com/docs/bundler\#root)
+### [`root`](https://bun.com/docs/bundler#root)
 
 The root directory of the project.
 
@@ -1188,7 +1172,7 @@ By specifying `.` as `root`, the generated file structure will look like this:
 
 ```
 
-### [`publicPath`](https://bun.com/docs/bundler\#publicpath)
+### [`publicPath`](https://bun.com/docs/bundler#publicpath)
 
 A prefix to be appended to any import paths in bundled code.
 
@@ -1254,7 +1238,7 @@ var logo = './logo-a7305bdef.svg';
 var logo = 'https://cdn.example.com/logo-a7305bdef.svg';
 ```
 
-### [`define`](https://bun.com/docs/bundler\#define)
+### [`define`](https://bun.com/docs/bundler#define)
 
 A map of global identifiers to be replaced at build time. Keys of this object are identifier names, and values are JSON strings that will be inlined.
 
@@ -1282,7 +1266,7 @@ CLI
 bun build ./index.tsx --outdir ./out --define 'STRING="value"' --define "nested.boolean=true"
 ```
 
-### [`loader`](https://bun.com/docs/bundler\#loader)
+### [`loader`](https://bun.com/docs/bundler#loader)
 
 A map of file extensions to [built-in loader names](https://bun.com/docs/bundler/loaders#built-in-loaders). This can be used to quickly customize how certain files are loaded.
 
@@ -1310,7 +1294,7 @@ CLI
 bun build ./index.tsx --outdir ./out --loader .png:dataurl --loader .txt:file
 ```
 
-### [`banner`](https://bun.com/docs/bundler\#banner)
+### [`banner`](https://bun.com/docs/bundler#banner)
 
 A banner to be added to the final bundle, this can be a directive like "use client" for react or a comment block such as a license for the code.
 
@@ -1358,7 +1342,7 @@ CLI
 bun build ./index.tsx --outdir ./out --footer="// built with love in SF"
 ```
 
-### [`drop`](https://bun.com/docs/bundler\#drop)
+### [`drop`](https://bun.com/docs/bundler#drop)
 
 Remove function calls from a bundle. For example, `--drop=console` will remove all calls to `console.log`. Arguments to calls will also be removed, regardless of if those arguments may have side effects. Dropping `debugger` will remove all `debugger` statements.
 
@@ -1383,7 +1367,7 @@ CLI
 bun build ./index.tsx --outdir ./out --drop=console --drop=debugger --drop=anyIdentifier.or.propertyAccess
 ```
 
-### [`throw`](https://bun.com/docs/bundler\#throw)
+### [`throw`](https://bun.com/docs/bundler#throw)
 
 Controls error handling behavior when the build fails. When set to `true` (default), the returned promise rejects with an `AggregateError`. When set to `false`, the promise resolves with a `BuildOutput` object where `success` is `false`.
 
@@ -1413,7 +1397,7 @@ if (!result.success) {
 
 ```
 
-## [Outputs](https://bun.com/docs/bundler\#outputs)
+## [Outputs](https://bun.com/docs/bundler#outputs)
 
 The `Bun.build` function returns a `Promise<BuildOutput>`, defined as:
 
@@ -1507,7 +1491,7 @@ BuildArtifact (entry-point) {
 }
 ```
 
-### [Bytecode](https://bun.com/docs/bundler\#bytecode)
+### [Bytecode](https://bun.com/docs/bundler#bytecode)
 
 The `bytecode: boolean` option can be used to generate bytecode for any JavaScript/TypeScript entrypoints. This can greatly improve startup times for large applications. Only supported for `"cjs"` format, only supports `"target": "bun"` and dependent on a matching version of Bun. This adds a corresponding `.jsc` file for each entrypoint.
 
@@ -1532,7 +1516,7 @@ CLI
 bun build ./index.tsx --outdir ./out --bytecode
 ```
 
-### [Executables](https://bun.com/docs/bundler\#executables)
+### [Executables](https://bun.com/docs/bundler#executables)
 
 Bun supports "compiling" a JavaScript/TypeScript entrypoint into a standalone executable. This executable contains a copy of the Bun binary.
 
@@ -1546,7 +1530,7 @@ bun build ./cli.tsx --outfile mycli --compile
 
 Refer to [Bundler > Executables](https://bun.com/docs/bundler/executables) for complete documentation.
 
-## [Logs and errors](https://bun.com/docs/bundler\#logs-and-errors)
+## [Logs and errors](https://bun.com/docs/bundler#logs-and-errors)
 
 On failure, `Bun.build` returns a rejected promise with an `AggregateError`. This can be logged to the console for pretty printing of the error list, or programmatically read with a `try`/ `catch` block.
 
@@ -1609,7 +1593,7 @@ if (result.logs.length > 0) {
 
 ```
 
-## [Reference](https://bun.com/docs/bundler\#reference)
+## [Reference](https://bun.com/docs/bundler#reference)
 
 ```
 interface Bun {
@@ -1789,7 +1773,7 @@ $bunbuild<entrypoints...>
 
 --production
 
-Set NODE\_ENV=production and enable minification
+Set NODE_ENV=production and enable minification
 
 --bytecode
 
@@ -1809,7 +1793,7 @@ Transpile file only, do not bundle
 
 --env=<val>
 
-Inline environment variables into the bundle as process.env.${name}. Defaults to 'disable'. To inline environment variables matching a prefix, use my prefix like 'FOO\_PUBLIC\_\*'.
+Inline environment variables into the bundle as process.env.${name}. Defaults to 'disable'. To inline environment variables matching a prefix, use my prefix like 'FOO_PUBLIC\_\*'.
 
 #### Output & File Management
 
@@ -1969,7 +1953,7 @@ Security Scanner API](https://bun.com/docs/install/security-scanner-api) [Next\\
 \\
 HTML & static sites](https://bun.com/docs/bundler/html)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/index.md)
 
@@ -1993,7 +1977,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

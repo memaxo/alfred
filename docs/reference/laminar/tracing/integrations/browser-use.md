@@ -1,9 +1,10 @@
 ---
 title: Observability for Browser Use - Laminar documentation
-url: 
+url:
 description: Trace Browser Use's agent execution steps and browser sessions
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/browser-use#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -28,13 +29,13 @@ On this page
 - [Usage](https://docs.lmnr.ai/tracing/integrations/browser-use#usage)
 - [Viewing Traces](https://docs.lmnr.ai/tracing/integrations/browser-use#viewing-traces)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/browser-use\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/browser-use#overview) Overview
 
 [Browser Use](https://browser-use.com/) is a Python library that enables AI to control your browser.Laminar has a native tracing integration with Browser Use agent and underlying Playwright browser. It allows you to trace both agent execution steps and browser session recordings.
 
 Laminar excels at tracing browser agents by providing unified visibility into both browser session recordings and agent execution steps.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/browser-use\#usage)  Usage
+## [​](https://docs.lmnr.ai/tracing/integrations/browser-use#usage) Usage
 
 Simply initialize Laminar at the top of your project and both Browser Use agent’s steps and session recordings will be automatically traced and synced.
 
@@ -61,7 +62,7 @@ asyncio.run(main())
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/integrations/browser-use\#viewing-traces)  Viewing Traces
+## [​](https://docs.lmnr.ai/tracing/integrations/browser-use#viewing-traces) Viewing Traces
 
 You can view traces in the Laminar UI by going to the traces tab in your project.
 When you select a trace, you can see both the browser session recording and the agent execution steps.Timeline of the browser session is synced with the agent execution steps, timeline highlights indicate the agent’s current step synced with the browser session.![Browser Use Observability](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/integrations/bu_demo.gif?fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=4efd5fbeade965fddc888e9cd009f1fc)

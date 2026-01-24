@@ -172,8 +172,8 @@ We implement a `SchemaGenerator` service in the API layer and integrate it into 
 
 The service has two responsibilities:
 
-1) Fast, deterministic mapping: decide whether a given data payload should render as GenUI and which component is appropriate (`selectComponent`).
-2) Safe schema production: produce a valid `UIComponent` schema for the selected component, using deterministic building for unambiguous shapes and AI SDK v6 `generateObject` for ambiguous or layout-heavy cases (`generateSchema`).
+1. Fast, deterministic mapping: decide whether a given data payload should render as GenUI and which component is appropriate (`selectComponent`).
+2. Safe schema production: produce a valid `UIComponent` schema for the selected component, using deterministic building for unambiguous shapes and AI SDK v6 `generateObject` for ambiguous or layout-heavy cases (`generateSchema`).
 
 ### Milestone A: Add `SchemaGenerator` service (deterministic + LLM paths)
 
@@ -305,43 +305,38 @@ Add metrics/logging (minimal but useful):
 
 All commands run from the repository root unless stated otherwise.
 
-1) Implement and typecheck the new service and voice handler changes:
-
+1. Implement and typecheck the new service and voice handler changes:
    - `bun run typecheck`
 
-2) Run API-focused tests (fast feedback):
-
+2. Run API-focused tests (fast feedback):
    - `bun run test packages/api/test/schema.*.test.ts`
    - `bun run test packages/api/test/voice*`
 
-3) Run GenUI framework tests to ensure no cross-package regressions:
-
+3. Run GenUI framework tests to ensure no cross-package regressions:
    - `bun run test packages/type/src/genui*`
    - `bun run test packages/ui/src/genui*`
 
-4) Manual proof (web):
-
+4. Manual proof (web):
    - Start dev stack (repo standard): `bun run dev`
    - Ask ALFRED a data-heavy question that triggers structured data output (for example: “Show me workflow status for my last run”).
    - Confirm the response includes a `data-ui` part and that the web chat renders a GenUI component (not raw JSON).
 
 If a dedicated endpoint for streaming schemas is added in this phase, also:
 
-   - Use `createGenUIObjectConfig({ api: "<your endpoint>" })` in a small dev harness and confirm partial schema renders a skeleton then resolves to a component.
+- Use `createGenUIObjectConfig({ api: "<your endpoint>" })` in a small dev harness and confirm partial schema renders a skeleton then resolves to a component.
 
-5) If you add a new server route under `apps/web/src/routes/`, regenerate the TanStack Router route tree:
-
+5. If you add a new server route under `apps/web/src/routes/`, regenerate the TanStack Router route tree:
    - `cd apps/web && bunx @tanstack/router-cli generate`
 
 ## Validation and Acceptance
 
 This phase is accepted when:
 
-1) **No hardcoded schemas in voice workflow handler**:
+1. **No hardcoded schemas in voice workflow handler**:
    - `packages/api/src/voice/workflow-handler.ts` no longer manually constructs the `ui` object for `workflow-timeline` and `plan` in `buildVoiceWorkflowRaw`.
    - Instead it delegates to `packages/api/src/services/schema.ts`.
 
-2) **Correct mapping coverage**:
+2. **Correct mapping coverage**:
    - `SchemaGenerator.selectComponent()` has at least 10 unit tests and maps the required shapes:
      - array of numbers → chart
      - key/value records → grid
@@ -349,18 +344,18 @@ This phase is accepted when:
      - text → null
      - nested structures → plan or recursive components
 
-3) **Schema validity**:
+3. **Schema validity**:
    - All produced schemas pass `uiComponentSchema.safeParse(...)`.
    - Invalid LLM outputs do not crash request handlers; they fall back to `null` UI.
 
-4) **Capability gating**:
+4. **Capability gating**:
    - When the selected model does not support GenUI (`supportsGenUI(selection) === false`), the system does not call structured output generation and returns `null` UI (or a deterministic schema if available).
 
-5) **User-visible proof**:
+5. **User-visible proof**:
    - CI-grade proof: `/api/genui` server route streams a `UIComponent` response when a session exists and the selected model supports GenUI (covered by `apps/web/src/tests/routes/genui.route.test.ts`).
    - Optional manual proof: run the web app, hit `/api/genui` from a small harness using `createGenUIObjectConfig`, and confirm `StreamingUIRenderer` renders a skeleton then the generated schema.
 
-6) **Coverage expectation**:
+6. **Coverage expectation**:
    - The new tests under `packages/api/test/schema.*.test.ts` achieve >80% coverage of `packages/api/src/services/schema.ts` (use `bun run test --coverage ...` when practical; if coverage reporting is unavailable in the wrapper, measure coverage in CI tooling and document the evidence here).
 
 ## Idempotence and Recovery
@@ -447,4 +442,3 @@ This phase must not block or regress other north star areas; it should compose c
 - RAG/rerank/sense/summarize: out of scope for Phase 1; schema generation uses only the data already produced by tools/handlers.
 - Protocol: continue using `data-ui` parts as the canonical cross-surface contract.
 - Pacer: out of scope unless streaming endpoint requires throttling; prefer AI SDK’s native stream protocol first.
-

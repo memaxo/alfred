@@ -4,13 +4,13 @@ In TanStack Start, routes matching the initial request are rendered on the serve
 
 However, there are cases where you might want to disable SSR for certain routes or all routes, such as:
 
- * When beforeLoad or loader requires browser-only APIs (e.g., localStorage).
- * When the route component depends on browser-only APIs (e.g., canvas).
+- When beforeLoad or loader requires browser-only APIs (e.g., localStorage).
+- When the route component depends on browser-only APIs (e.g., canvas).
 
 TanStack Start's Selective SSR feature lets you configure:
 
- * Which routes should execute beforeLoad or loader on the server.
- * Which route components should be rendered on the server.
+- Which routes should execute beforeLoad or loader on the server.
+- Which route components should be rendered on the server.
 
 How does this compare to SPA mode?
 
@@ -20,213 +20,186 @@ Configuration
 
 You can control how a route is handled during the initial server request using the ssr property. If this property is not set, it defaults to true. You can change this default using the defaultSsr option in createStart:
 
+// src/start.ts
+import { createStart } from '@tanstack/react-start'
 
- // src/start.ts
- import { createStart } from '@tanstack/react-start'
+export const startInstance = createStart(() => ({
+// Disable SSR by default
+defaultSsr: false,
+}))
 
- export const startInstance = createStart(() => ({
- // Disable SSR by default
- defaultSsr: false,
- }))
+// src/start.ts
+import { createStart } from '@tanstack/react-start'
 
-
-
- // src/start.ts
- import { createStart } from '@tanstack/react-start'
-
- export const startInstance = createStart(() => ({
- // Disable SSR by default
- defaultSsr: false,
- }))
-
+export const startInstance = createStart(() => ({
+// Disable SSR by default
+defaultSsr: false,
+}))
 
 ssr: true
 
 This is the default behavior unless otherwise configured. On the initial request, it will:
 
- * Run beforeLoad on the server and send the resulting context to the client.
- * Run loader on the server and send the loader data to the client.
- * Render the component on the server and send the HTML markup to the client.
+- Run beforeLoad on the server and send the resulting context to the client.
+- Run loader on the server and send the loader data to the client.
+- Render the component on the server and send the HTML markup to the client.
 
-
-
- // src/routes/posts/$postId.tsx
+// src/routes/posts/$postId.tsx
  export const Route = createFileRoute('/posts/$postId')({
- ssr: true,
- beforeLoad: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- loader: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- component: () => This component is rendered on the server,
- })
+ssr: true,
+beforeLoad: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+loader: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+component: () => This component is rendered on the server,
+})
 
-
-
- // src/routes/posts/$postId.tsx
+// src/routes/posts/$postId.tsx
  export const Route = createFileRoute('/posts/$postId')({
- ssr: true,
- beforeLoad: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- loader: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- component: () => This component is rendered on the server,
- })
-
+ssr: true,
+beforeLoad: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+loader: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+component: () => This component is rendered on the server,
+})
 
 ssr: false
 
 This disables server-side:
 
- * Execution of the route's beforeLoad and loader.
- * Rendering of the route component.
+- Execution of the route's beforeLoad and loader.
+- Rendering of the route component.
 
-
-
- // src/routes/posts/$postId.tsx
+// src/routes/posts/$postId.tsx
  export const Route = createFileRoute('/posts/$postId')({
- ssr: false,
- beforeLoad: () => {
- console.log('Executes on the client during hydration')
- },
- loader: () => {
- console.log('Executes on the client during hydration')
- },
- component: () => This component is rendered on the client,
- })
+ssr: false,
+beforeLoad: () => {
+console.log('Executes on the client during hydration')
+},
+loader: () => {
+console.log('Executes on the client during hydration')
+},
+component: () => This component is rendered on the client,
+})
 
-
-
- // src/routes/posts/$postId.tsx
+// src/routes/posts/$postId.tsx
  export const Route = createFileRoute('/posts/$postId')({
- ssr: false,
- beforeLoad: () => {
- console.log('Executes on the client during hydration')
- },
- loader: () => {
- console.log('Executes on the client during hydration')
- },
- component: () => This component is rendered on the client,
- })
-
+ssr: false,
+beforeLoad: () => {
+console.log('Executes on the client during hydration')
+},
+loader: () => {
+console.log('Executes on the client during hydration')
+},
+component: () => This component is rendered on the client,
+})
 
 ssr: 'data-only'
 
 This hybrid option will:
 
- * Run beforeLoad on the server and send the resulting context to the client.
- * Run loader on the server and send the loader data to the client.
- * Disable server-side rendering of the route component.
+- Run beforeLoad on the server and send the resulting context to the client.
+- Run loader on the server and send the loader data to the client.
+- Disable server-side rendering of the route component.
 
-
-
- // src/routes/posts/$postId.tsx
+// src/routes/posts/$postId.tsx
  export const Route = createFileRoute('/posts/$postId')({
- ssr: 'data-only',
- beforeLoad: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- loader: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- component: () => This component is rendered on the client,
- })
+ssr: 'data-only',
+beforeLoad: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+loader: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+component: () => This component is rendered on the client,
+})
 
-
-
- // src/routes/posts/$postId.tsx
+// src/routes/posts/$postId.tsx
  export const Route = createFileRoute('/posts/$postId')({
- ssr: 'data-only',
- beforeLoad: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- loader: () => {
- console.log('Executes on the server during the initial request')
- console.log('Executes on the client for subsequent navigation')
- },
- component: () => This component is rendered on the client,
- })
-
+ssr: 'data-only',
+beforeLoad: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+loader: () => {
+console.log('Executes on the server during the initial request')
+console.log('Executes on the client for subsequent navigation')
+},
+component: () => This component is rendered on the client,
+})
 
 Functional Form
 
 For more flexibility, you can use the functional form of the ssr property to decide at runtime whether to SSR a route:
 
+// src/routes/docs/$docType/$docId.tsx
+export const Route = createFileRoute('/docs/$docType/$docId')({
+validateSearch: z.object({ details: z.boolean().optional() }),
+ssr: ({ params, search }) => {
+if (params.status === 'success' && params.value.docType === 'sheet') {
+return false
+}
+if (search.status === 'success' && search.value.details) {
+return 'data-only'
+}
+},
+beforeLoad: () => {
+console.log('Executes on the server depending on the result of ssr()')
+},
+loader: () => {
+console.log('Executes on the server depending on the result of ssr()')
+},
+component: () => This component is rendered on the client,
+})
 
- // src/routes/docs/$docType/$docId.tsx
- export const Route = createFileRoute('/docs/$docType/$docId')({
- validateSearch: z.object({ details: z.boolean().optional() }),
- ssr: ({ params, search }) => {
- if (params.status === 'success' && params.value.docType === 'sheet') {
- return false
- }
- if (search.status === 'success' && search.value.details) {
- return 'data-only'
- }
- },
- beforeLoad: () => {
- console.log('Executes on the server depending on the result of ssr()')
- },
- loader: () => {
- console.log('Executes on the server depending on the result of ssr()')
- },
- component: () => This component is rendered on the client,
- })
-
-
-
- // src/routes/docs/$docType/$docId.tsx
- export const Route = createFileRoute('/docs/$docType/$docId')({
- validateSearch: z.object({ details: z.boolean().optional() }),
- ssr: ({ params, search }) => {
- if (params.status === 'success' && params.value.docType === 'sheet') {
- return false
- }
- if (search.status === 'success' && search.value.details) {
- return 'data-only'
- }
- },
- beforeLoad: () => {
- console.log('Executes on the server depending on the result of ssr()')
- },
- loader: () => {
- console.log('Executes on the server depending on the result of ssr()')
- },
- component: () => This component is rendered on the client,
- })
-
+// src/routes/docs/$docType/$docId.tsx
+export const Route = createFileRoute('/docs/$docType/$docId')({
+validateSearch: z.object({ details: z.boolean().optional() }),
+ssr: ({ params, search }) => {
+if (params.status === 'success' && params.value.docType === 'sheet') {
+return false
+}
+if (search.status === 'success' && search.value.details) {
+return 'data-only'
+}
+},
+beforeLoad: () => {
+console.log('Executes on the server depending on the result of ssr()')
+},
+loader: () => {
+console.log('Executes on the server depending on the result of ssr()')
+},
+component: () => This component is rendered on the client,
+})
 
 The ssr function runs only on the server during the initial request and is stripped from the client bundle.
 
 search and params are passed in after validation as a discriminated union:
 
+params:
+| { status: 'success'; value: Expand> }
+| { status: 'error'; error: unknown }
+search:
+| { status: 'success'; value: Expand> }
+| { status: 'error'; error: unknown }
 
- params:
- | { status: 'success'; value: Expand> }
- | { status: 'error'; error: unknown }
- search:
- | { status: 'success'; value: Expand> }
- | { status: 'error'; error: unknown }
-
-
-
- params:
- | { status: 'success'; value: Expand> }
- | { status: 'error'; error: unknown }
- search:
- | { status: 'success'; value: Expand> }
- | { status: 'error'; error: unknown }
-
+params:
+| { status: 'success'; value: Expand> }
+| { status: 'error'; error: unknown }
+search:
+| { status: 'success'; value: Expand> }
+| { status: 'error'; error: unknown }
 
 If validation fails, status will be error and error will contain the failure details. Otherwise, status will be success and value will contain the validated data.
 
@@ -234,42 +207,34 @@ Inheritance
 
 At runtime, a child route inherits the Selective SSR configuration of its parent. However, the inherited value can only be changed to be more restrictive (i.e. true to data-only or false and data-only to false). For example:
 
+root { ssr: undefined }
+posts { ssr: false }
+$postId { ssr: true }
 
- root { ssr: undefined }
- posts { ssr: false }
- $postId { ssr: true }
+root { ssr: undefined }
+posts { ssr: false }
+$postId { ssr: true }
 
-
-
- root { ssr: undefined }
- posts { ssr: false }
- $postId { ssr: true }
-
-
- * root defaults to ssr: true.
- * posts explicitly sets ssr: false, so neither beforeLoad nor loader will run on the server, and the route component won't be rendered on the server.
- * $postId sets ssr: true, but inherits ssr: false from its parent. Because the inherited value can only be changed to be more restrictive, ssr: true has no effect and the inherited ssr: false will remain.
+- root defaults to ssr: true.
+- posts explicitly sets ssr: false, so neither beforeLoad nor loader will run on the server, and the route component won't be rendered on the server.
+- $postId sets ssr: true, but inherits ssr: false from its parent. Because the inherited value can only be changed to be more restrictive, ssr: true has no effect and the inherited ssr: false will remain.
 
 Another example:
 
+root { ssr: undefined }
+posts { ssr: 'data-only' }
+$postId { ssr: true }
+details { ssr: false }
 
- root { ssr: undefined }
- posts { ssr: 'data-only' }
- $postId { ssr: true }
- details { ssr: false }
+root { ssr: undefined }
+posts { ssr: 'data-only' }
+$postId { ssr: true }
+details { ssr: false }
 
-
-
- root { ssr: undefined }
- posts { ssr: 'data-only' }
- $postId { ssr: true }
- details { ssr: false }
-
-
- * root defaults to ssr: true.
- * posts sets ssr: 'data-only', so beforeLoad and loader run on the server, but the route component isn't rendered on the server.
- * $postId sets ssr: true, but inherits ssr: 'data-only' from its parent.
- * details sets ssr: false, so neither beforeLoad nor loader will run on the server, and the route component won't be rendered on the server. Here the inherited value is changed to be more restrictive, and therefore, the ssr: false will override the inherited value.
+- root defaults to ssr: true.
+- posts sets ssr: 'data-only', so beforeLoad and loader run on the server, but the route component isn't rendered on the server.
+- $postId sets ssr: true, but inherits ssr: 'data-only' from its parent.
+- details sets ssr: false, so neither beforeLoad nor loader will run on the server, and the route component won't be rendered on the server. Here the inherited value is changed to be more restrictive, and therefore, the ssr: false will override the inherited value.
 
 Fallback Rendering
 
@@ -283,85 +248,68 @@ You can disable server side rendering of the root route component, however the s
 
 A minimal setup of a root route with disabled SSR for the route component looks like this:
 
+import \* as React from 'react'
 
- import * as React from 'react'
+import {
+HeadContent,
+Outlet,
+Scripts,
+createRootRoute,
+} from '@tanstack/react-router'
 
- import {
- HeadContent,
- Outlet,
- Scripts,
- createRootRoute,
- } from '@tanstack/react-router'
+export const Route = createRootRoute({
+shellComponent: RootShell,
+component: RootComponent,
+errorComponent: () => Error,
+notFoundComponent: () => Not found,
+ssr: false, // or `defaultSsr: false` on the router
+})
 
- export const Route = createRootRoute({
- shellComponent: RootShell,
- component: RootComponent,
- errorComponent: () => Error,
- notFoundComponent: () => Not found,
- ssr: false, // or `defaultSsr: false` on the router
- })
+function RootShell({ children }: { children: React.ReactNode }) {
+return (
 
- function RootShell({ children }: { children: React.ReactNode }) {
- return (
+{children}
 
+)
+}
 
+function RootComponent() {
+return (
 
+This component will be rendered on the client
 
+)
+}
 
- {children}
+import \* as React from 'react'
 
+import {
+HeadContent,
+Outlet,
+Scripts,
+createRootRoute,
+} from '@tanstack/react-router'
 
+export const Route = createRootRoute({
+shellComponent: RootShell,
+component: RootComponent,
+errorComponent: () => Error,
+notFoundComponent: () => Not found,
+ssr: false, // or `defaultSsr: false` on the router
+})
 
- )
- }
+function RootShell({ children }: { children: React.ReactNode }) {
+return (
 
- function RootComponent() {
- return (
+{children}
 
- This component will be rendered on the client
+)
+}
 
+function RootComponent() {
+return (
 
- )
- }
+This component will be rendered on the client
 
-
-
- import * as React from 'react'
-
- import {
- HeadContent,
- Outlet,
- Scripts,
- createRootRoute,
- } from '@tanstack/react-router'
-
- export const Route = createRootRoute({
- shellComponent: RootShell,
- component: RootComponent,
- errorComponent: () => Error,
- notFoundComponent: () => Not found,
- ssr: false, // or `defaultSsr: false` on the router
- })
-
- function RootShell({ children }: { children: React.ReactNode }) {
- return (
-
-
-
-
-
- {children}
-
-
-
- )
- }
-
- function RootComponent() {
- return (
-
- This component will be rendered on the client
-
-
- )
- }
+)
+}

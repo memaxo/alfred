@@ -1,9 +1,10 @@
 ---
 title: Track and associate traces with specific users - Laminar documentation
-url: 
+url:
 description: Track and associate traces with specific users
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/user-id#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -28,7 +29,7 @@ On this page
 - [Setting User ID](https://docs.lmnr.ai/tracing/structure/user-id#setting-user-id)
 - [Privacy Considerations](https://docs.lmnr.ai/tracing/structure/user-id#privacy-considerations)
 
-## [​](https://docs.lmnr.ai/tracing/structure/user-id\#associating-traces-with-users)  Associating Traces with Users
+## [​](https://docs.lmnr.ai/tracing/structure/user-id#associating-traces-with-users) Associating Traces with Users
 
 Tracking which user triggered a particular trace is crucial for:
 
@@ -39,14 +40,13 @@ Tracking which user triggered a particular trace is crucial for:
 
 In Laminar, you can associate traces with users by setting user ID on a trace.
 
-## [​](https://docs.lmnr.ai/tracing/structure/user-id\#setting-user-id)  Setting User ID
+## [​](https://docs.lmnr.ai/tracing/structure/user-id#setting-user-id) Setting User ID
 
 This allows you to filter and search for traces by user ID later.
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -71,7 +71,7 @@ await observe({
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/user-id\#privacy-considerations)  Privacy Considerations
+## [​](https://docs.lmnr.ai/tracing/structure/user-id#privacy-considerations) Privacy Considerations
 
 When including user IDs in traces, consider the following privacy practices:
 
@@ -83,7 +83,6 @@ When including user IDs in traces, consider the following privacy practices:
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 

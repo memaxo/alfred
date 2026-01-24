@@ -17,37 +17,35 @@ RAG stands for retrieval augmented generation. In simple terms, RAG is the proce
 While LLMs are powerful, the information they can reason on is restricted to the data they were trained on. This problem becomes apparent when asking an LLM for information outside of their training data, like proprietary data or common knowledge that has occurred after the model’s training cutoff. RAG solves this problem by fetching information relevant to the prompt and then passing that to the model as context.
 
 To illustrate with a basic example, imagine asking the model for your favorite food:
-    
-    
+
     **input**
-    
+
     What is my favorite food?
-    
-    
-    
-    
+
+
+
+
     **generation**
-    
+
     I don't have access to personal information about individuals, including their
-    
+
     favorite foods.
 
 Not surprisingly, the model doesn’t know. But imagine, alongside your prompt, the model received some extra context:
-    
-    
+
     **input**
-    
+
     Respond to the user's prompt using only the provided context.
-    
+
     user prompt: 'What is my favorite food?'
-    
+
     context: user loves chicken nuggets
-    
-    
-    
-    
+
+
+
+
     **generation**
-    
+
     Your favorite food is chicken nuggets!
 
 Just like that, you have augmented the model’s generation by providing relevant information to the query. Assuming the model has the appropriate information, it is now highly likely to return an accurate response to the users query. But how does it retrieve the relevant information? The answer relies on a concept called embedding.
@@ -84,77 +82,73 @@ In this project, you will build a agent that will only respond with information 
 
 This project will use the following stack:
 
-  * Next.js 14 (App Router)
-  * AI SDK 
-  * OpenAI
-  * Drizzle ORM 
-  * Postgres  with  pgvector 
-  * shadcn-ui  and  TailwindCSS  for styling
+- Next.js 14 (App Router)
+- AI SDK
+- OpenAI
+- Drizzle ORM
+- Postgres with pgvector
+- shadcn-ui and TailwindCSS for styling
 
 ### Clone Repo
 
 To reduce the scope of this guide, you will be starting with a repository that already has a few things set up for you:
 
-  * Drizzle ORM (`lib/db`) including an initial migration and a script to migrate (`db:migrate`)
-  * a basic schema for the `resources` table (this will be for source material)
-  * a Server Action for creating a `resource`
+- Drizzle ORM (`lib/db`) including an initial migration and a script to migrate (`db:migrate`)
+- a basic schema for the `resources` table (this will be for source material)
+- a Server Action for creating a `resource`
 
 To get started, clone the starter repository with the following command:
-    
-    
+
     git clone https://github.com/vercel/ai-sdk-rag-starter
-    
-    
+
+
     cd ai-sdk-rag-starter
 
 First things first, run the following command to install the project’s dependencies:
-    
-    
+
     pnpm install
 
 ### Create Database
 
 You will need a Postgres database to complete this tutorial. If you don't have Postgres setup on your local machine you can:
 
-  * Create a free Postgres database with Vercel (recommended - see instructions below); or
-  * Follow this guide to set it up locally
+- Create a free Postgres database with Vercel (recommended - see instructions below); or
+- Follow this guide to set it up locally
 
 #### Setting up Postgres with Vercel
 
 To set up a Postgres instance on your Vercel account:
 
-  1. Go to Vercel.com and make sure you're logged in
-  2. Navigate to your team homepage
-  3. Click on the **Integrations** tab
-  4. Click **Browse Marketplace**
-  5. Look for the **Storage** option in the sidebar
-  6. Select the **Neon** option (recommended, but any other PostgreSQL database provider should work)
-  7. Click **Install** , then click **Install** again in the top right corner
-  8. On the "Get Started with Neon" page, click **Create Database** on the right
-  9. Select your region (e.g., Washington, D.C., U.S. East)
-  10. Turn off **Auth**
-  11. Click **Continue**
-  12. Name your database (you can use the default name or rename it to something like "RagTutorial")
-  13. Click **Create** in the bottom right corner
-  14. After seeing "Database created successfully", click **Done**
-  15. You'll be redirected to your database instance
-  16. In the Quick Start section, click **Show secrets**
-  17. Copy the full `DATABASE_URL` environment variable
+1. Go to Vercel.com and make sure you're logged in
+2. Navigate to your team homepage
+3. Click on the **Integrations** tab
+4. Click **Browse Marketplace**
+5. Look for the **Storage** option in the sidebar
+6. Select the **Neon** option (recommended, but any other PostgreSQL database provider should work)
+7. Click **Install** , then click **Install** again in the top right corner
+8. On the "Get Started with Neon" page, click **Create Database** on the right
+9. Select your region (e.g., Washington, D.C., U.S. East)
+10. Turn off **Auth**
+11. Click **Continue**
+12. Name your database (you can use the default name or rename it to something like "RagTutorial")
+13. Click **Create** in the bottom right corner
+14. After seeing "Database created successfully", click **Done**
+15. You'll be redirected to your database instance
+16. In the Quick Start section, click **Show secrets**
+17. Copy the full `DATABASE_URL` environment variable
 
 ### Migrate Database
 
 Once you have a Postgres database, you need to add the connection string as an environment secret.
 
 Make a copy of the `.env.example` file and rename it to `.env`.
-    
-    
+
     cp .env.example .env
 
 Open the new `.env` file. You should see an item called `DATABASE_URL`. Copy in your database connection string after the equals sign.
 
 With that set up, you can now run your first database migration. Run the following command:
-    
-    
+
     pnpm db:migrate
 
 This will first add the `pgvector` extension to your database. Then it will create a new table for your `resources` schema that is defined in `lib/db/schema/resources.ts`. This schema has four columns: `id`, `content`, `createdAt`, and `updatedAt`.
@@ -171,10 +165,10 @@ Once you have your API key, paste it into your `.env` file (`OPENAI_API_KEY`).
 
 Let’s build a quick task list of what needs to be done:
 
-  1. Create a table in your database to store embeddings
-  2. Add logic to chunk and create embeddings when creating resources
-  3. Create an agent
-  4. Give the agent tools to query / create resources for it’s knowledge base
+1. Create a table in your database to store embeddings
+2. Add logic to chunk and create embeddings when creating resources
+3. Create an agent
+4. Give the agent tools to query / create resources for it’s knowledge base
 
 ### Create Embeddings Table
 
@@ -183,69 +177,67 @@ Currently, your application has one table (`resources`) which has a column (`con
 Create a new file (`lib/db/schema/embeddings.ts`) and add the following code:
 
 lib/db/schema/embeddings.ts
-    
-    
+
     import { nanoid } from '@/lib/utils';
-    
+
     import { index, pgTable, text, varchar, vector } from 'drizzle-orm/pg-core';
-    
+
     import { resources } from './resources';
-    
-    
-    
-    
+
+
+
+
     export const embeddings = pgTable(
-    
+
       'embeddings',
-    
+
       {
-    
+
         id: varchar('id', { length: 191 })
-    
+
           .primaryKey()
-    
+
           .$defaultFn(() => nanoid()),
-    
+
         resourceId: varchar('resource_id', { length: 191 }).references(
-    
+
           () => resources.id,
-    
+
           { onDelete: 'cascade' },
-    
+
         ),
-    
+
         content: text('content').notNull(),
-    
+
         embedding: vector('embedding', { dimensions: 1536 }).notNull(),
-    
+
       },
-    
+
       table => ({
-    
+
         embeddingIndex: index('embeddingIndex').using(
-    
+
           'hnsw',
-    
+
           table.embedding.op('vector_cosine_ops'),
-    
+
         ),
-    
+
       }),
-    
+
     );
 
 This table has four columns:
 
-  * `id` \- unique identifier
-  * `resourceId` \- a foreign key relation to the full source material
-  * `content` \- the plain text chunk
-  * `embedding` \- the vector representation of the plain text chunk
+- `id` \- unique identifier
+- `resourceId` \- a foreign key relation to the full source material
+- `content` \- the plain text chunk
+- `embedding` \- the vector representation of the plain text chunk
 
 To perform similarity search, you also need to include an index (HNSW or IVFFlat) on this column for better performance.
 
 To push this change to the database, run the following command:
-    
-    
+
     pnpm db:push
 
 ### Add Embedding Logic
@@ -253,8 +245,7 @@ To push this change to the database, run the following command:
 Now that you have a table to store embeddings, it’s time to write the logic to create the embeddings.
 
 Create a file with the following command:
-    
-    
+
     mkdir lib/ai && touch lib/ai/embedding.ts
 
 ### Generate Chunks
@@ -262,18 +253,17 @@ Create a file with the following command:
 Remember, to create an embedding, you will start with a piece of source material (unknown length), break it down into smaller chunks, embed each chunk, and then save the chunk to the database. Let’s start by creating a function to break the source material into small chunks.
 
 lib/ai/embedding.ts
-    
-    
+
     const generateChunks = (input: string): string[] => {
-    
+
       return input
-    
+
         .trim()
-    
+
         .split('.')
-    
+
         .filter(i => i !== '');
-    
+
     };
 
 This function will take an input string and split it by periods, filtering out any empty items. This will return an array of strings. It is worth experimenting with different chunking techniques in your projects as the best technique will vary.
@@ -281,8 +271,7 @@ This function will take an input string and split it by periods, filtering out a
 ### Install AI SDK
 
 You will use the AI SDK to create embeddings. This will require two more dependencies, which you can install by running the following command:
-    
-    
+
     pnpm add ai @ai-sdk/react @ai-sdk/openai
 
 This will install the AI SDK, AI SDK's React hooks, and AI SDK's OpenAI provider.
@@ -294,53 +283,52 @@ The AI SDK is designed to be a unified interface to interact with any large lang
 Let’s add a function to generate embeddings. Copy the following code into your `lib/ai/embedding.ts` file.
 
 lib/ai/embedding.ts
-    
-    
+
     import { embedMany } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
-    
-    
-    
+
+
+
+
     const embeddingModel = openai.embedding('text-embedding-ada-002');
-    
-    
-    
-    
+
+
+
+
     const generateChunks = (input: string): string[] => {
-    
+
       return input
-    
+
         .trim()
-    
+
         .split('.')
-    
+
         .filter(i => i !== '');
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export const generateEmbeddings = async (
-    
+
       value: string,
-    
+
     ): Promise> => {
-    
+
       const chunks = generateChunks(value);
-    
+
       const { embeddings } = await embedMany({
-    
+
         model: embeddingModel,
-    
+
         values: chunks,
-    
+
       });
-    
+
       return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
-    
+
     };
 
 In this code, you first define the model you want to use for the embeddings. In this example, you are using OpenAI’s `text-embedding-ada-002` embedding model.
@@ -352,58 +340,57 @@ Next, you create an asynchronous function called `generateEmbeddings`. This func
 Open the file at `lib/actions/resources.ts`. This file has one function, `createResource`, which, as the name implies, allows you to create a resource.
 
 lib/actions/resources.ts
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import {
-    
+
       NewResourceParams,
-    
+
       insertResourceSchema,
-    
+
       resources,
-    
+
     } from '@/lib/db/schema/resources';
-    
+
     import { db } from '../db';
-    
-    
-    
-    
+
+
+
+
     export const createResource = async (input: NewResourceParams) => {
-    
+
       try {
-    
+
         const { content } = insertResourceSchema.parse(input);
-    
-    
-    
-    
+
+
+
+
         const [resource] = await db
-    
+
           .insert(resources)
-    
+
           .values({ content })
-    
+
           .returning();
-    
-    
-    
-    
+
+
+
+
         return 'Resource successfully created.';
-    
+
       } catch (e) {
-    
+
         if (e instanceof Error)
-    
+
           return e.message.length > 0 ? e.message : 'Error, please try again.';
-    
+
       }
-    
+
     };
 
 This function is a Server Action, as denoted by the `“use server”;` directive at the top of the file. This means that it can be called anywhere in your Next.js application. This function will take an input, run it through a Zod schema to ensure it adheres to the correct schema, and then creates a new resource in the database. This is the ideal location to generate and store embeddings of the newly created resources.
@@ -411,81 +398,80 @@ This function is a Server Action, as denoted by the `“use server”;` directiv
 Update the file with the following code:
 
 lib/actions/resources.ts
-    
-    
+
     'use server';
-    
-    
-    
-    
+
+
+
+
     import {
-    
+
       NewResourceParams,
-    
+
       insertResourceSchema,
-    
+
       resources,
-    
+
     } from '@/lib/db/schema/resources';
-    
+
     import { db } from '../db';
-    
+
     import { generateEmbeddings } from '../ai/embedding';
-    
+
     import { embeddings as embeddingsTable } from '../db/schema/embeddings';
-    
-    
-    
-    
+
+
+
+
     export const createResource = async (input: NewResourceParams) => {
-    
+
       try {
-    
+
         const { content } = insertResourceSchema.parse(input);
-    
-    
-    
-    
+
+
+
+
         const [resource] = await db
-    
+
           .insert(resources)
-    
+
           .values({ content })
-    
+
           .returning();
-    
-    
-    
-    
+
+
+
+
         const embeddings = await generateEmbeddings(content);
-    
+
         await db.insert(embeddingsTable).values(
-    
+
           embeddings.map(embedding => ({
-    
+
             resourceId: resource.id,
-    
+
             ...embedding,
-    
+
           })),
-    
+
         );
-    
-    
-    
-    
+
+
+
+
         return 'Resource successfully created and embedded.';
-    
+
       } catch (error) {
-    
+
         return error instanceof Error && error.message.length > 0
-    
+
           ? error.message
-    
+
           : 'Error, please try again.';
-    
+
       }
-    
+
     };
 
 First, you call the `generateEmbeddings` function created in the previous step, passing in the source material (`content`). Once you have your embeddings (`e`) of the source material, you can save them to the database, passing the `resourceId` alongside each embedding.
@@ -497,92 +483,90 @@ Great! Let's build the frontend. The AI SDK’s `useChat` hook allows you to eas
 Replace your root page (`app/page.tsx`) with the following code.
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { useState } from 'react';
-    
-    
-    
-    
+
+
+
+
     export default function Chat() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, sendMessage } = useChat();
-    
+
       return (
-    
-        
-    
-          
-    
+
+
+
+
+
             {messages.map(m => (
-    
-              
-    
-                
-    
+
+
+
+
+
                   {m.role}
-    
+
                   {m.parts.map(part => {
-    
+
                     switch (part.type) {
-    
+
                       case 'text':
-    
+
                         return {part.text};
-    
+
                     }
-    
+
                   })}
-    
-                
-    
-              
-    
+
+
+
+
+
             ))}
-    
-          
-    
-    
-    
-    
+
+
+
+
+
+
            {
-    
+
               e.preventDefault();
-    
+
               sendMessage({ text: input });
-    
+
               setInput('');
-    
+
             }}
-    
+
           >
-    
+
              setInput(e.currentTarget.value)}
-    
+
             />
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 The `useChat` hook enables the streaming of chat messages from your AI provider (you will be using OpenAI), manages the state for chat input, and updates the UI automatically as new messages are received.
 
 Run the following command to start the Next.js dev server:
-    
-    
+
     pnpm run dev
 
 Head to http://localhost:3000. You should see an empty screen with an input bar floating at the bottom. Try to send a message. The message shows up in the UI for a fraction of a second and then disappears. This is because you haven’t set up the corresponding API route to call the model! By default, `useChat` will send a POST request to the `/api/chat` endpoint with the `messages` as the request body.
@@ -594,49 +578,47 @@ You can customize the endpoint in the useChat configuration object
 In Next.js, you can create custom request handlers for a given route using Route Handlers. Route Handlers are defined in a `route.ts` file and can export HTTP methods like `GET`, `POST`, `PUT`, `PATCH` etc.
 
 Create a file at `app/api/chat/route.ts` by running the following command:
-    
-    
+
     mkdir -p app/api/chat && touch app/api/chat/route.ts
 
 Open the file and add the following code:
 
 app/api/chat/route.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { convertToModelMessages, streamText, UIMessage } from 'ai';
-    
-    
-    
-    
+
+
+
+
     // Allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 In this code, you declare and export an asynchronous function called POST. You retrieve the `messages` from the request body and then pass them to the `streamText` function imported from the AI SDK, alongside the model you would like to use. Finally, you return the model’s response in `UIMessageStreamResponse` format.
@@ -650,48 +632,47 @@ While you now have a working agent, it isn't doing anything special.
 Let’s add system instructions to refine and restrict the model’s behavior. In this case, you want the model to only use information it has retrieved to generate responses. Update your route handler with the following code:
 
 app/api/chat/route.ts
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { convertToModelMessages, streamText, UIMessage } from 'ai';
-    
-    
-    
-    
+
+
+
+
     // Allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         system: `You are a helpful assistant. Check your knowledge base before answering any questions.
-    
+
         Only respond to questions using information from tool calls.
-    
+
         if no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
-    
+
         messages: convertToModelMessages(messages),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 Head back to the browser and try to ask the model what your favorite food is. The model should now respond exactly as you instructed above (“Sorry, I don’t know”) given it doesn’t have any relevant information.
@@ -709,89 +690,87 @@ Let’s see how you can create a tool to give the model the ability to create, e
 Update your route handler with the following code:
 
 app/api/chat/route.ts
-    
-    
+
     import { createResource } from '@/lib/actions/resources';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { convertToModelMessages, streamText, tool, UIMessage } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     // Allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         system: `You are a helpful assistant. Check your knowledge base before answering any questions.
-    
+
         Only respond to questions using information from tool calls.
-    
+
         if no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
-    
+
         messages: convertToModelMessages(messages),
-    
+
         tools: {
-    
+
           addResource: tool({
-    
+
             description: `add a resource to your knowledge base.
-    
+
               If the user provides a random piece of knowledge unprompted, use this tool without asking for confirmation.`,
-    
+
             inputSchema: z.object({
-    
+
               content: z
-    
+
                 .string()
-    
+
                 .describe('the content or resource to add to the knowledge base'),
-    
+
             }),
-    
+
             execute: async ({ content }) => createResource({ content }),
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 In this code, you define a tool called `addResource`. This tool has three elements:
 
-  * **description** : description of the tool that will influence when the tool is picked.
-  * **inputSchema** : Zod schema that defines the input necessary for the tool to run.
-  * **execute** : An asynchronous function that is called with the arguments from the tool call.
+- **description** : description of the tool that will influence when the tool is picked.
+- **inputSchema** : Zod schema that defines the input necessary for the tool to run.
+- **execute** : An asynchronous function that is called with the arguments from the tool call.
 
 In simple terms, on each generation, the model will decide whether it should call the tool. If it deems it should call the tool, it will extract the input and then append a new `message` to the `messages` array of type `tool-call`. The AI SDK will then run the `execute` function with the parameters provided by the `tool-call` message.
 
 Head back to the browser and tell the model your favorite food. You should see an empty response in the UI. Did anything happen? Let’s see. Run the following command in a new terminal window.
-    
-    
+
     pnpm db:studio
 
 This will start Drizzle Studio where we can view the rows in our database. You should see a new row in both the `embeddings` and `resources` table with your favorite food!
@@ -799,114 +778,113 @@ This will start Drizzle Studio where we can view the rows in our database. You s
 Let’s make a few changes in the UI to communicate to the user when a tool has been called. Head back to your root page (`app/page.tsx`) and add the following code:
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useChat } from '@ai-sdk/react';
-    
+
     import { useState } from 'react';
-    
-    
-    
-    
+
+
+
+
     export default function Chat() {
-    
+
       const [input, setInput] = useState('');
-    
+
       const { messages, sendMessage } = useChat();
-    
+
       return (
-    
-        
-    
-          
-    
+
+
+
+
+
             {messages.map(m => (
-    
-              
-    
-                
-    
+
+
+
+
+
                   {m.role}
-    
+
                   {m.parts.map(part => {
-    
+
                     switch (part.type) {
-    
+
                       case 'text':
-    
+
                         return {part.text};
-    
+
                       case 'tool-addResource':
-    
+
                       case 'tool-getInformation':
-    
+
                         return (
-    
-                          
-    
+
+
+
                             call{part.state === 'output-available' ? 'ed' : 'ing'}{' '}
-    
+
                             tool: {part.type}
-    
-                            
-    
+
+
+
                               {JSON.stringify(part.input, null, 2)}
-    
-                            
-    
-                          
-    
+
+
+
+
+
                         );
-    
+
                     }
-    
+
                   })}
-    
-                
-    
-              
-    
+
+
+
+
+
             ))}
-    
-          
-    
-    
-    
-    
+
+
+
+
+
+
            {
-    
+
               e.preventDefault();
-    
+
               sendMessage({ text: input });
-    
+
               setInput('');
-    
+
             }}
-    
+
           >
-    
+
              setInput(e.currentTarget.value)}
-    
+
             />
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 With this change, you now conditionally render the tool that has been called directly in the UI. Save the file and head back to browser. Tell the model your favorite movie. You should see which tool is called in place of the model’s typical text response.
 
 Don't worry about the `tool-getInformation` tool case in the switch statement
 
-  * we'll add that tool in a later section.
+- we'll add that tool in a later section.
 
 ### Improving UX with Multi-Step Calls
 
@@ -917,90 +895,89 @@ The AI SDK has a feature called `stopWhen` which allows stopping conditions when
 Open your root page (`api/chat/route.ts`) and add the following key to the `streamText` configuration object:
 
 api/chat/route.ts
-    
-    
+
     import { createResource } from '@/lib/actions/resources';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       convertToModelMessages,
-    
+
       streamText,
-    
+
       tool,
-    
+
       UIMessage,
-    
+
       stepCountIs,
-    
+
     } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     // Allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         system: `You are a helpful assistant. Check your knowledge base before answering any questions.
-    
+
         Only respond to questions using information from tool calls.
-    
+
         if no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
         tools: {
-    
+
           addResource: tool({
-    
+
             description: `add a resource to your knowledge base.
-    
+
               If the user provides a random piece of knowledge unprompted, use this tool without asking for confirmation.`,
-    
+
             inputSchema: z.object({
-    
+
               content: z
-    
+
                 .string()
-    
+
                 .describe('the content or resource to add to the knowledge base'),
-    
+
             }),
-    
+
             execute: async ({ content }) => createResource({ content }),
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 Head back to the browser and tell the model your favorite pizza topping (note: pineapple is not an option). You should see a follow-up response from the model confirming the action.
@@ -1012,221 +989,219 @@ The model can now add and embed arbitrary information to your knowledge base. Ho
 To find similar content, you will need to embed the users query, search the database for semantic similarities, then pass those items to the model as context alongside the query. To achieve this, let’s update your embedding logic file (`lib/ai/embedding.ts`):
 
 lib/ai/embedding.ts
-    
-    
+
     import { embed, embedMany } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { db } from '../db';
-    
+
     import { cosineDistance, desc, gt, sql } from 'drizzle-orm';
-    
+
     import { embeddings } from '../db/schema/embeddings';
-    
-    
-    
-    
+
+
+
+
     const embeddingModel = openai.embedding('text-embedding-ada-002');
-    
-    
-    
-    
+
+
+
+
     const generateChunks = (input: string): string[] => {
-    
+
       return input
-    
+
         .trim()
-    
+
         .split('.')
-    
+
         .filter(i => i !== '');
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export const generateEmbeddings = async (
-    
+
       value: string,
-    
+
     ): Promise> => {
-    
+
       const chunks = generateChunks(value);
-    
+
       const { embeddings } = await embedMany({
-    
+
         model: embeddingModel,
-    
+
         values: chunks,
-    
+
       });
-    
+
       return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export const generateEmbedding = async (value: string): Promise => {
-    
+
       const input = value.replaceAll('\\n', ' ');
-    
+
       const { embedding } = await embed({
-    
+
         model: embeddingModel,
-    
+
         value: input,
-    
+
       });
-    
+
       return embedding;
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export const findRelevantContent = async (userQuery: string) => {
-    
+
       const userQueryEmbedded = await generateEmbedding(userQuery);
-    
+
       const similarity = sql`1 - (${cosineDistance(
-    
+
         embeddings.embedding,
-    
+
         userQueryEmbedded,
-    
+
       )})`;
-    
+
       const similarGuides = await db
-    
+
         .select({ name: embeddings.content, similarity })
-    
+
         .from(embeddings)
-    
+
         .where(gt(similarity, 0.5))
-    
+
         .orderBy(t => desc(t.similarity))
-    
+
         .limit(4);
-    
+
       return similarGuides;
-    
+
     };
 
 In this code, you add two functions:
 
-  * `generateEmbedding`: generate a single embedding from an input string
-  * `findRelevantContent`: embeds the user’s query, searches the database for similar items, then returns relevant items
+- `generateEmbedding`: generate a single embedding from an input string
+- `findRelevantContent`: embeds the user’s query, searches the database for similar items, then returns relevant items
 
 With that done, it’s onto the final step: creating the tool.
 
 Go back to your route handler (`api/chat/route.ts`) and add a new tool called `getInformation`:
 
 api/chat/route.ts
-    
-    
+
     import { createResource } from '@/lib/actions/resources';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import {
-    
+
       convertToModelMessages,
-    
+
       streamText,
-    
+
       tool,
-    
+
       UIMessage,
-    
+
       stepCountIs,
-    
+
     } from 'ai';
-    
+
     import { z } from 'zod';
-    
+
     import { findRelevantContent } from '@/lib/ai/embedding';
-    
-    
-    
-    
+
+
+
+
     // Allow streaming responses up to 30 seconds
-    
+
     export const maxDuration = 30;
-    
-    
-    
-    
+
+
+
+
     export async function POST(req: Request) {
-    
+
       const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    
-    
-    
+
+
+
+
       const result = streamText({
-    
+
         model: openai('gpt-4o'),
-    
+
         messages: convertToModelMessages(messages),
-    
+
         stopWhen: stepCountIs(5),
-    
+
         system: `You are a helpful assistant. Check your knowledge base before answering any questions.
-    
+
         Only respond to questions using information from tool calls.
-    
+
         if no relevant information is found in the tool calls, respond, "Sorry, I don't know."`,
-    
+
         tools: {
-    
+
           addResource: tool({
-    
+
             description: `add a resource to your knowledge base.
-    
+
               If the user provides a random piece of knowledge unprompted, use this tool without asking for confirmation.`,
-    
+
             inputSchema: z.object({
-    
+
               content: z
-    
+
                 .string()
-    
+
                 .describe('the content or resource to add to the knowledge base'),
-    
+
             }),
-    
+
             execute: async ({ content }) => createResource({ content }),
-    
+
           }),
-    
+
           getInformation: tool({
-    
+
             description: `get information from your knowledge base to answer questions.`,
-    
+
             inputSchema: z.object({
-    
+
               question: z.string().describe('the users question'),
-    
+
             }),
-    
+
             execute: async ({ question }) => findRelevantContent(question),
-    
+
           }),
-    
+
         },
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return result.toUIMessageStreamResponse();
-    
+
     }
 
 Head back to the browser, refresh the page, and ask for your favorite food. You should see the model call the `getInformation` tool, and then use the relevant information to formulate a response!
@@ -1241,8 +1216,8 @@ If you experience an error with the migration, open your migration file (`lib/db
 
 If you're using the Vercel setup above, you can run the command directly by either:
 
-  * Going to the Neon console and entering the command there, or
-  * Going back to the Vercel platform, navigating to the Quick Start section of your database, and finding the PSQL connection command (second tab). This will connect to your instance in the terminal where you can run the command directly.
+- Going to the Neon console and entering the command there, or
+- Going back to the Vercel platform, navigating to the Quick Start section of your database, and finding the PSQL connection command (second tab). This will connect to your instance in the terminal where you can run the command directly.
 
 More info.
 

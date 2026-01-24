@@ -1,8 +1,9 @@
 ---
 title: Using dataset stored on Laminar for evaluations - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/evaluations/using-dataset#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -27,11 +28,11 @@ On this page
 - [Defining data](https://docs.lmnr.ai/evaluations/using-dataset#defining-data)
 - [Technical details and extension](https://docs.lmnr.ai/evaluations/using-dataset#technical-details-and-extension)
 
-## [​](https://docs.lmnr.ai/evaluations/using-dataset\#prerequisites)  Prerequisites
+## [​](https://docs.lmnr.ai/evaluations/using-dataset#prerequisites) Prerequisites
 
 Have a dataset uploaded to Laminar, or collected from traces. See [datasets](https://docs.lmnr.ai/datasets/introduction) for more information.
 
-## [​](https://docs.lmnr.ai/evaluations/using-dataset\#defining-data)  Defining data
+## [​](https://docs.lmnr.ai/evaluations/using-dataset#defining-data) Defining data
 
 To run an evaluation with a Laminar dataset, you pass the dataset object as `data` instead of a list of dictionaries.Use `LaminarDataset` to create a dataset object. The dataset name should match the name of the dataset in Laminar.
 The constructor also takes an optional `fetch_size`/ `fetchSize` parameter, which specifies the number of datapoints to fetch at once.
@@ -41,7 +42,6 @@ evaluation [batch size](https://docs.lmnr.ai/evaluations/configuration#configuri
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -60,7 +60,7 @@ evaluate({
 
 ```
 
-## [​](https://docs.lmnr.ai/evaluations/using-dataset\#technical-details-and-extension)  Technical details and extension
+## [​](https://docs.lmnr.ai/evaluations/using-dataset#technical-details-and-extension) Technical details and extension
 
 `LaminarDataset` is an implementation of an abstract class `EvaluationDataset` which defines 2 methods besides initialization:
 
@@ -73,7 +73,6 @@ and is designed to be used in a similar way.You can re-use the `EvaluationDatase
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 

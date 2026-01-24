@@ -1,9 +1,10 @@
 ---
 title: Binary data – API | Bun Docs
-url: 
+url:
 description: How to represent and manipulate binary data in Bun.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -63,7 +64,7 @@ Below is a quick "cheat sheet" that doubles as a table of contents. Click an ite
 | [`File`](https://bun.com/docs/api/binary-data#file) | A subclass of `Blob` that represents a file. Has a `name` and `lastModified` timestamp. There is experimental support in Node.js v20. |
 | [`BunFile`](https://bun.com/docs/api/binary-data#bunfile) | _Bun only_. A subclass of `Blob` that represents a lazily-loaded file on disk. Created with `Bun.file(path)`. |
 
-## [`ArrayBuffer` and views](https://bun.com/docs/api/binary-data\#arraybuffer-and-views)
+## [`ArrayBuffer` and views](https://bun.com/docs/api/binary-data#arraybuffer-and-views)
 
 Until 2009, there was no language-native way to store and manipulate binary data in JavaScript. ECMAScript v5 introduced a range of new mechanisms for this. The most fundamental building block is `ArrayBuffer`, a simple data structure that represents a sequence of bytes in memory.
 
@@ -86,7 +87,7 @@ slice.byteLength; // => 4
 
 To do anything interesting we need a construct known as a "view". A view is a class that _wraps_ an `ArrayBuffer` instance and lets you read and manipulate the underlying data. There are two types of views: _typed arrays_ and `DataView`.
 
-### [`DataView`](https://bun.com/docs/api/binary-data\#dataview)
+### [`DataView`](https://bun.com/docs/api/binary-data#dataview)
 
 The `DataView` class is a lower-level interface for reading and manipulating the data in an `ArrayBuffer`.
 
@@ -131,20 +132,20 @@ dv.setFloat64(0, 3.1415);
 
 The following methods are available on `DataView`:
 
-| Getters | Setters |
-| --- | --- |
-| [`getBigInt64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getBigInt64) | [`setBigInt64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setBigInt64) |
+| Getters                                                                                                                    | Setters                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [`getBigInt64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getBigInt64)   | [`setBigInt64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setBigInt64)   |
 | [`getBigUint64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getBigUint64) | [`setBigUint64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setBigUint64) |
-| [`getFloat32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getFloat32) | [`setFloat32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat32) |
-| [`getFloat64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getFloat64) | [`setFloat64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat64) |
-| [`getInt16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getInt16) | [`setInt16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setInt16) |
-| [`getInt32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getInt32) | [`setInt32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setInt32) |
-| [`getInt8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getInt8) | [`setInt8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setInt8) |
-| [`getUint16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getUint16) | [`setUint16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setUint16) |
-| [`getUint32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getUint32) | [`setUint32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setUint32) |
-| [`getUint8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getUint8) | [`setUint8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setUint8) |
+| [`getFloat32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getFloat32)     | [`setFloat32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat32)     |
+| [`getFloat64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getFloat64)     | [`setFloat64()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat64)     |
+| [`getInt16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getInt16)         | [`setInt16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setInt16)         |
+| [`getInt32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getInt32)         | [`setInt32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setInt32)         |
+| [`getInt8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getInt8)           | [`setInt8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setInt8)           |
+| [`getUint16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getUint16)       | [`setUint16()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setUint16)       |
+| [`getUint32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getUint32)       | [`setUint32()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setUint32)       |
+| [`getUint8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/getUint8)         | [`setUint8()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setUint8)         |
 
-### [`TypedArray`](https://bun.com/docs/api/binary-data\#typedarray)
+### [`TypedArray`](https://bun.com/docs/api/binary-data#typedarray)
 
 Typed arrays are a family of classes that provide an `Array`-like interface for interacting with data in an `ArrayBuffer`. Whereas a `DataView` lets you write numbers of varying size at a particular offset, a `TypedArray` interprets the underlying bytes as an array of numbers, each of a fixed size.
 
@@ -169,20 +170,20 @@ While an `ArrayBuffer` is a generic sequence of bytes, these typed array classes
 
 The following classes are typed arrays, along with a description of how they interpret the bytes in an `ArrayBuffer`:
 
-| Class | Description |
-| --- | --- |
-| [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array) | Every one (1) byte is interpreted as an unsigned 8-bit integer. Range 0 to 255. |
-| [`Uint16Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array) | Every two (2) bytes are interpreted as an unsigned 16-bit integer. Range 0 to 65535. |
-| [`Uint32Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array) | Every four (4) bytes are interpreted as an unsigned 32-bit integer. Range 0 to 4294967295. |
-| [`Int8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array) | Every one (1) byte is interpreted as a signed 8-bit integer. Range -128 to 127. |
-| [`Int16Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array) | Every two (2) bytes are interpreted as a signed 16-bit integer. Range -32768 to 32767. |
-| [`Int32Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array) | Every four (4) bytes are interpreted as a signed 32-bit integer. Range -2147483648 to 2147483647. |
-| [`Float16Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float16Array) | Every two (2) bytes are interpreted as a 16-bit floating point number. Range -6.104e5 to 6.55e4. |
-| [`Float32Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array) | Every four (4) bytes are interpreted as a 32-bit floating point number. Range -3.4e38 to 3.4e38. |
-| [`Float64Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array) | Every eight (8) bytes are interpreted as a 64-bit floating point number. Range -1.7e308 to 1.7e308. |
-| [`BigInt64Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt64Array) | Every eight (8) bytes are interpreted as a signed `BigInt`. Range -9223372036854775808 to 9223372036854775807 (though `BigInt` is capable of representing larger numbers). |
-| [`BigUint64Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array) | Every eight (8) bytes are interpreted as an unsigned `BigInt`. Range 0 to 18446744073709551615 (though `BigInt` is capable of representing larger numbers). |
-| [`Uint8ClampedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray) | Same as `Uint8Array`, but automatically "clamps" to the range 0-255 when assigning a value to an element. |
+| Class                                                                                                                     | Description                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array)               | Every one (1) byte is interpreted as an unsigned 8-bit integer. Range 0 to 255.                                                                                            |
+| [`Uint16Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array)             | Every two (2) bytes are interpreted as an unsigned 16-bit integer. Range 0 to 65535.                                                                                       |
+| [`Uint32Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array)             | Every four (4) bytes are interpreted as an unsigned 32-bit integer. Range 0 to 4294967295.                                                                                 |
+| [`Int8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array)                 | Every one (1) byte is interpreted as a signed 8-bit integer. Range -128 to 127.                                                                                            |
+| [`Int16Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array)               | Every two (2) bytes are interpreted as a signed 16-bit integer. Range -32768 to 32767.                                                                                     |
+| [`Int32Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array)               | Every four (4) bytes are interpreted as a signed 32-bit integer. Range -2147483648 to 2147483647.                                                                          |
+| [`Float16Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float16Array)           | Every two (2) bytes are interpreted as a 16-bit floating point number. Range -6.104e5 to 6.55e4.                                                                           |
+| [`Float32Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array)           | Every four (4) bytes are interpreted as a 32-bit floating point number. Range -3.4e38 to 3.4e38.                                                                           |
+| [`Float64Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array)           | Every eight (8) bytes are interpreted as a 64-bit floating point number. Range -1.7e308 to 1.7e308.                                                                        |
+| [`BigInt64Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt64Array)         | Every eight (8) bytes are interpreted as a signed `BigInt`. Range -9223372036854775808 to 9223372036854775807 (though `BigInt` is capable of representing larger numbers). |
+| [`BigUint64Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array)       | Every eight (8) bytes are interpreted as an unsigned `BigInt`. Range 0 to 18446744073709551615 (though `BigInt` is capable of representing larger numbers).                |
+| [`Uint8ClampedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray) | Same as `Uint8Array`, but automatically "clamps" to the range 0-255 when assigning a value to an element.                                                                  |
 
 The table below demonstrates how the bytes in an `ArrayBuffer` are interpreted when viewed using different typed array classes.
 
@@ -278,7 +279,7 @@ arr.indexOf(5); // 5
 
 Refer to the [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray) for more information on the properties and methods of typed arrays.
 
-### [`Uint8Array`](https://bun.com/docs/api/binary-data\#uint8array)
+### [`Uint8Array`](https://bun.com/docs/api/binary-data#uint8array)
 
 It's worth specifically highlighting `Uint8Array`, as it represents a classic "byte array"—a sequence of 8-bit unsigned integers between 0 and 255. This is the most common typed array you'll encounter in JavaScript.
 
@@ -306,7 +307,7 @@ const text = decoder.decode(bytes);
 
 ```
 
-### [`Buffer`](https://bun.com/docs/api/binary-data\#buffer)
+### [`Buffer`](https://bun.com/docs/api/binary-data#buffer)
 
 Bun implements `Buffer`, a Node.js API for working with binary data that pre-dates the introduction of typed arrays in the JavaScript spec. It has since been re-implemented as a subclass of `Uint8Array`. It provides a wide range of methods, including several Array-like and `DataView`-like methods.
 
@@ -325,7 +326,7 @@ console.log(buf.toString());
 
 For complete documentation, refer to the [Node.js documentation](https://nodejs.org/api/buffer.html).
 
-## [`Blob`](https://bun.com/docs/api/binary-data\#blob)
+## [`Blob`](https://bun.com/docs/api/binary-data#blob)
 
 `Blob` is a Web API commonly used for representing files. `Blob` was initially implemented in browsers (unlike `ArrayBuffer` which is part of JavaScript itself), but it is now supported in Node and Bun.
 
@@ -363,7 +364,7 @@ await blob.stream(); // => ReadableStream
 
 ```
 
-### [`BunFile`](https://bun.com/docs/api/binary-data\#bunfile)
+### [`BunFile`](https://bun.com/docs/api/binary-data#bunfile)
 
 `BunFile` is a subclass of `Blob` used to represent a lazily-loaded file on disk. Like `File`, it adds a `name` and `lastModified` property. Unlike `File`, it does not require the file to be loaded into memory.
 
@@ -373,7 +374,7 @@ const file = Bun.file("index.txt");
 
 ```
 
-### [`File`](https://bun.com/docs/api/binary-data\#file)
+### [`File`](https://bun.com/docs/api/binary-data#file)
 
 Browser only. Experimental support in Node.js 20.
 
@@ -397,7 +398,7 @@ const file = new File(["<html>Hello</html>"], "index.html", {
 
 Refer to the [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/Blob) for complete docs information.
 
-## [Streams](https://bun.com/docs/api/binary-data\#streams)
+## [Streams](https://bun.com/docs/api/binary-data#streams)
 
 Streams are an important abstraction for working with binary data without loading it all into memory at once. They are commonly used for reading and writing files, sending and receiving network requests, and processing large amounts of data.
 
@@ -431,11 +432,11 @@ for await (const chunk of stream) {
 
 For a more complete discussion of streams in Bun, see [API > Streams](https://bun.com/docs/api/streams).
 
-## [Conversion](https://bun.com/docs/api/binary-data\#conversion)
+## [Conversion](https://bun.com/docs/api/binary-data#conversion)
 
 Converting from one binary format to another is a common task. This section is intended as a reference.
 
-### [From `ArrayBuffer`](https://bun.com/docs/api/binary-data\#from-arraybuffer)
+### [From `ArrayBuffer`](https://bun.com/docs/api/binary-data#from-arraybuffer)
 
 Since `ArrayBuffer` stores the data that underlies other binary structures like `TypedArray`, the snippets below are not _converting_ from `ArrayBuffer` to another format. Instead, they are _creating_ a new instance using the data stored underlying data.
 
@@ -520,7 +521,7 @@ new ReadableStream({
 
 ```
 
-### [From `TypedArray`](https://bun.com/docs/api/binary-data\#from-typedarray)
+### [From `TypedArray`](https://bun.com/docs/api/binary-data#from-typedarray)
 
 #### To `ArrayBuffer`
 
@@ -599,7 +600,7 @@ new ReadableStream({
 
 ```
 
-### [From `DataView`](https://bun.com/docs/api/binary-data\#from-dataview)
+### [From `DataView`](https://bun.com/docs/api/binary-data#from-dataview)
 
 #### To `ArrayBuffer`
 
@@ -678,7 +679,7 @@ new ReadableStream({
 
 ```
 
-### [From `Buffer`](https://bun.com/docs/api/binary-data\#from-buffer)
+### [From `Buffer`](https://bun.com/docs/api/binary-data#from-buffer)
 
 #### To `ArrayBuffer`
 
@@ -766,7 +767,7 @@ new ReadableStream({
 
 ```
 
-### [From `Blob`](https://bun.com/docs/api/binary-data\#from-blob)
+### [From `Blob`](https://bun.com/docs/api/binary-data#from-blob)
 
 #### To `ArrayBuffer`
 
@@ -821,7 +822,7 @@ blob.stream();
 
 ```
 
-### [From `ReadableStream`](https://bun.com/docs/api/binary-data\#from-readablestream)
+### [From `ReadableStream`](https://bun.com/docs/api/binary-data#from-readablestream)
 
 It's common to use [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) as a convenient intermediate representation to make it easier to convert `ReadableStream` to other formats.
 
@@ -947,7 +948,7 @@ Workers](https://bun.com/docs/api/workers) [Next\\
 \\
 Streams](https://bun.com/docs/api/streams)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/binary-data.md)
 
@@ -971,7 +972,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

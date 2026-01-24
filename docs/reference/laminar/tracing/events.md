@@ -1,8 +1,9 @@
 ---
 title: Sending custom events to Laminar - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/events#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -33,18 +34,17 @@ On this page
 
 Laminar allows you to send custom events to the platform. This can be useful for tracking any events that are not covered by the spans and tracing.
 
-## [​](https://docs.lmnr.ai/tracing/events\#introduction)  Introduction
+## [​](https://docs.lmnr.ai/tracing/events#introduction) Introduction
 
 You can think of events as a data payload attached to a single timestamp.Main difference between events and spans is that events have a single timestamp and don’t have a duration.Events allow you to track **any free-form data** that happens in your applicationYou can then run [queries](https://docs.lmnr.ai/sql-editor/introduction) on the events to get event-based analytics and insights. You can also build [custom dashboards](https://docs.lmnr.ai/custom-dashboards/overview) to visualize the events.
 
-## [​](https://docs.lmnr.ai/tracing/events\#sending-events)  Sending events
+## [​](https://docs.lmnr.ai/tracing/events#sending-events) Sending events
 
 To send an event, simply use the `event` function on `Laminar` class.
 
 - TypeScript
 
 - Python
-
 
 Copy
 
@@ -67,18 +67,17 @@ Laminar.event({
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/events\#span-context)  Span context
+### [​](https://docs.lmnr.ai/tracing/events#span-context) Span context
 
 If you create an event inside a span context, e.g. in an `observe` d function, the event will be associated with the current span.Otherwise, we will create a new span for the event and attach the event to it.
 
-### [​](https://docs.lmnr.ai/tracing/events\#timestamp)  Timestamp
+### [​](https://docs.lmnr.ai/tracing/events#timestamp) Timestamp
 
 By default, event will have the current timestamp.You can also specify the timestamp manually:
 
 - TypeScript
 
 - Python
-
 
 Copy
 
@@ -94,20 +93,19 @@ Laminar.event({
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/events\#attributes)  Attributes
+### [​](https://docs.lmnr.ai/tracing/events#attributes) Attributes
 
 Attributes are passed as an object/dictionary. Allowed attribute types are `string`, `number`, `boolean`, `string[]`, `number[]`, `boolean[]`.
 
 If you want to pass a JSON object as an attribute, you need to stringify it first.
 
-## [​](https://docs.lmnr.ai/tracing/events\#specifying-session-or-user-id)  Specifying session or user id
+## [​](https://docs.lmnr.ai/tracing/events#specifying-session-or-user-id) Specifying session or user id
 
 You can associate an event with a session id or user id.
 
 - TypeScript
 
 - Python
-
 
 Copy
 
@@ -124,7 +122,7 @@ Laminar.event({
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/events\#querying-events)  Querying events
+## [​](https://docs.lmnr.ai/tracing/events#querying-events) Querying events
 
 You can query events using the `events` table in Laminar [SQL Editor](https://docs.lmnr.ai/sql-editor/introduction).
 

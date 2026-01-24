@@ -1,9 +1,10 @@
 ---
 title: HTML & static sites – Bundler | Bun Docs
-url: 
+url:
 description: Zero-config HTML bundler for single-page apps and multi-page apps. Automatic bundling, TailwindCSS plugins, TypeScript, JSX, React support, and incredibly fast builds
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -95,7 +96,7 @@ Bun's development server provides powerful features with zero configuration:
   - Automatic copying & hashing of images and assets
   - Rewrites asset paths in JavaScript, CSS, and HTML
 
-## [Single Page Apps (SPA)](https://bun.com/docs/bundler/html\#single-page-apps-spa)
+## [Single Page Apps (SPA)](https://bun.com/docs/bundler/html#single-page-apps-spa)
 
 When you pass a single .html file to Bun, Bun will use it as a fallback route for all paths. This makes it perfect for single page apps that use client-side routing:
 
@@ -127,7 +128,7 @@ index.html
 
 ```
 
-## [Multi-page apps (MPA)](https://bun.com/docs/bundler/html\#multi-page-apps-mpa)
+## [Multi-page apps (MPA)](https://bun.com/docs/bundler/html#multi-page-apps-mpa)
 
 Some projects have several separate routes or HTML files as entry points. To support multiple entry points, pass them all to `bun`
 
@@ -152,7 +153,7 @@ This will serve:
 - `index.html` at `/`
 - `about.html` at `/about`
 
-### [Glob patterns](https://bun.com/docs/bundler/html\#glob-patterns)
+### [Glob patterns](https://bun.com/docs/bundler/html#glob-patterns)
 
 To specify multiple files, you can use glob patterns that end in `.html`:
 
@@ -172,7 +173,7 @@ Routes:
 
 Pressh+Enterto show shortcuts
 
-### [Path normalization](https://bun.com/docs/bundler/html\#path-normalization)
+### [Path normalization](https://bun.com/docs/bundler/html#path-normalization)
 
 The base path is chosen from the longest common prefix among all the files.
 
@@ -194,13 +195,13 @@ Routes:
 
 Pressh+Enterto show shortcuts
 
-## [JavaScript, TypeScript, and JSX](https://bun.com/docs/bundler/html\#javascript-typescript-and-jsx)
+## [JavaScript, TypeScript, and JSX](https://bun.com/docs/bundler/html#javascript-typescript-and-jsx)
 
 Bun's transpiler natively implements JavaScript, TypeScript, and JSX support. [Learn more about loaders in Bun](https://bun.com/docs/bundler/loaders).
 
 Bun's transpiler is also used at runtime.
 
-### [ES Modules & CommonJS](https://bun.com/docs/bundler/html\#es-modules-commonjs)
+### [ES Modules & CommonJS](https://bun.com/docs/bundler/html#es-modules-commonjs)
 
 You can use ESM and CJS in your JavaScript, TypeScript, and JSX files. Bun will handle the transpilation and bundling automatically.
 
@@ -208,7 +209,7 @@ There is no pre-build or separate optimization step. It's all done at the same t
 
 Learn more about [module resolution in Bun](https://bun.com/docs/runtime/modules).
 
-## [CSS](https://bun.com/docs/bundler/html\#css)
+## [CSS](https://bun.com/docs/bundler/html#css)
 
 Bun's CSS parser is also natively implemented (clocking in around 58,000 lines of Zig).
 
@@ -251,7 +252,7 @@ body {
 
 ```
 
-### [Referencing local assets in CSS](https://bun.com/docs/bundler/html\#referencing-local-assets-in-css)
+### [Referencing local assets in CSS](https://bun.com/docs/bundler/html#referencing-local-assets-in-css)
 
 You can reference local assets in your CSS files.
 
@@ -275,7 +276,7 @@ body {
 
 ```
 
-### [Importing CSS in JavaScript](https://bun.com/docs/bundler/html\#importing-css-in-javascript)
+### [Importing CSS in JavaScript](https://bun.com/docs/bundler/html#importing-css-in-javascript)
 
 To associate a CSS file with a JavaScript file, you can import it in your JavaScript file.
 
@@ -289,11 +290,11 @@ import "./more-styles.css";
 
 This generates `./app.css` and `./app.js` in the output directory. All CSS files imported from JavaScript will be bundled into a single CSS file per entry point. If you import the same CSS file from multiple JavaScript files, it will only be included once in the output CSS file.
 
-## [Plugins](https://bun.com/docs/bundler/html\#plugins)
+## [Plugins](https://bun.com/docs/bundler/html#plugins)
 
 The dev server supports plugins.
 
-### [Tailwind CSS](https://bun.com/docs/bundler/html\#tailwind-css)
+### [Tailwind CSS](https://bun.com/docs/bundler/html#tailwind-css)
 
 To use TailwindCSS, install the `bun-plugin-tailwind` plugin:
 
@@ -347,7 +348,7 @@ import "tailwindcss";
 
 Only one of those are necessary, not all three.
 
-### [Echo console logs from browser to terminal](https://bun.com/docs/bundler/html\#echo-console-logs-from-browser-to-terminal)
+### [Echo console logs from browser to terminal](https://bun.com/docs/bundler/html#echo-console-logs-from-browser-to-terminal)
 
 Bun's dev server supports streaming console logs from the browser to the terminal.
 
@@ -367,7 +368,7 @@ Each call to `console.log` or `console.error` will be broadcast to the terminal 
 
 Internally, this reuses the existing WebSocket connection from hot module reloading to send the logs.
 
-### [Edit files in the browser](https://bun.com/docs/bundler/html\#edit-files-in-the-browser)
+### [Edit files in the browser](https://bun.com/docs/bundler/html#edit-files-in-the-browser)
 
 Bun's frontend dev server has support for [Automatic Workspace Folders](https://chromium.googlesource.com/devtools/devtools-frontend/+/main/docs/ecosystem/automatic_workspace_folders.md) in Chrome DevTools, which lets you save edits to files in the browser.
 
@@ -398,7 +399,7 @@ For security reasons, this is only enabled when:
 
 You can disable this by passing `development: { chromeDevToolsAutomaticWorkspaceFolders: false }` in `Bun.serve`'s options.
 
-## [Keyboard Shortcuts](https://bun.com/docs/bundler/html\#keyboard-shortcuts)
+## [Keyboard Shortcuts](https://bun.com/docs/bundler/html#keyboard-shortcuts)
 
 While the server is running:
 
@@ -406,7 +407,7 @@ While the server is running:
 - `c + Enter` \- Clear console
 - `q + Enter` (or Ctrl+C) - Quit server
 
-## [Build for Production](https://bun.com/docs/bundler/html\#build-for-production)
+## [Build for Production](https://bun.com/docs/bundler/html#build-for-production)
 
 When you're ready to deploy, use `bun build` to create optimized production bundles:
 
@@ -437,13 +438,13 @@ Bun.build({
 
 Currently, plugins are only supported through `Bun.build`'s API or through `bunfig.toml` with the frontend dev server - not yet supported in `bun build`'s CLI.
 
-### [Watch Mode](https://bun.com/docs/bundler/html\#watch-mode)
+### [Watch Mode](https://bun.com/docs/bundler/html#watch-mode)
 
 You can run `bun build --watch` to watch for changes and rebuild automatically. This works nicely for library development.
 
 You've never seen a watch mode this fast.
 
-### [Plugin API](https://bun.com/docs/bundler/html\#plugin-api)
+### [Plugin API](https://bun.com/docs/bundler/html#plugin-api)
 
 Need more control? Configure the bundler through the JavaScript API and use Bun's builtin `HTMLRewriter` to preprocess HTML.
 
@@ -484,7 +485,7 @@ await Bun.build({
 
 ```
 
-## [What Gets Processed?](https://bun.com/docs/bundler/html\#what-gets-processed)
+## [What Gets Processed?](https://bun.com/docs/bundler/html#what-gets-processed)
 
 Bun automatically handles all common web assets:
 
@@ -496,7 +497,7 @@ Bun automatically handles all common web assets:
 
 All paths are resolved relative to your HTML file, making it easy to organize your project however you want.
 
-## [This is a work in progress](https://bun.com/docs/bundler/html\#this-is-a-work-in-progress)
+## [This is a work in progress](https://bun.com/docs/bundler/html#this-is-a-work-in-progress)
 
 - Need more plugins
 - Need more configuration options for things like asset handling
@@ -504,11 +505,11 @@ All paths are resolved relative to your HTML file, making it easy to organize yo
 
 If you want to submit a PR, most of the [code is here](https://github.com/oven-sh/bun/blob/main/src/js/internal/html.ts). You could even copy paste that file into your project and use it as a starting point.
 
-## [How this works](https://bun.com/docs/bundler/html\#how-this-works)
+## [How this works](https://bun.com/docs/bundler/html#how-this-works)
 
 This is a small wrapper around Bun's support for HTML imports in JavaScript.
 
-### [Adding a backend to your frontend](https://bun.com/docs/bundler/html\#adding-a-backend-to-your-frontend)
+### [Adding a backend to your frontend](https://bun.com/docs/bundler/html#adding-a-backend-to-your-frontend)
 
 To add a backend to your frontend, you can use the `"routes"` option in `Bun.serve`.
 
@@ -520,7 +521,7 @@ Learn more in [the full-stack docs](https://bun.com/docs/bundler/fullstack).
 \\
 CSS](https://bun.com/docs/bundler/css)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/html.md)
 
@@ -544,7 +545,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

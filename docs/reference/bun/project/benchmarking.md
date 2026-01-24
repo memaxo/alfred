@@ -1,9 +1,10 @@
 ---
 title: Benchmarking – Project | Bun Docs
-url: 
+url:
 description: Bun is designed for performance. Learn how to benchmark Bun yourself.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,14 +55,14 @@ Project
 
 Bun is designed for speed. Hot paths are extensively profiled and benchmarked. The source code for all of Bun's public benchmarks can be found in the [`/bench`](https://github.com/oven-sh/bun/tree/main/bench) directory of the Bun repo.
 
-## [Measuring time](https://bun.com/docs/project/benchmarking\#measuring-time)
+## [Measuring time](https://bun.com/docs/project/benchmarking#measuring-time)
 
 To precisely measure time, Bun offers two runtime APIs functions:
 
 1. The Web-standard [`performance.now()`](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now) function
 2. `Bun.nanoseconds()` which is similar to `performance.now()` except it returns the current time since the application started in nanoseconds. You can use `performance.timeOrigin` to convert this to a Unix timestamp.
 
-## [Benchmarking tools](https://bun.com/docs/project/benchmarking\#benchmarking-tools)
+## [Benchmarking tools](https://bun.com/docs/project/benchmarking#benchmarking-tools)
 
 When writing your own benchmarks, it's important to choose the right tool.
 
@@ -72,13 +73,13 @@ When writing your own benchmarks, it's important to choose the right tool.
   - [`http_load_test`](https://github.com/uNetworking/uSockets/blob/master/examples/http_load_test.c)
 - For benchmarking scripts or CLI commands, we recommend [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
-## [Measuring memory usage](https://bun.com/docs/project/benchmarking\#measuring-memory-usage)
+## [Measuring memory usage](https://bun.com/docs/project/benchmarking#measuring-memory-usage)
 
 Bun has two heaps. One heap is for the JavaScript runtime and the other heap is for everything else.
 
 [#](https://bun.com/docs/project/benchmarking#bunjsc)
 
-### [JavaScript heap stats](https://bun.com/docs/project/benchmarking\#javascript-heap-stats)
+### [JavaScript heap stats](https://bun.com/docs/project/benchmarking#javascript-heap-stats)
 
 The `bun:jsc` module exposes a few functions for measuring memory usage:
 
@@ -229,7 +230,7 @@ Once imported, you should see something like this:
 
 The [web debugger](https://bun.com/docs/runtime/debugger#inspect) also offers the timeline feature which allows you to track and examine the memory usage of the running debug session.
 
-### [Native heap stats](https://bun.com/docs/project/benchmarking\#native-heap-stats)
+### [Native heap stats](https://bun.com/docs/project/benchmarking#native-heap-stats)
 
 Bun uses mimalloc for the other heap. To report a summary of non-JavaScript memory usage, set the `MIMALLOC_SHOW_STATS=1` environment variable. and stats will print on exit.
 
@@ -265,7 +266,7 @@ Roadmap](https://bun.com/docs/project/roadmap) [Next\\
 \\
 Contributing](https://bun.com/docs/project/contributing)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/project/benchmarking.md)
 
@@ -289,7 +290,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

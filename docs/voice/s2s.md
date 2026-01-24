@@ -4,26 +4,26 @@ This guide explains how to run the end-to-end speech-to-speech pipeline across t
 
 ## Prerequisites
 
-| Requirement | Purpose |
-| --- | --- |
-| Bun 1.2.18+ | API + web dev servers |
-| Node 20+ (optional) | Expo tooling |
-| Python 3.10+ with [`uv`](https://github.com/astral-sh/uv) | Local STT/TTS models |
-| `ffmpeg` 6+ | Transcoding between PCM and client codecs |
-| Expo CLI + iOS/Android simulators | Drive Mode + CarPlay testing |
+| Requirement                                               | Purpose                                   |
+| --------------------------------------------------------- | ----------------------------------------- |
+| Bun 1.2.18+                                               | API + web dev servers                     |
+| Node 20+ (optional)                                       | Expo tooling                              |
+| Python 3.10+ with [`uv`](https://github.com/astral-sh/uv) | Local STT/TTS models                      |
+| `ffmpeg` 6+                                               | Transcoding between PCM and client codecs |
+| Expo CLI + iOS/Android simulators                         | Drive Mode + CarPlay testing              |
 
 ## Environment Variables
 
-| Variable | Description |
-| --- | --- |
-| `VOICE_PROVIDER` | `maya1` (default) or `supertonic` (lightweight ONNX TTS) |
-| `WHISPER_MODEL_PATH` | Faster-Whisper model path (local) |
-| `PIPER_MODEL_PATH` / `PIPER_VOICE` | Piper model + voice |
-| `VOICE_FFMPEG_PATH` | Optional path override for `ffmpeg` |
-| `VOICE_STREAMING_PROTO` | `1` to enable the WebSocket streaming prototype |
-| `VOICE_STREAMING_PORT` | Port for the prototype server (default `8788`) |
-| `EXPO_PUBLIC_SERVER_URL` / `EXPO_PUBLIC_VOICE_STREAM_URL` | Expo native app API + streaming endpoints |
-| `VITE_VOICE_STREAMING_URL` / `VITE_VOICE_STREAMING_PORT` | Optional overrides for the web streaming endpoint |
+| Variable                                                  | Description                                              |
+| --------------------------------------------------------- | -------------------------------------------------------- |
+| `VOICE_PROVIDER`                                          | `maya1` (default) or `supertonic` (lightweight ONNX TTS) |
+| `WHISPER_MODEL_PATH`                                      | Faster-Whisper model path (local)                        |
+| `PIPER_MODEL_PATH` / `PIPER_VOICE`                        | Piper model + voice                                      |
+| `VOICE_FFMPEG_PATH`                                       | Optional path override for `ffmpeg`                      |
+| `VOICE_STREAMING_PROTO`                                   | `1` to enable the WebSocket streaming prototype          |
+| `VOICE_STREAMING_PORT`                                    | Port for the prototype server (default `8788`)           |
+| `EXPO_PUBLIC_SERVER_URL` / `EXPO_PUBLIC_VOICE_STREAM_URL` | Expo native app API + streaming endpoints                |
+| `VITE_VOICE_STREAMING_URL` / `VITE_VOICE_STREAMING_PORT`  | Optional overrides for the web streaming endpoint        |
 
 ## Session management
 
@@ -54,6 +54,7 @@ bun scripts/voice/verify-runtime.ts # stable runtime check (STT via `say`, TTS +
 ```
 
 Notes:
+
 - The Python STT subprocess consumes **PCM16**; prefer `transcribeLocal()`/`voice.sttTranscribe` (they decode containers via `decodeToPCM16`) over calling `STTPool.transcribe` with WAV/WebM bytes.
 
 ## Running the API
@@ -68,6 +69,7 @@ VOICE_PROVIDER=maya1 \
 ```
 
 Key commands:
+
 - `bun test test/voice.s2s.test.ts` – regression test for the `speechToSpeech` mutation.
 - `bun test test/voice/codec.test.ts` – verifies ffmpeg-based transcoding.
 

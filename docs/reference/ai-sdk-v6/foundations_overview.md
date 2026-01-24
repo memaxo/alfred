@@ -40,9 +40,9 @@ To effectively leverage the AI SDK, it helps to familiarize yourself with the fo
 
 **Generative artificial intelligence** refers to models that predict and generate various types of outputs (such as text, images, or audio) based on what’s statistically likely, pulling from patterns they’ve learned from their training data. For example:
 
-  * Given a photo, a generative model can generate a caption.
-  * Given an audio file, a generative model can generate a transcription.
-  * Given a text description, a generative model can generate an image.
+- Given a photo, a generative model can generate a caption.
+- Given an audio file, a generative model can generate a transcription.
+- Given a text description, a generative model can generate an image.
 
 ## Large Language Models
 

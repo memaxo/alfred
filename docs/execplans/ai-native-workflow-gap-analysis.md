@@ -33,10 +33,12 @@ This document provides a comprehensive gap analysis comparing the AI-Native Work
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `packages/api/src/routers/codex-intent.ts` - Simple intent-to-codex-prompt mapper (not structured `WorkflowIntent`)
 - Basic intent classification exists but not for workflow planning
 
 **What's Missing:**
+
 - `WorkflowIntent` type definition
 - Structured intent parsing with ambiguity detection
 - Clarification tool/mechanism (`askClarification`)
@@ -44,6 +46,7 @@ This document provides a comprehensive gap analysis comparing the AI-Native Work
 - Intent classification for workflow types
 
 **Gap Details:**
+
 ```typescript
 // MISSING: packages/plan/src/intent/parser.ts
 export type WorkflowIntent = {
@@ -71,11 +74,13 @@ export async function parseIntent(
 **Status:** 🟡 **PARTIAL** - Research exists but not structured as `ResearchResult`
 
 **What Exists:**
+
 - `packages/runtime/src/context.ts` - `ContextBuilder` with `gatherWebContext()`
 - `packages/agent/src/orchestrator/tool/web.ts` - Web search with Exa/DDG fallback
 - `packages/runtime/src/phases/scan.ts` - Scan phase gathers web context
 
 **What's Missing:**
+
 - Structured `ResearchResult` type
 - Source reliability scoring
 - Date filtering/decay
@@ -83,6 +88,7 @@ export async function parseIntent(
 - Research aggregation into single result
 
 **Gap Details:**
+
 ```typescript
 // EXISTS: packages/runtime/src/context.ts
 async gatherWebContext({ requirement, authz }): Promise<WebReceipt>
@@ -112,17 +118,20 @@ export type ResearchResult = {
 **Status:** 🟡 **PARTIAL** - Codebase scanning exists, pattern lookup missing
 
 **What Exists:**
+
 - `packages/runtime/src/context.ts` - `gatherCodeContext()` for semantic code search
 - `packages/agent/src/orchestrator/reasoning/decompose-semantic.ts` - Import analysis
 - Codebase scanning via RAG/knowledge graph
 
 **What's Missing:**
+
 - Pattern lookup from knowledge graph (workflow patterns don't exist yet)
 - Convention extraction (project conventions not stored)
 - Structured internal research result type
 - Integration with project-scoped patterns
 
 **Gap Details:**
+
 ```typescript
 // EXISTS: packages/runtime/src/context.ts
 async gatherCodeContext({ requirement, cw, topK }): Promise<CodeReceipt>
@@ -148,10 +157,12 @@ export async function extractConventions(
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `packages/runtime/src/context.ts` - Combines code + web receipts into `SearchReceipt`
 - Basic aggregation exists but not structured as `ResearchResult`
 
 **What's Missing:**
+
 - Token limit management for combined research
 - Source deduplication
 - Research result schema validation
@@ -166,11 +177,13 @@ export async function extractConventions(
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `packages/runtime/src/orchestrator/types.ts` - `ProjectConfig` (runtime-only, technical config)
 - `workflow_runs.linearIssueId` - Links to Linear issues, not projects
 - No project container entity
 
 **What's Missing:**
+
 - `projects` table schema
 - Project auto-detection from workspace path
 - Project-Linear sync
@@ -178,6 +191,7 @@ export async function extractConventions(
 - Project-scoped pattern filtering
 
 **Gap Details:**
+
 ```sql
 -- MISSING: Migration 0XXX_projects.sql
 CREATE TABLE IF NOT EXISTS projects (
@@ -207,11 +221,13 @@ CREATE TABLE IF NOT EXISTS projects (
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `packages/runtime/src/phases/plan.ts` - `executePlanPhase()` generates text-based ExecPlan markdown
 - `packages/agent/src/orchestrator/multi/decompose.ts` - `decomposeTask()` creates `SubTask[]`
 - `packages/cognitive/src/plan/types.ts` - Simple `Plan` type (steps, duration, confidence) - NOT `StructuredPlan`
 
 **What's Missing:**
+
 - `StructuredPlan` type with `Phase[]` structure
 - `Phase` type wrapping `SubTask[]`
 - Plan generation from `WorkflowIntent + ResearchResult`
@@ -220,6 +236,7 @@ CREATE TABLE IF NOT EXISTS projects (
 - Duration estimation per phase
 
 **Gap Details:**
+
 ```typescript
 // EXISTS: packages/agent/src/orchestrator/multi/decompose.ts
 export type SubTask = {
@@ -263,11 +280,13 @@ export type StructuredPlan = {
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - No multi-model judging exists
 - No plan variant generation
 - No evaluation pipeline
 
 **What's Missing:**
+
 - Best-of-N plan variant generation
 - Multi-model judges (Claude, GPT-4, Gemini)
 - Evaluation criteria schema
@@ -275,6 +294,7 @@ export type StructuredPlan = {
 - Verification-first evaluation (typecheck/tests/build)
 
 **Gap Details:**
+
 ```typescript
 // MISSING: packages/plan/src/evaluate/judge.ts
 export async function evaluatePlans(
@@ -298,16 +318,19 @@ export async function verifyPlans(
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `workflow_runs` table stores execution state
 - No `workflow_plans` table for persisted plans
 
 **What's Missing:**
+
 - `workflow_plans` table schema
 - Plan approval gate
 - Plan-to-run conversion
 - Plan versioning
 
 **Gap Details:**
+
 ```sql
 -- MISSING: Migration 0XXX_workflow_plans.sql
 CREATE TABLE IF NOT EXISTS workflow_plans (
@@ -334,17 +357,20 @@ CREATE TABLE IF NOT EXISTS workflow_plans (
 **Status:** 🟡 **PARTIAL** - Wave planning exists, but not from `StructuredPlan`
 
 **What Exists:**
+
 - `packages/agent/src/orchestrator/multi/spawn.ts` - `planWaves()` converts `SubTask[]` → `WavePlan[]`
 - `packages/runtime/src/orchestrator/waves.ts` - `runWaves()` executes waves
 - Wave dependency handling
 
 **What's Missing:**
+
 - Conversion from `StructuredPlan.phases` → `WavePlan[]`
 - Phase-to-wave mapping
 - Agent type assignment from plan phases
 - Resource allocation from plan
 
 **Gap Details:**
+
 ```typescript
 // EXISTS: packages/agent/src/orchestrator/multi/spawn.ts
 export function planWaves(
@@ -371,16 +397,19 @@ export function planWavesFromPhases(
 **Status:** 🟡 **PARTIAL** - Workspace persists, but no explicit handoff
 
 **What Exists:**
+
 - `packages/runtime/src/orchestrator/waves.ts` - Workspace persists between waves
 - Agents see workspace state implicitly
 
 **What's Missing:**
+
 - Explicit context handoff between agents
 - Agent output summaries for next agent
 - Context refresh after each wave
 - Structured handoff data
 
 **Gap Details:**
+
 ```typescript
 // EXISTS: Workspace persistence (implicit)
 // Each agent sees workspace state via file system
@@ -409,17 +438,20 @@ export async function handoffContext(
 **Status:** 🟡 **PARTIAL** - Events exist, but not structured for plan visualization
 
 **What Exists:**
+
 - `packages/runtime/src/orchestrator/waves.ts` - Yields `WorkflowEvent` for wave progress
 - `workflow_events` table stores events
 - WebSocket subscription exists (`apps/web/src/lib/subscription/manager.ts`)
 
 **What's Missing:**
+
 - Plan-specific event types (`plan-variant`, `plan-selected`, `phase-start`, `phase-complete`)
 - Phase progress tracking
 - Plan generation event streaming
 - Integration with desktop UI subscription protocol
 
 **Gap Details:**
+
 ```typescript
 // EXISTS: packages/runtime/src/orchestrator/waves.ts
 yield { type: "notice", message: `wave_${wave.id}_start` };
@@ -441,10 +473,12 @@ export type PlanEvent =
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `workflow_runs.suspendedAt`, `workflow_runs.resumedAt` - Schema supports suspend/resume
 - No clarification-triggered suspend mechanism
 
 **What's Missing:**
+
 - Clarification request handling
 - Suspend on clarification
 - Resume with user response
@@ -461,11 +495,13 @@ export type PlanEvent =
 **Status:** 🟡 **PARTIAL** - Pattern learning exists for tool sequences, not workflow patterns
 
 **What Exists:**
+
 - `packages/agent/src/orchestrator/tool/learning/exec.ts` - `executeLearnPattern()` stores tool sequence patterns
 - `packages/agent/src/orchestrator/learning-worker.ts` - `learnFromRun()` extracts facts from workflows
 - `packages/knowledge/src/extract/patterns.ts` - Pattern extraction for text/knowledge
 
 **What's Missing:**
+
 - `WorkflowPattern` type (different from tool sequence patterns)
 - Pattern extraction from successful `StructuredPlan` executions
 - Pattern structure capture (phase graph, dependencies)
@@ -473,6 +509,7 @@ export type PlanEvent =
 - Pattern confidence calculation
 
 **Gap Details:**
+
 ```typescript
 // EXISTS: Tool sequence patterns
 export type ToolPattern = {
@@ -502,16 +539,19 @@ export type WorkflowPattern = {
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `packages/knowledge/src/reasoning/decisions.ts` - Semantic similarity for decision extraction
 - No workflow pattern matching
 
 **What's Missing:**
+
 - Semantic pattern matching for intents
 - Structural validation (phase count, file paths)
 - Project-scoped pattern filtering
 - Pattern confidence thresholds (0.85+ auto-suggest, 0.70-0.85 require confirmation)
 
 **Gap Details:**
+
 ```typescript
 // MISSING: packages/plan/src/pattern/match.ts
 export async function matchPatterns(
@@ -535,12 +575,14 @@ export async function matchPatterns(
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - No pattern lifecycle management
 
 **What's Missing:**
+
 - 30-day unused decay
 - <30% success quarantine
-- >90% success amplification
+- > 90% success amplification
 - Pattern status tracking (`active`, `quarantined`, `trusted`)
 
 **Related Tickets:** P4-3 ([ALF-293](https://linear.app/alfred-ops/issue/ALF-293))
@@ -552,10 +594,12 @@ export async function matchPatterns(
 **Status:** 🟡 **PARTIAL** - Failure learning exists, but not as anti-patterns
 
 **What Exists:**
+
 - `packages/agent/src/orchestrator/learning-worker.ts` - `processFailedRuns()` extracts facts from failures
 - Failures stored as knowledge graph facts
 
 **What's Missing:**
+
 - Explicit anti-pattern storage
 - Anti-pattern blocking mechanism
 - Time-based rehabilitation
@@ -570,6 +614,7 @@ export async function matchPatterns(
 **Status:** ❌ **MISSING** (depends on Project entity)
 
 **What's Missing:**
+
 - `workflow_patterns.project_id` FK
 - Project-scoped pattern queries
 - Cross-project pattern weighting (0.8x)
@@ -584,9 +629,11 @@ export async function matchPatterns(
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - No convention extraction or storage
 
 **What's Missing:**
+
 - Convention extraction from successful workflows
 - Convention storage in `projects.conventions` JSONB
 - Convention confidence tracking
@@ -603,11 +650,13 @@ export async function matchPatterns(
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `apps/web/src/components/windows/workflow/` - Basic workflow window exists
 - React Flow used elsewhere in codebase
 - Desktop window system supports `workflow` type
 
 **What's Missing:**
+
 - Canvas subview within workflow window
 - Phase node components
 - Dependency edge components
@@ -615,6 +664,7 @@ export async function matchPatterns(
 - View mode toggle ("plan" | "canvas" | "timeline")
 
 **Gap Details:**
+
 ```typescript
 // MISSING: apps/web/src/components/windows/workflow/canvas.tsx
 export function PlanCanvas({ plan }: { plan: StructuredPlan }) {
@@ -633,9 +683,11 @@ export function PlanCanvas({ plan }: { plan: StructuredPlan }) {
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - No plan approval UI
 
 **What's Missing:**
+
 - Approve/reject/iterate buttons
 - Keyboard shortcuts
 - Approval state management
@@ -650,6 +702,7 @@ export function PlanCanvas({ plan }: { plan: StructuredPlan }) {
 **Status:** ❌ **MISSING**
 
 **What's Missing:**
+
 - Drag-drop phase reordering
 - Cycle detection
 - Optimistic updates
@@ -666,10 +719,12 @@ export function PlanCanvas({ plan }: { plan: StructuredPlan }) {
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `packages/agent/src/environment/container.ts` - Container creation
 - Container reuse for same runId
 
 **What's Missing:**
+
 - Pre-created container pool
 - Pool assignment/replenishment
 - Idle timeout management
@@ -683,10 +738,12 @@ export function PlanCanvas({ plan }: { plan: StructuredPlan }) {
 **Status:** ❌ **MISSING**
 
 **What Exists:**
+
 - `packages/agent/src/orchestrator/tool/web.ts` - Tracks `CostInfo` for Exa searches only
 - No aggregate cost tracking
 
 **What's Missing:**
+
 - Per-workflow cost tracking
 - Token usage per phase
 - Budget enforcement
@@ -701,11 +758,13 @@ export function PlanCanvas({ plan }: { plan: StructuredPlan }) {
 **Status:** 🟡 **PARTIAL** - Some safeguards exist, but not comprehensive
 
 **What Exists:**
+
 - `packages/runtime/src/core.ts` - Workflow timeout (30 minutes)
 - `packages/cognitive/src/loop.ts` - Stall detection (60 seconds)
 - MAX_TRANSITIONS guard exists
 
 **What's Missing:**
+
 - Explicit tests for success/escalation/MAX_TRANSITIONS
 - Abort propagation tests
 - Comprehensive resilience test suite
@@ -721,6 +780,7 @@ export function PlanCanvas({ plan }: { plan: StructuredPlan }) {
 **Status:** ❌ **COMPLETELY MISSING**
 
 **Expected Structure:**
+
 ```
 packages/plan/
 ├── src/
@@ -842,16 +902,16 @@ packages/plan/
 
 ## Summary Statistics
 
-| Category | Exists | Partial | Missing | Total |
-|----------|--------|---------|---------|-------|
-| **Phase 1: Intent & Research** | 0 | 3 | 4 | 7 |
-| **Phase 2: Planning & Evaluation** | 0 | 1 | 3 | 4 |
-| **Phase 3: Execution Integration** | 1 | 3 | 1 | 5 |
-| **Phase 4: Pattern Learning** | 0 | 2 | 4 | 6 |
-| **Phase 5: Visual Builder** | 0 | 0 | 3 | 3 |
-| **Phase 6: Resilience** | 0 | 1 | 2 | 3 |
-| **Infrastructure** | 0 | 0 | 3 | 3 |
-| **TOTAL** | 1 | 10 | 20 | 31 |
+| Category                           | Exists | Partial | Missing | Total |
+| ---------------------------------- | ------ | ------- | ------- | ----- |
+| **Phase 1: Intent & Research**     | 0      | 3       | 4       | 7     |
+| **Phase 2: Planning & Evaluation** | 0      | 1       | 3       | 4     |
+| **Phase 3: Execution Integration** | 1      | 3       | 1       | 5     |
+| **Phase 4: Pattern Learning**      | 0      | 2       | 4       | 6     |
+| **Phase 5: Visual Builder**        | 0      | 0       | 3       | 3     |
+| **Phase 6: Resilience**            | 0      | 1       | 2       | 3     |
+| **Infrastructure**                 | 0      | 0       | 3       | 3     |
+| **TOTAL**                          | 1      | 10      | 20      | 31    |
 
 **Completion Estimate:** ~35% of required components exist (mostly partial implementations)
 

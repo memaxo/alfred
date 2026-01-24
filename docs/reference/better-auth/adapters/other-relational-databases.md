@@ -1,9 +1,10 @@
 ---
 title: Other Relational Databases | Better Auth
-url: 
+url:
 description: Integrate Better Auth with other relational databases.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,19 +31,19 @@ Better Auth supports a wide range of database dialects out of the box thanks to 
 
 Any dialect supported by Kysely can be utilized with Better Auth, including capabilities for generating and migrating database schemas through the [CLI](https://www.better-auth.com/docs/concepts/cli).
 
-## [Core Dialects](https://www.better-auth.com/docs/adapters/other-relational-databases\#core-dialects)
+## [Core Dialects](https://www.better-auth.com/docs/adapters/other-relational-databases#core-dialects)
 
 - [MySQL](https://www.better-auth.com/docs/adapters/mysql)
 - [SQLite](https://www.better-auth.com/docs/adapters/sqlite)
 - [PostgreSQL](https://www.better-auth.com/docs/adapters/postgresql)
 - [MS SQL](https://www.better-auth.com/docs/adapters/mssql)
 
-## [Kysely Organization Dialects](https://www.better-auth.com/docs/adapters/other-relational-databases\#kysely-organization-dialects)
+## [Kysely Organization Dialects](https://www.better-auth.com/docs/adapters/other-relational-databases#kysely-organization-dialects)
 
 - [Postgres.js](https://github.com/kysely-org/kysely-postgres-js)
 - [SingleStore Data API](https://github.com/kysely-org/kysely-singlestore)
 
-## [Kysely Community dialects](https://www.better-auth.com/docs/adapters/other-relational-databases\#kysely-community-dialects)
+## [Kysely Community dialects](https://www.better-auth.com/docs/adapters/other-relational-databases#kysely-community-dialects)
 
 - [PlanetScale Serverless Driver](https://github.com/depot/kysely-planetscale)
 - [Cloudflare D1](https://github.com/aidenwallis/kysely-d1)

@@ -8,23 +8,23 @@ You have several options for authentication in your TanStack Start application:
 
 **Hosted Solutions:**
 
- 1. **Clerk** \- Complete authentication platform with UI components
- 2. **WorkOS** \- Enterprise-focused with SSO and compliance features
- 3. **Better Auth** \- Open-source TypeScript library
+1.  **Clerk** \- Complete authentication platform with UI components
+2.  **WorkOS** \- Enterprise-focused with SSO and compliance features
+3.  **Better Auth** \- Open-source TypeScript library
 
 **DIY Implementation Benefits:**
 
- * **Full Control** : Complete customization over authentication flow
- * **No Vendor Lock-in** : Own your authentication logic and user data
- * **Custom Requirements** : Implement specific business logic or compliance needs
- * **Cost Control** : No per-user pricing or usage limits
+- **Full Control** : Complete customization over authentication flow
+- **No Vendor Lock-in** : Own your authentication logic and user data
+- **Custom Requirements** : Implement specific business logic or compliance needs
+- **Cost Control** : No per-user pricing or usage limits
 
 Authentication involves many considerations including password security, session management, rate limiting, CSRF protection, and various attack vectors.
 
 Core Concepts Authentication vs Authorization
 
- * **Authentication** : Who is this user? (Login/logout)
- * **Authorization** : What can this user do? (Permissions/roles)
+- **Authentication** : Who is this user? (Login/logout)
+- **Authorization** : What can this user do? (Permissions/roles)
 
 TanStack Start provides the tools for both through server functions, sessions, and route protection.
 
@@ -32,866 +32,808 @@ Essential Building Blocks 1\. Server Functions for Authentication
 
 Server functions handle sensitive authentication logic securely on the server:
 
+import { createServerFn } from '@tanstack/react-start'
+import { redirect } from '@tanstack/react-router'
 
- import { createServerFn } from '@tanstack/react-start'
- import { redirect } from '@tanstack/react-router'
+// Login server function
+export const loginFn = createServerFn({ method: 'POST' })
+.inputValidator((data: { email: string; password: string }) => data)
+.handler(async ({ data }) => {
+// Verify credentials (replace with your auth logic)
+const user = await authenticateUser(data.email, data.password)
 
- // Login server function
- export const loginFn = createServerFn({ method: 'POST' })
- .inputValidator((data: { email: string; password: string }) => data)
- .handler(async ({ data }) => {
- // Verify credentials (replace with your auth logic)
- const user = await authenticateUser(data.email, data.password)
+if (!user) {
+return { error: 'Invalid credentials' }
+}
 
- if (!user) {
- return { error: 'Invalid credentials' }
- }
+// Create session
+const session = await useAppSession()
+await session.update({
+userId: user.id,
+email: user.email,
+})
 
- // Create session
- const session = await useAppSession()
- await session.update({
- userId: user.id,
- email: user.email,
- })
+// Redirect to protected area
+throw redirect({ to: '/dashboard' })
+})
 
- // Redirect to protected area
- throw redirect({ to: '/dashboard' })
- })
+// Logout server function
+export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
+const session = await useAppSession()
+await session.clear()
+throw redirect({ to: '/' })
+})
 
- // Logout server function
- export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
- const session = await useAppSession()
- await session.clear()
- throw redirect({ to: '/' })
- })
+// Get current user
+export const getCurrentUserFn = createServerFn({ method: 'GET' }).handler(
+async () => {
+const session = await useAppSession()
+const userId = session.data.userId
 
- // Get current user
- export const getCurrentUserFn = createServerFn({ method: 'GET' }).handler(
- async () => {
- const session = await useAppSession()
- const userId = session.data.userId
+if (!userId) {
+return null
+}
 
- if (!userId) {
- return null
- }
+return await getUserById(userId)
+},
+)
 
- return await getUserById(userId)
- },
- )
+import { createServerFn } from '@tanstack/react-start'
+import { redirect } from '@tanstack/react-router'
 
+// Login server function
+export const loginFn = createServerFn({ method: 'POST' })
+.inputValidator((data: { email: string; password: string }) => data)
+.handler(async ({ data }) => {
+// Verify credentials (replace with your auth logic)
+const user = await authenticateUser(data.email, data.password)
 
+if (!user) {
+return { error: 'Invalid credentials' }
+}
 
- import { createServerFn } from '@tanstack/react-start'
- import { redirect } from '@tanstack/react-router'
+// Create session
+const session = await useAppSession()
+await session.update({
+userId: user.id,
+email: user.email,
+})
 
- // Login server function
- export const loginFn = createServerFn({ method: 'POST' })
- .inputValidator((data: { email: string; password: string }) => data)
- .handler(async ({ data }) => {
- // Verify credentials (replace with your auth logic)
- const user = await authenticateUser(data.email, data.password)
+// Redirect to protected area
+throw redirect({ to: '/dashboard' })
+})
 
- if (!user) {
- return { error: 'Invalid credentials' }
- }
+// Logout server function
+export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
+const session = await useAppSession()
+await session.clear()
+throw redirect({ to: '/' })
+})
 
- // Create session
- const session = await useAppSession()
- await session.update({
- userId: user.id,
- email: user.email,
- })
+// Get current user
+export const getCurrentUserFn = createServerFn({ method: 'GET' }).handler(
+async () => {
+const session = await useAppSession()
+const userId = session.data.userId
 
- // Redirect to protected area
- throw redirect({ to: '/dashboard' })
- })
+if (!userId) {
+return null
+}
 
- // Logout server function
- export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
- const session = await useAppSession()
- await session.clear()
- throw redirect({ to: '/' })
- })
-
- // Get current user
- export const getCurrentUserFn = createServerFn({ method: 'GET' }).handler(
- async () => {
- const session = await useAppSession()
- const userId = session.data.userId
-
- if (!userId) {
- return null
- }
-
- return await getUserById(userId)
- },
- )
-
+return await getUserById(userId)
+},
+)
 
 2\. Session Management
 
 TanStack Start provides secure HTTP-only cookie sessions:
 
+// utils/session.ts
+import { useSession } from '@tanstack/react-start/server'
 
- // utils/session.ts
- import { useSession } from '@tanstack/react-start/server'
+type SessionData = {
+userId?: string
+email?: string
+role?: string
+}
 
- type SessionData = {
- userId?: string
- email?: string
- role?: string
- }
+export function useAppSession() {
+return useSession({
+// Session configuration
+name: 'app-session',
+password: process.env.SESSION_SECRET!, // At least 32 characters
+// Optional: customize cookie settings
+cookie: {
+secure: process.env.NODE_ENV === 'production',
+sameSite: 'lax',
+httpOnly: true,
+},
+})
+}
 
- export function useAppSession() {
- return useSession({
- // Session configuration
- name: 'app-session',
- password: process.env.SESSION_SECRET!, // At least 32 characters
- // Optional: customize cookie settings
- cookie: {
- secure: process.env.NODE_ENV === 'production',
- sameSite: 'lax',
- httpOnly: true,
- },
- })
- }
+// utils/session.ts
+import { useSession } from '@tanstack/react-start/server'
 
+type SessionData = {
+userId?: string
+email?: string
+role?: string
+}
 
-
- // utils/session.ts
- import { useSession } from '@tanstack/react-start/server'
-
- type SessionData = {
- userId?: string
- email?: string
- role?: string
- }
-
- export function useAppSession() {
- return useSession({
- // Session configuration
- name: 'app-session',
- password: process.env.SESSION_SECRET!, // At least 32 characters
- // Optional: customize cookie settings
- cookie: {
- secure: process.env.NODE_ENV === 'production',
- sameSite: 'lax',
- httpOnly: true,
- },
- })
- }
-
+export function useAppSession() {
+return useSession({
+// Session configuration
+name: 'app-session',
+password: process.env.SESSION_SECRET!, // At least 32 characters
+// Optional: customize cookie settings
+cookie: {
+secure: process.env.NODE_ENV === 'production',
+sameSite: 'lax',
+httpOnly: true,
+},
+})
+}
 
 3\. Authentication Context
 
 Share authentication state across your application:
 
+// contexts/auth.tsx
+import { createContext, useContext, ReactNode } from 'react'
+import { useServerFn } from '@tanstack/react-start'
+import { getCurrentUserFn } from '../server/auth'
 
- // contexts/auth.tsx
- import { createContext, useContext, ReactNode } from 'react'
- import { useServerFn } from '@tanstack/react-start'
- import { getCurrentUserFn } from '../server/auth'
+type User = {
+id: string
+email: string
+role: string
+}
 
- type User = {
- id: string
- email: string
- role: string
- }
+type AuthContextType = {
+user: User | null
+isLoading: boolean
+refetch: () => void
+}
 
- type AuthContextType = {
- user: User | null
- isLoading: boolean
- refetch: () => void
- }
+const AuthContext = createContext(undefined)
 
- const AuthContext = createContext(undefined)
+export function AuthProvider({ children }: { children: ReactNode }) {
+const { data: user, isLoading, refetch } = useServerFn(getCurrentUserFn)
 
- export function AuthProvider({ children }: { children: ReactNode }) {
- const { data: user, isLoading, refetch } = useServerFn(getCurrentUserFn)
+return (
 
- return (
+{children}
 
- {children}
+)
+}
 
- )
- }
+export function useAuth() {
+const context = useContext(AuthContext)
+if (!context) {
+throw new Error('useAuth must be used within AuthProvider')
+}
+return context
+}
 
- export function useAuth() {
- const context = useContext(AuthContext)
- if (!context) {
- throw new Error('useAuth must be used within AuthProvider')
- }
- return context
- }
+// contexts/auth.tsx
+import { createContext, useContext, ReactNode } from 'react'
+import { useServerFn } from '@tanstack/react-start'
+import { getCurrentUserFn } from '../server/auth'
 
+type User = {
+id: string
+email: string
+role: string
+}
 
+type AuthContextType = {
+user: User | null
+isLoading: boolean
+refetch: () => void
+}
 
- // contexts/auth.tsx
- import { createContext, useContext, ReactNode } from 'react'
- import { useServerFn } from '@tanstack/react-start'
- import { getCurrentUserFn } from '../server/auth'
+const AuthContext = createContext(undefined)
 
- type User = {
- id: string
- email: string
- role: string
- }
+export function AuthProvider({ children }: { children: ReactNode }) {
+const { data: user, isLoading, refetch } = useServerFn(getCurrentUserFn)
 
- type AuthContextType = {
- user: User | null
- isLoading: boolean
- refetch: () => void
- }
+return (
 
- const AuthContext = createContext(undefined)
+{children}
 
- export function AuthProvider({ children }: { children: ReactNode }) {
- const { data: user, isLoading, refetch } = useServerFn(getCurrentUserFn)
+)
+}
 
- return (
-
- {children}
-
- )
- }
-
- export function useAuth() {
- const context = useContext(AuthContext)
- if (!context) {
- throw new Error('useAuth must be used within AuthProvider')
- }
- return context
- }
-
+export function useAuth() {
+const context = useContext(AuthContext)
+if (!context) {
+throw new Error('useAuth must be used within AuthProvider')
+}
+return context
+}
 
 4\. Route Protection
 
 Protect routes using beforeLoad:
 
+// routes/\_authed.tsx - Layout route for protected pages
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { getCurrentUserFn } from '../server/auth'
 
- // routes/_authed.tsx - Layout route for protected pages
- import { createFileRoute, redirect } from '@tanstack/react-router'
- import { getCurrentUserFn } from '../server/auth'
+export const Route = createFileRoute('/\_authed')({
+beforeLoad: async ({ location }) => {
+const user = await getCurrentUserFn()
 
- export const Route = createFileRoute('/_authed')({
- beforeLoad: async ({ location }) => {
- const user = await getCurrentUserFn()
+if (!user) {
+throw redirect({
+to: '/login',
+search: { redirect: location.href },
+})
+}
 
- if (!user) {
- throw redirect({
- to: '/login',
- search: { redirect: location.href },
- })
- }
+// Pass user to child routes
+return { user }
+},
+})
 
- // Pass user to child routes
- return { user }
- },
- })
+// routes/\_authed.tsx - Layout route for protected pages
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { getCurrentUserFn } from '../server/auth'
 
+export const Route = createFileRoute('/\_authed')({
+beforeLoad: async ({ location }) => {
+const user = await getCurrentUserFn()
 
+if (!user) {
+throw redirect({
+to: '/login',
+search: { redirect: location.href },
+})
+}
 
- // routes/_authed.tsx - Layout route for protected pages
- import { createFileRoute, redirect } from '@tanstack/react-router'
- import { getCurrentUserFn } from '../server/auth'
+// Pass user to child routes
+return { user }
+},
+})
 
- export const Route = createFileRoute('/_authed')({
- beforeLoad: async ({ location }) => {
- const user = await getCurrentUserFn()
+// routes/\_authed/dashboard.tsx - Protected route
+import { createFileRoute } from '@tanstack/react-router'
 
- if (!user) {
- throw redirect({
- to: '/login',
- search: { redirect: location.href },
- })
- }
+export const Route = createFileRoute('/\_authed/dashboard')({
+component: DashboardComponent,
+})
 
- // Pass user to child routes
- return { user }
- },
- })
+function DashboardComponent() {
+const { user } = Route.useRouteContext()
 
+return (
 
+Welcome, {user.email}!
+{/_ Dashboard content _/}
 
- // routes/_authed/dashboard.tsx - Protected route
- import { createFileRoute } from '@tanstack/react-router'
+)
+}
 
- export const Route = createFileRoute('/_authed/dashboard')({
- component: DashboardComponent,
- })
+// routes/\_authed/dashboard.tsx - Protected route
+import { createFileRoute } from '@tanstack/react-router'
 
- function DashboardComponent() {
- const { user } = Route.useRouteContext()
+export const Route = createFileRoute('/\_authed/dashboard')({
+component: DashboardComponent,
+})
 
- return (
+function DashboardComponent() {
+const { user } = Route.useRouteContext()
 
- Welcome, {user.email}!
- {/* Dashboard content */}
+return (
 
- )
- }
+Welcome, {user.email}!
+{/_ Dashboard content _/}
 
-
-
- // routes/_authed/dashboard.tsx - Protected route
- import { createFileRoute } from '@tanstack/react-router'
-
- export const Route = createFileRoute('/_authed/dashboard')({
- component: DashboardComponent,
- })
-
- function DashboardComponent() {
- const { user } = Route.useRouteContext()
-
- return (
-
- Welcome, {user.email}!
- {/* Dashboard content */}
-
- )
- }
-
+)
+}
 
 Implementation Patterns Basic Email/Password Authentication
 
+// server/auth.ts
+import bcrypt from 'bcryptjs'
+import { createServerFn } from '@tanstack/react-start'
 
- // server/auth.ts
- import bcrypt from 'bcryptjs'
- import { createServerFn } from '@tanstack/react-start'
+// User registration
+export const registerFn = createServerFn({ method: 'POST' })
+.inputValidator(
+(data: { email: string; password: string; name: string }) => data,
+)
+.handler(async ({ data }) => {
+// Check if user exists
+const existingUser = await getUserByEmail(data.email)
+if (existingUser) {
+return { error: 'User already exists' }
+}
 
- // User registration
- export const registerFn = createServerFn({ method: 'POST' })
- .inputValidator(
- (data: { email: string; password: string; name: string }) => data,
- )
- .handler(async ({ data }) => {
- // Check if user exists
- const existingUser = await getUserByEmail(data.email)
- if (existingUser) {
- return { error: 'User already exists' }
- }
+// Hash password
+const hashedPassword = await bcrypt.hash(data.password, 12)
 
- // Hash password
- const hashedPassword = await bcrypt.hash(data.password, 12)
+// Create user
+const user = await createUser({
+email: data.email,
+password: hashedPassword,
+name: data.name,
+})
 
- // Create user
- const user = await createUser({
- email: data.email,
- password: hashedPassword,
- name: data.name,
- })
+// Create session
+const session = await useAppSession()
+await session.update({ userId: user.id })
 
- // Create session
- const session = await useAppSession()
- await session.update({ userId: user.id })
+return { success: true, user: { id: user.id, email: user.email } }
+})
 
- return { success: true, user: { id: user.id, email: user.email } }
- })
+async function authenticateUser(email: string, password: string) {
+const user = await getUserByEmail(email)
+if (!user) return null
 
- async function authenticateUser(email: string, password: string) {
- const user = await getUserByEmail(email)
- if (!user) return null
+const isValid = await bcrypt.compare(password, user.password)
+return isValid ? user : null
+}
 
- const isValid = await bcrypt.compare(password, user.password)
- return isValid ? user : null
- }
+// server/auth.ts
+import bcrypt from 'bcryptjs'
+import { createServerFn } from '@tanstack/react-start'
 
+// User registration
+export const registerFn = createServerFn({ method: 'POST' })
+.inputValidator(
+(data: { email: string; password: string; name: string }) => data,
+)
+.handler(async ({ data }) => {
+// Check if user exists
+const existingUser = await getUserByEmail(data.email)
+if (existingUser) {
+return { error: 'User already exists' }
+}
 
+// Hash password
+const hashedPassword = await bcrypt.hash(data.password, 12)
 
- // server/auth.ts
- import bcrypt from 'bcryptjs'
- import { createServerFn } from '@tanstack/react-start'
+// Create user
+const user = await createUser({
+email: data.email,
+password: hashedPassword,
+name: data.name,
+})
 
- // User registration
- export const registerFn = createServerFn({ method: 'POST' })
- .inputValidator(
- (data: { email: string; password: string; name: string }) => data,
- )
- .handler(async ({ data }) => {
- // Check if user exists
- const existingUser = await getUserByEmail(data.email)
- if (existingUser) {
- return { error: 'User already exists' }
- }
+// Create session
+const session = await useAppSession()
+await session.update({ userId: user.id })
 
- // Hash password
- const hashedPassword = await bcrypt.hash(data.password, 12)
+return { success: true, user: { id: user.id, email: user.email } }
+})
 
- // Create user
- const user = await createUser({
- email: data.email,
- password: hashedPassword,
- name: data.name,
- })
+async function authenticateUser(email: string, password: string) {
+const user = await getUserByEmail(email)
+if (!user) return null
 
- // Create session
- const session = await useAppSession()
- await session.update({ userId: user.id })
-
- return { success: true, user: { id: user.id, email: user.email } }
- })
-
- async function authenticateUser(email: string, password: string) {
- const user = await getUserByEmail(email)
- if (!user) return null
-
- const isValid = await bcrypt.compare(password, user.password)
- return isValid ? user : null
- }
-
+const isValid = await bcrypt.compare(password, user.password)
+return isValid ? user : null
+}
 
 Role-Based Access Control (RBAC)
 
+// utils/auth.ts
+export const roles = {
+USER: 'user',
+ADMIN: 'admin',
+MODERATOR: 'moderator',
+} as const
 
- // utils/auth.ts
- export const roles = {
- USER: 'user',
- ADMIN: 'admin',
- MODERATOR: 'moderator',
- } as const
+type Role = (typeof roles)[keyof typeof roles]
 
- type Role = (typeof roles)[keyof typeof roles]
+export function hasPermission(userRole: Role, requiredRole: Role): boolean {
+const hierarchy = {
+[roles.USER]: 0,
+[roles.MODERATOR]: 1,
+[roles.ADMIN]: 2,
+}
 
- export function hasPermission(userRole: Role, requiredRole: Role): boolean {
- const hierarchy = {
- [roles.USER]: 0,
- [roles.MODERATOR]: 1,
- [roles.ADMIN]: 2,
- }
+return hierarchy[userRole] >= hierarchy[requiredRole]
+}
 
- return hierarchy[userRole] >= hierarchy[requiredRole]
- }
+// Protected route with role check
+export const Route = createFileRoute('/\_authed/admin/')({
+beforeLoad: async ({ context }) => {
+if (!hasPermission(context.user.role, roles.ADMIN)) {
+throw redirect({ to: '/unauthorized' })
+}
+},
+})
 
- // Protected route with role check
- export const Route = createFileRoute('/_authed/admin/')({
- beforeLoad: async ({ context }) => {
- if (!hasPermission(context.user.role, roles.ADMIN)) {
- throw redirect({ to: '/unauthorized' })
- }
- },
- })
+// utils/auth.ts
+export const roles = {
+USER: 'user',
+ADMIN: 'admin',
+MODERATOR: 'moderator',
+} as const
 
+type Role = (typeof roles)[keyof typeof roles]
 
+export function hasPermission(userRole: Role, requiredRole: Role): boolean {
+const hierarchy = {
+[roles.USER]: 0,
+[roles.MODERATOR]: 1,
+[roles.ADMIN]: 2,
+}
 
- // utils/auth.ts
- export const roles = {
- USER: 'user',
- ADMIN: 'admin',
- MODERATOR: 'moderator',
- } as const
+return hierarchy[userRole] >= hierarchy[requiredRole]
+}
 
- type Role = (typeof roles)[keyof typeof roles]
-
- export function hasPermission(userRole: Role, requiredRole: Role): boolean {
- const hierarchy = {
- [roles.USER]: 0,
- [roles.MODERATOR]: 1,
- [roles.ADMIN]: 2,
- }
-
- return hierarchy[userRole] >= hierarchy[requiredRole]
- }
-
- // Protected route with role check
- export const Route = createFileRoute('/_authed/admin/')({
- beforeLoad: async ({ context }) => {
- if (!hasPermission(context.user.role, roles.ADMIN)) {
- throw redirect({ to: '/unauthorized' })
- }
- },
- })
-
+// Protected route with role check
+export const Route = createFileRoute('/\_authed/admin/')({
+beforeLoad: async ({ context }) => {
+if (!hasPermission(context.user.role, roles.ADMIN)) {
+throw redirect({ to: '/unauthorized' })
+}
+},
+})
 
 Social Authentication Integration
 
+// Example with OAuth providers
+export const authProviders = {
+google: {
+clientId: process.env.GOOGLE_CLIENT_ID!,
+redirectUri: `${process.env.APP_URL}/auth/google/callback`,
+},
+github: {
+clientId: process.env.GITHUB_CLIENT_ID!,
+redirectUri: `${process.env.APP_URL}/auth/github/callback`,
+},
+}
 
- // Example with OAuth providers
- export const authProviders = {
- google: {
- clientId: process.env.GOOGLE_CLIENT_ID!,
- redirectUri: `${process.env.APP_URL}/auth/google/callback`,
- },
- github: {
- clientId: process.env.GITHUB_CLIENT_ID!,
- redirectUri: `${process.env.APP_URL}/auth/github/callback`,
- },
- }
+export const initiateOAuthFn = createServerFn({ method: 'POST' })
+.inputValidator((data: { provider: 'google' | 'github' }) => data)
+.handler(async ({ data }) => {
+const provider = authProviders[data.provider]
+const state = generateRandomState()
 
- export const initiateOAuthFn = createServerFn({ method: 'POST' })
- .inputValidator((data: { provider: 'google' | 'github' }) => data)
- .handler(async ({ data }) => {
- const provider = authProviders[data.provider]
- const state = generateRandomState()
+// Store state in session for CSRF protection
+const session = await useAppSession()
+await session.update({ oauthState: state })
 
- // Store state in session for CSRF protection
- const session = await useAppSession()
- await session.update({ oauthState: state })
+// Generate OAuth URL
+const authUrl = generateOAuthUrl(provider, state)
 
- // Generate OAuth URL
- const authUrl = generateOAuthUrl(provider, state)
+throw redirect({ href: authUrl })
+})
 
- throw redirect({ href: authUrl })
- })
+// Example with OAuth providers
+export const authProviders = {
+google: {
+clientId: process.env.GOOGLE_CLIENT_ID!,
+redirectUri: `${process.env.APP_URL}/auth/google/callback`,
+},
+github: {
+clientId: process.env.GITHUB_CLIENT_ID!,
+redirectUri: `${process.env.APP_URL}/auth/github/callback`,
+},
+}
 
+export const initiateOAuthFn = createServerFn({ method: 'POST' })
+.inputValidator((data: { provider: 'google' | 'github' }) => data)
+.handler(async ({ data }) => {
+const provider = authProviders[data.provider]
+const state = generateRandomState()
 
+// Store state in session for CSRF protection
+const session = await useAppSession()
+await session.update({ oauthState: state })
 
- // Example with OAuth providers
- export const authProviders = {
- google: {
- clientId: process.env.GOOGLE_CLIENT_ID!,
- redirectUri: `${process.env.APP_URL}/auth/google/callback`,
- },
- github: {
- clientId: process.env.GITHUB_CLIENT_ID!,
- redirectUri: `${process.env.APP_URL}/auth/github/callback`,
- },
- }
+// Generate OAuth URL
+const authUrl = generateOAuthUrl(provider, state)
 
- export const initiateOAuthFn = createServerFn({ method: 'POST' })
- .inputValidator((data: { provider: 'google' | 'github' }) => data)
- .handler(async ({ data }) => {
- const provider = authProviders[data.provider]
- const state = generateRandomState()
-
- // Store state in session for CSRF protection
- const session = await useAppSession()
- await session.update({ oauthState: state })
-
- // Generate OAuth URL
- const authUrl = generateOAuthUrl(provider, state)
-
- throw redirect({ href: authUrl })
- })
-
+throw redirect({ href: authUrl })
+})
 
 Password Reset Flow
 
+// Password reset request
+export const requestPasswordResetFn = createServerFn({ method: 'POST' })
+.inputValidator((data: { email: string }) => data)
+.handler(async ({ data }) => {
+const user = await getUserByEmail(data.email)
+if (!user) {
+// Don't reveal if email exists
+return { success: true }
+}
 
- // Password reset request
- export const requestPasswordResetFn = createServerFn({ method: 'POST' })
- .inputValidator((data: { email: string }) => data)
- .handler(async ({ data }) => {
- const user = await getUserByEmail(data.email)
- if (!user) {
- // Don't reveal if email exists
- return { success: true }
- }
+const token = generateSecureToken()
+const expires = new Date(Date.now() + 60 _ 60 _ 1000) // 1 hour
 
- const token = generateSecureToken()
- const expires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+await savePasswordResetToken(user.id, token, expires)
+await sendPasswordResetEmail(user.email, token)
 
- await savePasswordResetToken(user.id, token, expires)
- await sendPasswordResetEmail(user.email, token)
+return { success: true }
+})
 
- return { success: true }
- })
+// Password reset confirmation
+export const resetPasswordFn = createServerFn({ method: 'POST' })
+.inputValidator((data: { token: string; newPassword: string }) => data)
+.handler(async ({ data }) => {
+const resetToken = await getPasswordResetToken(data.token)
 
- // Password reset confirmation
- export const resetPasswordFn = createServerFn({ method: 'POST' })
- .inputValidator((data: { token: string; newPassword: string }) => data)
- .handler(async ({ data }) => {
- const resetToken = await getPasswordResetToken(data.token)
+if (!resetToken || resetToken.expires data)
+.handler(async ({ data }) => {
+const user = await getUserByEmail(data.email)
+if (!user) {
+// Don't reveal if email exists
+return { success: true }
+}
 
- if (!resetToken || resetToken.expires data)
- .handler(async ({ data }) => {
- const user = await getUserByEmail(data.email)
- if (!user) {
- // Don't reveal if email exists
- return { success: true }
- }
+const token = generateSecureToken()
+const expires = new Date(Date.now() + 60 _ 60 _ 1000) // 1 hour
 
- const token = generateSecureToken()
- const expires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+await savePasswordResetToken(user.id, token, expires)
+await sendPasswordResetEmail(user.email, token)
 
- await savePasswordResetToken(user.id, token, expires)
- await sendPasswordResetEmail(user.email, token)
+return { success: true }
+})
 
- return { success: true }
- })
+// Password reset confirmation
+export const resetPasswordFn = createServerFn({ method: 'POST' })
+.inputValidator((data: { token: string; newPassword: string }) => data)
+.handler(async ({ data }) => {
+const resetToken = await getPasswordResetToken(data.token)
 
- // Password reset confirmation
- export const resetPasswordFn = createServerFn({ method: 'POST' })
- .inputValidator((data: { token: string; newPassword: string }) => data)
- .handler(async ({ data }) => {
- const resetToken = await getPasswordResetToken(data.token)
+if (!resetToken || resetToken.expires ()
 
- if (!resetToken || resetToken.expires ()
+export const rateLimitLogin = (ip: string): boolean => {
+const now = Date.now()
+const attempts = loginAttempts.get(ip)
 
- export const rateLimitLogin = (ip: string): boolean => {
- const now = Date.now()
- const attempts = loginAttempts.get(ip)
+if (!attempts || now > attempts.resetTime) {
+loginAttempts.set(ip, { count: 1, resetTime: now + 15 _ 60 _ 1000 }) // 15 min
+return true
+}
 
- if (!attempts || now > attempts.resetTime) {
- loginAttempts.set(ip, { count: 1, resetTime: now + 15 * 60 * 1000 }) // 15 min
- return true
- }
+if (attempts.count >= 5) {
+return false // Too many attempts
+}
 
- if (attempts.count >= 5) {
- return false // Too many attempts
- }
+attempts.count++
+return true
+}
 
- attempts.count++
- return true
- }
+// Simple in-memory rate limiting (use Redis in production)
+const loginAttempts = new Map()
 
+export const rateLimitLogin = (ip: string): boolean => {
+const now = Date.now()
+const attempts = loginAttempts.get(ip)
 
+if (!attempts || now > attempts.resetTime) {
+loginAttempts.set(ip, { count: 1, resetTime: now + 15 _ 60 _ 1000 }) // 15 min
+return true
+}
 
- // Simple in-memory rate limiting (use Redis in production)
- const loginAttempts = new Map()
+if (attempts.count >= 5) {
+return false // Too many attempts
+}
 
- export const rateLimitLogin = (ip: string): boolean => {
- const now = Date.now()
- const attempts = loginAttempts.get(ip)
-
- if (!attempts || now > attempts.resetTime) {
- loginAttempts.set(ip, { count: 1, resetTime: now + 15 * 60 * 1000 }) // 15 min
- return true
- }
-
- if (attempts.count >= 5) {
- return false // Too many attempts
- }
-
- attempts.count++
- return true
- }
-
+attempts.count++
+return true
+}
 
 4\. Input Validation
 
+import { z } from 'zod'
 
- import { z } from 'zod'
+const loginSchema = z.object({
+email: z.string().email().max(255),
+password: z.string().min(8).max(100),
+})
 
- const loginSchema = z.object({
- email: z.string().email().max(255),
- password: z.string().min(8).max(100),
- })
+export const loginFn = createServerFn({ method: 'POST' })
+.inputValidator((data) => loginSchema.parse(data))
+.handler(async ({ data }) => {
+// data is now validated
+})
 
- export const loginFn = createServerFn({ method: 'POST' })
- .inputValidator((data) => loginSchema.parse(data))
- .handler(async ({ data }) => {
- // data is now validated
- })
+import { z } from 'zod'
 
+const loginSchema = z.object({
+email: z.string().email().max(255),
+password: z.string().min(8).max(100),
+})
 
-
- import { z } from 'zod'
-
- const loginSchema = z.object({
- email: z.string().email().max(255),
- password: z.string().min(8).max(100),
- })
-
- export const loginFn = createServerFn({ method: 'POST' })
- .inputValidator((data) => loginSchema.parse(data))
- .handler(async ({ data }) => {
- // data is now validated
- })
-
+export const loginFn = createServerFn({ method: 'POST' })
+.inputValidator((data) => loginSchema.parse(data))
+.handler(async ({ data }) => {
+// data is now validated
+})
 
 Testing Authentication Unit Testing Server Functions
 
+// **tests**/auth.test.ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { loginFn } from '../server/auth'
 
- // __tests__/auth.test.ts
- import { describe, it, expect, beforeEach } from 'vitest'
- import { loginFn } from '../server/auth'
+describe('Authentication', () => {
+beforeEach(async () => {
+await setupTestDatabase()
+})
 
- describe('Authentication', () => {
- beforeEach(async () => {
- await setupTestDatabase()
- })
+it('should login with valid credentials', async () => {
+const result = await loginFn({
+data: { email: 'test@example.com', password: 'password123' },
+})
 
- it('should login with valid credentials', async () => {
- const result = await loginFn({
- data: { email: 'test@example.com', password: 'password123' },
- })
+expect(result.error).toBeUndefined()
+expect(result.user).toBeDefined()
+})
 
- expect(result.error).toBeUndefined()
- expect(result.user).toBeDefined()
- })
+it('should reject invalid credentials', async () => {
+const result = await loginFn({
+data: { email: 'test@example.com', password: 'wrongpassword' },
+})
 
- it('should reject invalid credentials', async () => {
- const result = await loginFn({
- data: { email: 'test@example.com', password: 'wrongpassword' },
- })
+expect(result.error).toBe('Invalid credentials')
+})
+})
 
- expect(result.error).toBe('Invalid credentials')
- })
- })
+// **tests**/auth.test.ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { loginFn } from '../server/auth'
 
+describe('Authentication', () => {
+beforeEach(async () => {
+await setupTestDatabase()
+})
 
+it('should login with valid credentials', async () => {
+const result = await loginFn({
+data: { email: 'test@example.com', password: 'password123' },
+})
 
- // __tests__/auth.test.ts
- import { describe, it, expect, beforeEach } from 'vitest'
- import { loginFn } from '../server/auth'
+expect(result.error).toBeUndefined()
+expect(result.user).toBeDefined()
+})
 
- describe('Authentication', () => {
- beforeEach(async () => {
- await setupTestDatabase()
- })
+it('should reject invalid credentials', async () => {
+const result = await loginFn({
+data: { email: 'test@example.com', password: 'wrongpassword' },
+})
 
- it('should login with valid credentials', async () => {
- const result = await loginFn({
- data: { email: 'test@example.com', password: 'password123' },
- })
-
- expect(result.error).toBeUndefined()
- expect(result.user).toBeDefined()
- })
-
- it('should reject invalid credentials', async () => {
- const result = await loginFn({
- data: { email: 'test@example.com', password: 'wrongpassword' },
- })
-
- expect(result.error).toBe('Invalid credentials')
- })
- })
-
+expect(result.error).toBe('Invalid credentials')
+})
+})
 
 Integration Testing
 
+// **tests**/auth-flow.test.tsx
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { RouterProvider, createMemoryHistory } from '@tanstack/react-router'
+import { router } from '../router'
 
- // __tests__/auth-flow.test.tsx
- import { render, screen, fireEvent, waitFor } from '@testing-library/react'
- import { RouterProvider, createMemoryHistory } from '@tanstack/react-router'
- import { router } from '../router'
+describe('Authentication Flow', () => {
+it('should redirect to login when accessing protected route', async () => {
+const history = createMemoryHistory()
+history.push('/dashboard') // Protected route
 
- describe('Authentication Flow', () => {
- it('should redirect to login when accessing protected route', async () => {
- const history = createMemoryHistory()
- history.push('/dashboard') // Protected route
+render()
 
- render()
+await waitFor(() => {
+expect(screen.getByText('Login')).toBeInTheDocument()
+})
+})
+})
 
- await waitFor(() => {
- expect(screen.getByText('Login')).toBeInTheDocument()
- })
- })
- })
+// **tests**/auth-flow.test.tsx
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { RouterProvider, createMemoryHistory } from '@tanstack/react-router'
+import { router } from '../router'
 
+describe('Authentication Flow', () => {
+it('should redirect to login when accessing protected route', async () => {
+const history = createMemoryHistory()
+history.push('/dashboard') // Protected route
 
+render()
 
- // __tests__/auth-flow.test.tsx
- import { render, screen, fireEvent, waitFor } from '@testing-library/react'
- import { RouterProvider, createMemoryHistory } from '@tanstack/react-router'
- import { router } from '../router'
-
- describe('Authentication Flow', () => {
- it('should redirect to login when accessing protected route', async () => {
- const history = createMemoryHistory()
- history.push('/dashboard') // Protected route
-
- render()
-
- await waitFor(() => {
- expect(screen.getByText('Login')).toBeInTheDocument()
- })
- })
- })
-
+await waitFor(() => {
+expect(screen.getByText('Login')).toBeInTheDocument()
+})
+})
+})
 
 Common Patterns Loading States
 
+function LoginForm() {
+const [isLoading, setIsLoading] = useState(false)
+const loginMutation = useServerFn(loginFn)
 
- function LoginForm() {
- const [isLoading, setIsLoading] = useState(false)
- const loginMutation = useServerFn(loginFn)
+const handleSubmit = async (data: LoginData) => {
+setIsLoading(true)
+try {
+await loginMutation.mutate(data)
+} catch (error) {
+// Handle error
+} finally {
+setIsLoading(false)
+}
+}
 
- const handleSubmit = async (data: LoginData) => {
- setIsLoading(true)
- try {
- await loginMutation.mutate(data)
- } catch (error) {
- // Handle error
- } finally {
- setIsLoading(false)
- }
- }
+return (
 
- return (
+{/_ Form fields _/}
 
- {/* Form fields */}
+{isLoading ? 'Logging in...' : 'Login'}
 
- {isLoading ? 'Logging in...' : 'Login'}
+)
+}
 
+function LoginForm() {
+const [isLoading, setIsLoading] = useState(false)
+const loginMutation = useServerFn(loginFn)
 
- )
- }
+const handleSubmit = async (data: LoginData) => {
+setIsLoading(true)
+try {
+await loginMutation.mutate(data)
+} catch (error) {
+// Handle error
+} finally {
+setIsLoading(false)
+}
+}
 
+return (
 
+{/_ Form fields _/}
 
- function LoginForm() {
- const [isLoading, setIsLoading] = useState(false)
- const loginMutation = useServerFn(loginFn)
+{isLoading ? 'Logging in...' : 'Login'}
 
- const handleSubmit = async (data: LoginData) => {
- setIsLoading(true)
- try {
- await loginMutation.mutate(data)
- } catch (error) {
- // Handle error
- } finally {
- setIsLoading(false)
- }
- }
-
- return (
-
- {/* Form fields */}
-
- {isLoading ? 'Logging in...' : 'Login'}
-
-
- )
- }
-
+)
+}
 
 Remember Me Functionality
 
+export const loginFn = createServerFn({ method: 'POST' })
+.inputValidator(
+(data: { email: string; password: string; rememberMe?: boolean }) => data,
+)
+.handler(async ({ data }) => {
+const user = await authenticateUser(data.email, data.password)
+if (!user) return { error: 'Invalid credentials' }
 
- export const loginFn = createServerFn({ method: 'POST' })
- .inputValidator(
- (data: { email: string; password: string; rememberMe?: boolean }) => data,
- )
- .handler(async ({ data }) => {
- const user = await authenticateUser(data.email, data.password)
- if (!user) return { error: 'Invalid credentials' }
+const session = await useAppSession()
+await session.update(
+{ userId: user.id },
+{
+// Extend session if remember me is checked
+maxAge: data.rememberMe ? 30 _ 24 _ 60 \* 60 : undefined, // 30 days vs session
+},
+)
 
- const session = await useAppSession()
- await session.update(
- { userId: user.id },
- {
- // Extend session if remember me is checked
- maxAge: data.rememberMe ? 30 * 24 * 60 * 60 : undefined, // 30 days vs session
- },
- )
+return { success: true }
+})
 
- return { success: true }
- })
+export const loginFn = createServerFn({ method: 'POST' })
+.inputValidator(
+(data: { email: string; password: string; rememberMe?: boolean }) => data,
+)
+.handler(async ({ data }) => {
+const user = await authenticateUser(data.email, data.password)
+if (!user) return { error: 'Invalid credentials' }
 
+const session = await useAppSession()
+await session.update(
+{ userId: user.id },
+{
+// Extend session if remember me is checked
+maxAge: data.rememberMe ? 30 _ 24 _ 60 \* 60 : undefined, // 30 days vs session
+},
+)
 
-
- export const loginFn = createServerFn({ method: 'POST' })
- .inputValidator(
- (data: { email: string; password: string; rememberMe?: boolean }) => data,
- )
- .handler(async ({ data }) => {
- const user = await authenticateUser(data.email, data.password)
- if (!user) return { error: 'Invalid credentials' }
-
- const session = await useAppSession()
- await session.update(
- { userId: user.id },
- {
- // Extend session if remember me is checked
- maxAge: data.rememberMe ? 30 * 24 * 60 * 60 : undefined, // 30 days vs session
- },
- )
-
- return { success: true }
- })
-
+return { success: true }
+})
 
 Working Examples
 
@@ -901,16 +843,16 @@ Migration from Other Solutions From Client-Side Auth
 
 If you're migrating from client-side authentication (localStorage, context only):
 
- 1. Move authentication logic to server functions
- 2. Replace localStorage with server sessions
- 3. Update route protection to use beforeLoad
- 4. Add proper security headers and CSRF protection
+1.  Move authentication logic to server functions
+2.  Replace localStorage with server sessions
+3.  Update route protection to use beforeLoad
+4.  Add proper security headers and CSRF protection
 
 From Other Frameworks
 
- * **Next.js** : Replace API routes with server functions, migrate NextAuth sessions
- * **Remix** : Convert loaders/actions to server functions, adapt session patterns
- * **SvelteKit** : Move form actions to server functions, update route protection
+- **Next.js** : Replace API routes with server functions, migrate NextAuth sessions
+- **Remix** : Convert loaders/actions to server functions, adapt session patterns
+- **SvelteKit** : Move form actions to server functions, update route protection
 
 Production Considerations
 
@@ -920,38 +862,38 @@ Hosted vs DIY Comparison
 
 **Hosted Solutions (Clerk, WorkOS, Better Auth):**
 
- * Pre-built security measures and regular updates
- * UI components and user management features
- * Compliance certifications and audit trails
- * Support and documentation
- * Per-user or subscription pricing
+- Pre-built security measures and regular updates
+- UI components and user management features
+- Compliance certifications and audit trails
+- Support and documentation
+- Per-user or subscription pricing
 
 **DIY Implementation:**
 
- * Complete control over implementation and data
- * No ongoing subscription costs
- * Custom business logic and workflows
- * Responsibility for security updates and monitoring
- * Need to handle edge cases and attack vectors
+- Complete control over implementation and data
+- No ongoing subscription costs
+- Custom business logic and workflows
+- Responsibility for security updates and monitoring
+- Need to handle edge cases and attack vectors
 
 Security Considerations
 
 Authentication systems need to handle various security aspects:
 
- * Password hashing and timing attack prevention
- * Session management and fixation protection
- * CSRF and XSS protection
- * Rate limiting and brute force prevention
- * OAuth flow security
- * Compliance requirements (GDPR, CCPA, etc.)
+- Password hashing and timing attack prevention
+- Session management and fixation protection
+- CSRF and XSS protection
+- Rate limiting and brute force prevention
+- OAuth flow security
+- Compliance requirements (GDPR, CCPA, etc.)
 
 Next Steps
 
 When implementing authentication, consider:
 
- * **Security Review** : Review your implementation for security best practices
- * **Performance** : Add caching for user lookups and session validation
- * **Monitoring** : Add logging and monitoring for authentication events
- * **Compliance** : Ensure compliance with relevant regulations if storing personal data
+- **Security Review** : Review your implementation for security best practices
+- **Performance** : Add caching for user lookups and session validation
+- **Monitoring** : Add logging and monitoring for authentication events
+- **Compliance** : Ensure compliance with relevant regulations if storing personal data
 
 For other authentication approaches, check the Authentication Overview. For specific integration help, explore our working examples.

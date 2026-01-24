@@ -11,42 +11,40 @@ Copy markdown
 You can use it to generate structured data and in tools.
 
 ## Example
-    
-    
+
     import { valibotSchema } from '@ai-sdk/valibot';
-    
+
     import { object, string, array } from 'valibot';
-    
-    
-    
-    
+
+
+
+
     const recipeSchema = valibotSchema(
-    
+
       object({
-    
+
         name: string(),
-    
+
         ingredients: array(
-    
+
           object({
-    
+
             name: string(),
-    
+
             amount: string(),
-    
+
           }),
-    
+
         ),
-    
+
         steps: array(string()),
-    
+
       }),
-    
+
     );
 
 ## Import
-    
-    
+
     import { valibotSchema } from "ai"
 
 ## API Signature

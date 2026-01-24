@@ -6,6 +6,7 @@
 **Target:** Q1 2026
 
 **Companion Documents:**
+
 - [`desktop-type-migration.md`](./desktop-type-migration.md) — Type system migration from ReactFlow to hybrid architecture
 
 ---
@@ -16,11 +17,11 @@ ALFRED Desktop Evolution transforms the current ReactFlow-based spatial canvas i
 
 ### Vision Statement
 
-*"The last desktop you'll ever need — where every thought becomes action, every agent is visible, and every piece of knowledge is a tap away."*
+_"The last desktop you'll ever need — where every thought becomes action, every agent is visible, and every piece of knowledge is a tap away."_
 
 ### Core User Journey
 
-Jack wakes up, opens ALFRED Desktop, and speaks: *"Alfred, show me what the agents accomplished overnight."* The Orb pulses, the Agent Waves panel materializes showing 12 completed PRs across 3 projects, the Knowledge Graph updates with 47 new facts learned, and a gentle notification indicates 2 PRs await his review. Jack swipes to the Monaco editor, reviews the diffs inline, approves with voice command, and watches the deployment pipeline flow through the Docker Management panel in real-time.
+Jack wakes up, opens ALFRED Desktop, and speaks: _"Alfred, show me what the agents accomplished overnight."_ The Orb pulses, the Agent Waves panel materializes showing 12 completed PRs across 3 projects, the Knowledge Graph updates with 47 new facts learned, and a gentle notification indicates 2 PRs await his review. Jack swipes to the Monaco editor, reviews the diffs inline, approves with voice command, and watches the deployment pipeline flow through the Docker Management panel in real-time.
 
 ---
 
@@ -113,58 +114,58 @@ apps/web (Desktop Shell)
 
 ### 1.3 Backend Integration Map
 
-| Desktop App | Primary Router(s) | Secondary Integrations | Package Dependencies |
-|-------------|-------------------|------------------------|---------------------|
-| Chat | `assistant`, `voice` | `cognitive`, `knowledge` | `@alfred/history`, `@alfred/rag` |
-| Code Editor | `fs`, `codex` | `agentfs`, `droid` | `@alfred/embed` |
-| Agent Waves | `orchestrator`, `droid` | `workflow`, `plan` | `@alfred/runtime` |
-| PR Review | `workflow`, `linear` | `deploy`, `codex` | `@alfred/policy` |
-| Docker Manager | `deploy`, `agentfs` | `admin` | `@alfred/metrics` |
-| Knowledge Graph | `graph`, `knowledge` | `cognitive` | `@alfred/embed` |
-| AgentFS Viewer | `agentfs` | `droid`, `codex` | — |
-| Terminal | `terminal` | `fs` | `@alfred/tui` |
-| Task Manager | `admin`, `workflow` | `droid`, `codex` | `@alfred/metrics` |
-| Settings | `profile`, `preference`, `visual` | `privacy`, `token` | `@alfred/auth` |
-| **Cortex Visualizer** | `visual` | `cognitive` | `@alfred/cortex` |
-| **Learning Dashboard** | `cognitive` | `knowledge` | `@alfred/learning` |
-| **Policy Viewer** | `admin` | `cognitive` | `@alfred/policy` |
-| **Tune Manager** | `tune` | `eval` | `@alfred/tune` |
-| **Plan Editor** | `plan` | `workflow`, `codexIntent` | `@alfred/plan` |
-| **Metrics Dashboard** | `admin` | — | `@alfred/metrics` |
-| **RAG Explorer** | `graph` | `knowledge` | `@alfred/rag`, `@alfred/embed` |
+| Desktop App            | Primary Router(s)                 | Secondary Integrations    | Package Dependencies             |
+| ---------------------- | --------------------------------- | ------------------------- | -------------------------------- |
+| Chat                   | `assistant`, `voice`              | `cognitive`, `knowledge`  | `@alfred/history`, `@alfred/rag` |
+| Code Editor            | `fs`, `codex`                     | `agentfs`, `droid`        | `@alfred/embed`                  |
+| Agent Waves            | `orchestrator`, `droid`           | `workflow`, `plan`        | `@alfred/runtime`                |
+| PR Review              | `workflow`, `linear`              | `deploy`, `codex`         | `@alfred/policy`                 |
+| Docker Manager         | `deploy`, `agentfs`               | `admin`                   | `@alfred/metrics`                |
+| Knowledge Graph        | `graph`, `knowledge`              | `cognitive`               | `@alfred/embed`                  |
+| AgentFS Viewer         | `agentfs`                         | `droid`, `codex`          | —                                |
+| Terminal               | `terminal`                        | `fs`                      | `@alfred/tui`                    |
+| Task Manager           | `admin`, `workflow`               | `droid`, `codex`          | `@alfred/metrics`                |
+| Settings               | `profile`, `preference`, `visual` | `privacy`, `token`        | `@alfred/auth`                   |
+| **Cortex Visualizer**  | `visual`                          | `cognitive`               | `@alfred/cortex`                 |
+| **Learning Dashboard** | `cognitive`                       | `knowledge`               | `@alfred/learning`               |
+| **Policy Viewer**      | `admin`                           | `cognitive`               | `@alfred/policy`                 |
+| **Tune Manager**       | `tune`                            | `eval`                    | `@alfred/tune`                   |
+| **Plan Editor**        | `plan`                            | `workflow`, `codexIntent` | `@alfred/plan`                   |
+| **Metrics Dashboard**  | `admin`                           | —                         | `@alfred/metrics`                |
+| **RAG Explorer**       | `graph`                           | `knowledge`               | `@alfred/rag`, `@alfred/embed`   |
 
 ### 1.4 Package Coverage Matrix
 
 All 26 ALFRED packages mapped to desktop UI surfaces:
 
-| Package | UI Surface | Coverage Level |
-|---------|------------|----------------|
-| `@alfred/agent` | Agent Waves, AgentFS Viewer | ✅ Full |
-| `@alfred/api` | All apps (tRPC client) | ✅ Full |
-| `@alfred/auth` | Settings → Sessions, Biometric Dialogs | ✅ Full |
-| `@alfred/codex` | Code Editor, Agent Waves | ✅ Full |
-| `@alfred/cognitive` | Orb, Status Area, Learning Dashboard | ✅ Full |
-| `@alfred/cortex` | Cortex Visualizer, Orb Animations, Wallpaper | ✅ Full |
-| `@alfred/db` | All apps (via routers) | ✅ Full |
-| `@alfred/embed` | RAG Explorer, Knowledge Graph | ✅ Full |
-| `@alfred/graph` | Knowledge Graph, RAG Explorer | ✅ Full |
-| `@alfred/history` | Chat → History Panel | ✅ Full |
-| `@alfred/knowledge` | Knowledge Graph, Chat Context | ✅ Full |
-| `@alfred/learning` | Learning Dashboard | ✅ Full |
-| `@alfred/logger` | Task Manager Logs | ✅ Internal |
-| `@alfred/metrics` | Metrics Dashboard, Task Manager | ✅ Full |
-| `@alfred/plan` | Plan Editor, Workflow Builder | ✅ Full |
-| `@alfred/policy` | Policy Viewer, Permission Dialogs | ✅ Full |
-| `@alfred/protocol` | Agent Selector, ACP Sessions | ✅ Full |
-| `@alfred/rag` | RAG Explorer, Chat Context | ✅ Full |
-| `@alfred/runtime` | Agent Waves, Workflow Builder | ✅ Full |
-| `@alfred/test-kit` | — | ✅ Internal |
-| `@alfred/tsconfig` | — | ✅ Internal |
-| `@alfred/tui` | Terminal TUI Mode | ✅ Full |
-| `@alfred/tune` | Tune Manager | ✅ Full |
-| `@alfred/type` | All apps (type definitions) | ✅ Full |
-| `@alfred/ui` | All apps (UI primitives) | ✅ Full |
-| `@alfred/voice` | Chat Voice, Orb | ✅ Full |
+| Package             | UI Surface                                   | Coverage Level |
+| ------------------- | -------------------------------------------- | -------------- |
+| `@alfred/agent`     | Agent Waves, AgentFS Viewer                  | ✅ Full        |
+| `@alfred/api`       | All apps (tRPC client)                       | ✅ Full        |
+| `@alfred/auth`      | Settings → Sessions, Biometric Dialogs       | ✅ Full        |
+| `@alfred/codex`     | Code Editor, Agent Waves                     | ✅ Full        |
+| `@alfred/cognitive` | Orb, Status Area, Learning Dashboard         | ✅ Full        |
+| `@alfred/cortex`    | Cortex Visualizer, Orb Animations, Wallpaper | ✅ Full        |
+| `@alfred/db`        | All apps (via routers)                       | ✅ Full        |
+| `@alfred/embed`     | RAG Explorer, Knowledge Graph                | ✅ Full        |
+| `@alfred/graph`     | Knowledge Graph, RAG Explorer                | ✅ Full        |
+| `@alfred/history`   | Chat → History Panel                         | ✅ Full        |
+| `@alfred/knowledge` | Knowledge Graph, Chat Context                | ✅ Full        |
+| `@alfred/learning`  | Learning Dashboard                           | ✅ Full        |
+| `@alfred/logger`    | Task Manager Logs                            | ✅ Internal    |
+| `@alfred/metrics`   | Metrics Dashboard, Task Manager              | ✅ Full        |
+| `@alfred/plan`      | Plan Editor, Workflow Builder                | ✅ Full        |
+| `@alfred/policy`    | Policy Viewer, Permission Dialogs            | ✅ Full        |
+| `@alfred/protocol`  | Agent Selector, ACP Sessions                 | ✅ Full        |
+| `@alfred/rag`       | RAG Explorer, Chat Context                   | ✅ Full        |
+| `@alfred/runtime`   | Agent Waves, Workflow Builder                | ✅ Full        |
+| `@alfred/test-kit`  | —                                            | ✅ Internal    |
+| `@alfred/tsconfig`  | —                                            | ✅ Internal    |
+| `@alfred/tui`       | Terminal TUI Mode                            | ✅ Full        |
+| `@alfred/tune`      | Tune Manager                                 | ✅ Full        |
+| `@alfred/type`      | All apps (type definitions)                  | ✅ Full        |
+| `@alfred/ui`        | All apps (UI primitives)                     | ✅ Full        |
+| `@alfred/voice`     | Chat Voice, Orb                              | ✅ Full        |
 
 ### 1.5 Architectural Decision: Hybrid ReactFlow Strategy
 
@@ -218,16 +219,16 @@ App-Specific Graphs (ReactFlow, isolated per app)
 
 #### Rationale
 
-| Concern | ReactFlow | Traditional DOM | Winner |
-|---------|-----------|-----------------|--------|
-| Tiling window management | ❌ Not designed for it | ✅ Native support | DOM |
-| Window z-ordering | ⚠️ Workaround needed | ✅ Native CSS | DOM |
-| Window minimize/maximize | ❌ Not supported | ✅ Trivial | DOM |
-| Resize handles | ⚠️ Custom implementation | ✅ Native/CSS | DOM |
-| Infinite canvas panning | ✅ Core feature | ❌ Complex to build | ReactFlow |
-| Node-based visualization | ✅ Core feature | ❌ Complex to build | ReactFlow |
-| Edge connections | ✅ Built-in | ❌ Manual SVG | ReactFlow |
-| Performance (1000+ nodes) | ✅ Virtualized | ⚠️ Manual virtualization | ReactFlow |
+| Concern                   | ReactFlow                | Traditional DOM          | Winner    |
+| ------------------------- | ------------------------ | ------------------------ | --------- |
+| Tiling window management  | ❌ Not designed for it   | ✅ Native support        | DOM       |
+| Window z-ordering         | ⚠️ Workaround needed     | ✅ Native CSS            | DOM       |
+| Window minimize/maximize  | ❌ Not supported         | ✅ Trivial               | DOM       |
+| Resize handles            | ⚠️ Custom implementation | ✅ Native/CSS            | DOM       |
+| Infinite canvas panning   | ✅ Core feature          | ❌ Complex to build      | ReactFlow |
+| Node-based visualization  | ✅ Core feature          | ❌ Complex to build      | ReactFlow |
+| Edge connections          | ✅ Built-in              | ❌ Manual SVG            | ReactFlow |
+| Performance (1000+ nodes) | ✅ Virtualized           | ⚠️ Manual virtualization | ReactFlow |
 
 #### Implementation Impact
 
@@ -237,13 +238,21 @@ App-Specific Graphs (ReactFlow, isolated per app)
 
 ```typescript
 // Desktop Store (NO ReactFlow dependency)
-type DesktopState = WindowSlice & TilingSlice & ViewportSlice & TaskbarSlice & CacheSlice & ContextSlice;
+type DesktopState = WindowSlice &
+  TilingSlice &
+  ViewportSlice &
+  TaskbarSlice &
+  CacheSlice &
+  ContextSlice;
 
 // Mindscape Store (ReactFlow isolated)
-type MindscapeState = MindscapeSlice;  // import { Node, Edge } from "@xyflow/react"
+type MindscapeState = MindscapeSlice; // import { Node, Edge } from "@xyflow/react"
 
 // App Graph Stores (ReactFlow isolated per app)
-type KnowledgeGraphState = { nodes: KnowledgeGraphNode[]; edges: KnowledgeGraphEdge[]; };
+type KnowledgeGraphState = {
+  nodes: KnowledgeGraphNode[];
+  edges: KnowledgeGraphEdge[];
+};
 ```
 
 **Component Architecture:**
@@ -292,6 +301,7 @@ Primary container orchestrating all desktop layers.
 **File:** `apps/web/src/components/desktop/shell.tsx`
 
 **Responsibilities:**
+
 - Initialize desktop state from persisted storage
 - Manage layer visibility and z-ordering
 - Handle global keyboard shortcuts
@@ -299,6 +309,7 @@ Primary container orchestrating all desktop layers.
 - Bridge voice commands to window actions
 
 **Props Interface:**
+
 ```
 AlfredDesktopShellProps {
   initialLayout?: PersistedDesktopLayout
@@ -308,6 +319,7 @@ AlfredDesktopShellProps {
 ```
 
 **State Dependencies:**
+
 - `useDesktopStore()` — Primary desktop state
 - `useTilingStore()` — Tiling layout state
 - `useOrbStore()` — Orb presence state
@@ -322,6 +334,7 @@ macOS-inspired top menu bar with Alfred branding.
 **File:** `apps/web/src/components/desktop/menubar/menubar.tsx`
 
 **Child Components:**
+
 - `AlfredMenu` — Apple menu equivalent (About, Preferences, Quit)
 - `AppMenu` — Context-sensitive menus for focused app
 - `StatusArea` — System status icons
@@ -329,6 +342,7 @@ macOS-inspired top menu bar with Alfred branding.
 - `ClockWidget` — Time display with calendar popover
 
 **Props Interface:**
+
 ```
 MenuBarProps {
   focusedWindow: WindowInstance | null
@@ -347,6 +361,7 @@ Windows 11-inspired bottom taskbar with app launchers and system tray.
 **File:** `apps/web/src/components/desktop/taskbar/taskbar.tsx`
 
 **Child Components:**
+
 - `LaunchButton` — Alfred logo, opens app drawer
 - `PinnedApps` — User-pinned application shortcuts
 - `RunningApps` — Active window indicators with previews
@@ -354,6 +369,7 @@ Windows 11-inspired bottom taskbar with app launchers and system tray.
 - `ClockTray` — Time with notification center toggle
 
 **Props Interface:**
+
 ```
 TaskbarProps {
   pinnedApps: WindowType[]
@@ -375,6 +391,7 @@ Wayland-inspired tiling window manager supporting multiple layouts.
 **File:** `apps/web/src/components/desktop/tiling/manager.tsx`
 
 **Tiling Layouts:**
+
 - `monocle` — Single fullscreen window
 - `split-h` — Horizontal 50/50 split
 - `split-v` — Vertical 50/50 split
@@ -384,17 +401,18 @@ Wayland-inspired tiling window manager supporting multiple layouts.
 - `floating` — Traditional floating windows
 
 **Key Functions:**
+
 ```
 TilingWindowManager {
   // Layout management
   setLayout(layout: TilingLayout): void
   cycleLayout(): void
-  
+
   // Window operations
   tileWindow(windowId: string, zone: TileZone): void
   swapWindows(windowA: string, windowB: string): void
   focusDirection(direction: 'left' | 'right' | 'up' | 'down'): void
-  
+
   // Zone management
   resizeZone(zoneId: string, delta: { width?: number, height?: number }): void
   splitZone(zoneId: string, direction: 'h' | 'v'): void
@@ -411,6 +429,7 @@ Unified window decoration with JARVIS-aesthetic styling.
 **File:** `apps/web/src/components/desktop/windows/chrome.tsx`
 
 **Visual Structure:**
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ ● ● ●  │ [Icon] Window Title          │ [−] [□] [×]   │
@@ -423,6 +442,7 @@ Unified window decoration with JARVIS-aesthetic styling.
 ```
 
 **Props Interface:**
+
 ```
 WindowChromeProps {
   id: string
@@ -430,23 +450,23 @@ WindowChromeProps {
   icon: ReactNode
   type: WindowType
   children: ReactNode
-  
+
   // Control visibility
   closable: boolean
   minimizable: boolean
   maximizable: boolean
   resizable: boolean
-  
+
   // State
   isFocused: boolean
   isMaximized: boolean
   isTiled: boolean
   tileZone?: TileZone
-  
+
   // Constraints
   minSize: { width: number, height: number }
   maxSize?: { width: number, height: number }
-  
+
   // Callbacks
   onClose: () => void
   onMinimize: () => void
@@ -661,14 +681,14 @@ ChatAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `MessageList` | `message-list.tsx` | Virtualized message history with streaming support |
-| `InputArea` | `input-area.tsx` | Text input with voice toggle and attachments |
-| `VoiceIndicator` | `voice-indicator.tsx` | Real-time voice waveform visualization |
-| `ContextPanel` | `context-panel.tsx` | Collapsible panel showing active context |
-| `ThreadSidebar` | `thread-sidebar.tsx` | Previous conversation threads |
-| `KnowledgePreview` | `knowledge-preview.tsx` | Inline knowledge node previews |
+| Component          | File                    | Purpose                                            |
+| ------------------ | ----------------------- | -------------------------------------------------- |
+| `MessageList`      | `message-list.tsx`      | Virtualized message history with streaming support |
+| `InputArea`        | `input-area.tsx`        | Text input with voice toggle and attachments       |
+| `VoiceIndicator`   | `voice-indicator.tsx`   | Real-time voice waveform visualization             |
+| `ContextPanel`     | `context-panel.tsx`     | Collapsible panel showing active context           |
+| `ThreadSidebar`    | `thread-sidebar.tsx`    | Previous conversation threads                      |
+| `KnowledgePreview` | `knowledge-preview.tsx` | Inline knowledge node previews                     |
 
 **State Management:**
 
@@ -678,16 +698,16 @@ useChatAppStore {
   activeThreadId: string | null
   messages: UIMessage[]
   isStreaming: boolean
-  
+
   // Voice state
   voiceMode: 'idle' | 'listening' | 'processing' | 'speaking'
   audioLevel: number
   transcript: string
-  
+
   // Context state
   contextRefs: ResourceRef[]
   ragResults: RagDocEntry[]
-  
+
   // Actions
   sendMessage(content: string): Promise<void>
   startVoice(): void
@@ -699,13 +719,13 @@ useChatAppStore {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `assistant` | `stream` | Primary message streaming |
-| `voice` | `stt`, `tts`, `s2s` | Voice transcription and synthesis |
-| `cognitive` | `state`, `feedback` | Cognitive state display |
-| `knowledge` | `search` | Context-aware knowledge retrieval |
-| `graph` | `query` | Knowledge graph lookups |
+| Router      | Procedures          | Usage                             |
+| ----------- | ------------------- | --------------------------------- |
+| `assistant` | `stream`            | Primary message streaming         |
+| `voice`     | `stt`, `tts`, `s2s` | Voice transcription and synthesis |
+| `cognitive` | `state`, `feedback` | Cognitive state display           |
+| `knowledge` | `search`            | Context-aware knowledge retrieval |
+| `graph`     | `query`             | Knowledge graph lookups           |
 
 **Voice-to-Voice Flow:**
 
@@ -753,15 +773,15 @@ CodeAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `EditorTabs` | `editor-tabs.tsx` | Multi-file tab bar with dirty indicators |
-| `MonacoEditor` | `monaco-editor.tsx` | Core Monaco instance with ALFRED theme |
-| `FileTree` | `file-tree.tsx` | Project file navigator |
-| `AISuggestions` | `ai-suggestions.tsx` | Inline completion overlay |
-| `DiffViewer` | `diff-viewer.tsx` | Side-by-side and inline diff modes |
-| `SymbolOutline` | `symbol-outline.tsx` | Function/class outline panel |
-| `GitGutter` | `git-gutter.tsx` | Line-level git status |
+| Component       | File                 | Purpose                                  |
+| --------------- | -------------------- | ---------------------------------------- |
+| `EditorTabs`    | `editor-tabs.tsx`    | Multi-file tab bar with dirty indicators |
+| `MonacoEditor`  | `monaco-editor.tsx`  | Core Monaco instance with ALFRED theme   |
+| `FileTree`      | `file-tree.tsx`      | Project file navigator                   |
+| `AISuggestions` | `ai-suggestions.tsx` | Inline completion overlay                |
+| `DiffViewer`    | `diff-viewer.tsx`    | Side-by-side and inline diff modes       |
+| `SymbolOutline` | `symbol-outline.tsx` | Function/class outline panel             |
+| `GitGutter`     | `git-gutter.tsx`     | Line-level git status                    |
 
 **Monaco Configuration:**
 
@@ -774,11 +794,11 @@ MonacoConfig {
   minimap: { enabled: true, scale: 1 }
   wordWrap: 'on'
   formatOnSave: true
-  
+
   // AI Features
   inlineSuggest: { enabled: true }
   suggestOnTriggerCharacters: true
-  
+
   // ALFRED-specific
   agentEditHighlight: true
   knowledgeHover: true
@@ -794,12 +814,12 @@ useAICompletions {
   suggestions: CompletionSuggestion[]
   isLoading: boolean
   confidenceThreshold: number
-  
+
   // Methods
   triggerCompletion(position: Position): Promise<void>
   acceptSuggestion(index: number): void
   dismissSuggestion(): void
-  
+
   // Configuration
   setModel(model: string): void
   setContext(files: string[]): void
@@ -808,12 +828,12 @@ useAICompletions {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `fs` | `read`, `write`, `list` | File operations |
-| `codex` | `stream`, `sessions` | AI code generation |
+| Router    | Procedures                          | Usage                 |
+| --------- | ----------------------------------- | --------------------- |
+| `fs`      | `read`, `write`, `list`             | File operations       |
+| `codex`   | `stream`, `sessions`                | AI code generation    |
 | `agentfs` | `workspace.read`, `workspace.write` | Agent workspace files |
-| `droid` | `stream` | Agent-driven edits |
+| `droid`   | `stream`                            | Agent-driven edits    |
 
 ---
 
@@ -835,14 +855,14 @@ AgentsAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `WaveTimeline` | `wave-timeline.tsx` | Horizontal timeline of execution waves |
-| `AgentCard` | `agent-card.tsx` | Individual agent status card |
-| `SpawnTree` | `spawn-tree.tsx` | Hierarchical spawn visualization |
-| `ExecutionLog` | `execution-log.tsx` | Scrollable log of agent actions |
-| `DependencyGraph` | `dependency-graph.tsx` | Visual dep graph between subtasks |
-| `ResourceUsage` | `resource-usage.tsx` | CPU/memory/API usage meters |
+| Component         | File                   | Purpose                                |
+| ----------------- | ---------------------- | -------------------------------------- |
+| `WaveTimeline`    | `wave-timeline.tsx`    | Horizontal timeline of execution waves |
+| `AgentCard`       | `agent-card.tsx`       | Individual agent status card           |
+| `SpawnTree`       | `spawn-tree.tsx`       | Hierarchical spawn visualization       |
+| `ExecutionLog`    | `execution-log.tsx`    | Scrollable log of agent actions        |
+| `DependencyGraph` | `dependency-graph.tsx` | Visual dep graph between subtasks      |
+| `ResourceUsage`   | `resource-usage.tsx`   | CPU/memory/API usage meters            |
 
 **Wave Visualization Model:**
 
@@ -853,10 +873,10 @@ Wave {
   status: 'pending' | 'active' | 'completed' | 'failed'
   startedAt?: Timestamp
   completedAt?: Timestamp
-  
+
   agents: AgentInstance[]
   dependencies: WaveDependency[]
-  
+
   metrics: {
     totalAgents: number
     completedAgents: number
@@ -871,27 +891,27 @@ AgentInstance {
   subtaskId: string
   subtaskTitle: string
   status: AgentStatus
-  
+
   spawned: Timestamp
   completed?: Timestamp
-  
+
   toolCalls: ToolCallSummary[]
   filesModified: string[]
   linesChanged: number
-  
+
   error?: AgentError
 }
 ```
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `orchestrator` | `run`, `stream`, `events` | Orchestration execution |
-| `droid` | `stream` | Individual agent streams |
-| `codex` | `sessions` | Codex CLI agent sessions |
-| `workflow` | `events` | Workflow event stream |
-| `plan` | `generate`, `status` | ExecPlan generation and tracking |
+| Router         | Procedures                | Usage                            |
+| -------------- | ------------------------- | -------------------------------- |
+| `orchestrator` | `run`, `stream`, `events` | Orchestration execution          |
+| `droid`        | `stream`                  | Individual agent streams         |
+| `codex`        | `sessions`                | Codex CLI agent sessions         |
+| `workflow`     | `events`                  | Workflow event stream            |
+| `plan`         | `generate`, `status`      | ExecPlan generation and tracking |
 
 **Real-time Event Streaming:**
 
@@ -900,12 +920,12 @@ useAgentWavesStream(runId: string) {
   // Subscriptions
   orchestratorEvents: EventSource → OrchestratorEvent[]
   agentUpdates: Map<string, AgentUpdate>
-  
+
   // Derived state
   waves: Wave[]
   activeWave: Wave | null
   completedWaves: Wave[]
-  
+
   // Actions
   pauseExecution(): Promise<void>
   resumeExecution(): Promise<void>
@@ -934,15 +954,15 @@ PRAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `PRList` | `pr-list.tsx` | Filterable list of PRs |
-| `PRDetail` | `pr-detail.tsx` | Full PR information panel |
-| `DiffPanel` | `diff-panel.tsx` | File-by-file diff viewer |
-| `CommentThread` | `comment-thread.tsx` | Inline comment threads |
-| `MergeControls` | `merge-controls.tsx` | Merge/squash/rebase buttons with biometric |
-| `CIStatus` | `ci-status.tsx` | CI/CD pipeline status |
-| `ReviewChecklist` | `review-checklist.tsx` | AI-generated review checklist |
+| Component         | File                   | Purpose                                    |
+| ----------------- | ---------------------- | ------------------------------------------ |
+| `PRList`          | `pr-list.tsx`          | Filterable list of PRs                     |
+| `PRDetail`        | `pr-detail.tsx`        | Full PR information panel                  |
+| `DiffPanel`       | `diff-panel.tsx`       | File-by-file diff viewer                   |
+| `CommentThread`   | `comment-thread.tsx`   | Inline comment threads                     |
+| `MergeControls`   | `merge-controls.tsx`   | Merge/squash/rebase buttons with biometric |
+| `CIStatus`        | `ci-status.tsx`        | CI/CD pipeline status                      |
+| `ReviewChecklist` | `review-checklist.tsx` | AI-generated review checklist              |
 
 **PR Data Model:**
 
@@ -952,29 +972,29 @@ PullRequest {
   number: number
   title: string
   description: string
-  
+
   author: {
     type: 'human' | 'agent'
     id: string
     name: string
     avatar?: string
   }
-  
+
   repository: Repository
   sourceBranch: string
   targetBranch: string
-  
+
   status: 'open' | 'merged' | 'closed'
   reviewStatus: 'pending' | 'approved' | 'changes_requested'
-  
+
   diff: DiffSummary
   comments: Comment[]
   reviews: Review[]
   ciChecks: CICheck[]
-  
+
   createdAt: Timestamp
   updatedAt: Timestamp
-  
+
   // ALFRED-specific
   orchestratorRunId?: string
   subtaskIds?: string[]
@@ -984,13 +1004,13 @@ PullRequest {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `workflow` | `events` | PR creation events |
-| `linear` | `updateIssue` | Link PRs to Linear issues |
-| `deploy` | `preview`, `promote` | Deployment from PR |
-| `codex` | `sessions` | View agent that created PR |
-| `agentfs` | `audit` | File change history |
+| Router     | Procedures           | Usage                      |
+| ---------- | -------------------- | -------------------------- |
+| `workflow` | `events`             | PR creation events         |
+| `linear`   | `updateIssue`        | Link PRs to Linear issues  |
+| `deploy`   | `preview`, `promote` | Deployment from PR         |
+| `codex`    | `sessions`           | View agent that created PR |
+| `agentfs`  | `audit`              | File change history        |
 
 ---
 
@@ -1011,14 +1031,14 @@ DockerAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `ContainerList` | `container-list.tsx` | List of all containers with status |
-| `ContainerDetail` | `container-detail.tsx` | Full container information |
-| `LogsViewer` | `logs-viewer.tsx` | Real-time log streaming |
-| `ResourceChart` | `resource-chart.tsx` | CPU/memory/network graphs |
-| `VolumeManager` | `volume-manager.tsx` | Volume mount management |
-| `NetworkInspector` | `network-inspector.tsx` | Container network view |
+| Component          | File                    | Purpose                            |
+| ------------------ | ----------------------- | ---------------------------------- |
+| `ContainerList`    | `container-list.tsx`    | List of all containers with status |
+| `ContainerDetail`  | `container-detail.tsx`  | Full container information         |
+| `LogsViewer`       | `logs-viewer.tsx`       | Real-time log streaming            |
+| `ResourceChart`    | `resource-chart.tsx`    | CPU/memory/network graphs          |
+| `VolumeManager`    | `volume-manager.tsx`    | Volume mount management            |
+| `NetworkInspector` | `network-inspector.tsx` | Container network view             |
 
 **Container Model:**
 
@@ -1028,26 +1048,26 @@ Container {
   name: string
   image: string
   status: 'running' | 'stopped' | 'paused' | 'created'
-  
+
   // AgentFS metadata
   agentFsWorkspaceId?: string
   orchestratorRunId?: string
   agentType?: 'codex' | 'droid'
-  
+
   // Resources
   cpu: { usage: number, limit: number }
   memory: { usage: number, limit: number }
   network: { rx: number, tx: number }
-  
+
   // Mounts
   volumes: VolumeMount[]
-  
+
   // Lifecycle
   createdAt: Timestamp
   startedAt?: Timestamp
   finishedAt?: Timestamp
   exitCode?: number
-  
+
   // Ports
   ports: PortMapping[]
 }
@@ -1055,11 +1075,11 @@ Container {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `deploy` | `health`, `probe` | Container health checks |
-| `agentfs` | `workspace.list` | AgentFS workspace containers |
-| `admin` | `perfStats` | Resource statistics |
+| Router    | Procedures        | Usage                        |
+| --------- | ----------------- | ---------------------------- |
+| `deploy`  | `health`, `probe` | Container health checks      |
+| `agentfs` | `workspace.list`  | AgentFS workspace containers |
+| `admin`   | `perfStats`       | Resource statistics          |
 
 ---
 
@@ -1081,15 +1101,15 @@ KnowledgeAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `GraphCanvas` | `graph-canvas.tsx` | Force-directed graph visualization |
-| `EntityPanel` | `entity-panel.tsx` | Selected entity details |
-| `FactList` | `fact-list.tsx` | Facts associated with entity |
-| `RelationList` | `relation-list.tsx` | Entity relationships |
-| `SearchBar` | `search-bar.tsx` | Semantic and keyword search |
-| `TimeSlider` | `time-slider.tsx` | Temporal navigation |
-| `InsightPanel` | `insight-panel.tsx` | AI-generated insights |
+| Component      | File                | Purpose                            |
+| -------------- | ------------------- | ---------------------------------- |
+| `GraphCanvas`  | `graph-canvas.tsx`  | Force-directed graph visualization |
+| `EntityPanel`  | `entity-panel.tsx`  | Selected entity details            |
+| `FactList`     | `fact-list.tsx`     | Facts associated with entity       |
+| `RelationList` | `relation-list.tsx` | Entity relationships               |
+| `SearchBar`    | `search-bar.tsx`    | Semantic and keyword search        |
+| `TimeSlider`   | `time-slider.tsx`   | Temporal navigation                |
+| `InsightPanel` | `insight-panel.tsx` | AI-generated insights              |
 
 **Knowledge Data Model:**
 
@@ -1099,16 +1119,16 @@ KnowledgeEntity {
   type: EntityType
   name: string
   aliases: string[]
-  
+
   facts: KnowledgeFact[]
   relations: KnowledgeRelation[]
-  
+
   confidence: number
   source: 'conversation' | 'extraction' | 'inference'
-  
+
   createdAt: Timestamp
   updatedAt: Timestamp
-  
+
   // Visualization
   position?: { x: number, y: number }
   cluster?: string
@@ -1119,10 +1139,10 @@ KnowledgeFact {
   subject: string
   predicate: string
   object: string
-  
+
   confidence: number
   temporal?: TemporalScope
-  
+
   sources: FactSource[]
   contradictions?: Contradiction[]
 }
@@ -1132,21 +1152,21 @@ KnowledgeRelation {
   type: RelationType
   sourceId: string
   targetId: string
-  
+
   strength: number
   bidirectional: boolean
-  
+
   metadata?: Record<string, unknown>
 }
 ```
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `graph` | `query`, `connect`, `watch` | Graph operations |
+| Router      | Procedures                     | Usage                |
+| ----------- | ------------------------------ | -------------------- |
+| `graph`     | `query`, `connect`, `watch`    | Graph operations     |
 | `knowledge` | `extract`, `search`, `explain` | Knowledge extraction |
-| `cognitive` | `state` | Cognitive context |
+| `cognitive` | `state`                        | Cognitive context    |
 
 ---
 
@@ -1168,14 +1188,14 @@ AgentFSAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `WorkspaceList` | `workspace-list.tsx` | List of AgentFS workspaces |
-| `CallTimeline` | `call-timeline.tsx` | Chronological operation timeline |
-| `FileAudit` | `file-audit.tsx` | File-level change history |
-| `CheckpointBrowser` | `checkpoint-browser.tsx` | Browse and restore checkpoints |
-| `KVViewer` | `kv-viewer.tsx` | Key-value store browser |
-| `OperationDetail` | `operation-detail.tsx` | Full operation details |
+| Component           | File                     | Purpose                          |
+| ------------------- | ------------------------ | -------------------------------- |
+| `WorkspaceList`     | `workspace-list.tsx`     | List of AgentFS workspaces       |
+| `CallTimeline`      | `call-timeline.tsx`      | Chronological operation timeline |
+| `FileAudit`         | `file-audit.tsx`         | File-level change history        |
+| `CheckpointBrowser` | `checkpoint-browser.tsx` | Browse and restore checkpoints   |
+| `KVViewer`          | `kv-viewer.tsx`          | Key-value store browser          |
+| `OperationDetail`   | `operation-detail.tsx`   | Full operation details           |
 
 **AgentFS Data Model:**
 
@@ -1185,14 +1205,14 @@ AgentFSWorkspace {
   runId: string
   containerId: string
   containerName: string
-  
+
   status: 'active' | 'suspended' | 'completed' | 'failed'
-  
+
   // Stats
   totalOperations: number
   filesModified: number
   checkpointCount: number
-  
+
   createdAt: Timestamp
   lastActivityAt: Timestamp
 }
@@ -1201,14 +1221,14 @@ AgentFSOperation {
   id: string
   workspaceId: string
   agentId: string
-  
+
   type: 'read' | 'write' | 'delete' | 'exec' | 'checkpoint' | 'kv'
   path?: string
-  
+
   input: Record<string, unknown>
   output?: Record<string, unknown>
   error?: string
-  
+
   durationMs: number
   timestamp: Timestamp
 }
@@ -1216,11 +1236,11 @@ AgentFSOperation {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `agentfs` | `workspace.*`, `audit` | All AgentFS operations |
-| `droid` | `stream` | Link to agent execution |
-| `codex` | `sessions` | Link to Codex sessions |
+| Router    | Procedures             | Usage                   |
+| --------- | ---------------------- | ----------------------- |
+| `agentfs` | `workspace.*`, `audit` | All AgentFS operations  |
+| `droid`   | `stream`               | Link to agent execution |
+| `codex`   | `sessions`             | Link to Codex sessions  |
 
 ---
 
@@ -1241,14 +1261,14 @@ CortexAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `ShaderPreview` | `shader-preview.tsx` | Live WebGPU shader rendering canvas |
-| `ParameterTuner` | `parameter-tuner.tsx` | Real-time shader parameter sliders |
-| `PresetBrowser` | `preset-browser.tsx` | Browse and apply visualization presets |
-| `GPUMonitor` | `gpu-monitor.tsx` | GPU utilization and memory metrics |
-| `ShaderEditor` | `shader-editor.tsx` | WGSL shader code editor (advanced) |
-| `ExportPanel` | `export-panel.tsx` | Export presets as shareable configs |
+| Component        | File                  | Purpose                                |
+| ---------------- | --------------------- | -------------------------------------- |
+| `ShaderPreview`  | `shader-preview.tsx`  | Live WebGPU shader rendering canvas    |
+| `ParameterTuner` | `parameter-tuner.tsx` | Real-time shader parameter sliders     |
+| `PresetBrowser`  | `preset-browser.tsx`  | Browse and apply visualization presets |
+| `GPUMonitor`     | `gpu-monitor.tsx`     | GPU utilization and memory metrics     |
+| `ShaderEditor`   | `shader-editor.tsx`   | WGSL shader code editor (advanced)     |
+| `ExportPanel`    | `export-panel.tsx`    | Export presets as shareable configs    |
 
 **Cortex Data Model:**
 
@@ -1257,15 +1277,15 @@ CortexPreset {
   id: string
   name: string
   category: 'orb' | 'wallpaper' | 'graph' | 'particle' | 'neural'
-  
+
   shader: {
     vertex: string      // WGSL vertex shader
     fragment: string    // WGSL fragment shader
     compute?: string    // WGSL compute shader (optional)
   }
-  
+
   parameters: ShaderParameter[]
-  
+
   metadata: {
     author: string
     createdAt: Timestamp
@@ -1286,10 +1306,10 @@ ShaderParameter {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `visual` | `config.get`, `presets.list`, `presets.save` | Preset management |
-| `cognitive` | `state` | Cognitive state for adaptive visuals |
+| Router      | Procedures                                   | Usage                                |
+| ----------- | -------------------------------------------- | ------------------------------------ |
+| `visual`    | `config.get`, `presets.list`, `presets.save` | Preset management                    |
+| `cognitive` | `state`                                      | Cognitive state for adaptive visuals |
 
 **GPU Integration:**
 
@@ -1299,14 +1319,14 @@ useCortexEngine() {
   device: GPUDevice | null
   adapter: GPUAdapter | null
   isSupported: boolean
-  
+
   // Rendering
   renderFrame(preset: CortexPreset, params: Record<string, unknown>): void
   setParameter(name: string, value: unknown): void
-  
+
   // Performance
   gpuMetrics: { utilization: number, memory: number, fps: number }
-  
+
   // Presets
   loadPreset(presetId: string): Promise<void>
   savePreset(preset: CortexPreset): Promise<void>
@@ -1332,14 +1352,14 @@ LearningAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `MistakeLedger` | `mistake-ledger.tsx` | Chronological list of errors and corrections |
-| `CorrectionTimeline` | `correction-timeline.tsx` | Visual timeline of self-corrections |
-| `AccuracyChart` | `accuracy-chart.tsx` | Accuracy trends over time by category |
-| `ImprovementInsights` | `improvement-insights.tsx` | AI-generated insights on learning patterns |
-| `CategoryBreakdown` | `category-breakdown.tsx` | Error distribution by task category |
-| `LearningGoals` | `learning-goals.tsx` | Track progress toward improvement goals |
+| Component             | File                       | Purpose                                      |
+| --------------------- | -------------------------- | -------------------------------------------- |
+| `MistakeLedger`       | `mistake-ledger.tsx`       | Chronological list of errors and corrections |
+| `CorrectionTimeline`  | `correction-timeline.tsx`  | Visual timeline of self-corrections          |
+| `AccuracyChart`       | `accuracy-chart.tsx`       | Accuracy trends over time by category        |
+| `ImprovementInsights` | `improvement-insights.tsx` | AI-generated insights on learning patterns   |
+| `CategoryBreakdown`   | `category-breakdown.tsx`   | Error distribution by task category          |
+| `LearningGoals`       | `learning-goals.tsx`       | Track progress toward improvement goals      |
 
 **Learning Data Model:**
 
@@ -1347,10 +1367,10 @@ LearningAppProps {
 MistakeEntry {
   id: string
   timestamp: Timestamp
-  
+
   category: LearningCategory
   severity: 'minor' | 'moderate' | 'critical'
-  
+
   context: {
     taskType: string
     agentId?: string
@@ -1359,14 +1379,14 @@ MistakeEntry {
     expectedOutput: string
     actualOutput: string
   }
-  
+
   correction: {
     correctedAt: Timestamp
     correctedOutput: string
     correctionSource: 'user' | 'self' | 'supervisor'
     lessonLearned: string
   }
-  
+
   recurrence: {
     count: number
     lastOccurrence: Timestamp
@@ -1376,19 +1396,19 @@ MistakeEntry {
 
 LearningMetrics {
   period: TimeRange
-  
+
   accuracy: {
     overall: number
     byCategory: Record<LearningCategory, number>
     trend: number  // positive = improving
   }
-  
+
   mistakes: {
     total: number
     corrected: number
     recurring: number
   }
-  
+
   improvements: {
     categoriesImproved: string[]
     newCapabilities: string[]
@@ -1401,10 +1421,10 @@ LearningCategory = 'code_generation' | 'planning' | 'tool_use' | 'reasoning' | '
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
+| Router      | Procedures                         | Usage               |
+| ----------- | ---------------------------------- | ------------------- |
 | `cognitive` | `feedback.list`, `feedback.submit` | Feedback management |
-| `knowledge` | `extract` | Learning extraction |
+| `knowledge` | `extract`                          | Learning extraction |
 
 **Note:** `@alfred/learning` package provides `mistake_ledger` and `self_supervision` - router integration pending.
 
@@ -1427,22 +1447,22 @@ PolicyAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `DecisionLog` | `decision-log.tsx` | Audit trail of policy decisions |
-| `ConstraintList` | `constraint-list.tsx` | Active autonomy constraints |
-| `AutonomyControls` | `autonomy-controls.tsx` | Adjust autonomy levels |
-| `RuleEditor` | `rule-editor.tsx` | Edit/create policy rules (admin) |
-| `ApprovalQueue` | `approval-queue.tsx` | Pending approval requests |
-| `ScopeViewer` | `scope-viewer.tsx` | OAuth scope breakdown |
+| Component          | File                    | Purpose                          |
+| ------------------ | ----------------------- | -------------------------------- |
+| `DecisionLog`      | `decision-log.tsx`      | Audit trail of policy decisions  |
+| `ConstraintList`   | `constraint-list.tsx`   | Active autonomy constraints      |
+| `AutonomyControls` | `autonomy-controls.tsx` | Adjust autonomy levels           |
+| `RuleEditor`       | `rule-editor.tsx`       | Edit/create policy rules (admin) |
+| `ApprovalQueue`    | `approval-queue.tsx`    | Pending approval requests        |
+| `ScopeViewer`      | `scope-viewer.tsx`      | OAuth scope breakdown            |
 
 **Policy Data Model:**
 
-```  
+```
 PolicyDecision {
   id: string
   timestamp: Timestamp
-  
+
   request: {
     action: PolicyAction
     resource: string
@@ -1450,14 +1470,14 @@ PolicyDecision {
     agentId?: string
     context: Record<string, unknown>
   }
-  
+
   decision: {
     outcome: 'allow' | 'deny' | 'escalate'
     reason: string
     rule: string
     confidence: number
   }
-  
+
   escalation?: {
     escalatedTo: 'user' | 'supervisor'
     resolvedAt?: Timestamp
@@ -1469,12 +1489,12 @@ AutonomyConstraint {
   id: string
   name: string
   description: string
-  
+
   scope: PolicyScope
   level: 'read' | 'low' | 'medium' | 'high'
-  
+
   conditions: ConstraintCondition[]
-  
+
   enabled: boolean
   createdAt: Timestamp
   updatedAt: Timestamp
@@ -1486,10 +1506,10 @@ PolicyAction = 'read' | 'write' | 'delete' | 'execute' | 'deploy' | 'approve'
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `admin` | `policy.list`, `policy.update` | Policy management |
-| `cognitive` | `autonomy.get`, `autonomy.set` | Autonomy levels |
+| Router      | Procedures                     | Usage             |
+| ----------- | ------------------------------ | ----------------- |
+| `admin`     | `policy.list`, `policy.update` | Policy management |
+| `cognitive` | `autonomy.get`, `autonomy.set` | Autonomy levels   |
 
 **Note:** Maps to `@alfred/policy` package's PDP (Policy Decision Point) engine.
 
@@ -1512,14 +1532,14 @@ TuneAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `JobList` | `job-list.tsx` | List of fine-tuning jobs with status |
-| `TrainingProgress` | `training-progress.tsx` | Real-time loss/accuracy charts |
-| `DatasetBrowser` | `dataset-browser.tsx` | Browse and preview training datasets |
-| `HyperparameterEditor` | `hyperparameter-editor.tsx` | Configure training hyperparameters |
-| `ModelComparison` | `model-comparison.tsx` | Compare base vs fine-tuned models |
-| `CheckpointManager` | `checkpoint-manager.tsx` | Manage training checkpoints |
+| Component              | File                        | Purpose                              |
+| ---------------------- | --------------------------- | ------------------------------------ |
+| `JobList`              | `job-list.tsx`              | List of fine-tuning jobs with status |
+| `TrainingProgress`     | `training-progress.tsx`     | Real-time loss/accuracy charts       |
+| `DatasetBrowser`       | `dataset-browser.tsx`       | Browse and preview training datasets |
+| `HyperparameterEditor` | `hyperparameter-editor.tsx` | Configure training hyperparameters   |
+| `ModelComparison`      | `model-comparison.tsx`      | Compare base vs fine-tuned models    |
+| `CheckpointManager`    | `checkpoint-manager.tsx`    | Manage training checkpoints          |
 
 **Tune Data Model:**
 
@@ -1528,7 +1548,7 @@ TuneJob {
   id: string
   name: string
   status: JobStatus
-  
+
   config: {
     baseModel: string
     dataset: string
@@ -1538,7 +1558,7 @@ TuneJob {
     loraRank?: number
     loraAlpha?: number
   }
-  
+
   progress: {
     currentEpoch: number
     currentStep: number
@@ -1547,19 +1567,19 @@ TuneJob {
     accuracy?: number
     eta?: number  // seconds remaining
   }
-  
+
   metrics: {
     trainingLoss: number[]
     validationLoss: number[]
     accuracy: number[]
   }
-  
+
   checkpoints: TuneCheckpoint[]
-  
+
   createdAt: Timestamp
   startedAt?: Timestamp
   completedAt?: Timestamp
-  
+
   error?: string
 }
 
@@ -1567,13 +1587,13 @@ TuneDataset {
   id: string
   name: string
   description: string
-  
+
   stats: {
     samples: number
     avgTokens: number
     categories: string[]
   }
-  
+
   preview: DatasetSample[]
 }
 
@@ -1582,10 +1602,10 @@ JobStatus = 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancell
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `tune` | `start`, `pause`, `resume`, `cancel`, `list` | Job management |
-| `eval` | `run`, `scores` | Model evaluation |
+| Router | Procedures                                   | Usage            |
+| ------ | -------------------------------------------- | ---------------- |
+| `tune` | `start`, `pause`, `resume`, `cancel`, `list` | Job management   |
+| `eval` | `run`, `scores`                              | Model evaluation |
 
 ---
 
@@ -1606,14 +1626,14 @@ PlanAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `PlanCanvas` | `plan-canvas.tsx` | Visual plan builder with drag-drop |
-| `IntentDebugger` | `intent-debugger.tsx` | Test intent classification |
-| `ResearchPanel` | `research-panel.tsx` | Integrated research results |
-| `PatternLibrary` | `pattern-library.tsx` | Reusable plan patterns |
-| `EvaluationMetrics` | `evaluation-metrics.tsx` | Plan quality metrics |
-| `DependencyGraph` | `dependency-graph.tsx` | Task dependency visualization |
+| Component           | File                     | Purpose                            |
+| ------------------- | ------------------------ | ---------------------------------- |
+| `PlanCanvas`        | `plan-canvas.tsx`        | Visual plan builder with drag-drop |
+| `IntentDebugger`    | `intent-debugger.tsx`    | Test intent classification         |
+| `ResearchPanel`     | `research-panel.tsx`     | Integrated research results        |
+| `PatternLibrary`    | `pattern-library.tsx`    | Reusable plan patterns             |
+| `EvaluationMetrics` | `evaluation-metrics.tsx` | Plan quality metrics               |
+| `DependencyGraph`   | `dependency-graph.tsx`   | Task dependency visualization      |
 
 **Plan Data Model:**
 
@@ -1622,27 +1642,27 @@ Plan {
   id: string
   name: string
   description: string
-  
+
   goal: string
   constraints: string[]
-  
+
   tasks: PlanTask[]
   dependencies: TaskDependency[]
-  
+
   research: {
     queries: ResearchQuery[]
     results: ResearchResult[]
   }
-  
+
   evaluation: {
     feasibility: number
     complexity: number
     estimatedDuration: number
     confidence: number
   }
-  
+
   status: 'draft' | 'validated' | 'executing' | 'completed'
-  
+
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -1651,15 +1671,15 @@ PlanTask {
   id: string
   title: string
   description: string
-  
+
   type: 'code' | 'research' | 'review' | 'deploy' | 'test'
   priority: 'critical' | 'high' | 'medium' | 'low'
-  
+
   assignee?: 'codex' | 'droid' | 'claude' | 'human'
-  
+
   inputs: string[]
   outputs: string[]
-  
+
   estimatedMinutes: number
 }
 
@@ -1667,7 +1687,7 @@ IntentClassification {
   input: string
   intent: string
   confidence: number
-  
+
   entities: ExtractedEntity[]
   suggestedPlan?: Plan
 }
@@ -1675,11 +1695,11 @@ IntentClassification {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `plan` | `generate`, `validate`, `save` | Plan CRUD |
-| `codexIntent` | `classify`, `suggest` | Intent classification |
-| `workflow` | `create` | Convert plan to workflow |
+| Router        | Procedures                     | Usage                    |
+| ------------- | ------------------------------ | ------------------------ |
+| `plan`        | `generate`, `validate`, `save` | Plan CRUD                |
+| `codexIntent` | `classify`, `suggest`          | Intent classification    |
+| `workflow`    | `create`                       | Convert plan to workflow |
 
 ---
 
@@ -1700,14 +1720,14 @@ MetricsAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `MetricExplorer` | `metric-explorer.tsx` | Browse available metrics |
-| `DashboardBuilder` | `dashboard-builder.tsx` | Create custom dashboards |
-| `AlertConfig` | `alert-config.tsx` | Configure metric alerts |
-| `QueryEditor` | `query-editor.tsx` | PromQL query interface |
-| `ChartPanel` | `chart-panel.tsx` | Configurable metric charts |
-| `HealthOverview` | `health-overview.tsx` | System health summary |
+| Component          | File                    | Purpose                    |
+| ------------------ | ----------------------- | -------------------------- |
+| `MetricExplorer`   | `metric-explorer.tsx`   | Browse available metrics   |
+| `DashboardBuilder` | `dashboard-builder.tsx` | Create custom dashboards   |
+| `AlertConfig`      | `alert-config.tsx`      | Configure metric alerts    |
+| `QueryEditor`      | `query-editor.tsx`      | PromQL query interface     |
+| `ChartPanel`       | `chart-panel.tsx`       | Configurable metric charts |
+| `HealthOverview`   | `health-overview.tsx`   | System health summary      |
 
 **Metrics Data Model:**
 
@@ -1717,7 +1737,7 @@ MetricDefinition {
   type: 'counter' | 'gauge' | 'histogram' | 'summary'
   help: string
   labels: string[]
-  
+
   category: MetricCategory
 }
 
@@ -1725,14 +1745,14 @@ Dashboard {
   id: string
   name: string
   description: string
-  
+
   panels: DashboardPanel[]
-  
+
   variables: DashboardVariable[]
-  
+
   refreshInterval: number
   timeRange: TimeRange
-  
+
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -1741,11 +1761,11 @@ DashboardPanel {
   id: string
   title: string
   type: 'graph' | 'stat' | 'table' | 'gauge' | 'heatmap'
-  
+
   query: string  // PromQL
-  
+
   position: { x: number, y: number, w: number, h: number }
-  
+
   options: Record<string, unknown>
 }
 
@@ -1754,8 +1774,8 @@ MetricCategory = 'cognitive' | 'agent' | 'voice' | 'api' | 'db' | 'system'
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
+| Router  | Procedures                | Usage            |
+| ------- | ------------------------- | ---------------- |
 | `admin` | `perfStats`, `voiceStats` | Aggregated stats |
 
 **Direct Integration:** Prometheus metrics scraped from `/api/metrics` endpoint.
@@ -1779,14 +1799,14 @@ RAGAppProps {
 
 **Key Child Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `ChunkBrowser` | `chunk-browser.tsx` | Browse indexed document chunks |
-| `EmbeddingVisualizer` | `embedding-visualizer.tsx` | t-SNE/UMAP embedding projection |
-| `RetrievalDebugger` | `retrieval-debugger.tsx` | Test queries and inspect results |
-| `RerankTuner` | `rerank-tuner.tsx` | Tune reranking parameters |
-| `SimilarityExplorer` | `similarity-explorer.tsx` | Explore semantic similarities |
-| `IndexStats` | `index-stats.tsx` | Vector index statistics |
+| Component             | File                       | Purpose                          |
+| --------------------- | -------------------------- | -------------------------------- |
+| `ChunkBrowser`        | `chunk-browser.tsx`        | Browse indexed document chunks   |
+| `EmbeddingVisualizer` | `embedding-visualizer.tsx` | t-SNE/UMAP embedding projection  |
+| `RetrievalDebugger`   | `retrieval-debugger.tsx`   | Test queries and inspect results |
+| `RerankTuner`         | `rerank-tuner.tsx`         | Tune reranking parameters        |
+| `SimilarityExplorer`  | `similarity-explorer.tsx`  | Explore semantic similarities    |
+| `IndexStats`          | `index-stats.tsx`          | Vector index statistics          |
 
 **RAG Data Model:**
 
@@ -1794,7 +1814,7 @@ RAGAppProps {
 RAGChunk {
   id: string
   documentId: string
-  
+
   content: string
   metadata: {
     source: string
@@ -1802,21 +1822,21 @@ RAGChunk {
     section?: string
     tokens: number
   }
-  
+
   embedding?: number[]  // For visualization
-  
+
   createdAt: Timestamp
 }
 
 RetrievalResult {
   query: string
-  
+
   results: Array<{
     chunk: RAGChunk
     score: number
     rerankScore?: number
   }>
-  
+
   metadata: {
     totalChunks: number
     searchTimeMs: number
@@ -1829,14 +1849,14 @@ RetrievalResult {
 EmbeddingProjection {
   method: 'tsne' | 'umap' | 'pca'
   dimensions: 2 | 3
-  
+
   points: Array<{
     id: string
     position: number[]
     label?: string
     cluster?: number
   }>
-  
+
   clusters?: Array<{
     id: number
     centroid: number[]
@@ -1848,12 +1868,13 @@ EmbeddingProjection {
 
 **Backend Integration:**
 
-| Router | Procedures | Usage |
-|--------|------------|-------|
-| `graph` | `query`, `search` | Vector search |
-| `knowledge` | `search` | Semantic search |
+| Router      | Procedures        | Usage           |
+| ----------- | ----------------- | --------------- |
+| `graph`     | `query`, `search` | Vector search   |
+| `knowledge` | `search`          | Semantic search |
 
 **Package Integration:**
+
 - `@alfred/rag`: `doc.ts`, `code.ts`, `rerank.ts`
 - `@alfred/embed`: Embedding generation
 
@@ -1936,35 +1957,35 @@ WindowSlice {
   // State (NO ReactFlow Node<T> — pure TypeScript)
   windows: WindowInstance[]
   zIndexCounter: number
-  
+
   // Window CRUD
   openWindow(type: WindowType, data?: Partial<WindowData>, bounds?: Partial<Bounds>): string
   closeWindow(windowId: string): void
   updateWindow(windowId: string, updates: Partial<WindowInstance>): void
   updateWindowData(windowId: string, data: Partial<WindowData>): void
-  
+
   // Focus management (replaces ReactFlow selection)
   focusWindow(windowId: string): void
   blurWindow(windowId: string): void
   bringToFront(windowId: string): void
   sendToBack(windowId: string): void
-  
+
   // State transitions
   minimizeWindow(windowId: string): void
   maximizeWindow(windowId: string): void
   restoreWindow(windowId: string): void
   toggleMaximize(windowId: string): void
-  
+
   // Geometry (traditional window positioning)
   moveWindow(windowId: string, position: { x: number; y: number }): void
   resizeWindow(windowId: string, size: { width: number; height: number }): void
   setBounds(windowId: string, bounds: Bounds): void
-  
+
   // Batch operations
   closeAllWindows(): void
   minimizeAllWindows(): void
   cascadeWindows(): void
-  
+
   // Query
   getWindowById(windowId: string): WindowInstance | undefined
   getWindowsByType(type: WindowType): WindowInstance[]
@@ -1976,20 +1997,20 @@ WindowInstance {
   id: string
   type: WindowType
   data: WindowData
-  
+
   bounds: Bounds         // { x, y, width, height }
   state: WindowState     // 'normal' | 'minimized' | 'maximized' | 'fullscreen'
-  
+
   isTiled: boolean
   tileZone?: TileZone
-  
+
   zIndex: number
   isFocused: boolean
-  
+
   minSize: { width: number; height: number }
   maxSize?: { width: number; height: number }
   resizable: boolean
-  
+
   createdAt: number
   lastFocusedAt: number
 }
@@ -2006,26 +2027,26 @@ TilingSlice {
   zones: TileZone[]
   windowZoneMap: Map<string, string>
   gapSize: number
-  
+
   // Layout operations
   setLayout(layout: TilingLayout): void
   cycleLayout(): void
-  
+
   // Zone operations
   createZone(zone: TileZone): void
   updateZone(zoneId: string, updates: Partial<TileZone>): void
   removeZone(zoneId: string): void
   splitZone(zoneId: string, direction: 'h' | 'v'): void
   mergeZones(zoneA: string, zoneB: string): void
-  
+
   // Window-zone binding
   assignWindowToZone(windowId: string, zoneId: string): void
   unassignWindow(windowId: string): void
   swapWindowZones(windowA: string, windowB: string): void
-  
+
   // Focus navigation
   focusZoneDirection(direction: 'left' | 'right' | 'up' | 'down'): string | null
-  
+
   // Computed
   getZoneBounds(zoneId: string): Bounds
   getWindowBounds(windowId: string): Bounds | null
@@ -2061,18 +2082,18 @@ ViewportSlice {
   viewport: Viewport
   isSpaceMode: boolean
   isMindscapeMode: boolean
-  
+
   // Focus management
   focusWindow(windowId: string | null): void
   focusNext(): void
   focusPrevious(): void
-  
+
   // Viewport
   setViewport(viewport: Viewport): void
   panTo(x: number, y: number): void
   zoomTo(zoom: number): void
   fitToWindow(windowId: string): void
-  
+
   // Mode toggles
   setSpaceMode(isSpaceMode: boolean): void
   toggleMindscape(): void
@@ -2089,15 +2110,15 @@ DockSlice {
   dockPins: WindowType[]
   recentApps: WindowType[]
   systemTrayItems: SystemTrayItem[]
-  
+
   // Pin management
   pinType(type: WindowType): void
   unpinType(type: WindowType): void
   reorderPins(fromIndex: number, toIndex: number): void
-  
+
   // App launching
   spawnWindow(type: WindowType, resourceRef?: ResourceRef, position?: Position): string
-  
+
   // System tray
   addTrayItem(item: SystemTrayItem): void
   removeTrayItem(itemId: string): void
@@ -2120,35 +2141,35 @@ MindscapeSlice {
   edges: MindscapeEdge[]              // Edge<EdgeData>
   viewport: Viewport                  // { x, y, zoom }
   selectedNodeIds: string[]
-  
+
   // ReactFlow callbacks (ONLY place these exist)
   onNodesChange: OnNodesChange
   onEdgesChange: OnEdgesChange
   onConnect: OnConnect
-  
+
   // Node CRUD
   addNode(node: MindscapeNode): void
   removeNode(nodeId: string): void
   updateNode(nodeId: string, data: Partial<MindscapeNodeData>): void
-  
+
   // Edge CRUD
   addEdge(edge: MindscapeEdge): void
   removeEdge(edgeId: string): void
-  
+
   // Selection
   selectNode(nodeId: string): void
   selectNodes(nodeIds: string[]): void
   clearSelection(): void
-  
+
   // Viewport
   setViewport(viewport: Viewport): void
   fitView(): void
   panTo(x: number, y: number): void
   zoomTo(zoom: number): void
-  
+
   // Layout
   autoLayout(): void
-  
+
   // Integration with Desktop
   spawnFromWindow(windowId: string): void    // Create node from desktop window
   openInDesktop(nodeId: string): void        // Open window for node
@@ -2168,10 +2189,10 @@ MindscapeNodeData {
 
 ```typescript
 // Desktop components: Import from desktop store (no RF)
-import { useDesktopStore } from '@/store/desktop';
+import { useDesktopStore } from "@/store/desktop";
 
 // Mindscape layer ONLY: Import from mindscape store (RF isolated)
-import { useMindscapeStore } from '@/store/mindscape';
+import { useMindscapeStore } from "@/store/mindscape";
 ```
 
 ### 4.4 Orb Store — AI Presence State
@@ -2184,33 +2205,33 @@ OrbStore {
   mode: OrbMode
   state: OrbState
   position: OrbPosition
-  
+
   // Animation state
   intensity: number
   pulseRate: number
   colorShift: number
-  
+
   // Voice overlay
   isVoiceOverlayVisible: boolean
   voiceWaveform: Float32Array
-  
+
   // Mode control
   setMode(mode: OrbMode): void
   dock(): void
   float(): void
   expand(): void
   hide(): void
-  
+
   // State transitions
   setIdle(): void
   setListening(): void
   setThinking(): void
   setTalking(): void
   setActive(): void
-  
+
   // Position (floating mode)
   setPosition(position: OrbPosition): void
-  
+
   // Voice overlay
   showVoiceOverlay(): void
   hideVoiceOverlay(): void
@@ -2232,49 +2253,49 @@ VoiceStore {
   sessionId: string | null
   isActive: boolean
   mode: VoiceMode
-  
+
   // Audio state
   inputDevice: MediaDeviceInfo | null
   outputDevice: MediaDeviceInfo | null
   inputLevel: number
   outputLevel: number
-  
+
   // STT state
   isListening: boolean
   transcript: string
   interimTranscript: string
   confidence: number
-  
+
   // TTS state
   isSpeaking: boolean
   currentUtterance: string
   utteranceQueue: string[]
-  
+
   // Configuration
   voiceModel: string
   sttModel: string
   ttsVoice: string
   vadSensitivity: number
-  
+
   // Session management
   startSession(): Promise<void>
   endSession(): Promise<void>
-  
+
   // Recording control
   startListening(): void
   stopListening(): void
   cancelListening(): void
-  
+
   // Playback control
   speak(text: string): Promise<void>
   stopSpeaking(): void
   pauseSpeaking(): void
   resumeSpeaking(): void
-  
+
   // Device selection
   setInputDevice(device: MediaDeviceInfo): void
   setOutputDevice(device: MediaDeviceInfo): void
-  
+
   // Configuration
   setVoiceModel(model: string): void
   setSttModel(model: string): void
@@ -2294,32 +2315,32 @@ CognitiveStore {
   phase: CognitivePhase
   autonomy: Autonomy
   confidence: CognitiveConfidence
-  
+
   // Focus state
   focusState: FocusState
   focusDuration: number
-  
+
   // Physiology (cognitive load model)
   physiology: PhysiologyState
   cognitiveLoad: number
-  
+
   // Feedback history
   feedbackHistory: FeedbackEntry[]
   pendingFeedback: FeedbackEntry | null
-  
+
   // State updates
   updatePhase(phase: CognitivePhase): void
   updateAutonomy(autonomy: Autonomy): void
   updateConfidence(confidence: CognitiveConfidence): void
-  
+
   // Focus management
   startFocus(note?: string): void
   endFocus(): void
-  
+
   // Feedback
   addFeedback(feedback: FeedbackEntry): void
   acknowledgeFeedback(feedbackId: string): void
-  
+
   // Subscriptions
   subscribeToState(): () => void
 }
@@ -2343,31 +2364,31 @@ AgentsStore {
   // Active runs
   activeRuns: Map<string, OrchestratorRun>
   selectedRunId: string | null
-  
+
   // Wave state
   waves: Map<string, Wave[]>
   activeAgents: Map<string, AgentInstance>
-  
+
   // Event streams
   eventBuffers: Map<string, OrchestratorEvent[]>
-  
+
   // Run management
   selectRun(runId: string): void
   startRun(config: RunConfig): Promise<string>
   pauseRun(runId: string): Promise<void>
   resumeRun(runId: string): Promise<void>
   cancelRun(runId: string): Promise<void>
-  
+
   // Agent control
   pauseAgent(agentId: string): Promise<void>
   resumeAgent(agentId: string): Promise<void>
   cancelAgent(agentId: string): Promise<void>
   retrySubtask(subtaskId: string): Promise<void>
-  
+
   // Event handling
   handleEvent(runId: string, event: OrchestratorEvent): void
   clearEvents(runId: string): void
-  
+
   // Subscriptions
   subscribeToRun(runId: string): () => void
 }
@@ -2376,19 +2397,19 @@ OrchestratorRun {
   id: string
   status: RunStatus
   config: RunConfig
-  
+
   execPlan: ExecPlan
   currentWave: number
   totalWaves: number
-  
+
   agents: AgentInstance[]
   completedSubtasks: string[]
   failedSubtasks: string[]
-  
+
   startedAt: Timestamp
   estimatedCompletionAt?: Timestamp
   completedAt?: Timestamp
-  
+
   metrics: RunMetrics
 }
 
@@ -2404,30 +2425,30 @@ DockerStore {
   // Container state
   containers: Map<string, Container>
   selectedContainerId: string | null
-  
+
   // Filtering
   filter: ContainerFilter
   sortBy: ContainerSortField
   sortDirection: 'asc' | 'desc'
-  
+
   // Real-time updates
   resourceMetrics: Map<string, ResourceMetrics>
   logStreams: Map<string, string[]>
-  
+
   // Container CRUD
   refreshContainers(): Promise<void>
   selectContainer(containerId: string): void
-  
+
   // Container control
   startContainer(containerId: string): Promise<void>
   stopContainer(containerId: string): Promise<void>
   restartContainer(containerId: string): Promise<void>
   removeContainer(containerId: string): Promise<void>
-  
+
   // Logs
   streamLogs(containerId: string): () => void
   clearLogs(containerId: string): void
-  
+
   // Filtering
   setFilter(filter: ContainerFilter): void
   setSortBy(field: ContainerSortField): void
@@ -2451,34 +2472,34 @@ PRReviewStore {
   // PR list state
   pullRequests: Map<string, PullRequest>
   selectedPRId: string | null
-  
+
   // Filtering
   filter: PRFilter
   sortBy: PRSortField
-  
+
   // Review state
   pendingComments: Map<string, DraftComment[]>
   reviewDecision: ReviewDecision | null
-  
+
   // Diff state
   expandedFiles: Set<string>
   viewMode: DiffViewMode
-  
+
   // PR list operations
   refreshPRs(): Promise<void>
   selectPR(prId: string): void
-  
+
   // Review operations
   addComment(prId: string, comment: DraftComment): void
   editComment(commentId: string, content: string): void
   deleteComment(commentId: string): void
-  
+
   submitReview(prId: string, decision: ReviewDecision): Promise<void>
-  
+
   // Merge operations
   mergePR(prId: string, method: MergeMethod): Promise<void>
   closePR(prId: string): Promise<void>
-  
+
   // Diff operations
   expandFile(path: string): void
   collapseFile(path: string): void
@@ -2507,15 +2528,15 @@ CortexStore {
   isSupported: boolean
   device: GPUDevice | null
   adapter: GPUAdapter | null
-  
+
   // Active preset
   currentPreset: CortexPreset | null
   parameters: Map<string, unknown>
-  
+
   // Preview state
   previewMode: 'orb' | 'wallpaper' | 'graph' | 'custom'
   isPreviewActive: boolean
-  
+
   // Performance
   gpuMetrics: {
     utilization: number
@@ -2523,11 +2544,11 @@ CortexStore {
     memoryTotal: number
     fps: number
   }
-  
+
   // Presets
   presets: CortexPreset[]
   favorites: string[]
-  
+
   // Actions
   initializeGPU(): Promise<boolean>
   loadPreset(presetId: string): Promise<void>
@@ -2549,7 +2570,7 @@ LearningStore {
   // Mistake ledger
   mistakes: MistakeEntry[]
   selectedMistakeId: string | null
-  
+
   // Filters
   filter: {
     category?: LearningCategory
@@ -2557,20 +2578,20 @@ LearningStore {
     resolved?: boolean
     timeRange?: TimeRange
   }
-  
+
   // Metrics
   metrics: LearningMetrics | null
   metricsLoading: boolean
-  
+
   // Actions
   fetchMistakes(): Promise<void>
   selectMistake(id: string): void
   markResolved(id: string): Promise<void>
   addCorrection(id: string, correction: Correction): Promise<void>
-  
+
   // Metrics
   fetchMetrics(timeRange: TimeRange): Promise<void>
-  
+
   // Subscriptions
   subscribeToNewMistakes(): () => void
 }
@@ -2587,34 +2608,34 @@ PolicyStore {
   // Decisions
   decisions: PolicyDecision[]
   selectedDecisionId: string | null
-  
+
   // Constraints
   constraints: AutonomyConstraint[]
-  
+
   // Autonomy levels
   autonomyLevels: Map<PolicyScope, AutonomyLevel>
-  
+
   // Pending approvals
   pendingApprovals: PolicyDecision[]
-  
+
   // Filters
   filter: {
     scope?: PolicyScope
     outcome?: 'allow' | 'deny' | 'escalate'
     timeRange?: TimeRange
   }
-  
+
   // Actions
   fetchDecisions(): Promise<void>
   selectDecision(id: string): void
-  
+
   // Constraints
   updateConstraint(id: string, updates: Partial<AutonomyConstraint>): Promise<void>
   toggleConstraint(id: string): Promise<void>
-  
+
   // Autonomy
   setAutonomyLevel(scope: PolicyScope, level: AutonomyLevel): Promise<void>
-  
+
   // Approvals
   approve(decisionId: string): Promise<void>
   deny(decisionId: string): Promise<void>
@@ -2632,36 +2653,36 @@ TuneStore {
   // Jobs
   jobs: TuneJob[]
   selectedJobId: string | null
-  
+
   // Datasets
   datasets: TuneDataset[]
-  
+
   // Active job progress (streamed)
   activeProgress: Map<string, TuneProgress>
-  
+
   // Filters
   filter: {
     status?: JobStatus
     baseModel?: string
   }
-  
+
   // Actions
   fetchJobs(): Promise<void>
   selectJob(id: string): void
-  
+
   // Job control
   startJob(config: TuneConfig): Promise<string>
   pauseJob(id: string): Promise<void>
   resumeJob(id: string): Promise<void>
   cancelJob(id: string): Promise<void>
-  
+
   // Datasets
   fetchDatasets(): Promise<void>
   previewDataset(id: string): Promise<DatasetSample[]>
-  
+
   // Checkpoints
   loadCheckpoint(jobId: string, checkpointId: string): Promise<void>
-  
+
   // Subscriptions
   subscribeToProgress(jobId: string): () => void
 }
@@ -2676,44 +2697,44 @@ PlanStore {
   // Plans
   plans: Plan[]
   activePlanId: string | null
-  
+
   // Editor state
   editorMode: 'edit' | 'debug' | 'research'
   selectedTaskId: string | null
-  
+
   // Intent debugging
   intentInput: string
   intentResult: IntentClassification | null
-  
+
   // Research
   researchQueries: ResearchQuery[]
   researchResults: ResearchResult[]
-  
+
   // Pattern library
   patterns: PlanPattern[]
-  
+
   // Actions
   fetchPlans(): Promise<void>
   selectPlan(id: string): void
   createPlan(goal: string): Promise<string>
   updatePlan(id: string, updates: Partial<Plan>): Promise<void>
   deletePlan(id: string): Promise<void>
-  
+
   // Tasks
   addTask(planId: string, task: PlanTask): void
   updateTask(taskId: string, updates: Partial<PlanTask>): void
   removeTask(taskId: string): void
   reorderTasks(planId: string, taskIds: string[]): void
-  
+
   // Intent
   classifyIntent(input: string): Promise<IntentClassification>
-  
+
   // Research
   executeResearch(query: string): Promise<ResearchResult[]>
-  
+
   // Validation
   validatePlan(id: string): Promise<PlanValidation>
-  
+
   // Convert to workflow
   convertToWorkflow(planId: string): Promise<string>
 }
@@ -2728,35 +2749,35 @@ MetricsStore {
   // Dashboards
   dashboards: Dashboard[]
   activeDashboardId: string | null
-  
+
   // Metric definitions
   metricDefinitions: MetricDefinition[]
-  
+
   // Query results
   queryResults: Map<string, MetricQueryResult>
-  
+
   // Time range
   timeRange: TimeRange
   refreshInterval: number
-  
+
   // Alerts
   alerts: MetricAlert[]
-  
+
   // Actions
   fetchDashboards(): Promise<void>
   selectDashboard(id: string): void
   createDashboard(dashboard: Dashboard): Promise<string>
   updateDashboard(id: string, updates: Partial<Dashboard>): Promise<void>
   deleteDashboard(id: string): Promise<void>
-  
+
   // Queries
   executeQuery(query: string): Promise<MetricQueryResult>
   refreshPanel(panelId: string): Promise<void>
-  
+
   // Time range
   setTimeRange(range: TimeRange): void
   setRefreshInterval(seconds: number): void
-  
+
   // Auto-refresh
   startAutoRefresh(): void
   stopAutoRefresh(): void
@@ -2772,20 +2793,20 @@ RAGStore {
   // Chunks
   chunks: RAGChunk[]
   selectedChunkId: string | null
-  
+
   // Query state
   query: string
   results: RetrievalResult | null
   isSearching: boolean
-  
+
   // Embedding visualization
   projection: EmbeddingProjection | null
   projectionMethod: 'tsne' | 'umap' | 'pca'
-  
+
   // Reranking
   rerankModel: string
   rerankEnabled: boolean
-  
+
   // Index stats
   indexStats: {
     totalChunks: number
@@ -2793,22 +2814,22 @@ RAGStore {
     embeddingDimension: number
     indexSize: number
   } | null
-  
+
   // Actions
   fetchChunks(filter?: ChunkFilter): Promise<void>
   selectChunk(id: string): void
-  
+
   // Search
   search(query: string): Promise<RetrievalResult>
   clearResults(): void
-  
+
   // Visualization
   generateProjection(method: ProjectionMethod): Promise<void>
-  
+
   // Reranking
   setRerankModel(model: string): void
   toggleReranking(): void
-  
+
   // Stats
   fetchIndexStats(): Promise<void>
 }
@@ -2827,25 +2848,25 @@ HistoryStore {
     messageCount: number
     maxMessages: number
   }
-  
+
   // Pruning
   prunedMessages: number
   lastPruneAt: Timestamp | null
-  
+
   // Configuration
   budgetStrategy: 'fifo' | 'importance' | 'hybrid'
   importanceThreshold: number
-  
+
   // Actions
   fetchBudget(threadId: string): Promise<void>
-  
+
   // Configuration
   setBudgetStrategy(strategy: BudgetStrategy): void
   setImportanceThreshold(threshold: number): void
-  
+
   // Manual pruning
   pruneThread(threadId: string): Promise<void>
-  
+
   // Budget visualization
   getBudgetBreakdown(threadId: string): Promise<BudgetBreakdown>
 }
@@ -2860,23 +2881,23 @@ AuthStore {
   // Sessions
   activeSessions: AuthSession[]
   currentSessionId: string | null
-  
+
   // Tokens
   apiTokens: APIToken[]
-  
+
   // OAuth connections
   oauthConnections: OAuthConnection[]
-  
+
   // Actions
   fetchSessions(): Promise<void>
   revokeSession(sessionId: string): Promise<void>
   revokeAllOtherSessions(): Promise<void>
-  
+
   // Tokens
   fetchTokens(): Promise<void>
   createToken(name: string, scopes: string[]): Promise<APIToken>
   revokeToken(tokenId: string): Promise<void>
-  
+
   // OAuth
   fetchOAuthConnections(): Promise<void>
   disconnectOAuth(provider: string): Promise<void>
@@ -2907,17 +2928,17 @@ ALFRED Desktop uses TanStack DB with PGlite for local-first data persistence, en
 LocalDBClient {
   // Instance
   db: PGlite
-  
+
   // Initialization
   initialize(): Promise<void>
   migrate(): Promise<void>
-  
+
   // Sync
   startSync(): void
   stopSync(): void
   forcePush(): Promise<void>
   forcePull(): Promise<void>
-  
+
   // Status
   syncStatus: SyncStatus
   lastSyncAt: Timestamp | null
@@ -3003,7 +3024,7 @@ useConversation(threadId: string) {
     // Try local first
     const local = await localDb.conversations.get(threadId)
     if (local && !isStale(local)) return local
-    
+
     // Fetch from server
     const remote = await trpc.assistant.history.query({ threadId })
     await localDb.conversations.upsert(remote)
@@ -3018,7 +3039,7 @@ useKnowledgeEntity(entityId: string) {
   queryFn: async () => {
     const cached = await localDb.knowledgeCache.get(entityId)
     if (cached && !isExpired(cached)) return cached.entityData
-    
+
     const entity = await trpc.knowledge.entity.query({ id: entityId })
     await localDb.knowledgeCache.upsert({
       id: entityId,
@@ -3067,17 +3088,17 @@ useSaveLayout() {
 windowTypeSchema = z.enum([
   // Tier 0: Core Experience
   'chat',
-  'terminal', 
+  'terminal',
   'code',
   'agents',
-  
+
   // Tier 1: System & Operations
   'taskmanager',
   'docker',
   'pr-review',
   'agentfs',
   'files',
-  
+
   // Tier 2: Intelligence & Learning (NEW)
   'cortex',       // @alfred/cortex
   'learning',     // @alfred/learning
@@ -3086,13 +3107,13 @@ windowTypeSchema = z.enum([
   'plan',         // @alfred/plan
   'metrics',      // @alfred/metrics
   'rag',          // @alfred/rag + @alfred/embed
-  
+
   // Tier 3: Knowledge & Exploration
   'knowledge',
   'workflow',
   'linear',
   'concept',
-  
+
   // Tier 4: Productivity & Settings
   'settings',
   'notes',
@@ -3211,14 +3232,14 @@ agentInstanceSchema = z.object({
   subtaskId: z.string(),
   subtaskTitle: z.string(),
   status: agentStatusSchema,
-  
+
   spawned: z.string(),
   completed: z.string().optional(),
-  
+
   toolCalls: z.array(toolCallSummarySchema),
   filesModified: z.array(z.string()),
   linesChanged: z.number(),
-  
+
   error: z.object({
     code: z.string(),
     message: z.string(),
@@ -3232,14 +3253,14 @@ waveSchema = z.object({
   status: z.enum(['pending', 'active', 'completed', 'failed']),
   startedAt: z.string().optional(),
   completedAt: z.string().optional(),
-  
+
   agents: z.array(agentInstanceSchema),
   dependencies: z.array(z.object({
     fromWave: z.number(),
     toWave: z.number(),
     reason: z.string()
   })),
-  
+
   metrics: z.object({
     totalAgents: z.number(),
     completedAgents: z.number(),
@@ -3251,7 +3272,7 @@ waveSchema = z.object({
 orchestratorRunSchema = z.object({
   id: z.string(),
   status: z.enum(['pending', 'planning', 'executing', 'paused', 'completed', 'failed', 'cancelled']),
-  
+
   config: z.object({
     projectId: z.string(),
     issueId: z.string().optional(),
@@ -3259,11 +3280,11 @@ orchestratorRunSchema = z.object({
     maxWaves: z.number().default(10),
     maxAgentsPerWave: z.number().default(5)
   }),
-  
+
   execPlan: z.unknown(), // Full ExecPlan schema
   currentWave: z.number(),
   totalWaves: z.number(),
-  
+
   startedAt: z.string(),
   estimatedCompletionAt: z.string().optional(),
   completedAt: z.string().optional()
@@ -3326,44 +3347,44 @@ pullRequestSchema = z.object({
   number: z.number(),
   title: z.string(),
   description: z.string(),
-  
+
   author: z.object({
     type: z.enum(['human', 'agent']),
     id: z.string(),
     name: z.string(),
     avatar: z.string().optional()
   }),
-  
+
   repository: z.object({
     id: z.string(),
     name: z.string(),
     owner: z.string(),
     url: z.string()
   }),
-  
+
   sourceBranch: z.string(),
   targetBranch: z.string(),
-  
+
   status: z.enum(['open', 'merged', 'closed']),
   reviewStatus: z.enum(['pending', 'approved', 'changes_requested']),
   isDraft: z.boolean(),
   hasConflicts: z.boolean(),
-  
+
   diff: z.object({
     files: z.array(fileDiffSchema),
     totalAdditions: z.number(),
     totalDeletions: z.number(),
     changedFiles: z.number()
   }),
-  
+
   comments: z.array(commentSchema),
   reviews: z.array(reviewSchema),
   ciChecks: z.array(ciCheckSchema),
-  
+
   createdAt: z.string(),
   updatedAt: z.string(),
   mergedAt: z.string().optional(),
-  
+
   // ALFRED metadata
   orchestratorRunId: z.string().optional(),
   subtaskIds: z.array(z.string()).optional(),
@@ -3390,15 +3411,15 @@ cortexPresetSchema = z.object({
   id: z.string(),
   name: z.string(),
   category: z.enum(['orb', 'wallpaper', 'graph', 'particle', 'neural']),
-  
+
   shader: z.object({
     vertex: z.string(),
     fragment: z.string(),
     compute: z.string().optional()
   }),
-  
+
   parameters: z.array(shaderParameterSchema),
-  
+
   metadata: z.object({
     author: z.string(),
     createdAt: z.string(),
@@ -3427,10 +3448,10 @@ learningCategorySchema = z.enum([
 mistakeEntrySchema = z.object({
   id: z.string(),
   timestamp: z.string(),
-  
+
   category: learningCategorySchema,
   severity: z.enum(['minor', 'moderate', 'critical']),
-  
+
   context: z.object({
     taskType: z.string(),
     agentId: z.string().optional(),
@@ -3439,14 +3460,14 @@ mistakeEntrySchema = z.object({
     expectedOutput: z.string(),
     actualOutput: z.string()
   }),
-  
+
   correction: z.object({
     correctedAt: z.string(),
     correctedOutput: z.string(),
     correctionSource: z.enum(['user', 'self', 'supervisor']),
     lessonLearned: z.string()
   }).optional(),
-  
+
   recurrence: z.object({
     count: z.number(),
     lastOccurrence: z.string(),
@@ -3456,19 +3477,19 @@ mistakeEntrySchema = z.object({
 
 learningMetricsSchema = z.object({
   period: z.object({ start: z.string(), end: z.string() }),
-  
+
   accuracy: z.object({
     overall: z.number(),
     byCategory: z.record(learningCategorySchema, z.number()),
     trend: z.number()
   }),
-  
+
   mistakes: z.object({
     total: z.number(),
     corrected: z.number(),
     recurring: z.number()
   }),
-  
+
   improvements: z.object({
     categoriesImproved: z.array(z.string()),
     newCapabilities: z.array(z.string()),
@@ -3505,7 +3526,7 @@ autonomyLevelSchema = z.enum(['read', 'low', 'medium', 'high'])
 policyDecisionSchema = z.object({
   id: z.string(),
   timestamp: z.string(),
-  
+
   request: z.object({
     action: policyActionSchema,
     resource: z.string(),
@@ -3513,14 +3534,14 @@ policyDecisionSchema = z.object({
     agentId: z.string().optional(),
     context: z.record(z.unknown())
   }),
-  
+
   decision: z.object({
     outcome: z.enum(['allow', 'deny', 'escalate']),
     reason: z.string(),
     rule: z.string(),
     confidence: z.number()
   }),
-  
+
   escalation: z.object({
     escalatedTo: z.enum(['user', 'supervisor']),
     resolvedAt: z.string().optional(),
@@ -3532,15 +3553,15 @@ autonomyConstraintSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
-  
+
   scope: policyScopeSchema,
   level: autonomyLevelSchema,
-  
+
   conditions: z.array(z.object({
     type: z.string(),
     value: z.unknown()
   })),
-  
+
   enabled: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string()
@@ -3565,7 +3586,7 @@ tuneJobSchema = z.object({
   id: z.string(),
   name: z.string(),
   status: jobStatusSchema,
-  
+
   config: z.object({
     baseModel: z.string(),
     dataset: z.string(),
@@ -3575,7 +3596,7 @@ tuneJobSchema = z.object({
     loraRank: z.number().optional(),
     loraAlpha: z.number().optional()
   }),
-  
+
   progress: z.object({
     currentEpoch: z.number(),
     currentStep: z.number(),
@@ -3584,24 +3605,24 @@ tuneJobSchema = z.object({
     accuracy: z.number().optional(),
     eta: z.number().optional()
   }),
-  
+
   metrics: z.object({
     trainingLoss: z.array(z.number()),
     validationLoss: z.array(z.number()),
     accuracy: z.array(z.number())
   }),
-  
+
   checkpoints: z.array(z.object({
     id: z.string(),
     step: z.number(),
     loss: z.number(),
     createdAt: z.string()
   })),
-  
+
   createdAt: z.string(),
   startedAt: z.string().optional(),
   completedAt: z.string().optional(),
-  
+
   error: z.string().optional()
 })
 
@@ -3609,13 +3630,13 @@ tuneDatasetSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
-  
+
   stats: z.object({
     samples: z.number(),
     avgTokens: z.number(),
     categories: z.array(z.string())
   }),
-  
+
   preview: z.array(z.object({
     input: z.string(),
     output: z.string()
@@ -3632,15 +3653,15 @@ planTaskSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  
+
   type: z.enum(['code', 'research', 'review', 'deploy', 'test']),
   priority: z.enum(['critical', 'high', 'medium', 'low']),
-  
+
   assignee: z.enum(['codex', 'droid', 'claude', 'human']).optional(),
-  
+
   inputs: z.array(z.string()),
   outputs: z.array(z.string()),
-  
+
   estimatedMinutes: z.number()
 })
 
@@ -3648,16 +3669,16 @@ planSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
-  
+
   goal: z.string(),
   constraints: z.array(z.string()),
-  
+
   tasks: z.array(planTaskSchema),
   dependencies: z.array(z.object({
     from: z.string(),
     to: z.string()
   })),
-  
+
   research: z.object({
     queries: z.array(z.string()),
     results: z.array(z.object({
@@ -3665,16 +3686,16 @@ planSchema = z.object({
       findings: z.array(z.string())
     }))
   }),
-  
+
   evaluation: z.object({
     feasibility: z.number(),
     complexity: z.number(),
     estimatedDuration: z.number(),
     confidence: z.number()
   }),
-  
+
   status: z.enum(['draft', 'validated', 'executing', 'completed']),
-  
+
   createdAt: z.string(),
   updatedAt: z.string()
 })
@@ -3683,13 +3704,13 @@ intentClassificationSchema = z.object({
   input: z.string(),
   intent: z.string(),
   confidence: z.number(),
-  
+
   entities: z.array(z.object({
     type: z.string(),
     value: z.string(),
     confidence: z.number()
   })),
-  
+
   suggestedPlan: planSchema.optional()
 })
 ```
@@ -3734,20 +3755,20 @@ dashboardSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
-  
+
   panels: z.array(dashboardPanelSchema),
   variables: z.array(z.object({
     name: z.string(),
     query: z.string(),
     current: z.string()
   })),
-  
+
   refreshInterval: z.number(),
   timeRange: z.object({
     start: z.string(),
     end: z.string()
   }),
-  
+
   createdAt: z.string(),
   updatedAt: z.string()
 })
@@ -3761,7 +3782,7 @@ dashboardSchema = z.object({
 ragChunkSchema = z.object({
   id: z.string(),
   documentId: z.string(),
-  
+
   content: z.string(),
   metadata: z.object({
     source: z.string(),
@@ -3769,21 +3790,21 @@ ragChunkSchema = z.object({
     section: z.string().optional(),
     tokens: z.number()
   }),
-  
+
   embedding: z.array(z.number()).optional(),
-  
+
   createdAt: z.string()
 })
 
 retrievalResultSchema = z.object({
   query: z.string(),
-  
+
   results: z.array(z.object({
     chunk: ragChunkSchema,
     score: z.number(),
     rerankScore: z.number().optional()
   })),
-  
+
   metadata: z.object({
     totalChunks: z.number(),
     searchTimeMs: z.number(),
@@ -3796,14 +3817,14 @@ retrievalResultSchema = z.object({
 embeddingProjectionSchema = z.object({
   method: z.enum(['tsne', 'umap', 'pca']),
   dimensions: z.enum([2, 3]),
-  
+
   points: z.array(z.object({
     id: z.string(),
     position: z.array(z.number()),
     label: z.string().optional(),
     cluster: z.number().optional()
   })),
-  
+
   clusters: z.array(z.object({
     id: z.number(),
     centroid: z.array(z.number()),
@@ -3977,6 +3998,7 @@ alfred-ui/
 ### 7.6 Wireframes — Tiling Layouts
 
 **Monocle Layout (Single Window)**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
@@ -3993,6 +4015,7 @@ alfred-ui/
 ```
 
 **Split Horizontal Layout**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ┌──────────────────────────────┐  ┌──────────────────────────────┐         │
@@ -4007,6 +4030,7 @@ alfred-ui/
 ```
 
 **Master-Stack Layout**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ┌─────────────────────────────────────────┐  ┌────────────────────┐        │
@@ -4022,6 +4046,7 @@ alfred-ui/
 ```
 
 **Quad Layout**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ┌──────────────────────┐  ┌──────────────────────┐                         │
@@ -4189,20 +4214,20 @@ ALFRED Desktop supports multiple AI agents (Claude Code, Codex CLI, Roo, Cursor)
 ACPClientManager {
   // Active sessions
   sessions: Map<string, ACPSession>
-  
+
   // Agent registry
   availableAgents: AgentDefinition[]
-  
+
   // Session management
   createSession(agentType: AgentType, config: SessionConfig): Promise<ACPSession>
   getSession(sessionId: string): ACPSession | null
   closeSession(sessionId: string): Promise<void>
   closeAllSessions(): Promise<void>
-  
+
   // Agent discovery
   discoverAgents(): Promise<AgentDefinition[]>
   getAgentCapabilities(agentType: AgentType): AgentCapabilities
-  
+
   // Permission handling
   handlePermissionRequest(request: PermissionRequest): Promise<PermissionOutcome>
 }
@@ -4212,22 +4237,22 @@ ACPSession {
   agentType: AgentType
   status: SessionStatus
   mode: SessionMode
-  
+
   // Connection
   connection: ClientSideConnection
-  
+
   // Message handling
   sendPrompt(prompt: string): Promise<void>
   streamResponse(): AsyncIterator<ContentChunk>
-  
+
   // Tool handling
   onToolCall(callback: (call: ToolCall) => void): void
   onToolResult(callback: (result: ToolCallUpdate) => void): void
-  
+
   // Terminal handling
   createTerminal(): Promise<TerminalHandle>
   getTerminal(id: string): TerminalHandle | null
-  
+
   // Session control
   setMode(mode: SessionMode): Promise<void>
   cancel(): void
@@ -4237,13 +4262,13 @@ ACPSession {
 
 ### 8.2 Supported Agents
 
-| Agent | Type | Capabilities | Integration Method |
-|-------|------|--------------|-------------------|
-| Claude Code | `claude` | Full ACP, file ops, shell, thinking | Native ACP over stdio |
-| Codex CLI | `codex` | File ops, shell, code generation | ACP wrapper over existing tool |
-| Roo | `roo` | Architecture, planning, code review | ACP over HTTP |
-| Cursor | `cursor` | Code completion, editing, chat | ACP over stdio |
-| Droid | `droid` | General purpose agent | Internal ALFRED implementation |
+| Agent       | Type     | Capabilities                        | Integration Method             |
+| ----------- | -------- | ----------------------------------- | ------------------------------ |
+| Claude Code | `claude` | Full ACP, file ops, shell, thinking | Native ACP over stdio          |
+| Codex CLI   | `codex`  | File ops, shell, code generation    | ACP wrapper over existing tool |
+| Roo         | `roo`    | Architecture, planning, code review | ACP over HTTP                  |
+| Cursor      | `cursor` | Code completion, editing, chat      | ACP over stdio                 |
+| Droid       | `droid`  | General purpose agent               | Internal ALFRED implementation |
 
 ### 8.3 Agent Selection UI
 
@@ -4258,6 +4283,7 @@ AgentSelectorProps {
 ```
 
 **Wireframe:**
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Select Agent                                                    │
@@ -4293,6 +4319,7 @@ PermissionDialogProps {
 ```
 
 **Wireframe:**
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ ⚠️ Permission Request                                     [×]   │
@@ -4327,33 +4354,33 @@ PermissionDialogProps {
 
 ### 9.1 Router Integration Matrix
 
-| Desktop App | Router | Procedures Used | Real-time? | Caching |
-|-------------|--------|-----------------|------------|---------|
-| **Chat** | `assistant` | `stream`, `history.list`, `history.get` | Yes (SSE) | Local |
-| | `voice` | `stt.stream`, `tts.stream`, `s2s.stream` | Yes (WebSocket) | No |
-| | `cognitive` | `state.get`, `feedback.submit` | Yes (subscription) | Local |
-| **Code Editor** | `fs` | `read`, `write`, `list`, `stat` | No | Local |
-| | `codex` | `stream`, `sessions.list`, `sessions.get` | Yes (SSE) | No |
-| **Agents** | `orchestrator` | `run.start`, `run.stream`, `run.pause`, `run.cancel` | Yes (SSE) | No |
-| | `droid` | `stream`, `resume`, `cancel` | Yes (SSE) | No |
-| | `workflow` | `events.subscribe`, `list` | Yes (subscription) | Local |
-| | `plan` | `generate`, `validate`, `status` | No | Local |
-| **PR Review** | `workflow` | `events.subscribe` | Yes | Local |
-| | `linear` | `issues.list`, `issues.update` | No | Local |
-| | `deploy` | `preview.create`, `promote`, `health` | Yes (SSE) | No |
-| **Docker** | `deploy` | `containers.list`, `containers.logs`, `health` | Yes (SSE) | No |
-| | `agentfs` | `workspace.list` | No | Local |
-| | `admin` | `perfStats` | Yes (interval) | No |
-| **Knowledge** | `graph` | `query`, `connect`, `watch` | Yes (subscription) | Local |
-| | `knowledge` | `extract`, `search`, `explain` | No | Local |
-| **AgentFS** | `agentfs` | `workspace.*`, `audit`, `checkpoint.*`, `kv.*` | No | Local |
-| **Terminal** | `terminal` | `create`, `write`, `resize`, `close` | Yes (WebSocket) | No |
-| **Task Manager** | `admin` | `voiceStats`, `perfStats`, `restart` | Yes (interval) | No |
-| | `workflow` | `list`, `events` | Yes | Local |
-| **Settings** | `profile` | `get`, `update` | No | Local |
-| | `preference` | `get`, `set`, `feedback` | No | Local |
-| | `visual` | `config.get`, `presets.list` | No | Local |
-| | `privacy` | `facts.list`, `facts.delete`, `export` | No | No |
+| Desktop App      | Router         | Procedures Used                                      | Real-time?         | Caching |
+| ---------------- | -------------- | ---------------------------------------------------- | ------------------ | ------- |
+| **Chat**         | `assistant`    | `stream`, `history.list`, `history.get`              | Yes (SSE)          | Local   |
+|                  | `voice`        | `stt.stream`, `tts.stream`, `s2s.stream`             | Yes (WebSocket)    | No      |
+|                  | `cognitive`    | `state.get`, `feedback.submit`                       | Yes (subscription) | Local   |
+| **Code Editor**  | `fs`           | `read`, `write`, `list`, `stat`                      | No                 | Local   |
+|                  | `codex`        | `stream`, `sessions.list`, `sessions.get`            | Yes (SSE)          | No      |
+| **Agents**       | `orchestrator` | `run.start`, `run.stream`, `run.pause`, `run.cancel` | Yes (SSE)          | No      |
+|                  | `droid`        | `stream`, `resume`, `cancel`                         | Yes (SSE)          | No      |
+|                  | `workflow`     | `events.subscribe`, `list`                           | Yes (subscription) | Local   |
+|                  | `plan`         | `generate`, `validate`, `status`                     | No                 | Local   |
+| **PR Review**    | `workflow`     | `events.subscribe`                                   | Yes                | Local   |
+|                  | `linear`       | `issues.list`, `issues.update`                       | No                 | Local   |
+|                  | `deploy`       | `preview.create`, `promote`, `health`                | Yes (SSE)          | No      |
+| **Docker**       | `deploy`       | `containers.list`, `containers.logs`, `health`       | Yes (SSE)          | No      |
+|                  | `agentfs`      | `workspace.list`                                     | No                 | Local   |
+|                  | `admin`        | `perfStats`                                          | Yes (interval)     | No      |
+| **Knowledge**    | `graph`        | `query`, `connect`, `watch`                          | Yes (subscription) | Local   |
+|                  | `knowledge`    | `extract`, `search`, `explain`                       | No                 | Local   |
+| **AgentFS**      | `agentfs`      | `workspace.*`, `audit`, `checkpoint.*`, `kv.*`       | No                 | Local   |
+| **Terminal**     | `terminal`     | `create`, `write`, `resize`, `close`                 | Yes (WebSocket)    | No      |
+| **Task Manager** | `admin`        | `voiceStats`, `perfStats`, `restart`                 | Yes (interval)     | No      |
+|                  | `workflow`     | `list`, `events`                                     | Yes                | Local   |
+| **Settings**     | `profile`      | `get`, `update`                                      | No                 | Local   |
+|                  | `preference`   | `get`, `set`, `feedback`                             | No                 | Local   |
+|                  | `visual`       | `config.get`, `presets.list`                         | No                 | Local   |
+|                  | `privacy`      | `facts.list`, `facts.delete`, `export`               | No                 | No      |
 
 ### 9.2 tRPC Client Configuration
 
@@ -4364,20 +4391,20 @@ TRPCClientConfig {
   // Connection
   url: string
   wsUrl: string
-  
+
   // Authentication
   getAuthHeaders: () => Promise<Record<string, string>>
-  
+
   // Error handling
   onError: (error: TRPCError) => void
-  
+
   // Retry configuration
   retry: {
     retryOnConnectionError: true
     maxRetries: 3
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000)
   }
-  
+
   // SSE configuration
   sse: {
     reconnect: true
@@ -4406,7 +4433,7 @@ useOrchestratorStream(runId: string) {
     'run.completed',
     'run.failed'
   ]
-  
+
   onEvent: (event: OrchestratorEvent) => void
   onError: (error: Error) => void
   onReconnect: () => void
@@ -4417,7 +4444,7 @@ useAssistantStream(threadId: string) {
   endpoint: `/api/assistant/stream`
   method: POST
   body: { threadId, messages }
-  
+
   eventTypes: [
     'text-delta',
     'tool-call',
@@ -4426,7 +4453,7 @@ useAssistantStream(threadId: string) {
     'step-start',
     'finish'
   ]
-  
+
   onDelta: (delta: ContentDelta) => void
   onToolCall: (call: ToolCall) => void
   onComplete: (message: UIMessage) => void
@@ -4435,9 +4462,9 @@ useAssistantStream(threadId: string) {
 // Voice S2S stream
 useVoiceStream(sessionId: string) {
   endpoint: `ws://.../voice/s2s`
-  
+
   send: (audioChunk: ArrayBuffer) => void
-  
+
   onTranscript: (text: string, isFinal: boolean) => void
   onSpeech: (audioChunk: ArrayBuffer) => void
   onStateChange: (state: VoiceState) => void
@@ -4446,7 +4473,7 @@ useVoiceStream(sessionId: string) {
 // Container logs stream
 useContainerLogsStream(containerId: string) {
   endpoint: `/api/deploy/logs?containerId=${containerId}`
-  
+
   onLog: (line: LogLine) => void
   onError: (error: Error) => void
 }
@@ -4460,18 +4487,18 @@ useContainerLogsStream(containerId: string) {
 useCognitiveSubscription() {
   // Subscribe to cognitive state updates
   subscription: trpc.cognitive.state.subscribe()
-  
+
   // Derived state
   phase: CognitivePhase
   autonomy: Autonomy
   confidence: CognitiveConfidence
   physiology: PhysiologyState
-  
+
   // UI indicators
   orbState: OrbState
   statusColor: string
   statusLabel: string
-  
+
   // Feedback
   submitFeedback: (feedback: FeedbackInput) => Promise<void>
 }
@@ -4487,15 +4514,15 @@ useKnowledgeGraph(options: KnowledgeGraphOptions) {
   entities: KnowledgeEntity[]
   relations: KnowledgeRelation[]
   isLoading: boolean
-  
+
   // Query operations
   search: (query: string) => Promise<void>
   expandEntity: (entityId: string) => Promise<void>
   getRelated: (entityId: string, depth: number) => Promise<void>
-  
+
   // Real-time updates
   subscribeToChanges: () => () => void
-  
+
   // Graph operations
   createRelation: (source: string, target: string, type: RelationType) => Promise<void>
   deleteRelation: (relationId: string) => Promise<void>
@@ -4516,62 +4543,62 @@ KnowledgeGraphOptions {
 
 ### 10.1 Global Shortcuts
 
-| Shortcut | Action | Context |
-|----------|--------|---------|
-| `⌘K` | Open Command Palette | Global |
-| `⌘Space` | Open Spotlight Search | Global |
-| `⌘M` | Toggle Mindscape Mode | Global |
-| `⌘N` | New Window (type based on focus) | Global |
-| `⌘W` | Close Focused Window | Global |
-| `⌘Q` | Quit ALFRED | Global |
-| `⌘,` | Open Settings | Global |
-| `⌘.` | Toggle Orb Visibility | Global |
-| `⌘\`` | Cycle Tiling Layout | Global |
-| `⌘Tab` | Switch Windows | Global |
-| `⌘⇧Tab` | Switch Windows (Reverse) | Global |
-| `⌘1-9` | Focus Window by Position | Global |
-| `⌘Enter` | Maximize/Restore Window | Global |
-| `⌘↑↓←→` | Focus Window in Direction | Tiling |
-| `⌘⇧↑↓←→` | Swap Window in Direction | Tiling |
-| `⌘⌥↑↓←→` | Resize Zone in Direction | Tiling |
+| Shortcut | Action                           | Context |
+| -------- | -------------------------------- | ------- |
+| `⌘K`     | Open Command Palette             | Global  |
+| `⌘Space` | Open Spotlight Search            | Global  |
+| `⌘M`     | Toggle Mindscape Mode            | Global  |
+| `⌘N`     | New Window (type based on focus) | Global  |
+| `⌘W`     | Close Focused Window             | Global  |
+| `⌘Q`     | Quit ALFRED                      | Global  |
+| `⌘,`     | Open Settings                    | Global  |
+| `⌘.`     | Toggle Orb Visibility            | Global  |
+| `⌘\``    | Cycle Tiling Layout              | Global  |
+| `⌘Tab`   | Switch Windows                   | Global  |
+| `⌘⇧Tab`  | Switch Windows (Reverse)         | Global  |
+| `⌘1-9`   | Focus Window by Position         | Global  |
+| `⌘Enter` | Maximize/Restore Window          | Global  |
+| `⌘↑↓←→`  | Focus Window in Direction        | Tiling  |
+| `⌘⇧↑↓←→` | Swap Window in Direction         | Tiling  |
+| `⌘⌥↑↓←→` | Resize Zone in Direction         | Tiling  |
 
 ### 10.2 Chat App Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `⌘Enter` | Send Message |
-| `⌘⇧V` | Toggle Voice Mode |
+| Shortcut | Action                 |
+| -------- | ---------------------- |
+| `⌘Enter` | Send Message           |
+| `⌘⇧V`    | Toggle Voice Mode      |
 | `Escape` | Cancel Voice Recording |
-| `⌘⇧N` | New Thread |
-| `⌘⇧A` | Attach Context |
-| `⌘P` | Open Thread Picker |
+| `⌘⇧N`    | New Thread             |
+| `⌘⇧A`    | Attach Context         |
+| `⌘P`     | Open Thread Picker     |
 
 ### 10.3 Code Editor Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `⌘S` | Save File |
-| `⌘⇧P` | Editor Command Palette |
-| `⌘⇧F` | Find in Files |
-| `⌘G` | Go to Line |
-| `⌘D` | Add Selection to Next Match |
-| `⌘⇧K` | Delete Line |
-| `⌘/` | Toggle Comment |
-| `⌘⇧I` | Trigger AI Completion |
-| `Tab` | Accept AI Suggestion |
-| `Escape` | Dismiss AI Suggestion |
+| Shortcut | Action                      |
+| -------- | --------------------------- |
+| `⌘S`     | Save File                   |
+| `⌘⇧P`    | Editor Command Palette      |
+| `⌘⇧F`    | Find in Files               |
+| `⌘G`     | Go to Line                  |
+| `⌘D`     | Add Selection to Next Match |
+| `⌘⇧K`    | Delete Line                 |
+| `⌘/`     | Toggle Comment              |
+| `⌘⇧I`    | Trigger AI Completion       |
+| `Tab`    | Accept AI Suggestion        |
+| `Escape` | Dismiss AI Suggestion       |
 
 ### 10.4 Agent Waves Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Space` | Pause/Resume Run |
-| `Escape` | Cancel Run |
-| `⌘R` | Retry Failed Subtask |
-| `⌘L` | Toggle Log Panel |
-| `⌘F` | Filter Agents |
-| `←→` | Navigate Waves |
-| `↑↓` | Select Agent |
+| Shortcut | Action               |
+| -------- | -------------------- |
+| `Space`  | Pause/Resume Run     |
+| `Escape` | Cancel Run           |
+| `⌘R`     | Retry Failed Subtask |
+| `⌘L`     | Toggle Log Panel     |
+| `⌘F`     | Filter Agents        |
+| `←→`     | Navigate Waves       |
+| `↑↓`     | Select Agent         |
 
 ---
 
@@ -4585,57 +4612,57 @@ KnowledgeGraphOptions {
 
 #### 0.1 Core Type System Migration
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Create new `WindowInstance` type (no `Node<T>`) | `store/desktop/types.ts` | 4h |
-| Create `Bounds`, `WindowState`, `TileZone` types | `store/desktop/types.ts` | 2h |
-| Create `TilingLayout`, `TilingConfig` types | `store/desktop/tiling.ts` | 2h |
-| Extend `WindowType` with Phase 8 apps | `store/desktop/types.ts` | 1h |
-| Create Zod schemas for new types | `store/desktop.schemas.ts` | 4h |
+| Task                                             | File(s)                    | Estimated Hours |
+| ------------------------------------------------ | -------------------------- | --------------- |
+| Create new `WindowInstance` type (no `Node<T>`)  | `store/desktop/types.ts`   | 4h              |
+| Create `Bounds`, `WindowState`, `TileZone` types | `store/desktop/types.ts`   | 2h              |
+| Create `TilingLayout`, `TilingConfig` types      | `store/desktop/tiling.ts`  | 2h              |
+| Extend `WindowType` with Phase 8 apps            | `store/desktop/types.ts`   | 1h              |
+| Create Zod schemas for new types                 | `store/desktop.schemas.ts` | 4h              |
 
 #### 0.2 Store Architecture Separation
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Rewrite `WindowSlice` without ReactFlow | `store/desktop/windows.ts` | 8h |
-| Create `TilingSlice` | `store/desktop/tiling.ts` | 6h |
-| Adapt `ViewportSlice` for desktop mode | `store/desktop/viewport.ts` | 4h |
-| Remove ReactFlow imports from desktop store | `store/desktop/index.ts` | 2h |
-| Create `MindscapeSlice` (ReactFlow isolated) | `store/mindscape/index.ts` | 6h |
-| Create `MindscapeNodeData` types | `store/mindscape/types.ts` | 2h |
+| Task                                         | File(s)                     | Estimated Hours |
+| -------------------------------------------- | --------------------------- | --------------- |
+| Rewrite `WindowSlice` without ReactFlow      | `store/desktop/windows.ts`  | 8h              |
+| Create `TilingSlice`                         | `store/desktop/tiling.ts`   | 6h              |
+| Adapt `ViewportSlice` for desktop mode       | `store/desktop/viewport.ts` | 4h              |
+| Remove ReactFlow imports from desktop store  | `store/desktop/index.ts`    | 2h              |
+| Create `MindscapeSlice` (ReactFlow isolated) | `store/mindscape/index.ts`  | 6h              |
+| Create `MindscapeNodeData` types             | `store/mindscape/types.ts`  | 2h              |
 
 #### 0.3 Graph Types Setup
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Create shared graph type file | `types/graph.ts` | 4h |
-| Define `KnowledgeGraphNode` types | `types/graph.ts` | 2h |
-| Define `WorkflowGraphNode` types | `types/graph.ts` | 2h |
-| Define `SpawnTreeNode` types | `types/graph.ts` | 2h |
-| Define `PlanGraphNode` types | `types/graph.ts` | 2h |
-| Define `EmbeddingNode` types | `types/graph.ts` | 2h |
+| Task                              | File(s)          | Estimated Hours |
+| --------------------------------- | ---------------- | --------------- |
+| Create shared graph type file     | `types/graph.ts` | 4h              |
+| Define `KnowledgeGraphNode` types | `types/graph.ts` | 2h              |
+| Define `WorkflowGraphNode` types  | `types/graph.ts` | 2h              |
+| Define `SpawnTreeNode` types      | `types/graph.ts` | 2h              |
+| Define `PlanGraphNode` types      | `types/graph.ts` | 2h              |
+| Define `EmbeddingNode` types      | `types/graph.ts` | 2h              |
 
 #### 0.4 Component Props Migration
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Create `WindowComponentProps` interface | `components/desktop/windows/types.ts` | 2h |
-| Create window component adapter (bridge old→new) | `components/desktop/windows/adapter.tsx` | 6h |
-| Update existing window imports for new props | Multiple (12 windows) | 12h |
-| Remove `NodeProps` imports from window components | Multiple | 4h |
+| Task                                              | File(s)                                  | Estimated Hours |
+| ------------------------------------------------- | ---------------------------------------- | --------------- |
+| Create `WindowComponentProps` interface           | `components/desktop/windows/types.ts`    | 2h              |
+| Create window component adapter (bridge old→new)  | `components/desktop/windows/adapter.tsx` | 6h              |
+| Update existing window imports for new props      | Multiple (12 windows)                    | 12h             |
+| Remove `NodeProps` imports from window components | Multiple                                 | 4h              |
 
 #### 0.5 ReactFlow Isolation Directory Structure
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Create `components/graphs/` directory | Directory structure | 1h |
-| Create `graphs/mindscape/` module | `components/graphs/mindscape/` | 2h |
-| Create `graphs/knowledge/` module | `components/graphs/knowledge/` | 2h |
-| Create `graphs/workflow/` module | `components/graphs/workflow/` | 2h |
-| Create `graphs/agents/` module | `components/graphs/agents/` | 2h |
-| Create `graphs/plan/` module | `components/graphs/plan/` | 2h |
-| Create `graphs/rag/` module | `components/graphs/rag/` | 2h |
-| Add ESLint rule to enforce isolation | `.eslintrc.js` | 2h |
+| Task                                  | File(s)                        | Estimated Hours |
+| ------------------------------------- | ------------------------------ | --------------- |
+| Create `components/graphs/` directory | Directory structure            | 1h              |
+| Create `graphs/mindscape/` module     | `components/graphs/mindscape/` | 2h              |
+| Create `graphs/knowledge/` module     | `components/graphs/knowledge/` | 2h              |
+| Create `graphs/workflow/` module      | `components/graphs/workflow/`  | 2h              |
+| Create `graphs/agents/` module        | `components/graphs/agents/`    | 2h              |
+| Create `graphs/plan/` module          | `components/graphs/plan/`      | 2h              |
+| Create `graphs/rag/` module           | `components/graphs/rag/`       | 2h              |
+| Add ESLint rule to enforce isolation  | `.eslintrc.js`                 | 2h              |
 
 **Phase 0 Total: ~96 hours (2.5 weeks at 40h/week)**
 
@@ -4649,52 +4676,52 @@ KnowledgeGraphOptions {
 
 #### 1.1 Desktop Shell Setup
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Create shell component structure | `components/desktop/shell.tsx` | 4h |
-| Implement layer system with z-ordering | `components/desktop/layers/` | 6h |
-| Set up desktop store (using new types) | `store/desktop/index.ts` | 4h |
-| Configure persistence middleware | `store/desktop/persist.ts` | 4h |
-| Implement global keyboard handler | `hooks/use-global-shortcuts.ts` | 6h |
+| Task                                   | File(s)                         | Estimated Hours |
+| -------------------------------------- | ------------------------------- | --------------- |
+| Create shell component structure       | `components/desktop/shell.tsx`  | 4h              |
+| Implement layer system with z-ordering | `components/desktop/layers/`    | 6h              |
+| Set up desktop store (using new types) | `store/desktop/index.ts`        | 4h              |
+| Configure persistence middleware       | `store/desktop/persist.ts`      | 4h              |
+| Implement global keyboard handler      | `hooks/use-global-shortcuts.ts` | 6h              |
 
 #### 1.2 Menu Bar Implementation
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Menu bar container | `components/desktop/menubar/menubar.tsx` | 4h |
-| Alfred menu dropdown | `components/desktop/menubar/alfred-menu.tsx` | 3h |
-| App-specific menus | `components/desktop/menubar/app-menu.tsx` | 4h |
-| Status area icons | `components/desktop/menubar/status-area.tsx` | 4h |
-| Clock widget | `components/desktop/menubar/clock.tsx` | 2h |
+| Task                 | File(s)                                      | Estimated Hours |
+| -------------------- | -------------------------------------------- | --------------- |
+| Menu bar container   | `components/desktop/menubar/menubar.tsx`     | 4h              |
+| Alfred menu dropdown | `components/desktop/menubar/alfred-menu.tsx` | 3h              |
+| App-specific menus   | `components/desktop/menubar/app-menu.tsx`    | 4h              |
+| Status area icons    | `components/desktop/menubar/status-area.tsx` | 4h              |
+| Clock widget         | `components/desktop/menubar/clock.tsx`       | 2h              |
 
 #### 1.3 Taskbar Implementation
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Taskbar container | `components/desktop/taskbar/taskbar.tsx` | 4h |
-| App launcher button | `components/desktop/taskbar/launch-button.tsx` | 3h |
-| Pinned apps section | `components/desktop/taskbar/pinned-apps.tsx` | 4h |
-| Running apps with previews | `components/desktop/taskbar/running-apps.tsx` | 6h |
-| System tray | `components/desktop/taskbar/system-tray.tsx` | 4h |
+| Task                       | File(s)                                        | Estimated Hours |
+| -------------------------- | ---------------------------------------------- | --------------- |
+| Taskbar container          | `components/desktop/taskbar/taskbar.tsx`       | 4h              |
+| App launcher button        | `components/desktop/taskbar/launch-button.tsx` | 3h              |
+| Pinned apps section        | `components/desktop/taskbar/pinned-apps.tsx`   | 4h              |
+| Running apps with previews | `components/desktop/taskbar/running-apps.tsx`  | 6h              |
+| System tray                | `components/desktop/taskbar/system-tray.tsx`   | 4h              |
 
 #### 1.4 Tiling Window Manager
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Tiling store slice | `store/desktop/tiling.ts` | 8h |
-| Zone calculation engine | `lib/desktop/tiling-engine.ts` | 12h |
-| Layout presets (6 layouts) | `lib/desktop/tiling-layouts.ts` | 8h |
-| Window chrome component | `components/desktop/windows/chrome.tsx` | 8h |
-| Resize handle system | `components/desktop/windows/resize-handle.tsx` | 6h |
-| Focus navigation | `hooks/use-tiling-navigation.ts` | 4h |
+| Task                       | File(s)                                        | Estimated Hours |
+| -------------------------- | ---------------------------------------------- | --------------- |
+| Tiling store slice         | `store/desktop/tiling.ts`                      | 8h              |
+| Zone calculation engine    | `lib/desktop/tiling-engine.ts`                 | 12h             |
+| Layout presets (6 layouts) | `lib/desktop/tiling-layouts.ts`                | 8h              |
+| Window chrome component    | `components/desktop/windows/chrome.tsx`        | 8h              |
+| Resize handle system       | `components/desktop/windows/resize-handle.tsx` | 6h              |
+| Focus navigation           | `hooks/use-tiling-navigation.ts`               | 4h              |
 
 #### 1.5 Window Registry
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Window type registry | `components/desktop/apps/registry.ts` | 4h |
-| Window factory function | `lib/desktop/window-factory.ts` | 4h |
-| Default window configs | `config/window-defaults.ts` | 2h |
+| Task                    | File(s)                               | Estimated Hours |
+| ----------------------- | ------------------------------------- | --------------- |
+| Window type registry    | `components/desktop/apps/registry.ts` | 4h              |
+| Window factory function | `lib/desktop/window-factory.ts`       | 4h              |
+| Default window configs  | `config/window-defaults.ts`           | 2h              |
 
 **Phase 1 Total: ~118 hours (3 weeks at 40h/week)**
 
@@ -4706,54 +4733,54 @@ KnowledgeGraphOptions {
 
 #### 2.1 Chat Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Chat app container | `components/desktop/apps/chat/chat-app.tsx` | 4h |
-| Message list with virtualization | `components/desktop/apps/chat/message-list.tsx` | 8h |
-| Input area with attachments | `components/desktop/apps/chat/input-area.tsx` | 6h |
-| Voice indicator component | `components/desktop/apps/chat/voice-indicator.tsx` | 6h |
-| Thread sidebar | `components/desktop/apps/chat/thread-sidebar.tsx` | 4h |
-| Context panel | `components/desktop/apps/chat/context-panel.tsx` | 4h |
-| Agent selector | `components/desktop/apps/chat/agent-selector.tsx` | 4h |
-| Chat store | `store/chat.ts` | 6h |
-| Voice integration hook | `hooks/use-chat-voice.ts` | 8h |
-| Assistant stream hook | `hooks/use-assistant-stream.ts` | 6h |
+| Task                             | File(s)                                            | Estimated Hours |
+| -------------------------------- | -------------------------------------------------- | --------------- |
+| Chat app container               | `components/desktop/apps/chat/chat-app.tsx`        | 4h              |
+| Message list with virtualization | `components/desktop/apps/chat/message-list.tsx`    | 8h              |
+| Input area with attachments      | `components/desktop/apps/chat/input-area.tsx`      | 6h              |
+| Voice indicator component        | `components/desktop/apps/chat/voice-indicator.tsx` | 6h              |
+| Thread sidebar                   | `components/desktop/apps/chat/thread-sidebar.tsx`  | 4h              |
+| Context panel                    | `components/desktop/apps/chat/context-panel.tsx`   | 4h              |
+| Agent selector                   | `components/desktop/apps/chat/agent-selector.tsx`  | 4h              |
+| Chat store                       | `store/chat.ts`                                    | 6h              |
+| Voice integration hook           | `hooks/use-chat-voice.ts`                          | 8h              |
+| Assistant stream hook            | `hooks/use-assistant-stream.ts`                    | 6h              |
 
 #### 2.2 Code Editor Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Code app container | `components/desktop/apps/code/code-app.tsx` | 4h |
-| Monaco integration | `components/desktop/apps/code/monaco-editor.tsx` | 8h |
-| Editor tabs | `components/desktop/apps/code/editor-tabs.tsx` | 4h |
-| File tree sidebar | `components/desktop/apps/code/file-tree.tsx` | 6h |
-| AI suggestions overlay | `components/desktop/apps/code/ai-suggestions.tsx` | 8h |
-| Diff viewer | `components/desktop/apps/code/diff-viewer.tsx` | 8h |
-| ALFRED void theme | `lib/monaco/alfred-theme.ts` | 4h |
-| Code store | `store/code.ts` | 6h |
-| FS operations hook | `hooks/use-fs-operations.ts` | 4h |
+| Task                   | File(s)                                           | Estimated Hours |
+| ---------------------- | ------------------------------------------------- | --------------- |
+| Code app container     | `components/desktop/apps/code/code-app.tsx`       | 4h              |
+| Monaco integration     | `components/desktop/apps/code/monaco-editor.tsx`  | 8h              |
+| Editor tabs            | `components/desktop/apps/code/editor-tabs.tsx`    | 4h              |
+| File tree sidebar      | `components/desktop/apps/code/file-tree.tsx`      | 6h              |
+| AI suggestions overlay | `components/desktop/apps/code/ai-suggestions.tsx` | 8h              |
+| Diff viewer            | `components/desktop/apps/code/diff-viewer.tsx`    | 8h              |
+| ALFRED void theme      | `lib/monaco/alfred-theme.ts`                      | 4h              |
+| Code store             | `store/code.ts`                                   | 6h              |
+| FS operations hook     | `hooks/use-fs-operations.ts`                      | 4h              |
 
 #### 2.3 Agent Waves Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Agents app container | `components/desktop/apps/agents/agents-app.tsx` | 4h |
-| Wave timeline | `components/desktop/apps/agents/wave-timeline.tsx` | 8h |
-| Agent card component | `components/desktop/apps/agents/agent-card.tsx` | 6h |
-| Spawn tree visualization | `components/desktop/apps/agents/spawn-tree.tsx` | 8h |
-| Execution log panel | `components/desktop/apps/agents/execution-log.tsx` | 6h |
-| Dependency graph | `components/desktop/apps/agents/dependency-graph.tsx` | 8h |
-| Agents store | `store/agents.ts` | 8h |
-| Orchestrator stream hook | `hooks/use-orchestrator-stream.ts` | 8h |
+| Task                     | File(s)                                               | Estimated Hours |
+| ------------------------ | ----------------------------------------------------- | --------------- |
+| Agents app container     | `components/desktop/apps/agents/agents-app.tsx`       | 4h              |
+| Wave timeline            | `components/desktop/apps/agents/wave-timeline.tsx`    | 8h              |
+| Agent card component     | `components/desktop/apps/agents/agent-card.tsx`       | 6h              |
+| Spawn tree visualization | `components/desktop/apps/agents/spawn-tree.tsx`       | 8h              |
+| Execution log panel      | `components/desktop/apps/agents/execution-log.tsx`    | 6h              |
+| Dependency graph         | `components/desktop/apps/agents/dependency-graph.tsx` | 8h              |
+| Agents store             | `store/agents.ts`                                     | 8h              |
+| Orchestrator stream hook | `hooks/use-orchestrator-stream.ts`                    | 8h              |
 
 #### 2.4 Terminal Application Enhancement
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Enhanced terminal container | `components/desktop/apps/terminal/terminal-app.tsx` | 4h |
-| Terminal tabs | `components/desktop/apps/terminal/terminal-tabs.tsx` | 4h |
-| Profile management | `components/desktop/apps/terminal/profiles.tsx` | 4h |
-| XTerm.js integration enhancement | `lib/terminal/xterm-config.ts` | 4h |
+| Task                             | File(s)                                              | Estimated Hours |
+| -------------------------------- | ---------------------------------------------------- | --------------- |
+| Enhanced terminal container      | `components/desktop/apps/terminal/terminal-app.tsx`  | 4h              |
+| Terminal tabs                    | `components/desktop/apps/terminal/terminal-tabs.tsx` | 4h              |
+| Profile management               | `components/desktop/apps/terminal/profiles.tsx`      | 4h              |
+| XTerm.js integration enhancement | `lib/terminal/xterm-config.ts`                       | 4h              |
 
 **Phase 2 Total: ~182 hours (4.5 weeks at 40h/week)**
 
@@ -4765,48 +4792,48 @@ KnowledgeGraphOptions {
 
 #### 3.1 PR Review Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| PR app container | `components/desktop/apps/pr-review/pr-app.tsx` | 4h |
-| PR list with filters | `components/desktop/apps/pr-review/pr-list.tsx` | 6h |
-| PR detail panel | `components/desktop/apps/pr-review/pr-detail.tsx` | 4h |
-| Diff panel with comments | `components/desktop/apps/pr-review/diff-panel.tsx` | 10h |
-| Comment thread component | `components/desktop/apps/pr-review/comment-thread.tsx` | 6h |
-| Merge controls with biometric | `components/desktop/apps/pr-review/merge-controls.tsx` | 6h |
-| CI status display | `components/desktop/apps/pr-review/ci-status.tsx` | 4h |
-| PR review store | `store/pr-review.ts` | 6h |
+| Task                          | File(s)                                                | Estimated Hours |
+| ----------------------------- | ------------------------------------------------------ | --------------- |
+| PR app container              | `components/desktop/apps/pr-review/pr-app.tsx`         | 4h              |
+| PR list with filters          | `components/desktop/apps/pr-review/pr-list.tsx`        | 6h              |
+| PR detail panel               | `components/desktop/apps/pr-review/pr-detail.tsx`      | 4h              |
+| Diff panel with comments      | `components/desktop/apps/pr-review/diff-panel.tsx`     | 10h             |
+| Comment thread component      | `components/desktop/apps/pr-review/comment-thread.tsx` | 6h              |
+| Merge controls with biometric | `components/desktop/apps/pr-review/merge-controls.tsx` | 6h              |
+| CI status display             | `components/desktop/apps/pr-review/ci-status.tsx`      | 4h              |
+| PR review store               | `store/pr-review.ts`                                   | 6h              |
 
 #### 3.2 Docker Manager Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Docker app container | `components/desktop/apps/docker/docker-app.tsx` | 4h |
-| Container list | `components/desktop/apps/docker/container-list.tsx` | 6h |
-| Container detail panel | `components/desktop/apps/docker/container-detail.tsx` | 4h |
-| Logs viewer with search | `components/desktop/apps/docker/logs-viewer.tsx` | 6h |
-| Resource charts | `components/desktop/apps/docker/resource-chart.tsx` | 6h |
-| Docker store | `store/docker.ts` | 6h |
+| Task                    | File(s)                                               | Estimated Hours |
+| ----------------------- | ----------------------------------------------------- | --------------- |
+| Docker app container    | `components/desktop/apps/docker/docker-app.tsx`       | 4h              |
+| Container list          | `components/desktop/apps/docker/container-list.tsx`   | 6h              |
+| Container detail panel  | `components/desktop/apps/docker/container-detail.tsx` | 4h              |
+| Logs viewer with search | `components/desktop/apps/docker/logs-viewer.tsx`      | 6h              |
+| Resource charts         | `components/desktop/apps/docker/resource-chart.tsx`   | 6h              |
+| Docker store            | `store/docker.ts`                                     | 6h              |
 
 #### 3.3 Task Manager Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Task manager container | `components/desktop/apps/taskmanager/taskmanager-app.tsx` | 4h |
-| Process list | `components/desktop/apps/taskmanager/process-list.tsx` | 6h |
-| Performance tab | `components/desktop/apps/taskmanager/performance-chart.tsx` | 6h |
-| Network tab | `components/desktop/apps/taskmanager/network-tab.tsx` | 4h |
-| History tab | `components/desktop/apps/taskmanager/history-tab.tsx` | 4h |
+| Task                   | File(s)                                                     | Estimated Hours |
+| ---------------------- | ----------------------------------------------------------- | --------------- |
+| Task manager container | `components/desktop/apps/taskmanager/taskmanager-app.tsx`   | 4h              |
+| Process list           | `components/desktop/apps/taskmanager/process-list.tsx`      | 6h              |
+| Performance tab        | `components/desktop/apps/taskmanager/performance-chart.tsx` | 6h              |
+| Network tab            | `components/desktop/apps/taskmanager/network-tab.tsx`       | 4h              |
+| History tab            | `components/desktop/apps/taskmanager/history-tab.tsx`       | 4h              |
 
 #### 3.4 AgentFS Viewer Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| AgentFS app container | `components/desktop/apps/agentfs/agentfs-app.tsx` | 4h |
-| Workspace list | `components/desktop/apps/agentfs/workspace-list.tsx` | 4h |
-| Call timeline | `components/desktop/apps/agentfs/call-timeline.tsx` | 6h |
-| File audit panel | `components/desktop/apps/agentfs/file-audit.tsx` | 6h |
-| Checkpoint browser | `components/desktop/apps/agentfs/checkpoint-browser.tsx` | 6h |
-| KV viewer | `components/desktop/apps/agentfs/kv-viewer.tsx` | 4h |
+| Task                  | File(s)                                                  | Estimated Hours |
+| --------------------- | -------------------------------------------------------- | --------------- |
+| AgentFS app container | `components/desktop/apps/agentfs/agentfs-app.tsx`        | 4h              |
+| Workspace list        | `components/desktop/apps/agentfs/workspace-list.tsx`     | 4h              |
+| Call timeline         | `components/desktop/apps/agentfs/call-timeline.tsx`      | 6h              |
+| File audit panel      | `components/desktop/apps/agentfs/file-audit.tsx`         | 6h              |
+| Checkpoint browser    | `components/desktop/apps/agentfs/checkpoint-browser.tsx` | 6h              |
+| KV viewer             | `components/desktop/apps/agentfs/kv-viewer.tsx`          | 4h              |
 
 **Phase 3 Total: ~136 hours (3.5 weeks at 40h/week)**
 
@@ -4818,45 +4845,45 @@ KnowledgeGraphOptions {
 
 #### 4.1 Knowledge Graph Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Knowledge app container | `components/desktop/apps/knowledge/knowledge-app.tsx` | 4h |
-| Force-directed graph canvas | `components/desktop/apps/knowledge/graph-canvas.tsx` | 12h |
-| Entity detail panel | `components/desktop/apps/knowledge/entity-panel.tsx` | 6h |
-| Fact list component | `components/desktop/apps/knowledge/fact-list.tsx` | 4h |
-| Relation list component | `components/desktop/apps/knowledge/relation-list.tsx` | 4h |
-| Semantic search bar | `components/desktop/apps/knowledge/search-bar.tsx` | 6h |
-| Time slider for temporal nav | `components/desktop/apps/knowledge/time-slider.tsx` | 6h |
-| Knowledge graph hook | `hooks/use-knowledge-graph.ts` | 8h |
+| Task                         | File(s)                                               | Estimated Hours |
+| ---------------------------- | ----------------------------------------------------- | --------------- |
+| Knowledge app container      | `components/desktop/apps/knowledge/knowledge-app.tsx` | 4h              |
+| Force-directed graph canvas  | `components/desktop/apps/knowledge/graph-canvas.tsx`  | 12h             |
+| Entity detail panel          | `components/desktop/apps/knowledge/entity-panel.tsx`  | 6h              |
+| Fact list component          | `components/desktop/apps/knowledge/fact-list.tsx`     | 4h              |
+| Relation list component      | `components/desktop/apps/knowledge/relation-list.tsx` | 4h              |
+| Semantic search bar          | `components/desktop/apps/knowledge/search-bar.tsx`    | 6h              |
+| Time slider for temporal nav | `components/desktop/apps/knowledge/time-slider.tsx`   | 6h              |
+| Knowledge graph hook         | `hooks/use-knowledge-graph.ts`                        | 8h              |
 
 #### 4.2 Linear Integration Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Linear app container | `components/desktop/apps/linear/linear-app.tsx` | 4h |
-| Issue list with filters | `components/desktop/apps/linear/issue-list.tsx` | 6h |
-| Issue detail panel | `components/desktop/apps/linear/issue-detail.tsx` | 6h |
-| Project board view | `components/desktop/apps/linear/project-board.tsx` | 8h |
+| Task                    | File(s)                                            | Estimated Hours |
+| ----------------------- | -------------------------------------------------- | --------------- |
+| Linear app container    | `components/desktop/apps/linear/linear-app.tsx`    | 4h              |
+| Issue list with filters | `components/desktop/apps/linear/issue-list.tsx`    | 6h              |
+| Issue detail panel      | `components/desktop/apps/linear/issue-detail.tsx`  | 6h              |
+| Project board view      | `components/desktop/apps/linear/project-board.tsx` | 8h              |
 
 #### 4.3 File Browser Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Files app container | `components/desktop/apps/files/files-app.tsx` | 4h |
-| Tree sidebar | `components/desktop/apps/files/tree-sidebar.tsx` | 6h |
-| File grid/list view | `components/desktop/apps/files/file-grid.tsx` | 6h |
-| Breadcrumb navigation | `components/desktop/apps/files/breadcrumbs.tsx` | 3h |
-| Quick Look preview | `components/desktop/apps/files/quick-look.tsx` | 6h |
+| Task                  | File(s)                                          | Estimated Hours |
+| --------------------- | ------------------------------------------------ | --------------- |
+| Files app container   | `components/desktop/apps/files/files-app.tsx`    | 4h              |
+| Tree sidebar          | `components/desktop/apps/files/tree-sidebar.tsx` | 6h              |
+| File grid/list view   | `components/desktop/apps/files/file-grid.tsx`    | 6h              |
+| Breadcrumb navigation | `components/desktop/apps/files/breadcrumbs.tsx`  | 3h              |
+| Quick Look preview    | `components/desktop/apps/files/quick-look.tsx`   | 6h              |
 
 #### 4.4 Workflow Builder Application
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Workflow app container | `components/desktop/apps/workflow/workflow-app.tsx` | 4h |
-| Node canvas (ReactFlow) | `components/desktop/apps/workflow/node-canvas.tsx` | 10h |
-| Node palette sidebar | `components/desktop/apps/workflow/node-palette.tsx` | 6h |
-| Execution panel | `components/desktop/apps/workflow/execution-panel.tsx` | 6h |
-| Variable inspector | `components/desktop/apps/workflow/variable-inspector.tsx` | 4h |
+| Task                    | File(s)                                                   | Estimated Hours |
+| ----------------------- | --------------------------------------------------------- | --------------- |
+| Workflow app container  | `components/desktop/apps/workflow/workflow-app.tsx`       | 4h              |
+| Node canvas (ReactFlow) | `components/desktop/apps/workflow/node-canvas.tsx`        | 10h             |
+| Node palette sidebar    | `components/desktop/apps/workflow/node-palette.tsx`       | 6h              |
+| Execution panel         | `components/desktop/apps/workflow/execution-panel.tsx`    | 6h              |
+| Variable inspector      | `components/desktop/apps/workflow/variable-inspector.tsx` | 4h              |
 
 **Phase 4 Total: ~133 hours (3.5 weeks at 40h/week)**
 
@@ -4868,24 +4895,24 @@ KnowledgeGraphOptions {
 
 #### 5.1 Orb Component System
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Orb presence container | `components/desktop/orb/orb.tsx` | 8h |
-| State animations (5 states) | `components/desktop/orb/animations.ts` | 12h |
-| Docked mode rendering | `components/desktop/orb/docked.tsx` | 4h |
-| Floating mode with drag | `components/desktop/orb/floating.tsx` | 6h |
-| Expanded voice overlay | `components/desktop/orb/expanded.tsx` | 8h |
-| Quick actions menu | `components/desktop/orb/quick-actions.tsx` | 4h |
-| Orb store | `store/orb.ts` | 4h |
+| Task                        | File(s)                                    | Estimated Hours |
+| --------------------------- | ------------------------------------------ | --------------- |
+| Orb presence container      | `components/desktop/orb/orb.tsx`           | 8h              |
+| State animations (5 states) | `components/desktop/orb/animations.ts`     | 12h             |
+| Docked mode rendering       | `components/desktop/orb/docked.tsx`        | 4h              |
+| Floating mode with drag     | `components/desktop/orb/floating.tsx`      | 6h              |
+| Expanded voice overlay      | `components/desktop/orb/expanded.tsx`      | 8h              |
+| Quick actions menu          | `components/desktop/orb/quick-actions.tsx` | 4h              |
+| Orb store                   | `store/orb.ts`                             | 4h              |
 
 #### 5.2 Voice Enhancement
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Voice session store | `store/voice.ts` | 6h |
-| Audio device selection | `hooks/use-audio-devices.ts` | 4h |
-| Waveform visualization | `components/ui/alfred/waveform.tsx` | 6h |
-| Voice settings panel | `components/desktop/apps/settings/voice-section.tsx` | 4h |
+| Task                   | File(s)                                              | Estimated Hours |
+| ---------------------- | ---------------------------------------------------- | --------------- |
+| Voice session store    | `store/voice.ts`                                     | 6h              |
+| Audio device selection | `hooks/use-audio-devices.ts`                         | 4h              |
+| Waveform visualization | `components/ui/alfred/waveform.tsx`                  | 6h              |
+| Voice settings panel   | `components/desktop/apps/settings/voice-section.tsx` | 4h              |
 
 **Phase 5 Total: ~66 hours (1.5 weeks at 40h/week)**
 
@@ -4899,51 +4926,51 @@ KnowledgeGraphOptions {
 
 #### 6.1 Mindscape Canvas (ReactFlow)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Mindscape ReactFlow canvas | `components/graphs/mindscape/canvas.tsx` | 8h |
-| Entity node component | `components/graphs/mindscape/entity-node.tsx` | 4h |
-| Relation edge component | `components/graphs/mindscape/relation-edge.tsx` | 4h |
-| Mindscape store integration | `store/mindscape/index.ts` | 6h |
-| Mode toggle animation | `components/desktop/layers/mode-transition.tsx` | 8h |
-| Mindscape layer wrapper | `components/desktop/layers/mindscape.tsx` | 6h |
+| Task                        | File(s)                                         | Estimated Hours |
+| --------------------------- | ----------------------------------------------- | --------------- |
+| Mindscape ReactFlow canvas  | `components/graphs/mindscape/canvas.tsx`        | 8h              |
+| Entity node component       | `components/graphs/mindscape/entity-node.tsx`   | 4h              |
+| Relation edge component     | `components/graphs/mindscape/relation-edge.tsx` | 4h              |
+| Mindscape store integration | `store/mindscape/index.ts`                      | 6h              |
+| Mode toggle animation       | `components/desktop/layers/mode-transition.tsx` | 8h              |
+| Mindscape layer wrapper     | `components/desktop/layers/mindscape.tsx`       | 6h              |
 
 #### 6.2 Knowledge Graph Components (ReactFlow)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Knowledge graph canvas | `components/graphs/knowledge/graph-canvas.tsx` | 6h |
-| Entity node types (6 types) | `components/graphs/knowledge/entity-node.tsx` | 6h |
-| Fact edge component | `components/graphs/knowledge/fact-edge.tsx` | 4h |
-| Integration with Knowledge app | `components/desktop/apps/knowledge/` | 4h |
+| Task                           | File(s)                                        | Estimated Hours |
+| ------------------------------ | ---------------------------------------------- | --------------- |
+| Knowledge graph canvas         | `components/graphs/knowledge/graph-canvas.tsx` | 6h              |
+| Entity node types (6 types)    | `components/graphs/knowledge/entity-node.tsx`  | 6h              |
+| Fact edge component            | `components/graphs/knowledge/fact-edge.tsx`    | 4h              |
+| Integration with Knowledge app | `components/desktop/apps/knowledge/`           | 4h              |
 
 #### 6.3 Workflow Graph Components (ReactFlow)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Workflow DAG canvas | `components/graphs/workflow/node-canvas.tsx` | 6h |
-| Action node component | `components/graphs/workflow/action-node.tsx` | 4h |
-| Condition node component | `components/graphs/workflow/condition-node.tsx` | 4h |
-| Flow edge component | `components/graphs/workflow/flow-edge.tsx` | 3h |
-| Integration with Workflow app | `components/desktop/apps/workflow/` | 4h |
+| Task                          | File(s)                                         | Estimated Hours |
+| ----------------------------- | ----------------------------------------------- | --------------- |
+| Workflow DAG canvas           | `components/graphs/workflow/node-canvas.tsx`    | 6h              |
+| Action node component         | `components/graphs/workflow/action-node.tsx`    | 4h              |
+| Condition node component      | `components/graphs/workflow/condition-node.tsx` | 4h              |
+| Flow edge component           | `components/graphs/workflow/flow-edge.tsx`      | 3h              |
+| Integration with Workflow app | `components/desktop/apps/workflow/`             | 4h              |
 
 #### 6.4 Agent Spawn Tree (ReactFlow)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Spawn tree canvas | `components/graphs/agents/spawn-tree.tsx` | 6h |
-| Agent node component | `components/graphs/agents/agent-node.tsx` | 4h |
-| Dependency edge component | `components/graphs/agents/dependency-edge.tsx` | 3h |
-| Integration with Agents app | `components/desktop/apps/agents/` | 4h |
+| Task                        | File(s)                                        | Estimated Hours |
+| --------------------------- | ---------------------------------------------- | --------------- |
+| Spawn tree canvas           | `components/graphs/agents/spawn-tree.tsx`      | 6h              |
+| Agent node component        | `components/graphs/agents/agent-node.tsx`      | 4h              |
+| Dependency edge component   | `components/graphs/agents/dependency-edge.tsx` | 3h              |
+| Integration with Agents app | `components/desktop/apps/agents/`              | 4h              |
 
 #### 6.5 Desktop-Mindscape Bridge
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Window-to-node projection | `lib/desktop/window-projection.ts` | 8h |
-| Desktop icon as concept node | `lib/desktop/icon-node-bridge.ts` | 6h |
-| Note-to-concept extraction | `lib/knowledge/note-extraction.ts` | 6h |
-| Conversation knowledge spawn | `lib/knowledge/conversation-extraction.ts` | 6h |
+| Task                         | File(s)                                    | Estimated Hours |
+| ---------------------------- | ------------------------------------------ | --------------- |
+| Window-to-node projection    | `lib/desktop/window-projection.ts`         | 8h              |
+| Desktop icon as concept node | `lib/desktop/icon-node-bridge.ts`          | 6h              |
+| Note-to-concept extraction   | `lib/knowledge/note-extraction.ts`         | 6h              |
+| Conversation knowledge spawn | `lib/knowledge/conversation-extraction.ts` | 6h              |
 
 **Phase 6 Total: ~120 hours (3 weeks at 40h/week)**
 
@@ -4955,34 +4982,34 @@ KnowledgeGraphOptions {
 
 #### 7.1 Accessibility
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Keyboard navigation audit | Multiple | 8h |
-| Screen reader compatibility | Multiple | 12h |
-| Focus management system | `lib/accessibility/focus.ts` | 8h |
-| ARIA labels and roles | Multiple | 8h |
-| High contrast mode | `styles/high-contrast.css` | 6h |
+| Task                        | File(s)                      | Estimated Hours |
+| --------------------------- | ---------------------------- | --------------- |
+| Keyboard navigation audit   | Multiple                     | 8h              |
+| Screen reader compatibility | Multiple                     | 12h             |
+| Focus management system     | `lib/accessibility/focus.ts` | 8h              |
+| ARIA labels and roles       | Multiple                     | 8h              |
+| High contrast mode          | `styles/high-contrast.css`   | 6h              |
 
 #### 7.2 Performance
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Window virtualization | `lib/desktop/virtualization.ts` | 8h |
-| Lazy loading app bundles | `components/desktop/apps/lazy.ts` | 6h |
-| State selector optimization | `store/desktop/selectors.ts` | 6h |
-| Animation performance | Multiple | 8h |
-| Bundle size audit | Build config | 4h |
+| Task                        | File(s)                           | Estimated Hours |
+| --------------------------- | --------------------------------- | --------------- |
+| Window virtualization       | `lib/desktop/virtualization.ts`   | 8h              |
+| Lazy loading app bundles    | `components/desktop/apps/lazy.ts` | 6h              |
+| State selector optimization | `store/desktop/selectors.ts`      | 6h              |
+| Animation performance       | Multiple                          | 8h              |
+| Bundle size audit           | Build config                      | 4h              |
 
 #### 7.3 Final Polish
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Notification center | `components/desktop/notification-center.tsx` | 8h |
-| Context lens hover | `components/desktop/context-lens.tsx` | 8h |
-| Workflow trails animation | `components/desktop/workflow-trails.tsx` | 8h |
-| Living desktop wallpaper | `components/desktop/living-wallpaper.tsx` | 8h |
-| Time capsule snapshots | `lib/desktop/time-capsule.ts` | 6h |
-| Focus mode | `components/desktop/focus-mode.tsx` | 6h |
+| Task                      | File(s)                                      | Estimated Hours |
+| ------------------------- | -------------------------------------------- | --------------- |
+| Notification center       | `components/desktop/notification-center.tsx` | 8h              |
+| Context lens hover        | `components/desktop/context-lens.tsx`        | 8h              |
+| Workflow trails animation | `components/desktop/workflow-trails.tsx`     | 8h              |
+| Living desktop wallpaper  | `components/desktop/living-wallpaper.tsx`    | 8h              |
+| Time capsule snapshots    | `lib/desktop/time-capsule.ts`                | 6h              |
+| Focus mode                | `components/desktop/focus-mode.tsx`          | 6h              |
 
 **Phase 7 Total: ~108 hours (2.5 weeks at 40h/week)**
 
@@ -4994,99 +5021,99 @@ KnowledgeGraphOptions {
 
 #### 8.1 Cortex Visualizer (`@alfred/cortex`)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Cortex app container | `components/desktop/apps/cortex/cortex-app.tsx` | 4h |
-| WebGPU shader preview | `components/desktop/apps/cortex/shader-preview.tsx` | 12h |
-| Parameter tuner sliders | `components/desktop/apps/cortex/parameter-tuner.tsx` | 6h |
-| Preset browser | `components/desktop/apps/cortex/preset-browser.tsx` | 4h |
-| GPU monitor panel | `components/desktop/apps/cortex/gpu-monitor.tsx` | 6h |
-| Cortex store | `store/cortex.ts` | 6h |
-| WebGPU engine hook | `hooks/use-cortex-engine.ts` | 8h |
+| Task                    | File(s)                                              | Estimated Hours |
+| ----------------------- | ---------------------------------------------------- | --------------- |
+| Cortex app container    | `components/desktop/apps/cortex/cortex-app.tsx`      | 4h              |
+| WebGPU shader preview   | `components/desktop/apps/cortex/shader-preview.tsx`  | 12h             |
+| Parameter tuner sliders | `components/desktop/apps/cortex/parameter-tuner.tsx` | 6h              |
+| Preset browser          | `components/desktop/apps/cortex/preset-browser.tsx`  | 4h              |
+| GPU monitor panel       | `components/desktop/apps/cortex/gpu-monitor.tsx`     | 6h              |
+| Cortex store            | `store/cortex.ts`                                    | 6h              |
+| WebGPU engine hook      | `hooks/use-cortex-engine.ts`                         | 8h              |
 
 #### 8.2 Learning Dashboard (`@alfred/learning`)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Learning app container | `components/desktop/apps/learning/learning-app.tsx` | 4h |
-| Mistake ledger list | `components/desktop/apps/learning/mistake-ledger.tsx` | 6h |
-| Correction timeline | `components/desktop/apps/learning/correction-timeline.tsx` | 6h |
-| Accuracy charts | `components/desktop/apps/learning/accuracy-chart.tsx` | 6h |
-| Improvement insights | `components/desktop/apps/learning/improvement-insights.tsx` | 4h |
-| Learning store | `store/learning.ts` | 6h |
+| Task                   | File(s)                                                     | Estimated Hours |
+| ---------------------- | ----------------------------------------------------------- | --------------- |
+| Learning app container | `components/desktop/apps/learning/learning-app.tsx`         | 4h              |
+| Mistake ledger list    | `components/desktop/apps/learning/mistake-ledger.tsx`       | 6h              |
+| Correction timeline    | `components/desktop/apps/learning/correction-timeline.tsx`  | 6h              |
+| Accuracy charts        | `components/desktop/apps/learning/accuracy-chart.tsx`       | 6h              |
+| Improvement insights   | `components/desktop/apps/learning/improvement-insights.tsx` | 4h              |
+| Learning store         | `store/learning.ts`                                         | 6h              |
 
 #### 8.3 Policy Viewer (`@alfred/policy`)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Policy app container | `components/desktop/apps/policy/policy-app.tsx` | 4h |
-| Decision log viewer | `components/desktop/apps/policy/decision-log.tsx` | 6h |
-| Constraint list | `components/desktop/apps/policy/constraint-list.tsx` | 4h |
-| Autonomy controls | `components/desktop/apps/policy/autonomy-controls.tsx` | 6h |
-| Rule editor (admin) | `components/desktop/apps/policy/rule-editor.tsx` | 8h |
-| Policy store | `store/policy.ts` | 6h |
+| Task                 | File(s)                                                | Estimated Hours |
+| -------------------- | ------------------------------------------------------ | --------------- |
+| Policy app container | `components/desktop/apps/policy/policy-app.tsx`        | 4h              |
+| Decision log viewer  | `components/desktop/apps/policy/decision-log.tsx`      | 6h              |
+| Constraint list      | `components/desktop/apps/policy/constraint-list.tsx`   | 4h              |
+| Autonomy controls    | `components/desktop/apps/policy/autonomy-controls.tsx` | 6h              |
+| Rule editor (admin)  | `components/desktop/apps/policy/rule-editor.tsx`       | 8h              |
+| Policy store         | `store/policy.ts`                                      | 6h              |
 
 #### 8.4 Tune Manager (`@alfred/tune`)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Tune app container | `components/desktop/apps/tune/tune-app.tsx` | 4h |
-| Job list with status | `components/desktop/apps/tune/job-list.tsx` | 6h |
-| Training progress charts | `components/desktop/apps/tune/training-progress.tsx` | 8h |
-| Dataset browser | `components/desktop/apps/tune/dataset-browser.tsx` | 6h |
-| Hyperparameter editor | `components/desktop/apps/tune/hyperparameter-editor.tsx` | 6h |
-| Model comparison | `components/desktop/apps/tune/model-comparison.tsx` | 6h |
-| Tune store | `store/tune.ts` | 6h |
+| Task                     | File(s)                                                  | Estimated Hours |
+| ------------------------ | -------------------------------------------------------- | --------------- |
+| Tune app container       | `components/desktop/apps/tune/tune-app.tsx`              | 4h              |
+| Job list with status     | `components/desktop/apps/tune/job-list.tsx`              | 6h              |
+| Training progress charts | `components/desktop/apps/tune/training-progress.tsx`     | 8h              |
+| Dataset browser          | `components/desktop/apps/tune/dataset-browser.tsx`       | 6h              |
+| Hyperparameter editor    | `components/desktop/apps/tune/hyperparameter-editor.tsx` | 6h              |
+| Model comparison         | `components/desktop/apps/tune/model-comparison.tsx`      | 6h              |
+| Tune store               | `store/tune.ts`                                          | 6h              |
 
 #### 8.5 Plan Editor (`@alfred/plan`)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Plan app container | `components/desktop/apps/plan/plan-app.tsx` | 4h |
-| Visual plan canvas | `components/desktop/apps/plan/plan-canvas.tsx` | 10h |
-| Intent debugger | `components/desktop/apps/plan/intent-debugger.tsx` | 6h |
-| Research panel | `components/desktop/apps/plan/research-panel.tsx` | 6h |
-| Pattern library browser | `components/desktop/apps/plan/pattern-library.tsx` | 4h |
-| Evaluation metrics | `components/desktop/apps/plan/evaluation-metrics.tsx` | 4h |
-| Plan store | `store/plan.ts` | 6h |
+| Task                    | File(s)                                               | Estimated Hours |
+| ----------------------- | ----------------------------------------------------- | --------------- |
+| Plan app container      | `components/desktop/apps/plan/plan-app.tsx`           | 4h              |
+| Visual plan canvas      | `components/desktop/apps/plan/plan-canvas.tsx`        | 10h             |
+| Intent debugger         | `components/desktop/apps/plan/intent-debugger.tsx`    | 6h              |
+| Research panel          | `components/desktop/apps/plan/research-panel.tsx`     | 6h              |
+| Pattern library browser | `components/desktop/apps/plan/pattern-library.tsx`    | 4h              |
+| Evaluation metrics      | `components/desktop/apps/plan/evaluation-metrics.tsx` | 4h              |
+| Plan store              | `store/plan.ts`                                       | 6h              |
 
 #### 8.6 Metrics Dashboard (`@alfred/metrics`)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Metrics app container | `components/desktop/apps/metrics/metrics-app.tsx` | 4h |
-| Metric explorer | `components/desktop/apps/metrics/metric-explorer.tsx` | 6h |
-| Dashboard builder | `components/desktop/apps/metrics/dashboard-builder.tsx` | 10h |
-| Alert configuration | `components/desktop/apps/metrics/alert-config.tsx` | 6h |
-| PromQL query editor | `components/desktop/apps/metrics/query-editor.tsx` | 8h |
-| Chart panel component | `components/desktop/apps/metrics/chart-panel.tsx` | 6h |
-| Metrics store | `store/metrics.ts` | 6h |
+| Task                  | File(s)                                                 | Estimated Hours |
+| --------------------- | ------------------------------------------------------- | --------------- |
+| Metrics app container | `components/desktop/apps/metrics/metrics-app.tsx`       | 4h              |
+| Metric explorer       | `components/desktop/apps/metrics/metric-explorer.tsx`   | 6h              |
+| Dashboard builder     | `components/desktop/apps/metrics/dashboard-builder.tsx` | 10h             |
+| Alert configuration   | `components/desktop/apps/metrics/alert-config.tsx`      | 6h              |
+| PromQL query editor   | `components/desktop/apps/metrics/query-editor.tsx`      | 8h              |
+| Chart panel component | `components/desktop/apps/metrics/chart-panel.tsx`       | 6h              |
+| Metrics store         | `store/metrics.ts`                                      | 6h              |
 
 #### 8.7 RAG Explorer (`@alfred/rag`, `@alfred/embed`)
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| RAG app container | `components/desktop/apps/rag/rag-app.tsx` | 4h |
-| Chunk browser | `components/desktop/apps/rag/chunk-browser.tsx` | 6h |
-| Embedding visualizer (t-SNE/UMAP) | `components/desktop/apps/rag/embedding-visualizer.tsx` | 12h |
-| Retrieval debugger | `components/desktop/apps/rag/retrieval-debugger.tsx` | 6h |
-| Rerank tuner | `components/desktop/apps/rag/rerank-tuner.tsx` | 4h |
-| Similarity explorer | `components/desktop/apps/rag/similarity-explorer.tsx` | 6h |
-| RAG store | `store/rag.ts` | 6h |
+| Task                              | File(s)                                                | Estimated Hours |
+| --------------------------------- | ------------------------------------------------------ | --------------- |
+| RAG app container                 | `components/desktop/apps/rag/rag-app.tsx`              | 4h              |
+| Chunk browser                     | `components/desktop/apps/rag/chunk-browser.tsx`        | 6h              |
+| Embedding visualizer (t-SNE/UMAP) | `components/desktop/apps/rag/embedding-visualizer.tsx` | 12h             |
+| Retrieval debugger                | `components/desktop/apps/rag/retrieval-debugger.tsx`   | 6h              |
+| Rerank tuner                      | `components/desktop/apps/rag/rerank-tuner.tsx`         | 4h              |
+| Similarity explorer               | `components/desktop/apps/rag/similarity-explorer.tsx`  | 6h              |
+| RAG store                         | `store/rag.ts`                                         | 6h              |
 
 #### 8.8 Enhanced Existing Apps with Package Integration
 
-| Task | File(s) | Estimated Hours |
-|------|---------|-----------------|
-| Chat: History budget panel | `components/desktop/apps/chat/history-budget.tsx` | 4h |
-| Chat: RAG context display | `components/desktop/apps/chat/rag-context.tsx` | 4h |
-| Settings: Session management | `components/desktop/apps/settings/sessions-section.tsx` | 6h |
-| Settings: Token management | `components/desktop/apps/settings/tokens-section.tsx` | 4h |
-| Settings: Policy preferences | `components/desktop/apps/settings/policy-section.tsx` | 4h |
-| Terminal: TUI mode toggle | `components/desktop/apps/terminal/tui-mode.tsx` | 4h |
-| Code: Semantic search | `components/desktop/apps/code/semantic-search.tsx` | 6h |
-| History store | `store/history.ts` | 4h |
-| Auth store | `store/auth.ts` | 4h |
+| Task                         | File(s)                                                 | Estimated Hours |
+| ---------------------------- | ------------------------------------------------------- | --------------- |
+| Chat: History budget panel   | `components/desktop/apps/chat/history-budget.tsx`       | 4h              |
+| Chat: RAG context display    | `components/desktop/apps/chat/rag-context.tsx`          | 4h              |
+| Settings: Session management | `components/desktop/apps/settings/sessions-section.tsx` | 6h              |
+| Settings: Token management   | `components/desktop/apps/settings/tokens-section.tsx`   | 4h              |
+| Settings: Policy preferences | `components/desktop/apps/settings/policy-section.tsx`   | 4h              |
+| Terminal: TUI mode toggle    | `components/desktop/apps/terminal/tui-mode.tsx`         | 4h              |
+| Code: Semantic search        | `components/desktop/apps/code/semantic-search.tsx`      | 6h              |
+| History store                | `store/history.ts`                                      | 4h              |
+| Auth store                   | `store/auth.ts`                                         | 4h              |
 
 **Phase 8 Total: ~326 hours (8 weeks at 40h/week)**
 
@@ -5094,18 +5121,18 @@ KnowledgeGraphOptions {
 
 ### Phase Summary (Updated with Phase 0)
 
-| Phase | Focus | Duration | Hours | Dependency |
-|-------|-------|----------|-------|------------|
-| **Phase 0** | **Type Migration & Architecture** | **Weeks 0-1** | **96h** | **BLOCKING** |
-| Phase 1 | Foundation (Shell, Tiling) | Weeks 2-4 | 118h | Phase 0 |
-| Phase 2 | Core Apps (Chat, Code, Agents, Terminal) | Weeks 5-7 | 182h | Phase 1 |
-| Phase 3 | System Apps (PR, Docker, Task, AgentFS) | Weeks 8-9 | 136h | Phase 1 |
-| Phase 4 | Knowledge & Integration | Weeks 10-11 | 133h | Phase 1 |
-| Phase 5 | Orb & Voice | Week 12 | 66h | Phase 2 |
-| Phase 6 | Mindscape & Graph Components (RF) | Weeks 13-15 | 120h | Phase 0, 4 |
-| Phase 7 | Polish & Accessibility | Weeks 16-17 | 108h | All |
-| Phase 8 | Intelligence & Learning Apps | Weeks 18-20 | 326h | Phase 1, 6 |
-| **Total** | | **20 weeks** | **1,285h** |
+| Phase       | Focus                                    | Duration      | Hours      | Dependency   |
+| ----------- | ---------------------------------------- | ------------- | ---------- | ------------ |
+| **Phase 0** | **Type Migration & Architecture**        | **Weeks 0-1** | **96h**    | **BLOCKING** |
+| Phase 1     | Foundation (Shell, Tiling)               | Weeks 2-4     | 118h       | Phase 0      |
+| Phase 2     | Core Apps (Chat, Code, Agents, Terminal) | Weeks 5-7     | 182h       | Phase 1      |
+| Phase 3     | System Apps (PR, Docker, Task, AgentFS)  | Weeks 8-9     | 136h       | Phase 1      |
+| Phase 4     | Knowledge & Integration                  | Weeks 10-11   | 133h       | Phase 1      |
+| Phase 5     | Orb & Voice                              | Week 12       | 66h        | Phase 2      |
+| Phase 6     | Mindscape & Graph Components (RF)        | Weeks 13-15   | 120h       | Phase 0, 4   |
+| Phase 7     | Polish & Accessibility                   | Weeks 16-17   | 108h       | All          |
+| Phase 8     | Intelligence & Learning Apps             | Weeks 18-20   | 326h       | Phase 1, 6   |
+| **Total**   |                                          | **20 weeks**  | **1,285h** |
 
 #### Critical Path
 
@@ -5127,12 +5154,12 @@ Phase 0 (Type Migration)
 
 #### Phase 0 Risks
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Type migration breaks existing windows | High | Create adapter layer, migrate incrementally |
-| ReactFlow removal causes runtime errors | High | Comprehensive test coverage before migration |
-| Store separation introduces state sync bugs | Medium | Thorough integration testing |
-| ESLint isolation rule slows development | Low | Clear documentation, pre-commit hooks |
+| Risk                                        | Impact | Mitigation                                   |
+| ------------------------------------------- | ------ | -------------------------------------------- |
+| Type migration breaks existing windows      | High   | Create adapter layer, migrate incrementally  |
+| ReactFlow removal causes runtime errors     | High   | Comprehensive test coverage before migration |
+| Store separation introduces state sync bugs | Medium | Thorough integration testing                 |
+| ESLint isolation rule slows development     | Low    | Clear documentation, pre-commit hooks        |
 
 ---
 
@@ -5140,39 +5167,39 @@ Phase 0 (Type Migration)
 
 ### New Files Count
 
-| Category | New Files | Lines (Estimated) |
-|----------|-----------|-------------------|
-| **Phase 0: Type Migration** | **12** | **2,400** |
-| **Phase 0: Graph Types** | **7** | **800** |
-| **Phase 0: Store Separation** | **4** | **600** |
-| Desktop Shell | 15 | 2,500 |
-| Window Manager | 12 | 2,800 |
-| Desktop Apps (Original) | 85 | 15,000 |
-| Desktop Apps (Phase 8) | 49 | 8,500 |
-| **Graph Components (Phase 6)** | **24** | **4,000** |
-| Stores (Original) | 12 | 3,000 |
-| Stores (Phase 8) | 9 | 2,000 |
-| **Mindscape Store (Phase 0)** | **3** | **500** |
-| Hooks | 22 | 2,800 |
-| Types/Schemas (Original) | 8 | 1,500 |
-| Types/Schemas (Phase 8) | 7 | 1,400 |
-| Utilities | 15 | 2,000 |
-| UI Components | 25 | 4,000 |
-| **Total** | **309** | **54,800** |
+| Category                       | New Files | Lines (Estimated) |
+| ------------------------------ | --------- | ----------------- |
+| **Phase 0: Type Migration**    | **12**    | **2,400**         |
+| **Phase 0: Graph Types**       | **7**     | **800**           |
+| **Phase 0: Store Separation**  | **4**     | **600**           |
+| Desktop Shell                  | 15        | 2,500             |
+| Window Manager                 | 12        | 2,800             |
+| Desktop Apps (Original)        | 85        | 15,000            |
+| Desktop Apps (Phase 8)         | 49        | 8,500             |
+| **Graph Components (Phase 6)** | **24**    | **4,000**         |
+| Stores (Original)              | 12        | 3,000             |
+| Stores (Phase 8)               | 9         | 2,000             |
+| **Mindscape Store (Phase 0)**  | **3**     | **500**           |
+| Hooks                          | 22        | 2,800             |
+| Types/Schemas (Original)       | 8         | 1,500             |
+| Types/Schemas (Phase 8)        | 7         | 1,400             |
+| Utilities                      | 15        | 2,000             |
+| UI Components                  | 25        | 4,000             |
+| **Total**                      | **309**   | **54,800**        |
 
 ### New Apps Added in Phase 8
 
-| App | Package(s) | Files | Lines |
-|-----|------------|-------|-------|
-| Cortex Visualizer | `@alfred/cortex` | 7 | 1,200 |
-| Learning Dashboard | `@alfred/learning` | 6 | 1,000 |
-| Policy Viewer | `@alfred/policy` | 6 | 1,100 |
-| Tune Manager | `@alfred/tune` | 7 | 1,300 |
-| Plan Editor | `@alfred/plan` | 7 | 1,200 |
-| Metrics Dashboard | `@alfred/metrics` | 7 | 1,400 |
-| RAG Explorer | `@alfred/rag`, `@alfred/embed` | 7 | 1,300 |
-| Enhanced Existing | `@alfred/history`, `@alfred/auth`, `@alfred/tui` | 8 | 1,000 |
-| **Total Phase 8** | | **55** | **9,500** |
+| App                | Package(s)                                       | Files  | Lines     |
+| ------------------ | ------------------------------------------------ | ------ | --------- |
+| Cortex Visualizer  | `@alfred/cortex`                                 | 7      | 1,200     |
+| Learning Dashboard | `@alfred/learning`                               | 6      | 1,000     |
+| Policy Viewer      | `@alfred/policy`                                 | 6      | 1,100     |
+| Tune Manager       | `@alfred/tune`                                   | 7      | 1,300     |
+| Plan Editor        | `@alfred/plan`                                   | 7      | 1,200     |
+| Metrics Dashboard  | `@alfred/metrics`                                | 7      | 1,400     |
+| RAG Explorer       | `@alfred/rag`, `@alfred/embed`                   | 7      | 1,300     |
+| Enhanced Existing  | `@alfred/history`, `@alfred/auth`, `@alfred/tui` | 8      | 1,000     |
+| **Total Phase 8**  |                                                  | **55** | **9,500** |
 
 ### Complete File Manifest
 
@@ -5576,53 +5603,53 @@ apps/web/src/
 
 ### 13.1 Performance Metrics
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Time to Interactive | < 2s | Lighthouse |
-| Window Open Latency | < 100ms | Performance API |
-| Tiling Layout Switch | < 50ms | Performance API |
-| Voice Recognition Start | < 200ms | Custom metric |
-| Message Stream First Byte | < 500ms | Network timing |
-| Agent Wave Update | < 100ms | Custom metric |
+| Metric                             | Target  | Measurement     |
+| ---------------------------------- | ------- | --------------- |
+| Time to Interactive                | < 2s    | Lighthouse      |
+| Window Open Latency                | < 100ms | Performance API |
+| Tiling Layout Switch               | < 50ms  | Performance API |
+| Voice Recognition Start            | < 200ms | Custom metric   |
+| Message Stream First Byte          | < 500ms | Network timing  |
+| Agent Wave Update                  | < 100ms | Custom metric   |
 | Knowledge Graph Render (100 nodes) | < 500ms | Performance API |
-| Memory Usage (10 windows) | < 500MB | DevTools |
+| Memory Usage (10 windows)          | < 500MB | DevTools        |
 
 ### 13.2 Accessibility Compliance
 
-| Standard | Requirement |
-|----------|-------------|
-| WCAG 2.1 AA | Full compliance |
-| Keyboard Navigation | All features accessible |
-| Screen Reader | VoiceOver/NVDA tested |
-| Color Contrast | 4.5:1 minimum |
-| Focus Indicators | Visible on all interactive elements |
-| Motion | Respects prefers-reduced-motion |
+| Standard            | Requirement                         |
+| ------------------- | ----------------------------------- |
+| WCAG 2.1 AA         | Full compliance                     |
+| Keyboard Navigation | All features accessible             |
+| Screen Reader       | VoiceOver/NVDA tested               |
+| Color Contrast      | 4.5:1 minimum                       |
+| Focus Indicators    | Visible on all interactive elements |
+| Motion              | Respects prefers-reduced-motion     |
 
 ### 13.3 User Experience Criteria
 
-| Criterion | Acceptance |
-|-----------|------------|
-| Voice-to-Voice Conversation | Complete flow works end-to-end |
-| Agent Waves Visualization | Real-time updates within 1s |
-| PR Review Flow | View, comment, merge workflow complete |
-| Knowledge Graph Navigation | Semantic search returns in < 2s |
-| Tiling Window Management | All 7 layouts functional |
-| Desktop Persistence | State restored on reload |
-| Orb States | All 5 states animate correctly |
+| Criterion                   | Acceptance                             |
+| --------------------------- | -------------------------------------- |
+| Voice-to-Voice Conversation | Complete flow works end-to-end         |
+| Agent Waves Visualization   | Real-time updates within 1s            |
+| PR Review Flow              | View, comment, merge workflow complete |
+| Knowledge Graph Navigation  | Semantic search returns in < 2s        |
+| Tiling Window Management    | All 7 layouts functional               |
+| Desktop Persistence         | State restored on reload               |
+| Orb States                  | All 5 states animate correctly         |
 
 ---
 
 ## Part XIV: Risks & Mitigations
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Monaco bundle size | High | Medium | Lazy load, code splitting |
-| ReactFlow performance at scale | High | Medium | Virtualization, LOD |
-| Voice latency on slow connections | Medium | High | Local VAD, streaming chunks |
-| Tiling edge cases | Medium | Medium | Extensive layout testing |
-| ACP compatibility across agents | High | Medium | Adapter pattern, fallbacks |
-| Local-first sync conflicts | Medium | Low | CRDT consideration, manual resolve |
-| Accessibility regression | High | Medium | Automated a11y testing in CI |
+| Risk                              | Impact | Likelihood | Mitigation                         |
+| --------------------------------- | ------ | ---------- | ---------------------------------- |
+| Monaco bundle size                | High   | Medium     | Lazy load, code splitting          |
+| ReactFlow performance at scale    | High   | Medium     | Virtualization, LOD                |
+| Voice latency on slow connections | Medium | High       | Local VAD, streaming chunks        |
+| Tiling edge cases                 | Medium | Medium     | Extensive layout testing           |
+| ACP compatibility across agents   | High   | Medium     | Adapter pattern, fallbacks         |
+| Local-first sync conflicts        | Medium | Low        | CRDT consideration, manual resolve |
+| Accessibility regression          | High   | Medium     | Automated a11y testing in CI       |
 
 ---
 
@@ -5630,32 +5657,31 @@ apps/web/src/
 
 ### Phase Completion Status
 
-| Phase | Status | Start | End | Notes |
-|-------|--------|-------|-----|-------|
-| Phase 1: Foundation | Not Started | - | - | - |
-| Phase 2: Core Apps | Not Started | - | - | - |
-| Phase 3: System Apps | Not Started | - | - | - |
-| Phase 4: Knowledge | Not Started | - | - | - |
-| Phase 5: Orb & Voice | Not Started | - | - | - |
-| Phase 6: Mindscape | Not Started | - | - | - |
-| Phase 7: Polish | Not Started | - | - | - |
+| Phase                | Status      | Start | End | Notes |
+| -------------------- | ----------- | ----- | --- | ----- |
+| Phase 1: Foundation  | Not Started | -     | -   | -     |
+| Phase 2: Core Apps   | Not Started | -     | -   | -     |
+| Phase 3: System Apps | Not Started | -     | -   | -     |
+| Phase 4: Knowledge   | Not Started | -     | -   | -     |
+| Phase 5: Orb & Voice | Not Started | -     | -   | -     |
+| Phase 6: Mindscape   | Not Started | -     | -   | -     |
+| Phase 7: Polish      | Not Started | -     | -   | -     |
 
 ### Surprises & Discoveries
 
-*Document unexpected findings during implementation.*
+_Document unexpected findings during implementation._
 
 ### Decision Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
+| Date       | Decision                                   | Rationale                                     |
+| ---------- | ------------------------------------------ | --------------------------------------------- |
 | 2026-01-03 | Wayland-inspired tiling over floating-only | Better productivity, keyboard-driven workflow |
-| 2026-01-03 | PGlite for local-first | Offline capability, instant UI |
-| 2026-01-03 | Separate stores per app domain | Better code organization, tree shaking |
-| 2026-01-03 | ACP as agent abstraction layer | Future-proof multi-agent support |
+| 2026-01-03 | PGlite for local-first                     | Offline capability, instant UI                |
+| 2026-01-03 | Separate stores per app domain             | Better code organization, tree shaking        |
+| 2026-01-03 | ACP as agent abstraction layer             | Future-proof multi-agent support              |
 
 ---
 
 ## Part XVI: Outcomes & Retrospective
 
-*To be completed after implementation.*
-
+_To be completed after implementation._

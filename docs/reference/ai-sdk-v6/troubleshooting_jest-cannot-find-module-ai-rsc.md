@@ -15,12 +15,11 @@ I am getting the following error: `Cannot find module '@ai-sdk/rsc'`.
 Configure the module resolution via `jest config update` in `moduleNameMapper`:
 
 jest.config.js
-    
-    
+
     "moduleNameMapper": {
-    
+
       "^@ai-sdk/rsc$": "/node_modules/@ai-sdk/rsc/dist"
-    
+
     }
 
 Previous

@@ -36,6 +36,7 @@ Agent A → (context object) → Agent B
 ```
 
 Problems:
+
 - Context must fit in memory
 - Context accumulates across handoffs
 - No persistence—crashes lose everything
@@ -49,6 +50,7 @@ Agent A → (writes artifact) → filesystem → (reads artifact) → Agent B
 ```
 
 Benefits:
+
 - Unlimited context (filesystem scale)
 - Fresh start each time
 - Durable persistence

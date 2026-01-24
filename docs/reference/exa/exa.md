@@ -14,11 +14,11 @@ This endpoint helps eliminate hallucinations in coding agents by providing real,
 
 Alfred’s orchestrator now prefers Exa for web search whenever `EXA_API_KEY` is present. The web tool keeps the policy scope `web.read` and automatically falls back to DuckDuckGo if Exa is unavailable or errors. Default live crawl options ensure the planning flow always acts on fresh content, and top results flow into the context bundle with snippets for downstream ranking.
 
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `EXA_API_KEY` | Required API key for Exa requests | _none_ |
-| `EXA_BASE_URL` | Override Exa API base URL | `https://api.exa.ai` |
-| `EXA_TIMEOUT_MS` | Upper bound for Exa request duration | `20000` |
+| Variable            | Purpose                                                                                | Default                                   |
+| ------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `EXA_API_KEY`       | Required API key for Exa requests                                                      | _none_                                    |
+| `EXA_BASE_URL`      | Override Exa API base URL                                                              | `https://api.exa.ai`                      |
+| `EXA_TIMEOUT_MS`    | Upper bound for Exa request duration                                                   | `20000`                                   |
 | `ORCH_WEB_PROVIDER` | Optional override for orchestrator search provider (`exa`, `ddg`, `serpapi`, `tavily`) | auto (uses `exa` when the API key is set) |
 
 The orchestrator submits search requests with `livecrawl: "always"`, lightweight highlights, and concise summaries. High-confidence links can later be re-fetched with Exa’s contents endpoint to attach richer context without exposing API credentials to the UI.

@@ -38,10 +38,10 @@ Love is a universal emotion that is characterized by feelings of affection, atta
 
 AI SDK Core has various functions designed for text generation, structured data generation, and tool usage. These functions take a standardized approach to setting up prompts and settings, making it easier to work with different models.
 
-  * `generateText`: Generates text and tool calls. This function is ideal for non-interactive use cases such as automation tasks where you need to write text (e.g. drafting email or summarizing web pages) and for agents that use tools.
-  * `streamText`: Stream text and tool calls. You can use the `streamText` function for interactive use cases such as chat bots and content streaming.
-  * `generateObject`: Generates a typed, structured object that matches a Zod schema. You can use this function to force the language model to return structured data, e.g. for information extraction, synthetic data generation, or classification tasks.
-  * `streamObject`: Stream a structured object that matches a Zod schema. You can use this function to stream generated UIs.
+- `generateText`: Generates text and tool calls. This function is ideal for non-interactive use cases such as automation tasks where you need to write text (e.g. drafting email or summarizing web pages) and for agents that use tools.
+- `streamText`: Stream text and tool calls. You can use the `streamText` function for interactive use cases such as chat bots and content streaming.
+- `generateObject`: Generates a typed, structured object that matches a Zod schema. You can use this function to force the language model to return structured data, e.g. for information extraction, synthetic data generation, or classification tasks.
+- `streamObject`: Stream a structured object that matches a Zod schema. You can use this function to stream generated UIs.
 
 ## API Reference
 

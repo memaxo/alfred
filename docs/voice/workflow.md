@@ -12,6 +12,7 @@ Voice Input → Intent Classification → Plan Generation → Voice Summary → 
 ```
 
 When enabled, the voice assistant classifies incoming speech to determine if it's:
+
 - **Workflow intent**: User wants to build, fix, or modify something
 - **Approval intent**: User is approving or rejecting a plan
 - **Status query**: User is asking about workflow progress
@@ -25,15 +26,15 @@ Voice workflow is **enabled by default**. Configure all settings in:
 
 ### Preference Keys
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `domain.voice.workflow_enabled` | boolean | `true` | Enable/disable voice workflow |
-| `domain.voice.workflow_verbosity` | `"brief" \| "standard" \| "detailed"` | `"standard"` | Plan summary detail level |
-| `domain.voice.workflow_auto_approve` | `"off" \| "small" \| "medium" \| "all"` | `"off"` | Auto-approve threshold |
-| `domain.voice.workflow_notifications` | `"voice" \| "sound" \| "silent"` | `"voice"` | Completion notification type |
-| `domain.voice.workflow_updates` | `"request" \| "25percent" \| "phase" \| "continuous"` | `"request"` | Progress update frequency |
-| `domain.voice.workflow_timeout` | number (minutes) | `5` | Approval timeout (0 = none) |
-| `domain.voice.workflow_learning` | boolean | `true` | Learn patterns from workflows |
+| Key                                   | Type                                                  | Default      | Description                   |
+| ------------------------------------- | ----------------------------------------------------- | ------------ | ----------------------------- |
+| `domain.voice.workflow_enabled`       | boolean                                               | `true`       | Enable/disable voice workflow |
+| `domain.voice.workflow_verbosity`     | `"brief" \| "standard" \| "detailed"`                 | `"standard"` | Plan summary detail level     |
+| `domain.voice.workflow_auto_approve`  | `"off" \| "small" \| "medium" \| "all"`               | `"off"`      | Auto-approve threshold        |
+| `domain.voice.workflow_notifications` | `"voice" \| "sound" \| "silent"`                      | `"voice"`    | Completion notification type  |
+| `domain.voice.workflow_updates`       | `"request" \| "25percent" \| "phase" \| "continuous"` | `"request"`  | Progress update frequency     |
+| `domain.voice.workflow_timeout`       | number (minutes)                                      | `5`          | Approval timeout (0 = none)   |
+| `domain.voice.workflow_learning`      | boolean                                               | `true`       | Learn patterns from workflows |
 
 ### Verbosity Levels
 
@@ -90,11 +91,13 @@ Natural language requests that indicate development intent are routed to the wor
 After ALFRED presents a plan, the user can approve or reject:
 
 **Approval phrases:**
+
 - "Yes", "Approve", "Go ahead"
 - "Proceed", "Do it", "Execute"
 - "Sounds good", "Looks good", "That's fine"
 
 **Rejection phrases:**
+
 - "No", "Reject", "Cancel"
 - "Stop", "Abort", "Nevermind"
 - "Scratch that", "Not now"
@@ -115,16 +118,16 @@ While a workflow is executing:
 ```
 User: "Build a dark mode feature for the settings page"
 
-ALFRED: "I've created a plan with 3 phases and 7 total tasks. 
-         Phase 1: Create theme context with 2 tasks. 
-         Phase 2: Update components with 3 tasks. 
+ALFRED: "I've created a plan with 3 phases and 7 total tasks.
+         Phase 1: Create theme context with 2 tasks.
+         Phase 2: Update components with 3 tasks.
          Phase 3: Add persistence with 2 tasks.
          This will run 4 agents in 2 waves. Estimated time: about 5 minutes.
          Say 'approve' to proceed or 'reject' to cancel."
 
 User: "Approve"
 
-ALFRED: "Plan approved. Agents are now executing. I'll let you know when 
+ALFRED: "Plan approved. Agents are now executing. I'll let you know when
          they're done, or ask for status updates anytime."
 
 [Later...]
@@ -143,6 +146,7 @@ ALFRED: "Done! Completed 7 tasks in 4 minutes."
 ## Hybrid Approval
 
 Plans can be approved either:
+
 1. **Via voice**: Say "approve" or similar
 2. **Via web UI**: Click the approve button in the workflow interface
 
@@ -217,16 +221,16 @@ Structured plans are converted to natural language optimized for TTS:
 
 ### Files
 
-| File | Purpose |
-|------|---------|
-| `packages/api/src/voice/intent.ts` | Intent classification |
-| `packages/api/src/voice/workflow-state.ts` | State machine types |
-| `packages/api/src/voice/plan-speech.ts` | Plan-to-speech conversion |
+| File                                         | Purpose                             |
+| -------------------------------------------- | ----------------------------------- |
+| `packages/api/src/voice/intent.ts`           | Intent classification               |
+| `packages/api/src/voice/workflow-state.ts`   | State machine types                 |
+| `packages/api/src/voice/plan-speech.ts`      | Plan-to-speech conversion           |
 | `packages/api/src/voice/workflow-handler.ts` | Intent handlers, auto-approve logic |
-| `packages/api/src/voice/session-context.ts` | Session storage, timeout handling |
-| `packages/api/src/voice/preferences.ts` | Preference types and loader |
-| `packages/api/src/voice/notifier.ts` | WebSocket notifications |
-| `packages/api/src/voice/assistant.ts` | Entry point with routing |
+| `packages/api/src/voice/session-context.ts`  | Session storage, timeout handling   |
+| `packages/api/src/voice/preferences.ts`      | Preference types and loader         |
+| `packages/api/src/voice/notifier.ts`         | WebSocket notifications             |
+| `packages/api/src/voice/assistant.ts`        | Entry point with routing            |
 
 ## Debugging
 

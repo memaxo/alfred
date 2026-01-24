@@ -1,8 +1,9 @@
 ---
 title: Self hosting Laminar by forking from GitHub and running docker compose locally - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/self-hosting/setup#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -82,7 +83,6 @@ By default, the backend will listen on port 8000 for HTTP and 8001 for gRPC.
 - JavaScript/Typescript
 
 - Python
-
 
 Copy
 

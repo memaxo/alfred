@@ -8,10 +8,10 @@ Copy markdown
 
 When using the AI SDK 5 with Zod, you may experience:
 
-  * TypeScript server crashes or hangs
-  * Extremely slow type checking in files that import AI SDK functions
-  * Error messages like "Type instantiation is excessively deep and possibly infinite"
-  * IDE becoming unresponsive when working with AI SDK code
+- TypeScript server crashes or hangs
+- Extremely slow type checking in files that import AI SDK functions
+- Error messages like "Type instantiation is excessively deep and possibly infinite"
+- IDE becoming unresponsive when working with AI SDK code
 
 ## Background
 
@@ -22,8 +22,7 @@ The AI SDK 5 has specific compatibility requirements with Zod versions. When imp
 ### Upgrade Zod to 4.1.8 or Later
 
 The primary solution is to upgrade to Zod version 4.1.8 or later, which includes a fix for this module resolution issue:
-    
-    
+
     pnpm add zod@^4.1.8
 
 This version resolves the underlying problem where different module resolution settings were causing TypeScript to load the same Zod declarations twice, leading to expensive structural comparisons.
@@ -31,18 +30,17 @@ This version resolves the underlying problem where different module resolution s
 ### Alternative: Update TypeScript Configuration
 
 If upgrading Zod isn't possible, you can update your `tsconfig.json` to use `moduleResolution: "nodenext"`:
-    
-    
+
     {
-    
+
       "compilerOptions": {
-    
+
         "moduleResolution": "nodenext"
-    
+
         // ... other options
-    
+
       }
-    
+
     }
 
 This resolves the TypeScript performance issues while allowing you to continue using the standard Zod import.

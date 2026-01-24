@@ -13,11 +13,13 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
 **Overall Assessment:** **Good Foundation, Needs Hardening** ⚠️
 
 **Top 3 Strengths:**
+
 1. **Comprehensive Policy Enforcement**: 65+ `requirePolicy` calls across routers, proper audit logging
 2. **Secure Subprocess Spawning**: All tools use `spawnWithSecureCwd()` and `openDirectorySecure()` correctly
 3. **Consistent Error Handling**: `toTRPCError()` utility used consistently, proper error classification
 
 **Top 3 Concerns:**
+
 1. **SSE Endpoint Rate Limiting**: SSE endpoints (assistant/orchestrator/workflow) have no per-connection rate limiting or connection count limits
 2. **Performance Budget Enforcement**: Budgets documented but not validated in CI (`scripts/check-budgets.ts` partially implemented)
 3. **Input Validation Gaps**: Some routers use `coerceRecord()` with `as` casts instead of Zod validation
@@ -52,6 +54,7 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
 #### ⚠️ Concerns
 
 1. **WebSocket Rate Limiting Implementation**: Voice streaming WebSocket has rate limiting (`packages/api/src/voice/streaming.ts:149-185`), but needs verification:
+
    ```typescript
    // Line 149-185: Rate limiting implemented
    // Rate limiting by IP
@@ -60,11 +63,14 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
      throw new VoiceStreamAuthError("rate_limit_exceeded", 429);
    }
    // Rate limiting by userId
-   if (!checkRateLimit(userRateLimitBuckets, MAX_CONNECTIONS_PER_MINUTE_PER_USER)) {
+   if (
+     !checkRateLimit(userRateLimitBuckets, MAX_CONNECTIONS_PER_MINUTE_PER_USER)
+   ) {
      voiceWebSocketUpgradeRateLimitHitsTotal.labels("user").inc();
      throw new VoiceStreamAuthError("rate_limit_exceeded", 429);
    }
    ```
+
    - **Status**: ✅ Rate limiting is implemented (10 per minute per IP, 5 per minute per user)
    - **Recommendation**: Verify rate limit values are appropriate for production use case
    - **Note**: Limits are more restrictive than tRPC (1000 req/min), which is appropriate for WebSocket connections
@@ -76,6 +82,7 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
    - **Recommendation**: Add connection rate limiting or connection count limits per user
 
 3. **Input Validation Gaps**: Some routers use unsafe type coercion:
+
    ```typescript
    // packages/api/src/routers/workflow.ts:107-112
    function coerceRecord(val: unknown): Record<string, unknown> {
@@ -85,6 +92,7 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
      return {};
    }
    ```
+
    - **Risk**: Type confusion, potential prototype pollution
    - **Impact**: Security vulnerabilities if malicious input bypasses validation
    - **Recommendation**: Use Zod schema validation instead of `as` casts
@@ -134,13 +142,15 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
 #### ⚠️ Concerns
 
 1. **Error Message Consistency**: Some routers use generic messages:
+
    ```typescript
    // packages/api/src/routers/voice.ts:164, 186, 322, 334, 352
    throw toTRPCError(error); // Generic "unknown_error"
-   
+
    // Better: packages/api/src/routers/assistant.ts:192, 232
    throw toTRPCError(error, "assistant_error"); // Domain-specific
    ```
+
    - **Impact**: Harder to debug, less actionable error messages
    - **Recommendation**: Standardize error messages with domain prefixes (`voice_*`, `workflow_*`, etc.)
 
@@ -162,6 +172,7 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
 #### ⚠️ Concerns
 
 1. **Budget Enforcement Missing**: Performance budgets documented but not enforced (`scripts/check-budgets.ts:86-94`):
+
    ```typescript
    function checkBudgets(): Violation[] {
      const violations: Violation[] = [];
@@ -169,6 +180,7 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
      return violations;
    }
    ```
+
    - **Impact**: Performance regressions can slip in unnoticed
    - **Recommendation**: Implement budget checker using `@alfred/test-kit/src/performance/budget.ts`
 
@@ -244,10 +256,12 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
    - Server-only packages properly externalized
 
 2. **Variable-Based Imports**: Server routes use variable-based dynamic imports (`apps/web/src/routes/api/trpc/$.ts:5-9`):
+
    ```typescript
    const contextPkg = "@alfred/api/context";
    const { createContext } = await import(contextPkg);
    ```
+
    - Prevents server code leakage to client bundles
 
 #### ⚠️ Concerns
@@ -280,10 +294,12 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
 #### ✅ Strengths
 
 1. **Correct Order**: Middleware chain is correct (`packages/api/src/trpc.ts:74-78`):
+
    ```typescript
    const baseProcedure = t.procedure.use(metricsMiddleware);
    export const protectedProcedure = baseProcedure.use(authMiddleware);
    ```
+
    - Metrics → Auth → Rate Limit → Procedure (when applied)
 
 #### ⚠️ Concerns
@@ -312,13 +328,15 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
 #### ⚠️ Concerns
 
 1. **Error Context Inconsistency**: Some routers include rich context, others don't:
+
    ```typescript
    // Good: packages/api/src/routers/workflow.ts:256
    throw toTRPCError(error, "workflow_start_failed");
-   
+
    // Could be better: packages/api/src/routers/voice.ts:164
    throw toTRPCError(error); // No context
    ```
+
    - **Recommendation**: Standardize error messages with domain prefixes and context
 
 ### 4.2 Stream Error Handling
@@ -326,10 +344,11 @@ ALFRED's API surface demonstrates **strong security foundations** with comprehen
 #### ✅ Strengths
 
 1. **Abort Handling**: SSE endpoints handle abort signals (`apps/web/src/lib/api/stream-handler.ts:191-195`):
+
    ```typescript
    onAbort: ({ steps }) => {
      logger.warn(`${errorPrefix}_stream_aborted`, { steps: steps.length });
-   }
+   };
    ```
 
 2. **Error Boundaries**: Workflow stream has proper error handling (`apps/web/src/routes/api/workflow/stream.ts:216-223`):

@@ -7,9 +7,11 @@ Comprehensive test suite for the cross-device layout persistence feature, coveri
 ## Test Files
 
 ### 1. Service Unit Tests
+
 **File**: `apps/web/src/lib/__tests__/mindscape/layout-sync.test.ts`
 
 **Coverage**:
+
 - ✅ Initialization with userId and sync client
 - ✅ Loading saved layouts from database
 - ✅ Handling missing layouts gracefully
@@ -25,9 +27,11 @@ Comprehensive test suite for the cross-device layout persistence feature, coveri
 **Test Count**: 22 tests, all passing
 
 ### 2. Hook Integration Tests
+
 **File**: `apps/web/src/hooks/__tests__/use-layout-sync.test.tsx`
 
 **Coverage**:
+
 - ✅ Service initialization on mount
 - ✅ Position change detection
 - ✅ Page visibility change handling
@@ -40,9 +44,11 @@ Comprehensive test suite for the cross-device layout persistence feature, coveri
 **Test Count**: 9 tests
 
 ### 3. Database Persistence Tests
+
 **File**: `packages/api/test/mindscape-layout-persistence.test.ts`
 
 **Coverage**:
+
 - ✅ Saving layout snapshots to `user_preferences`
 - ✅ Loading saved layouts
 - ✅ Last-write-wins conflict resolution
@@ -55,9 +61,11 @@ Comprehensive test suite for the cross-device layout persistence feature, coveri
 **Test Count**: 8 tests
 
 ### 4. Performance Tests
+
 **File**: `apps/web/src/lib/__tests__/mindscape/layout-sync.perf.test.ts`
 
 **Coverage**:
+
 - ✅ Debounce delay enforcement (5s)
 - ✅ Batch efficiency (50 nodes = 1 DB write)
 - ✅ MAX_BATCH_SIZE limit

@@ -1,9 +1,10 @@
 ---
 title: Macros – Bundler | Bun Docs
-url: 
+url:
 description: Run JavaScript functions at bundle-time and inline the results into your bundle
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -88,20 +89,20 @@ console.log(`Your random number is ${0.6805550949689833}`);
 
 As you can see, the source code of the `random` function occurs nowhere in the bundle. Instead, it is executed _during bundling_ and function call ( `random()`) is replaced with the result of the function. Since the source code will never be included in the bundle, macros can safely perform privileged operations like reading from a database.
 
-## [When to use macros](https://bun.com/docs/bundler/macros\#when-to-use-macros)
+## [When to use macros](https://bun.com/docs/bundler/macros#when-to-use-macros)
 
 If you have several build scripts for small things where you would otherwise have a one-off build script, bundle-time code execution can be easier to maintain. It lives with the rest of your code, it runs with the rest of the build, it is automatically parallelized, and if it fails, the build fails too.
 
 If you find yourself running a lot of code at bundle-time though, consider running a server instead.
 
-## [Import attributes](https://bun.com/docs/bundler/macros\#import-attributes)
+## [Import attributes](https://bun.com/docs/bundler/macros#import-attributes)
 
 Bun Macros are import statements annotated using either:
 
 - `with { type: 'macro' }` — an [import attribute](https://github.com/tc39/proposal-import-attributes), a Stage 3 ECMA Scrd
 - `assert { type: 'macro' }` — an import assertion, an earlier incarnation of import attributes that has now been abandoned (but is [already supported](https://caniuse.com/mdn-javascript_statements_import_import_assertions) by a number of browsers and runtimes)
 
-## [Security considerations](https://bun.com/docs/bundler/macros\#security-considerations)
+## [Security considerations](https://bun.com/docs/bundler/macros#security-considerations)
 
 Macros must explicitly be imported with `{ type: "macro" }` in order to be executed at bundle-time. These imports have no effect if they are not called, unlike regular JavaScript imports which may have side effects.
 
@@ -136,7 +137,7 @@ macro();
 
 ```
 
-## [Export condition `"macro"`](https://bun.com/docs/bundler/macros\#export-condition-macro)
+## [Export condition `"macro"`](https://bun.com/docs/bundler/macros#export-condition-macro)
 
 When shipping a library containing a macro to `npm` or another package registry, use the `"macro"` [export condition](https://nodejs.org/api/packages.html#conditional-exports) to provide a special version of your package exclusively for the macro environment.
 
@@ -165,7 +166,7 @@ import { macro } from "my-package" with { type: "macro" }; // macro import
 
 The first import will resolve to `./node_modules/my-package/index.js`, while the second will be resolved by Bun's bundler to `./node_modules/my-package/index.macro.js`.
 
-## [Execution](https://bun.com/docs/bundler/macros\#execution)
+## [Execution](https://bun.com/docs/bundler/macros#execution)
 
 When Bun's transpiler sees a macro import, it calls the function inside the transpiler using Bun's JavaScript runtime and converts the return value from JavaScript into an AST node. These JavaScript functions are called at bundle-time, not runtime.
 
@@ -173,7 +174,7 @@ Macros are executed synchronously in the transpiler during the visiting phase—
 
 Bun's bundler is multi-threaded. As such, macros execute in parallel inside of multiple spawned JavaScript "workers".
 
-## [Dead code elimination](https://bun.com/docs/bundler/macros\#dead-code-elimination)
+## [Dead code elimination](https://bun.com/docs/bundler/macros#dead-code-elimination)
 
 The bundler performs dead code elimination _after_ running and inlining macros. So given the following macro:
 
@@ -197,7 +198,7 @@ if (returnFalse()) {
 
 ```
 
-## [Serializability](https://bun.com/docs/bundler/macros\#serializability)
+## [Serializability](https://bun.com/docs/bundler/macros#serializability)
 
 Bun's transpiler needs to be able to serialize the result of the macro so it can be inlined into the AST. All JSON-compatible data structures are supported:
 
@@ -252,7 +253,7 @@ export function getText(url: string) {
 
 ```
 
-## [Arguments](https://bun.com/docs/bundler/macros\#arguments)
+## [Arguments](https://bun.com/docs/bundler/macros#arguments)
 
 Macros can accept inputs, but only in limited cases. The value must be statically known. For example, the following is not allowed:
 
@@ -294,9 +295,9 @@ export { howLong };
 
 ```
 
-## [Examples](https://bun.com/docs/bundler/macros\#examples)
+## [Examples](https://bun.com/docs/bundler/macros#examples)
 
-### [Embed latest git commit hash](https://bun.com/docs/bundler/macros\#embed-latest-git-commit-hash)
+### [Embed latest git commit hash](https://bun.com/docs/bundler/macros#embed-latest-git-commit-hash)
 
 getGitCommitHash.ts
 
@@ -338,7 +339,7 @@ console.log(`The current Git commit hash is 3ee3259104f`);
 
 You're probably thinking "Why not just use `process.env.GIT_COMMIT_HASH`?" Well, you can do that too. But can you do this with an environment variable?
 
-### [Make `fetch()` requests at bundle-time](https://bun.com/docs/bundler/macros\#make-fetch-requests-at-bundle-time)
+### [Make `fetch()` requests at bundle-time](https://bun.com/docs/bundler/macros#make-fetch-requests-at-bundle-time)
 
 In this example, we make an outgoing HTTP request using `fetch()`, parse the HTML response using `HTMLRewriter`, and return an object containing the title and meta tags–all at bundle-time.
 
@@ -425,7 +426,7 @@ Plugins](https://bun.com/docs/bundler/plugins) [Next\\
 \\
 vs esbuild](https://bun.com/docs/bundler/vs-esbuild)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/macros.md)
 
@@ -449,7 +450,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -7,28 +7,26 @@ Copy markdown
 Rerank a set of documents based on their relevance to a query using a reranking model.
 
 This is ideal for improving search relevance by reordering documents, emails, or other content based on semantic understanding of the query and documents.
-    
-    
+
     import { cohere } from '@ai-sdk/cohere';
-    
+
     import { rerank } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { ranking } = await rerank({
-    
+
       model: cohere.reranking('rerank-v3.5'),
-    
+
       documents: ['sunny day at the beach', 'rainy afternoon in the city'],
-    
+
       query: 'talk about rain',
-    
+
     });
 
 ## Import
-    
-    
+
     import { rerank } from "ai"
 
 ## API Signature
@@ -214,139 +212,136 @@ Optional metadata from the provider. The outer key is the provider name. The inn
 ## Examples
 
 ### String Documents
-    
-    
+
     import { cohere } from '@ai-sdk/cohere';
-    
+
     import { rerank } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { ranking, rerankedDocuments } = await rerank({
-    
+
       model: cohere.reranking('rerank-v3.5'),
-    
+
       documents: [
-    
+
         'sunny day at the beach',
-    
+
         'rainy afternoon in the city',
-    
+
         'snowy night in the mountains',
-    
+
       ],
-    
+
       query: 'talk about rain',
-    
+
       topN: 2,
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(rerankedDocuments);
-    
+
     // ['rainy afternoon in the city', 'sunny day at the beach']
-    
-    
-    
-    
+
+
+
+
     console.log(ranking);
-    
+
     // [
-    
+
     //   { originalIndex: 1, score: 0.9, document: 'rainy afternoon...' },
-    
+
     //   { originalIndex: 0, score: 0.3, document: 'sunny day...' }
-    
+
     // ]
 
 ### Object Documents
-    
-    
+
     import { cohere } from '@ai-sdk/cohere';
-    
+
     import { rerank } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const documents = [
-    
+
       {
-    
+
         from: 'Paul Doe',
-    
+
         subject: 'Follow-up',
-    
+
         text: 'We are happy to give you a discount of 20%.',
-    
+
       },
-    
+
       {
-    
+
         from: 'John McGill',
-    
+
         subject: 'Missing Info',
-    
+
         text: 'Here is the pricing from Oracle: $5000/month',
-    
+
       },
-    
+
     ];
-    
-    
-    
-    
+
+
+
+
     const { ranking } = await rerank({
-    
+
       model: cohere.reranking('rerank-v3.5'),
-    
+
       documents,
-    
+
       query: 'Which pricing did we get from Oracle?',
-    
+
       topN: 1,
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(ranking[0].document);
-    
+
     // { from: 'John McGill', subject: 'Missing Info', ... }
 
 ### With Provider Options
-    
-    
+
     import { cohere } from '@ai-sdk/cohere';
-    
+
     import { rerank } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { ranking } = await rerank({
-    
+
       model: cohere.reranking('rerank-v3.5'),
-    
+
       documents: ['sunny day at the beach', 'rainy afternoon in the city'],
-    
+
       query: 'talk about rain',
-    
+
       providerOptions: {
-    
+
         cohere: {
-    
+
           maxTokensPerDoc: 1000,
-    
+
         },
-    
+
       },
-    
+
     });
 
 Previous

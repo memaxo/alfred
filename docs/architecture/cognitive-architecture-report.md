@@ -74,14 +74,50 @@ ALFRED's cognitive system uses an **event-sourced state machine** with pure stat
 // packages/cognitive/src/state.ts:134-175
 export type CognitiveState =
   | { _: "idle"; since: Timestamp; physiology: Physiology }
-  | { _: "capturing"; input: string; confidence: Confidence; started: Timestamp; physiology: Physiology }
-  | { _: "thinking"; about: string; depth: number; paths: Path[]; reasoningTraces?: string[]; started: Timestamp; physiology: Physiology }
-  | { _: "deciding"; options: Decision[]; criteria: Criteria; weights: number[]; deadline: Timestamp; physiology: Physiology }
-  | { _: "executing"; plan: Plan; step: number; auto: AutonomyGradient; started: Timestamp; physiology: Physiology }
-  | { _: "reflecting"; outcome: Outcome; expected: string; actual: string; error: number; physiology: Physiology };
+  | {
+      _: "capturing";
+      input: string;
+      confidence: Confidence;
+      started: Timestamp;
+      physiology: Physiology;
+    }
+  | {
+      _: "thinking";
+      about: string;
+      depth: number;
+      paths: Path[];
+      reasoningTraces?: string[];
+      started: Timestamp;
+      physiology: Physiology;
+    }
+  | {
+      _: "deciding";
+      options: Decision[];
+      criteria: Criteria;
+      weights: number[];
+      deadline: Timestamp;
+      physiology: Physiology;
+    }
+  | {
+      _: "executing";
+      plan: Plan;
+      step: number;
+      auto: AutonomyGradient;
+      started: Timestamp;
+      physiology: Physiology;
+    }
+  | {
+      _: "reflecting";
+      outcome: Outcome;
+      expected: string;
+      actual: string;
+      error: number;
+      physiology: Physiology;
+    };
 ```
 
 **Key Design Points:**
+
 - **Discriminated Union**: The `_` field ensures type safety—TypeScript narrows types based on the discriminant.
 - **Physiology in Every State**: All states carry `physiology` (energy, boredom, frustration) for homeostatic regulation.
 - **Timestamps**: Branded `Timestamp` type prevents mixing with raw numbers.
@@ -103,6 +139,7 @@ stateDiagram-v2
 ```
 
 **Valid Transitions:**
+
 - `idle` → `thinking` (on `input` event)
 - `thinking` → `reflecting` (on `complete` event)
 - `thinking` → `deciding` (when decision required)
@@ -129,10 +166,16 @@ export const applyTransition = (
 **Performance Budget**: <100µs per transition (enforced with `cognitiveTransitionDuration` histogram). Transitions are pure functions—no side effects, deterministic outputs.
 
 **Event Types:**
+
 ```typescript
 // packages/cognitive/src/state.ts:188-198
 export type Event =
-  | { _: "input"; content: string; source: "user" | "system" | "tool"; ts: Timestamp }
+  | {
+      _: "input";
+      content: string;
+      source: "user" | "system" | "tool";
+      ts: Timestamp;
+    }
   | { _: "timeout"; deadline: Timestamp }
   | { _: "feedback"; expected: string; actual: string; ts: Timestamp }
   | { _: "interrupt"; reason: string; priority: 1 | 2 | 3; ts: Timestamp }
@@ -146,8 +189,8 @@ export type Event =
 ```typescript
 // packages/cognitive/src/state.ts:119-124
 export type Physiology = {
-  energy: number;      // 0..1 (decreases with steps)
-  boredom: number;     // 0..1 (increases with repetition)
+  energy: number; // 0..1 (decreases with steps)
+  boredom: number; // 0..1 (increases with repetition)
   frustration: number; // 0..1 (increases with errors)
 };
 ```
@@ -180,11 +223,16 @@ export const updatePhysiology = (
       boredom *= 0.8;
       break;
   }
-  return { energy: clamp01(energy), boredom: clamp01(boredom), frustration: clamp01(frustration) };
+  return {
+    energy: clamp01(energy),
+    boredom: clamp01(boredom),
+    frustration: clamp01(frustration),
+  };
 };
 ```
 
 **Physiology → Autonomy Regulation:**
+
 - High frustration (>0.7) → autonomy reduced by 50% multiplier
 - Low energy (<0.2) → autonomy reduced by 20% multiplier
 - High boredom (>0.9) → constraint violation (prevents loops)
@@ -212,14 +260,14 @@ export const updatePhysiology = (
 // packages/cognitive/src/state.ts:69-72, 177-185
 type BetaPrior = {
   alpha: number; // Success count (weighted)
-  beta: number;  // Failure count (weighted)
+  beta: number; // Failure count (weighted)
 };
 
 export type AutonomyGradient = {
-  level: Autonomy;           // Derived from Beta mode
-  confidence: Confidence;    // 1 - Beta variance
-  prior: BetaPrior;         // Alpha/beta parameters
-  evidence: Evidence[];      // Recent evidence (last 10)
+  level: Autonomy; // Derived from Beta mode
+  confidence: Confidence; // 1 - Beta variance
+  prior: BetaPrior; // Alpha/beta parameters
+  evidence: Evidence[]; // Recent evidence (last 10)
   constraints: Constraint[]; // Temporal, scope, confidence, approval
   lastUpdate: Timestamp;
 };
@@ -335,6 +383,7 @@ sequenceDiagram
 **Key Implementation**: `packages/runtime/src/loops/cognitive.ts:42-114`
 
 **Flow Steps:**
+
 1. **Load State**: Replay all historical events to reconstruct current state
 2. **Apply Transition**: Pure function `applyTransition(state, autonomy, event)` → new state
 3. **Update Autonomy**: If feedback event, update autonomy with evidence
@@ -440,7 +489,9 @@ export function analyzeMistakes(
       id: `mistake-${category}-${items.length}`,
       derived: items.map((item) => item.id),
       conclusion: `Observed ${items.length} issue(s) in ${category}.`,
-      confidence: confidence(Math.min(1, items.length / Math.max(entries.length, 1))),
+      confidence: confidence(
+        Math.min(1, items.length / Math.max(entries.length, 1))
+      ),
       rationale: `Recent mistakes indicate focus area: ${category}.`,
     });
   }
@@ -523,6 +574,7 @@ export async function synthesize(
 #### Confidence Scoring
 
 Learning confidence is calculated from:
+
 - Pattern frequency (more examples → higher confidence)
 - Outcome success rate (successful patterns → higher confidence)
 - Recency (recent patterns → higher confidence)
@@ -547,6 +599,7 @@ flowchart LR
 ```
 
 **Key Integration Points:**
+
 - `packages/runtime/src/core.ts`: `recordOutcome()` extracts patterns
 - `packages/learning/src/self_supervision.ts`: Converts errors to insights
 - `packages/cognitive/src/state.ts`: Autonomy updates use learning evidence
@@ -564,13 +617,25 @@ ALFRED's memory system uses a **hypergraph** structure with active recall reinfo
 ```typescript
 // packages/knowledge/src/hypergraph.ts:19-34
 export type Knowledge =
-  | { _: "fact"; content: string; confidence: Confidence; source: string; ts: Timestamp }
+  | {
+      _: "fact";
+      content: string;
+      confidence: Confidence;
+      source: string;
+      ts: Timestamp;
+    }
   | { _: "relation"; from: NodeId; to: NodeId; kind: string; weight: number }
-  | { _: "insight"; derived: NodeId[]; conclusion: string; confidence: Confidence }
+  | {
+      _: "insight";
+      derived: NodeId[];
+      conclusion: string;
+      confidence: Confidence;
+    }
   | { _: "pattern"; examples: NodeId[]; rule: string; accuracy: number };
 ```
 
 **Key Design:**
+
 - **Facts**: Atomic knowledge units with confidence and source
 - **Relations**: Connections between nodes with weights
 - **Insights**: Derived knowledge from multiple facts
@@ -608,13 +673,13 @@ graph TB
         R2[Relation: lexical_match]
         P1[Pattern: "Use TypeScript for new projects"]
     end
-    
+
     F1 -->|R1| F2
     F1 -->|derived| I1
     F2 -->|derived| I1
     I1 -->|examples| P1
     F1 -->|R2| F2
-    
+
     style F1 fill:#e1f5ff
     style F2 fill:#e1f5ff
     style I1 fill:#fff4e1
@@ -631,8 +696,8 @@ The hypergraph maintains multiple indices for different query types:
 // packages/knowledge/src/hypergraph.ts:126-139
 export class Hypergraph {
   private readonly nodes = new HAMT<Knowledge>();
-  private readonly temporal = new IntervalTree();      // Temporal queries
-  private readonly spatial = new RTreeND(1024);        // Vector similarity
+  private readonly temporal = new IntervalTree(); // Temporal queries
+  private readonly spatial = new RTreeND(1024); // Vector similarity
   private readonly ordered = new BTreeIndex<string, NodeId>(64); // Lexical search
   private readonly edges = new Map<NodeId, Set<NodeId>>(); // Graph traversal
   private readonly inbound = new Map<NodeId, Set<NodeId>>(); // Reverse traversal
@@ -641,6 +706,7 @@ export class Hypergraph {
 ```
 
 **Index Selection:**
+
 - **HAMT**: O(1) content-addressable lookups
 - **Interval Tree**: Temporal range queries (`between(start, end)`)
 - **R-Tree**: Vector similarity search (KNN queries)
@@ -670,11 +736,13 @@ flowchart TD
 ```
 
 **Performance Budgets:**
+
 - Graph lookups: <1ms
 - Fact extraction: <10ms
 - Hybrid queries: <50ms
 
 **Key Files:**
+
 - `packages/knowledge/src/query.hot.ts`: Hot-path query engine
 - `packages/knowledge/src/hypergraph.ts`: Core hypergraph implementation
 
@@ -687,9 +755,10 @@ flowchart TD
 ```typescript
 // packages/db/src/repo/graph/write.ts (conceptual)
 export async function touchNode(nodeId: string): Promise<void> {
-  await db.update(memoryNodes)
+  await db
+    .update(memoryNodes)
     .set({
-      updated: sql`NOW()`,  // Reset decay timer
+      updated: sql`NOW()`, // Reset decay timer
       properties: sql`jsonb_set(
         COALESCE(properties, '{}'::jsonb),
         '{confidence}',
@@ -701,6 +770,7 @@ export async function touchNode(nodeId: string): Promise<void> {
 ```
 
 **Reinforcement Rules:**
+
 - **Touch on Retrieval**: When a node is retrieved via semantic search or graph traversal, it's "touched"
 - **Confidence Boost**: Confidence increases by `0.05` (capped at `1.0`)
 - **Decay Timer Reset**: `updated_at` timestamp updated → resets decay timer
@@ -731,7 +801,7 @@ graph LR
     C -->|No| E[Pruned<br/>Archived]
     D -->|24h later| C
     E -->|30 days| F[Permanently Deleted]
-    
+
     style A fill:#e1f5ff
     style B fill:#fff4e1
     style E fill:#ffe1f5
@@ -739,6 +809,7 @@ graph LR
 ```
 
 **Safety Rails:**
+
 - **Decay Limit**: Maximum 1000 nodes decayed per cycle (prevents runaway operations)
 - **Confidence Floor**: Minimum `0.01` (prevents complete forgetting unless pruned)
 - **Circuit Breaker**: Errors don't crash the API server
@@ -769,6 +840,7 @@ flowchart TD
 ```
 
 **Key Integration Points:**
+
 - `packages/runtime/src/context.ts`: Context building queries knowledge graph
 - `packages/runtime/src/core.ts`: Outcome recording persists patterns
 - `packages/knowledge/src/persist.ts`: Persistence layer
@@ -782,6 +854,7 @@ The **runtime layer** (`packages/runtime/`) orchestrates cognitive, knowledge, a
 ### 5.1 Runtime Layer Purpose
 
 **Separation of Concerns:**
+
 - **Domain Packages**: Pure logic (`cognitive/`, `knowledge/`, `learning/`)
 - **Runtime Layer**: Orchestration, context building, workflow execution
 - **API Layer**: HTTP/tRPC boundaries, persistence, metrics
@@ -852,25 +925,25 @@ for await (const chunk of result.textStream) {
 async build(input: ContextBuildInput): Promise<ExecutionContext> {
   // 1. User Preferences (from DB)
   const preferences = await db.query.preferences(userId);
-  
+
   // 2. Knowledge Graph (semantic + structural)
   const knowledgeContext = await knowledgeEngine.query({
     semantic: { query: input.requirement, topK: 5 },
     structural: { fromNode: relatedNodeId, depth: 2 },
   });
-  
+
   // 3. Cognitive State (current state machine state)
   const cognitiveState = await cognitiveRepo.getCurrentState(streamId);
-  
+
   // 4. Learnings (patterns, mistakes)
   const learnings = await learningEngine.getPatterns({
     domain: input.workspace,
     minConfidence: 0.8,
   });
-  
+
   // 5. RAG Chunks (semantic search)
   const ragChunks = await ragEngine.retrieve(input.requirement, { topK: 5 });
-  
+
   return {
     requirement: input.requirement,
     receipts: searchReceipts,
@@ -896,10 +969,10 @@ async recordOutcome(runId: string, outcome: Outcome): Promise<void> {
   if (outcome._ === "success") {
     // Extract patterns from successful workflow
     const patterns = extractPatterns(runId);
-    
+
     // Persist to knowledge graph
     await knowledgeEngine.persistPatterns(patterns);
-    
+
     // Update autonomy with success evidence
     await updateAutonomyEvidence({
       _: "success",
@@ -915,7 +988,7 @@ async recordOutcome(runId: string, outcome: Outcome): Promise<void> {
       effect: "workflow_failed",
       category: "execution",
     });
-    
+
     // Update autonomy with failure evidence
     await updateAutonomyEvidence({
       _: "failure",
@@ -972,7 +1045,12 @@ export type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string; state: string }
   | { type: "tool-call"; toolCallId: string; toolName: string; input: unknown }
-  | { type: "tool-result"; toolCallId: string; toolName: string; output: unknown }
+  | {
+      type: "tool-result";
+      toolCallId: string;
+      toolName: string;
+      output: unknown;
+    }
   | { type: "data-cache"; operation: "hit" | "miss"; key: string }
   | { type: "error"; error: string };
 ```
@@ -989,10 +1067,10 @@ export type StreamEvent =
 // apps/web/src/components/mindscape/nodes/chat-node.tsx (conceptual)
 export function ChatNode({ nodeId }: { nodeId: string }) {
   const { messages, send } = useChatLogic({ initialAgent: "assistant" });
-  
+
   // Visualize cognitive state
   const cognitiveState = useCognitiveState(nodeId);
-  
+
   return (
     <OrbNode
       state={cognitiveState._}
@@ -1015,21 +1093,21 @@ export function ChatNode({ nodeId }: { nodeId: string }) {
 // apps/web/src/components/chat-container.tsx (conceptual)
 export function ChatContainer() {
   const { messages, send, isLoading } = useAssistantStream();
-  
+
   // Optimistic update: Add user message immediately
   const handleSend = (text: string) => {
     const optimisticMessage = { id: crypto.randomUUID(), role: "user", parts: [{ type: "text", text }] };
     setMessages(prev => [...prev, optimisticMessage]);
-    
+
     // Stream response
     send(text);
   };
-  
+
   // Error handling: Show retry affordance
   if (error) {
     return <ErrorBoundary error={error} onRetry={() => send(lastMessage)} />;
   }
-  
+
   return <Chat messages={messages} onSend={handleSend} />;
 }
 ```
@@ -1047,6 +1125,7 @@ export function ChatContainer() {
 **Core Principle**: Domain logic is pure (no side effects), boundaries handle I/O.
 
 **Example:**
+
 ```typescript
 // packages/cognitive/src/transition.ts:43-127
 export const applyTransition = (
@@ -1061,6 +1140,7 @@ export const applyTransition = (
 ```
 
 **Benefits:**
+
 - **Testability**: Pure functions are easy to test (no mocks needed)
 - **Performance**: No I/O overhead in hot paths
 - **Determinism**: Same inputs → same outputs (enables replay)
@@ -1094,6 +1174,7 @@ for (const record of events) {
 ```
 
 **Benefits:**
+
 - **Audit Trail**: Complete history of state changes
 - **Temporal Queries**: Query state at any point in time
 - **Debugging**: Replay events to reproduce bugs
@@ -1107,22 +1188,29 @@ for (const record of events) {
 ```typescript
 // packages/cognitive/src/transition.ts:106-126
 const durationMs = performance.now() - start;
-cognitiveTransitionDuration.observe({
-  from_state: state._,
-  to_state: toState,
-  event_type: event._,
-}, durationMs / 1000);
+cognitiveTransitionDuration.observe(
+  {
+    from_state: state._,
+    to_state: toState,
+    event_type: event._,
+  },
+  durationMs / 1000
+);
 
 if (shouldWarn && durationMs > 0.1) {
-  console.warn(`cognitive_budget_exceeded: transition took ${durationMs.toFixed(4)}ms`);
+  console.warn(
+    `cognitive_budget_exceeded: transition took ${durationMs.toFixed(4)}ms`
+  );
 }
 ```
 
 **Hot Paths**: Files with `.hot.ts` suffix indicate performance-critical code:
+
 - `packages/cognitive/src/transition.ts`
 - `packages/knowledge/src/query.hot.ts`
 
 **Budgets:**
+
 - Cognitive transitions: <100µs
 - Graph lookups: <1ms
 - Fact extraction: <10ms
@@ -1135,8 +1223,16 @@ if (shouldWarn && durationMs > 0.1) {
 ```typescript
 // packages/cognitive/src/state.ts:15-25
 type Timestamp = number & { readonly _: unique symbol };
-type Confidence = number & { readonly _: unique symbol; readonly min: 0; readonly max: 1 };
-type Autonomy = number & { readonly _: unique symbol; readonly min: 0; readonly max: 1 };
+type Confidence = number & {
+  readonly _: unique symbol;
+  readonly min: 0;
+  readonly max: 1;
+};
+type Autonomy = number & {
+  readonly _: unique symbol;
+  readonly min: 0;
+  readonly max: 1;
+};
 
 export const timestamp = (n: number): Timestamp => {
   if (!Number.isFinite(n) || n < 0) throw new Error("Invalid timestamp");
@@ -1177,6 +1273,7 @@ export async function runCognitiveLoop(...): Promise<CognitiveLoopResult> {
 ```
 
 **Benefits:**
+
 - **Testability**: Core logic testable without mocks
 - **Composability**: Pure functions compose easily
 - **Performance**: No I/O in hot paths
@@ -1190,12 +1287,14 @@ export async function runCognitiveLoop(...): Promise<CognitiveLoopResult> {
 **Rationale**: Relations matter as much as facts. Structural queries enable pattern recognition and dependency awareness.
 
 **Benefits:**
+
 - **Structural Queries**: Traverse graph to find related concepts
 - **Pattern Recognition**: Extract patterns from graph topology
 - **Hybrid Search**: Combine semantic (vector) + structural (graph) queries
 - **Native to Postgres**: No additional infrastructure (pgvector extension)
 
 **Trade-offs:**
+
 - More complex than pure vector DB
 - Requires maintaining multiple indices (HAMT, interval tree, B-tree, R-tree)
 
@@ -1206,12 +1305,14 @@ export async function runCognitiveLoop(...): Promise<CognitiveLoopResult> {
 **Rationale**: Deterministic replay, audit trail, temporal queries.
 
 **Benefits:**
+
 - **Deterministic Replay**: Reconstruct state from events
 - **Audit Trail**: Complete history of state changes
 - **Temporal Queries**: Query state at any point in time
 - **Debugging**: Reproduce bugs by replaying events
 
 **Trade-offs:**
+
 - Storage overhead (events + snapshots)
 - Snapshot complexity (when to snapshot, how to hydrate)
 
@@ -1222,12 +1323,14 @@ export async function runCognitiveLoop(...): Promise<CognitiveLoopResult> {
 **Rationale**: Probabilistic reasoning matches uncertainty in real-world decisions.
 
 **Benefits:**
+
 - **Confidence Intervals**: Beta variance provides confidence measure
 - **Reliability Weighting**: Evidence reliability affects updates
 - **Natural Decay**: Beta prior decays toward baseline over time
 - **Physiology Integration**: Homeostatic regulation via multipliers
 
 **Trade-offs:**
+
 - More complex than simple counters
 - Requires understanding Beta distribution math
 
@@ -1238,12 +1341,14 @@ export async function runCognitiveLoop(...): Promise<CognitiveLoopResult> {
 **Rationale**: Enables aggressive personalization, no multi-tenancy overhead.
 
 **Benefits:**
+
 - **Deep Learning**: All data belongs to one person → aggressive learning
 - **Direct Infrastructure Access**: No abstraction layers for multi-user
 - **Privacy**: Data stays local, no sharing concerns
 - **Simplicity**: No rate limiting, obvious defaults
 
 **Trade-offs:**
+
 - Not scalable to multiple users (by design)
 - Hardcoded defaults (timeouts, retries, limits)
 
@@ -1254,12 +1359,14 @@ export async function runCognitiveLoop(...): Promise<CognitiveLoopResult> {
 **Rationale**: Performance, testability, composability.
 
 **Benefits:**
+
 - **Performance**: No I/O overhead in hot paths (meets <100µs budgets)
 - **Testability**: Pure functions easy to test (no mocks)
 - **Composability**: Functions compose easily (no hidden dependencies)
 - **Determinism**: Same inputs → same outputs (enables replay)
 
 **Trade-offs:**
+
 - More function parameters (no dependency injection)
 - Caller must handle side effects
 
@@ -1276,10 +1383,12 @@ export async function runCognitiveLoop(...): Promise<CognitiveLoopResult> {
 **When**: During context building (`packages/runtime/src/context.ts`), after execution (pattern extraction).
 
 **Key Files:**
+
 - `packages/runtime/src/context.ts`: Context building queries graph
 - `packages/runtime/src/core.ts`: Outcome recording persists patterns
 
 **Flow:**
+
 ```
 Workflow Request → Context Builder → Knowledge Graph Query → Execution Context → AI SDK
 ```
@@ -1291,10 +1400,12 @@ Workflow Request → Context Builder → Knowledge Graph Query → Execution Con
 **When**: After outcome recording (`packages/runtime/src/core.ts`).
 
 **Key Files:**
+
 - `packages/learning/src/self_supervision.ts`: Converts errors to insights
 - `packages/knowledge/src/hypergraph.ts`: Persists patterns as graph edges
 
 **Flow:**
+
 ```
 Workflow Outcome → Extract Patterns → Persist to Graph → Future Queries
 ```
@@ -1306,10 +1417,12 @@ Workflow Outcome → Extract Patterns → Persist to Graph → Future Queries
 **When**: During autonomy updates (`packages/cognitive/src/state.ts:373-455`), after mistake detection.
 
 **Key Files:**
+
 - `packages/cognitive/src/state.ts`: Autonomy updates with evidence
 - `packages/learning/src/mistake_ledger.ts`: Records mistakes
 
 **Flow:**
+
 ```
 Mistake Detected → Record Mistake → Analyze Patterns → Update Autonomy Evidence → Future Decisions
 ```
@@ -1321,11 +1434,13 @@ Mistake Detected → Record Mistake → Analyze Patterns → Update Autonomy Evi
 **When**: During workflow execution, context building, outcome recording.
 
 **Key Files:**
+
 - `packages/runtime/src/core.ts`: WorkflowRuntime orchestrates execution
 - `packages/runtime/src/context.ts`: ContextBuilder queries domains
 - `packages/runtime/src/engines/`: Domain engines (cognitive, knowledge, learning)
 
 **Flow:**
+
 ```
 Workflow Request → Runtime → Context Builder → Domain Queries → Execution → Outcome Recording → Domain Updates
 ```
@@ -1336,28 +1451,31 @@ Workflow Request → Runtime → Context Builder → Domain Queries → Executio
 
 ### 10.1 Budgets
 
-| Operation | Budget | Enforcement |
-|-----------|--------|-------------|
-| Cognitive transitions | <100µs | `cognitiveTransitionDuration` histogram |
-| Graph lookups | <1ms | `knowledgeQueryDuration` histogram |
-| Fact extraction | <10ms | `knowledgeExtractionDuration` histogram |
-| Context building | <100ms | `runtimeContextBuildDurationSeconds` histogram |
-| Plan generation | <100ms | `runtimePlanGenerationDurationSeconds` histogram |
+| Operation             | Budget | Enforcement                                      |
+| --------------------- | ------ | ------------------------------------------------ |
+| Cognitive transitions | <100µs | `cognitiveTransitionDuration` histogram          |
+| Graph lookups         | <1ms   | `knowledgeQueryDuration` histogram               |
+| Fact extraction       | <10ms  | `knowledgeExtractionDuration` histogram          |
+| Context building      | <100ms | `runtimeContextBuildDurationSeconds` histogram   |
+| Plan generation       | <100ms | `runtimePlanGenerationDurationSeconds` histogram |
 
 **Key Metrics**: `packages/cognitive/src/metrics.ts`, `packages/knowledge/src/metrics.ts`, `packages/runtime/src/metrics.ts`
 
 ### 10.2 Hot Paths
 
 **Files with `.hot.ts` suffix:**
+
 - `packages/cognitive/src/transition.ts` (state transitions)
 - `packages/knowledge/src/query.hot.ts` (graph queries)
 
 **Zero-Allocation Patterns:**
+
 - Reuse buffers in hot loops
 - Avoid array spreading
 - Prefer `for` loops over `map`/`filter`
 
 **Example:**
+
 ```typescript
 // packages/knowledge/src/hypergraph.ts:298-301
 search(pattern: string): NodeId[] {
@@ -1369,6 +1487,7 @@ search(pattern: string): NodeId[] {
 ### 10.3 Metrics
 
 **Prometheus Metrics** (exposed on `/api/metrics`):
+
 - `cognitive_transition_duration_seconds{from_state,to_state,event_type}`
 - `cognitive_autonomy_update_duration_seconds`
 - `cognitive_physiology_gauge{metric}` (energy, boredom, frustration)
@@ -1392,7 +1511,12 @@ search(pattern: string): NodeId[] {
 describe("applyTransition", () => {
   it("transitions idle → thinking on input event", () => {
     const state = idle(Date.now());
-    const event: Event = { _: "input", content: "test", source: "user", ts: timestamp(Date.now()) };
+    const event: Event = {
+      _: "input",
+      content: "test",
+      source: "user",
+      ts: timestamp(Date.now()),
+    };
     const result = applyTransition(state, initialAutonomy(Date.now()), event);
     expect(result.state._).toBe("thinking");
   });
@@ -1413,7 +1537,11 @@ describe("runCognitiveLoop integration", () => {
   it("persists events and replays history", async () => {
     const ctx = createTestRuntimeContext();
     const result1 = await runCognitiveLoop(ctx, streamId, inputEvent("Test"));
-    const result2 = await runCognitiveLoop(ctx, streamId, completeEvent(successOutcome));
+    const result2 = await runCognitiveLoop(
+      ctx,
+      streamId,
+      completeEvent(successOutcome)
+    );
     // Verify events persisted and state reconstructed
   });
 });
@@ -1431,7 +1559,10 @@ describe("runCognitiveLoop integration", () => {
 // apps/web/test/*.test.ts (conceptual)
 describe("Workflow E2E", () => {
   it("executes workflow and updates knowledge graph", async () => {
-    const response = await fetch("/api/workflow/start", { method: "POST", body: JSON.stringify({ requirement: "test" }) });
+    const response = await fetch("/api/workflow/start", {
+      method: "POST",
+      body: JSON.stringify({ requirement: "test" }),
+    });
     // Verify workflow executed, events streamed, knowledge updated
   });
 });
@@ -1448,6 +1579,7 @@ describe("Workflow E2E", () => {
 ALFRED's cognitive architecture represents a sophisticated approach to AI assistant design, combining event-sourced state machines, Bayesian autonomy, hypergraph memory, and self-supervision into a cohesive system. The architecture prioritizes **purity** (pure functions at core), **performance** (strict budgets), and **personalization** (single-user focus).
 
 **Key Strengths:**
+
 - Deterministic state machine enables replay and debugging
 - Bayesian autonomy provides probabilistic reasoning with confidence intervals
 - Hypergraph memory enables structural queries alongside semantic search
@@ -1455,12 +1587,14 @@ ALFRED's cognitive architecture represents a sophisticated approach to AI assist
 - Memory decay prevents unbounded growth while preserving useful knowledge
 
 **Potential Concerns:**
+
 - Event sourcing adds storage overhead (mitigated by snapshots)
 - Bayesian math requires understanding Beta distributions
 - Single-user focus limits scalability (by design)
 - Pure function pattern requires careful boundary management
 
 **Next Steps for Senior Architect:**
+
 1. Review `packages/cognitive/src/state.ts` for state machine implementation
 2. Review `packages/knowledge/src/hypergraph.ts` for memory structure
 3. Review `packages/runtime/src/loops/cognitive.ts` for cognitive loop integration

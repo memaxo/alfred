@@ -1,9 +1,10 @@
 ---
 title: Bearer Token Authentication | Better Auth
-url: 
+url:
 description: Authenticate API requests using Bearer tokens instead of browser cookies
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,7 +31,7 @@ The Bearer plugin enables authentication using Bearer tokens as an alternative t
 
 Use this cautiously; it is intended only for APIs that don't support cookies or require Bearer tokens for authentication. Improper implementation could easily lead to security vulnerabilities.
 
-## [Installing the Bearer Plugin](https://www.better-auth.com/docs/plugins/bearer\#installing-the-bearer-plugin)
+## [Installing the Bearer Plugin](https://www.better-auth.com/docs/plugins/bearer#installing-the-bearer-plugin)
 
 Add the Bearer plugin to your authentication setup:
 
@@ -45,9 +46,9 @@ export const auth = betterAuth({
 });
 ```
 
-## [How to Use Bearer Tokens](https://www.better-auth.com/docs/plugins/bearer\#how-to-use-bearer-tokens)
+## [How to Use Bearer Tokens](https://www.better-auth.com/docs/plugins/bearer#how-to-use-bearer-tokens)
 
-### [1\. Obtain the Bearer Token](https://www.better-auth.com/docs/plugins/bearer\#1-obtain-the-bearer-token)
+### [1\. Obtain the Bearer Token](https://www.better-auth.com/docs/plugins/bearer#1-obtain-the-bearer-token)
 
 After a successful sign-in, you'll receive a session token in the response headers. Store this token securely (e.g., in `localStorage`):
 
@@ -86,7 +87,7 @@ export const authClient = createAuthClient({
 
 You may want to clear the token based on the response status code or other conditions:
 
-### [2\. Configure the Auth Client](https://www.better-auth.com/docs/plugins/bearer\#2-configure-the-auth-client)
+### [2\. Configure the Auth Client](https://www.better-auth.com/docs/plugins/bearer#2-configure-the-auth-client)
 
 Set up your auth client to include the Bearer token in all requests:
 
@@ -103,7 +104,7 @@ export const authClient = createAuthClient({
 });
 ```
 
-### [3\. Make Authenticated Requests](https://www.better-auth.com/docs/plugins/bearer\#3-make-authenticated-requests)
+### [3\. Make Authenticated Requests](https://www.better-auth.com/docs/plugins/bearer#3-make-authenticated-requests)
 
 Now you can make authenticated API calls:
 
@@ -114,7 +115,7 @@ auth-client.ts
 const { data } = await authClient.listSessions();
 ```
 
-### [4\. Per-Request Token (Optional)](https://www.better-auth.com/docs/plugins/bearer\#4-per-request-token-optional)
+### [4\. Per-Request Token (Optional)](https://www.better-auth.com/docs/plugins/bearer#4-per-request-token-optional)
 
 You can also provide the token for individual requests:
 
@@ -130,7 +131,7 @@ const { data } = await authClient.listSessions({
 });
 ```
 
-### [5\. Using Bearer Tokens Outside the Auth Client](https://www.better-auth.com/docs/plugins/bearer\#5-using-bearer-tokens-outside-the-auth-client)
+### [5\. Using Bearer Tokens Outside the Auth Client](https://www.better-auth.com/docs/plugins/bearer#5-using-bearer-tokens-outside-the-auth-client)
 
 The Bearer token can be used to authenticate any request to your API, even when not using the auth client:
 
@@ -169,7 +170,7 @@ export async function handler(req, res) {
 }
 ```
 
-## [Options](https://www.better-auth.com/docs/plugins/bearer\#options)
+## [Options](https://www.better-auth.com/docs/plugins/bearer#options)
 
 **requireSignature** (boolean): Require the token to be signed. Default: `false`.
 

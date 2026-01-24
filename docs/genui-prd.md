@@ -34,14 +34,14 @@ ALFRED doesn't just answer—it renders the answer in its ideal form:
 
 GenUI is the **presentation layer** for Concierge Focus primitives:
 
-| Concierge Concept | GenUI Rendering |
-|-------------------|-----------------|
-| Focus Board | `grid` of commitment cards with `progress-window` per run |
-| Attention Queue | `list` of attention items with `confirm` actions |
-| Delta Brief | `workflow-timeline` of changes + `chart` of metrics |
-| Running Workflows | `streaming-terminal` + `task-tracker` + live `progress-window` |
-| Voice Call Screen | `plan` summary + `confirm` options + `orb` visualization |
-| Needs Decision | `confirm` with options + contextual `chart`/`grid` if data-driven |
+| Concierge Concept | GenUI Rendering                                                   |
+| ----------------- | ----------------------------------------------------------------- |
+| Focus Board       | `grid` of commitment cards with `progress-window` per run         |
+| Attention Queue   | `list` of attention items with `confirm` actions                  |
+| Delta Brief       | `workflow-timeline` of changes + `chart` of metrics               |
+| Running Workflows | `streaming-terminal` + `task-tracker` + live `progress-window`    |
+| Voice Call Screen | `plan` summary + `confirm` options + `orb` visualization          |
+| Needs Decision    | `confirm` with options + contextual `chart`/`grid` if data-driven |
 
 ## Definitions (feature taxonomy)
 
@@ -316,6 +316,7 @@ GenUI is the **presentation layer** for Concierge Focus primitives:
 ### Component library (50+ primitives)
 
 All components in `apps/web/src/components/manifest.ts` are available:
+
 - Data: `chart`, `grid`, `list`, `number`, `matrix`, `term`
 - AI: `plan`, `task`, `tool`, `think`, `confirm`, `cite`, `branch`
 - Forms: `text`, `select`, `date`, `checkbox`, `choice`, `autocomplete`
@@ -425,13 +426,14 @@ All components in `apps/web/src/components/manifest.ts` are available:
   - **Pattern from**: `packages/ui/src/genui/tool.ts` (helper functions).
   - **Purpose**: Wrap existing tools to emit GenUI results.
   - **Example**:
+
     ```typescript
     // Before
     return { success: true, data: results };
-    
+
     // After
     return createChartResult(
-      { type: "bar", data: results.map(r => ({ x: r.date, y: r.count })) },
+      { type: "bar", data: results.map((r) => ({ x: r.date, y: r.count })) },
       { results }
     );
     ```

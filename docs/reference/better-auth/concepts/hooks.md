@@ -1,9 +1,10 @@
 ---
 title: Hooks | Better Auth
-url: 
+url:
 description: Better Auth Hooks let you customize BetterAuth's behavior
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,11 +31,11 @@ Hooks in Better Auth let you "hook into" the lifecycle and execute custom logic.
 
 We highly recommend using hooks if you need to make custom adjustments to an endpoint rather than making another endpoint outside of Better Auth.
 
-## [Before Hooks](https://www.better-auth.com/docs/concepts/hooks\#before-hooks)
+## [Before Hooks](https://www.better-auth.com/docs/concepts/hooks#before-hooks)
 
 **Before hooks** run _before_ an endpoint is executed. Use them to modify requests, pre validate data, or return early.
 
-### [Example: Enforce Email Domain Restriction](https://www.better-auth.com/docs/concepts/hooks\#example-enforce-email-domain-restriction)
+### [Example: Enforce Email Domain Restriction](https://www.better-auth.com/docs/concepts/hooks#example-enforce-email-domain-restriction)
 
 This hook ensures that users can only sign up if their email ends with `@example.com`:
 
@@ -60,7 +61,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Example: Modify Request Context](https://www.better-auth.com/docs/concepts/hooks\#example-modify-request-context)
+### [Example: Modify Request Context](https://www.better-auth.com/docs/concepts/hooks#example-modify-request-context)
 
 To adjust the request context before proceeding:
 
@@ -89,11 +90,11 @@ export const auth = betterAuth({
 });
 ```
 
-## [After Hooks](https://www.better-auth.com/docs/concepts/hooks\#after-hooks)
+## [After Hooks](https://www.better-auth.com/docs/concepts/hooks#after-hooks)
 
 **After hooks** run _after_ an endpoint is executed. Use them to modify responses.
 
-### [Example: Send a notification to your channel when a new user is registered](https://www.better-auth.com/docs/concepts/hooks\#example-send-a-notification-to-your-channel-when-a-new-user-is-registered)
+### [Example: Send a notification to your channel when a new user is registered](https://www.better-auth.com/docs/concepts/hooks#example-send-a-notification-to-your-channel-when-a-new-user-is-registered)
 
 auth.ts
 
@@ -119,7 +120,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [Ctx](https://www.better-auth.com/docs/concepts/hooks\#ctx)
+## [Ctx](https://www.better-auth.com/docs/concepts/hooks#ctx)
 
 When you call `createAuthMiddleware` a `ctx` object is passed that provides a lot of useful properties. Including:
 
@@ -132,11 +133,11 @@ When you call `createAuthMiddleware` a `ctx` object is passed that provides a lo
 
 and more.
 
-### [Request Response](https://www.better-auth.com/docs/concepts/hooks\#request-response)
+### [Request Response](https://www.better-auth.com/docs/concepts/hooks#request-response)
 
 This utilities allows you to get request information and to send response from a hook.
 
-#### [JSON Responses](https://www.better-auth.com/docs/concepts/hooks\#json-responses)
+#### [JSON Responses](https://www.better-auth.com/docs/concepts/hooks#json-responses)
 
 Use `ctx.json` to send JSON responses:
 
@@ -148,7 +149,7 @@ const hook = createAuthMiddleware(async (ctx) => {
 });
 ```
 
-#### [Redirects](https://www.better-auth.com/docs/concepts/hooks\#redirects)
+#### [Redirects](https://www.better-auth.com/docs/concepts/hooks#redirects)
 
 Use `ctx.redirect` to redirect users:
 
@@ -160,7 +161,7 @@ const hook = createAuthMiddleware(async (ctx) => {
 });
 ```
 
-#### [Cookies](https://www.better-auth.com/docs/concepts/hooks\#cookies)
+#### [Cookies](https://www.better-auth.com/docs/concepts/hooks#cookies)
 
 - Set cookies: `ctx.setCookies` or `ctx.setSignedCookie`.
 - Get cookies: `ctx.getCookies` or `ctx.getSignedCookies`.
@@ -181,7 +182,7 @@ const hook = createAuthMiddleware(async (ctx) => {
 });
 ```
 
-#### [Errors](https://www.better-auth.com/docs/concepts/hooks\#errors)
+#### [Errors](https://www.better-auth.com/docs/concepts/hooks#errors)
 
 Throw errors with `APIError` for a specific status code and message:
 
@@ -195,11 +196,11 @@ const hook = createAuthMiddleware(async (ctx) => {
 });
 ```
 
-### [Context](https://www.better-auth.com/docs/concepts/hooks\#context)
+### [Context](https://www.better-auth.com/docs/concepts/hooks#context)
 
 The `ctx` object contains another `context` object inside that's meant to hold contexts related to auth. Including a newly created session on after hook, cookies configuration, password hasher and so on.
 
-#### [New Session](https://www.better-auth.com/docs/concepts/hooks\#new-session)
+#### [New Session](https://www.better-auth.com/docs/concepts/hooks#new-session)
 
 The newly created session after an endpoint is run. This only exist in after hook.
 
@@ -211,7 +212,7 @@ createAuthMiddleware(async (ctx) => {
 });
 ```
 
-#### [Returned](https://www.better-auth.com/docs/concepts/hooks\#returned)
+#### [Returned](https://www.better-auth.com/docs/concepts/hooks#returned)
 
 The returned value from the hook is passed to the next hook in the chain.
 
@@ -223,7 +224,7 @@ createAuthMiddleware(async (ctx) => {
 });
 ```
 
-#### [Response Headers](https://www.better-auth.com/docs/concepts/hooks\#response-headers)
+#### [Response Headers](https://www.better-auth.com/docs/concepts/hooks#response-headers)
 
 The response headers added by endpoints and hooks that run before this hook.
 
@@ -235,7 +236,7 @@ createAuthMiddleware(async (ctx) => {
 });
 ```
 
-#### [Predefined Auth Cookies](https://www.better-auth.com/docs/concepts/hooks\#predefined-auth-cookies)
+#### [Predefined Auth Cookies](https://www.better-auth.com/docs/concepts/hooks#predefined-auth-cookies)
 
 Access BetterAuth’s predefined cookie properties:
 
@@ -247,32 +248,32 @@ createAuthMiddleware(async (ctx) => {
 });
 ```
 
-#### [Secret](https://www.better-auth.com/docs/concepts/hooks\#secret)
+#### [Secret](https://www.better-auth.com/docs/concepts/hooks#secret)
 
 You can access the `secret` for your auth instance on `ctx.context.secret`
 
-#### [Password](https://www.better-auth.com/docs/concepts/hooks\#password)
+#### [Password](https://www.better-auth.com/docs/concepts/hooks#password)
 
 The password object provider `hash` and `verify`
 
 - `ctx.context.password.hash`: let's you hash a given password.
 - `ctx.context.password.verify`: let's you verify given `password` and a `hash`.
 
-#### [Adapter](https://www.better-auth.com/docs/concepts/hooks\#adapter)
+#### [Adapter](https://www.better-auth.com/docs/concepts/hooks#adapter)
 
 Adapter exposes the adapter methods used by Better Auth. Including `findOne`, `findMany`, `create`, `delete`, `update` and `updateMany`. You generally should use your actually `db` instance from your orm rather than this adapter.
 
-#### [Internal Adapter](https://www.better-auth.com/docs/concepts/hooks\#internal-adapter)
+#### [Internal Adapter](https://www.better-auth.com/docs/concepts/hooks#internal-adapter)
 
 These are calls to your db that perform specific actions. `createUser`, `createSession`, `updateSession`...
 
 This may be useful to use instead of using your db directly to get access to `databaseHooks`, proper `secondaryStorage` support and so on. If you're make a query similar to what exist in this internal adapter actions it's worth a look.
 
-#### [generateId](https://www.better-auth.com/docs/concepts/hooks\#generateid)
+#### [generateId](https://www.better-auth.com/docs/concepts/hooks#generateid)
 
 You can use `ctx.context.generateId` to generate Id for various reasons.
 
-## [Reusable Hooks](https://www.better-auth.com/docs/concepts/hooks\#reusable-hooks)
+## [Reusable Hooks](https://www.better-auth.com/docs/concepts/hooks#reusable-hooks)
 
 If you need to reuse a hook across multiple endpoints, consider creating a plugin. Learn more in the [Plugins Documentation](https://www.better-auth.com/docs/concepts/plugins).
 

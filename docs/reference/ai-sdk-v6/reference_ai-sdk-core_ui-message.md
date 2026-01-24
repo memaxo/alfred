@@ -10,114 +10,112 @@ Copy markdown
 
 `UIMessage` is designed to be type-safe and accepts three generic parameters to ensure proper typing throughout your application:
 
-  1. **`METADATA`** \- Custom metadata type for additional message information
-  2. **`DATA_PARTS`** \- Custom data part types for structured data components
-  3. **`TOOLS`** \- Tool definitions for type-safe tool interactions
+1. **`METADATA`** \- Custom metadata type for additional message information
+2. **`DATA_PARTS`** \- Custom data part types for structured data components
+3. **`TOOLS`** \- Tool definitions for type-safe tool interactions
 
 ## Creating Your Own UIMessage Type
 
 Here's an example of how to create a custom typed UIMessage for your application:
-    
-    
+
     import { InferUITools, ToolSet, UIMessage, tool } from 'ai';
-    
+
     import z from 'zod';
-    
-    
-    
-    
+
+
+
+
     const metadataSchema = z.object({
-    
+
       someMetadata: z.string().datetime(),
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     type MyMetadata = z.infer;
-    
-    
-    
-    
+
+
+
+
     const dataPartSchema = z.object({
-    
+
       someDataPart: z.object({}),
-    
+
       anotherDataPart: z.object({}),
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     type MyDataPart = z.infer;
-    
-    
-    
-    
+
+
+
+
     const tools = {
-    
+
       someTool: tool({}),
-    
+
     } satisfies ToolSet;
-    
-    
-    
-    
+
+
+
+
     type MyTools = InferUITools;
-    
-    
-    
-    
+
+
+
+
     export type MyUIMessage = UIMessage;
 
 ## `UIMessage` Interface
-    
-    
+
     interface UIMessage {
-    
+
       /**
-    
+
        * A unique identifier for the message.
-    
+
        */
-    
+
       id: string;
-    
-    
-    
-    
+
+
+
+
       /**
-    
+
        * The role of the message.
-    
+
        */
-    
+
       role: 'system' | 'user' | 'assistant';
-    
-    
-    
-    
+
+
+
+
       /**
-    
+
        * The metadata of the message.
-    
+
        */
-    
+
       metadata?: METADATA;
-    
-    
-    
-    
+
+
+
+
       /**
-    
+
        * The parts of the message. Use this for rendering the message in the UI.
-    
+
        */
-    
+
       parts: Array>;
-    
+
     }
 
 ## `UIMessagePart` Types
@@ -125,63 +123,61 @@ Here's an example of how to create a custom typed UIMessage for your application
 ### `TextUIPart`
 
 A text part of a message.
-    
-    
+
     type TextUIPart = {
-    
+
       type: 'text';
-    
+
       /**
-    
+
        * The text content.
-    
+
        */
-    
+
       text: string;
-    
+
       /**
-    
+
        * The state of the text part.
-    
+
        */
-    
+
       state?: 'streaming' | 'done';
-    
+
     };
 
 ### `ReasoningUIPart`
 
 A reasoning part of a message.
-    
-    
+
     type ReasoningUIPart = {
-    
+
       type: 'reasoning';
-    
+
       /**
-    
+
        * The reasoning text.
-    
+
        */
-    
+
       text: string;
-    
+
       /**
-    
+
        * The state of the reasoning part.
-    
+
        */
-    
+
       state?: 'streaming' | 'done';
-    
+
       /**
-    
+
        * The provider metadata.
-    
+
        */
-    
+
       providerMetadata?: Record;
-    
+
     };
 
 ### `ToolUIPart`
@@ -189,139 +185,135 @@ A reasoning part of a message.
 A tool part of a message that represents tool invocations and their results.
 
 The type is based on the name of the tool (e.g., `tool-someTool` for a tool named `someTool`).
-    
-    
+
     type ToolUIPart = ValueOf | undefined;
-    
+
             providerExecuted?: boolean;
-    
+
             output?: never;
-    
+
             errorText?: never;
-    
+
           }
-    
+
         | {
-    
+
             state: 'input-available';
-    
+
             input: TOOLS[NAME]['input'];
-    
+
             providerExecuted?: boolean;
-    
+
             output?: never;
-    
+
             errorText?: never;
-    
+
           }
-    
+
         | {
-    
+
             state: 'output-available';
-    
+
             input: TOOLS[NAME]['input'];
-    
+
             output: TOOLS[NAME]['output'];
-    
+
             errorText?: never;
-    
+
             providerExecuted?: boolean;
-    
+
           }
-    
+
         | {
-    
+
             state: 'output-error';
-    
+
             input: TOOLS[NAME]['input'];
-    
+
             output?: never;
-    
+
             errorText: string;
-    
+
             providerExecuted?: boolean;
-    
+
           }
-    
+
       );
-    
+
     }>;
 
 ### `SourceUrlUIPart`
 
 A source URL part of a message.
-    
-    
+
     type SourceUrlUIPart = {
-    
+
       type: 'source-url';
-    
+
       sourceId: string;
-    
+
       url: string;
-    
+
       title?: string;
-    
+
       providerMetadata?: Record;
-    
+
     };
 
 ### `SourceDocumentUIPart`
 
 A document source part of a message.
-    
-    
+
     type SourceDocumentUIPart = {
-    
+
       type: 'source-document';
-    
+
       sourceId: string;
-    
+
       mediaType: string;
-    
+
       title: string;
-    
+
       filename?: string;
-    
+
       providerMetadata?: Record;
-    
+
     };
 
 ### `FileUIPart`
 
 A file part of a message.
-    
-    
+
     type FileUIPart = {
-    
+
       type: 'file';
-    
+
       /**
-    
+
        * IANA media type of the file.
-    
+
        */
-    
+
       mediaType: string;
-    
+
       /**
-    
+
        * Optional filename of the file.
-    
+
        */
-    
+
       filename?: string;
-    
+
       /**
-    
+
        * The URL of the file.
-    
+
        * It can either be a URL to a hosted file or a Data URL.
-    
+
        */
-    
+
       url: string;
-    
+
     };
 
 ### `DataUIPart`
@@ -329,19 +321,17 @@ A file part of a message.
 A data part of a message for custom data types.
 
 The type is based on the name of the data part (e.g., `data-someDataPart` for a data part named `someDataPart`).
-    
-    
+
     type DataUIPart = ValueOf;
 
 ### `StepStartUIPart`
 
 A step boundary part of a message.
-    
-    
+
     type StepStartUIPart = {
-    
+
       type: 'step-start';
-    
+
     };
 
 Previous

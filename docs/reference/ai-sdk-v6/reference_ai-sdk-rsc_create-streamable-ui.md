@@ -9,8 +9,7 @@ AI SDK RSC is currently experimental. We recommend using AI SDK UI for productio
 Create a stream that sends UI from the server to the client. On the client side, it can be rendered as a normal React node.
 
 ## Import
-    
-    
+
     import { createStreamableUI } from "@ai-sdk/rsc"
 
 ## API Signature

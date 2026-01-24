@@ -16,12 +16,14 @@ A worker is an agent that executes a single task to completion. Workers have iso
 Workers have minimal context by design:
 
 **What workers receive:**
+
 - Their specific task description
 - Relevant files/artifacts for that task
 - Tool catalog (CATALOG.md)
 - Any context the planner explicitly includes
 
 **What workers don't receive:**
+
 - Knowledge of other workers
 - Full project plan
 - History of other tasks

@@ -1,9 +1,10 @@
 ---
 title: bun why – Package manager | Bun Docs
-url: 
+url:
 description: Explains why a package is installed in your project.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,22 +55,22 @@ Project
 
 The `bun why` command explains why a package is installed in your project by showing the dependency chain that led to its installation.
 
-## [Usage](https://bun.com/docs/cli/why\#usage)
+## [Usage](https://bun.com/docs/cli/why#usage)
 
 ```
 bun why <package>
 ```
 
-## [Arguments](https://bun.com/docs/cli/why\#arguments)
+## [Arguments](https://bun.com/docs/cli/why#arguments)
 
 - `<package>`: The name of the package to explain. Supports glob patterns like `@org/*` or `*-lodash`.
 
-## [Options](https://bun.com/docs/cli/why\#options)
+## [Options](https://bun.com/docs/cli/why#options)
 
 - `--top`: Show only the top-level dependencies instead of the complete dependency tree.
 - `--depth <number>`: Maximum depth of the dependency tree to display.
 
-## [Examples](https://bun.com/docs/cli/why\#examples)
+## [Examples](https://bun.com/docs/cli/why#examples)
 
 Check why a specific package is installed:
 
@@ -121,7 +122,7 @@ express@4.18.2
         └─ (deeper dependencies hidden)
 ```
 
-## [Understanding the Output](https://bun.com/docs/cli/why\#understanding-the-output)
+## [Understanding the Output](https://bun.com/docs/cli/why#understanding-the-output)
 
 The output shows:
 
@@ -138,7 +139,7 @@ For nested dependencies, the command shows the complete dependency tree by defau
 \\
 Global cache](https://bun.com/docs/install/cache)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/why.md)
 
@@ -162,7 +163,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

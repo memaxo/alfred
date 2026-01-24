@@ -10,9 +10,9 @@ State is an essential part of any application. State is particularly important i
 
 For example, in a chatbot, state is an array of `messages` where each `message` has:
 
-  * `id`: a unique identifier
-  * `role`: who sent the message (user/assistant/system/tool)
-  * `content`: the content of the message
+- `id`: a unique identifier
+- `role`: who sent the message (user/assistant/system/tool)
+- `content`: the content of the message
 
 This state can be rendered in the UI and sent to the model without any modifications.
 
@@ -44,80 +44,78 @@ UI State refers to the state of your application that is rendered on the client.
 
 ### Creating the AI Context
 
-AI SDK RSC simplifies managing AI and UI state across your application by providing several hooks. These hooks are powered by  React context  under the hood.
+AI SDK RSC simplifies managing AI and UI state across your application by providing several hooks. These hooks are powered by React context under the hood.
 
 Notably, this means you do not have to pass the message history to the server explicitly for each request. You also can access and update your application state in any child component of the context provider. As you begin building multistep generative interfaces, this will be particularly helpful.
 
 To use `@ai-sdk/rsc` to manage AI and UI State in your application, you can create a React context using `createAI`:
 
 app/actions.tsx
-    
-    
+
     // Define the AI state and UI state types
-    
+
     export type ServerMessage = {
-    
+
       role: 'user' | 'assistant';
-    
+
       content: string;
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export type ClientMessage = {
-    
+
       id: string;
-    
+
       role: 'user' | 'assistant';
-    
+
       display: ReactNode;
-    
+
     };
-    
-    
-    
-    
+
+
+
+
     export const sendMessage = async (input: string): Promise => {
-    
+
       "use server"
-    
+
       ...
-    
+
     }
 
 app/ai.ts
-    
-    
+
     import { createAI } from '@ai-sdk/rsc';
-    
+
     import { ClientMessage, ServerMessage, sendMessage } from './actions';
-    
-    
-    
-    
+
+
+
+
     export type AIState = ServerMessage[];
-    
+
     export type UIState = ClientMessage[];
-    
-    
-    
-    
+
+
+
+
     // Create the AI provider with the initial states and allowed actions
-    
+
     export const AI = createAI({
-    
+
       initialAIState: [],
-    
+
       initialUIState: [],
-    
+
       actions: {
-    
+
         sendMessage,
-    
+
       },
-    
+
     });
 
 You must pass Server Actions to the `actions` object.
@@ -127,35 +125,34 @@ In this example, you define types for AI State and UI State, respectively.
 Next, wrap your application with your newly created context. With that, you can get and set AI and UI State across your entire application.
 
 app/layout.tsx
-    
-    
+
     import { type ReactNode } from 'react';
-    
+
     import { AI } from './ai';
-    
-    
-    
-    
+
+
+
+
     export default function RootLayout({
-    
+
       children,
-    
+
     }: Readonly) {
-    
+
       return (
-    
-        
-    
-          
-    
+
+
+
+
+
             {children}
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 ## Reading UI State in Client
@@ -163,39 +160,38 @@ app/layout.tsx
 The UI state can be accessed in Client Components using the `useUIState` hook provided by the RSC API. The hook returns the current UI state and a function to update the UI state like React's `useState`.
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useUIState } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [messages, setMessages] = useUIState();
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {messages.map(message => (
-    
+
             {message.display}
-    
+
           ))}
-    
-        
-    
+
+
+
       );
-    
+
     }
 
 ## Reading AI State in Client
@@ -203,39 +199,38 @@ app/page.tsx
 The AI state can be accessed in Client Components using the `useAIState` hook provided by the RSC API. The hook returns the current AI state.
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useAIState } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const [messages, setMessages] = useAIState();
-    
-    
-    
-    
+
+
+
+
       return (
-    
-        
-    
+
+
+
           {messages.map(message => (
-    
+
             {message.content}
-    
+
           ))}
-    
-        
-    
+
+
+
       );
-    
+
     }
 
 ## Reading AI State on Server
@@ -243,38 +238,37 @@ app/page.tsx
 The AI State can be accessed within any Server Action provided to the `createAI` context using the `getAIState` function. It returns the current AI state as a read-only value:
 
 app/actions.ts
-    
-    
+
     import { getAIState } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export async function sendMessage(message: string) {
-    
+
       'use server';
-    
-    
-    
-    
+
+
+
+
       const history = getAIState();
-    
-    
-    
-    
+
+
+
+
       const response = await generateText({
-    
+
         model: openai('gpt-3.5-turbo'),
-    
+
         messages: [...history, { role: 'user', content: message }],
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       return response;
-    
+
     }
 
 Remember, you can only access state within actions that have been passed to the `createAI` context within the `actions` key.
@@ -284,52 +278,51 @@ Remember, you can only access state within actions that have been passed to the 
 The AI State can also be updated from within your Server Action with the `getMutableAIState` function. This function is similar to `getAIState`, but it returns the state with methods to read and update it:
 
 app/actions.ts
-    
-    
+
     import { getMutableAIState } from '@ai-sdk/rsc';
-    
-    
-    
-    
+
+
+
+
     export async function sendMessage(message: string) {
-    
+
       'use server';
-    
-    
-    
-    
+
+
+
+
       const history = getMutableAIState();
-    
-    
-    
-    
+
+
+
+
       // Update the AI state with the new user message.
-    
+
       history.update([...history.get(), { role: 'user', content: message }]);
-    
-    
-    
-    
+
+
+
+
       const response = await generateText({
-    
+
         model: openai('gpt-3.5-turbo'),
-    
+
         messages: history.get(),
-    
+
       });
-    
-    
-    
-    
+
+
+
+
       // Update the AI state again with the response from the model.
-    
+
       history.done([...history.get(), { role: 'assistant', content: response }]);
-    
-    
-    
-    
+
+
+
+
       return response;
-    
+
     }
 
 It is important to update the AI State with new responses using `.update()` and `.done()` to keep the conversation history in sync.
@@ -339,91 +332,90 @@ It is important to update the AI State with new responses using `.update()` and 
 To call the `sendMessage` action from the client, you can use the `useActions` hook. The hook returns all the available Actions that were provided to `createAI`:
 
 app/page.tsx
-    
-    
+
     'use client';
-    
-    
-    
-    
+
+
+
+
     import { useActions, useUIState } from '@ai-sdk/rsc';
-    
+
     import { AI } from './ai';
-    
-    
-    
-    
+
+
+
+
     export default function Page() {
-    
+
       const { sendMessage } = useActions();
-    
+
       const [messages, setMessages] = useUIState();
-    
-    
-    
-    
+
+
+
+
       const handleSubmit = async event => {
-    
+
         event.preventDefault();
-    
-    
-    
-    
+
+
+
+
         setMessages([
-    
+
           ...messages,
-    
+
           { id: Date.now(), role: 'user', display: event.target.message.value },
-    
+
         ]);
-    
-    
-    
-    
+
+
+
+
         const response = await sendMessage(event.target.message.value);
-    
-    
-    
-    
+
+
+
+
         setMessages([
-    
+
           ...messages,
-    
+
           { id: Date.now(), role: 'assistant', display: response },
-    
+
         ]);
-    
+
       };
-    
-    
-    
-    
+
+
+
+
       return (
-    
+
         <>
-    
-          
-    
+
+
+
             {messages.map(message => (
-    
+
               {message.display}
-    
+
             ))}
-    
-          
-    
-          
-    
-            
-    
+
+
+
+
+
+
+
             Send
-    
-          
-    
-        
-    
+
+
+
+
+
       );
-    
+
     }
 
 When the user submits a message, the `sendMessage` action is called with the message content. The response from the action is then added to the UI state, updating the displayed messages.
@@ -432,7 +424,7 @@ Important! Don't forget to update the UI State after you call your Server Action
 
 To learn more, check out this example on managing AI and UI state using `@ai-sdk/rsc`.
 
-* * *
+---
 
 Next, you will learn how you can save and restore state with `@ai-sdk/rsc`.
 

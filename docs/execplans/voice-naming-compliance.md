@@ -13,6 +13,7 @@ To bring the `@alfred/voice` package into full compliance with `AGENTS.md` namin
 ## Violations Identified
 
 ### Scripts (Snake-case/Multi-word)
+
 - `packages/voice/scripts/stt_server.py` -> Should be `server.py` or `stt.py`
 - `packages/voice/scripts/stt_transcribe.py` -> Should be `transcribe.py`
 - `packages/voice/scripts/download_models.py` -> Should be `download.py`
@@ -23,6 +24,7 @@ To bring the `@alfred/voice` package into full compliance with `AGENTS.md` namin
 - `packages/voice/scripts/tts_say.py` -> Should be `say.py`
 
 ### Exported Symbols (Compound names)
+
 - `src/process/maya.ts`: `MayaTTSProcess` -> Should be `Maya`
 - `src/process/tts.ts`: `TTSPool` -> Should be `TTS` (or `Pool` if default export)
 - `src/process/stt.ts`: `STTPool` -> Should be `STT`
@@ -33,6 +35,7 @@ To bring the `@alfred/voice` package into full compliance with `AGENTS.md` namin
 ## Plan of Work
 
 ### Phase 1: Script Renaming
+
 Rename scripts to single words and update `package.json` and usage references.
 
 - `stt_server.py` -> `server.py` (Context: It's the main STT server)
@@ -45,12 +48,14 @@ Rename scripts to single words and update `package.json` and usage references.
 - `tts_say.py` -> `say.py`
 
 **Updates Required:**
+
 - `packages/voice/package.json` (scripts)
 - `packages/api/src/voice/pools.ts` (script references)
 - `packages/voice/src/process/tts.ts` (legacy script reference check)
 - `packages/voice/src/process/stt.ts` (script reference)
 
 ### Phase 2: Symbol Renaming
+
 Rename exported classes to match their filename/domain (single word).
 
 - `MayaTTSProcess` -> `Maya`
@@ -61,23 +66,24 @@ Rename exported classes to match their filename/domain (single word).
 - `SupertonicTTS` -> `Supertonic`
 
 **Updates Required:**
+
 - All internal imports in `packages/voice`
 - Consumers in `packages/api` (`pools.ts`, `session.ts`)
 
 ## Progress
 
 - [ ] Phase 1: Script Renaming
-    - [ ] Rename files
-    - [ ] Update `package.json`
-    - [ ] Update `pools.ts` and config references
+  - [ ] Rename files
+  - [ ] Update `package.json`
+  - [ ] Update `pools.ts` and config references
 - [ ] Phase 2: Symbol Renaming
-    - [ ] Rename `MayaTTSProcess` -> `Maya`
-    - [ ] Rename `TTSPool` -> `TTS`
-    - [ ] Rename `STTPool` -> `STT`
-    - [ ] Rename `ModelProcess` -> `Process`
-    - [ ] Rename `IPCBridge` -> `Bridge`
-    - [ ] Rename `SupertonicTTS` -> `Supertonic`
-    - [ ] Update imports in `packages/api`
+  - [ ] Rename `MayaTTSProcess` -> `Maya`
+  - [ ] Rename `TTSPool` -> `TTS`
+  - [ ] Rename `STTPool` -> `STT`
+  - [ ] Rename `ModelProcess` -> `Process`
+  - [ ] Rename `IPCBridge` -> `Bridge`
+  - [ ] Rename `SupertonicTTS` -> `Supertonic`
+  - [ ] Update imports in `packages/api`
 
 ## Context and Orientation
 
@@ -91,14 +97,14 @@ The `voice` package has accumulated technical debt in naming conventions during 
 ## Decision Log
 
 - **Decision**: Rename `stt_server.py` to `server.py`.
-    - **Reason**: `stt.py` might be confused with the module name. `server.py` inside `scripts` (which are voice-specific) is clear enough. Actually, `stt.py` is better if we consider the domain. But `server.py` implies the persistent process. Let's stick to `server.py` for the STT server script, and `maya.py` for the TTS server script (which we already did). Wait, `maya.py` is specific. `stt.py` would be consistent with `maya.py`. Let's use `stt.py` for the server script to match `maya.py` (which is the TTS server).
-    - **Correction**: `stt.py` is better.
+  - **Reason**: `stt.py` might be confused with the module name. `server.py` inside `scripts` (which are voice-specific) is clear enough. Actually, `stt.py` is better if we consider the domain. But `server.py` implies the persistent process. Let's stick to `server.py` for the STT server script, and `maya.py` for the TTS server script (which we already did). Wait, `maya.py` is specific. `stt.py` would be consistent with `maya.py`. Let's use `stt.py` for the server script to match `maya.py` (which is the TTS server).
+  - **Correction**: `stt.py` is better.
 
 - **Decision**: Rename `MayaTTSProcess` to `Maya`.
-    - **Reason**: `Maya` class in `maya.ts`. Matches `Note` in `note.ts`.
+  - **Reason**: `Maya` class in `maya.ts`. Matches `Note` in `note.ts`.
 
 - **Decision**: Rename `ModelProcess` to `Process`.
-    - **Reason**: `Process` class in `base.ts`. Generic process wrapper.
+  - **Reason**: `Process` class in `base.ts`. Generic process wrapper.
 
 ## Outcomes & Retrospective
 

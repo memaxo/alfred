@@ -232,7 +232,6 @@ Lets say you're displaying a big number of issues in your application and want t
 
 - Poll updates for each issue in the application. There should never be a reason to do this and your application might get rate limited. See above tactics to implement this better
 
-
 ### Other Examples
 
 #### Queries

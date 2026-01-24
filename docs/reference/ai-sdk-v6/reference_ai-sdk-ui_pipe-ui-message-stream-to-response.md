@@ -7,37 +7,35 @@ Copy markdown
 The `pipeUIMessageStreamToResponse` function pipes streaming data to a Node.js ServerResponse object (see Streaming Data).
 
 ## Import
-    
-    
+
     import { pipeUIMessageStreamToResponse } from "ai"
 
 ## Example
-    
-    
+
     pipeUIMessageStreamToResponse({
-    
+
       response: serverResponse,
-    
+
       status: 200,
-    
+
       statusText: 'OK',
-    
+
       headers: {
-    
+
         'Custom-Header': 'value',
-    
+
       },
-    
+
       stream: myUIMessageStream,
-    
+
       consumeSseStream: ({ stream }) => {
-    
+
         // Optional: consume the SSE stream independently
-    
+
         console.log('Consuming SSE stream:', stream);
-    
+
       },
-    
+
     });
 
 ## API Signature

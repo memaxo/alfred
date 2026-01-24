@@ -7,6 +7,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ## Current State
 
 **Before sqlite-vec:**
+
 - 123 passing tests
 - 55 skipped tests (51 SQLite limitations)
 - 274 total integration tests across 26 files
@@ -14,6 +15,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 - 33 vector-dependent tests currently skipped
 
 **After sqlite-vec:**
+
 - **Estimate: 156 passing tests** (+33 vector tests unblocked)
 - **Estimate: 25 skipped tests** (30SQLite + 1 tsvector + 4 other gaps remain)
 - **Estimate: 97% coverage** of Phase 1-4 tests
@@ -46,6 +48,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ## Plan
 
 ### Phase 1: Research & Setup (Est: 2 hours)
+
 - [**1.1**] Study sqlite-vec API documentation (KNN, distance functions)
 - [**1.2**] Download and verify sqlite-vec binary for platform (macOS x86_64)
 - [**1.3**] Verify Bun SQLite accepts `.load()` extension loading
@@ -55,6 +58,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ---
 
 ### Phase 2: Test Infrastructure (Est: 3 hours)
+
 - [**2.1** Create sqlite-vec test helper functions
   - `initializeVecExtension()` - Loads extension or logs warning
   - `vecInitTable()` - `vector_init()` wrapper
@@ -67,6 +71,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ---
 
 ### Phase 3: Database Schema Updates (Est: 2 hours)
+
 - [**3.1** Add `vec_init()` calls to `migrations/*.sql`
   - In `0001_memory_nodes.sql`: Add after table creation
   - `SELECT load_extension('./vector');` before insert
@@ -82,6 +87,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ---
 
 ### Phase 4: Repository Layer Updates (Est: 4 hours)
+
 - [**4.1** Create `libsql-vec.ts` helper module
   - `loadVecExtension()` - loads binary or logs warning
   - `initVecTable()` - generates vector_init SQL
@@ -97,7 +103,8 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ---
 
 ### Phase 5: Test Implementation (Estimate: 6 hours)
-- [**5.1]** Update existing tests with sqlite-vec helpers
+
+- [**5.1]\*\* Update existing tests with sqlite-vec helpers
   - `cognitive-state-machine.test.ts` → Add vector similarity tests
   - `knowledge-to-adapter.test.ts` → Test with real vector KNN
   - `learning-full-pipeline.test.ts` → Test knowledge vector persistence
@@ -110,7 +117,8 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ---
 
 ### Phase 6: CI/CD Updates (Estimate: 2 hours)
-- [**6.1]** Update `.github/workflows/ci.yml`
+
+- [**6.1]\*\* Update `.github/workflows/ci.yml`
   - Add sqlite-vec binary download step (macOS-x86_64, linux-x86_64, linux-arm64)
   - Cache extension binary in artifacts directory
 - [**6.2** Update `scripts/test-bun.ts`
@@ -123,6 +131,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ---
 
 ### Phase 7: Documentation (Estimate: 1 hour)
+
 - [**7.1** Update `docs/testing/limitations-known.md`
   - Document sqlite-vec feature parity with PostgreSQL
   - Note what tests still require PostgreSQL
@@ -140,6 +149,7 @@ Add sqlite-vec support to ALFRED to enable vector similarity search capabilities
 ### sqlite-vec API to Use
 
 **Load extension:**
+
 ```typescript
 import { createTestDb } from "@alfred/db/testing";
 
@@ -155,6 +165,7 @@ beforeAll(async () => {
 ```
 
 **Store vector:**
+
 ```typescript
 // 1024-dimensional Float32 vector as BLOB
 const vector = new Float32Array(1024);
@@ -163,6 +174,7 @@ new DataView(buffer.buffer).setFloat32(vector);
 ```
 
 **Initialize table:**
+
 ```typescript
 await db.execute(
   `SELECT vector_init('memory_nodes', 'embedding', 'type=FLOAT32,dimension=${EMBEDDING_DIM}')`
@@ -170,37 +182,45 @@ await db.execute(
 ```
 
 **KNN Query:**
+
 ```typescript
 const { knn } = await import("@alfred/knowledge");
 
 // Pattern 1: Using helper
 const similar = await knn({
   node: { id: "node-1" },
-  query: queryEmbedding,    // Float32Array(1024)
+  query: queryEmbedding, // Float32Array(1024)
   topK: 20,
   tableName: "memory_nodes",
   vectorColumn: "embedding",
 });
 
 // Pattern 2: Direct SQL
-const results = await db.execute(sql`
+const results = await db.execute(
+  sql`
   SELECT n.id, v.distance
   FROM memory_nodes as n
   JOIN vector_quantize_scan('memory_nodes', 'embedding', ?, 20) as v
   ON n.id = v.rowid
-`, [queryEmbedding]);
+`,
+  [queryEmbedding]
+);
 ```
 
 **Cosine similarity:**
+
 ```typescript
-const distance = await db.execute(sql`
+const distance = await db.execute(
+  sql`
   SELECT vcosine(embedding, query_embeddings[::text) AS similarity
   FROM vcosine(
     embedded,
     json_quote(query_embeddings::text),
     1024
   ) LIMIT 1
-`, [embedded,]);
+`,
+  [embedded]
+);
 ```
 
 ---
@@ -208,6 +228,7 @@ const distance = await db.execute(sql`
 ## File Structure
 
 **Files to create:**
+
 ```
 packages/db/
 ├── migrations/
@@ -238,13 +259,13 @@ packages/db/
 
 ## Risk Assessment
 
-| Risk | Likelihood | Mitigation |
-|------|-----------|------------|
-| sqlite-vec binary compatibility | Low | Download multiple binaries, macOS x86_64 and linux-x86_64 |
-| SQLite compatibility changes | Low | Use SQLite version checking; add version gating |
-| Bun extension loading issues | Low | Add early check with try/catch with fallback |
-| Performance regression unknown | Low | sqlite-vec designed for performance |
-| sqlite-vec license issues | Low | MIT license for development, skip commercial usage |
+| Risk                            | Likelihood | Mitigation                                                |
+| ------------------------------- | ---------- | --------------------------------------------------------- |
+| sqlite-vec binary compatibility | Low        | Download multiple binaries, macOS x86_64 and linux-x86_64 |
+| SQLite compatibility changes    | Low        | Use SQLite version checking; add version gating           |
+| Bun extension loading issues    | Low        | Add early check with try/catch with fallback              |
+| Performance regression unknown  | Low        | sqlite-vec designed for performance                       |
+| sqlite-vec license issues       | Low        | MIT license for development, skip commercial usage        |
 
 ---
 
@@ -272,6 +293,7 @@ If issues arise:
 ## Out of Scope
 
 **Not covered:**
+
 - Full-text search (FTS5 extension required)
 - tsvector workarounds (would need FTS5)
 - Turso migration (not production-ready)

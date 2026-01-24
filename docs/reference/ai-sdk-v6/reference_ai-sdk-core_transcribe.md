@@ -7,33 +7,31 @@ Copy markdown
 `transcribe` is an experimental feature.
 
 Generates a transcript from an audio file.
-    
-    
+
     import { experimental_transcribe as transcribe } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { readFile } from 'fs/promises';
-    
-    
-    
-    
+
+
+
+
     const { text: transcript } = await transcribe({
-    
+
       model: openai.transcription('whisper-1'),
-    
+
       audio: await readFile('audio.mp3'),
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(transcript);
 
 ## Import
-    
-    
+
     import { experimental_transcribe as transcribe } from "ai"
 
 ## API Signature

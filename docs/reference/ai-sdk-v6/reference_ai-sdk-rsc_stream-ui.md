@@ -11,8 +11,7 @@ A helper function to create a streamable UI from LLM providers. This function is
 To see `streamUI` in action, check out these examples.
 
 ## Import
-    
-    
+
     import { streamUI } from "@ai-sdk/rsc"
 
 ## Parameters

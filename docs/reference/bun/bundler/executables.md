@@ -1,9 +1,10 @@
 ---
 title: Single-file executable – Runtime | Bun Docs
-url: 
+url:
 description: Compile a TypeScript or JavaScript file to a standalone executable
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -79,7 +80,7 @@ Hello world!
 
 All imported files and packages are bundled into the executable, along with a copy of the Bun runtime. All built-in Bun and Node.js APIs are supported.
 
-## [Cross-compile to other platforms](https://bun.com/docs/bundler/executables\#cross-compile-to-other-platforms)
+## [Cross-compile to other platforms](https://bun.com/docs/bundler/executables#cross-compile-to-other-platforms)
 
 The `--target` flag lets you compile your standalone executable for a different operating system, architecture, or version of Bun than the machine you're running `bun build` on.
 
@@ -138,20 +139,20 @@ bun build --compile --target=bun-darwin-x64 ./path/to/my/app.ts --outfile myapp
 
 The order of the `--target` flag does not matter, as long as they're delimited by a `-`.
 
-| --target | Operating System | Architecture | Modern | Baseline | Libc |
-| --- | --- | --- | --- | --- | --- |
-| bun-linux-x64 | Linux | x64 | ✅ | ✅ | glibc |
-| bun-linux-arm64 | Linux | arm64 | ✅ | N/A | glibc |
-| bun-windows-x64 | Windows | x64 | ✅ | ✅ | - |
-| ~~bun-windows-arm64~~ | Windows | arm64 | ❌ | ❌ | - |
-| bun-darwin-x64 | macOS | x64 | ✅ | ✅ | - |
-| bun-darwin-arm64 | macOS | arm64 | ✅ | N/A | - |
-| bun-linux-x64-musl | Linux | x64 | ✅ | ✅ | musl |
-| bun-linux-arm64-musl | Linux | arm64 | ✅ | N/A | musl |
+| --target              | Operating System | Architecture | Modern | Baseline | Libc  |
+| --------------------- | ---------------- | ------------ | ------ | -------- | ----- |
+| bun-linux-x64         | Linux            | x64          | ✅     | ✅       | glibc |
+| bun-linux-arm64       | Linux            | arm64        | ✅     | N/A      | glibc |
+| bun-windows-x64       | Windows          | x64          | ✅     | ✅       | -     |
+| ~~bun-windows-arm64~~ | Windows          | arm64        | ❌     | ❌       | -     |
+| bun-darwin-x64        | macOS            | x64          | ✅     | ✅       | -     |
+| bun-darwin-arm64      | macOS            | arm64        | ✅     | N/A      | -     |
+| bun-linux-x64-musl    | Linux            | x64          | ✅     | ✅       | musl  |
+| bun-linux-arm64-musl  | Linux            | arm64        | ✅     | N/A      | musl  |
 
 On x64 platforms, Bun uses SIMD optimizations which require a modern CPU supporting AVX2 instructions. The `-baseline` build of Bun is for older CPUs that don't support these optimizations. Normally, when you install Bun we automatically detect which version to use but this can be harder to do when cross-compiling since you might not know the target CPU. You usually don't need to worry about it on Darwin x64, but it is relevant for Windows x64 and Linux x64. If you or your users see `"Illegal instruction"` errors, you might need to use the baseline version.
 
-## [Build-time constants](https://bun.com/docs/bundler/executables\#build-time-constants)
+## [Build-time constants](https://bun.com/docs/bundler/executables#build-time-constants)
 
 Use the `--define` flag to inject build-time constants into your executable, such as version numbers, build timestamps, or configuration values:
 
@@ -163,7 +164,7 @@ These constants are embedded directly into your compiled binary at build time, p
 
 For comprehensive examples and advanced patterns, see the [Build-time constants guide](https://bun.com/guides/runtime/build-time-constants).
 
-## [Deploying to production](https://bun.com/docs/bundler/executables\#deploying-to-production)
+## [Deploying to production](https://bun.com/docs/bundler/executables#deploying-to-production)
 
 Compiled executables reduce memory usage and improve Bun's start time.
 
@@ -178,7 +179,7 @@ bun build --compile --minify --sourcemap ./path/to/my/app.ts --outfile myapp
 
 ```
 
-### [Bytecode compilation](https://bun.com/docs/bundler/executables\#bytecode-compilation)
+### [Bytecode compilation](https://bun.com/docs/bundler/executables#bytecode-compilation)
 
 To improve startup time, enable bytecode compilation:
 
@@ -195,7 +196,7 @@ Bytecode compilation moves parsing overhead for large input files from runtime t
 
 **Experimental:** Bytecode compilation is an experimental feature introduced in Bun v1.1.30. Only `cjs` format is supported (which means no top-level-await). Let us know if you run into any issues!
 
-### [What do these flags do?](https://bun.com/docs/bundler/executables\#what-do-these-flags-do)
+### [What do these flags do?](https://bun.com/docs/bundler/executables#what-do-these-flags-do)
 
 The `--minify` argument optimizes the size of the transpiled output code. If you have a large application, this can save megabytes of space. For smaller applications, it might still improve start time a little.
 
@@ -203,7 +204,7 @@ The `--sourcemap` argument embeds a sourcemap compressed with zstd, so that erro
 
 The `--bytecode` argument enables bytecode compilation. Every time you run JavaScript code in Bun, JavaScriptCore (the engine) will compile your source code into bytecode. We can move this parsing work from runtime to bundle time, saving you startup time.
 
-## [Act as the Bun CLI](https://bun.com/docs/bundler/executables\#act-as-the-bun-cli)
+## [Act as the Bun CLI](https://bun.com/docs/bundler/executables#act-as-the-bun-cli)
 
 New in Bun v1.2.16
 
@@ -256,7 +257,7 @@ Checked 63 installs across 64 packages (no changes) [5.00ms]
 
 This is useful for building CLI tools on top of Bun that may need to install packages, bundle dependencies, run different or local files and more without needing to download a separate binary or install bun.
 
-## [Full-stack executables](https://bun.com/docs/bundler/executables\#full-stack-executables)
+## [Full-stack executables](https://bun.com/docs/bundler/executables#full-stack-executables)
 
 New in Bun v1.2.17
 
@@ -345,7 +346,7 @@ Bun automatically handles serving the frontend assets with proper MIME types and
 
 For more details on building full-stack applications with Bun, see the [full-stack guide](https://bun.com/docs/bundler/fullstack).
 
-## [Worker](https://bun.com/docs/bundler/executables\#worker)
+## [Worker](https://bun.com/docs/bundler/executables#worker)
 
 To use workers in a standalone executable, add the worker's entrypoint to the CLI arguments:
 
@@ -371,7 +372,7 @@ In the future, we may automatically detect usages of statically-known paths in `
 
 If you use a relative path to a file not included in the standalone executable, it will attempt to load that path from disk relative to the current working directory of the process (and then error if it doesn't exist).
 
-## [SQLite](https://bun.com/docs/bundler/executables\#sqlite)
+## [SQLite](https://bun.com/docs/bundler/executables#sqlite)
 
 You can use `bun:sqlite` imports with `bun build --compile`.
 
@@ -392,7 +393,7 @@ $ ./hello
 
 ```
 
-## [Embed assets & files](https://bun.com/docs/bundler/executables\#embed-assets-files)
+## [Embed assets & files](https://bun.com/docs/bundler/executables#embed-assets-files)
 
 Standalone executables support embedding files.
 
@@ -426,7 +427,7 @@ const bytes = await file(icon).arrayBuffer();
 
 ```
 
-### [Embed SQLite databases](https://bun.com/docs/bundler/executables\#embed-sqlite-databases)
+### [Embed SQLite databases](https://bun.com/docs/bundler/executables#embed-sqlite-databases)
 
 If your application wants to embed a SQLite database, set `type: "sqlite"` in the import attribute and the `embed` attribute to `"true"`.
 
@@ -439,7 +440,7 @@ console.log(myEmbeddedDb.query("select * from users LIMIT 1").get());
 
 This database is read-write, but all changes are lost when the executable exits (since it's stored in memory).
 
-### [Embed N-API Addons](https://bun.com/docs/bundler/executables\#embed-n-api-addons)
+### [Embed N-API Addons](https://bun.com/docs/bundler/executables#embed-n-api-addons)
 
 As of Bun v1.0.23, you can embed `.node` files into executables.
 
@@ -452,7 +453,7 @@ console.log(addon.hello());
 
 Unfortunately, if you're using `@mapbox/node-pre-gyp` or other similar tools, you'll need to make sure the `.node` file is directly required or it won't bundle correctly.
 
-### [Embed directories](https://bun.com/docs/bundler/executables\#embed-directories)
+### [Embed directories](https://bun.com/docs/bundler/executables#embed-directories)
 
 To embed a directory with `bun build --compile`, use a shell glob in your `bun build` command:
 
@@ -477,7 +478,7 @@ export default {
 
 This is honestly a workaround, and we expect to improve this in the future with a more direct API.
 
-### [Listing embedded files](https://bun.com/docs/bundler/executables\#listing-embedded-files)
+### [Listing embedded files](https://bun.com/docs/bundler/executables#listing-embedded-files)
 
 To get a list of all embedded files, use `Bun.embeddedFiles`:
 
@@ -508,15 +509,15 @@ To disable the content hash, pass `--asset-naming` to `bun build --compile` like
 bun build --compile --asset-naming="[name].[ext]" ./index.ts
 ```
 
-## [Minification](https://bun.com/docs/bundler/executables\#minification)
+## [Minification](https://bun.com/docs/bundler/executables#minification)
 
 To trim down the size of the executable a little, pass `--minify` to `bun build --compile`. This uses Bun's minifier to reduce the code size. Overall though, Bun's binary is still way too big and we need to make it smaller.
 
-## [Using Bun.build() API](https://bun.com/docs/bundler/executables\#using-bun-build-api)
+## [Using Bun.build() API](https://bun.com/docs/bundler/executables#using-bun-build-api)
 
 You can also generate standalone executables using the `Bun.build()` JavaScript API. This is useful when you need programmatic control over the build process.
 
-### [Basic usage](https://bun.com/docs/bundler/executables\#basic-usage)
+### [Basic usage](https://bun.com/docs/bundler/executables#basic-usage)
 
 ```
 await Bun.build({
@@ -530,7 +531,7 @@ await Bun.build({
 
 ```
 
-### [Windows metadata with Bun.build()](https://bun.com/docs/bundler/executables\#windows-metadata-with-bun-build)
+### [Windows metadata with Bun.build()](https://bun.com/docs/bundler/executables#windows-metadata-with-bun-build)
 
 When targeting Windows, you can specify metadata through the `windows` object:
 
@@ -555,7 +556,7 @@ await Bun.build({
 
 ```
 
-### [Cross-compilation with Bun.build()](https://bun.com/docs/bundler/executables\#cross-compilation-with-bun-build)
+### [Cross-compilation with Bun.build()](https://bun.com/docs/bundler/executables#cross-compilation-with-bun-build)
 
 You can cross-compile for different platforms:
 
@@ -577,16 +578,16 @@ for (const platform of platforms) {
 
 ```
 
-## [Windows-specific flags](https://bun.com/docs/bundler/executables\#windows-specific-flags)
+## [Windows-specific flags](https://bun.com/docs/bundler/executables#windows-specific-flags)
 
 When compiling a standalone executable for Windows, there are several platform-specific options that can be used to customize the generated `.exe` file:
 
-### [Visual customization](https://bun.com/docs/bundler/executables\#visual-customization)
+### [Visual customization](https://bun.com/docs/bundler/executables#visual-customization)
 
 - `--windows-icon=path/to/icon.ico` \- Set the executable file icon
 - `--windows-hide-console` \- Disable the background terminal window (useful for GUI applications)
 
-### [Metadata customization](https://bun.com/docs/bundler/executables\#metadata-customization)
+### [Metadata customization](https://bun.com/docs/bundler/executables#metadata-customization)
 
 You can embed version information and other metadata into your Windows executable:
 
@@ -628,7 +629,7 @@ Each version component must be a number between 0 and 65535.
 
 These flags currently cannot be used when cross-compiling because they depend on Windows APIs. They are only available when building on Windows itself.
 
-## [Code signing on macOS](https://bun.com/docs/bundler/executables\#code-signing-on-macos)
+## [Code signing on macOS](https://bun.com/docs/bundler/executables#code-signing-on-macos)
 
 To codesign a standalone executable on macOS (which fixes Gatekeeper warnings), use the `codesign` command.
 
@@ -679,7 +680,7 @@ codesign -vvv --verify ./myapp
 
 Codesign support requires Bun v1.2.4 or newer.
 
-## [Unsupported CLI arguments](https://bun.com/docs/bundler/executables\#unsupported-cli-arguments)
+## [Unsupported CLI arguments](https://bun.com/docs/bundler/executables#unsupported-cli-arguments)
 
 Currently, the `--compile` flag can only accept a single entrypoint at a time and does not support the following flags:
 
@@ -695,7 +696,7 @@ Node.js compatibility](https://bun.com/docs/runtime/nodejs-apis) [Next\\
 \\
 Plugins](https://bun.com/docs/runtime/plugins)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/executables.md)
 
@@ -719,7 +720,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

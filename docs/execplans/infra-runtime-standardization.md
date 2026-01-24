@@ -111,7 +111,7 @@ Out of scope:
 
 ### Phase 5: Agent tools for lifecycle + recovery (AI SDK v6)
 
-- [x] (2026-01-09) Add a small, policy-gated tool catalog focused on *safe operations*:
+- [x] (2026-01-09) Add a small, policy-gated tool catalog focused on _safe operations_:
   - `runtime.status` (deps + feature flags + pool health + active connections)
   - `runtime.recover` (restart voice/embed pools, reconnect redis, clear stale state)
   - `runtime.logs` (tail last N lines for a component, redacting secrets)

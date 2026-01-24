@@ -1,8 +1,9 @@
 ---
 title: Overview of Laminar SQL syntax and approach - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/sql-editor/overview#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -27,7 +28,7 @@ On this page
 - [Basic query structure](https://docs.lmnr.ai/sql-editor/overview#basic-query-structure)
 - [Data types](https://docs.lmnr.ai/sql-editor/overview#data-types)
 - [JSON](https://docs.lmnr.ai/sql-editor/overview#json)
-- [Filtering by start\_time](https://docs.lmnr.ai/sql-editor/overview#filtering-by-start-time)
+- [Filtering by start_time](https://docs.lmnr.ai/sql-editor/overview#filtering-by-start-time)
 - [Example](https://docs.lmnr.ai/sql-editor/overview#example)
 - [Avoiding joins](https://docs.lmnr.ai/sql-editor/overview#avoiding-joins)
 - [Example](https://docs.lmnr.ai/sql-editor/overview#example-2)
@@ -39,11 +40,11 @@ On this page
 - [Nested extraction by key](https://docs.lmnr.ai/sql-editor/overview#nested-extraction-by-key)
 - [More complex JSON functions](https://docs.lmnr.ai/sql-editor/overview#more-complex-json-functions)
 
-## [​](https://docs.lmnr.ai/sql-editor/overview\#introduction)  Introduction
+## [​](https://docs.lmnr.ai/sql-editor/overview#introduction) Introduction
 
 Laminar stores all queryable data in Clickhouse. Clickhouse is an analytical columnar database which provides a SQL-like query language.This guide will explain the SQL syntax used in Laminar SQL Editor. For the full Clickhouse SQL reference, see the [Clickhouse documentation](https://clickhouse.com/docs/sql-reference).
 
-## [​](https://docs.lmnr.ai/sql-editor/overview\#basic-query-structure)  Basic query structure
+## [​](https://docs.lmnr.ai/sql-editor/overview#basic-query-structure) Basic query structure
 
 We only allow `SELECT` queries, so we will focus on the syntax for this.Here’s the basic syntax of a Clickhouse `SELECT` query. Some parts that we don’t recommend or don’t support are omitted.
 
@@ -71,7 +72,7 @@ SELECT [DISTINCT [ON (column1, column2, ...)]] expr_list
 The very basics are similar to standard SQL. That is, you can perform any
 `SELECT FROM WHERE GROUP BY HAVING ORDER BY LIMIT` query.
 
-## [​](https://docs.lmnr.ai/sql-editor/overview\#data-types)  Data types
+## [​](https://docs.lmnr.ai/sql-editor/overview#data-types) Data types
 
 Clickhouse has numerous data types. Here are some of the most important and relevant ones.
 
@@ -94,16 +95,16 @@ AND start_time < '2025-01-02'::DateTime
 
 ```
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#json)  JSON
+### [​](https://docs.lmnr.ai/sql-editor/overview#json) JSON
 
 Laminar stores JSONs as strings in Clickhouse.
 See [Working with JSONs](https://docs.lmnr.ai/sql-editor/overview#working-with-jsons) for more details.
 
-## [​](https://docs.lmnr.ai/sql-editor/overview\#filtering-by-start-time)  Filtering by start\_time
+## [​](https://docs.lmnr.ai/sql-editor/overview#filtering-by-start-time) Filtering by start_time
 
 Spans inside each project are ordered by `start_time`, so adding a `start_time` filter will speed up the query and prevent it from failing because of running out of memory.This is relevant to both the `spans` table and the `traces` aggregation view on it.
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#example)  Example
+### [​](https://docs.lmnr.ai/sql-editor/overview#example) Example
 
 Suppose you want to have a look at all the tool call spans in a single trace. You know the trace ID.
 
@@ -130,11 +131,11 @@ AND start_time >= (
 
 ```
 
-## [​](https://docs.lmnr.ai/sql-editor/overview\#avoiding-joins)  Avoiding joins
+## [​](https://docs.lmnr.ai/sql-editor/overview#avoiding-joins) Avoiding joins
 
 Clickhouse is a columnar database, so it’s not optimized for joins. If you need to join data, you can do it in the application layer.
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#example-2)  Example
+### [​](https://docs.lmnr.ai/sql-editor/overview#example-2) Example
 
 Let’s say you want to have a look at LLM spans that took abnormally long time to complete and see the effect of this on their corresponding traces.In regular SQL, you would join the `spans` table with the `traces` table to get the trace duration.
 
@@ -150,7 +151,7 @@ AND s.end_time - s.start_time > 90 -- 90 seconds
 
 ```
 
-In Clickhouse, you would need to collect trace\_ids in the application, and then query the `traces` table for each trace\_id.
+In Clickhouse, you would need to collect trace_ids in the application, and then query the `traces` table for each trace_id.
 
 Copy
 
@@ -171,11 +172,11 @@ WHERE trace_id IN ({traceIds: Array(UUID)})
 
 This may seem counter-intuitive at first, but this is the fastest and the most efficient way to do it.
 
-## [​](https://docs.lmnr.ai/sql-editor/overview\#working-with-dates)  Working with dates
+## [​](https://docs.lmnr.ai/sql-editor/overview#working-with-dates) Working with dates
 
 See the full reference in [Clickhouse documentation](https://clickhouse.com/docs/sql-reference/functions/date-time-functions).
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#truncating-datetimes)  Truncating datetimes
+### [​](https://docs.lmnr.ai/sql-editor/overview#truncating-datetimes) Truncating datetimes
 
 Clickhouse has a special syntax for truncating datetimes. The most general function for truncation is `toStartOfInterval(value, interval_specifier)`.
 
@@ -221,7 +222,7 @@ There are also convenience functions for common intervals:
 - `toStartOfQuarter(value)` \- truncates to the start of the month
 - `toStartOfYear(value)` \- truncates to the start of the year
 
-## [​](https://docs.lmnr.ai/sql-editor/overview\#working-with-json)  Working with JSON
+## [​](https://docs.lmnr.ai/sql-editor/overview#working-with-json) Working with JSON
 
 Many columns, such as `attributes` on `spans` table, contain JSON values stored as strings.
 Clickhouse provides a wide variety of functions to work with JSONs. See the full reference in [Clickhouse documentation](https://clickhouse.com/docs/sql-reference/functions/json-functions).Generally, there are two families of functions to work with JSONs:
@@ -231,7 +232,7 @@ Clickhouse provides a wide variety of functions to work with JSONs. See the full
 
 We recommend using `simpleJSON*` functions, especially if you know the data type of the value you want to extract.
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#extracting-values-from-json-by-key)  Extracting values from JSON by key
+### [​](https://docs.lmnr.ai/sql-editor/overview#extracting-values-from-json-by-key) Extracting values from JSON by key
 
 Most of the time, you will want to extract a value from JSON by `key`. If you know the data type of the value, you can use the `simpleJSONExtract*` functions.For example,
 
@@ -251,7 +252,7 @@ WHERE start_time > now() - INTERVAL '1 day' AND span_type = 1 -- LLM
 This will return the number of tokens that were read from the last day.
 Note that this works only for the models and instrumentations that support caching and report this value.
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#checking-if-a-key-exists)  Checking if a key exists
+### [​](https://docs.lmnr.ai/sql-editor/overview#checking-if-a-key-exists) Checking if a key exists
 
 If you want to check if a key exists in the JSON, you can use the `simpleJSONHas` functions.
 The query below will return the number of LLM spans that have a `gen_ai.request.structured_output_schema` key in the `attributes` column,
@@ -267,7 +268,7 @@ AND simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
 
 ```
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#nested-extraction-by-key)  Nested extraction by key
+### [​](https://docs.lmnr.ai/sql-editor/overview#nested-extraction-by-key) Nested extraction by key
 
 If you know that a value inside a JSON object is a stringified JSON, you can use the `simpleJSONExtract*` functions repeatedly to extract the nested value.Suppose you pass a structured output schema to the LLM, and the schema always has a `description` key.
 
@@ -289,7 +290,7 @@ AND simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
 
 This will return the description of the structured output schema for the LLM spans that have schema defined in the last day.
 
-### [​](https://docs.lmnr.ai/sql-editor/overview\#more-complex-json-functions)  More complex JSON functions
+### [​](https://docs.lmnr.ai/sql-editor/overview#more-complex-json-functions) More complex JSON functions
 
 If you need more flexibility at the cost of query performance, you can use the `JSON*` functions.Here’s a quick list of things, you can do with `JSON*` functions:
 

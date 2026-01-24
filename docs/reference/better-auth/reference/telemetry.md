@@ -1,9 +1,10 @@
 ---
 title: Telemetry | Better Auth
-url: 
+url:
 description: Better Auth now collects anonymous telemetry data about general usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,13 +29,13 @@ Copy MarkdownOpen in
 
 Better Auth collects anonymous usage data to help us improve the project. This is optional, transparent, and disabled by default.
 
-## [Why is telemetry collected?](https://www.better-auth.com/docs/reference/telemetry\#why-is-telemetry-collected)
+## [Why is telemetry collected?](https://www.better-auth.com/docs/reference/telemetry#why-is-telemetry-collected)
 
 Since v1.3.5, Better Auth collects anonymous telemetry data about general usage if enabled.
 
 Telemetry data helps us understand how Better Auth is being used across different environments so we can improve performance, prioritize features, and fix issues more effectively. It guides our decisions on performance optimizations, feature development, and bug fixes. All data is collected completely anonymously and with privacy in mind, and users can opt out at any time. We strive to keep what we collect as transparent as possible.
 
-## [What is being collected?](https://www.better-auth.com/docs/reference/telemetry\#what-is-being-collected)
+## [What is being collected?](https://www.better-auth.com/docs/reference/telemetry#what-is-being-collected)
 
 The following data points may be reported. Everything is anonymous and intended for aggregate insights only.
 
@@ -64,7 +65,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [How is my data protected?](https://www.better-auth.com/docs/reference/telemetry\#how-is-my-data-protected)
+## [How is my data protected?](https://www.better-auth.com/docs/reference/telemetry#how-is-my-data-protected)
 
 All collected data is fully anonymous and only useful in aggregate. It cannot be traced back to any individual source and is accessible only to a small group of core Better Auth maintainers to guide roadmap decisions.
 
@@ -72,28 +73,13 @@ All collected data is fully anonymous and only useful in aggregate. It cannot be
 - **No full config**: We never send your full `betterAuth` configuration. Instead we send a reduced, redacted snapshot of non‑sensitive toggles and counts.
 - **Redaction by design**: See [detect-auth-config.ts](https://github.com/better-auth/better-auth/blob/main/packages/better-auth/src/telemetry/detectors/detect-auth-config.ts) in the Better Auth source for the exact shape of what is included. It purposely converts sensitive values to booleans, counts, or generic identifiers.
 
-## [How can I enable it?](https://www.better-auth.com/docs/reference/telemetry\#how-can-i-enable-it)
+## [How can I enable it?](https://www.better-auth.com/docs/reference/telemetry#how-can-i-enable-it)
 
 You can enable telemetry collection in your auth config or by setting an environment variable.
 
 - Via your auth config.
 
-
-
-
-
-
 auth.ts
-
-
-
-
-
-
-
-
-
-
 
 ```
 export const auth = betterAuth({
@@ -105,22 +91,7 @@ export const auth = betterAuth({
 
 - Via an environment variable.
 
-
-
-
-
-
 .env
-
-
-
-
-
-
-
-
-
-
 
 ```
 # Enable telemetry
@@ -130,8 +101,7 @@ BETTER_AUTH_TELEMETRY=1
 BETTER_AUTH_TELEMETRY=0
 ```
 
-
-### [When is telemetry sent?](https://www.better-auth.com/docs/reference/telemetry\#when-is-telemetry-sent)
+### [When is telemetry sent?](https://www.better-auth.com/docs/reference/telemetry#when-is-telemetry-sent)
 
 - On `betterAuth` initialization ( `type: "init"`).
 - On CLI actions: `generate` and `migrate` as described above.

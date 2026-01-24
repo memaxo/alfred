@@ -28,11 +28,13 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** Codex, Docker, and Droid tools stream stdout/stderr in real-time. Current UI doesn't show this.
 
 **Capabilities:**
+
 - **Codex:** Streams stdout/stderr, reasoning traces, artifacts
 - **Docker:** Streams build output, container logs (follow mode)
 - **Droid:** Streams search results, code analysis output
 
 **Missing UI Patterns:**
+
 - Real-time log streaming window
 - Terminal-like output display
 - Stderr vs stdout differentiation
@@ -47,12 +49,14 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** Operations can take minutes to hours (Docker builds, Proxmox VM creation, Codex execution).
 
 **Capabilities:**
+
 - **Docker Build:** Can take 15+ minutes, streams output
 - **Proxmox LXC Create:** Returns UPID, takes minutes
 - **Codex Exec:** Can take up to 2 hours (timeout), streams output
 - **Workflow Execution:** Multi-step, can take 30+ minutes
 
 **Missing UI Patterns:**
+
 - Progress bars with time estimates
 - Operation status windows (persistent, non-intrusive)
 - Cancellation controls
@@ -66,11 +70,13 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** Docker containers and Proxmox VMs have resource usage (CPU, memory, network) that needs visualization.
 
 **Capabilities:**
+
 - **Docker:** Container status, port mapping, resource usage
 - **Proxmox:** VM/LXC status, resource allocation, power state
 - **Workflows:** Execution metrics, performance budgets
 
 **Missing UI Patterns:**
+
 - Real-time resource graphs (CPU, memory, network)
 - Status dashboards (multiple containers/VMs)
 - Health indicators
@@ -84,11 +90,13 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** Proxmox operations return UPID (unique task IDs) that need tracking. Docker operations return container IDs.
 
 **Capabilities:**
+
 - **Proxmox:** `task_wait` operation tracks UPID completion
 - **Docker:** Container lifecycle tracking
 - **Workflows:** Multi-step task tracking
 
 **Missing UI Patterns:**
+
 - Task status windows
 - Task queue visualization
 - Task dependency graphs
@@ -102,10 +110,12 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** Codex execution needs terminal-like interface. Docker exec needs interactive shell.
 
 **Capabilities:**
+
 - **Codex:** Executes commands, streams output, can be interactive
 - **Docker:** `exec` operation for interactive container access
 
 **Missing UI Patterns:**
+
 - Terminal window component
 - Command input
 - Output streaming
@@ -119,12 +129,14 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** When operations fail, users need detailed error information for debugging.
 
 **Capabilities:**
+
 - **Codex:** Exit codes, error messages, truncated output
 - **Docker:** Build failures, container errors, health probe failures
 - **Proxmox:** API errors, task failures
 - **Workflows:** Step failures, rollback information
 
 **Missing UI Patterns:**
+
 - Error detail panels
 - Stack trace viewers
 - Error context (what was running, inputs)
@@ -138,11 +150,13 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** Workflows are multi-step with dependencies. Current UI shows basic plan/task, but not execution flow.
 
 **Capabilities:**
+
 - **Workflows:** Plan → Scan → Act → Report phases
 - **Tasks:** Dependencies, parallel execution
 - **Tools:** Chained execution, output passing
 
 **Missing UI Patterns:**
+
 - Workflow timeline visualization
 - Task dependency graph
 - Phase progress indicators
@@ -156,11 +170,13 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 **Problem:** Codex produces artifacts (files), Docker produces images, workflows produce outputs.
 
 **Capabilities:**
+
 - **Codex:** Artifacts array with paths and kinds
 - **Docker:** Images, containers
 - **Workflows:** Output data, state snapshots
 
 **Missing UI Patterns:**
+
 - Artifact browser
 - Artifact preview
 - Artifact download
@@ -195,6 +211,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - Real-time streaming (append-only)
 - Color coding (stdout vs stderr)
 - Auto-scroll toggle
@@ -230,6 +247,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - Progress bar with percentage
 - Time estimates (elapsed, remaining)
 - Current step indicator
@@ -268,6 +286,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - Real-time resource graphs (CPU, memory, network)
 - Status indicators (running, stopped, error)
 - Port mapping display
@@ -301,6 +320,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - UPID tracking (unique task identifier)
 - Progress indication
 - Current step display
@@ -342,6 +362,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - Phase visualization (Scan → Plan → Act → Report)
 - Task dependency graph
 - Progress per phase/task
@@ -375,6 +396,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - Command input field
 - Output streaming
 - Command history (↑↓ navigation)
@@ -415,6 +437,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - Error message display
 - Stack trace viewer
 - Context information (what was running, inputs)
@@ -454,6 +477,7 @@ We've focused heavily on **personal assistant UI** (notes, reminders, voice), bu
 ```
 
 **Features:**
+
 - Artifact list with metadata
 - Preview (for text files)
 - Download individual/all
@@ -485,6 +509,7 @@ interface StreamingTerminalProps {
 ```
 
 **Features:**
+
 - Real-time output streaming
 - Color coding (stdout=white, stderr=red, system=yellow)
 - Auto-scroll toggle
@@ -514,6 +539,7 @@ interface ProgressWindowProps {
 ```
 
 **Features:**
+
 - Progress bar with percentage
 - Time estimates
 - Current step indicator
@@ -547,6 +573,7 @@ interface ResourceMonitorProps {
 ```
 
 **Features:**
+
 - Real-time resource graphs
 - Status indicators
 - Quick actions
@@ -574,6 +601,7 @@ interface TaskTrackerProps {
 ```
 
 **Features:**
+
 - Task ID display (UPID)
 - Progress tracking
 - Wait for completion option
@@ -608,6 +636,7 @@ interface WorkflowTimelineProps {
 ```
 
 **Features:**
+
 - Phase visualization
 - Task dependency graph
 - Progress per phase/task
@@ -637,6 +666,7 @@ interface InteractiveTerminalProps {
 ```
 
 **Features:**
+
 - Command input
 - Output streaming
 - Command history (↑↓)
@@ -669,6 +699,7 @@ interface ErrorPanelProps {
 ```
 
 **Features:**
+
 - Error message display
 - Stack trace viewer (expandable)
 - Context information
@@ -697,6 +728,7 @@ interface ArtifactBrowserProps {
 ```
 
 **Features:**
+
 - Artifact list with metadata
 - Preview (text files)
 - Download individual/all
@@ -710,6 +742,7 @@ interface ArtifactBrowserProps {
 ### How These Patterns Fit
 
 **Window Types:**
+
 - **StreamingTerminal:** `window` type (draggable, resizable)
 - **ProgressWindow:** `overlay` type (persistent, non-intrusive)
 - **ResourceMonitor:** `window` type (persistent, session lifecycle)
@@ -720,12 +753,14 @@ interface ArtifactBrowserProps {
 - **ArtifactBrowser:** `window` type (persistent, user-controlled)
 
 **Progressive Disclosure:**
+
 - Operations start as **overlays** (non-intrusive progress)
 - User can **expand** to full window (detailed view)
 - **Background mode** minimizes to notification
 - **Completion** triggers notification card
 
 **Voice Integration:**
+
 - ALFRED narrates progress: "Building Docker image... 60% complete"
 - Voice commands: "show me the logs", "cancel the build", "minimize that window"
 - Proactive: "Your Docker build completed successfully"
@@ -740,6 +775,7 @@ interface ArtifactBrowserProps {
 **Needed:** Stream events during execution
 
 **Solution:**
+
 - Use `ToolWriter` interface (already exists in tools)
 - Emit streaming events via WebSocket/SSE
 - Update UI components in real-time
@@ -750,6 +786,7 @@ interface ArtifactBrowserProps {
 **Needed:** Progress bars, time estimates
 
 **Solution:**
+
 - Tools emit progress events via `writer.write()`
 - Parse progress from stdout (Docker build output)
 - Track elapsed time, estimate remaining
@@ -760,6 +797,7 @@ interface ArtifactBrowserProps {
 **Needed:** CPU, memory, network graphs
 
 **Solution:**
+
 - Poll Docker/Proxmox APIs for resource usage
 - Store metrics in time-series format
 - Render graphs using chart library (Tremor?)
@@ -770,6 +808,7 @@ interface ArtifactBrowserProps {
 **Needed:** Task status polling, completion detection
 
 **Solution:**
+
 - Poll Proxmox API for task status (UPID)
 - Show task window until completion
 - Auto-dismiss on completion
@@ -780,6 +819,7 @@ interface ArtifactBrowserProps {
 **Needed:** Detailed error panels, debugging tools
 
 **Solution:**
+
 - Capture full error context (stack, inputs, outputs)
 - Display in expandable error panel
 - Provide retry/fix suggestions
@@ -789,26 +829,31 @@ interface ArtifactBrowserProps {
 ## Priority Implementation Order
 
 ### Phase 1: Core Streaming (Week 1)
+
 1. **StreamingTerminal** component
 2. Real-time output streaming (WebSocket/SSE)
 3. Log filtering/search
 
 ### Phase 2: Progress Tracking (Week 2)
+
 1. **ProgressWindow** component
 2. Progress event parsing
 3. Time estimation
 
 ### Phase 3: Resource Monitoring (Week 3)
+
 1. **ResourceMonitor** component
 2. Resource polling (Docker, Proxmox)
 3. Real-time graphs
 
 ### Phase 4: Workflow Visualization (Week 4)
+
 1. **WorkflowTimeline** component
 2. Task dependency graph
 3. Phase progress tracking
 
 ### Phase 5: Error & Artifacts (Week 5)
+
 1. **ErrorPanel** component
 2. **ArtifactBrowser** component
 3. Error context capture
@@ -818,17 +863,20 @@ interface ArtifactBrowserProps {
 ## Success Metrics
 
 ### User Experience
+
 - **Streaming Latency:** <100ms from tool output to UI display
 - **Progress Accuracy:** ±5% progress estimation
 - **Resource Update:** <5s refresh interval
 - **Error Clarity:** User can diagnose 90%+ errors from UI
 
 ### Performance
+
 - **Streaming Performance:** Handle 1000+ lines/second
 - **Resource Polling:** <100ms per resource
 - **Graph Rendering:** 60fps smooth updates
 
 ### Reliability
+
 - **Stream Reliability:** 99.9% messages delivered
 - **Progress Accuracy:** ±5% estimation error
 - **Error Capture:** 100% errors have context
@@ -849,4 +897,3 @@ The orchestrator UI requires **fundamentally different patterns** than personal 
 8. **Artifacts** - Output management
 
 These patterns complement the generative UI architecture but require **specialized components** for technical operations.
-

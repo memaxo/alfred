@@ -103,7 +103,12 @@ When the ALFRED orchestrator uses `codex exec` to prepare a plan, it expects a s
     "tasks": [],
     "deps": [],
     "acceptanceChecks": [],
-    "branchStrategy": { "base": "origin/main", "feature": "feature/plan-id", "review": "", "notes": "" }
+    "branchStrategy": {
+      "base": "origin/main",
+      "feature": "feature/plan-id",
+      "review": "",
+      "notes": ""
+    }
   }
 }
 ```

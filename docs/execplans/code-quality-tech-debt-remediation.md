@@ -58,15 +58,15 @@ Observable outcomes include: running `bun run check:names` and `bun run check:bu
 
 ## Surprises & Discoveries
 
-*(To be filled during execution)*
+_(To be filled during execution)_
 
 ## Decision Log
 
-*(To be filled during execution)*
+_(To be filled during execution)_
 
 ## Outcomes & Retrospective
 
-*(To be filled upon completion)*
+_(To be filled upon completion)_
 
 ## Context and Orientation
 
@@ -559,105 +559,105 @@ We systematically clean up naming violations by prioritizing voice scripts (alre
 After completing each phase, run the following validation steps:
 
 **Phase 1 Validation:**
-    Run `bun run check:names` and verify it reports violations or "All checks passed"
-    Run `bun run check:budgets` and verify it reports violations or "All budgets met"
-    Verify CI runs both checkers and fails on violations
-    Check that existing `.hot.ts` files meet their budgets
+Run `bun run check:names` and verify it reports violations or "All checks passed"
+Run `bun run check:budgets` and verify it reports violations or "All budgets met"
+Verify CI runs both checkers and fails on violations
+Check that existing `.hot.ts` files meet their budgets
 
 **Phase 2 Validation:**
-    Run `bun test packages/api/test/` and verify no test failures
-    Search for removed code and verify no imports remain
-    Verify deprecated ExecPlans are archived
+Run `bun test packages/api/test/` and verify no test failures
+Search for removed code and verify no imports remain
+Verify deprecated ExecPlans are archived
 
 **Phase 3 Validation:**
-    Run `bun test packages/api/test/` and verify all tests pass without flags
-    Run tests together and verify no isolation problems
-    Verify test execution time improves (fewer mocks)
-    Check test coverage increases for error cases
+Run `bun test packages/api/test/` and verify all tests pass without flags
+Run tests together and verify no isolation problems
+Verify test execution time improves (fewer mocks)
+Check test coverage increases for error cases
 
 **Phase 4 Validation:**
-    Run `bun test packages/pipeline/test/` and verify all features work
-    Run `bun test packages/runtime/test/` and verify no test failures
-    Verify deprecated `runPlanV6` is removed
-    Check orchestrator file count decreases (consolidation)
+Run `bun test packages/pipeline/test/` and verify all features work
+Run `bun test packages/runtime/test/` and verify no test failures
+Verify deprecated `runPlanV6` is removed
+Check orchestrator file count decreases (consolidation)
 
 **Phase 5 Validation:**
-    Run `bun test packages/runtime/test/` and verify runtime emits real events
-    Check runtime events contain real data (not placeholders)
-    Verify context gathering, AI SDK streaming, tool execution, and report generation work
+Run `bun test packages/runtime/test/` and verify runtime emits real events
+Check runtime events contain real data (not placeholders)
+Verify context gathering, AI SDK streaming, tool execution, and report generation work
 
 **Phase 6 Validation:**
-    Run `bun test packages/api/test/architecture.godfiles.test.ts` and verify routers ≤500 lines
-    Check domain services are testable independently
-    Verify CI enforces architectural budgets
+Run `bun test packages/api/test/architecture.godfiles.test.ts` and verify routers ≤500 lines
+Check domain services are testable independently
+Verify CI enforces architectural budgets
 
 **Phase 7 Validation:**
-    Run `bun test packages/api/test/` and verify test session header only works in test mode
-    Verify biometric bypass works in development mode
-    Check production security is verified
+Run `bun test packages/api/test/` and verify test session header only works in test mode
+Verify biometric bypass works in development mode
+Check production security is verified
 
 **Phase 8 Validation:**
-    Run `bun run typecheck` and verify no new type errors
-    Run `bun run check:names` and verify violations decrease
-    Check `any` usage count decreases
-    Verify justified exceptions are documented
+Run `bun run typecheck` and verify no new type errors
+Run `bun run check:names` and verify violations decrease
+Check `any` usage count decreases
+Verify justified exceptions are documented
 
 **Final Acceptance:**
-    All phases complete successfully
-    All tests pass
-    CI enforces code quality standards
-    Codebase is free of major technical debt
-    Documentation is up to date
+All phases complete successfully
+All tests pass
+CI enforces code quality standards
+Codebase is free of major technical debt
+Documentation is up to date
 
 ## Idempotence and Recovery
 
 All phases are designed to be idempotent. Running steps multiple times should not cause issues. If a step fails halfway:
 
 **For Phase 1-2 (Tooling and Dead Code):**
-    Re-run the step. Tooling is additive and dead code removal is safe to repeat.
+Re-run the step. Tooling is additive and dead code removal is safe to repeat.
 
 **For Phase 3 (Test Infrastructure):**
-    Tests can be run multiple times. If a test fails, fix the issue and re-run.
+Tests can be run multiple times. If a test fails, fix the issue and re-run.
 
 **For Phase 4 (Orchestrator Migration):**
-    Migration is incremental. If a feature port fails, fix the issue and continue with the next feature. Legacy code remains until migration is complete.
+Migration is incremental. If a feature port fails, fix the issue and continue with the next feature. Legacy code remains until migration is complete.
 
 **For Phase 5 (Runtime Integration):**
-    Integration is additive. If a placeholder replacement fails, fix the issue and continue.
+Integration is additive. If a placeholder replacement fails, fix the issue and continue.
 
 **For Phase 6-8 (Architecture, Security, Type Safety):**
-    Changes are incremental and safe to repeat. If a change fails, revert and fix.
+Changes are incremental and safe to repeat. If a change fails, revert and fix.
 
 If you need to rollback:
-    Use git to revert changes: `git revert <commit>`
-    Re-run tests to verify rollback
-    Document rollback reason in Decision Log
+Use git to revert changes: `git revert <commit>`
+Re-run tests to verify rollback
+Document rollback reason in Decision Log
 
 ## Artifacts and Notes
 
-*(To be filled during execution with transcripts, diffs, and snippets that prove success)*
+_(To be filled during execution with transcripts, diffs, and snippets that prove success)_
 
 ## Interfaces and Dependencies
 
 **New Interfaces:**
 
 In `scripts/check-budgets.ts`, define:
-    function checkBudgets(): Violation[]
-    interface Violation { file: string; function: string; measured: number; budget: number; }
+function checkBudgets(): Violation[]
+interface Violation { file: string; function: string; measured: number; budget: number; }
 
 In `scripts/check-names.ts`, define:
-    function checkNames(): Violation[]
-    interface Violation { file: string; line: number; type: "file" | "symbol" | "param"; message: string; }
+function checkNames(): Violation[]
+interface Violation { file: string; line: number; type: "file" | "symbol" | "param"; message: string; }
 
 In `packages/pipeline/src/reconstruct.ts`, define:
-    interface PipelineSnapshot { runId: string; lastCompletedStage: StageName | null; contextEntries: Array<[string, unknown]>; timestamp: number; }
-    class PipelineReconstructor { reduce(snapshot: PipelineSnapshot, event: PipelineEvent): PipelineSnapshot; reconstruct(events: Iterable<PipelineEvent>): PipelineSnapshot; }
+interface PipelineSnapshot { runId: string; lastCompletedStage: StageName | null; contextEntries: Array<[string, unknown]>; timestamp: number; }
+class PipelineReconstructor { reduce(snapshot: PipelineSnapshot, event: PipelineEvent): PipelineSnapshot; reconstruct(events: Iterable<PipelineEvent>): PipelineSnapshot; }
 
 In `packages/pipeline/src/events.ts`, add:
-    type PipelineEvent = ... | { type: "context:set"; key: string; value: unknown; }
+type PipelineEvent = ... | { type: "context:set"; key: string; value: unknown; }
 
 In `packages/api/src/services/plan.ts`, define:
-    export class PlanService { classifyIntent(input: string): Promise<IntentResult>; classifyComplexity(intent: IntentResult): ComplexityLevel; generateTrace(steps: TraceStep[]): Trace; }
+export class PlanService { classifyIntent(input: string): Promise<IntentResult>; classifyComplexity(intent: IntentResult): ComplexityLevel; generateTrace(steps: TraceStep[]): Trace; }
 
 **Dependencies:**
 

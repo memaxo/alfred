@@ -6,33 +6,27 @@ The client entry point is **optional** out of the box. If not provided, TanStack
 
 Getting our html to the client is only half the battle. Once there, we need to hydrate our client-side JavaScript once the route resolves to the client. We do this by hydrating the root of our application with the StartClient component:
 
+// src/client.tsx
+import { StartClient } from '@tanstack/react-start/client'
+import { StrictMode } from 'react'
+import { hydrateRoot } from 'react-dom/client'
 
- // src/client.tsx
- import { StartClient } from '@tanstack/react-start/client'
- import { StrictMode } from 'react'
- import { hydrateRoot } from 'react-dom/client'
+hydrateRoot(
+document,
 
- hydrateRoot(
- document,
+,
+)
 
+// src/client.tsx
+import { StartClient } from '@tanstack/react-start/client'
+import { StrictMode } from 'react'
+import { hydrateRoot } from 'react-dom/client'
 
- ,
- )
+hydrateRoot(
+document,
 
-
-
- // src/client.tsx
- import { StartClient } from '@tanstack/react-start/client'
- import { StrictMode } from 'react'
- import { hydrateRoot } from 'react-dom/client'
-
- hydrateRoot(
- document,
-
-
- ,
- )
-
+,
+)
 
 This enables us to kick off client-side routing once the user's initial server request has fulfilled.
 
@@ -40,80 +34,64 @@ Error Handling
 
 You can wrap your client entry point with error boundaries to handle client-side errors gracefully:
 
+// src/client.tsx
+import { StartClient } from '@tanstack/react-start/client'
+import { StrictMode } from 'react'
+import { hydrateRoot } from 'react-dom/client'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
- // src/client.tsx
- import { StartClient } from '@tanstack/react-start/client'
- import { StrictMode } from 'react'
- import { hydrateRoot } from 'react-dom/client'
- import { ErrorBoundary } from './components/ErrorBoundary'
+hydrateRoot(
+document,
 
- hydrateRoot(
- document,
+,
+)
 
+// src/client.tsx
+import { StartClient } from '@tanstack/react-start/client'
+import { StrictMode } from 'react'
+import { hydrateRoot } from 'react-dom/client'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
+hydrateRoot(
+document,
 
-
- ,
- )
-
-
-
- // src/client.tsx
- import { StartClient } from '@tanstack/react-start/client'
- import { StrictMode } from 'react'
- import { hydrateRoot } from 'react-dom/client'
- import { ErrorBoundary } from './components/ErrorBoundary'
-
- hydrateRoot(
- document,
-
-
-
-
- ,
- )
-
+,
+)
 
 Development vs Production
 
 You may want different behavior in development vs production:
 
+// src/client.tsx
+import { StartClient } from '@tanstack/react-start/client'
+import { StrictMode } from 'react'
+import { hydrateRoot } from 'react-dom/client'
 
- // src/client.tsx
- import { StartClient } from '@tanstack/react-start/client'
- import { StrictMode } from 'react'
- import { hydrateRoot } from 'react-dom/client'
+const App = (
+<>
+{import.meta.env.DEV && Development Mode}
 
- const App = (
- <>
- {import.meta.env.DEV && Development Mode}
+)
 
+hydrateRoot(
+document,
+import.meta.env.DEV ? {App} : App,
+)
 
- )
+// src/client.tsx
+import { StartClient } from '@tanstack/react-start/client'
+import { StrictMode } from 'react'
+import { hydrateRoot } from 'react-dom/client'
 
- hydrateRoot(
- document,
- import.meta.env.DEV ? {App} : App,
- )
+const App = (
+<>
+{import.meta.env.DEV && Development Mode}
 
+)
 
-
- // src/client.tsx
- import { StartClient } from '@tanstack/react-start/client'
- import { StrictMode } from 'react'
- import { hydrateRoot } from 'react-dom/client'
-
- const App = (
- <>
- {import.meta.env.DEV && Development Mode}
-
-
- )
-
- hydrateRoot(
- document,
- import.meta.env.DEV ? {App} : App,
- )
-
+hydrateRoot(
+document,
+import.meta.env.DEV ? {App} : App,
+)
 
 The client entry point gives you full control over how your application initializes on the client side while working seamlessly with TanStack Start's server-side rendering.

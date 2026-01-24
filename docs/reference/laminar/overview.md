@@ -1,8 +1,9 @@
 ---
 title: Laminar - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/overview#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -30,7 +31,7 @@ Laminar is a comprehensive **open-source platform** for observability and evalua
 - **Open-source** \- Fully open-source and easy to self-host. Give us a ⭐ [here](https://github.com/lmnr-ai/lmnr)
 - **Cloud** \- Managed cloud service available at [lmnr.ai](https://lmnr.ai/)
 
-## [​](https://docs.lmnr.ai/overview\#get-started)  Get Started
+## [​](https://docs.lmnr.ai/overview#get-started) Get Started
 
 [**Tracing** \\
 \\

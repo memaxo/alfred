@@ -1,9 +1,10 @@
 ---
 title: Single Sign-On (SSO) | Better Auth
-url: 
+url:
 description: Integrate Single Sign-On (SSO) with your application.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -32,15 +33,15 @@ Single Sign-On (SSO) allows users to authenticate with multiple applications usi
 
 This plugin is in active development and may not be suitable for production use. Please report any issues or bugs on [GitHub](https://github.com/better-auth/better-auth) and any security concerns on [security@better-auth.com](mailto:security@better-auth.com).
 
-## [Installation](https://www.better-auth.com/docs/plugins/sso\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/sso#installation)
 
-### [Install the plugin](https://www.better-auth.com/docs/plugins/sso\#install-the-plugin)
+### [Install the plugin](https://www.better-auth.com/docs/plugins/sso#install-the-plugin)
 
 ```
 npm install @better-auth/sso
 ```
 
-### [Add Plugin to the server](https://www.better-auth.com/docs/plugins/sso\#add-plugin-to-the-server)
+### [Add Plugin to the server](https://www.better-auth.com/docs/plugins/sso#add-plugin-to-the-server)
 
 auth.ts
 
@@ -55,7 +56,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/sso\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/sso#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -71,7 +72,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/sso#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/sso\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/sso#add-the-client-plugin)
 
 auth-client.ts
 
@@ -86,15 +87,15 @@ const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/sso\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/sso#usage)
 
-### [Register an OIDC Provider](https://www.better-auth.com/docs/plugins/sso\#register-an-oidc-provider)
+### [Register an OIDC Provider](https://www.better-auth.com/docs/plugins/sso#register-an-oidc-provider)
 
 To register an OIDC provider, use the `registerSSOProvider` endpoint and provide the necessary configuration details for the provider.
 
 A redirect URL will be automatically generated using the provider ID. For instance, if the provider ID is `hydra`, the redirect URL would be `{baseURL}/api/auth/sso/callback/hydra`. Note that `/api/auth` may vary depending on your base path configuration.
 
-#### [Example](https://www.better-auth.com/docs/plugins/sso\#example)
+#### [Example](https://www.better-auth.com/docs/plugins/sso#example)
 
 clientserver
 
@@ -159,7 +160,7 @@ await auth.api.registerSSOProvider({
 });
 ```
 
-### [Register a SAML Provider](https://www.better-auth.com/docs/plugins/sso\#register-a-saml-provider)
+### [Register a SAML Provider](https://www.better-auth.com/docs/plugins/sso#register-a-saml-provider)
 
 To register a SAML provider, use the `registerSSOProvider` endpoint with SAML configuration details. The provider will act as a Service Provider (SP) and integrate with your Identity Provider (IdP).
 
@@ -267,7 +268,7 @@ await auth.api.registerSSOProvider({
 });
 ```
 
-### [Get Service Provider Metadata](https://www.better-auth.com/docs/plugins/sso\#get-service-provider-metadata)
+### [Get Service Provider Metadata](https://www.better-auth.com/docs/plugins/sso#get-service-provider-metadata)
 
 For SAML providers, you can retrieve the Service Provider metadata XML that needs to be configured in your Identity Provider:
 
@@ -285,7 +286,7 @@ const metadataXML = await response.text();
 console.log(metadataXML);
 ```
 
-### [Sign In with SSO](https://www.better-auth.com/docs/plugins/sso\#sign-in-with-sso)
+### [Sign In with SSO](https://www.better-auth.com/docs/plugins/sso#sign-in-with-sso)
 
 To sign in with an SSO provider, you can call `signIn.sso`
 
@@ -346,7 +347,7 @@ const res = await auth.api.signInSSO({
 });
 ```
 
-#### [Full method](https://www.better-auth.com/docs/plugins/sso\#full-method)
+#### [Full method](https://www.better-auth.com/docs/plugins/sso#full-method)
 
 ClientServer
 
@@ -368,17 +369,17 @@ const { data, error } = await authClient.signIn.sso({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email?` | The email address to sign in with. This is used to identify the issuer to sign in with. It's optional if the issuer is provided. | `string` |
-| `organizationSlug?` | The slug of the organization to sign in with. | `string` |
-| `providerId?` | The ID of the provider to sign in with. This can be provided instead of email or issuer. | `string` |
-| `domain?` | The domain of the provider. | `string` |
-| `callbackURL` | The URL to redirect to after login. | `string` |
-| `errorCallbackURL?` | The URL to redirect to after login. | `string` |
-| `newUserCallbackURL?` | The URL to redirect to after login if the user is new. | `string` |
-| `scopes?` | Scopes to request from the provider. | `string[]` |
-| `requestSignUp?` | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider. | `boolean` |
+| Prop                  | Description                                                                                                                      | Type       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `email?`              | The email address to sign in with. This is used to identify the issuer to sign in with. It's optional if the issuer is provided. | `string`   |
+| `organizationSlug?`   | The slug of the organization to sign in with.                                                                                    | `string`   |
+| `providerId?`         | The ID of the provider to sign in with. This can be provided instead of email or issuer.                                         | `string`   |
+| `domain?`             | The domain of the provider.                                                                                                      | `string`   |
+| `callbackURL`         | The URL to redirect to after login.                                                                                              | `string`   |
+| `errorCallbackURL?`   | The URL to redirect to after login.                                                                                              | `string`   |
+| `newUserCallbackURL?` | The URL to redirect to after login if the user is new.                                                                           | `string`   |
+| `scopes?`             | Scopes to request from the provider.                                                                                             | `string[]` |
+| `requestSignUp?`      | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider.                                         | `boolean`  |
 
 POST
 
@@ -400,17 +401,17 @@ const data = await auth.api.signInSSO({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email?` | The email address to sign in with. This is used to identify the issuer to sign in with. It's optional if the issuer is provided. | `string` |
-| `organizationSlug?` | The slug of the organization to sign in with. | `string` |
-| `providerId?` | The ID of the provider to sign in with. This can be provided instead of email or issuer. | `string` |
-| `domain?` | The domain of the provider. | `string` |
-| `callbackURL` | The URL to redirect to after login. | `string` |
-| `errorCallbackURL?` | The URL to redirect to after login. | `string` |
-| `newUserCallbackURL?` | The URL to redirect to after login if the user is new. | `string` |
-| `scopes?` | Scopes to request from the provider. | `string[]` |
-| `requestSignUp?` | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider. | `boolean` |
+| Prop                  | Description                                                                                                                      | Type       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `email?`              | The email address to sign in with. This is used to identify the issuer to sign in with. It's optional if the issuer is provided. | `string`   |
+| `organizationSlug?`   | The slug of the organization to sign in with.                                                                                    | `string`   |
+| `providerId?`         | The ID of the provider to sign in with. This can be provided instead of email or issuer.                                         | `string`   |
+| `domain?`             | The domain of the provider.                                                                                                      | `string`   |
+| `callbackURL`         | The URL to redirect to after login.                                                                                              | `string`   |
+| `errorCallbackURL?`   | The URL to redirect to after login.                                                                                              | `string`   |
+| `newUserCallbackURL?` | The URL to redirect to after login if the user is new.                                                                           | `string`   |
+| `scopes?`             | Scopes to request from the provider.                                                                                             | `string[]` |
+| `requestSignUp?`      | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider.                                         | `boolean`  |
 
 When a user is authenticated, if the user does not exist, the user will be provisioned using the `provisionUser` function. If the organization provisioning is enabled and a provider is associated with an organization, the user will be added to the organization.
 
@@ -435,11 +436,11 @@ const auth = betterAuth({
 });
 ```
 
-## [Provisioning](https://www.better-auth.com/docs/plugins/sso\#provisioning)
+## [Provisioning](https://www.better-auth.com/docs/plugins/sso#provisioning)
 
 The SSO plugin provides powerful provisioning capabilities to automatically set up users and manage their organization memberships when they sign in through SSO providers.
 
-### [User Provisioning](https://www.better-auth.com/docs/plugins/sso\#user-provisioning)
+### [User Provisioning](https://www.better-auth.com/docs/plugins/sso#user-provisioning)
 
 User provisioning allows you to run custom logic whenever a user signs in through an SSO provider. This is useful for:
 
@@ -493,7 +494,7 @@ The `provisionUser` function receives:
 - **token**: OAuth2 tokens (for OIDC providers) - may be undefined for SAML
 - **provider**: The SSO provider configuration
 
-### [Organization Provisioning](https://www.better-auth.com/docs/plugins/sso\#organization-provisioning)
+### [Organization Provisioning](https://www.better-auth.com/docs/plugins/sso#organization-provisioning)
 
 Organization provisioning automatically manages user memberships in organizations when SSO providers are linked to specific organizations. This is particularly useful for:
 
@@ -501,7 +502,7 @@ Organization provisioning automatically manages user memberships in organization
 - Automatic role assignment based on SSO attributes
 - Managing team memberships through SSO
 
-#### [Basic Organization Provisioning](https://www.better-auth.com/docs/plugins/sso\#basic-organization-provisioning)
+#### [Basic Organization Provisioning](https://www.better-auth.com/docs/plugins/sso#basic-organization-provisioning)
 
 auth.ts
 
@@ -518,7 +519,7 @@ const auth = betterAuth({
 });
 ```
 
-#### [Advanced Organization Provisioning with Custom Roles](https://www.better-auth.com/docs/plugins/sso\#advanced-organization-provisioning-with-custom-roles)
+#### [Advanced Organization Provisioning with Custom Roles](https://www.better-auth.com/docs/plugins/sso#advanced-organization-provisioning-with-custom-roles)
 
 auth.ts
 
@@ -555,7 +556,7 @@ const auth = betterAuth({
 });
 ```
 
-#### [Linking SSO Providers to Organizations](https://www.better-auth.com/docs/plugins/sso\#linking-sso-providers-to-organizations)
+#### [Linking SSO Providers to Organizations](https://www.better-auth.com/docs/plugins/sso#linking-sso-providers-to-organizations)
 
 When registering an SSO provider, you can link it to a specific organization:
 
@@ -578,7 +579,7 @@ await auth.api.registerSSOProvider({
 
 Now when users from `acmecorp.com` sign in through this provider, they'll automatically be added to the "Acme Corp" organization with the appropriate role.
 
-#### [Multiple Organizations Example](https://www.better-auth.com/docs/plugins/sso\#multiple-organizations-example)
+#### [Multiple Organizations Example](https://www.better-auth.com/docs/plugins/sso#multiple-organizations-example)
 
 You can set up multiple SSO providers for different organizations:
 
@@ -610,7 +611,7 @@ await auth.api.registerSSOProvider({
 });
 ```
 
-#### [Organization Provisioning Flow](https://www.better-auth.com/docs/plugins/sso\#organization-provisioning-flow)
+#### [Organization Provisioning Flow](https://www.better-auth.com/docs/plugins/sso#organization-provisioning-flow)
 
 1. **User signs in** through an SSO provider linked to an organization
 2. **User is authenticated** and either found or created in the database
@@ -619,9 +620,9 @@ await auth.api.registerSSOProvider({
 5. **User is added** to the organization with the determined role
 6. **User provisioning runs** (if configured) for additional setup
 
-### [Provisioning Best Practices](https://www.better-auth.com/docs/plugins/sso\#provisioning-best-practices)
+### [Provisioning Best Practices](https://www.better-auth.com/docs/plugins/sso#provisioning-best-practices)
 
-#### [1\. Idempotent Operations](https://www.better-auth.com/docs/plugins/sso\#1-idempotent-operations)
+#### [1\. Idempotent Operations](https://www.better-auth.com/docs/plugins/sso#1-idempotent-operations)
 
 Make sure your provisioning functions can be safely run multiple times:
 
@@ -639,7 +640,7 @@ provisionUser: async ({ user, userInfo }) => {
 },
 ```
 
-#### [2\. Error Handling](https://www.better-auth.com/docs/plugins/sso\#2-error-handling)
+#### [2\. Error Handling](https://www.better-auth.com/docs/plugins/sso#2-error-handling)
 
 Handle errors gracefully to avoid blocking user sign-in:
 
@@ -655,7 +656,7 @@ provisionUser: async ({ user, userInfo }) => {
 },
 ```
 
-#### [3\. Conditional Provisioning](https://www.better-auth.com/docs/plugins/sso\#3-conditional-provisioning)
+#### [3\. Conditional Provisioning](https://www.better-auth.com/docs/plugins/sso#3-conditional-provisioning)
 
 Only run certain provisioning steps when needed:
 
@@ -672,9 +673,9 @@ organizationProvisioning: {
 },
 ```
 
-## [SAML Configuration](https://www.better-auth.com/docs/plugins/sso\#saml-configuration)
+## [SAML Configuration](https://www.better-auth.com/docs/plugins/sso#saml-configuration)
 
-### [Service Provider Configuration](https://www.better-auth.com/docs/plugins/sso\#service-provider-configuration)
+### [Service Provider Configuration](https://www.better-auth.com/docs/plugins/sso#service-provider-configuration)
 
 When registering a SAML provider, you need to provide Service Provider (SP) metadata configuration:
 
@@ -686,7 +687,7 @@ When registering a SAML provider, you need to provide Service Provider (SP) meta
 - **encPrivateKey**: Private key for decryption (if encryption is enabled)
 - **encPrivateKeyPass**: Password for the encryption private key
 
-### [Identity Provider Configuration](https://www.better-auth.com/docs/plugins/sso\#identity-provider-configuration)
+### [Identity Provider Configuration](https://www.better-auth.com/docs/plugins/sso#identity-provider-configuration)
 
 You also need to provide Identity Provider (IdP) configuration:
 
@@ -697,7 +698,7 @@ You also need to provide Identity Provider (IdP) configuration:
 - **encPrivateKey**: Private key for IdP assertion decryption
 - **encPrivateKeyPass**: Password for the IdP decryption key
 
-### [SAML Attribute Mapping](https://www.better-auth.com/docs/plugins/sso\#saml-attribute-mapping)
+### [SAML Attribute Mapping](https://www.better-auth.com/docs/plugins/sso#saml-attribute-mapping)
 
 Configure how SAML attributes map to user fields:
 
@@ -716,31 +717,31 @@ mapping: {
 }
 ```
 
-### [SAML Endpoints](https://www.better-auth.com/docs/plugins/sso\#saml-endpoints)
+### [SAML Endpoints](https://www.better-auth.com/docs/plugins/sso#saml-endpoints)
 
 The plugin automatically creates the following SAML endpoints:
 
 - **SP Metadata**: `/api/auth/sso/saml2/sp/metadata?providerId={providerId}`
 - **SAML Callback**: `/api/auth/sso/saml2/callback/{providerId}`
 
-## [Schema](https://www.better-auth.com/docs/plugins/sso\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/sso#schema)
 
 The plugin requires additional fields in the `ssoProvider` table to store the provider's configuration.
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | A database identifier |
-| issuer | string | - | The issuer identifier |
-| domain | string | - | The domain of the provider |
-| oidcConfig | string | - | The OIDC configuration (JSON string) |
-| samlConfig | string | - | The SAML configuration (JSON string) |
-| userId | string | - | The user ID |
-| providerId | string | - | The provider ID. Used to identify a provider and to generate a redirect URL. |
-| organizationId | string | - | The organization Id. If provider is linked to an organization. |
+| Field Name     | Type   | Key | Description                                                                  |
+| -------------- | ------ | --- | ---------------------------------------------------------------------------- |
+| id             | string | PK  | A database identifier                                                        |
+| issuer         | string | -   | The issuer identifier                                                        |
+| domain         | string | -   | The domain of the provider                                                   |
+| oidcConfig     | string | -   | The OIDC configuration (JSON string)                                         |
+| samlConfig     | string | -   | The SAML configuration (JSON string)                                         |
+| userId         | string | -   | The user ID                                                                  |
+| providerId     | string | -   | The provider ID. Used to identify a provider and to generate a redirect URL. |
+| organizationId | string | -   | The organization Id. If provider is linked to an organization.               |
 
-## [Options](https://www.better-auth.com/docs/plugins/sso\#options)
+## [Options](https://www.better-auth.com/docs/plugins/sso#options)
 
-### [Server](https://www.better-auth.com/docs/plugins/sso\#server)
+### [Server](https://www.better-auth.com/docs/plugins/sso#server)
 
 **provisionUser**: A custom function to provision a user when they sign in with an SSO provider.
 
@@ -752,13 +753,13 @@ The plugin requires additional fields in the `ssoProvider` table to store the pr
 
 **trustEmailVerified**: Trust the email verified flag from the provider.
 
-| Prop | Type | Default |
-| --- | --- | --- |
-| `provisionUser?` | `function` | - |
-| `organizationProvisioning?` | `object` | - |
-| `defaultOverrideUserInfo?` | `boolean` | - |
-| `disableImplicitSignUp?` | `boolean` | - |
-| `providersLimit?` | `number | function` | `10` |
+| Prop                        | Type       | Default   |
+| --------------------------- | ---------- | --------- | ---- |
+| `provisionUser?`            | `function` | -         |
+| `organizationProvisioning?` | `object`   | -         |
+| `defaultOverrideUserInfo?`  | `boolean`  | -         |
+| `disableImplicitSignUp?`    | `boolean`  | -         |
+| `providersLimit?`           | `number    | function` | `10` |
 
 [Edit on GitHub](https://github.com/better-auth/better-auth/blob/main/docs/content/docs/plugins/sso.mdx)
 

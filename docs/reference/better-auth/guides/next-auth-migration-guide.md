@@ -1,9 +1,10 @@
 ---
 title: Migrating from NextAuth.js to Better Auth | Better Auth
-url: 
+url:
 description: A step-by-step guide to transitioning from NextAuth.js to Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,25 +29,25 @@ Copy MarkdownOpen in
 
 In this guide, we’ll walk through the steps to migrate a project from [NextAuth.js](https://authjs.dev/) to Better Auth, ensuring no loss of data or functionality. While this guide focuses on Next.js, it can be adapted for other frameworks as well.
 
-* * *
+---
 
-## [Before You Begin](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#before-you-begin)
+## [Before You Begin](https://www.better-auth.com/docs/guides/next-auth-migration-guide#before-you-begin)
 
 Before starting the migration process, set up Better Auth in your project. Follow the [installation guide](https://www.better-auth.com/docs/installation) to get started.
 
-* * *
+---
 
-### [Mapping Existing Columns](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#mapping-existing-columns)
+### [Mapping Existing Columns](https://www.better-auth.com/docs/guides/next-auth-migration-guide#mapping-existing-columns)
 
 Instead of altering your existing database column names, you can map them to match Better Auth's expected structure. This allows you to retain your current database schema.
 
-#### [User Schema](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#user-schema)
+#### [User Schema](https://www.better-auth.com/docs/guides/next-auth-migration-guide#user-schema)
 
 Map the following fields in the user schema:
 
 - (next-auth v4) `emailVerified`: datetime → boolean
 
-#### [Session Schema](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#session-schema)
+#### [Session Schema](https://www.better-auth.com/docs/guides/next-auth-migration-guide#session-schema)
 
 Map the following fields in the session schema:
 
@@ -71,7 +72,7 @@ export const auth = betterAuth({
 
 Make sure to have `createdAt` and `updatedAt` fields on your session schema.
 
-#### [Account Schema](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#account-schema)
+#### [Account Schema](https://www.better-auth.com/docs/guides/next-auth-migration-guide#account-schema)
 
 Map these fields in the account schema:
 
@@ -122,7 +123,7 @@ model Session {
 
 Make sure to have `createdAt` and `updatedAt` fields on your account schema.
 
-### [Update the Route Handler](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#update-the-route-handler)
+### [Update the Route Handler](https://www.better-auth.com/docs/guides/next-auth-migration-guide#update-the-route-handler)
 
 In the `app/api/auth` folder, rename the `[...nextauth]` file to `[...all]` to avoid confusion. Then, update the `route.ts` file as follows:
 
@@ -135,7 +136,7 @@ import { auth } from "~/server/auth";
 export const { POST, GET } = toNextJsHandler(auth);
 ```
 
-### [Update the Client](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#update-the-client)
+### [Update the Client](https://www.better-auth.com/docs/guides/next-auth-migration-guide#update-the-client)
 
 Create a file named `auth-client.ts` in the `lib` folder. Add the following code:
 
@@ -151,7 +152,7 @@ export const authClient = createAuthClient({
 export const { signIn, signOut, useSession } = authClient;
 ```
 
-#### [Social Login Functions](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#social-login-functions)
+#### [Social Login Functions](https://www.better-auth.com/docs/guides/next-auth-migration-guide#social-login-functions)
 
 Update your social login functions to use Better Auth. For example, for Discord:
 
@@ -166,7 +167,7 @@ export const signInDiscord = async () => {
 };
 ```
 
-#### [Update `useSession` Calls](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#update-usesession-calls)
+#### [Update `useSession` Calls](https://www.better-auth.com/docs/guides/next-auth-migration-guide#update-usesession-calls)
 
 Replace `useSession` calls with Better Auth’s version. Example:
 
@@ -187,7 +188,7 @@ export const Profile = () => {
 };
 ```
 
-### [Server-Side Session Handling](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#server-side-session-handling)
+### [Server-Side Session Handling](https://www.better-auth.com/docs/guides/next-auth-migration-guide#server-side-session-handling)
 
 Use the `auth` instance to get session data on the server:
 
@@ -206,11 +207,11 @@ export const protectedAction = async () => {
 };
 ```
 
-### [Middleware](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#middleware)
+### [Middleware](https://www.better-auth.com/docs/guides/next-auth-migration-guide#middleware)
 
 To protect routes with middleware, refer to the [Next.js middleware guide](https://www.better-auth.com/docs/integrations/next#middleware).
 
-## [Wrapping Up](https://www.better-auth.com/docs/guides/next-auth-migration-guide\#wrapping-up)
+## [Wrapping Up](https://www.better-auth.com/docs/guides/next-auth-migration-guide#wrapping-up)
 
 Congratulations! You’ve successfully migrated from NextAuth.js to Better Auth. For a complete implementation with multiple authentication methods, check out the [demo repository](https://github.com/Bekacru/t3-app-better-auth).
 

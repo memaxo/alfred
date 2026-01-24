@@ -30,9 +30,7 @@ function VoiceButton() {
   };
 
   return (
-    <button onClick={handlePress}>
-      {stream.isActive ? "Stop" : "Start"}
-    </button>
+    <button onClick={handlePress}>{stream.isActive ? "Stop" : "Start"}</button>
   );
 }
 ```
@@ -212,11 +210,11 @@ You can tune Nemotron latency vs accuracy via `sttChunkSize`:
 
 Balance latency vs accuracy with `chunkSize`:
 
-| Chunk Size | Latency | Accuracy | Use Case |
-|------------|---------|----------|----------|
-| `fast`     | ~80ms   | Lower    | Real-time dictation |
-| `low`      | ~160ms  | Medium   | Quick commands |
-| `medium`   | ~560ms  | Good     | General use (default) |
+| Chunk Size | Latency | Accuracy | Use Case                  |
+| ---------- | ------- | -------- | ------------------------- |
+| `fast`     | ~80ms   | Lower    | Real-time dictation       |
+| `low`      | ~160ms  | Medium   | Quick commands            |
+| `medium`   | ~560ms  | Good     | General use (default)     |
 | `accurate` | ~1.1s   | Highest  | High-stakes transcription |
 
 ## Audio Format Requirements
@@ -356,12 +354,12 @@ VOICE_PROVIDER=maya1  # Default provider
 
 ## Performance Budgets
 
-| Operation | Target | Notes |
-|-----------|--------|-------|
-| STT (batch) | <2s | For 10s audio |
-| STT (streaming) | <500ms | Per chunk |
-| TTS | <1s | For short text |
-| S2S roundtrip | <5s | Full conversation turn |
+| Operation       | Target | Notes                  |
+| --------------- | ------ | ---------------------- |
+| STT (batch)     | <2s    | For 10s audio          |
+| STT (streaming) | <500ms | Per chunk              |
+| TTS             | <1s    | For short text         |
+| S2S roundtrip   | <5s    | Full conversation turn |
 
 ## Examples
 

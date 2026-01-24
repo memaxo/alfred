@@ -10,11 +10,13 @@
 Server entry point for TanStack Start and Bun executable compilation.
 
 **Key Features**:
+
 - Uses TanStack Start's default handler
 - Initializes server services before handling requests
 - Compatible with `bun build --compile`
 
 **File**: `apps/web/src/server.ts`
+
 ```typescript
 import handler from "@tanstack/react-start/server-entry";
 import { initServer } from "./server/bootstrap";
@@ -35,10 +37,12 @@ export default {
 Extracted initialization logic from `packages/api/src/index.ts` for reusable initialization.
 
 **Exports**:
+
 - `initApiServices()` - Initialize compression worker and voice pools
 - `shutdownApiServices()` - Gracefully shutdown all API services
 
 **Key Features**:
+
 - Centralized API service initialization
 - Proper error handling and logging
 - Graceful shutdown support
@@ -48,12 +52,14 @@ Extracted initialization logic from `packages/api/src/index.ts` for reusable ini
 Enhanced bootstrap function with full server initialization.
 
 **New Features**:
+
 - Initializes reminder scheduler (if `SCHED_REMIND=1`)
 - Initializes API services (compression worker, voice pools)
 - Handles graceful shutdown (SIGTERM, SIGINT)
 - Maintains HMR support for development
 
 **Key Functions**:
+
 - `initServer()` - Initialize all server-side services
 - `shutdown()` - Gracefully shutdown all services
 
@@ -62,6 +68,7 @@ Enhanced bootstrap function with full server initialization.
 Updated to use the new `init.ts` module while maintaining backward compatibility.
 
 **Changes**:
+
 - Auto-initializes services when module is imported (backward compatibility)
 - Exports `initApiServices` and `shutdownApiServices` for explicit control
 
@@ -70,6 +77,7 @@ Updated to use the new `init.ts` module while maintaining backward compatibility
 Updated build script to use the new server entry point.
 
 **Change**:
+
 - Default `ENTRY_POINT` changed from `apps/web/src/router.tsx` to `apps/web/src/server.ts`
 
 ## Architecture
@@ -133,6 +141,7 @@ bun build --compile \
 ### Environment Variables
 
 **Required for initialization**:
+
 - `SCHED_REMIND=1` - Enable reminder scheduler
 - `VOICE_PROVIDER=maya1` (or `supertonic`) - Enable on-device voice models (requires Python)
 - `COMPRESSION_ENABLED=true` - Enable compression worker (default: production)
@@ -142,12 +151,14 @@ bun build --compile \
 ### Manual Testing
 
 1. **Test server initialization**:
+
    ```bash
    bun run dev
    # Check logs for initialization messages
    ```
 
 2. **Test executable build**:
+
    ```bash
    ./scripts/build-executable.sh
    ./dist/alfred-server

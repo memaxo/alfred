@@ -1,9 +1,10 @@
 ---
 title: Google | Better Auth
-url: 
+url:
 description: Google provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,13 +27,13 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your Google credentials](https://www.better-auth.com/docs/authentication/google\#get-your-google-credentials)
+### [Get your Google credentials](https://www.better-auth.com/docs/authentication/google#get-your-google-credentials)
 
 To use Google as a social provider, you need to get your Google credentials. You can get them by creating a new project in the [Google Cloud Console](https://console.cloud.google.com/apis/dashboard).
 
 In the Google Cloud Console > Credentials > Authorized redirect URIs, make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/google` for local development. For production, make sure to set the redirect URL as your application domain, e.g. `https://example.com/api/auth/callback/google`. If you change the base path of the auth routes, you should update the redirect URL accordingly.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/google\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/google#configure-the-provider)
 
 To configure the provider, you need to pass the `clientId` and `clientSecret` to `socialProviders.google` in your auth configuration.
 
@@ -51,9 +52,9 @@ export const auth = betterAuth({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/authentication/google\#usage)
+## [Usage](https://www.better-auth.com/docs/authentication/google#usage)
 
-### [Sign In with Google](https://www.better-auth.com/docs/authentication/google\#sign-in-with-google)
+### [Sign In with Google](https://www.better-auth.com/docs/authentication/google#sign-in-with-google)
 
 To sign in with Google, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 
@@ -72,7 +73,7 @@ const signIn = async () => {
 };
 ```
 
-### [Sign In with Google With ID Token](https://www.better-auth.com/docs/authentication/google\#sign-in-with-google-with-id-token)
+### [Sign In with Google With ID Token](https://www.better-auth.com/docs/authentication/google#sign-in-with-google-with-id-token)
 
 To sign in with Google using the ID Token, you can use the `signIn.social` function to pass the ID Token.
 
@@ -96,7 +97,7 @@ const data = await authClient.signIn.social({
 If you want to use google one tap, you can use the [One Tap\\
 Plugin](https://www.better-auth.com/docs/plugins/one-tap) guide.
 
-### [Always ask to select an account](https://www.better-auth.com/docs/authentication/google\#always-ask-to-select-an-account)
+### [Always ask to select an account](https://www.better-auth.com/docs/authentication/google#always-ask-to-select-an-account)
 
 If you want to always ask the user to select an account, you pass the `prompt` parameter to the provider, setting it to `select_account`.
 
@@ -110,7 +111,7 @@ socialProviders: {
 }
 ```
 
-### [Requesting Additional Google Scopes](https://www.better-auth.com/docs/authentication/google\#requesting-additional-google-scopes)
+### [Requesting Additional Google Scopes](https://www.better-auth.com/docs/authentication/google#requesting-additional-google-scopes)
 
 If your application needs additional Google scopes after the user has already signed up (e.g., for Google Drive, Gmail, or other Google services), you can request them using the `linkSocial` method with the same Google provider.
 
@@ -138,7 +139,7 @@ Ensure you're using Better Auth version 1.2.7 or later to avoid "Social
 account already linked" errors when requesting additional scopes from the same
 provider.
 
-### [Always get refresh token](https://www.better-auth.com/docs/authentication/google\#always-get-refresh-token)
+### [Always get refresh token](https://www.better-auth.com/docs/authentication/google#always-get-refresh-token)
 
 Google only issues a refresh token the first time a user consents to your app.
 If the user has already authorized your app, subsequent OAuth flows will only return an access token, not a refresh token.

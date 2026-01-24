@@ -27,7 +27,7 @@ Initial:     orchestrate() → execute()
 +Resume:     orchestrate() → loadHistory() → hydrate() → ensureTicket() → execute() → ...
 ```
 
-Each feature added 50-200 lines to the orchestrator. Nobody stepped back to ask: *"Should this be a separate concern?"*
+Each feature added 50-200 lines to the orchestrator. Nobody stepped back to ask: _"Should this be a separate concern?"_
 
 ### 2. Premature Extraction
 
@@ -58,6 +58,7 @@ phases/          Scan, plan, act, report
 ```
 
 **The confusion:**
+
 - Is `workflow/linear.ts` or `orchestrator/` responsible for Linear?
 - Is `phases/act.ts` or `orchestrator/waves.ts` responsible for execution?
 - Where does review live? (`workflow/review-gate.ts`? `orchestrator/review.ts`?)
@@ -127,26 +128,27 @@ This is implicit state management. You can't understand what state is available 
 
 **We treated the orchestrator as a place to put code, not as an architecture.**
 
-Good architecture asks: *"What are the responsibilities? What are the boundaries? How do they communicate?"*
+Good architecture asks: _"What are the responsibilities? What are the boundaries? How do they communicate?"_
 
-We asked: *"Where should this new feature go?"* and answered: *"In the orchestrator, I guess."*
+We asked: _"Where should this new feature go?"_ and answered: _"In the orchestrator, I guess."_
 
 ## What the Pipeline Got Right
 
-| Orchestrator Anti-Pattern | Pipeline Solution |
-|--------------------------|-------------------|
-| Feature accretion | Explicit stages with typed boundaries |
-| Premature extraction | Stages are the unit of extraction |
-| Overlapping directories | Single `packages/pipeline/` package |
-| Callback god object | Observer pattern (add observers, don't modify core) |
-| Generator misuse | Stages return values; events via `ctx.emit()` |
-| Closure state | Explicit `PipelineContext.get/set()` |
+| Orchestrator Anti-Pattern | Pipeline Solution                                   |
+| ------------------------- | --------------------------------------------------- |
+| Feature accretion         | Explicit stages with typed boundaries               |
+| Premature extraction      | Stages are the unit of extraction                   |
+| Overlapping directories   | Single `packages/pipeline/` package                 |
+| Callback god object       | Observer pattern (add observers, don't modify core) |
+| Generator misuse          | Stages return values; events via `ctx.emit()`       |
+| Closure state             | Explicit `PipelineContext.get/set()`                |
 
 ## Lessons Learned
 
 ### 1. Define Boundaries Before Writing Code
 
 Before implementing a feature, ask:
+
 - What is this feature's single responsibility?
 - What does it need as input? What does it produce?
 - How does it communicate with other concerns?
@@ -154,6 +156,7 @@ Before implementing a feature, ask:
 ### 2. Resist Premature Extraction
 
 Don't create a file for every function. A file should represent a **coherent module** with:
+
 - Clear responsibility
 - Stable interface
 - Internal cohesion
@@ -163,11 +166,13 @@ Don't create a file for every function. A file should represent a **coherent mod
 ### 3. Prefer Composition Over Callbacks
 
 Instead of:
+
 ```typescript
 function orchestrate(input, callbacks: { onProgress, onComplete, onError, ... })
 ```
 
 Use:
+
 ```typescript
 const runner = new Runner();
 runner.addObserver(new ProgressObserver());
@@ -178,6 +183,7 @@ runner.run(input);
 ### 4. Make State Explicit
 
 Instead of:
+
 ```typescript
 function bigFunction() {
   let state1, state2, state3, ...;
@@ -186,6 +192,7 @@ function bigFunction() {
 ```
 
 Use:
+
 ```typescript
 interface Context {
   get<T>(key: string): T;
@@ -196,22 +203,24 @@ interface Context {
 ### 5. Separate Data Flow from Side Effects
 
 Instead of:
+
 ```typescript
 function* process() {
-  yield sideEffect1();  // Mixed!
+  yield sideEffect1(); // Mixed!
   const data = transform(input);
-  yield sideEffect2();  // Mixed!
+  yield sideEffect2(); // Mixed!
   return data;
 }
 ```
 
 Use:
+
 ```typescript
 function process(input, ctx) {
-  ctx.emit(event1);  // Side effects via context
-  const data = transform(input);  // Pure transformation
+  ctx.emit(event1); // Side effects via context
+  const data = transform(input); // Pure transformation
   ctx.emit(event2);
-  return data;  // Return value is the result
+  return data; // Return value is the result
 }
 ```
 

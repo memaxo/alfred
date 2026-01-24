@@ -1,9 +1,10 @@
 ---
 title: Contributing – Project | Bun Docs
-url: 
+url:
 description: Learn how to contribute to Bun and get your local development environment up and running.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Configuring a development environment for Bun can take 10-30 minutes depending o
 
 If you are using Windows, please refer to [this guide](https://bun.com/docs/project/building-windows)
 
-## [Install Dependencies](https://bun.com/docs/project/contributing\#install-dependencies)
+## [Install Dependencies](https://bun.com/docs/project/contributing#install-dependencies)
 
 Using your system's package manager, install Bun's dependencies:
 
@@ -132,7 +133,7 @@ brew tap oven-sh/bun
 brew install bun
 ```
 
-## [Install LLVM](https://bun.com/docs/project/contributing\#install-llvm)
+## [Install LLVM](https://bun.com/docs/project/contributing#install-llvm)
 
 Bun requires LLVM 19 ( `clang` is part of LLVM). This version requirement is to match WebKit (precompiled), as mismatching versions will cause memory allocation failures at runtime. In most cases, you can install LLVM through your system package manager:
 
@@ -217,7 +218,7 @@ export PATH="$PATH:/usr/lib/llvm19/bin"
 
 ⚠️ Ubuntu distributions (<= 20.04) may require installation of the C++ standard library independently. See the [troubleshooting section](https://bun.com/docs/project/contributing#span-file-not-found-on-ubuntu) for more information.
 
-## [Building Bun](https://bun.com/docs/project/contributing\#building-bun)
+## [Building Bun](https://bun.com/docs/project/contributing#building-bun)
 
 After cloning the repository, run the following command to build. This may take a while as it will clone submodules and build dependencies.
 
@@ -235,7 +236,7 @@ build/debug/bun-debug --version
 x.y.z_debug
 ```
 
-## [VSCode](https://bun.com/docs/project/contributing\#vscode)
+## [VSCode](https://bun.com/docs/project/contributing#vscode)
 
 VSCode is the recommended IDE for working on Bun, as it has been configured. Once opening, you can run `Extensions: Show Recommended Extensions` to install the recommended extensions for Zig and C++. ZLS is automatically configured.
 
@@ -247,7 +248,7 @@ We recommend adding `./build/debug` to your `$PATH` so that you can run `bun-deb
 bun-debug
 ```
 
-## [Running debug builds](https://bun.com/docs/project/contributing\#running-debug-builds)
+## [Running debug builds](https://bun.com/docs/project/contributing#running-debug-builds)
 
 The `bd` package.json script compiles and runs a debug build of Bun, only printing the output of the build process if it fails.
 
@@ -271,7 +272,7 @@ Bun generally takes about 2.5 minutes to compile a debug build when there are Zi
 - Use debug logs. `BUN_DEBUG_<scope>=1` will enable debug logging for the corresponding `Output.scoped(.<scope>, false)` logs. You can also set `BUN_DEBUG_QUIET_LOGS=1` to disable all debug logging that isn't explicitly enabled. To dump debug lgos into a file, `BUN_DEBUG=<path-to-file>.log`. Debug logs are aggressively removed in release builds.
 - src/js/\*\*.ts changes are pretty much instant to rebuild. C++ changes are a bit slower, but still much faster than the Zig code (Zig is one compilation unit, C++ is many).
 
-## [Code generation scripts](https://bun.com/docs/project/contributing\#code-generation-scripts)
+## [Code generation scripts](https://bun.com/docs/project/contributing#code-generation-scripts)
 
 Several code generation scripts are used during Bun's build process. These are run automatically when changes are made to certain files.
 
@@ -283,11 +284,11 @@ In particular, these are:
 - `./src/codegen/bundle-modules.ts` \-\- Bundles built-in modules like `node:fs`, `bun:ffi` into files we can include in the final binary. In development, these can be reloaded without rebuilding Zig (you still need to run `bun run build`, but it re-reads the transpiled files from disk afterwards). In release builds, these are embedded into the binary.
 - `./src/codegen/bundle-functions.ts` \-\- Bundles globally-accessible functions implemented in JavaScript/TypeScript like `ReadableStream`, `WritableStream`, and a handful more. These are used similarly to the builtin modules, but the output more closely aligns with what WebKit/Safari does for Safari's built-in functions so that we can copy-paste the implementations from WebKit as a starting point.
 
-## [Modifying ESM modules](https://bun.com/docs/project/contributing\#modifying-esm-modules)
+## [Modifying ESM modules](https://bun.com/docs/project/contributing#modifying-esm-modules)
 
 Certain modules like `node:fs`, `node:stream`, `bun:sqlite`, and `ws` are implemented in JavaScript. These live in `src/js/{node,bun,thirdparty}` files and are pre-bundled using Bun.
 
-## [Release build](https://bun.com/docs/project/contributing\#release-build)
+## [Release build](https://bun.com/docs/project/contributing#release-build)
 
 To compile a release build of Bun, run:
 
@@ -297,7 +298,7 @@ bun run build:release
 
 The binary will be located at `./build/release/bun` and `./build/release/bun-profile`.
 
-### [Download release build from pull requests](https://bun.com/docs/project/contributing\#download-release-build-from-pull-requests)
+### [Download release build from pull requests](https://bun.com/docs/project/contributing#download-release-build-from-pull-requests)
 
 To save you time spent building a release build locally, we provide a way to run release builds from pull requests. This is useful for manually testing changes in a release build before they are merged.
 
@@ -320,7 +321,7 @@ bun-1234566 --version
 
 This works by downloading the release build from the GitHub Actions artifacts on the linked pull request. You may need the `gh` CLI installed to authenticate with GitHub.
 
-## [AddressSanitizer](https://bun.com/docs/project/contributing\#addresssanitizer)
+## [AddressSanitizer](https://bun.com/docs/project/contributing#addresssanitizer)
 
 [AddressSanitizer](https://en.wikipedia.org/wiki/AddressSanitizer) helps find memory issues, and is enabled by default in debug builds of Bun on Linux and macOS. This includes the Zig code and all dependencies. It makes the Zig code take about 2x longer to build, if that's stopping you from being productive you can disable it by setting `-Denable_asan=$<IF:$<BOOL:${ENABLE_ASAN}>,true,false>` to `-Denable_asan=false` in the `cmake/targets/BuildBun.cmake` file, but generally we recommend batching your changes up between builds.
 
@@ -332,7 +333,7 @@ bun run build:release:asan
 
 In CI, we run our test suite with at least one target that is built with Address Sanitizer.
 
-## [Building WebKit locally + Debug mode of JSC](https://bun.com/docs/project/contributing\#building-webkit-locally-debug-mode-of-jsc)
+## [Building WebKit locally + Debug mode of JSC](https://bun.com/docs/project/contributing#building-webkit-locally-debug-mode-of-jsc)
 
 WebKit is not cloned by default (to save time and disk space). To clone and build WebKit locally, run:
 
@@ -394,9 +395,9 @@ If you are using a JSC debug build and using VScode, make sure to run the `C/C++
 
 Note that if you change make changes to our [WebKit fork](https://github.com/oven-sh/WebKit), you will also have to change [`SetupWebKit.cmake`](https://bun.com/cmake/tools/SetupWebKit.cmake) to point to the commit hash.
 
-## [Troubleshooting](https://bun.com/docs/project/contributing\#troubleshooting)
+## [Troubleshooting](https://bun.com/docs/project/contributing#troubleshooting)
 
-### ['span' file not found on Ubuntu](https://bun.com/docs/project/contributing\#span-file-not-found-on-ubuntu)
+### ['span' file not found on Ubuntu](https://bun.com/docs/project/contributing#span-file-not-found-on-ubuntu)
 
 ⚠️ Please note that the instructions below are specific to issues occurring on Ubuntu. It is unlikely that the same issues will occur on other Linux distributions.
 
@@ -459,7 +460,7 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 ```
 
-### [libarchive](https://bun.com/docs/project/contributing\#libarchive)
+### [libarchive](https://bun.com/docs/project/contributing#libarchive)
 
 If you see an error on macOS when compiling `libarchive`, run:
 
@@ -467,7 +468,7 @@ If you see an error on macOS when compiling `libarchive`, run:
 brew install pkg-config
 ```
 
-### [macOS `library not found for -lSystem`](https://bun.com/docs/project/contributing\#macos-library-not-found-for-lsystem)
+### [macOS `library not found for -lSystem`](https://bun.com/docs/project/contributing#macos-library-not-found-for-lsystem)
 
 If you see this error when compiling, run:
 
@@ -475,7 +476,7 @@ If you see this error when compiling, run:
 xcode-select --install
 ```
 
-### [Cannot find `libatomic.a`](https://bun.com/docs/project/contributing\#cannot-find-libatomic-a)
+### [Cannot find `libatomic.a`](https://bun.com/docs/project/contributing#cannot-find-libatomic-a)
 
 Bun defaults to linking `libatomic` statically, as not all systems have it. If you are building on a distro that does not have a static libatomic available, you can run the following command to enable dynamic linking:
 
@@ -485,7 +486,7 @@ bun run build -DUSE_STATIC_LIBATOMIC=OFF
 
 The built version of Bun may not work on other systems if compiled this way.
 
-### [ccache conflicts with building TinyCC on macOS](https://bun.com/docs/project/contributing\#ccache-conflicts-with-building-tinycc-on-macos)
+### [ccache conflicts with building TinyCC on macOS](https://bun.com/docs/project/contributing#ccache-conflicts-with-building-tinycc-on-macos)
 
 If you run into issues with `ccache` when building TinyCC, try reinstalling ccache
 
@@ -495,7 +496,7 @@ brew install ccache
 
 ```
 
-## [Using bun-debug](https://bun.com/docs/project/contributing\#using-bun-debug)
+## [Using bun-debug](https://bun.com/docs/project/contributing#using-bun-debug)
 
 - Disable logging: `BUN_DEBUG_QUIET_LOGS=1 bun-debug ...` (to disable all debug logging)
 - Enable logging for a specific zig scope: `BUN_DEBUG_EventLoop=1 bun-debug ...` (to allow `std.log.scoped(.EventLoop)`)
@@ -507,7 +508,7 @@ Benchmarking](https://bun.com/docs/project/benchmarking) [Next\\
 \\
 Building Windows](https://bun.com/docs/project/building-windows)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/project/contributing.md)
 
@@ -531,7 +532,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

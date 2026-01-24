@@ -1,9 +1,10 @@
 ---
 title: Metadata - Laminar documentation
-url: 
+url:
 description: Add contextual information to your traces
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/structure/metadata#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -34,7 +35,7 @@ On this page
 - [Metadata vs Tags](https://docs.lmnr.ai/tracing/structure/metadata#metadata-vs-tags)
 - [Best Practices](https://docs.lmnr.ai/tracing/structure/metadata#best-practices)
 
-## [​](https://docs.lmnr.ai/tracing/structure/metadata\#what-is-trace-metadata%3F)  What is Trace Metadata?
+## [​](https://docs.lmnr.ai/tracing/structure/metadata#what-is-trace-metadata%3F) What is Trace Metadata?
 
 Metadata provides additional context to your traces beyond the basic trace information. It helps you:
 
@@ -45,12 +46,11 @@ Metadata provides additional context to your traces beyond the basic trace infor
 
 Metadata is key-value information that is attached to an entire trace, as opposed to individual spans.
 
-## [​](https://docs.lmnr.ai/tracing/structure/metadata\#adding-metadata-to-traces)  Adding Metadata to Traces
+## [​](https://docs.lmnr.ai/tracing/structure/metadata#adding-metadata-to-traces) Adding Metadata to Traces
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Use the `Laminar.setTraceMetadata` inside a span context to add metadata to the trace:
 
@@ -129,7 +129,6 @@ Any new call to set metadata will overwrite the previous metadata.
 
 - Python
 
-
 ❌ **Incorrect usage**:
 
 Copy
@@ -157,14 +156,13 @@ await observe({ name: 'myFunction' }, async () => {
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/metadata\#common-metadata-use-cases)  Common Metadata Use Cases
+## [​](https://docs.lmnr.ai/tracing/structure/metadata#common-metadata-use-cases) Common Metadata Use Cases
 
-### [​](https://docs.lmnr.ai/tracing/structure/metadata\#environment-information)  Environment Information
+### [​](https://docs.lmnr.ai/tracing/structure/metadata#environment-information) Environment Information
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -177,12 +175,11 @@ Laminar.setTraceMetadata({
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/metadata\#performance-tracking)  Performance Tracking
+### [​](https://docs.lmnr.ai/tracing/structure/metadata#performance-tracking) Performance Tracking
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -195,12 +192,11 @@ Laminar.setTraceMetadata({
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/structure/metadata\#a%2Fb-testing)  A/B Testing
+### [​](https://docs.lmnr.ai/tracing/structure/metadata#a%2Fb-testing) A/B Testing
 
 - JavaScript/TypeScript
 
 - Python
-
 
 Copy
 
@@ -213,7 +209,7 @@ Laminar.setTraceMetadata({
 
 ```
 
-## [​](https://docs.lmnr.ai/tracing/structure/metadata\#filtering-traces-by-metadata)  Filtering Traces by Metadata
+## [​](https://docs.lmnr.ai/tracing/structure/metadata#filtering-traces-by-metadata) Filtering Traces by Metadata
 
 You can filter traces by metadata in the Laminar UI. Currently, we only support exact key-value matches,
 e.g. a trace with
@@ -237,21 +233,21 @@ can be matched by searching for `userId=123` or `region=us-west`.
 
 In the example below, we filter by `userId` key of the metadata:![Filter by metadata](https://mintcdn.com/laminarai/W6ojRY5YjRjfXRin/images/traces/metadata-filter.png?w=2500&fit=max&auto=format&n=W6ojRY5YjRjfXRin&q=85&s=967f9dcc9aa45f128ce9ad92ae3237c2)
 
-## [​](https://docs.lmnr.ai/tracing/structure/metadata\#metadata-vs-tags)  Metadata vs Tags
+## [​](https://docs.lmnr.ai/tracing/structure/metadata#metadata-vs-tags) Metadata vs Tags
 
 Adding metadata to a trace is different from adding tags to a span:
 
-|  | Metadata | Tags |
-| --- | --- | --- |
-| **Scope** | Applies to entire trace | Applies to individual spans |
-| **Purpose** | General trace context | Specific span classification |
-| **Validation** | Any string key-value pairs | Any string |
-| **UI Location** | Shown in trace overview | Shown in individual span details |
-| **Common Uses** | Environment info, user context | Data categories, tags |
+|                 | Metadata                       | Tags                             |
+| --------------- | ------------------------------ | -------------------------------- |
+| **Scope**       | Applies to entire trace        | Applies to individual spans      |
+| **Purpose**     | General trace context          | Specific span classification     |
+| **Validation**  | Any string key-value pairs     | Any string                       |
+| **UI Location** | Shown in trace overview        | Shown in individual span details |
+| **Common Uses** | Environment info, user context | Data categories, tags            |
 
 To learn more about tags, see [tags](https://docs.lmnr.ai/tracing/structure/tags).
 
-## [​](https://docs.lmnr.ai/tracing/structure/metadata\#best-practices)  Best Practices
+## [​](https://docs.lmnr.ai/tracing/structure/metadata#best-practices) Best Practices
 
 1. **Consistent Keys**: Use consistent key names across your application
 2. **Avoid Sensitive Data**: Don’t include PII or sensitive data in metadata

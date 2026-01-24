@@ -10,6 +10,7 @@
 **Discovery:** Creating a new package has many subtle requirements that are easy to get wrong.
 
 **Key Issues Found:**
+
 - Missing `.js` extensions in `index.ts` exports breaks ESM compatibility
 - Using `"typescript": "catalog:"` fails in package-specific devDependencies
 - Relative paths to tsconfig base (`../tsconfig/tsconfig.json`) work better than aliases
@@ -25,6 +26,7 @@
 **Discovery:** User-facing documentation needs different structure than implementation docs.
 
 **Key Patterns:**
+
 - Quick start must be in first 3 paragraphs (copy-pasteable)
 - Progressive complexity: Quick Start → Patterns → Advanced → API Reference
 - Every feature doc needs a debugging section with common errors
@@ -40,6 +42,7 @@
 **Discovery:** Vague "implemented" comments waste reviewer time.
 
 **Key Requirements:**
+
 - List specific file paths (created vs modified)
 - Include commit SHAs for direct code review
 - State exact test counts ("15 tests covering X, Y, Z")
@@ -55,6 +58,7 @@
 **Discovery:** Your corrections revealed patterns that should be automatic.
 
 **Specific Corrections Made:**
+
 1. `readonly` modifiers on class properties that don't mutate
 2. Removed `async` from `raceWithAbort` (only returns Promise)
 3. Added `.js` extensions to all exports in `index.ts`
@@ -62,6 +66,7 @@
 5. Multi-line type signatures for long function types
 
 **Why These Matter:**
+
 - `readonly` prevents accidental mutation bugs at compile time
 - Removing redundant `async` reduces overhead and improves stack traces
 - `.js` extensions required by Node ESM loader (TypeScript resolution doesn't help)
@@ -100,6 +105,7 @@
 **The Solution:** Codify them as checklists that agents and humans follow.
 
 **How It Works:**
+
 1. Agent encounters an issue (e.g., missing `.js` extensions)
 2. Human corrects it (your diff shows the fix)
 3. Agent reflects on pattern (this document)
@@ -108,6 +114,7 @@
 6. Future agents follow the rule automatically
 
 **Verification:**
+
 - Rules include both ✅ correct and ❌ wrong examples
 - Rationale explains why pattern matters (not just "do this")
 - Validation checklists make it easy to verify compliance
@@ -116,14 +123,17 @@
 ## Files Created/Modified
 
 ### New Ruler Documents
+
 - `.ruler/51-package-creation.md` - Package structure standards
 - `.ruler/52-ticket-and-doc-updates.md` - Documentation and ticket evidence
 - `.ruler/53-code-quality-corrections.md` - TypeScript quality patterns
 
 ### Architecture Documentation
+
 - `docs/architecture/resilience-package.md` - Complete package architecture guide
 
 ### Generated
+
 - `AGENTS.md` - Regenerated with new rules
 
 ## Measurement of Success

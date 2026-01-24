@@ -1,9 +1,10 @@
 ---
 title: MongoDB Adapter | Better Auth
-url: 
+url:
 description: Integrate Better Auth with MongoDB.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -29,7 +30,7 @@ Copy MarkdownOpen in
 MongoDB is a popular NoSQL database that is widely used for building scalable and flexible applications. It provides a flexible schema that allows for easy data modeling and querying.
 Read more here: [MongoDB](https://www.mongodb.com/).
 
-## [Example Usage](https://www.better-auth.com/docs/adapters/mongo\#example-usage)
+## [Example Usage](https://www.better-auth.com/docs/adapters/mongo#example-usage)
 
 Make sure you have MongoDB installed and configured.
 Then, you can use the mongodb adapter.
@@ -52,7 +53,7 @@ export const auth = betterAuth({
 });
 ```
 
-## [Schema generation & migration](https://www.better-auth.com/docs/adapters/mongo\#schema-generation--migration)
+## [Schema generation & migration](https://www.better-auth.com/docs/adapters/mongo#schema-generation--migration)
 
 For MongoDB, we don't need to generate or migrate the schema.
 

@@ -1,9 +1,10 @@
 ---
 title: Observability for LangChain / LangGraph - Laminar documentation
-url: 
+url:
 description: Instrument your LangChain and LangGraph applications with Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/langchain#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -32,13 +33,13 @@ On this page
 - [Monitoring Your LangChain Usage](https://docs.lmnr.ai/tracing/integrations/langchain#monitoring-your-langchain-usage)
 - [Advanced Features](https://docs.lmnr.ai/tracing/integrations/langchain#advanced-features)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/langchain\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/langchain#overview) Overview
 
 Laminar automatically instruments [LangChain](https://www.langchain.com/) and [LangGraph](https://www.langchain.com/langgraph) operations by simply initializing Laminar at the beginning of your Python application. This allows you to trace and monitor your LLM chains, agents, and graph-based workflows, providing complete visibility into your AI application’s performance, costs, and behavior without needing to modify your existing LangChain/LangGraph code.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/langchain\#getting-started)  Getting Started
+## [​](https://docs.lmnr.ai/tracing/integrations/langchain#getting-started) Getting Started
 
-### [​](https://docs.lmnr.ai/tracing/integrations/langchain\#1-install-laminar-and-langchain%2Flanggraph)  1\. Install Laminar and LangChain/LangGraph
+### [​](https://docs.lmnr.ai/tracing/integrations/langchain#1-install-laminar-and-langchain%2Flanggraph) 1\. Install Laminar and LangChain/LangGraph
 
 You’ll need Laminar, LangChain core, any specific LangChain LLM/tool integrations (e.g., for OpenAI), and LangGraph:
 
@@ -50,7 +51,7 @@ pip install 'lmnr[all]' langchain langchain-openai langgraph python-dotenv
 
 ```
 
-### [​](https://docs.lmnr.ai/tracing/integrations/langchain\#2-set-up-environment-variables-%26-initialize-laminar)  2\. Set up environment variables & Initialize Laminar
+### [​](https://docs.lmnr.ai/tracing/integrations/langchain#2-set-up-environment-variables-%26-initialize-laminar) 2\. Set up environment variables & Initialize Laminar
 
 Store your API keys in a `.env` file and initialize Laminar once at the start of your application, before any LangChain or LangGraph code is executed.
 
@@ -78,7 +79,7 @@ Laminar.initialize()
 
 To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](https://docs.lmnr.ai/guides/fastapi).
 
-### [​](https://docs.lmnr.ai/tracing/integrations/langchain\#3-use-langchain-and-langgraph-as-usual)  3\. Use LangChain and LangGraph as usual
+### [​](https://docs.lmnr.ai/tracing/integrations/langchain#3-use-langchain-and-langgraph-as-usual) 3\. Use LangChain and LangGraph as usual
 
 **LangChain Example (Simple LLMChain):**
 
@@ -134,7 +135,7 @@ app = workflow.compile()
 
 All instrumentable LangChain and LangGraph operations are now automatically traced in Laminar.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/langchain\#monitoring-your-langchain-usage)  Monitoring Your LangChain Usage
+## [​](https://docs.lmnr.ai/tracing/integrations/langchain#monitoring-your-langchain-usage) Monitoring Your LangChain Usage
 
 After instrumenting your LangChain and LangGraph applications with Laminar, you’ll be able to:
 
@@ -146,7 +147,7 @@ After instrumenting your LangChain and LangGraph applications with Laminar, you�
 
 Visit your Laminar dashboard to view your LangChain traces and analytics.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/langchain\#advanced-features)  Advanced Features
+## [​](https://docs.lmnr.ai/tracing/integrations/langchain#advanced-features) Advanced Features
 
 Leverage Laminar’s advanced features to get more out of your LangChain instrumentation:
 

@@ -1,9 +1,10 @@
 ---
 title: bun pm – Package manager | Bun Docs
-url: 
+url:
 description: Utilities relating to package management with Bun.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,7 +55,7 @@ Project
 
 The `bun pm` command group provides a set of utilities for working with Bun's package manager.
 
-## [pack](https://bun.com/docs/cli/pm\#pack)
+## [pack](https://bun.com/docs/cli/pm#pack)
 
 To create a tarball of the current workspace:
 
@@ -64,7 +65,7 @@ bun pm pack
 
 This command creates a `.tgz` file containing all files that would be published to npm, following the same rules as `npm pack`.
 
-## [Examples](https://bun.com/docs/cli/pm\#examples)
+## [Examples](https://bun.com/docs/cli/pm#examples)
 
 Basic usage:
 
@@ -100,7 +101,7 @@ bun pm pack --destination ./dist
 # Saves tarball in ./dist/ directory
 ```
 
-## [Options](https://bun.com/docs/cli/pm\#options)
+## [Options](https://bun.com/docs/cli/pm#options)
 
 - `--dry-run`: Perform all tasks except writing the tarball to disk. Shows what would be included.
 - `--destination <dir>`: Specify the directory where the tarball will be saved.
@@ -111,7 +112,7 @@ bun pm pack --destination ./dist
 
 **Note:** `--filename` and `--destination` cannot be used at the same time.
 
-## [Output Modes](https://bun.com/docs/cli/pm\#output-modes)
+## [Output Modes](https://bun.com/docs/cli/pm#output-modes)
 
 **Default output:**
 
@@ -145,7 +146,7 @@ my-package-1.0.0.tgz
 
 The `--quiet` flag is particularly useful for automation workflows where you need to capture the generated tarball filename for further processing.
 
-## [bin](https://bun.com/docs/cli/pm\#bin)
+## [bin](https://bun.com/docs/cli/pm#bin)
 
 To print the path to the `bin` directory for the local project:
 
@@ -167,7 +168,7 @@ bun pm bin -g
 <$HOME>/.bun/bin
 ```
 
-## [ls](https://bun.com/docs/cli/pm\#ls)
+## [ls](https://bun.com/docs/cli/pm#ls)
 
 To print a list of installed dependencies in the current project and their resolved versions, excluding their dependencies.
 
@@ -206,7 +207,7 @@ bun pm ls --all
 ├── ...
 ```
 
-## [whoami](https://bun.com/docs/cli/pm\#whoami)
+## [whoami](https://bun.com/docs/cli/pm#whoami)
 
 Print your npm username. Requires you to be logged in ( `bunx npm login`) with credentials in either `bunfig.toml` or `.npmrc`:
 
@@ -214,7 +215,7 @@ Print your npm username. Requires you to be logged in ( `bunx npm login`) with c
 bun pm whoami
 ```
 
-## [hash](https://bun.com/docs/cli/pm\#hash)
+## [hash](https://bun.com/docs/cli/pm#hash)
 
 To generate and print the hash of the current lockfile:
 
@@ -234,7 +235,7 @@ To print the hash stored in the current lockfile:
 bun pm hash-print
 ```
 
-## [cache](https://bun.com/docs/cli/pm\#cache)
+## [cache](https://bun.com/docs/cli/pm#cache)
 
 To print the path to Bun's global module cache:
 
@@ -248,7 +249,7 @@ To clear Bun's global module cache:
 bun pm cache rm
 ```
 
-## [migrate](https://bun.com/docs/cli/pm\#migrate)
+## [migrate](https://bun.com/docs/cli/pm#migrate)
 
 To migrate another package manager's lockfile without installing anything:
 
@@ -256,7 +257,7 @@ To migrate another package manager's lockfile without installing anything:
 bun pm migrate
 ```
 
-## [untrusted](https://bun.com/docs/cli/pm\#untrusted)
+## [untrusted](https://bun.com/docs/cli/pm#untrusted)
 
 To print current untrusted dependencies with scripts:
 
@@ -272,7 +273,7 @@ bun pm untrusted
 These dependencies had their lifecycle scripts blocked during install.
 ```
 
-## [trust](https://bun.com/docs/cli/pm\#trust)
+## [trust](https://bun.com/docs/cli/pm#trust)
 
 To run scripts for untrusted dependencies and add to `trustedDependencies`:
 
@@ -284,7 +285,7 @@ Options for the `trust` command:
 
 - `--all`: Trust all untrusted dependencies.
 
-## [default-trusted](https://bun.com/docs/cli/pm\#default-trusted)
+## [default-trusted](https://bun.com/docs/cli/pm#default-trusted)
 
 To print the default trusted dependencies list:
 
@@ -294,7 +295,7 @@ bun pm default-trusted
 
 see the current list on GitHub [here](https://github.com/oven-sh/bun/blob/main/src/install/default-trusted-dependencies.txt)
 
-## [version](https://bun.com/docs/cli/pm\#version)
+## [version](https://bun.com/docs/cli/pm#version)
 
 To display current package version and help:
 
@@ -342,7 +343,7 @@ v1.0.1
 
 Supports `patch`, `minor`, `major`, `premajor`, `preminor`, `prepatch`, `prerelease`, `from-git`, or specific versions like `1.2.3`. By default creates git commit and tag unless `--no-git-tag-version` was used to skip.
 
-## [pkg](https://bun.com/docs/cli/pm\#pkg)
+## [pkg](https://bun.com/docs/cli/pm#pkg)
 
 Manage `package.json` data with get, set, delete, and fix operations.
 
@@ -423,7 +424,7 @@ bun pm pkg fix                                    # auto-fix common issues
 \\
 `bun why`](https://bun.com/docs/cli/why)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/pm.md)
 
@@ -447,7 +448,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

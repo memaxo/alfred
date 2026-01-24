@@ -1,9 +1,10 @@
 ---
 title: Color – API | Bun Docs
-url: 
+url:
 description: Bun's color function leverages Bun's CSS parser for parsing, normalizing, and converting colors from user input to a variety of output formats.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -54,38 +55,43 @@ Project
 
 `Bun.color(input, outputFormat?)` leverages Bun's CSS parser to parse, normalize, and convert colors from user input to a variety of output formats, including:
 
-| Format | Example |
-| --- | --- |
-| `"css"` | `"red"` |
-| `"ansi"` | `"\x1b[38;2;255;0;0m"` |\
-| `"ansi-16"` | `"\x1b[38;5;\tm"` |\
-| `"ansi-256"` | `"\x1b[38;5;196m"` |\
-| `"ansi-16m"` | `"\x1b[38;2;255;0;0m"` |\
-| `"number"` | `0x1a2b3c` |\
-| `"rgb"` | `"rgb(255, 99, 71)"` |\
-| `"rgba"` | `"rgba(255, 99, 71, 0.5)"` |\
-| `"hsl"` | `"hsl(120, 50%, 50%)"` |\
-| `"hex"` | `"#1a2b3c"` |\
-| `"HEX"` | `"#1A2B3C"` |\
-| `"{rgb}"` | `{ r: 255, g: 99, b: 71 }` |\
-| `"{rgba}"` | `{ r: 255, g: 99, b: 71, a: 1 }` |\
-| `"[rgb]"` | `[ 255, 99, 71 ]` |\
-| `"[rgba]"` | `[ 255, 99, 71, 255]` |\
+| Format       | Example                          |
+| ------------ | -------------------------------- | --- |
+| `"css"`      | `"red"`                          |
+| `"ansi"`     | `"\x1b[38;2;255;0;0m"`           | \   |
+| `"ansi-16"`  | `"\x1b[38;5;\tm"`                | \   |
+| `"ansi-256"` | `"\x1b[38;5;196m"`               | \   |
+| `"ansi-16m"` | `"\x1b[38;2;255;0;0m"`           | \   |
+| `"number"`   | `0x1a2b3c`                       | \   |
+| `"rgb"`      | `"rgb(255, 99, 71)"`             | \   |
+| `"rgba"`     | `"rgba(255, 99, 71, 0.5)"`       | \   |
+| `"hsl"`      | `"hsl(120, 50%, 50%)"`           | \   |
+| `"hex"`      | `"#1a2b3c"`                      | \   |
+| `"HEX"`      | `"#1A2B3C"`                      | \   |
+| `"{rgb}"`    | `{ r: 255, g: 99, b: 71 }`       | \   |
+| `"{rgba}"`   | `{ r: 255, g: 99, b: 71, a: 1 }` | \   |
+| `"[rgb]"`    | `[ 255, 99, 71 ]`                | \   |
+| `"[rgba]"`   | `[ 255, 99, 71, 255]`            | \   |
+
 \
 There are many different ways to use this API:\
 \
+
 - Validate and normalize colors to persist in a database ( `number` is the most database-friendly)\
 - Convert colors to different formats\
 - Colorful logging beyond the 16 colors many use today (use `ansi` if you don't want to figure out what the user's terminal supports, otherwise use `ansi-16`, `ansi-256`, or `ansi-16m` for how many colors the terminal supports)\
 - Format colors for use in CSS injected into HTML\
 - Get the `r`, `g`, `b`, and `a` color components as JavaScript objects or numbers from a CSS color string\
-\
-You can think of this as an alternative to the popular npm packages [`color`](https://github.com/Qix-/color) and [`tinycolor2`](https://github.com/bgrins/TinyColor) except with full support for parsing CSS color strings and zero dependencies built directly into Bun.\
-\
-### [Flexible input](https://bun.com/docs/api/color\#flexible-input)\
+  \
+  You can think of this as an alternative to the popular npm packages [`color`](https://github.com/Qix-/color) and [`tinycolor2`](https://github.com/bgrins/TinyColor) except with full support for parsing CSS color strings and zero dependencies built directly into Bun.\
+  \
+
+### [Flexible input](https://bun.com/docs/api/color#flexible-input)\
+
 \
 You can pass in any of the following:\
 \
+
 - Standard CSS color names like `"red"`\
 - Numbers like `0xff0000`\
 - Hex strings like `"#f00"`\
@@ -99,12 +105,15 @@ You can pass in any of the following:\
 - RGBA arrays like `[255, 0, 0, 255]`\
 - LAB strings like `"lab(50% 50% 50%)"`\
 - ... anything else that CSS can parse as a single color value\
-\
-### [Format colors as CSS](https://bun.com/docs/api/color\#format-colors-as-css)\
+  \
+
+### [Format colors as CSS](https://bun.com/docs/api/color#format-colors-as-css)\
+
 \
 The `"css"` format outputs valid CSS for use in stylesheets, inline styles, CSS variables, css-in-js, etc. It returns the most compact representation of the color as a string.\
 \
-```\
+
+````\
 Bun.color("red", "css"); // "red"\
 Bun.color(0xff0000, "css"); // "#f000"\
 Bun.color("#f00", "css"); // "red"\
@@ -375,3 +384,4 @@ Get help\
 [Discord](https://bun.com/discord)\
 \
 [Migration help for organizations](https://t.co/0CA0Neqgts)
+````

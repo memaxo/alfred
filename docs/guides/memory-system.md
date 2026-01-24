@@ -25,6 +25,7 @@ The domain cache TTL was increased from 60 seconds to 300 seconds (5 minutes) ba
 **Location**: `packages/embed/src/quantize.ts`
 
 Implements symmetric Int8 quantization for embedding vectors:
+
 - 4x storage reduction (1024-dim: 4KB → 1KB)
 - 97%+ cosine similarity retention
 - Direct similarity computation on quantized vectors
@@ -44,13 +45,13 @@ const reconstructed = dequantizeFromInt8(quantized);
 
 Seed knowledge is assigned different confidence levels based on source type:
 
-| Source Type | Confidence | Description |
-|-------------|------------|-------------|
-| official | 0.8 | Official documentation, verified facts |
-| established | 0.7 | Well-established community knowledge |
-| inferred | 0.5 | Inferred relationships |
-| community | 0.5 | Community-sourced knowledge |
-| preference | 0.4 | User-specific preferences |
+| Source Type | Confidence | Description                            |
+| ----------- | ---------- | -------------------------------------- |
+| official    | 0.8        | Official documentation, verified facts |
+| established | 0.7        | Well-established community knowledge   |
+| inferred    | 0.5        | Inferred relationships                 |
+| community   | 0.5        | Community-sourced knowledge            |
+| preference  | 0.4        | User-specific preferences              |
 
 ## Tier 2: Moderate Complexity
 
@@ -65,11 +66,11 @@ effective_half_life = base_half_life × (1 + log(1 + access_count))
 ```
 
 | Access Count | Decay Multiplier |
-|--------------|------------------|
-| 0 | 1.0x |
-| 9 | ~3.3x slower |
-| 99 | ~5.6x slower |
-| 999 | ~7.9x slower |
+| ------------ | ---------------- |
+| 0            | 1.0x             |
+| 9            | ~3.3x slower     |
+| 99           | ~5.6x slower     |
+| 999          | ~7.9x slower     |
 
 **Schema**: Added `access_count` and `last_accessed_at` columns to `memory_nodes`.
 
@@ -82,6 +83,7 @@ effective_half_life = base_half_life × (1 + log(1 + access_count))
 **Location**: `packages/db/src/repo/graph/scoring.ts`, `packages/db/src/repo/graph/traverse.ts`
 
 Replaced static similarity threshold (0.5) with top-K retrieval:
+
 - Retrieve K candidates (default: 20)
 - Apply downstream quality filtering (minScore: 0.3)
 - Enables better recall while maintaining precision
@@ -146,11 +148,11 @@ const result = await dsaBfs(
 
 Implements Corrective RAG evaluation with three decision types:
 
-| Action | Score Range | Description |
-|--------|-------------|-------------|
-| USE | ≥0.7 | Results are high quality |
-| REFINE | 0.3-0.7 | Results are ambiguous |
-| FALLBACK | <0.3 | Results are poor |
+| Action   | Score Range | Description              |
+| -------- | ----------- | ------------------------ |
+| USE      | ≥0.7        | Results are high quality |
+| REFINE   | 0.3-0.7     | Results are ambiguous    |
+| FALLBACK | <0.3        | Results are poor         |
 
 ```typescript
 import { evaluateRetrieval } from "@alfred/rag";
@@ -198,12 +200,17 @@ Implements Zep-style bi-temporal model:
 - `created_at`: When we learned about the edge (transaction time)
 
 Benefits:
+
 - Non-destructive updates (soft deletes)
 - Historical queries ("what did the graph look like at time X?")
 - Audit trail of all changes
 
 ```typescript
-import { softDeleteEdge, getGraphSnapshot, supersededEdge } from "@alfred/db/repo/graph";
+import {
+  softDeleteEdge,
+  getGraphSnapshot,
+  supersededEdge,
+} from "@alfred/db/repo/graph";
 
 // Soft delete preserves history
 await softDeleteEdge(edgeId);
@@ -227,59 +234,63 @@ The agent has access to explicit memory tools that provide direct control over t
 
 ### Available Tools
 
-| Tool | Description | Key Operations |
-|------|-------------|----------------|
-| `memory_search` | Semantic search through memories | Query embedding, similarity scoring, top-K retrieval |
-| `memory_retrieve` | Get specific memory by ID | Full details, optional neighbor expansion |
-| `memory_update` | Update memory metadata | Confidence, properties, label |
-| `memory_remove` | Remove a memory | Soft delete (archive) or hard delete |
-| `memory_boost` | Reinforce a memory | Increase confidence by configurable amount |
-| `memory_traverse` | Walk the knowledge graph | Simple BFS or semantic DSA-BFS traversal |
-| `memory_history` | Review conversation history | List conversations, get messages, search |
-| `memory_stats` | System health metrics | Node counts, confidence distribution, access patterns |
+| Tool              | Description                      | Key Operations                                        |
+| ----------------- | -------------------------------- | ----------------------------------------------------- |
+| `memory_search`   | Semantic search through memories | Query embedding, similarity scoring, top-K retrieval  |
+| `memory_retrieve` | Get specific memory by ID        | Full details, optional neighbor expansion             |
+| `memory_update`   | Update memory metadata           | Confidence, properties, label                         |
+| `memory_remove`   | Remove a memory                  | Soft delete (archive) or hard delete                  |
+| `memory_boost`    | Reinforce a memory               | Increase confidence by configurable amount            |
+| `memory_traverse` | Walk the knowledge graph         | Simple BFS or semantic DSA-BFS traversal              |
+| `memory_history`  | Review conversation history      | List conversations, get messages, search              |
+| `memory_stats`    | System health metrics            | Node counts, confidence distribution, access patterns |
 
 ### Usage Examples
 
 #### Semantic Search
+
 ```typescript
 // Agent can search memories by meaning
 const result = await memory_search({
   query: "user's preferred programming languages",
   resource: "user",
   topK: 10,
-  minScore: 0.5
+  minScore: 0.5,
 });
 ```
 
 #### Memory Reinforcement
+
 ```typescript
 // When agent confirms information is correct, boost confidence
 await memory_boost({
   id: nodeId,
   amount: 0.15,
-  reason: "User confirmed this preference"
+  reason: "User confirmed this preference",
 });
 ```
 
 #### Graph Traversal
+
 ```typescript
 // Explore related knowledge using semantic DSA-BFS
 const result = await memory_traverse({
   startId: factId,
   query: "related programming concepts",
   maxDepth: 3,
-  direction: "both"
+  direction: "both",
 });
 ```
 
 #### Conversation Review
+
 ```typescript
 // Review past conversations for context
 const history = await memory_history({
   userId: "user-1",
   conversationId: conversationId,
   limit: 20,
-  search: "project requirements"
+  search: "project requirements",
 });
 ```
 
@@ -315,6 +326,7 @@ cd packages/agent && bun test test/tool/memory.test.ts
 ```
 
 The test suite includes 44 tests covering:
+
 - Embedding utilities (embedQuery, embedTexts, normalizeEmbedding)
 - Tool input validation (Zod schemas)
 - Tool execution with mocked dependencies
@@ -325,18 +337,21 @@ The test suite includes 44 tests covering:
 All new metrics are prefixed with `alfred_` and registered in `packages/api/src/metrics.ts`:
 
 ### Classification Metrics
+
 - `alfred_classification_source_total{domain, source}` - Classification sources
 - `alfred_classification_accuracy_total{domain, outcome}` - Accuracy tracking
 - `alfred_classification_duration_seconds{method}` - Latency
 - `alfred_domain_cache_hits_total{result}` - Cache efficiency
 
 ### Memory System Metrics
+
 - `alfred_embedding_quantizations_total{status}` - Quantization operations
 - `alfred_embedding_storage_saved_bytes` - Storage savings
 - `alfred_adaptive_decay_operations_total{outcome}` - Decay operations
 - `alfred_node_access_count` - Access count distribution
 
 ### Retrieval Metrics
+
 - `alfred_dsa_bfs_traversals_total{outcome}` - Traversal outcomes
 - `alfred_dsa_bfs_expansions` - Expansion count distribution
 - `alfred_dsa_bfs_duration_seconds` - Traversal latency
@@ -344,10 +359,12 @@ All new metrics are prefixed with `alfred_` and registered in `packages/api/src/
 - `alfred_crag_score` - Score distribution
 
 ### Drift Detection Metrics
+
 - `alfred_concept_drift_detections_total{domain}` - Drift events
 - `alfred_concept_drift_window_size{domain}` - Window sizes
 
 ### Bi-Temporal Metrics
+
 - `alfred_bitemporal_edge_operations_total{operation}` - Edge operations
 - `alfred_bitemporal_historical_queries_total` - Historical queries
 
@@ -360,6 +377,7 @@ cd packages/db && bun run db:migrate
 ```
 
 New migrations:
+
 - `0048_embedding_quantization.sql` - Quantized embedding column
 - `0049_access_tracking.sql` - Access count columns
 - `0050_domain_thresholds.sql` - Threshold calibration table
@@ -380,10 +398,10 @@ cd packages/knowledge && bun test memory-system.test.ts
 
 ## Performance Budgets
 
-| Operation | Budget | Measured |
-|-----------|--------|----------|
-| Domain classification | <1ms | ~0.3ms |
-| Threshold calculation | <0.1ms | ~0.01ms |
-| Access multiplier | <0.01ms | ~0.001ms |
-| DSA-BFS traversal | <100ms | ~50ms p99 |
-| CRAG evaluation | <10ms | ~5ms |
+| Operation             | Budget  | Measured  |
+| --------------------- | ------- | --------- |
+| Domain classification | <1ms    | ~0.3ms    |
+| Threshold calculation | <0.1ms  | ~0.01ms   |
+| Access multiplier     | <0.01ms | ~0.001ms  |
+| DSA-BFS traversal     | <100ms  | ~50ms p99 |
+| CRAG evaluation       | <10ms   | ~5ms      |

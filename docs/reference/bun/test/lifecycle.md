@@ -1,9 +1,10 @@
 ---
 title: Lifecycle hooks – Test runner | Bun Docs
-url: 
+url:
 description: Add lifecycle hooks to your tests that run before/after each test or test run
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -50,12 +51,12 @@ Project
 
 The test runner supports the following lifecycle hooks. This is useful for loading test fixtures, mocking data, and configuring the test environment.
 
-| Hook | Description |
-| --- | --- |
-| `beforeAll` | Runs once before all tests. |
-| `beforeEach` | Runs before each test. |
-| `afterEach` | Runs after each test. |
-| `afterAll` | Runs once after all tests. |
+| Hook         | Description                 |
+| ------------ | --------------------------- |
+| `beforeAll`  | Runs once before all tests. |
+| `beforeEach` | Runs before each test.      |
+| `afterEach`  | Runs after each test.       |
+| `afterAll`   | Runs once after all tests.  |
 
 Perform per-test setup and teardown logic with `beforeEach` and `afterEach`.
 
@@ -144,7 +145,7 @@ Watch mode](https://bun.com/docs/test/hot) [Next\\
 \\
 Mocks](https://bun.com/docs/test/mocks)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/test/lifecycle.md)
 
@@ -168,7 +169,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

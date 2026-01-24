@@ -1,9 +1,10 @@
 ---
 title: Hot reloading – Bundler | Bun Docs
-url: 
+url:
 description: Update modules in a running application without reloading the page using import.meta.hot
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,7 +57,7 @@ Hot Module Replacement (HMR) allows you to update modules in a runningapplicatio
 
 HMR is enabled by default when using Bun's full-stack development server.
 
-## [`import.meta.hot` API Reference](https://bun.com/docs/bundler/hmr\#import-meta-hot-api-reference)
+## [`import.meta.hot` API Reference](https://bun.com/docs/bundler/hmr#import-meta-hot-api-reference)
 
 Bun implements a client-side HMR API modeled after [Vite's `import.meta.hot` API](https://vitejs.dev/guide/api-hmr.html). It can be checked for with `if (import.meta.hot)`, tree-shaking it in production
 
@@ -104,19 +105,19 @@ doSomething(import.meta.hot.data);
 
 **Note** — The HMR API is still a work in progress. Some features are missing. HMR can be disabled in `Bun.serve` by setting the `development` option to `{ hmr: false }`.
 
-|  | Method | Notes |
-| --- | --- | --- |
-| ✅ | `hot.accept()` | Indicate that a hot update can be replaced gracefully. |
-| ✅ | `hot.data` | Persist data between module evaluations. |
-| ✅ | `hot.dispose()` | Add a callback function to run when a module is about to be replaced. |
-| ❌ | `hot.invalidate()` |  |
-| ✅ | `hot.on()` | Attach an event listener |
-| ✅ | `hot.off()` | Remove an event listener from `on`. |
-| ❌ | `hot.send()` |  |
-| 🚧 | `hot.prune()` | **NOTE**: Callback is currently never called. |
-| ✅ | `hot.decline()` | No-op to match Vite's `import.meta.hot` |
+|     | Method             | Notes                                                                 |
+| --- | ------------------ | --------------------------------------------------------------------- |
+| ✅  | `hot.accept()`     | Indicate that a hot update can be replaced gracefully.                |
+| ✅  | `hot.data`         | Persist data between module evaluations.                              |
+| ✅  | `hot.dispose()`    | Add a callback function to run when a module is about to be replaced. |
+| ❌  | `hot.invalidate()` |                                                                       |
+| ✅  | `hot.on()`         | Attach an event listener                                              |
+| ✅  | `hot.off()`        | Remove an event listener from `on`.                                   |
+| ❌  | `hot.send()`       |                                                                       |
+| 🚧  | `hot.prune()`      | **NOTE**: Callback is currently never called.                         |
+| ✅  | `hot.decline()`    | No-op to match Vite's `import.meta.hot`                               |
 
-### [`import.meta.hot.accept()`](https://bun.com/docs/bundler/hmr\#import-meta-hot-accept)
+### [`import.meta.hot.accept()`](https://bun.com/docs/bundler/hmr#import-meta-hot-accept)
 
 The `accept()` method indicates that a module can be hot-replaced. When calledwithout arguments, it indicates that this module can be replaced simply byre-evaluating the file. After a hot update, importers of this module will beautomatically patched.
 
@@ -186,7 +187,7 @@ import.meta.hot.accept(["./foo", "./bar"], newModules => {
 
 Indicates that multiple dependencies' modules can be accepted. This variant accepts an array of dependencies, where the callback will receive the updated modules, and `undefined` for any that had errors.
 
-### [`import.meta.hot.data`](https://bun.com/docs/bundler/hmr\#import-meta-hot-data)
+### [`import.meta.hot.data`](https://bun.com/docs/bundler/hmr#import-meta-hot-data)
 
 `import.meta.hot.data` maintains state between module instances during hotreplacement, enabling data transfer from previous to new versions. When `import.meta.hot.data` is written into, Bun will also mark this module ascapable of self-accepting (equivalent of calling `import.meta.hot.accept()`).
 
@@ -203,7 +204,7 @@ In production, `data` is inlined to be `{}`, meaning it cannot be used as a stat
 
 The above pattern is recommended for stateful modules because Bun knows it can minify `{}.prop ??= value` into `value` in production.
 
-### [`import.meta.hot.dispose()`](https://bun.com/docs/bundler/hmr\#import-meta-hot-dispose)
+### [`import.meta.hot.dispose()`](https://bun.com/docs/bundler/hmr#import-meta-hot-dispose)
 
 Attaches an on-dispose callback. This is called:
 
@@ -223,7 +224,7 @@ This callback is not called on route navigation or when the browser tab closes.
 
 Returning a promise will delay module replacement until the module is disposed.All dispose callbacks are called in parallel.
 
-### [`import.meta.hot.prune()`](https://bun.com/docs/bundler/hmr\#import-meta-hot-prune)
+### [`import.meta.hot.prune()`](https://bun.com/docs/bundler/hmr#import-meta-hot-prune)
 
 Attaches an on-prune callback. This is called when all imports to this moduleare removed, but the module was previously loaded.
 
@@ -244,7 +245,7 @@ import.meta.hot.prune(() => {
 
 If `dispose` was used instead, the WebSocket would close and re-open on everyhot update. Both versions of the code will prevent page reloads when importedfiles are updated.
 
-### [`import.meta.hot.on()` and `off()`](https://bun.com/docs/bundler/hmr\#import-meta-hot-on-and-off)
+### [`import.meta.hot.on()` and `off()`](https://bun.com/docs/bundler/hmr#import-meta-hot-on-and-off)
 
 `on()` and `off()` are used to listen for events from the HMR runtime. Event names are prefixed with a prefix so that plugins do not conflict with each other.
 
@@ -259,16 +260,16 @@ When a file is replaced, all of its event listeners are automatically removed.
 
 A list of all built-in events:
 
-| Event | Emitted when |
-| --- | --- |
-| `bun:beforeUpdate` | before a hot update is applied. |
-| `bun:afterUpdate` | after a hot update is applied. |
-| `bun:beforeFullReload` | before a full page reload happens. |
-| `bun:beforePrune` | before prune callbacks are called. |
-| `bun:invalidate` | when a module is invalidated with `import.meta.hot.invalidate()` |
-| `bun:error` | when a build or runtime error occurs |
-| `bun:ws:disconnect` | when the HMR WebSocket connection is lost. This can indicate the development server is offline. |
-| `bun:ws:connect` | when the HMR WebSocket connects or re-connects. |
+| Event                  | Emitted when                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| `bun:beforeUpdate`     | before a hot update is applied.                                                                 |
+| `bun:afterUpdate`      | after a hot update is applied.                                                                  |
+| `bun:beforeFullReload` | before a full page reload happens.                                                              |
+| `bun:beforePrune`      | before prune callbacks are called.                                                              |
+| `bun:invalidate`       | when a module is invalidated with `import.meta.hot.invalidate()`                                |
+| `bun:error`            | when a build or runtime error occurs                                                            |
+| `bun:ws:disconnect`    | when the HMR WebSocket connection is lost. This can indicate the development server is offline. |
+| `bun:ws:connect`       | when the HMR WebSocket connects or re-connects.                                                 |
 
 For compatibility with Vite, the above events are also available via `vite:*` prefix instead of `bun:*`.
 
@@ -278,7 +279,7 @@ Fullstack Dev Server](https://bun.com/docs/bundler/fullstack) [Next\\
 \\
 Loaders](https://bun.com/docs/bundler/loaders)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/hmr.md)
 
@@ -302,7 +303,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

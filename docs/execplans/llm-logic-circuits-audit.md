@@ -7,6 +7,7 @@
 ## Core Principle
 
 Instead of pattern matching, regex, keyword lists, and embedding similarity thresholds, use small, focused LLM calls with:
+
 - Light/fast models (Cerebras ~3000 tokens/sec)
 - Tight, focused prompts
 - Structured outputs (Zod schemas)
@@ -19,6 +20,7 @@ Instead of pattern matching, regex, keyword lists, and embedding similarity thre
 **Location**: `packages/knowledge/src/extract/reasoning.ts`
 
 **Current Heuristic**:
+
 - String matching against `DECISION_MARKERS` array: `["considering", "choosing", "selecting", "opting for", "decided to", "will"]`
 - Simple `.includes()` checks on lowercase sentences
 - Hardcoded confidence: 0.85
@@ -26,6 +28,7 @@ Instead of pattern matching, regex, keyword lists, and embedding similarity thre
 **Problem**: Misses nuanced decisions, false positives on casual language, no understanding of context.
 
 **LLM Circuit Solution**:
+
 ```typescript
 // Light LLM call with structured output
 extractDecisions(reasoningText: string): Decision[] {
@@ -36,6 +39,7 @@ extractDecisions(reasoningText: string): Decision[] {
 ```
 
 **Files**:
+
 - `packages/knowledge/src/extract/reasoning.ts:22-44` - Decision markers
 - `packages/knowledge/src/extract/reasoning.ts:47-68` - Alternative markers
 
@@ -46,6 +50,7 @@ extractDecisions(reasoningText: string): Decision[] {
 **Location**: `packages/plan/src/intent/classify.ts`
 
 **Current Heuristic**:
+
 - Regex patterns against lowercase description
 - Categories: `fix`, `feat`, `refactor`, `test`, `docs`, `chore`
 - First match wins
@@ -53,6 +58,7 @@ extractDecisions(reasoningText: string): Decision[] {
 **Problem**: Brittle, misses compound intents, no nuance (e.g., "fix and refactor").
 
 **LLM Circuit Solution**:
+
 ```typescript
 classifyIntent(intent: WorkflowIntent): IntentCategory {
   // Fast LLM with structured output
@@ -62,6 +68,7 @@ classifyIntent(intent: WorkflowIntent): IntentCategory {
 ```
 
 **Files**:
+
 - `packages/plan/src/intent/classify.ts:6-29` - Regex classification
 
 ---
@@ -71,6 +78,7 @@ classifyIntent(intent: WorkflowIntent): IntentCategory {
 **Location**: `packages/knowledge/src/reasoning/decisions.ts`
 
 **Current Heuristic**:
+
 - Embedding similarity to "decision" centroid
 - Threshold: `MIN_SIMILARITY = 0.32`
 - Sentence-level matching
@@ -78,6 +86,7 @@ classifyIntent(intent: WorkflowIntent): IntentCategory {
 **Problem**: Embedding similarity is noisy, threshold is arbitrary, misses implicit decisions.
 
 **LLM Circuit Solution**:
+
 ```typescript
 deriveDecisionFacts(text: string): KnowledgeEntry[] {
   // LLM extracts decisions with rationale
@@ -87,6 +96,7 @@ deriveDecisionFacts(text: string): KnowledgeEntry[] {
 ```
 
 **Files**:
+
 - `packages/knowledge/src/reasoning/decisions.ts:13-55` - Embedding-based decision extraction
 
 ---
@@ -96,6 +106,7 @@ deriveDecisionFacts(text: string): KnowledgeEntry[] {
 **Location**: `packages/knowledge/src/reasoning/alternatives.ts`
 
 **Current Heuristic**:
+
 - Clause splitting via NLP library
 - Embedding similarity to "alternative" centroid
 - Threshold: `MIN_SIMILARITY = 0.28`
@@ -103,6 +114,7 @@ deriveDecisionFacts(text: string): KnowledgeEntry[] {
 **Problem**: Clause splitting is syntactic, not semantic. Embedding similarity misses nuanced alternatives.
 
 **LLM Circuit Solution**:
+
 ```typescript
 deriveAlternativeFacts(text: string): KnowledgeEntry[] {
   // LLM identifies alternatives and trade-offs
@@ -112,6 +124,7 @@ deriveAlternativeFacts(text: string): KnowledgeEntry[] {
 ```
 
 **Files**:
+
 - `packages/knowledge/src/reasoning/alternatives.ts:19-87` - Clause-based alternative extraction
 
 ---
@@ -121,6 +134,7 @@ deriveAlternativeFacts(text: string): KnowledgeEntry[] {
 **Location**: `packages/knowledge/src/reasoning/causality.ts`
 
 **Current Heuristic**:
+
 - Clause splitting, assumes adjacent clauses are cause-effect
 - Embedding similarity to "causal" centroid
 - Threshold: `MIN_SIMILARITY = 0.3`
@@ -128,6 +142,7 @@ deriveAlternativeFacts(text: string): KnowledgeEntry[] {
 **Problem**: Adjacent clauses ≠ causality. Misses implicit causal chains, temporal vs causal confusion.
 
 **LLM Circuit Solution**:
+
 ```typescript
 deriveCausalityFromText(text: string): KnowledgeEntry[] {
   // LLM extracts causal relationships with evidence
@@ -137,6 +152,7 @@ deriveCausalityFromText(text: string): KnowledgeEntry[] {
 ```
 
 **Files**:
+
 - `packages/knowledge/src/reasoning/causality.ts:20-96` - Clause-based causality
 
 ---
@@ -146,6 +162,7 @@ deriveCausalityFromText(text: string): KnowledgeEntry[] {
 **Location**: `packages/knowledge/src/lexicon/domains.ts`
 
 **Current Heuristic**:
+
 - Keyword matching against `DOMAIN_KEYWORDS` dictionary
 - Word boundary checks
 - Score-based ranking
@@ -153,6 +170,7 @@ deriveCausalityFromText(text: string): KnowledgeEntry[] {
 **Problem**: Keyword lists are incomplete, miss domain-specific jargon, no semantic understanding.
 
 **LLM Circuit Solution**:
+
 ```typescript
 classifyDomain(text: string): DomainResult[] {
   // Fast LLM for domain classification
@@ -162,6 +180,7 @@ classifyDomain(text: string): DomainResult[] {
 ```
 
 **Files**:
+
 - `packages/knowledge/src/lexicon/domains.ts:447-480` - Static keyword classification
 - `packages/knowledge/src/lexicon/domains.ts:724-757` - Topic detection wrapper
 
@@ -172,6 +191,7 @@ classifyDomain(text: string): DomainResult[] {
 **Location**: `packages/plan/src/pattern/match.ts`
 
 **Current Heuristic**:
+
 - Word count vs phase count comparison
 - Hardcoded thresholds: `intentWordCount > 20 && phaseCount < 2` → reject
 - `intentWordCount < 5 && phaseCount > 5` → reject
@@ -179,6 +199,7 @@ classifyDomain(text: string): DomainResult[] {
 **Problem**: Word count ≠ complexity. Misses nuanced structural mismatches.
 
 **LLM Circuit Solution**:
+
 ```typescript
 validateStructural(patterns: Pattern[], intent: string): Pattern[] {
   // LLM validates structural fit
@@ -188,6 +209,7 @@ validateStructural(patterns: Pattern[], intent: string): Pattern[] {
 ```
 
 **Files**:
+
 - `packages/plan/src/pattern/match.ts:98-115` - Word count validation
 
 ---
@@ -197,12 +219,14 @@ validateStructural(patterns: Pattern[], intent: string): Pattern[] {
 **Location**: `packages/plan/src/intent/split.ts`
 
 **Current Heuristic**:
+
 - String matching for conjunctions: `[" and ", " also ", " plus "]`
 - Simple split on first match
 
 **Problem**: Misses semantic splits, false positives on compound nouns ("frontend and backend").
 
 **LLM Circuit Solution**:
+
 ```typescript
 detectSplits(input: string): string[] {
   // LLM identifies if intent should be split
@@ -212,6 +236,7 @@ detectSplits(input: string): string[] {
 ```
 
 **Files**:
+
 - `packages/plan/src/intent/split.ts:4-12` - Conjunction-based splitting
 
 ---
@@ -221,6 +246,7 @@ detectSplits(input: string): string[] {
 **Location**: `packages/agent/src/orchestrator/tool/codex.ts`
 
 **Current Heuristic**:
+
 - Manual object property traversal (`item.text`, `item.content`, `item.output`)
 - Type guards and null checks
 - String concatenation for arrays
@@ -228,6 +254,7 @@ detectSplits(input: string): string[] {
 **Problem**: Brittle, breaks on schema changes, misses nested structures.
 
 **LLM Circuit Solution**:
+
 ```typescript
 extractAgentMessage(item: unknown): string | null {
   // LLM extracts message from unknown structure
@@ -237,6 +264,7 @@ extractAgentMessage(item: unknown): string | null {
 ```
 
 **Files**:
+
 - `packages/agent/src/orchestrator/tool/codex.ts:202-242` - Manual extraction
 - `packages/agent/src/orchestrator/tool/codex.ts:244-258` - Aggregated output extraction
 
@@ -247,12 +275,14 @@ extractAgentMessage(item: unknown): string | null {
 **Location**: `packages/agent/src/orchestrator/multi/decompose.ts`
 
 **Current Heuristic**:
+
 - Path prefix matching (`/api/`, `/src/`, `/test/`)
 - Hardcoded bucket rules
 
 **Problem**: Misses non-standard structures, no semantic understanding of file purpose.
 
 **LLM Circuit Solution**:
+
 ```typescript
 classifyPath(path: string, fileContent?: string): Bucket {
   // LLM classifies file purpose
@@ -262,6 +292,7 @@ classifyPath(path: string, fileContent?: string): Bucket {
 ```
 
 **Files**:
+
 - `packages/agent/src/orchestrator/multi/decompose.ts:38-207` - Path-based classification
 
 ---
@@ -271,12 +302,14 @@ classifyPath(path: string, fileContent?: string): Bucket {
 **Location**: `packages/knowledge/src/extract/facts.ts`
 
 **Current Heuristic**:
+
 - NLP library features (verb presence, sentence length, punctuation)
 - Hardcoded confidence formula
 
 **Problem**: Syntactic features ≠ semantic confidence. Misses context-dependent confidence.
 
 **LLM Circuit Solution**:
+
 ```typescript
 computeSentenceConfidence(sentence: string, context: string): number {
   // LLM assesses fact confidence
@@ -286,6 +319,7 @@ computeSentenceConfidence(sentence: string, context: string): number {
 ```
 
 **Files**:
+
 - `packages/knowledge/src/extract/facts.ts:39-70` - Feature-based confidence
 
 ---
@@ -295,6 +329,7 @@ computeSentenceConfidence(sentence: string, context: string): number {
 **Location**: `packages/knowledge/src/extract/temporal.ts`
 
 **Current Heuristic**:
+
 - Regex patterns for date ranges: `/\b(?:from|between)\s+([^,.;]+?)\s+(?:to|and)\s+([^,.;]+?)/gi`
 - Library-based parsing (`chrono.parse`)
 - Hardcoded confidence adjustments
@@ -302,6 +337,7 @@ computeSentenceConfidence(sentence: string, context: string): number {
 **Problem**: Regex misses natural language temporal expressions. Library parsing is brittle.
 
 **LLM Circuit Solution**:
+
 ```typescript
 extractTemporal(text: string): TemporalExpression[] {
   // LLM extracts temporal expressions
@@ -311,6 +347,7 @@ extractTemporal(text: string): TemporalExpression[] {
 ```
 
 **Files**:
+
 - `packages/knowledge/src/extract/temporal.ts:94-169` - Regex + library parsing
 
 ---
@@ -318,21 +355,25 @@ extractTemporal(text: string): TemporalExpression[] {
 ## Implementation Strategy
 
 ### Phase 1: Core Extraction Circuits
+
 1. Decision extraction (`reasoning.ts`)
 2. Intent classification (`classify.ts`)
 3. Domain classification (`domains.ts`)
 
 ### Phase 2: Reasoning Circuits
+
 4. Decision facts (`decisions.ts`)
 5. Alternative facts (`alternatives.ts`)
 6. Causal relationships (`causality.ts`)
 
 ### Phase 3: Structural Circuits
+
 7. Pattern validation (`match.ts`)
 8. Intent splitting (`split.ts`)
 9. Path classification (`decompose.ts`)
 
 ### Phase 4: Extraction Circuits
+
 10. Codex event extraction (`codex.ts`)
 11. Sentence confidence (`facts.ts`)
 12. Temporal extraction (`temporal.ts`)
@@ -348,12 +389,14 @@ import { z } from "zod";
 import { getFastModel } from "@alfred/agent/models";
 
 const decisionSchema = z.object({
-  decisions: z.array(z.object({
-    decision: z.string(),
-    rationale: z.string(),
-    alternatives: z.array(z.string()),
-    confidence: z.number().min(0).max(1),
-  })),
+  decisions: z.array(
+    z.object({
+      decision: z.string(),
+      rationale: z.string(),
+      alternatives: z.array(z.string()),
+      confidence: z.number().min(0).max(1),
+    })
+  ),
 });
 
 export async function extractDecisions(
@@ -361,7 +404,7 @@ export async function extractDecisions(
   context?: string
 ): Promise<Decision[]> {
   const model = getFastModel(); // Cerebras or similar
-  
+
   const result = await generateObject({
     model,
     schema: decisionSchema,
@@ -375,7 +418,7 @@ Return structured decision objects with rationale and alternatives.
 `,
     temperature: 0, // Deterministic
   });
-  
+
   return result.object.decisions;
 }
 ```
@@ -407,6 +450,7 @@ Return structured decision objects with rationale and alternatives.
 **Location**: `packages/runtime/src/engines/safety.ts`
 
 **Current Heuristic**:
+
 - Embedding similarity to risk centroids (low/medium/high)
 - Hardcoded thresholds: `< 0.35` → low, `< 0.6` → medium
 - Vector averaging for plan-level assessment
@@ -414,6 +458,7 @@ Return structured decision objects with rationale and alternatives.
 **Problem**: Embedding similarity doesn't capture risk semantics. Thresholds are arbitrary. Misses nuanced risk factors.
 
 **LLM Circuit Solution**:
+
 ```typescript
 classifyPlanRisk(plan: PlanLike): RiskAssessment {
   // LLM assesses risk with structured reasoning
@@ -423,6 +468,7 @@ classifyPlanRisk(plan: PlanLike): RiskAssessment {
 ```
 
 **Files**:
+
 - `packages/runtime/src/engines/safety.ts:147-256` - Embedding-based risk classification
 
 ---
@@ -432,6 +478,7 @@ classifyPlanRisk(plan: PlanLike): RiskAssessment {
 **Location**: `packages/agent/src/orchestrator/dreaming.ts`
 
 **Current Heuristic**:
+
 - String matching for error keywords
 - Hardcoded severity mapping
 - Confidence derived from severity
@@ -439,6 +486,7 @@ classifyPlanRisk(plan: PlanLike): RiskAssessment {
 **Problem**: Keyword matching misses context. Doesn't understand error semantics or user impact.
 
 **LLM Circuit Solution**:
+
 ```typescript
 inferSeverity(errorMessage: string, context?: string): DreamSeverity {
   // LLM classifies error severity
@@ -448,6 +496,7 @@ inferSeverity(errorMessage: string, context?: string): DreamSeverity {
 ```
 
 **Files**:
+
 - `packages/agent/src/orchestrator/dreaming.ts:75-98` - Keyword-based severity inference
 
 ---
@@ -483,6 +532,7 @@ packages/circuits/
 ```
 
 Each circuit follows the pattern:
+
 1. Accept input text + optional context
 2. Use fast model via model selector
 3. Structured output via Zod schema
@@ -503,31 +553,37 @@ const decisions = await extractDecisions(text, contextSummary, fastModel);
 ## Migration Strategy
 
 ### Phase 0: Infrastructure Setup
+
 - [ ] Create `packages/circuits/` package
 - [ ] Integrate with model selector (use `background` role)
 - [ ] Set up fast model defaults (Cerebras)
 
 ### Phase 1: Core Extraction Circuits
+
 - [ ] Decision extraction (`reasoning.ts`)
 - [ ] Intent classification (`classify.ts`)
 - [ ] Domain classification (`domains.ts`)
 
 ### Phase 2: Reasoning Circuits
+
 - [ ] Decision facts (`decisions.ts`)
 - [ ] Alternative facts (`alternatives.ts`)
 - [ ] Causal relationships (`causality.ts`)
 
 ### Phase 3: Structural Circuits
+
 - [ ] Pattern validation (`match.ts`)
 - [ ] Intent splitting (`split.ts`)
 - [ ] Path classification (`decompose.ts`)
 
 ### Phase 4: Extraction Circuits
+
 - [ ] Codex event extraction (`codex.ts`)
 - [ ] Sentence confidence (`facts.ts`)
 - [ ] Temporal extraction (`temporal.ts`)
 
 ### Phase 5: Assessment Circuits
+
 - [ ] Risk assessment (`safety.ts`)
 - [ ] Error severity (`dreaming.ts`)
 

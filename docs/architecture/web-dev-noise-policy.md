@@ -10,6 +10,7 @@ Keep the web dev server and production build pipeline **quiet by default** while
 ## Scope
 
 This policy targets:
+
 - `cd apps/web && bun run dev`
 - `bun run verify:build`
 - `bun run test:web:smoke:prod`
@@ -50,4 +51,3 @@ This policy targets:
 - **Route hygiene guard** (no tests under routes): `apps/web/src/tests/routes/hygiene.test.ts`
 - **Leakage guard**: `bun run verify:build`
 - **Prod smoke**: `bun run test:web:smoke:prod`
-

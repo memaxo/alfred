@@ -1,8 +1,9 @@
 ---
 title: Browser Observability for Puppeteer - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/puppeteer#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -29,7 +30,7 @@ On this page
 
 Laminar excels at tracing browser agents by providing unified visibility into both browser session recordings and agent execution steps.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/puppeteer\#puppeteer-integration)  Puppeteer integration
+## [​](https://docs.lmnr.ai/tracing/integrations/puppeteer#puppeteer-integration) Puppeteer integration
 
 Laminar has a native integration with Puppeteer for JavaScript. You simply need to initialize Laminar with your project API key and Puppeteer will be traced automatically.
 We will hook into the API to create OpenTelemetry spans, but more importantly, we record browser session recordings.

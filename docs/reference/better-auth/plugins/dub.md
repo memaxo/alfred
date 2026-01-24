@@ -1,9 +1,10 @@
 ---
 title: Dub | Better Auth
-url: 
+url:
 description: Better Auth Plugin for Lead Tracking using Dub links and OAuth Linking
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -30,9 +31,9 @@ Copy MarkdownOpen in
 
 This plugins allows you to track leads when a user signs up using a Dub link. It also adds OAuth linking support to allow you to build integrations extending Dub's linking management infrastructure.
 
-## [Installation](https://www.better-auth.com/docs/plugins/dub\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/dub#installation)
 
-### [Install the plugin](https://www.better-auth.com/docs/plugins/dub\#install-the-plugin)
+### [Install the plugin](https://www.better-auth.com/docs/plugins/dub#install-the-plugin)
 
 First, install the plugin:
 
@@ -48,7 +49,7 @@ bun
 npm install @dub/better-auth
 ```
 
-### [Install the Dub SDK](https://www.better-auth.com/docs/plugins/dub\#install-the-dub-sdk)
+### [Install the Dub SDK](https://www.better-auth.com/docs/plugins/dub#install-the-dub-sdk)
 
 Next, install the Dub SDK on your server:
 
@@ -64,7 +65,7 @@ bun
 npm install dub
 ```
 
-### [Configure the plugin](https://www.better-auth.com/docs/plugins/dub\#configure-the-plugin)
+### [Configure the plugin](https://www.better-auth.com/docs/plugins/dub#configure-the-plugin)
 
 Add the plugin to your auth config:
 
@@ -84,9 +85,9 @@ export const auth = betterAuth({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/dub\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/dub#usage)
 
-### [Lead Tracking](https://www.better-auth.com/docs/plugins/dub\#lead-tracking)
+### [Lead Tracking](https://www.better-auth.com/docs/plugins/dub#lead-tracking)
 
 By default, the plugin will track sign up events as leads. You can disable this by setting `disableLeadTracking` to `true`.
 
@@ -107,7 +108,7 @@ const betterAuth = betterAuth({
 });
 ```
 
-### [OAuth Linking](https://www.better-auth.com/docs/plugins/dub\#oauth-linking)
+### [OAuth Linking](https://www.better-auth.com/docs/plugins/dub#oauth-linking)
 
 The plugin supports OAuth for account linking.
 
@@ -150,8 +151,8 @@ const { data, error } = await authClient.dub.link({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop          | Description                      | Type     |
+| ------------- | -------------------------------- | -------- |
 | `callbackURL` | URL to redirect to after linking | `string` |
 
 POST
@@ -165,39 +166,39 @@ const data = await auth.api.dubLink({
 });
 ```
 
-## [Options](https://www.better-auth.com/docs/plugins/dub\#options)
+## [Options](https://www.better-auth.com/docs/plugins/dub#options)
 
 You can pass the following options to the plugin:
 
-### [`dubClient`](https://www.better-auth.com/docs/plugins/dub\#dubclient)
+### [`dubClient`](https://www.better-auth.com/docs/plugins/dub#dubclient)
 
 The Dub client instance.
 
-### [`disableLeadTracking`](https://www.better-auth.com/docs/plugins/dub\#disableleadtracking)
+### [`disableLeadTracking`](https://www.better-auth.com/docs/plugins/dub#disableleadtracking)
 
 Disable lead tracking for sign up events.
 
-### [`leadEventName`](https://www.better-auth.com/docs/plugins/dub\#leadeventname)
+### [`leadEventName`](https://www.better-auth.com/docs/plugins/dub#leadeventname)
 
 Event name for sign up leads.
 
-### [`customLeadTrack`](https://www.better-auth.com/docs/plugins/dub\#customleadtrack)
+### [`customLeadTrack`](https://www.better-auth.com/docs/plugins/dub#customleadtrack)
 
 Custom lead track function.
 
-### [`oauth`](https://www.better-auth.com/docs/plugins/dub\#oauth)
+### [`oauth`](https://www.better-auth.com/docs/plugins/dub#oauth)
 
 Dub OAuth configuration.
 
-### [`oauth.clientId`](https://www.better-auth.com/docs/plugins/dub\#oauthclientid)
+### [`oauth.clientId`](https://www.better-auth.com/docs/plugins/dub#oauthclientid)
 
 Client ID for Dub OAuth.
 
-### [`oauth.clientSecret`](https://www.better-auth.com/docs/plugins/dub\#oauthclientsecret)
+### [`oauth.clientSecret`](https://www.better-auth.com/docs/plugins/dub#oauthclientsecret)
 
 Client secret for Dub OAuth.
 
-### [`oauth.pkce`](https://www.better-auth.com/docs/plugins/dub\#oauthpkce)
+### [`oauth.pkce`](https://www.better-auth.com/docs/plugins/dub#oauthpkce)
 
 Enable PKCE for Dub OAuth.
 

@@ -1,9 +1,10 @@
 ---
 title: OIDC Provider | Better Auth
-url: 
+url:
 description: Open ID Connect plugin for Better Auth that allows you to have your own OIDC provider.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -42,9 +43,9 @@ The **OIDC Provider Plugin** enables you to build and manage your own OpenID Con
 
 This plugin is in active development and may not be suitable for production use. Please report any issues or bugs on [GitHub](https://github.com/better-auth/better-auth).
 
-## [Installation](https://www.better-auth.com/docs/plugins/oidc-provider\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/oidc-provider#installation)
 
-### [Mount the Plugin](https://www.better-auth.com/docs/plugins/oidc-provider\#mount-the-plugin)
+### [Mount the Plugin](https://www.better-auth.com/docs/plugins/oidc-provider#mount-the-plugin)
 
 Add the OIDC plugin to your auth config. See [OIDC Configuration](https://www.better-auth.com/docs/plugins/oidc-provider#oidc-configuration) on how to configure the plugin.
 
@@ -62,7 +63,7 @@ const auth = betterAuth({
 })
 ```
 
-### [Migrate the Database](https://www.better-auth.com/docs/plugins/oidc-provider\#migrate-the-database)
+### [Migrate the Database](https://www.better-auth.com/docs/plugins/oidc-provider#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -78,7 +79,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/oidc-provider#schema) section to add the fields manually.
 
-### [Add the Client Plugin](https://www.better-auth.com/docs/plugins/oidc-provider\#add-the-client-plugin)
+### [Add the Client Plugin](https://www.better-auth.com/docs/plugins/oidc-provider#add-the-client-plugin)
 
 Add the OIDC client plugin to your auth client config.
 
@@ -92,15 +93,15 @@ const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/oidc-provider\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/oidc-provider#usage)
 
 Once installed, you can utilize the OIDC Provider to manage authentication flows within your application.
 
-### [Register a New Client](https://www.better-auth.com/docs/plugins/oidc-provider\#register-a-new-client)
+### [Register a New Client](https://www.better-auth.com/docs/plugins/oidc-provider#register-a-new-client)
 
 To register a new OIDC client, use the `oauth2.register` method.
 
-#### [Simple Example](https://www.better-auth.com/docs/plugins/oidc-provider\#simple-example)
+#### [Simple Example](https://www.better-auth.com/docs/plugins/oidc-provider#simple-example)
 
 ```
 const application = await client.oauth2.register({
@@ -109,7 +110,7 @@ const application = await client.oauth2.register({
 });
 ```
 
-#### [Full Method](https://www.better-auth.com/docs/plugins/oidc-provider\#full-method)
+#### [Full Method](https://www.better-auth.com/docs/plugins/oidc-provider#full-method)
 
 ClientServer
 
@@ -139,25 +140,25 @@ const { data, error } = await authClient.oauth2.register({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `redirect_uris` | A list of redirect URIs. | `string[]` |
-| `token_endpoint_auth_method?` | The authentication method for the token endpoint. | `"none" | "client_secret_basic" | "client_secret_post"` |
-| `grant_types?` | The grant types supported by the application. | `("authorization_code" | "implicit" | "password" | "client_credentials" | "refresh_token" | "urn:ietf:params:oauth:grant-type:jwt-bearer" | "urn:ietf:params:oauth:grant-type:saml2-bearer")[]` |
-| `response_types?` | The response types supported by the application. | `("code" | "token")[]` |
-| `client_name?` | The name of the application. | `string` |
-| `client_uri?` | The URI of the application. | `string` |
-| `logo_uri?` | The URI of the application logo. | `string` |
-| `scope?` | The scopes supported by the application. Separated by spaces. | `string` |
-| `contacts?` | The contact information for the application. | `string[]` |
-| `tos_uri?` | The URI of the application terms of service. | `string` |
-| `policy_uri?` | The URI of the application privacy policy. | `string` |
-| `jwks_uri?` | The URI of the application JWKS. | `string` |
-| `jwks?` | The JWKS of the application. | `Record<string, any>` |
-| `metadata?` | The metadata of the application. | `Record<string, any>` |
-| `software_id?` | The software ID of the application. | `string` |
-| `software_version?` | The software version of the application. | `string` |
-| `software_statement?` | The software statement of the application. | `string` |
+| Prop                          | Description                                                   | Type                   |
+| ----------------------------- | ------------------------------------------------------------- | ---------------------- | --------------------- | --------------------- | -------------------- | --------------- | --------------------------------------------- | --------------------------------------------------- |
+| `redirect_uris`               | A list of redirect URIs.                                      | `string[]`             |
+| `token_endpoint_auth_method?` | The authentication method for the token endpoint.             | `"none"                | "client_secret_basic" | "client_secret_post"` |
+| `grant_types?`                | The grant types supported by the application.                 | `("authorization_code" | "implicit"            | "password"            | "client_credentials" | "refresh_token" | "urn:ietf:params:oauth:grant-type:jwt-bearer" | "urn:ietf:params:oauth:grant-type:saml2-bearer")[]` |
+| `response_types?`             | The response types supported by the application.              | `("code"               | "token")[]`           |
+| `client_name?`                | The name of the application.                                  | `string`               |
+| `client_uri?`                 | The URI of the application.                                   | `string`               |
+| `logo_uri?`                   | The URI of the application logo.                              | `string`               |
+| `scope?`                      | The scopes supported by the application. Separated by spaces. | `string`               |
+| `contacts?`                   | The contact information for the application.                  | `string[]`             |
+| `tos_uri?`                    | The URI of the application terms of service.                  | `string`               |
+| `policy_uri?`                 | The URI of the application privacy policy.                    | `string`               |
+| `jwks_uri?`                   | The URI of the application JWKS.                              | `string`               |
+| `jwks?`                       | The JWKS of the application.                                  | `Record<string, any>`  |
+| `metadata?`                   | The metadata of the application.                              | `Record<string, any>`  |
+| `software_id?`                | The software ID of the application.                           | `string`               |
+| `software_version?`           | The software version of the application.                      | `string`               |
+| `software_statement?`         | The software statement of the application.                    | `string`               |
 
 POST
 
@@ -187,31 +188,31 @@ const data = await auth.api.registerOAuthApplication({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `redirect_uris` | A list of redirect URIs. | `string[]` |
-| `token_endpoint_auth_method?` | The authentication method for the token endpoint. | `"none" | "client_secret_basic" | "client_secret_post"` |
-| `grant_types?` | The grant types supported by the application. | `("authorization_code" | "implicit" | "password" | "client_credentials" | "refresh_token" | "urn:ietf:params:oauth:grant-type:jwt-bearer" | "urn:ietf:params:oauth:grant-type:saml2-bearer")[]` |
-| `response_types?` | The response types supported by the application. | `("code" | "token")[]` |
-| `client_name?` | The name of the application. | `string` |
-| `client_uri?` | The URI of the application. | `string` |
-| `logo_uri?` | The URI of the application logo. | `string` |
-| `scope?` | The scopes supported by the application. Separated by spaces. | `string` |
-| `contacts?` | The contact information for the application. | `string[]` |
-| `tos_uri?` | The URI of the application terms of service. | `string` |
-| `policy_uri?` | The URI of the application privacy policy. | `string` |
-| `jwks_uri?` | The URI of the application JWKS. | `string` |
-| `jwks?` | The JWKS of the application. | `Record<string, any>` |
-| `metadata?` | The metadata of the application. | `Record<string, any>` |
-| `software_id?` | The software ID of the application. | `string` |
-| `software_version?` | The software version of the application. | `string` |
-| `software_statement?` | The software statement of the application. | `string` |
+| Prop                          | Description                                                   | Type                   |
+| ----------------------------- | ------------------------------------------------------------- | ---------------------- | --------------------- | --------------------- | -------------------- | --------------- | --------------------------------------------- | --------------------------------------------------- |
+| `redirect_uris`               | A list of redirect URIs.                                      | `string[]`             |
+| `token_endpoint_auth_method?` | The authentication method for the token endpoint.             | `"none"                | "client_secret_basic" | "client_secret_post"` |
+| `grant_types?`                | The grant types supported by the application.                 | `("authorization_code" | "implicit"            | "password"            | "client_credentials" | "refresh_token" | "urn:ietf:params:oauth:grant-type:jwt-bearer" | "urn:ietf:params:oauth:grant-type:saml2-bearer")[]` |
+| `response_types?`             | The response types supported by the application.              | `("code"               | "token")[]`           |
+| `client_name?`                | The name of the application.                                  | `string`               |
+| `client_uri?`                 | The URI of the application.                                   | `string`               |
+| `logo_uri?`                   | The URI of the application logo.                              | `string`               |
+| `scope?`                      | The scopes supported by the application. Separated by spaces. | `string`               |
+| `contacts?`                   | The contact information for the application.                  | `string[]`             |
+| `tos_uri?`                    | The URI of the application terms of service.                  | `string`               |
+| `policy_uri?`                 | The URI of the application privacy policy.                    | `string`               |
+| `jwks_uri?`                   | The URI of the application JWKS.                              | `string`               |
+| `jwks?`                       | The JWKS of the application.                                  | `Record<string, any>`  |
+| `metadata?`                   | The metadata of the application.                              | `Record<string, any>`  |
+| `software_id?`                | The software ID of the application.                           | `string`               |
+| `software_version?`           | The software version of the application.                      | `string`               |
+| `software_statement?`         | The software statement of the application.                    | `string`               |
 
 This endpoint supports [RFC7591](https://datatracker.ietf.org/doc/html/rfc7591) compliant client registration.
 
 Once the application is created, you will receive a `client_id` and `client_secret` that you can display to the user.
 
-### [Trusted Clients](https://www.better-auth.com/docs/plugins/oidc-provider\#trusted-clients)
+### [Trusted Clients](https://www.better-auth.com/docs/plugins/oidc-provider#trusted-clients)
 
 For first-party applications and internal services, you can configure trusted clients directly in your OIDC provider configuration. Trusted clients bypass database lookups for better performance and can optionally skip consent screens for improved user experience.
 
@@ -251,7 +252,7 @@ const auth = betterAuth({
 })
 ```
 
-### [UserInfo Endpoint](https://www.better-auth.com/docs/plugins/oidc-provider\#userinfo-endpoint)
+### [UserInfo Endpoint](https://www.better-auth.com/docs/plugins/oidc-provider#userinfo-endpoint)
 
 The OIDC Provider includes a UserInfo endpoint that allows clients to retrieve information about the authenticated user. This endpoint is available at `/oauth2/userinfo` and requires a valid access token.
 
@@ -276,12 +277,12 @@ const userInfo = await response.json();
 The UserInfo endpoint returns different claims based on the scopes that were granted during authorization:
 
 - With `openid` scope: Returns the user's ID ( `sub` claim)
-- With `profile` scope: Returns name, picture, given\_name, family\_name
-- With `email` scope: Returns email and email\_verified
+- With `profile` scope: Returns name, picture, given_name, family_name
+- With `email` scope: Returns email and email_verified
 
 The `getAdditionalUserInfoClaim` function receives the user object, requested scopes array, and the client, allowing you to conditionally include claims based on the scopes granted during authorization. These additional claims will be included in both the UserInfo endpoint response and the ID token.
 
-### [Consent Screen](https://www.better-auth.com/docs/plugins/oidc-provider\#consent-screen)
+### [Consent Screen](https://www.better-auth.com/docs/plugins/oidc-provider#consent-screen)
 
 When a user is redirected to the OIDC provider for authentication, they may be prompted to authorize the application to access their data. This is known as the consent screen. By default, Better Auth will display a sample consent screen. You can customize the consent screen by providing a `consentPage` option during initialization.
 
@@ -342,7 +343,7 @@ const res = await client.oauth2.consent({
 
 Both methods are fully supported. The URL parameter method works well with mobile apps and third-party contexts, while the cookie-based method provides a simpler implementation for web applications.
 
-### [Handling Login](https://www.better-auth.com/docs/plugins/oidc-provider\#handling-login)
+### [Handling Login](https://www.better-auth.com/docs/plugins/oidc-provider#handling-login)
 
 When a user is redirected to the OIDC provider for authentication, if they are not already logged in, they will be redirected to the login page. You can customize the login page by providing a `loginPage` option during initialization.
 
@@ -360,9 +361,9 @@ export const auth = betterAuth({
 
 You don't need to handle anything from your side; when a new session is created, the plugin will handle continuing the authorization flow.
 
-## [Configuration](https://www.better-auth.com/docs/plugins/oidc-provider\#configuration)
+## [Configuration](https://www.better-auth.com/docs/plugins/oidc-provider#configuration)
 
-### [OIDC Metadata](https://www.better-auth.com/docs/plugins/oidc-provider\#oidc-metadata)
+### [OIDC Metadata](https://www.better-auth.com/docs/plugins/oidc-provider#oidc-metadata)
 
 Customize the OIDC metadata by providing a configuration object during initialization.
 
@@ -384,7 +385,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [JWKS Endpoint](https://www.better-auth.com/docs/plugins/oidc-provider\#jwks-endpoint)
+### [JWKS Endpoint](https://www.better-auth.com/docs/plugins/oidc-provider#jwks-endpoint)
 
 The OIDC Provider plugin can integrate with the JWT plugin to provide asymmetric key signing for ID tokens verifiable at a JWKS endpoint.
 
@@ -414,7 +415,7 @@ export const auth = betterAuth({
 
 When `useJWTPlugin: false` (default), ID tokens are signed with the application secret.
 
-### [Dynamic Client Registration](https://www.better-auth.com/docs/plugins/oidc-provider\#dynamic-client-registration)
+### [Dynamic Client Registration](https://www.better-auth.com/docs/plugins/oidc-provider#dynamic-client-registration)
 
 If you want to allow clients to register dynamically, you can enable this feature by setting the `allowDynamicClientRegistration` option to `true`.
 
@@ -430,60 +431,60 @@ const auth = betterAuth({
 
 This will allow clients to register using the `/register` endpoint to be publicly available.
 
-## [Schema](https://www.better-auth.com/docs/plugins/oidc-provider\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/oidc-provider#schema)
 
 The OIDC Provider plugin adds the following tables to the database:
 
-### [OAuth Application](https://www.better-auth.com/docs/plugins/oidc-provider\#oauth-application)
+### [OAuth Application](https://www.better-auth.com/docs/plugins/oidc-provider#oauth-application)
 
 Table Name: `oauthApplication`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Database ID of the OAuth client |
-| clientId | string | PK | Unique identifier for each OAuth client |
-| clientSecret | string | ? | Secret key for the OAuth client. Optional for public clients using PKCE. |
-| name | string | - | Name of the OAuth client |
-| redirectURLs | string | - | Comma-separated list of redirect URLs |
-| metadata | string | ? | Additional metadata for the OAuth client |
-| type | string | - | Type of OAuth client (e.g., web, mobile) |
-| disabled | boolean | - | Indicates if the client is disabled |
-| userId | string | ? | ID of the user who owns the client. (optional) |
-| createdAt | Date | - | Timestamp of when the OAuth client was created |
-| updatedAt | Date | - | Timestamp of when the OAuth client was last updated |
+| Field Name   | Type    | Key | Description                                                              |
+| ------------ | ------- | --- | ------------------------------------------------------------------------ |
+| id           | string  | PK  | Database ID of the OAuth client                                          |
+| clientId     | string  | PK  | Unique identifier for each OAuth client                                  |
+| clientSecret | string  | ?   | Secret key for the OAuth client. Optional for public clients using PKCE. |
+| name         | string  | -   | Name of the OAuth client                                                 |
+| redirectURLs | string  | -   | Comma-separated list of redirect URLs                                    |
+| metadata     | string  | ?   | Additional metadata for the OAuth client                                 |
+| type         | string  | -   | Type of OAuth client (e.g., web, mobile)                                 |
+| disabled     | boolean | -   | Indicates if the client is disabled                                      |
+| userId       | string  | ?   | ID of the user who owns the client. (optional)                           |
+| createdAt    | Date    | -   | Timestamp of when the OAuth client was created                           |
+| updatedAt    | Date    | -   | Timestamp of when the OAuth client was last updated                      |
 
-### [OAuth Access Token](https://www.better-auth.com/docs/plugins/oidc-provider\#oauth-access-token)
+### [OAuth Access Token](https://www.better-auth.com/docs/plugins/oidc-provider#oauth-access-token)
 
 Table Name: `oauthAccessToken`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Database ID of the access token |
-| accessToken | string | - | Access token issued to the client |
-| refreshToken | string | - | Refresh token issued to the client |
-| accessTokenExpiresAt | Date | - | Expiration date of the access token |
-| refreshTokenExpiresAt | Date | - | Expiration date of the refresh token |
-| clientId | string | FK | ID of the OAuth client |
-| userId | string | FK | ID of the user associated with the token |
-| scopes | string | - | Comma-separated list of scopes granted |
-| createdAt | Date | - | Timestamp of when the access token was created |
-| updatedAt | Date | - | Timestamp of when the access token was last updated |
+| Field Name            | Type   | Key | Description                                         |
+| --------------------- | ------ | --- | --------------------------------------------------- |
+| id                    | string | PK  | Database ID of the access token                     |
+| accessToken           | string | -   | Access token issued to the client                   |
+| refreshToken          | string | -   | Refresh token issued to the client                  |
+| accessTokenExpiresAt  | Date   | -   | Expiration date of the access token                 |
+| refreshTokenExpiresAt | Date   | -   | Expiration date of the refresh token                |
+| clientId              | string | FK  | ID of the OAuth client                              |
+| userId                | string | FK  | ID of the user associated with the token            |
+| scopes                | string | -   | Comma-separated list of scopes granted              |
+| createdAt             | Date   | -   | Timestamp of when the access token was created      |
+| updatedAt             | Date   | -   | Timestamp of when the access token was last updated |
 
-### [OAuth Consent](https://www.better-auth.com/docs/plugins/oidc-provider\#oauth-consent)
+### [OAuth Consent](https://www.better-auth.com/docs/plugins/oidc-provider#oauth-consent)
 
 Table Name: `oauthConsent`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Database ID of the consent |
-| userId | string | FK | ID of the user who gave consent |
-| clientId | string | FK | ID of the OAuth client |
-| scopes | string | - | Comma-separated list of scopes consented to |
-| consentGiven | boolean | - | Indicates if consent was given |
-| createdAt | Date | - | Timestamp of when the consent was given |
-| updatedAt | Date | - | Timestamp of when the consent was last updated |
+| Field Name   | Type    | Key | Description                                    |
+| ------------ | ------- | --- | ---------------------------------------------- |
+| id           | string  | PK  | Database ID of the consent                     |
+| userId       | string  | FK  | ID of the user who gave consent                |
+| clientId     | string  | FK  | ID of the OAuth client                         |
+| scopes       | string  | -   | Comma-separated list of scopes consented to    |
+| consentGiven | boolean | -   | Indicates if consent was given                 |
+| createdAt    | Date    | -   | Timestamp of when the consent was given        |
+| updatedAt    | Date    | -   | Timestamp of when the consent was last updated |
 
-## [Options](https://www.better-auth.com/docs/plugins/oidc-provider\#options)
+## [Options](https://www.better-auth.com/docs/plugins/oidc-provider#options)
 
 **allowDynamicClientRegistration**: `boolean` \- Enable or disable dynamic client registration.
 

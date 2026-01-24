@@ -7,75 +7,71 @@ Copy markdown
 `generateSpeech` is an experimental feature.
 
 Generates speech audio from text.
-    
-    
+
     import { experimental_generateSpeech as generateSpeech } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
-    
-    
-    
+
+
+
+
     const { audio } = await generateSpeech({
-    
+
       model: openai.speech('tts-1'),
-    
+
       text: 'Hello from the AI SDK!',
-    
+
       voice: 'alloy',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(audio);
 
 ## Examples
 
 ### OpenAI
-    
-    
+
     import { experimental_generateSpeech as generateSpeech } from 'ai';
-    
+
     import { openai } from '@ai-sdk/openai';
-    
-    
-    
-    
+
+
+
+
     const { audio } = await generateSpeech({
-    
+
       model: openai.speech('tts-1'),
-    
+
       text: 'Hello from the AI SDK!',
-    
+
       voice: 'alloy',
-    
+
     });
 
 ### ElevenLabs
-    
-    
+
     import { experimental_generateSpeech as generateSpeech } from 'ai';
-    
+
     import { elevenlabs } from '@ai-sdk/elevenlabs';
-    
-    
-    
-    
+
+
+
+
     const { audio } = await generateSpeech({
-    
+
       model: elevenlabs.speech('eleven_multilingual_v2'),
-    
+
       text: 'Hello from the AI SDK!',
-    
+
       voice: 'your-voice-id', // Required: get this from your ElevenLabs account
-    
+
     });
 
 ## Import
-    
-    
+
     import { experimental_generateSpeech as generateSpeech } from "ai"
 
 ## API Signature

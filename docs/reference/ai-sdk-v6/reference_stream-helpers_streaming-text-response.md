@@ -9,8 +9,7 @@ Copy markdown
 It is a utility class that simplifies the process of returning a ReadableStream of text in HTTP responses. It is a lightweight wrapper around the native Response class, automatically setting the status code to 200 and the Content-Type header to 'text/plain; charset=utf-8'.
 
 ## Import
-    
-    
+
     import { StreamingTextResponse } from "ai"
 
 ## API Signature

@@ -25,22 +25,22 @@ This matters because the component manifest is already treated as “source of t
 ## Surprises & Discoveries
 
 - Observation: The repo contains two window type unions (`apps/web/src/store/desktop/types.ts` and `apps/web/src/store/desktop/types.new.ts`) that are both referenced from active code paths, so adding a new desktop window type must update both unless/until we consolidate.
-Evidence: `apps/web/src/components/windows/shared/window-frame.tsx` imports from `types.new`, while `apps/web/src/components/desktop/windows/registry.tsx` imports from `types`.
+  Evidence: `apps/web/src/components/windows/shared/window-frame.tsx` imports from `types.new`, while `apps/web/src/components/desktop/windows/registry.tsx` imports from `types`.
 - Observation: Some “manifest components” are implemented under `apps/web/src/components/ai-elements/*` (AI SDK Elements) and others under `apps/web/src/components/*` or `apps/web/src/components/ui/*`, so the plan needs a consistent rule for “where is the canonical implementation”.
-Evidence: `tool` is implemented as `apps/web/src/components/ai-elements/tool.tsx`, while `code` is `apps/web/src/components/code.tsx`.
+  Evidence: `tool` is implemented as `apps/web/src/components/ai-elements/tool.tsx`, while `code` is `apps/web/src/components/code.tsx`.
 - Discovery: Several components were missing root wrappers in `apps/web/src/components/`, causing inconsistent import paths in manifest usage proofs. Created wrappers for `tool`, `matrix`, `wave`, `msg`, `chat`, and `chatbar`.
 
 ## Decision Log
 
 - Decision: For this plan, “integrated” means “implemented + reachable via router demo + reachable via Desktop window demo”.
-Rationale: “Implemented” alone is not enough to prevent drift; wiring makes the component observable and verifiable in production UI.
-Date/Author: 2026-01-12 / Codex
-- Decision: Add a dedicated Desktop window (“Components”) as the hard guarantee that *every* manifest component is wired into the Desktop-Inspired UI system, even if we later also adopt them into more specialized apps.
-Rationale: This removes ambiguity and prevents future regressions where a component silently becomes unused.
-Date/Author: 2026-01-12 / Codex
+  Rationale: “Implemented” alone is not enough to prevent drift; wiring makes the component observable and verifiable in production UI.
+  Date/Author: 2026-01-12 / Codex
+- Decision: Add a dedicated Desktop window (“Components”) as the hard guarantee that _every_ manifest component is wired into the Desktop-Inspired UI system, even if we later also adopt them into more specialized apps.
+  Rationale: This removes ambiguity and prevents future regressions where a component silently becomes unused.
+  Date/Author: 2026-01-12 / Codex
 - Decision: Enforce root wrappers for all manifest components.
-Rationale: Simplifies the manifest usage tracking and provides a predictable entry point for consumers.
-Date/Author: 2026-01-12 / Codex
+  Rationale: Simplifies the manifest usage tracking and provides a predictable entry point for consumers.
+  Date/Author: 2026-01-12 / Codex
 
 ## Outcomes & Retrospective
 
@@ -91,13 +91,16 @@ To accomplish this:
 
 1. In `apps/web/src/components/manifest.ts`, document the contract near the `componentStatus` type comment.
 2. Extend `apps/web/src/components/__tests__/manifest.test.ts` to assert:
-  - zero `pending` components,
-  - zero `installed` components,
-  - and that every component has a “demo configuration” entry (see Milestone 3/4) so that “integrated” is not a social contract.
+
+- zero `pending` components,
+- zero `installed` components,
+- and that every component has a “demo configuration” entry (see Milestone 3/4) so that “integrated” is not a social contract.
+
 3. Decide and document the canonical file layout for a component:
-  - Wrapper: `apps/web/src/components/<name>.tsx` (single-word filename; existing camelCase names use kebab-case file names where they already do, e.g. `voice-btn.tsx`).
-  - UI primitive implementation (when non-trivial): `apps/web/src/components/ui/<name>.tsx`.
-  - AI SDK Elements exceptions: if the canonical implementation lives under `apps/web/src/components/ai-elements/<name>.tsx`, create a thin wrapper at `apps/web/src/components/<name>.tsx` that re-exports it so the manifest always has a predictable import path.
+
+- Wrapper: `apps/web/src/components/<name>.tsx` (single-word filename; existing camelCase names use kebab-case file names where they already do, e.g. `voice-btn.tsx`).
+- UI primitive implementation (when non-trivial): `apps/web/src/components/ui/<name>.tsx`.
+- AI SDK Elements exceptions: if the canonical implementation lives under `apps/web/src/components/ai-elements/<name>.tsx`, create a thin wrapper at `apps/web/src/components/<name>.tsx` that re-exports it so the manifest always has a predictable import path.
 
 Acceptance for Milestone 1:
 
@@ -161,17 +164,26 @@ At the end of this milestone, the Desktop shell can spawn a dedicated window tha
 Implementation steps:
 
 1. Add a new Desktop window type `"components"`:
-  - Update both `apps/web/src/store/desktop/types.ts` and `apps/web/src/store/desktop/types.new.ts` to include `"components"` in `WindowType`.
+
+- Update both `apps/web/src/store/desktop/types.ts` and `apps/web/src/store/desktop/types.new.ts` to include `"components"` in `WindowType`.
+
 2. Add a new desktop “app” module:
-  - Create `apps/web/src/components/apps/components/` with:
-    - `index.tsx` exporting `ComponentsApp` and `ComponentsAppWindow` (matching the pattern used by other apps in `apps/web/src/components/apps/*`).
-  - Add exports in `apps/web/src/components/apps/index.ts`.
+
+- Create `apps/web/src/components/apps/components/` with:
+  - `index.tsx` exporting `ComponentsApp` and `ComponentsAppWindow` (matching the pattern used by other apps in `apps/web/src/components/apps/*`).
+- Add exports in `apps/web/src/components/apps/index.ts`.
+
 3. Register the window in `apps/web/src/components/desktop/windows/registry.tsx`:
-  - Add an entry for `"components"` with reasonable defaults (size, tier, singleton).
+
+- Add an entry for `"components"` with reasonable defaults (size, tier, singleton).
+
 4. Add a default desktop icon in `apps/web/src/store/desktop/icons.ts`:
-  - Add `{ id: "icon-components", type: "components", position: … }`.
+
+- Add `{ id: "icon-components", type: "components", position: … }`.
+
 5. Ensure command palette can spawn it:
-  - Confirm the command palette lists spawnable window types via the registry and add a label/icon if needed.
+
+- Confirm the command palette lists spawnable window types via the registry and add a label/icon if needed.
 
 Acceptance for Milestone 4:
 
@@ -203,22 +215,22 @@ All commands in this plan are run from the repo root unless stated otherwise.
 
 Baseline commands (already available today):
 
-  cd apps/web
-  bun test src/components/**tests**/manifest.test.ts
-  bun run audit:components
+cd apps/web
+bun test src/components/**tests**/manifest.test.ts
+bun run audit:components
 
 During implementation, after each milestone:
 
-  cd apps/web
-  bun run typecheck
-  bun test
+cd apps/web
+bun run typecheck
+bun test
 
 To manually verify the Desktop wiring:
 
-  cd apps/web
-  bun run dev
-  Open [http://localhost:3001/](http://localhost:3001/) (authenticated session required)
-  Click the “Components” desktop icon and verify the window renders.
+cd apps/web
+bun run dev
+Open [http://localhost:3001/](http://localhost:3001/) (authenticated session required)
+Click the “Components” desktop icon and verify the window renders.
 
 ## Validation and Acceptance
 

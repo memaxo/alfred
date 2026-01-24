@@ -1,9 +1,10 @@
 ---
 title: Filter – Package manager | Bun Docs
-url: 
+url:
 description: Run scripts in multiple packages in parallel
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -56,17 +57,17 @@ The `--filter` (or `-F`) flag is used for selecting packages by pattern in a mon
 
 Currently `--filter` is supported by `bun install` and `bun outdated`, and can also be used to run scripts for multiple packages at once.
 
-## [Matching](https://bun.com/docs/cli/filter\#matching)
+## [Matching](https://bun.com/docs/cli/filter#matching)
 
-### [Package Name `--filter <pattern>`](https://bun.com/docs/cli/filter\#package-name-filter-pattern)
+### [Package Name `--filter <pattern>`](https://bun.com/docs/cli/filter#package-name-filter-pattern)
 
 Name patterns select packages based on the package name, as specified in `package.json`. For example, if you have packages `pkg-a`, `pkg-b` and `other`, you can match all packages with `*`, only `pkg-a` and `pkg-b` with `pkg*`, and a specific package by providing the full name of the package.
 
-### [Package Path `--filter ./<glob>`](https://bun.com/docs/cli/filter\#package-path-filter-glob)
+### [Package Path `--filter ./<glob>`](https://bun.com/docs/cli/filter#package-path-filter-glob)
 
 Path patterns are specified by starting the pattern with `./`, and will select all packages in directories that match the pattern. For example, to match all packages in subdirectories of `packages`, you can use `--filter './packages/**'`. To match a package located in `packages/foo`, use `--filter ./packages/foo`.
 
-## [`bun install` and `bun outdated`](https://bun.com/docs/cli/filter\#bun-install-and-bun-outdated)
+## [`bun install` and `bun outdated`](https://bun.com/docs/cli/filter#bun-install-and-bun-outdated)
 
 Both `bun install` and `bun outdated` support the `--filter` flag.
 
@@ -121,7 +122,7 @@ bun outdated --filter './'
 
 For more information on both these commands, see [`bun install`](https://bun.com/docs/cli/install) and [`bun outdated`](https://bun.com/docs/cli/outdated).
 
-## [Running scripts with `--filter`](https://bun.com/docs/cli/filter\#running-scripts-with-filter)
+## [Running scripts with `--filter`](https://bun.com/docs/cli/filter#running-scripts-with-filter)
 
 Use the `--filter` flag to execute scripts in multiple packages at once:
 
@@ -153,7 +154,7 @@ Both commands will be run in parallel, and you will see a nice terminal UI showi
 
 [![Terminal Output](https://github.com/oven-sh/bun/assets/48869301/2a103e42-9921-4c33-948f-a1ad6e6bac71)](https://github.com/oven-sh/bun/assets/48869301/2a103e42-9921-4c33-948f-a1ad6e6bac71)
 
-### [Running scripts in workspaces](https://bun.com/docs/cli/filter\#running-scripts-in-workspaces)
+### [Running scripts in workspaces](https://bun.com/docs/cli/filter#running-scripts-in-workspaces)
 
 Filters respect your [workspace configuration](https://bun.com/docs/install/workspaces): If you have a `package.json` file that specifies which packages are part of the workspace, `--filter` will be restricted to only these packages. Also, in a workspace you can use `--filter` to run scripts in packages that are located anywhere in the workspace:
 
@@ -167,7 +168,7 @@ bun run --filter foo myscript
 
 ```
 
-### [Dependency Order](https://bun.com/docs/cli/filter\#dependency-order)
+### [Dependency Order](https://bun.com/docs/cli/filter#dependency-order)
 
 Bun will respect package dependency order when running scripts. Say you have a package `foo` that depends on another package `bar` in your workspace, and both packages have a `build` script. When you run `bun --filter '*' build`, you will notice that `foo` will only start running once `bar` is done.
 
@@ -177,7 +178,7 @@ Lifecycle scripts](https://bun.com/docs/install/lifecycle) [Next\\
 \\
 Lockfile](https://bun.com/docs/install/lockfile)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/filter.md)
 
@@ -201,7 +202,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

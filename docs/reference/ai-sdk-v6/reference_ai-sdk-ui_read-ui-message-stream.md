@@ -9,8 +9,7 @@ Transforms a stream of `UIMessageChunk`s into an `AsyncIterableStream` of `UIMes
 UI message streams are useful outside of Chat use cases, e.g. for terminal UIs, custom stream consumption on the client, or RSC (React Server Components).
 
 ## Import
-    
-    
+
     import { readUIMessageStream } from 'ai';
 
 ## API Signature

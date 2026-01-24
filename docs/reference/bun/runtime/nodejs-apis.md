@@ -1,9 +1,10 @@
 ---
 title: Node.js compatibility – Runtime | Bun Docs
-url: 
+url:
 description: Bun aims for full Node.js compatibility. This page tracks the current compatibility status.
 language: en
 ---
+
 Search`` `K`
 
 Intro
@@ -54,7 +55,7 @@ Every day, Bun gets closer to 100% Node.js API compatibility. Today, popular fra
 
 This page is updated regularly to reflect compatibility status of the latest version of Bun. The information below reflects Bun's compatibility with _Node.js v23_.
 
-## [Built-in Node.js modules](https://bun.com/docs/runtime/nodejs-apis\#built-in-node-js-modules)
+## [Built-in Node.js modules](https://bun.com/docs/runtime/nodejs-apis#built-in-node-js-modules)
 
 ### [`node:assert`](https://nodejs.org/api/assert.html)
 
@@ -228,7 +229,7 @@ This page is updated regularly to reflect compatibility status of the latest ver
 
 🔴 Not implemented.
 
-## [Node.js globals](https://bun.com/docs/runtime/nodejs-apis\#node-js-globals)
+## [Node.js globals](https://bun.com/docs/runtime/nodejs-apis#node-js-globals)
 
 The table below lists all globals implemented by Node.js and Bun's current compatibility status.
 
@@ -244,7 +245,7 @@ The table below lists all globals implemented by Node.js and Bun's current compa
 
 🟢 Fully implemented.
 
-### [`Buffer`](https://nodejs.org/api/buffer.html\#class-buffer)
+### [`Buffer`](https://nodejs.org/api/buffer.html#class-buffer)
 
 🟢 Fully implemented.
 
@@ -252,11 +253,11 @@ The table below lists all globals implemented by Node.js and Bun's current compa
 
 🟢 Fully implemented.
 
-### [`__dirname`](https://nodejs.org/api/globals.html\#__dirname)
+### [`__dirname`](https://nodejs.org/api/globals.html#__dirname)
 
 🟢 Fully implemented.
 
-### [`__filename`](https://nodejs.org/api/globals.html\#__filename)
+### [`__filename`](https://nodejs.org/api/globals.html#__filename)
 
 🟢 Fully implemented.
 
@@ -328,7 +329,7 @@ The table below lists all globals implemented by Node.js and Bun's current compa
 
 🟢 Fully implemented.
 
-### [`exports`](https://nodejs.org/api/globals.html\#exports)
+### [`exports`](https://nodejs.org/api/globals.html#exports)
 
 🟢 Fully implemented.
 
@@ -340,7 +341,7 @@ The table below lists all globals implemented by Node.js and Bun's current compa
 
 🟢 Fully implemented.
 
-### [`global`](https://nodejs.org/api/globals.html\#global)
+### [`global`](https://nodejs.org/api/globals.html#global)
 
 🟢 Implemented. This is an object containing all objects in the global namespace. It's rarely referenced directly, as its contents are available without an additional prefix, e.g. `__dirname` instead of `global.__dirname`.
 
@@ -364,7 +365,7 @@ The table below lists all globals implemented by Node.js and Bun's current compa
 
 🟢 Fully implemented.
 
-### [`module`](https://nodejs.org/api/globals.html\#module)
+### [`module`](https://nodejs.org/api/globals.html#module)
 
 🟢 Fully implemented.
 
@@ -428,7 +429,7 @@ The table below lists all globals implemented by Node.js and Bun's current compa
 
 🟢 Fully implemented.
 
-### [`require()`](https://nodejs.org/api/globals.html\#require)
+### [`require()`](https://nodejs.org/api/globals.html#require)
 
 🟢 Fully implemented, including [`require.main`](https://nodejs.org/api/modules.html#requiremain), [`require.cache`](https://nodejs.org/api/modules.html#requirecache), [`require.resolve`](https://nodejs.org/api/modules.html#requireresolverequest-options).
 
@@ -496,7 +497,7 @@ The table below lists all globals implemented by Node.js and Bun's current compa
 
 🟢 Fully implemented.
 
-### [`WebAssembly`](https://nodejs.org/api/globals.html\#webassembly)
+### [`WebAssembly`](https://nodejs.org/api/globals.html#webassembly)
 
 🟢 Fully implemented.
 
@@ -518,6 +519,6 @@ Web APIs](https://bun.com/docs/runtime/web-apis) [Next\\
 \\
 Single-file executable](https://bun.com/docs/bundler/executables)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/runtime/nodejs-apis.md)

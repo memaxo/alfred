@@ -9,6 +9,7 @@
 ## Executive Summary
 
 ALFRED already has the foundation for MCP OAuth integration:
+
 - ✅ OIDC Provider plugin configured (`packages/auth/src/index.ts`)
 - ✅ Device Authorization flow implemented
 - ✅ Well-known endpoints exist (`/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource`)
@@ -16,6 +17,7 @@ ALFRED already has the foundation for MCP OAuth integration:
 - ✅ Basic scopes defined (`openid`, `profile`, `email`, `read:*`, `write:*`, `admin:*`)
 
 Phase 6 focuses on:
+
 1. Defining granular MCP-specific scopes
 2. Registering trusted AI clients (Cursor, Claude)
 3. Testing the complete authentication flow
@@ -48,11 +50,11 @@ The MCP specification mandates OAuth 2.1 with the following requirements:
 
 ### MCP Client Types
 
-| Client Type | Description | Auth Method |
-|-------------|-------------|-------------|
-| **Public** | CLI tools, desktop apps | PKCE, no secret |
-| **Confidential** | Server-side integrations | client_secret + PKCE |
-| **Trusted** | First-party tools (Cursor, Claude) | Pre-registered, skipConsent |
+| Client Type      | Description                        | Auth Method                 |
+| ---------------- | ---------------------------------- | --------------------------- |
+| **Public**       | CLI tools, desktop apps            | PKCE, no secret             |
+| **Confidential** | Server-side integrations           | client_secret + PKCE        |
+| **Trusted**      | First-party tools (Cursor, Claude) | Pre-registered, skipConsent |
 
 ---
 
@@ -76,7 +78,7 @@ oidcProvider({
       "admin:*",
     ],
   },
-})
+});
 ```
 
 ### Recommended MCP Client Registration
@@ -91,10 +93,7 @@ oidcProvider({
       clientSecret: process.env.CURSOR_CLIENT_SECRET,
       name: "Cursor IDE",
       type: "confidential",
-      redirectURLs: [
-        "http://localhost:*/callback",
-        "cursor://callback",
-      ],
+      redirectURLs: ["http://localhost:*/callback", "cursor://callback"],
       skipConsent: true, // Trust Cursor
       metadata: { provider: "cursor" },
     },
@@ -103,10 +102,7 @@ oidcProvider({
       clientSecret: process.env.CLAUDE_CLIENT_SECRET,
       name: "Claude Desktop",
       type: "confidential",
-      redirectURLs: [
-        "http://localhost:*/callback",
-        "claude://callback",
-      ],
+      redirectURLs: ["http://localhost:*/callback", "claude://callback"],
       skipConsent: true, // Trust Claude
       metadata: { provider: "anthropic" },
     },
@@ -143,7 +139,7 @@ oidcProvider({
       "admin:deploy",
     ],
   },
-})
+});
 ```
 
 ---
@@ -177,17 +173,17 @@ admin:*         → Administrative operations (require biometric)
 
 ### Scope-to-Router Mapping
 
-| Scope | Router | Procedures |
-|-------|--------|------------|
-| `read:todos` | `todo` | `list`, `get` |
-| `write:todos` | `todo` | `create`, `update`, `delete`, `complete` |
-| `read:notes` | `note` | `list`, `get` |
-| `write:notes` | `note` | `create`, `update`, `delete` |
-| `read:knowledge` | `knowledge` | `visualize`, `stats` |
-| `write:knowledge` | `knowledge` | `ingest`, `create` |
-| `read:cognitive` | `cognitive` | `state`, `history` |
-| `admin:voice` | `admin` | `getVoiceStats`, `restartVoicePool` |
-| `admin:workflow` | `workflow` | `cancel`, `restart` |
+| Scope             | Router      | Procedures                               |
+| ----------------- | ----------- | ---------------------------------------- |
+| `read:todos`      | `todo`      | `list`, `get`                            |
+| `write:todos`     | `todo`      | `create`, `update`, `delete`, `complete` |
+| `read:notes`      | `note`      | `list`, `get`                            |
+| `write:notes`     | `note`      | `create`, `update`, `delete`             |
+| `read:knowledge`  | `knowledge` | `visualize`, `stats`                     |
+| `write:knowledge` | `knowledge` | `ingest`, `create`                       |
+| `read:cognitive`  | `cognitive` | `state`, `history`                       |
+| `admin:voice`     | `admin`     | `getVoiceStats`, `restartVoicePool`      |
+| `admin:workflow`  | `workflow`  | `cancel`, `restart`                      |
 
 ---
 
@@ -210,6 +206,7 @@ admin:*         → Administrative operations (require biometric)
 ### Phase 6.3: Resource Server Endpoints (Day 3)
 
 Better Auth handles these automatically, but verify:
+
 - [ ] `/api/auth/oauth2/introspect` - Token introspection (RFC 7662)
 - [ ] `/api/auth/oauth2/revoke` - Token revocation (RFC 7009)
 - [ ] Test introspection response format
@@ -297,7 +294,7 @@ Better Auth handles these automatically, but verify:
 export function requireScopes(...scopes: string[]) {
   return middleware(async ({ ctx, next }) => {
     const tokenScopes = ctx.session?.scopes ?? [];
-    
+
     for (const required of scopes) {
       if (!hasScope(tokenScopes, required)) {
         throw new TRPCError({
@@ -306,7 +303,7 @@ export function requireScopes(...scopes: string[]) {
         });
       }
     }
-    
+
     return next();
   });
 }
@@ -315,11 +312,11 @@ export function requireScopes(...scopes: string[]) {
 function hasScope(granted: string[], required: string): boolean {
   // Direct match
   if (granted.includes(required)) return true;
-  
+
   // Wildcard match (read:* covers read:todos)
   const [action] = required.split(":");
   if (granted.includes(`${action}:*`)) return true;
-  
+
   return false;
 }
 ```
@@ -327,6 +324,7 @@ function hasScope(granted: string[], required: string): boolean {
 ### 2. Admin Scope + Biometric
 
 Admin scopes (`admin:*`) require both:
+
 1. Valid access token with `admin:*` scope
 2. Recent biometric verification (`requireRecentBiometric`)
 
@@ -351,6 +349,7 @@ token=<access_token>
 ```
 
 Response:
+
 ```json
 {
   "active": true,
@@ -384,13 +383,13 @@ describe("Scope Resolution", () => {
 async function testMCPAuth() {
   // 1. Fetch metadata
   const metadata = await fetch("/.well-known/oauth-protected-resource").json();
-  
+
   // 2. Request device code
   const deviceCode = await auth.oauth2.requestDeviceCode({
     client_id: "test-client",
     scope: "openid read:todos",
   });
-  
+
   // 3. Simulate user approval
   // 4. Exchange for token
   // 5. Call protected endpoint

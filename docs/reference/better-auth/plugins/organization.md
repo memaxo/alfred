@@ -1,9 +1,10 @@
 ---
 title: Organization | Better Auth
-url: 
+url:
 description: The organization plugin allows you to manage your organization's members and teams.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 Organizations simplifies user access and permissions management. Assign roles and permissions to streamline project management, team coordination, and partnerships.
 
-## [Installation](https://www.better-auth.com/docs/plugins/organization\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/organization#installation)
 
-### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/organization\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your **auth** config](https://www.better-auth.com/docs/plugins/organization#add-the-plugin-to-your-auth-config)
 
 auth.ts
 
@@ -45,7 +46,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Migrate the database](https://www.better-auth.com/docs/plugins/organization\#migrate-the-database)
+### [Migrate the database](https://www.better-auth.com/docs/plugins/organization#migrate-the-database)
 
 Run the migration or generate the schema to add the necessary fields and tables to the database.
 
@@ -61,7 +62,7 @@ npx @better-auth/cli generate
 
 See the [Schema](https://www.better-auth.com/docs/plugins/organization#schema) section to add the fields manually.
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/organization\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/organization#add-the-client-plugin)
 
 auth-client.ts
 
@@ -76,13 +77,13 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/organization\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/organization#usage)
 
 Once you've installed the plugin, you can start using the organization plugin to manage your organization's members and teams. The client plugin will provide you with methods under the `organization` namespace, and the server `api` will provide you with the necessary endpoints to manage your organization and give you an easier way to call the functions on your own backend.
 
-## [Organization](https://www.better-auth.com/docs/plugins/organization\#organization)
+## [Organization](https://www.better-auth.com/docs/plugins/organization#organization)
 
-### [Create an organization](https://www.better-auth.com/docs/plugins/organization\#create-an-organization)
+### [Create an organization](https://www.better-auth.com/docs/plugins/organization#create-an-organization)
 
 ClientServer
 
@@ -94,13 +95,13 @@ POST
 const metadata = { someKey: "someValue" };const { data, error } = await authClient.organization.create({    name: "My Organization", // required    slug: "my-org", // required    logo: "https://example.com/logo.png",    metadata,    keepCurrentActiveOrganization: false,});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name` | The organization name. | `string` |
-| `slug` | The organization slug. | `string` |
-| `logo?` | The organization logo. | `string` |
-| `metadata?` | The metadata of the organization. | `Record<string, any>` |
-| `keepCurrentActiveOrganization?` | Whether to keep the current active organization active after creating a new one. | `boolean` |
+| Prop                             | Description                                                                      | Type                  |
+| -------------------------------- | -------------------------------------------------------------------------------- | --------------------- |
+| `name`                           | The organization name.                                                           | `string`              |
+| `slug`                           | The organization slug.                                                           | `string`              |
+| `logo?`                          | The organization logo.                                                           | `string`              |
+| `metadata?`                      | The metadata of the organization.                                                | `Record<string, any>` |
+| `keepCurrentActiveOrganization?` | Whether to keep the current active organization active after creating a new one. | `boolean`             |
 
 POST
 
@@ -110,16 +111,16 @@ POST
 const metadata = { someKey: "someValue" };const data = await auth.api.createOrganization({    body: {        name: "My Organization", // required        slug: "my-org", // required        logo: "https://example.com/logo.png",        metadata,        userId: "some_user_id", // server-only        keepCurrentActiveOrganization: false,    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name` | The organization name. | `string` |
-| `slug` | The organization slug. | `string` |
-| `logo?` | The organization logo. | `string` |
-| `metadata?` | The metadata of the organization. | `Record<string, any>` |
-| `userId?`(server-only) | The user ID of the organization creator. If not provided, the current user will be used. Should only be used by admins or when called by the server. | `string` |
-| `keepCurrentActiveOrganization?` | Whether to keep the current active organization active after creating a new one. | `boolean` |
+| Prop                             | Description                                                                                                                                          | Type                  |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `name`                           | The organization name.                                                                                                                               | `string`              |
+| `slug`                           | The organization slug.                                                                                                                               | `string`              |
+| `logo?`                          | The organization logo.                                                                                                                               | `string`              |
+| `metadata?`                      | The metadata of the organization.                                                                                                                    | `Record<string, any>` |
+| `userId?`(server-only)           | The user ID of the organization creator. If not provided, the current user will be used. Should only be used by admins or when called by the server. | `string`              |
+| `keepCurrentActiveOrganization?` | Whether to keep the current active organization active after creating a new one.                                                                     | `boolean`             |
 
-#### [Restrict who can create an organization](https://www.better-auth.com/docs/plugins/organization\#restrict-who-can-create-an-organization)
+#### [Restrict who can create an organization](https://www.better-auth.com/docs/plugins/organization#restrict-who-can-create-an-organization)
 
 By default, any user can create an organization. To restrict this, set the `allowUserToCreateOrganization` option to a function that returns a boolean, or directly to `true` or `false`.
 
@@ -142,7 +143,7 @@ const auth = betterAuth({
 });
 ```
 
-#### [Check if organization slug is taken](https://www.better-auth.com/docs/plugins/organization\#check-if-organization-slug-is-taken)
+#### [Check if organization slug is taken](https://www.better-auth.com/docs/plugins/organization#check-if-organization-slug-is-taken)
 
 To check if an organization slug is taken or not you can use the `checkSlug` function provided by the client. The function takes an object with the following properties:
 
@@ -156,8 +157,8 @@ POST
 const { data, error } = await authClient.organization.checkSlug({    slug: "my-org", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop   | Description                     | Type     |
+| ------ | ------------------------------- | -------- |
 | `slug` | The organization slug to check. | `string` |
 
 POST
@@ -168,18 +169,18 @@ POST
 const data = await auth.api.checkOrganizationSlug({    body: {        slug: "my-org", // required    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop   | Description                     | Type     |
+| ------ | ------------------------------- | -------- |
 | `slug` | The organization slug to check. | `string` |
 
-### [Organization Hooks](https://www.better-auth.com/docs/plugins/organization\#organization-hooks)
+### [Organization Hooks](https://www.better-auth.com/docs/plugins/organization#organization-hooks)
 
 You can customize organization operations using hooks that run before and after various organization-related activities. Better Auth provides two ways to configure hooks:
 
 1. **Legacy organizationCreation hooks** (deprecated, use `organizationHooks` instead)
 2. **Modern organizationHooks** (recommended) - provides comprehensive control over all organization-related activities
 
-#### [Organization Creation and Management Hooks](https://www.better-auth.com/docs/plugins/organization\#organization-creation-and-management-hooks)
+#### [Organization Creation and Management Hooks](https://www.better-auth.com/docs/plugins/organization#organization-creation-and-management-hooks)
 
 Control organization lifecycle operations:
 
@@ -238,7 +239,7 @@ The legacy `organizationCreation` hooks are still supported but deprecated.
 Use `organizationHooks.beforeCreateOrganization` and
 `organizationHooks.afterCreateOrganization` instead for new projects.
 
-#### [Member Hooks](https://www.better-auth.com/docs/plugins/organization\#member-hooks)
+#### [Member Hooks](https://www.better-auth.com/docs/plugins/organization#member-hooks)
 
 Control member operations within organizations:
 
@@ -318,7 +319,7 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Invitation Hooks](https://www.better-auth.com/docs/plugins/organization\#invitation-hooks)
+#### [Invitation Hooks](https://www.better-auth.com/docs/plugins/organization#invitation-hooks)
 
 Control invitation lifecycle:
 
@@ -406,7 +407,7 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Team Hooks](https://www.better-auth.com/docs/plugins/organization\#team-hooks)
+#### [Team Hooks](https://www.better-auth.com/docs/plugins/organization#team-hooks)
 
 Control team operations (when teams are enabled):
 
@@ -509,7 +510,7 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Hook Error Handling](https://www.better-auth.com/docs/plugins/organization\#hook-error-handling)
+#### [Hook Error Handling](https://www.better-auth.com/docs/plugins/organization#hook-error-handling)
 
 All hooks support error handling. Throwing an error in a `before` hook will prevent the operation from proceeding:
 
@@ -548,7 +549,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [List User's Organizations](https://www.better-auth.com/docs/plugins/organization\#list-users-organizations)
+### [List User's Organizations](https://www.better-auth.com/docs/plugins/organization#list-users-organizations)
 
 To list the organizations that a user is a member of, you can use `useListOrganizations` hook. It implements a reactive way to get the organizations that the user is a member of.
 
@@ -640,7 +641,7 @@ GET
 const data = await auth.api.listOrganizations({    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-### [Active Organization](https://www.better-auth.com/docs/plugins/organization\#active-organization)
+### [Active Organization](https://www.better-auth.com/docs/plugins/organization#active-organization)
 
 Active organization is the workspace the user is currently working on. By default when the user is signed in the active organization is set to `null`. You can set the active organization to the user session.
 
@@ -648,7 +649,7 @@ It's not always you want to persist the active organization in the session.
 You can manage the active organization in the client side only. For example,
 multiple tabs can have different active organizations.
 
-#### [Set Active Organization](https://www.better-auth.com/docs/plugins/organization\#set-active-organization)
+#### [Set Active Organization](https://www.better-auth.com/docs/plugins/organization#set-active-organization)
 
 You can set the active organization by calling the `organization.setActive` function. It'll set the active organization for the user session.
 
@@ -666,9 +667,9 @@ POST
 const { data, error } = await authClient.organization.setActive({    organizationId: "org-id",    organizationSlug: "org-slug",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `organizationId?` | The organization ID to set as active. It can be null to unset the active organization. | `string | null` |
+| Prop                | Description                                                                                                                | Type     |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ----- |
+| `organizationId?`   | The organization ID to set as active. It can be null to unset the active organization.                                     | `string  | null` |
 | `organizationSlug?` | The organization slug to set as active. It can be null to unset the active organization if organizationId is not provided. | `string` |
 
 POST
@@ -679,9 +680,9 @@ POST
 const data = await auth.api.setActiveOrganization({    body: {        organizationId: "org-id",        organizationSlug: "org-slug",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `organizationId?` | The organization ID to set as active. It can be null to unset the active organization. | `string | null` |
+| Prop                | Description                                                                                                                | Type     |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ----- |
+| `organizationId?`   | The organization ID to set as active. It can be null to unset the active organization.                                     | `string  | null` |
 | `organizationSlug?` | The organization slug to set as active. It can be null to unset the active organization if organizationId is not provided. | `string` |
 
 To set active organization when a session is created you can use [database hooks](https://www.better-auth.com/docs/concepts/database#database-hooks).
@@ -708,7 +709,7 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Use Active Organization](https://www.better-auth.com/docs/plugins/organization\#use-active-organization)
+#### [Use Active Organization](https://www.better-auth.com/docs/plugins/organization#use-active-organization)
 
 To retrieve the active organization for the user, you can call the `useActiveOrganization` hook. It returns the active organization for the user. Whenever the active organization changes, the hook will re-evaluate and return the new active organization.
 
@@ -772,7 +773,7 @@ export default {
 </template>
 ```
 
-### [Get Full Organization](https://www.better-auth.com/docs/plugins/organization\#get-full-organization)
+### [Get Full Organization](https://www.better-auth.com/docs/plugins/organization#get-full-organization)
 
 To get the full details of an organization, you can use the `getFullOrganization` function.
 By default, if you don't pass any properties, it will use the active organization.
@@ -787,11 +788,11 @@ GET
 const { data, error } = await authClient.organization.getFullOrganization({    organizationId: "org-id",    organizationSlug: "org-slug",    membersLimit: 100,});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `organizationId?` | The organization ID to get. By default, it will use the active organization. | `string` |
-| `organizationSlug?` | The organization slug to get. | `string` |
-| `membersLimit?` | The limit of members to get. By default, it uses the membershipLimit option which defaults to 100. | `number` |
+| Prop                | Description                                                                                        | Type     |
+| ------------------- | -------------------------------------------------------------------------------------------------- | -------- |
+| `organizationId?`   | The organization ID to get. By default, it will use the active organization.                       | `string` |
+| `organizationSlug?` | The organization slug to get.                                                                      | `string` |
+| `membersLimit?`     | The limit of members to get. By default, it uses the membershipLimit option which defaults to 100. | `number` |
 
 GET
 
@@ -801,13 +802,13 @@ GET
 const data = await auth.api.getFullOrganization({    query: {        organizationId: "org-id",        organizationSlug: "org-slug",        membersLimit: 100,    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `organizationId?` | The organization ID to get. By default, it will use the active organization. | `string` |
-| `organizationSlug?` | The organization slug to get. | `string` |
-| `membersLimit?` | The limit of members to get. By default, it uses the membershipLimit option which defaults to 100. | `number` |
+| Prop                | Description                                                                                        | Type     |
+| ------------------- | -------------------------------------------------------------------------------------------------- | -------- |
+| `organizationId?`   | The organization ID to get. By default, it will use the active organization.                       | `string` |
+| `organizationSlug?` | The organization slug to get.                                                                      | `string` |
+| `membersLimit?`     | The limit of members to get. By default, it uses the membershipLimit option which defaults to 100. | `number` |
 
-### [Update Organization](https://www.better-auth.com/docs/plugins/organization\#update-organization)
+### [Update Organization](https://www.better-auth.com/docs/plugins/organization#update-organization)
 
 To update organization info, you can use `organization.update`
 
@@ -821,14 +822,14 @@ POST
 const { data, error } = await authClient.organization.update({    data: { // required        name: "updated-name",        slug: "updated-slug",        logo: "new-logo.url",        metadata: { customerId: "test" },    },    organizationId: "org-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `data` | A partial list of data to update the organization. | `Object` |
-| `data.name?` | The name of the organization. | `string` |
-| `data.slug?` | The slug of the organization. | `string` |
-| `data.logo?` | The logo of the organization. | `string` |
-| `data.metadata?` | The metadata of the organization. | `Record<string, any> | null` |
-| `organizationId?` | The organization ID. to update. | `string` |
+| Prop              | Description                                        | Type                 |
+| ----------------- | -------------------------------------------------- | -------------------- | ----- |
+| `data`            | A partial list of data to update the organization. | `Object`             |
+| `data.name?`      | The name of the organization.                      | `string`             |
+| `data.slug?`      | The slug of the organization.                      | `string`             |
+| `data.logo?`      | The logo of the organization.                      | `string`             |
+| `data.metadata?`  | The metadata of the organization.                  | `Record<string, any> | null` |
+| `organizationId?` | The organization ID. to update.                    | `string`             |
 
 POST
 
@@ -838,16 +839,16 @@ POST
 const data = await auth.api.updateOrganization({    body: {        data: { // required            name: "updated-name",            slug: "updated-slug",            logo: "new-logo.url",            metadata: { customerId: "test" },        },        organizationId: "org-id",    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `data` | A partial list of data to update the organization. | `Object` |
-| `data.name?` | The name of the organization. | `string` |
-| `data.slug?` | The slug of the organization. | `string` |
-| `data.logo?` | The logo of the organization. | `string` |
-| `data.metadata?` | The metadata of the organization. | `Record<string, any> | null` |
-| `organizationId?` | The organization ID. to update. | `string` |
+| Prop              | Description                                        | Type                 |
+| ----------------- | -------------------------------------------------- | -------------------- | ----- |
+| `data`            | A partial list of data to update the organization. | `Object`             |
+| `data.name?`      | The name of the organization.                      | `string`             |
+| `data.slug?`      | The slug of the organization.                      | `string`             |
+| `data.logo?`      | The logo of the organization.                      | `string`             |
+| `data.metadata?`  | The metadata of the organization.                  | `Record<string, any> | null` |
+| `organizationId?` | The organization ID. to update.                    | `string`             |
 
-### [Delete Organization](https://www.better-auth.com/docs/plugins/organization\#delete-organization)
+### [Delete Organization](https://www.better-auth.com/docs/plugins/organization#delete-organization)
 
 To remove user owned organization, you can use `organization.delete`
 
@@ -861,8 +862,8 @@ POST
 const { data, error } = await authClient.organization.delete({    organizationId: "org-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop             | Description                    | Type     |
+| ---------------- | ------------------------------ | -------- |
 | `organizationId` | The organization ID to delete. | `string` |
 
 POST
@@ -873,8 +874,8 @@ POST
 const data = await auth.api.deleteOrganization({    body: {        organizationId: "org-id", // required    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop             | Description                    | Type     |
+| ---------------- | ------------------------------ | -------- |
 | `organizationId` | The organization ID to delete. | `string` |
 
 If the user has the necessary permissions (by default: role is owner) in the specified organization, all members, invitations and organization information will be removed.
@@ -899,11 +900,11 @@ const auth = betterAuth({
 });
 ```
 
-## [Invitations](https://www.better-auth.com/docs/plugins/organization\#invitations)
+## [Invitations](https://www.better-auth.com/docs/plugins/organization#invitations)
 
 To add a member to an organization, we first need to send an invitation to the user. The user will receive an email/sms with the invitation link. Once the user accepts the invitation, they will be added to the organization.
 
-### [Setup Invitation Email](https://www.better-auth.com/docs/plugins/organization\#setup-invitation-email)
+### [Setup Invitation Email](https://www.better-auth.com/docs/plugins/organization#setup-invitation-email)
 
 For member invitation to work we first need to provide `sendInvitationEmail` to the `better-auth` instance. This function is responsible for sending the invitation email to the user.
 
@@ -933,7 +934,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Send Invitation](https://www.better-auth.com/docs/plugins/organization\#send-invitation)
+### [Send Invitation](https://www.better-auth.com/docs/plugins/organization#send-invitation)
 
 To invite users to an organization, you can use the `invite` function provided by the client. The `invite` function takes an object with the following properties:
 
@@ -947,13 +948,13 @@ POST
 const { data, error } = await authClient.organization.inviteMember({    email: "example@gmail.com", // required    role: "member", // required    organizationId: "org-id",    resend: true,    teamId: "team-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email address of the user to invite. | `string` |
-| `role` | The role(s) to assign to the user. It can be `admin`, `member`, or `guest`. | `string | string[]` |
-| `organizationId?` | The organization ID to invite the user to. Defaults to the active organization. | `string` |
-| `resend?` | Resend the invitation email, if the user is already invited. | `boolean` |
-| `teamId?` | The team ID to invite the user to. | `string` |
+| Prop              | Description                                                                     | Type      |
+| ----------------- | ------------------------------------------------------------------------------- | --------- | --------- |
+| `email`           | The email address of the user to invite.                                        | `string`  |
+| `role`            | The role(s) to assign to the user. It can be `admin`, `member`, or `guest`.     | `string   | string[]` |
+| `organizationId?` | The organization ID to invite the user to. Defaults to the active organization. | `string`  |
+| `resend?`         | Resend the invitation email, if the user is already invited.                    | `boolean` |
+| `teamId?`         | The team ID to invite the user to.                                              | `string`  |
 
 POST
 
@@ -963,22 +964,22 @@ POST
 const data = await auth.api.createInvitation({    body: {        email: "example@gmail.com", // required        role: "member", // required        organizationId: "org-id",        resend: true,        teamId: "team-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `email` | The email address of the user to invite. | `string` |
-| `role` | The role(s) to assign to the user. It can be `admin`, `member`, or `guest`. | `string | string[]` |
-| `organizationId?` | The organization ID to invite the user to. Defaults to the active organization. | `string` |
-| `resend?` | Resend the invitation email, if the user is already invited. | `boolean` |
-| `teamId?` | The team ID to invite the user to. | `string` |
+| Prop              | Description                                                                     | Type      |
+| ----------------- | ------------------------------------------------------------------------------- | --------- | --------- |
+| `email`           | The email address of the user to invite.                                        | `string`  |
+| `role`            | The role(s) to assign to the user. It can be `admin`, `member`, or `guest`.     | `string   | string[]` |
+| `organizationId?` | The organization ID to invite the user to. Defaults to the active organization. | `string`  |
+| `resend?`         | Resend the invitation email, if the user is already invited.                    | `boolean` |
+| `teamId?`         | The team ID to invite the user to.                                              | `string`  |
 
 - If the user is already a member of the organization, the invitation will be
-canceled. - If the user is already invited to the organization, unless
-`resend` is set to `true`, the invitation will not be sent again. - If
-`cancelPendingInvitationsOnReInvite` is set to `true`, the invitation will be
-canceled if the user is already invited to the organization and a new
-invitation is sent.
+  canceled. - If the user is already invited to the organization, unless
+  `resend` is set to `true`, the invitation will not be sent again. - If
+  `cancelPendingInvitationsOnReInvite` is set to `true`, the invitation will be
+  canceled if the user is already invited to the organization and a new
+  invitation is sent.
 
-### [Accept Invitation](https://www.better-auth.com/docs/plugins/organization\#accept-invitation)
+### [Accept Invitation](https://www.better-auth.com/docs/plugins/organization#accept-invitation)
 
 When a user receives an invitation email, they can click on the invitation link to accept the invitation. The invitation link should include the invitation ID, which will be used to accept the invitation.
 
@@ -994,8 +995,8 @@ POST
 const { data, error } = await authClient.organization.acceptInvitation({    invitationId: "invitation-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `invitationId` | The ID of the invitation to accept. | `string` |
 
 POST
@@ -1006,11 +1007,11 @@ POST
 const data = await auth.api.acceptInvitation({    body: {        invitationId: "invitation-id", // required    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `invitationId` | The ID of the invitation to accept. | `string` |
 
-#### [Email Verification Requirement](https://www.better-auth.com/docs/plugins/organization\#email-verification-requirement)
+#### [Email Verification Requirement](https://www.better-auth.com/docs/plugins/organization#email-verification-requirement)
 
 If the `requireEmailVerificationOnInvitation` option is enabled in your organization configuration, users must verify their email address before they can accept invitations. This adds an extra security layer to ensure that only verified users can join your organization.
 
@@ -1032,7 +1033,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Invitation Accepted Callback](https://www.better-auth.com/docs/plugins/organization\#invitation-accepted-callback)
+### [Invitation Accepted Callback](https://www.better-auth.com/docs/plugins/organization#invitation-accepted-callback)
 
 You can configure Better Auth to execute a callback function when an invitation is accepted. This is useful for logging events, updating analytics, sending notifications, or any other custom logic you need to run when someone joins your organization.
 
@@ -1065,7 +1066,7 @@ The callback receives the following data:
 - `inviter`: The member who sent the invitation (including user details)
 - `acceptedUser`: The user who accepted the invitation
 
-### [Cancel Invitation](https://www.better-auth.com/docs/plugins/organization\#cancel-invitation)
+### [Cancel Invitation](https://www.better-auth.com/docs/plugins/organization#cancel-invitation)
 
 If a user has sent out an invitation, you can use this method to cancel it.
 
@@ -1081,8 +1082,8 @@ POST
 await authClient.organization.cancelInvitation({    invitationId: "invitation-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `invitationId` | The ID of the invitation to cancel. | `string` |
 
 POST
@@ -1093,11 +1094,11 @@ POST
 await auth.api.cancelInvitation({    body: {        invitationId: "invitation-id", // required    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `invitationId` | The ID of the invitation to cancel. | `string` |
 
-### [Reject Invitation](https://www.better-auth.com/docs/plugins/organization\#reject-invitation)
+### [Reject Invitation](https://www.better-auth.com/docs/plugins/organization#reject-invitation)
 
 If this user has received an invitation, but wants to decline it, this method will allow you to do so by rejecting it.
 
@@ -1111,8 +1112,8 @@ POST
 await authClient.organization.rejectInvitation({    invitationId: "invitation-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `invitationId` | The ID of the invitation to reject. | `string` |
 
 POST
@@ -1123,8 +1124,8 @@ POST
 await auth.api.rejectInvitation({    body: {        invitationId: "invitation-id", // required    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop           | Description                         | Type     |
+| -------------- | ----------------------------------- | -------- |
 | `invitationId` | The ID of the invitation to reject. | `string` |
 
 Like accepting invitations, rejecting invitations also requires email
@@ -1132,7 +1133,7 @@ verification when the `requireEmailVerificationOnInvitation` option is
 enabled. Users with unverified emails will receive an error when attempting to
 reject invitations.
 
-### [Get Invitation](https://www.better-auth.com/docs/plugins/organization\#get-invitation)
+### [Get Invitation](https://www.better-auth.com/docs/plugins/organization#get-invitation)
 
 To get an invitation you can use the `organization.getInvitation` function provided by the client. You need to provide the invitation id as a query parameter.
 
@@ -1146,8 +1147,8 @@ GET
 const { data, error } = await authClient.organization.getInvitation({    id: "invitation-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop | Description                      | Type     |
+| ---- | -------------------------------- | -------- |
 | `id` | The ID of the invitation to get. | `string` |
 
 GET
@@ -1158,11 +1159,11 @@ GET
 const data = await auth.api.getInvitation({    query: {        id: "invitation-id", // required    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop | Description                      | Type     |
+| ---- | -------------------------------- | -------- |
 | `id` | The ID of the invitation to get. | `string` |
 
-### [List Invitations](https://www.better-auth.com/docs/plugins/organization\#list-invitations)
+### [List Invitations](https://www.better-auth.com/docs/plugins/organization#list-invitations)
 
 To list all invitations for a given organization you can use the `listInvitations` function provided by the client.
 
@@ -1176,8 +1177,8 @@ GET
 const { data, error } = await authClient.organization.listInvitations({    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop              | Description                                                                                                                  | Type     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------- |
 | `organizationId?` | An optional ID of the organization to list invitations for. If not provided, will default to the user's active organization. | `string` |
 
 GET
@@ -1188,11 +1189,11 @@ GET
 const data = await auth.api.listInvitations({    query: {        organizationId: "organization-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop              | Description                                                                                                                  | Type     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------- |
 | `organizationId?` | An optional ID of the organization to list invitations for. If not provided, will default to the user's active organization. | `string` |
 
-### [List user invitations](https://www.better-auth.com/docs/plugins/organization\#list-user-invitations)
+### [List user invitations](https://www.better-auth.com/docs/plugins/organization#list-user-invitations)
 
 To list all invitations for a given user you can use the `listUserInvitations` function provided by the client.
 
@@ -1217,9 +1218,9 @@ const invitations = await auth.api.listUserInvitations({
 The `email` query parameter is only available on the server to query for
 invitations for a specific user.
 
-## [Members](https://www.better-auth.com/docs/plugins/organization\#members)
+## [Members](https://www.better-auth.com/docs/plugins/organization#members)
 
-### [List Members](https://www.better-auth.com/docs/plugins/organization\#list-members)
+### [List Members](https://www.better-auth.com/docs/plugins/organization#list-members)
 
 To list all members of an organization you can use the `listMembers` function.
 
@@ -1233,16 +1234,16 @@ GET
 const { data, error } = await authClient.organization.listMembers({    organizationId: "organization-id",    limit: 100,    offset: 0,    sortBy: "createdAt",    sortDirection: "desc",    filterField: "createdAt",    filterOperator: "eq",    filterValue: "value",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop              | Description                                                                                                       | Type     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- | -------- | ------- | ---- | ----- | ---- | ----- | ---- | ----- | ----------- |
 | `organizationId?` | An optional organization ID to list members for. If not provided, will default to the user's active organization. | `string` |
-| `limit?` | The limit of members to return. | `number` |
-| `offset?` | The offset to start from. | `number` |
-| `sortBy?` | The field to sort by. | `string` |
-| `sortDirection?` | The direction to sort by. | `"asc" | "desc"` |
-| `filterField?` | The field to filter by. | `string` |
-| `filterOperator?` | The operator to filter by. | `"eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "in" | "nin" | "contains"` |
-| `filterValue?` | The value to filter by. | `string` |
+| `limit?`          | The limit of members to return.                                                                                   | `number` |
+| `offset?`         | The offset to start from.                                                                                         | `number` |
+| `sortBy?`         | The field to sort by.                                                                                             | `string` |
+| `sortDirection?`  | The direction to sort by.                                                                                         | `"asc"   | "desc"` |
+| `filterField?`    | The field to filter by.                                                                                           | `string` |
+| `filterOperator?` | The operator to filter by.                                                                                        | `"eq"    | "ne"    | "gt" | "gte" | "lt" | "lte" | "in" | "nin" | "contains"` |
+| `filterValue?`    | The value to filter by.                                                                                           | `string` |
 
 GET
 
@@ -1252,18 +1253,18 @@ GET
 const data = await auth.api.listMembers({    query: {        organizationId: "organization-id",        limit: 100,        offset: 0,        sortBy: "createdAt",        sortDirection: "desc",        filterField: "createdAt",        filterOperator: "eq",        filterValue: "value",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop              | Description                                                                                                       | Type     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- | -------- | ------- | ---- | ----- | ---- | ----- | ---- | ----- | ----------- |
 | `organizationId?` | An optional organization ID to list members for. If not provided, will default to the user's active organization. | `string` |
-| `limit?` | The limit of members to return. | `number` |
-| `offset?` | The offset to start from. | `number` |
-| `sortBy?` | The field to sort by. | `string` |
-| `sortDirection?` | The direction to sort by. | `"asc" | "desc"` |
-| `filterField?` | The field to filter by. | `string` |
-| `filterOperator?` | The operator to filter by. | `"eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "in" | "nin" | "contains"` |
-| `filterValue?` | The value to filter by. | `string` |
+| `limit?`          | The limit of members to return.                                                                                   | `number` |
+| `offset?`         | The offset to start from.                                                                                         | `number` |
+| `sortBy?`         | The field to sort by.                                                                                             | `string` |
+| `sortDirection?`  | The direction to sort by.                                                                                         | `"asc"   | "desc"` |
+| `filterField?`    | The field to filter by.                                                                                           | `string` |
+| `filterOperator?` | The operator to filter by.                                                                                        | `"eq"    | "ne"    | "gt" | "gte" | "lt" | "lte" | "in" | "nin" | "contains"` |
+| `filterValue?`    | The value to filter by.                                                                                           | `string` |
 
-### [Remove Member](https://www.better-auth.com/docs/plugins/organization\#remove-member)
+### [Remove Member](https://www.better-auth.com/docs/plugins/organization#remove-member)
 
 To remove you can use `organization.removeMember`
 
@@ -1277,9 +1278,9 @@ POST
 const { data, error } = await authClient.organization.removeMember({    memberIdOrEmail: "user@example.com", // required    organizationId: "org-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `memberIdOrEmail` | The ID or email of the member to remove. | `string` |
+| Prop              | Description                                                                                                  | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | -------- |
+| `memberIdOrEmail` | The ID or email of the member to remove.                                                                     | `string` |
 | `organizationId?` | The ID of the organization to remove the member from. If not provided, the active organization will be used. | `string` |
 
 POST
@@ -1290,12 +1291,12 @@ POST
 const data = await auth.api.removeMember({    body: {        memberIdOrEmail: "user@example.com", // required        organizationId: "org-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `memberIdOrEmail` | The ID or email of the member to remove. | `string` |
+| Prop              | Description                                                                                                  | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | -------- |
+| `memberIdOrEmail` | The ID or email of the member to remove.                                                                     | `string` |
 | `organizationId?` | The ID of the organization to remove the member from. If not provided, the active organization will be used. | `string` |
 
-### [Update Member Role](https://www.better-auth.com/docs/plugins/organization\#update-member-role)
+### [Update Member Role](https://www.better-auth.com/docs/plugins/organization#update-member-role)
 
 To update the role of a member in an organization, you can use the `organization.updateMemberRole`. If the user has the permission to update the role of the member, the role will be updated.
 
@@ -1309,10 +1310,10 @@ POST
 await authClient.organization.updateMemberRole({    role: ["admin", "sale"], // required    memberId: "member-id", // required    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `role` | The new role to be applied. This can be a string or array of strings representing the roles. | `string | string[]` |
-| `memberId` | The member id to apply the role update to. | `string` |
+| Prop              | Description                                                                                                                                                           | Type     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| `role`            | The new role to be applied. This can be a string or array of strings representing the roles.                                                                          | `string  | string[]` |
+| `memberId`        | The member id to apply the role update to.                                                                                                                            | `string` |
 | `organizationId?` | An optional organization ID which the member is a part of to apply the role update. If not provided, you must provide session headers to get the active organization. | `string` |
 
 POST
@@ -1323,13 +1324,13 @@ POST
 await auth.api.updateMemberRole({    body: {        role: ["admin", "sale"], // required        memberId: "member-id", // required        organizationId: "organization-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `role` | The new role to be applied. This can be a string or array of strings representing the roles. | `string | string[]` |
-| `memberId` | The member id to apply the role update to. | `string` |
+| Prop              | Description                                                                                                                                                           | Type     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| `role`            | The new role to be applied. This can be a string or array of strings representing the roles.                                                                          | `string  | string[]` |
+| `memberId`        | The member id to apply the role update to.                                                                                                                            | `string` |
 | `organizationId?` | An optional organization ID which the member is a part of to apply the role update. If not provided, you must provide session headers to get the active organization. | `string` |
 
-### [Get Active Member](https://www.better-auth.com/docs/plugins/organization\#get-active-member)
+### [Get Active Member](https://www.better-auth.com/docs/plugins/organization#get-active-member)
 
 To get the current member of the active organization you can use the `organization.getActiveMember` function. This function will return the user's member details in their active organization.
 
@@ -1351,7 +1352,7 @@ GET
 const member = await auth.api.getActiveMember({    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-### [Get Active Member Role](https://www.better-auth.com/docs/plugins/organization\#get-active-member-role)
+### [Get Active Member Role](https://www.better-auth.com/docs/plugins/organization#get-active-member-role)
 
 To get the current role member of the active organization you can use the `organization.getActiveMemberRole` function. This function will return the user's member role in their active organization.
 
@@ -1373,7 +1374,7 @@ GET
 const { role } = await auth.api.getActiveMemberRole({    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-### [Add Member](https://www.better-auth.com/docs/plugins/organization\#add-member)
+### [Add Member](https://www.better-auth.com/docs/plugins/organization#add-member)
 
 If you want to add a member directly to an organization without sending an invitation, you can use the `addMember` function which can only be invoked on the server.
 
@@ -1393,14 +1394,14 @@ POST
 const data = await auth.api.addMember({    body: {        userId: "user-id",        role: ["admin", "sale"], // required        organizationId: "org-id",        teamId: "team-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `userId?` | The user ID which represents the user to be added as a member. If `null` is provided, then it's expected to provide session headers. | `string | null` |
-| `role` | The role(s) to assign to the new member. | `string | string[]` |
-| `organizationId?` | An optional organization ID to pass. If not provided, will default to the user's active organization. | `string` |
-| `teamId?` | An optional team ID to add the member to. | `string` |
+| Prop              | Description                                                                                                                          | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- | --------- |
+| `userId?`         | The user ID which represents the user to be added as a member. If `null` is provided, then it's expected to provide session headers. | `string  | null`     |
+| `role`            | The role(s) to assign to the new member.                                                                                             | `string  | string[]` |
+| `organizationId?` | An optional organization ID to pass. If not provided, will default to the user's active organization.                                | `string` |
+| `teamId?`         | An optional team ID to add the member to.                                                                                            | `string` |
 
-### [Leave Organization](https://www.better-auth.com/docs/plugins/organization\#leave-organization)
+### [Leave Organization](https://www.better-auth.com/docs/plugins/organization#leave-organization)
 
 To leave organization you can use `organization.leave` function. This function will remove the current user from the organization.
 
@@ -1414,8 +1415,8 @@ POST
 await authClient.organization.leave({    organizationId: "organization-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop             | Description                                  | Type     |
+| ---------------- | -------------------------------------------- | -------- |
 | `organizationId` | The organization ID for the member to leave. | `string` |
 
 POST
@@ -1426,15 +1427,15 @@ POST
 await auth.api.leaveOrganization({    body: {        organizationId: "organization-id", // required    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop             | Description                                  | Type     |
+| ---------------- | -------------------------------------------- | -------- |
 | `organizationId` | The organization ID for the member to leave. | `string` |
 
-## [Access Control](https://www.better-auth.com/docs/plugins/organization\#access-control)
+## [Access Control](https://www.better-auth.com/docs/plugins/organization#access-control)
 
 The organization plugin provides a very flexible access control system. You can control the access of the user based on the role they have in the organization. You can define your own set of permissions based on the role of the user.
 
-### [Roles](https://www.better-auth.com/docs/plugins/organization\#roles)
+### [Roles](https://www.better-auth.com/docs/plugins/organization#roles)
 
 By default, there are three roles in the organization:
 
@@ -1447,7 +1448,7 @@ By default, there are three roles in the organization:
 A user can have multiple roles. Multiple roles are stored as string separated
 by comma (",").
 
-### [Permissions](https://www.better-auth.com/docs/plugins/organization\#permissions)
+### [Permissions](https://www.better-auth.com/docs/plugins/organization#permissions)
 
 By default, there are three resources, and these have two to three actions.
 
@@ -1465,11 +1466,11 @@ By default, there are three resources, and these have two to three actions.
 
 The owner has full control over all the resources and actions. The admin has full control over all the resources except for deleting the organization or changing the owner. The member has no control over any of those actions other than reading the data.
 
-### [Custom Permissions](https://www.better-auth.com/docs/plugins/organization\#custom-permissions)
+### [Custom Permissions](https://www.better-auth.com/docs/plugins/organization#custom-permissions)
 
 The plugin provides an easy way to define your own set of permissions for each role.
 
-#### [Create Access Control](https://www.better-auth.com/docs/plugins/organization\#create-access-control)
+#### [Create Access Control](https://www.better-auth.com/docs/plugins/organization#create-access-control)
 
 You first need to create access controller by calling `createAccessControl` function and passing the statement object. The statement object should have the resource name as the key and the array of actions as the value.
 
@@ -1488,7 +1489,7 @@ const statement = {
 const ac = createAccessControl(statement);
 ```
 
-#### [Create Roles](https://www.better-auth.com/docs/plugins/organization\#create-roles)
+#### [Create Roles](https://www.better-auth.com/docs/plugins/organization#create-roles)
 
 Once you have created the access controller you can create roles with the permissions you have defined.
 
@@ -1542,7 +1543,7 @@ const admin = ac.newRole({
 });
 ```
 
-#### [Pass Roles to the Plugin](https://www.better-auth.com/docs/plugins/organization\#pass-roles-to-the-plugin)
+#### [Pass Roles to the Plugin](https://www.better-auth.com/docs/plugins/organization#pass-roles-to-the-plugin)
 
 Once you have created the roles you can pass them to the organization plugin both on the client and the server.
 
@@ -1592,7 +1593,7 @@ export const authClient = createAuthClient({
 })
 ```
 
-### [Access Control Usage](https://www.better-auth.com/docs/plugins/organization\#access-control-usage)
+### [Access Control Usage](https://www.better-auth.com/docs/plugins/organization#access-control-usage)
 
 **Has Permission**:
 
@@ -1673,14 +1674,14 @@ const canCreateProjectAndCreateSale =
 This will not include any dynamic roles as everything is ran syncronously on the client side.
 Please use the [hasPermission](https://www.better-auth.com/docs/plugins/organization#access-control-usage) APIs to include checks for any dynamic roles & permissions.
 
-* * *
+---
 
-## [Dynamic Access Control](https://www.better-auth.com/docs/plugins/organization\#dynamic-access-control)
+## [Dynamic Access Control](https://www.better-auth.com/docs/plugins/organization#dynamic-access-control)
 
 Dynamic access control allows you to create roles at runtime for organizations. This is achieved by storing the
 created roles and permissions associated with an organization in a database table.
 
-### [Enabling Dynamic Access Control](https://www.better-auth.com/docs/plugins/organization\#enabling-dynamic-access-control)
+### [Enabling Dynamic Access Control](https://www.better-auth.com/docs/plugins/organization#enabling-dynamic-access-control)
 
 To enable dynamic access control, pass the `dynamicAccessControl` configuration option with `enabled` set to `true` to both server and client plugins.
 
@@ -1728,7 +1729,7 @@ This will require you to run migrations to add the new `organizationRole` table 
 The `authClient.organization.checkRolePermission` function will not include any dynamic roles as everything is ran syncronously on the client side.
 Please use the [hasPermission](https://www.better-auth.com/docs/plugins/organization#access-control-usage) APIs to include checks for any dynamic roles.
 
-### [Creating a role](https://www.better-auth.com/docs/plugins/organization\#creating-a-role)
+### [Creating a role](https://www.better-auth.com/docs/plugins/organization#creating-a-role)
 
 To create a new role for an organization at runtime, you can use the `createRole` function.
 
@@ -1749,11 +1750,11 @@ POST
 // To use custom resources or permissions,// make sure they are defined in the `ac` instance of your organization config.const permission = {  project: ["create", "update", "delete"]}await authClient.organization.createRole({    role: "my-unique-role", // required    permission: permission,    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `role` | A unique name of the role to create. | `string` |
-| `permission?` | The permissions to assign to the role. | `Record<string, string[]>` |
-| `organizationId?` | The organization ID which the role will be created in. Defaults to the active organization. | `string` |
+| Prop              | Description                                                                                 | Type                       |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------------------------- |
+| `role`            | A unique name of the role to create.                                                        | `string`                   |
+| `permission?`     | The permissions to assign to the role.                                                      | `Record<string, string[]>` |
+| `organizationId?` | The organization ID which the role will be created in. Defaults to the active organization. | `string`                   |
 
 POST
 
@@ -1763,15 +1764,15 @@ POST
 // To use custom resources or permissions,// make sure they are defined in the `ac` instance of your organization config.const permission = {  project: ["create", "update", "delete"]}await auth.api.createOrgRole({    body: {        role: "my-unique-role", // required        permission: permission,        organizationId: "organization-id",    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `role` | A unique name of the role to create. | `string` |
-| `permission?` | The permissions to assign to the role. | `Record<string, string[]>` |
-| `organizationId?` | The organization ID which the role will be created in. Defaults to the active organization. | `string` |
+| Prop              | Description                                                                                 | Type                       |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------------------------- |
+| `role`            | A unique name of the role to create.                                                        | `string`                   |
+| `permission?`     | The permissions to assign to the role.                                                      | `Record<string, string[]>` |
+| `organizationId?` | The organization ID which the role will be created in. Defaults to the active organization. | `string`                   |
 
 Now you can freely call [`updateMemberRole`](https://www.better-auth.com/docs/plugins/organization#updating-a-member-role) to update the role of a member with your newly created role!
 
-### [Deleting a role](https://www.better-auth.com/docs/plugins/organization\#deleting-a-role)
+### [Deleting a role](https://www.better-auth.com/docs/plugins/organization#deleting-a-role)
 
 To delete a role, you can use the `deleteRole` function, then provide either a `roleName` or `roleId` parameter along
 with the `organizationId` parameter.
@@ -1786,10 +1787,10 @@ POST
 await authClient.organization.deleteRole({    roleName: "my-role",    roleId: "role-id",    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `roleName?` | The name of the role to delete. Alternatively, you can pass a `roleId` parameter instead. | `string` |
-| `roleId?` | The id of the role to delete. Alternatively, you can pass a `roleName` parameter instead. | `string` |
+| Prop              | Description                                                                                 | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------- |
+| `roleName?`       | The name of the role to delete. Alternatively, you can pass a `roleId` parameter instead.   | `string` |
+| `roleId?`         | The id of the role to delete. Alternatively, you can pass a `roleName` parameter instead.   | `string` |
 | `organizationId?` | The organization ID which the role will be deleted in. Defaults to the active organization. | `string` |
 
 POST
@@ -1800,13 +1801,13 @@ POST
 await auth.api.deleteOrgRole({    body: {        roleName: "my-role",        roleId: "role-id",        organizationId: "organization-id",    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `roleName?` | The name of the role to delete. Alternatively, you can pass a `roleId` parameter instead. | `string` |
-| `roleId?` | The id of the role to delete. Alternatively, you can pass a `roleName` parameter instead. | `string` |
+| Prop              | Description                                                                                 | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------- |
+| `roleName?`       | The name of the role to delete. Alternatively, you can pass a `roleId` parameter instead.   | `string` |
+| `roleId?`         | The id of the role to delete. Alternatively, you can pass a `roleName` parameter instead.   | `string` |
 | `organizationId?` | The organization ID which the role will be deleted in. Defaults to the active organization. | `string` |
 
-### [Listing roles](https://www.better-auth.com/docs/plugins/organization\#listing-roles)
+### [Listing roles](https://www.better-auth.com/docs/plugins/organization#listing-roles)
 
 To list roles, you can use the `listOrgRoles` function.
 This requires the `ac` resource with the `read` permission for the member to be able to list roles.
@@ -1821,8 +1822,8 @@ GET
 const { data: roles, error } = await authClient.organization.listRoles({    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop              | Description                                                                                        | Type     |
+| ----------------- | -------------------------------------------------------------------------------------------------- | -------- |
 | `organizationId?` | The organization ID which the roles are under to list. Defaults to the user's active organization. | `string` |
 
 GET
@@ -1833,11 +1834,11 @@ GET
 const roles = await auth.api.listOrgRoles({    query: {        organizationId: "organization-id",    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop              | Description                                                                                        | Type     |
+| ----------------- | -------------------------------------------------------------------------------------------------- | -------- |
 | `organizationId?` | The organization ID which the roles are under to list. Defaults to the user's active organization. | `string` |
 
-### [Getting a specific role](https://www.better-auth.com/docs/plugins/organization\#getting-a-specific-role)
+### [Getting a specific role](https://www.better-auth.com/docs/plugins/organization#getting-a-specific-role)
 
 To get a specific role, you can use the `getOrgRole` function and pass either a `roleName` or `roleId` parameter.
 This requires the `ac` resource with the `read` permission for the member to be able to get a role.
@@ -1852,10 +1853,10 @@ GET
 const { data: role, error } = await authClient.organization.getRole({    roleName: "my-role",    roleId: "role-id",    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `roleName?` | The name of the role to get. Alternatively, you can pass a `roleId` parameter instead. | `string` |
-| `roleId?` | The id of the role to get. Alternatively, you can pass a `roleName` parameter instead. | `string` |
+| Prop              | Description                                                                                 | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------- |
+| `roleName?`       | The name of the role to get. Alternatively, you can pass a `roleId` parameter instead.      | `string` |
+| `roleId?`         | The id of the role to get. Alternatively, you can pass a `roleName` parameter instead.      | `string` |
 | `organizationId?` | The organization ID which the role will be deleted in. Defaults to the active organization. | `string` |
 
 GET
@@ -1866,13 +1867,13 @@ GET
 const role = await auth.api.getOrgRole({    query: {        roleName: "my-role",        roleId: "role-id",        organizationId: "organization-id",    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `roleName?` | The name of the role to get. Alternatively, you can pass a `roleId` parameter instead. | `string` |
-| `roleId?` | The id of the role to get. Alternatively, you can pass a `roleName` parameter instead. | `string` |
+| Prop              | Description                                                                                 | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------- |
+| `roleName?`       | The name of the role to get. Alternatively, you can pass a `roleId` parameter instead.      | `string` |
+| `roleId?`         | The id of the role to get. Alternatively, you can pass a `roleName` parameter instead.      | `string` |
 | `organizationId?` | The organization ID which the role will be deleted in. Defaults to the active organization. | `string` |
 
-### [Updating a role](https://www.better-auth.com/docs/plugins/organization\#updating-a-role)
+### [Updating a role](https://www.better-auth.com/docs/plugins/organization#updating-a-role)
 
 To update a role, you can use the `updateOrgRole` function and pass either a `roleName` or `roleId` parameter.
 
@@ -1886,14 +1887,14 @@ POST
 const { data: updatedRole, error } = await authClient.organization.updateRole({    roleName: "my-role",    roleId: "role-id",    organizationId: "organization-id",    data: { // required        permission: { project: ["create", "update", "delete"] },        roleName: "my-new-role",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `roleName?` | The name of the role to update. Alternatively, you can pass a `roleId` parameter instead. | `string` |
-| `roleId?` | The id of the role to update. Alternatively, you can pass a `roleName` parameter instead. | `string` |
-| `organizationId?` | The organization ID which the role will be updated in. Defaults to the active organization. | `string` |
-| `data` | The data which will be updated | `Object` |
-| `data.permission?` | Optionally update the permissions of the role. | `Record<string, string[]>` |
-| `data.roleName?` | Optionally update the name of the role. | `string` |
+| Prop               | Description                                                                                 | Type                       |
+| ------------------ | ------------------------------------------------------------------------------------------- | -------------------------- |
+| `roleName?`        | The name of the role to update. Alternatively, you can pass a `roleId` parameter instead.   | `string`                   |
+| `roleId?`          | The id of the role to update. Alternatively, you can pass a `roleName` parameter instead.   | `string`                   |
+| `organizationId?`  | The organization ID which the role will be updated in. Defaults to the active organization. | `string`                   |
+| `data`             | The data which will be updated                                                              | `Object`                   |
+| `data.permission?` | Optionally update the permissions of the role.                                              | `Record<string, string[]>` |
+| `data.roleName?`   | Optionally update the name of the role.                                                     | `string`                   |
 
 POST
 
@@ -1903,20 +1904,20 @@ POST
 const updatedRole = await auth.api.updateOrgRole({    body: {        roleName: "my-role",        roleId: "role-id",        organizationId: "organization-id",        data: { // required            permission: { project: ["create", "update", "delete"] },            roleName: "my-new-role",        },    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `roleName?` | The name of the role to update. Alternatively, you can pass a `roleId` parameter instead. | `string` |
-| `roleId?` | The id of the role to update. Alternatively, you can pass a `roleName` parameter instead. | `string` |
-| `organizationId?` | The organization ID which the role will be updated in. Defaults to the active organization. | `string` |
-| `data` | The data which will be updated | `Object` |
-| `data.permission?` | Optionally update the permissions of the role. | `Record<string, string[]>` |
-| `data.roleName?` | Optionally update the name of the role. | `string` |
+| Prop               | Description                                                                                 | Type                       |
+| ------------------ | ------------------------------------------------------------------------------------------- | -------------------------- |
+| `roleName?`        | The name of the role to update. Alternatively, you can pass a `roleId` parameter instead.   | `string`                   |
+| `roleId?`          | The id of the role to update. Alternatively, you can pass a `roleName` parameter instead.   | `string`                   |
+| `organizationId?`  | The organization ID which the role will be updated in. Defaults to the active organization. | `string`                   |
+| `data`             | The data which will be updated                                                              | `Object`                   |
+| `data.permission?` | Optionally update the permissions of the role.                                              | `Record<string, string[]>` |
+| `data.roleName?`   | Optionally update the name of the role.                                                     | `string`                   |
 
-### [Configuration Options](https://www.better-auth.com/docs/plugins/organization\#configuration-options)
+### [Configuration Options](https://www.better-auth.com/docs/plugins/organization#configuration-options)
 
 Below is a list of options that can be passed to the `dynamicAccessControl` object.
 
-#### [`enabled`](https://www.better-auth.com/docs/plugins/organization\#enabled)
+#### [`enabled`](https://www.better-auth.com/docs/plugins/organization#enabled)
 
 This option is used to enable or disable dynamic access control. By default, it is disabled.
 
@@ -1928,7 +1929,7 @@ organization({
 })
 ```
 
-#### [`maximumRolesPerOrganization`](https://www.better-auth.com/docs/plugins/organization\#maximumrolesperorganization)
+#### [`maximumRolesPerOrganization`](https://www.better-auth.com/docs/plugins/organization#maximumrolesperorganization)
 
 This option is used to limit the number of roles that can be created for an organization.
 
@@ -1955,7 +1956,7 @@ organization({
 })
 ```
 
-### [Additional Fields](https://www.better-auth.com/docs/plugins/organization\#additional-fields)
+### [Additional Fields](https://www.better-auth.com/docs/plugins/organization#additional-fields)
 
 To add additional fields to the `organizationRole` table, you can pass the `additionalFields` configuration option to the `organization` plugin.
 
@@ -2020,13 +2021,13 @@ export const authClient = createAuthClient({
 })
 ```
 
-* * *
+---
 
-## [Teams](https://www.better-auth.com/docs/plugins/organization\#teams)
+## [Teams](https://www.better-auth.com/docs/plugins/organization#teams)
 
 Teams allow you to group members within an organization. The teams feature provides additional organization structure and can be used to manage permissions at a more granular level.
 
-### [Enabling Teams](https://www.better-auth.com/docs/plugins/organization\#enabling-teams)
+### [Enabling Teams](https://www.better-auth.com/docs/plugins/organization#enabling-teams)
 
 To enable teams, pass the `teams` configuration option to both server and client plugins:
 
@@ -2066,9 +2067,9 @@ export const authClient = createAuthClient({
 });
 ```
 
-### [Managing Teams](https://www.better-auth.com/docs/plugins/organization\#managing-teams)
+### [Managing Teams](https://www.better-auth.com/docs/plugins/organization#managing-teams)
 
-#### [Create Team](https://www.better-auth.com/docs/plugins/organization\#create-team)
+#### [Create Team](https://www.better-auth.com/docs/plugins/organization#create-team)
 
 Create a new team within an organization:
 
@@ -2082,9 +2083,9 @@ POST
 const { data, error } = await authClient.organization.createTeam({    name: "my-team", // required    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name` | The name of the team. | `string` |
+| Prop              | Description                                                                                 | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------- |
+| `name`            | The name of the team.                                                                       | `string` |
 | `organizationId?` | The organization ID which the team will be created in. Defaults to the active organization. | `string` |
 
 POST
@@ -2095,12 +2096,12 @@ POST
 const data = await auth.api.createTeam({    body: {        name: "my-team", // required        organizationId: "organization-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `name` | The name of the team. | `string` |
+| Prop              | Description                                                                                 | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------- | -------- |
+| `name`            | The name of the team.                                                                       | `string` |
 | `organizationId?` | The organization ID which the team will be created in. Defaults to the active organization. | `string` |
 
-#### [List Teams](https://www.better-auth.com/docs/plugins/organization\#list-teams)
+#### [List Teams](https://www.better-auth.com/docs/plugins/organization#list-teams)
 
 Get all teams in an organization:
 
@@ -2114,9 +2115,9 @@ GET
 const { data, error } = await authClient.organization.listTeams({    query: {        organizationId: "organization-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `query?` | Query parameters for filtering or scoping the list of teams. | `Object` |
+| Prop                    | Description                                                                                        | Type     |
+| ----------------------- | -------------------------------------------------------------------------------------------------- | -------- |
+| `query?`                | Query parameters for filtering or scoping the list of teams.                                       | `Object` |
 | `query.organizationId?` | The organization ID which the teams are under to list. Defaults to the user's active organization. | `string` |
 
 GET
@@ -2127,12 +2128,12 @@ GET
 const data = await auth.api.listOrganizationTeams({    query: {        query: {            organizationId: "organization-id",        },    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `query?` | Query parameters for filtering or scoping the list of teams. | `Object` |
+| Prop                    | Description                                                                                        | Type     |
+| ----------------------- | -------------------------------------------------------------------------------------------------- | -------- |
+| `query?`                | Query parameters for filtering or scoping the list of teams.                                       | `Object` |
 | `query.organizationId?` | The organization ID which the teams are under to list. Defaults to the user's active organization. | `string` |
 
-#### [Update Team](https://www.better-auth.com/docs/plugins/organization\#update-team)
+#### [Update Team](https://www.better-auth.com/docs/plugins/organization#update-team)
 
 Update a team's details:
 
@@ -2146,14 +2147,14 @@ POST
 const { data, error } = await authClient.organization.updateTeam({    teamId: "team-id", // required    data: { // required        name: "My new team name",        organizationId: "My new organization ID for this team",        createdAt: new Date(),        updatedAt: new Date(),    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The ID of the team to be updated. | `string` |
-| `data` | A partial object containing options for you to update. | `Object` |
-| `data.name?` | The name of the team to be updated. | `string` |
-| `data.organizationId?` | The organization ID which the team falls under. | `string` |
-| `data.createdAt?` | The timestamp of when the team was created. | `Date` |
-| `data.updatedAt?` | The timestamp of when the team was last updated. | `Date` |
+| Prop                   | Description                                            | Type     |
+| ---------------------- | ------------------------------------------------------ | -------- |
+| `teamId`               | The ID of the team to be updated.                      | `string` |
+| `data`                 | A partial object containing options for you to update. | `Object` |
+| `data.name?`           | The name of the team to be updated.                    | `string` |
+| `data.organizationId?` | The organization ID which the team falls under.        | `string` |
+| `data.createdAt?`      | The timestamp of when the team was created.            | `Date`   |
+| `data.updatedAt?`      | The timestamp of when the team was last updated.       | `Date`   |
 
 POST
 
@@ -2163,16 +2164,16 @@ POST
 const data = await auth.api.updateTeam({    body: {        teamId: "team-id", // required        data: { // required            name: "My new team name",            organizationId: "My new organization ID for this team",            createdAt: new Date(),            updatedAt: new Date(),        },    },    // This endpoint requires session cookies.    headers: await headers(),});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The ID of the team to be updated. | `string` |
-| `data` | A partial object containing options for you to update. | `Object` |
-| `data.name?` | The name of the team to be updated. | `string` |
-| `data.organizationId?` | The organization ID which the team falls under. | `string` |
-| `data.createdAt?` | The timestamp of when the team was created. | `Date` |
-| `data.updatedAt?` | The timestamp of when the team was last updated. | `Date` |
+| Prop                   | Description                                            | Type     |
+| ---------------------- | ------------------------------------------------------ | -------- |
+| `teamId`               | The ID of the team to be updated.                      | `string` |
+| `data`                 | A partial object containing options for you to update. | `Object` |
+| `data.name?`           | The name of the team to be updated.                    | `string` |
+| `data.organizationId?` | The organization ID which the team falls under.        | `string` |
+| `data.createdAt?`      | The timestamp of when the team was created.            | `Date`   |
+| `data.updatedAt?`      | The timestamp of when the team was last updated.       | `Date`   |
 
-#### [Remove Team](https://www.better-auth.com/docs/plugins/organization\#remove-team)
+#### [Remove Team](https://www.better-auth.com/docs/plugins/organization#remove-team)
 
 Delete a team from an organization:
 
@@ -2186,9 +2187,9 @@ POST
 const { data, error } = await authClient.organization.removeTeam({    teamId: "team-id", // required    organizationId: "organization-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The team ID of the team to remove. | `string` |
+| Prop              | Description                                                                                                         | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- | -------- |
+| `teamId`          | The team ID of the team to remove.                                                                                  | `string` |
 | `organizationId?` | The organization ID which the team falls under. If not provided, it will default to the user's active organization. | `string` |
 
 POST
@@ -2199,12 +2200,12 @@ POST
 const data = await auth.api.removeTeam({    body: {        teamId: "team-id", // required        organizationId: "organization-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The team ID of the team to remove. | `string` |
+| Prop              | Description                                                                                                         | Type     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- | -------- |
+| `teamId`          | The team ID of the team to remove.                                                                                  | `string` |
 | `organizationId?` | The organization ID which the team falls under. If not provided, it will default to the user's active organization. | `string` |
 
-#### [Set Active Team](https://www.better-auth.com/docs/plugins/organization\#set-active-team)
+#### [Set Active Team](https://www.better-auth.com/docs/plugins/organization#set-active-team)
 
 Sets the given team as the current active team. If `teamId` is `null` the current active team is unset.
 
@@ -2218,8 +2219,8 @@ POST
 const { data, error } = await authClient.organization.setActiveTeam({    teamId: "team-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop      | Description                                                | Type     |
+| --------- | ---------------------------------------------------------- | -------- |
 | `teamId?` | The team ID of the team to set as the current active team. | `string` |
 
 POST
@@ -2230,11 +2231,11 @@ POST
 const data = await auth.api.setActiveTeam({    body: {        teamId: "team-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop      | Description                                                | Type     |
+| --------- | ---------------------------------------------------------- | -------- |
 | `teamId?` | The team ID of the team to set as the current active team. | `string` |
 
-#### [List User Teams](https://www.better-auth.com/docs/plugins/organization\#list-user-teams)
+#### [List User Teams](https://www.better-auth.com/docs/plugins/organization#list-user-teams)
 
 List all teams that the current user is a part of.
 
@@ -2256,7 +2257,7 @@ GET
 const data = await auth.api.listUserTeams();
 ```
 
-#### [List Team Members](https://www.better-auth.com/docs/plugins/organization\#list-team-members)
+#### [List Team Members](https://www.better-auth.com/docs/plugins/organization#list-team-members)
 
 List the members of the given team.
 
@@ -2270,8 +2271,8 @@ POST
 const { data, error } = await authClient.organization.listTeamMembers({    teamId: "team-id",});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop      | Description                                                                                                           | Type     |
+| --------- | --------------------------------------------------------------------------------------------------------------------- | -------- |
 | `teamId?` | The team whose members we should return. If this is not provided the members of the current active team get returned. | `string` |
 
 POST
@@ -2282,11 +2283,11 @@ POST
 const data = await auth.api.listTeamMembers({    body: {        teamId: "team-id",    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
+| Prop      | Description                                                                                                           | Type     |
+| --------- | --------------------------------------------------------------------------------------------------------------------- | -------- |
 | `teamId?` | The team whose members we should return. If this is not provided the members of the current active team get returned. | `string` |
 
-#### [Add Team Member](https://www.better-auth.com/docs/plugins/organization\#add-team-member)
+#### [Add Team Member](https://www.better-auth.com/docs/plugins/organization#add-team-member)
 
 Add a member to a team.
 
@@ -2300,9 +2301,9 @@ POST
 const { data, error } = await authClient.organization.addTeamMember({    teamId: "team-id", // required    userId: "user-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The team the user should be a member of. | `string` |
+| Prop     | Description                                                    | Type     |
+| -------- | -------------------------------------------------------------- | -------- |
+| `teamId` | The team the user should be a member of.                       | `string` |
 | `userId` | The user ID which represents the user to be added as a member. | `string` |
 
 POST
@@ -2313,12 +2314,12 @@ POST
 const data = await auth.api.addTeamMember({    body: {        teamId: "team-id", // required        userId: "user-id", // required    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The team the user should be a member of. | `string` |
+| Prop     | Description                                                    | Type     |
+| -------- | -------------------------------------------------------------- | -------- |
+| `teamId` | The team the user should be a member of.                       | `string` |
 | `userId` | The user ID which represents the user to be added as a member. | `string` |
 
-#### [Remove Team Member](https://www.better-auth.com/docs/plugins/organization\#remove-team-member)
+#### [Remove Team Member](https://www.better-auth.com/docs/plugins/organization#remove-team-member)
 
 Remove a member from a team.
 
@@ -2332,9 +2333,9 @@ POST
 const { data, error } = await authClient.organization.removeTeamMember({    teamId: "team-id", // required    userId: "user-id", // required});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The team the user should be removed from. | `string` |
+| Prop     | Description                                     | Type     |
+| -------- | ----------------------------------------------- | -------- |
+| `teamId` | The team the user should be removed from.       | `string` |
 | `userId` | The user which should be removed from the team. | `string` |
 
 POST
@@ -2345,12 +2346,12 @@ POST
 const data = await auth.api.removeTeamMember({    body: {        teamId: "team-id", // required        userId: "user-id", // required    },});
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `teamId` | The team the user should be removed from. | `string` |
+| Prop     | Description                                     | Type     |
+| -------- | ----------------------------------------------- | -------- |
+| `teamId` | The team the user should be removed from.       | `string` |
 | `userId` | The user which should be removed from the team. | `string` |
 
-### [Team Permissions](https://www.better-auth.com/docs/plugins/organization\#team-permissions)
+### [Team Permissions](https://www.better-auth.com/docs/plugins/organization#team-permissions)
 
 Teams follow the organization's permission system. To manage teams, users need the following permissions:
 
@@ -2363,20 +2364,11 @@ By default:
 - Organization owners and admins can manage teams
 - Regular members cannot create, update, or delete teams
 
-### [Team Configuration Options](https://www.better-auth.com/docs/plugins/organization\#team-configuration-options)
+### [Team Configuration Options](https://www.better-auth.com/docs/plugins/organization#team-configuration-options)
 
 The teams feature supports several configuration options:
 
 - `maximumTeams`: Limit the number of teams per organization
-
-
-
-
-
-
-
-
-
 
 ```
 teams: {
@@ -2400,15 +2392,6 @@ teams: {
 
 - `allowRemovingAllTeams`: Control whether the last team can be removed
 
-
-
-
-
-
-
-
-
-
 ```
 teams: {
     enabled: true,
@@ -2416,8 +2399,7 @@ teams: {
 }
 ```
 
-
-### [Team Members](https://www.better-auth.com/docs/plugins/organization\#team-members)
+### [Team Members](https://www.better-auth.com/docs/plugins/organization#team-members)
 
 When inviting members to an organization, you can specify a team:
 
@@ -2431,117 +2413,117 @@ await authClient.organization.inviteMember({
 
 The invited member will be added to the specified team upon accepting the invitation.
 
-### [Database Schema](https://www.better-auth.com/docs/plugins/organization\#database-schema)
+### [Database Schema](https://www.better-auth.com/docs/plugins/organization#database-schema)
 
 When teams are enabled, new `team` and `teamMember` tables are added to the database.
 
 Table Name: `team`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each team |
-| name | string | - | The name of the team |
-| organizationId | string | FK | The ID of the organization |
-| createdAt | Date | - | Timestamp of when the team was created |
-| updatedAt | Date | ? | Timestamp of when the team was created |
+| Field Name     | Type   | Key | Description                            |
+| -------------- | ------ | --- | -------------------------------------- |
+| id             | string | PK  | Unique identifier for each team        |
+| name           | string | -   | The name of the team                   |
+| organizationId | string | FK  | The ID of the organization             |
+| createdAt      | Date   | -   | Timestamp of when the team was created |
+| updatedAt      | Date   | ?   | Timestamp of when the team was created |
 
 Table Name: `teamMember`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each team member |
-| teamId | string | FK | Unique identifier for each team |
-| userId | string | FK | The ID of the user |
-| createdAt | Date | - | Timestamp of when the team member was created |
+| Field Name | Type   | Key | Description                                   |
+| ---------- | ------ | --- | --------------------------------------------- |
+| id         | string | PK  | Unique identifier for each team member        |
+| teamId     | string | FK  | Unique identifier for each team               |
+| userId     | string | FK  | The ID of the user                            |
+| createdAt  | Date   | -   | Timestamp of when the team member was created |
 
-## [Schema](https://www.better-auth.com/docs/plugins/organization\#schema)
+## [Schema](https://www.better-auth.com/docs/plugins/organization#schema)
 
 The organization plugin adds the following tables to the database:
 
-### [Organization](https://www.better-auth.com/docs/plugins/organization\#organization-1)
+### [Organization](https://www.better-auth.com/docs/plugins/organization#organization-1)
 
 Table Name: `organization`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each organization |
-| name | string | - | The name of the organization |
-| slug | string | - | The slug of the organization |
-| logo | string | ? | The logo of the organization |
-| metadata | string | ? | Additional metadata for the organization |
-| createdAt | Date | - | Timestamp of when the organization was created |
+| Field Name | Type   | Key | Description                                    |
+| ---------- | ------ | --- | ---------------------------------------------- |
+| id         | string | PK  | Unique identifier for each organization        |
+| name       | string | -   | The name of the organization                   |
+| slug       | string | -   | The slug of the organization                   |
+| logo       | string | ?   | The logo of the organization                   |
+| metadata   | string | ?   | Additional metadata for the organization       |
+| createdAt  | Date   | -   | Timestamp of when the organization was created |
 
-### [Member](https://www.better-auth.com/docs/plugins/organization\#member)
+### [Member](https://www.better-auth.com/docs/plugins/organization#member)
 
 Table Name: `member`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each member |
-| userId | string | FK | The ID of the user |
-| organizationId | string | FK | The ID of the organization |
-| role | string | - | The role of the user in the organization |
-| createdAt | Date | - | Timestamp of when the member was added to the organization |
+| Field Name     | Type   | Key | Description                                                |
+| -------------- | ------ | --- | ---------------------------------------------------------- |
+| id             | string | PK  | Unique identifier for each member                          |
+| userId         | string | FK  | The ID of the user                                         |
+| organizationId | string | FK  | The ID of the organization                                 |
+| role           | string | -   | The role of the user in the organization                   |
+| createdAt      | Date   | -   | Timestamp of when the member was added to the organization |
 
-### [Invitation](https://www.better-auth.com/docs/plugins/organization\#invitation)
+### [Invitation](https://www.better-auth.com/docs/plugins/organization#invitation)
 
 Table Name: `invitation`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each invitation |
-| email | string | - | The email address of the user |
-| inviterId | string | FK | The ID of the inviter |
-| organizationId | string | FK | The ID of the organization |
-| role | string | - | The role of the user in the organization |
-| status | string | - | The status of the invitation |
-| expiresAt | Date | - | Timestamp of when the invitation expires |
+| Field Name     | Type   | Key | Description                              |
+| -------------- | ------ | --- | ---------------------------------------- |
+| id             | string | PK  | Unique identifier for each invitation    |
+| email          | string | -   | The email address of the user            |
+| inviterId      | string | FK  | The ID of the inviter                    |
+| organizationId | string | FK  | The ID of the organization               |
+| role           | string | -   | The role of the user in the organization |
+| status         | string | -   | The status of the invitation             |
+| expiresAt      | Date   | -   | Timestamp of when the invitation expires |
 
 If teams are enabled, you need to add the following fields to the invitation table:
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| teamId | string | ? | The ID of the team |
+| Field Name | Type   | Key | Description        |
+| ---------- | ------ | --- | ------------------ |
+| teamId     | string | ?   | The ID of the team |
 
-### [Session](https://www.better-auth.com/docs/plugins/organization\#session)
+### [Session](https://www.better-auth.com/docs/plugins/organization#session)
 
 Table Name: `session`
 
 You need to add two more fields to the session table to store the active organization ID and the active team ID.
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| activeOrganizationId | string | ? | The ID of the active organization |
-| activeTeamId | string | ? | The ID of the active team |
+| Field Name           | Type   | Key | Description                       |
+| -------------------- | ------ | --- | --------------------------------- |
+| activeOrganizationId | string | ?   | The ID of the active organization |
+| activeTeamId         | string | ?   | The ID of the active team         |
 
-### [Teams (optional)](https://www.better-auth.com/docs/plugins/organization\#teams-optional)
+### [Teams (optional)](https://www.better-auth.com/docs/plugins/organization#teams-optional)
 
 Table Name: `team`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each team |
-| name | string | - | The name of the team |
-| organizationId | string | FK | The ID of the organization |
-| createdAt | Date | - | Timestamp of when the team was created |
-| updatedAt | Date | ? | Timestamp of when the team was created |
+| Field Name     | Type   | Key | Description                            |
+| -------------- | ------ | --- | -------------------------------------- |
+| id             | string | PK  | Unique identifier for each team        |
+| name           | string | -   | The name of the team                   |
+| organizationId | string | FK  | The ID of the organization             |
+| createdAt      | Date   | -   | Timestamp of when the team was created |
+| updatedAt      | Date   | ?   | Timestamp of when the team was created |
 
 Table Name: `teamMember`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each team member |
-| teamId | string | FK | Unique identifier for each team |
-| userId | string | FK | The ID of the user |
-| createdAt | Date | - | Timestamp of when the team member was created |
+| Field Name | Type   | Key | Description                                   |
+| ---------- | ------ | --- | --------------------------------------------- |
+| id         | string | PK  | Unique identifier for each team member        |
+| teamId     | string | FK  | Unique identifier for each team               |
+| userId     | string | FK  | The ID of the user                            |
+| createdAt  | Date   | -   | Timestamp of when the team member was created |
 
 Table Name: `invitation`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| teamId | string | ? | The ID of the team |
+| Field Name | Type   | Key | Description        |
+| ---------- | ------ | --- | ------------------ |
+| teamId     | string | ?   | The ID of the team |
 
-### [Customizing the Schema](https://www.better-auth.com/docs/plugins/organization\#customizing-the-schema)
+### [Customizing the Schema](https://www.better-auth.com/docs/plugins/organization#customizing-the-schema)
 
 To change the schema table name or fields, you can pass `schema` option to the organization plugin.
 
@@ -2572,7 +2554,7 @@ const auth = betterAuth({
 });
 ```
 
-#### [Additional Fields](https://www.better-auth.com/docs/plugins/organization\#additional-fields-1)
+#### [Additional Fields](https://www.better-auth.com/docs/plugins/organization#additional-fields-1)
 
 Starting with [Better Auth v1.3](https://github.com/better-auth/better-auth/releases/tag/v1.3.0), you can easily add custom fields to the `organization`, `invitation`, `member`, and `team` tables.
 
@@ -2652,7 +2634,7 @@ await client.organization.create({
 });
 ```
 
-## [Options](https://www.better-auth.com/docs/plugins/organization\#options)
+## [Options](https://www.better-auth.com/docs/plugins/organization#options)
 
 **allowUserToCreateOrganization**: `boolean` \| `((user: User) => Promise<boolean> | boolean)` \- A function that determines whether a user can create an organization. By default, it's `true`. You can set it to `false` to restrict users from creating organizations.
 

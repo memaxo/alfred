@@ -9,135 +9,130 @@ Generates a typed, structured object for a given prompt and schema using a langu
 It can be used to force the language model to return structured data, e.g. for information extraction, synthetic data generation, or classification tasks.
 
 #### Example: generate an object using a schema
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { generateObject } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     const { object } = await generateObject({
-    
+
       model: openai('gpt-4.1'),
-    
+
       schema: z.object({
-    
+
         recipe: z.object({
-    
+
           name: z.string(),
-    
+
           ingredients: z.array(z.string()),
-    
+
           steps: z.array(z.string()),
-    
+
         }),
-    
+
       }),
-    
+
       prompt: 'Generate a lasagna recipe.',
-    
+
     });
-    
-    
-    
-    
+
+
+
+
     console.log(JSON.stringify(object, null, 2));
 
 #### Example: generate an array using a schema
 
 For arrays, you specify the schema of the array items.
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { generateObject } from 'ai';
-    
+
     import { z } from 'zod';
-    
-    
-    
-    
+
+
+
+
     const { object } = await generateObject({
-    
+
       model: openai('gpt-4.1'),
-    
+
       output: 'array',
-    
+
       schema: z.object({
-    
+
         name: z.string(),
-    
+
         class: z
-    
+
           .string()
-    
+
           .describe('Character class, e.g. warrior, mage, or thief.'),
-    
+
         description: z.string(),
-    
+
       }),
-    
+
       prompt: 'Generate 3 hero descriptions for a fantasy role playing game.',
-    
+
     });
 
 #### Example: generate an enum
 
 When you want to generate a specific enum value, you can set the output strategy to `enum` and provide the list of possible values in the `enum` parameter.
-    
-    
+
     import { generateObject } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { object } = await generateObject({
-    
+
       model: 'openai/gpt-4.1',
-    
+
       output: 'enum',
-    
+
       enum: ['action', 'comedy', 'drama', 'horror', 'sci-fi'],
-    
+
       prompt:
-    
+
         'Classify the genre of this movie plot: ' +
-    
+
         '"A group of astronauts travel through a wormhole in search of a ' +
-    
+
         'new habitable planet for humanity."',
-    
+
     });
 
 #### Example: generate JSON without a schema
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { generateObject } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { object } = await generateObject({
-    
+
       model: openai('gpt-4.1'),
-    
+
       output: 'no-schema',
-    
+
       prompt: 'Generate a lasagna recipe.',
-    
+
     });
 
 To see `generateObject` in action, check out the additional examples.
 
 ## Import
-    
-    
+
     import { generateObject } from "ai"
 
 ## API Signature

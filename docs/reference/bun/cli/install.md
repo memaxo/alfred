@@ -1,9 +1,10 @@
 ---
 title: bun install – Package manager | Bun Docs
-url: 
+url:
 description: Install all dependencies with `bun install`, or manage dependencies with `bun add` and `bun remove`.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -64,7 +65,7 @@ For more details, see [Package manager > Global cache](https://bun.com/docs/inst
 
 For Linux users
 
-The recommended minimum Linux Kernel version is 5.6. If you're on Linux kernel 5.1 - 5.5, `bun install` will work, but HTTP requests will be slow due to a lack of support for io\_uring's `connect()` operation.
+The recommended minimum Linux Kernel version is 5.6. If you're on Linux kernel 5.1 - 5.5, `bun install` will work, but HTTP requests will be slow due to a lack of support for io_uring's `connect()` operation.
 
 If you're using Ubuntu 20.04, here's how to install a [newer kernel](https://wiki.ubuntu.com/Kernel/LTSEnablementStack):
 
@@ -97,7 +98,7 @@ Running `bun install` will:
 - **Run** your project's `{pre|post}install` and `{pre|post}prepare` scripts at the appropriate time. For security reasons Bun _does not execute_ lifecycle scripts of installed dependencies.
 - **Write** a `bun.lock` lockfile to the project root.
 
-## [Logging](https://bun.com/docs/cli/install\#logging)
+## [Logging](https://bun.com/docs/cli/install#logging)
 
 To modify logging verbosity:
 
@@ -109,7 +110,7 @@ bun install --verbose # debug logging
 bun install --silent  # no logging
 ```
 
-## [Lifecycle scripts](https://bun.com/docs/cli/install\#lifecycle-scripts)
+## [Lifecycle scripts](https://bun.com/docs/cli/install#lifecycle-scripts)
 
 Unlike other npm clients, Bun does not execute arbitrary lifecycle scripts like `postinstall` for installed dependencies. Executing arbitrary scripts represents a potential security risk.
 
@@ -131,7 +132,7 @@ Lifecycle scripts will run in parallel during installation. To adjust the maximu
 bun install --concurrent-scripts 5
 ```
 
-## [Workspaces](https://bun.com/docs/cli/install\#workspaces)
+## [Workspaces](https://bun.com/docs/cli/install#workspaces)
 
 Bun supports `"workspaces"` in package.json. For complete documentation refer to [Package manager > Workspaces](https://bun.com/docs/install/workspaces).
 
@@ -149,7 +150,7 @@ package.json
 
 ```
 
-## [Installing dependencies for specific packages](https://bun.com/docs/cli/install\#installing-dependencies-for-specific-packages)
+## [Installing dependencies for specific packages](https://bun.com/docs/cli/install#installing-dependencies-for-specific-packages)
 
 In a monorepo, you can install the dependencies for a subset of packages using the `--filter` flag.
 
@@ -172,7 +173,7 @@ bun install --filter './packages/pkg-a'
 
 For more information on filtering with `bun install`, refer to [Package Manager > Filtering](https://bun.com/docs/cli/filter#bun-install-and-bun-outdated)
 
-## [Overrides and resolutions](https://bun.com/docs/cli/install\#overrides-and-resolutions)
+## [Overrides and resolutions](https://bun.com/docs/cli/install#overrides-and-resolutions)
 
 Bun supports npm's `"overrides"` and Yarn's `"resolutions"` in `package.json`. These are mechanisms for specifying a version range for _metadependencies_—the dependencies of your dependencies. Refer to [Package manager > Overrides and resolutions](https://bun.com/docs/install/overrides) for complete documentation.
 
@@ -190,7 +191,7 @@ package.json
 }
 ```
 
-## [Global packages](https://bun.com/docs/cli/install\#global-packages)
+## [Global packages](https://bun.com/docs/cli/install#global-packages)
 
 To install a package globally, use the `-g`/ `--global` flag. Typically this is used for installing command-line tools.
 
@@ -213,7 +214,7 @@ cowsay "Bun!"
                 ||     ||
 ```
 
-## [Production mode](https://bun.com/docs/cli/install\#production-mode)
+## [Production mode](https://bun.com/docs/cli/install#production-mode)
 
 To install in production mode (i.e. without `devDependencies` or `optionalDependencies`):
 
@@ -229,7 +230,7 @@ bun install --frozen-lockfile
 
 For more information on Bun's lockfile `bun.lock`, refer to [Package manager > Lockfile](https://bun.com/docs/install/lockfile).
 
-## [Omitting dependencies](https://bun.com/docs/cli/install\#omitting-dependencies)
+## [Omitting dependencies](https://bun.com/docs/cli/install#omitting-dependencies)
 
 To omit dev, peer, or optional dependencies use the `--omit` flag.
 
@@ -252,7 +253,7 @@ bun install --omit dev
 bun install --omit=dev --omit=peer --omit=optional
 ```
 
-## [Dry run](https://bun.com/docs/cli/install\#dry-run)
+## [Dry run](https://bun.com/docs/cli/install#dry-run)
 
 To perform a dry run (i.e. don't actually install anything):
 
@@ -260,7 +261,7 @@ To perform a dry run (i.e. don't actually install anything):
 bun install --dry-run
 ```
 
-## [Non-npm dependencies](https://bun.com/docs/cli/install\#non-npm-dependencies)
+## [Non-npm dependencies](https://bun.com/docs/cli/install#non-npm-dependencies)
 
 Bun supports installing dependencies from Git, GitHub, and local or remotely-hosted tarballs. For complete documentation refer to [Package manager > Git, GitHub, and tarball dependencies](https://bun.com/docs/cli/add).
 
@@ -280,11 +281,11 @@ package.json
 
 ```
 
-## [Installation strategies](https://bun.com/docs/cli/install\#installation-strategies)
+## [Installation strategies](https://bun.com/docs/cli/install#installation-strategies)
 
 Bun supports two package installation strategies that determine how dependencies are organized in `node_modules`:
 
-### [Hoisted installs (default for single projects)](https://bun.com/docs/cli/install\#hoisted-installs-default-for-single-projects)
+### [Hoisted installs (default for single projects)](https://bun.com/docs/cli/install#hoisted-installs-default-for-single-projects)
 
 The traditional npm/Yarn approach that flattens dependencies into a shared `node_modules` directory:
 
@@ -292,7 +293,7 @@ The traditional npm/Yarn approach that flattens dependencies into a shared `node
 bun install --linker hoisted
 ```
 
-### [Isolated installs](https://bun.com/docs/cli/install\#isolated-installs)
+### [Isolated installs](https://bun.com/docs/cli/install#isolated-installs)
 
 A pnpm-like approach that creates strict dependency isolation to prevent phantom dependencies:
 
@@ -304,13 +305,13 @@ Isolated installs create a central package store in `node_modules/.bun/` with sy
 
 For complete documentation on isolated installs, refer to [Package manager > Isolated installs](https://bun.com/docs/install/isolated).
 
-## [Disk efficiency](https://bun.com/docs/cli/install\#disk-efficiency)
+## [Disk efficiency](https://bun.com/docs/cli/install#disk-efficiency)
 
 Bun uses a global cache at `~/.bun/install/cache/` to minimize disk usage. Packages are stored once and linked to `node_modules` using hardlinks (Linux/Windows) or copy-on-write (macOS), so duplicate packages across projects don't consume additional disk space.
 
 For complete documentation refer to [Package manager > Global cache](https://bun.com/docs/install/cache).
 
-## [Configuration](https://bun.com/docs/cli/install\#configuration)
+## [Configuration](https://bun.com/docs/cli/install#configuration)
 
 The default behavior of `bun install` can be configured in `bunfig.toml`. The default values are shown below.
 
@@ -347,7 +348,7 @@ linker = "hoisted"
 
 ```
 
-## [CI/CD](https://bun.com/docs/cli/install\#ci-cd)
+## [CI/CD](https://bun.com/docs/cli/install#ci-cd)
 
 Use the official [`oven-sh/setup-bun`](https://github.com/oven-sh/setup-bun) action to install `bun` in a GitHub Actions pipeline:
 
@@ -593,7 +594,7 @@ Debugger](https://bun.com/docs/runtime/debugger) [Next\\
 \\
 `bun add`](https://bun.com/docs/cli/add)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/install.md)
 
@@ -617,7 +618,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

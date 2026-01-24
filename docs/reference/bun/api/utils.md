@@ -1,9 +1,10 @@
 ---
 title: Utils – API | Bun Docs
-url: 
+url:
 description: Bun implements a set of utilities that are commonly required by developers.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -52,7 +53,7 @@ Project
 
 [Roadmap](https://bun.com/docs/project/roadmap) [Benchmarking](https://bun.com/docs/project/benchmarking) [Contributing](https://bun.com/docs/project/contributing) [Building Windows](https://bun.com/docs/project/building-windows) [Bindgen](https://bun.com/docs/project/bindgen) [License](https://bun.com/docs/project/licensing)
 
-## [`Bun.version`](https://bun.com/docs/api/utils\#bun-version)
+## [`Bun.version`](https://bun.com/docs/api/utils#bun-version)
 
 A `string` containing the version of the `bun` CLI that is currently running.
 
@@ -62,7 +63,7 @@ Bun.version;
 
 ```
 
-## [`Bun.revision`](https://bun.com/docs/api/utils\#bun-revision)
+## [`Bun.revision`](https://bun.com/docs/api/utils#bun-revision)
 
 The git commit of [Bun](https://github.com/oven-sh/bun) that was compiled to create the current `bun` CLI.
 
@@ -72,11 +73,11 @@ Bun.revision;
 
 ```
 
-## [`Bun.env`](https://bun.com/docs/api/utils\#bun-env)
+## [`Bun.env`](https://bun.com/docs/api/utils#bun-env)
 
 An alias for `process.env`.
 
-## [`Bun.main`](https://bun.com/docs/api/utils\#bun-main)
+## [`Bun.main`](https://bun.com/docs/api/utils#bun-main)
 
 An absolute path to the entrypoint of the current program (the file that was executed with `bun run`).
 
@@ -101,7 +102,7 @@ if (import.meta.path === Bun.main) {
 
 This is analogous to the [`require.main = module` trick](https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line) in Node.js.
 
-## [`Bun.sleep()`](https://bun.com/docs/api/utils\#bun-sleep)
+## [`Bun.sleep()`](https://bun.com/docs/api/utils#bun-sleep)
 
 `Bun.sleep(ms: number)`
 
@@ -125,7 +126,7 @@ console.log("hello one second later!");
 
 ```
 
-## [`Bun.sleepSync()`](https://bun.com/docs/api/utils\#bun-sleepsync)
+## [`Bun.sleepSync()`](https://bun.com/docs/api/utils#bun-sleepsync)
 
 `Bun.sleepSync(ms: number)`
 
@@ -138,7 +139,7 @@ console.log("hello one second later!");
 
 ```
 
-## [`Bun.which()`](https://bun.com/docs/api/utils\#bun-which)
+## [`Bun.which()`](https://bun.com/docs/api/utils#bun-which)
 
 `Bun.which(bin: string)`
 
@@ -174,7 +175,7 @@ console.log(ls); // null
 
 You can think of this as a builtin alternative to the [`which`](https://www.npmjs.com/package/which) npm package.
 
-## [`Bun.randomUUIDv7()`](https://bun.com/docs/api/utils\#bun-randomuuidv7)
+## [`Bun.randomUUIDv7()`](https://bun.com/docs/api/utils#bun-randomuuidv7)
 
 `Bun.randomUUIDv7()` returns a [UUID v7](https://www.ietf.org/archive/id/draft-peabody-dispatch-new-uuid-format-01.html#name-uuidv7-layout-and-bit-order), which is monotonic and suitable for sorting and databases.
 
@@ -231,7 +232,7 @@ const base64url = Bun.randomUUIDv7("base64url");
 
 ```
 
-## [`Bun.peek()`](https://bun.com/docs/api/utils\#bun-peek)
+## [`Bun.peek()`](https://bun.com/docs/api/utils#bun-peek)
 
 `Bun.peek(prom: Promise)`
 
@@ -302,7 +303,7 @@ test("peek.status", () => {
 
 ```
 
-## [`Bun.openInEditor()`](https://bun.com/docs/api/utils\#bun-openineditor)
+## [`Bun.openInEditor()`](https://bun.com/docs/api/utils#bun-openineditor)
 
 Opens a file in your default editor. Bun auto-detects your editor via the `$VISUAL` or `$EDITOR` environment variables.
 
@@ -332,7 +333,7 @@ Bun.openInEditor(import.meta.url, {
 
 ```
 
-## [`Bun.deepEquals()`](https://bun.com/docs/api/utils\#bun-deepequals)
+## [`Bun.deepEquals()`](https://bun.com/docs/api/utils#bun-deepequals)
 
 Recursively checks if two objects are equivalent. This is used internally by `expect().toEqual()` in `bun:test`.
 
@@ -378,7 +379,7 @@ Bun.deepEquals(new Foo(), { a: 1 }, true); // false
 
 ```
 
-## [`Bun.escapeHTML()`](https://bun.com/docs/api/utils\#bun-escapehtml)
+## [`Bun.escapeHTML()`](https://bun.com/docs/api/utils#bun-escapehtml)
 
 `Bun.escapeHTML(value: string | object | number | boolean): string`
 
@@ -392,13 +393,13 @@ Escapes the following characters from an input string:
 
 This function is optimized for large input. On an M1X, it processes 480 MB/s -20 GB/s, depending on how much data is being escaped and whether there is non-asciitext. Non-string types will be converted to a string before escaping.
 
-## [`Bun.stringWidth()` ~6,756x faster `string-width` alternative](https://bun.com/docs/api/utils\#bun-stringwidth-6-756x-faster-string-width-alternative)
+## [`Bun.stringWidth()` ~6,756x faster `string-width` alternative](https://bun.com/docs/api/utils#bun-stringwidth-6-756x-faster-string-width-alternative)
 
 Get the column count of a string as it would be displayed in a terminal.Supports ANSI escape codes, emoji, and wide characters.
 
 Example usage:
 
-```
+````
 Bun.stringWidth("hello"); // => 5
 Bun.stringWidth("\u001b[31mhello\u001b[0m"); // => 5\
 Bun.stringWidth("\u001b[31mhello\u001b[0m", { countAnsiEscapeCodes: true }); // => 12\
@@ -995,3 +996,4 @@ Get help\
 [Discord](https://bun.com/discord)\
 \
 [Migration help for organizations](https://t.co/0CA0Neqgts)
+````

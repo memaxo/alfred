@@ -1,9 +1,10 @@
 ---
 title: GitHub | Better Auth
-url: 
+url:
 description: GitHub provider setup and usage.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,7 +27,7 @@ language: en
 
 Copy MarkdownOpen in
 
-### [Get your GitHub credentials](https://www.better-auth.com/docs/authentication/github\#get-your-github-credentials)
+### [Get your GitHub credentials](https://www.better-auth.com/docs/authentication/github#get-your-github-credentials)
 
 To use GitHub sign in, you need a client ID and client secret. You can get them from the [GitHub Developer Portal](https://github.com/settings/developers).
 
@@ -34,7 +35,7 @@ Make sure to set the redirect URL to `http://localhost:3000/api/auth/callback/gi
 
 Important: You MUST include the user:email scope in your GitHub app. See details below.
 
-### [Configure the provider](https://www.better-auth.com/docs/authentication/github\#configure-the-provider)
+### [Configure the provider](https://www.better-auth.com/docs/authentication/github#configure-the-provider)
 
 To configure the provider, you need to import the provider and pass it to the `socialProviders` option of the auth instance.
 
@@ -53,7 +54,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Sign In with GitHub](https://www.better-auth.com/docs/authentication/github\#sign-in-with-github)
+### [Sign In with GitHub](https://www.better-auth.com/docs/authentication/github#sign-in-with-github)
 
 To sign in with GitHub, you can use the `signIn.social` function provided by the client. The `signIn` function takes an object with the following properties:
 
@@ -72,9 +73,9 @@ const signIn = async () => {
 }
 ```
 
-## [Usage](https://www.better-auth.com/docs/authentication/github\#usage)
+## [Usage](https://www.better-auth.com/docs/authentication/github#usage)
 
-### [Setting up your Github app](https://www.better-auth.com/docs/authentication/github\#setting-up-your-github-app)
+### [Setting up your Github app](https://www.better-auth.com/docs/authentication/github#setting-up-your-github-app)
 
 Github has two types of apps: Github apps and OAuth apps.
 
@@ -84,12 +85,11 @@ For OAuth apps, you don't have to do anything special (just follow the steps abo
 
 2. Save changes.
 
-
 That's all! Now you can copy the Client ID and Client Secret of your app!
 
-If you get "email\_not\_found" error, it's because you selected a Github app & did not configure this part!
+If you get "email_not_found" error, it's because you selected a Github app & did not configure this part!
 
-### [Why don't I have a refresh token?](https://www.better-auth.com/docs/authentication/github\#why-dont-i-have-a-refresh-token)
+### [Why don't I have a refresh token?](https://www.better-auth.com/docs/authentication/github#why-dont-i-have-a-refresh-token)
 
 Github doesn't issue refresh tokens for OAuth apps. For regular OAuth apps,
 GitHub issues access tokens that remain valid indefinitely unless the user revokes them,

@@ -19,6 +19,7 @@ We persist a compact compilation object as part of the workflow run record (`wor
 - **Versioning**: `version: "workflow-compilation-v1"`
 
 The payload is intentionally compact:
+
 - `summaryText` (human-readable completion sentence)
 - `fileChanges` (created/modified/deleted paths)
 - `agents[]` (agent outcomes + summaries)
@@ -35,6 +36,7 @@ The pipeline emits `pipeline:complete.summaryText` so UIs can show an explicit c
 ### API-layer observer
 
 Create an API-layer `PipelineObserver` that:
+
 - collects `context:set` values for `executeOutput` and `summarizeOutput`
 - on `pipeline:complete`, builds a `WorkflowCompilation` and persists it to `workflow_runs.stateData`
 - on `pipeline:failed`, persists a partial compilation (status + error + any available work)
@@ -44,9 +46,11 @@ Canonical implementation: `packages/api/src/services/compilation.ts`
 ### API endpoint
 
 Expose a query endpoint that returns `WorkflowCompilation | null` for a `runId`:
+
 - `packages/api/src/routers/workflow.ts` → `workflow.compilation.get`
 
 Clients should use:
+
 - streaming preview for immediate “Completed” UI
 - compilation fetch for the full “Work” view
 
@@ -55,4 +59,3 @@ Clients should use:
 - **Web**: Work tab in workflow details + “Completed” card in `WorkflowWindow`.
 - **Native**: workflow detail screen displays compilation when run is completed/failed.
 - **TUI**: CLI command prints compilation by run id.
-

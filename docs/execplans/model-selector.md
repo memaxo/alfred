@@ -9,11 +9,13 @@ This ExecPlan must be maintained in accordance with `.agent/PLANS.md` from the r
 ALFRED currently makes LLM calls from multiple places and sometimes constructs models directly in call sites. After this change, ALFRED will have one canonical “model selector” that decides which model to use for each purpose (chat, planner, background work, voice, etc.) and will construct the correct AI SDK v6 `LanguageModel` via either Cerebras or OpenRouter. A single user will be able to choose their preferred primary chat model, planner model, background model, and voice model without code changes, and ALFRED will reliably use those choices across API routers, workflow runtime streaming, and plan generation.
 
 You can see it working after implementation by starting the app and observing:
+
 - The assistant/orchestrator routers return `modelId` values that match your selected role models.
 - A workflow run logs/metrics show the selected model id for streaming calls.
 - Changing the user’s model preference changes the model used in subsequent chat/workflow runs, without deploying new code.
 
 Provider references (non-authoritative; this plan is self-contained):
+
 - Cerebras provider overview: https://ai-sdk.dev/providers/ai-sdk-providers/cerebras
 - OpenRouter provider overview: https://ai-sdk.dev/providers/community-providers/openrouter
 
@@ -67,6 +69,7 @@ Provider references (non-authoritative; this plan is self-contained):
 ## Context and Orientation
 
 This repository is a Bun + Turborepo monorepo. ALFRED’s runtime has multiple LLM call paths:
+
 - API (tRPC) routers perform non-stream generation for chat-like endpoints.
 - Workflow runtime performs streaming generation to drive multi-step orchestration.
 - The plan package performs “planner” work using object generation and prompt-based transformations.
@@ -151,11 +154,13 @@ The selector must convert either form to a `LanguageModel` object.
 ### Why not hardcode “smart/fast/cheap” models
 
 Hardcoding model ids in code is brittle because:
+
 - provider catalogs change (models deprecated/renamed),
 - “best” models change rapidly,
 - deployments want different defaults without code forks.
 
 Instead we will:
+
 - ship recommended defaults in `config/env.example`,
 - store per-user preferred models in the DB,
 - treat env vars as deployment defaults.
@@ -165,6 +170,7 @@ Instead we will:
 The model selector must implement strict precedence. The goal is: user choices always win; env provides default; there is no hidden behavior.
 
 Precedence for each role:
+
 1. **User preference** in DB: if the user set a model for that role, use it.
 2. **Env default** for that role: if set, use it.
 3. **Role fallback**: a safe, explicit fallback for development/testing only.
@@ -179,6 +185,7 @@ Introduce role-based defaults. Names are stable and descriptive; do not use mult
 - `OPENROUTER_API_KEY`: required if any selected model uses OpenRouter.
 
 Default models by role (deployment defaults):
+
 - `AI_CHAT_MODEL` (string `provider:modelId`)
 - `AI_ORCHESTRATOR_MODEL`
 - `AI_PLANNER_MODEL`
@@ -187,9 +194,11 @@ Default models by role (deployment defaults):
 - Optional: `AI_CODER_MODEL`
 
 Optional fallback for planner robustness:
+
 - `AI_PLANNER_FALLBACK_MODEL` (same canonical format). This is an explicit “fallback chain” only for planner outputs when structured output fails.
 
 Compatibility (temporary):
+
 - If `AI_MODEL` exists, treat it as the default for `AI_CHAT_MODEL` only, but log a warning and document deprecation.
 
 ### Persistence
@@ -219,11 +228,13 @@ Because OpenRouter model ids include provider prefixes (e.g., `anthropic/claude-
 ## Design: history budgeting and context windows
 
 ALFRED already has history budgeting logic that needs a model id string (for context window selection). After this change:
+
 - The selector must expose a stable `modelKey` string for budgeting and metrics, such as `cerebras:zai-glm-4.7`.
 - The budgeting system must be updated to accept these ids and must not default to `openai/*`.
 - We must maintain an override mapping so deployments can set context windows without changing code. Existing patterns include `HISTORY_MODEL_CONTEXT` in `config/env.example`.
 
 Plan requirements:
+
 - Extend model metadata mapping to include commonly used Cerebras and OpenRouter ids.
 - Keep a safe default context window (conservative) if unknown.
 - Ensure “voice” role is allowed to prune aggressively for latency.
@@ -237,6 +248,7 @@ This section is prescriptive. It names the files, the interfaces, and the behavi
 Goal: define cross-layer types and runtime validation schemas so API, agent, runtime, and UI all speak the same language.
 
 Work:
+
 - Add a new file in `packages/type/src/` defining:
   - `ModelProvider = "cerebras" | "openrouter"`
   - `ModelRole = "chat" | "orchestrator" | "planner" | "background" | "voice" | "coder"`
@@ -250,9 +262,11 @@ Work:
 - Export types and schemas from `packages/type/src/index.ts` or appropriate subpath exports.
 
 Result:
+
 - All other packages can import `ModelRole` and a `parseModelRef()` helper without needing to guess string formats.
 
 Proof:
+
 - Typecheck passes for packages importing these types.
 - A unit test in `packages/type` validates parsing edge cases:
   - empty string rejects
@@ -265,6 +279,7 @@ Proof:
 Goal: one module constructs provider instances and returns `LanguageModel` + `modelKey` for any role, using precedence rules.
 
 Work:
+
 - Add a single module in `packages/agent/src/` (single-word name) that exports:
   - `getModelForRole(role: ModelRole, userId?: string): Promise<{ model: LanguageModel; modelKey: string }>`
   - `getModelKeyForRole(role: ModelRole, userId?: string): Promise<string>`
@@ -280,9 +295,11 @@ Work:
   - Load model preferences via the preference system if possible; otherwise use a dedicated repo function to fetch settings. This must be async and safe in SSR.
 
 Result:
+
 - All other code can ask for “role model” and does not know providers.
 
 Proof:
+
 - Unit tests in `packages/agent`:
   - precedence test: DB value overrides env
   - env fallback test: if no DB, uses env
@@ -294,6 +311,7 @@ Proof:
 Goal: assistant/orchestrator API endpoints use role-selected models and report correct model ids to the client.
 
 Work:
+
 - Update `packages/api/src/routers/assistant.ts`:
   - Replace any dependence on `getAssistantAgentDefaults().model` as the model source.
   - Use selector role `chat` for assistant generation.
@@ -305,9 +323,11 @@ Work:
 - Ensure `getConfig` endpoints return the correct selected model id.
 
 Result:
+
 - API generation uses role models; model ids reflect user selection.
 
 Proof:
+
 - API router tests updated/added to assert `modelId` returned matches configured defaults.
 
 ### Milestone 4: Migrate runtime workflow streaming to use selector
@@ -315,6 +335,7 @@ Proof:
 Goal: workflow runtime streaming uses the selector’s `orchestrator` model and does not instantiate providers directly.
 
 Work:
+
 - Replace `@ai-sdk/openai` usage in:
   - `packages/runtime/src/workflow/executor.ts`
   - `packages/agent/src/workflow/services.ts`
@@ -322,10 +343,12 @@ Work:
 - Ensure metrics labels in runtime streaming reflect `modelKey` from selector.
 
 Result:
+
 - No runtime `openai(...)` construction.
 - Streaming continues to work.
 
 Proof:
+
 - Workflow integration tests still pass; add a test that asserts selected model id is recorded in events/metrics (mock metrics if needed).
 
 ### Milestone 5: Migrate plan package LLM calls to use selector
@@ -333,14 +356,17 @@ Proof:
 Goal: plan generation and revisions use role `planner` (and optionally `background` for cheap tasks like titling).
 
 Work:
+
 - Update `packages/plan/src/generate/phased.ts` to request the planner model from selector.
 - Update `packages/plan/src/evaluate/revise.ts` similarly.
 - Update `packages/plan/src/pattern/trigger.ts` to use background model if desired, otherwise planner; record decision.
 
 Result:
+
 - Plan package does not construct providers itself.
 
 Proof:
+
 - Existing plan tests updated; ensure failure modes show clear errors.
 
 ### Milestone 6: User-facing configuration and persistence
@@ -348,6 +374,7 @@ Proof:
 Goal: user can choose models per role.
 
 Work:
+
 - Add UI in web settings:
   - A settings panel showing roles with a text input for canonical `provider:modelId` strings.
   - “Test model” button (optional) that runs a short `generateText` call and returns success/failure.
@@ -355,9 +382,11 @@ Work:
 - Persist choices via preference system or new DB table; ensure it’s scoped to the single user.
 
 Result:
+
 - User can change role model without redeploy.
 
 Proof:
+
 - Manual test: change chat model, refresh, new chat uses new model id.
 
 ### Milestone 7: Hardening, tests, and safeguards
@@ -365,6 +394,7 @@ Proof:
 Goal: prevent regression and ensure workflow runtime remains safe.
 
 Work:
+
 - Add tests that cover (must be explicit):
   - normal success path in workflow orchestration
   - escalation path (assistant → orchestrator or similar)
@@ -373,9 +403,11 @@ Work:
   - disallow `@ai-sdk/openai` imports in `packages/runtime/**` and in new selector call paths (docs/tests can be exempted).
 
 Result:
+
 - Tests and CI enforce the new architecture.
 
 Proof:
+
 - CI job runs and fails on intentionally reintroducing `@ai-sdk/openai`.
 
 ## Concrete Steps
@@ -384,30 +416,32 @@ These are the commands and expected outcomes that a contributor should run while
 
 1. Install dependencies (repo root):
 
-    bun install
+   bun install
 
 2. Typecheck the monorepo (repo root):
 
-    bun run typecheck
+   bun run typecheck
 
    Expect: no TypeScript errors.
 
 3. Run relevant tests:
+
 - API tests:
 
-    bun test packages/api
+  bun test packages/api
 
 - Runtime tests:
 
-    bun test packages/runtime
+  bun test packages/runtime
 
 - Plan tests:
 
-    bun test packages/plan
+  bun test packages/plan
 
-   Expect: all passing; new tests fail before implementation and pass after.
+  Expect: all passing; new tests fail before implementation and pass after.
 
 4. Manual smoke:
+
 - Start web app and exercise assistant chat and a workflow run.
 - Confirm logs/metrics show `modelKey` values like `cerebras:zai-glm-4.7` or `openrouter:...`.
 

@@ -9,8 +9,7 @@ AI SDK RSC is currently experimental. We recommend using AI SDK UI for productio
 It is a hook that enables you to read and update the UI State. The state is client-side and can contain functions, React nodes, and other data. UIState is the visual representation of the AI state.
 
 ## Import
-    
-    
+
     import { useUIState } from "@ai-sdk/rsc"
 
 ## API Signature

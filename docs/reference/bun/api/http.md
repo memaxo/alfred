@@ -1,9 +1,10 @@
 ---
 title: HTTP server – API | Bun Docs
-url: 
+url:
 description: Bun implements a fast HTTP server built on Request/Response objects, along with supporting node:http APIs.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -58,7 +59,7 @@ These modules have been re-implemented to use Bun's fast internal HTTP infrastru
 
 To start a high-performance HTTP server with a clean API, the recommended approach is [`Bun.serve`](https://bun.com/docs/api/http#start-a-server-bun-serve).
 
-## [`Bun.serve()`](https://bun.com/docs/api/http\#bun-serve)
+## [`Bun.serve()`](https://bun.com/docs/api/http#bun-serve)
 
 Use `Bun.serve` to start an HTTP server in Bun.
 
@@ -106,7 +107,7 @@ Bun.serve({
 
 ```
 
-### [Routing](https://bun.com/docs/api/http\#routing)
+### [Routing](https://bun.com/docs/api/http#routing)
 
 Routes in `Bun.serve()` receive a `BunRequest` (which extends [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request)) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) or `Promise<Response>`. This makes it easier to use the same code for both sending & receiving HTTP requests.
 
@@ -189,7 +190,7 @@ Bun.serve({
 
 Percent-encoded route parameter values are automatically decoded. Unicode characters are supported. Invalid unicode is replaced with the unicode replacement character `&0xFFFD;`.
 
-### [Static responses](https://bun.com/docs/api/http\#static-responses)
+### [Static responses](https://bun.com/docs/api/http#static-responses)
 
 Routes can also be `Response` objects (without the handler function). Bun.serve() optimizes it for zero-allocation dispatch - perfect for health checks, redirects, and fixed content:
 
@@ -222,7 +223,7 @@ Static responses do not allocate additional memory after initialization. You can
 
 Static route responses are cached for the lifetime of the server object. To reload static routes, call `server.reload(options)`.
 
-### [File Responses vs Static Responses](https://bun.com/docs/api/http\#file-responses-vs-static-responses)
+### [File Responses vs Static Responses](https://bun.com/docs/api/http#file-responses-vs-static-responses)
 
 When serving files in routes, there are two distinct behaviors depending on whether you buffer the file content or serve it directly:
 
@@ -259,7 +260,7 @@ Bun.serve({
 - **Memory efficient** \- Only buffers small chunks during transfer, not entire file
 - **Best for**: Large files, dynamic content, user uploads, files that change frequently
 
-### [HTTP Caching Behavior](https://bun.com/docs/api/http\#http-caching-behavior)
+### [HTTP Caching Behavior](https://bun.com/docs/api/http#http-caching-behavior)
 
 Both route types implement HTTP caching standards but with different strategies:
 
@@ -334,7 +335,7 @@ const server = Bun.serve({
 
 ```
 
-### [Route precedence](https://bun.com/docs/api/http\#route-precedence)
+### [Route precedence](https://bun.com/docs/api/http#route-precedence)
 
 Routes are matched in order of specificity:
 
@@ -356,7 +357,7 @@ Bun.serve({
 
 ```
 
-### [Per-HTTP Method Routes](https://bun.com/docs/api/http\#per-http-method-routes)
+### [Per-HTTP Method Routes](https://bun.com/docs/api/http#per-http-method-routes)
 
 Route handlers can be specialized by HTTP method:
 
@@ -383,15 +384,15 @@ Bun.serve({
 
 You can pass any of the following methods:
 
-| Method | Usecase example |
-| --- | --- |
-| `GET` | Fetch a resource |
-| `HEAD` | Check if a resource exists |
+| Method    | Usecase example                 |
+| --------- | ------------------------------- |
+| `GET`     | Fetch a resource                |
+| `HEAD`    | Check if a resource exists      |
 | `OPTIONS` | Get allowed HTTP methods (CORS) |
-| `DELETE` | Delete a resource |
-| `PATCH` | Update a resource |
-| `POST` | Create a resource |
-| `PUT` | Update a resource |
+| `DELETE`  | Delete a resource               |
+| `PATCH`   | Update a resource               |
+| `POST`    | Create a resource               |
+| `PUT`     | Update a resource               |
 
 When passing a function instead of an object, all methods will be handled by that function:
 
@@ -408,7 +409,7 @@ await fetch(new URL("/api/version", server.url), { method: "PUT" });
 
 ```
 
-### [Hot Route Reloading](https://bun.com/docs/api/http\#hot-route-reloading)
+### [Hot Route Reloading](https://bun.com/docs/api/http#hot-route-reloading)
 
 Update routes without server restarts using `server.reload()`:
 
@@ -428,7 +429,7 @@ server.reload({
 
 ```
 
-### [Error Handling](https://bun.com/docs/api/http\#error-handling)
+### [Error Handling](https://bun.com/docs/api/http#error-handling)
 
 Bun provides structured error handling for routes:
 
@@ -454,7 +455,7 @@ Bun.serve({
 
 ```
 
-### [HTML imports](https://bun.com/docs/api/http\#html-imports)
+### [HTML imports](https://bun.com/docs/api/http#html-imports)
 
 Bun supports importing HTML files directly into your server code, enabling full-stack applications with both server-side and client-side code. HTML imports work in two modes:
 
@@ -477,7 +478,7 @@ HTML imports don't just serve HTML — it's a full-featured frontend bundler, tr
 
 For a complete guide on building full-stack applications with HTML imports, including detailed examples and best practices, see [/docs/bundler/fullstack](https://bun.com/docs/bundler/fullstack).
 
-### [Practical example: REST API](https://bun.com/docs/api/http\#practical-example-rest-api)
+### [Practical example: REST API](https://bun.com/docs/api/http#practical-example-rest-api)
 
 Here's a basic database-backed REST API using Bun's router with zero dependencies:
 
@@ -558,11 +559,11 @@ export interface Post {
 
 ```
 
-### [Routing performance](https://bun.com/docs/api/http\#routing-performance)
+### [Routing performance](https://bun.com/docs/api/http#routing-performance)
 
 `Bun.serve()`'s router builds on top uWebSocket's [tree-based approach](https://github.com/oven-sh/bun/blob/0d1a00fa0f7830f8ecd99c027fce8096c9d459b6/packages/bun-uws/src/HttpRouter.h#L57-L64) to add [SIMD-accelerated route parameter decoding](https://github.com/oven-sh/bun/blob/main/src/bun.js/bindings/decodeURIComponentSIMD.cpp#L21-L271) and [JavaScriptCore structure caching](https://github.com/oven-sh/bun/blob/main/src/bun.js/bindings/ServerRouteList.cpp#L100-L101) to push the performance limits of what modern hardware allows.
 
-### [`fetch` request handler](https://bun.com/docs/api/http\#fetch-request-handler)
+### [`fetch` request handler](https://bun.com/docs/api/http#fetch-request-handler)
 
 The `fetch` handler handles incoming requests that weren't matched by any route. It receives a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) object and returns a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) or [`Promise<Response>`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
 
@@ -618,7 +619,7 @@ const server = Bun.serve({
 
 ```
 
-### [Changing the `port` and `hostname`](https://bun.com/docs/api/http\#changing-the-port-and-hostname)
+### [Changing the `port` and `hostname`](https://bun.com/docs/api/http#changing-the-port-and-hostname)
 
 To configure which port and hostname the server will listen on, set `port` and `hostname` in the options object.
 
@@ -684,7 +685,7 @@ PORT=4002 bun server.ts
 NODE_PORT=4002 bun server.ts
 ```
 
-### [Unix domain sockets](https://bun.com/docs/api/http\#unix-domain-sockets)
+### [Unix domain sockets](https://bun.com/docs/api/http#unix-domain-sockets)
 
 To listen on a [unix domain socket](https://en.wikipedia.org/wiki/Unix_domain_socket), pass the `unix` option with the path to the socket.
 
@@ -698,7 +699,7 @@ Bun.serve({
 
 ```
 
-### [Abstract namespace sockets](https://bun.com/docs/api/http\#abstract-namespace-sockets)
+### [Abstract namespace sockets](https://bun.com/docs/api/http#abstract-namespace-sockets)
 
 Bun supports Linux abstract namespace sockets. To use an abstract namespace socket, prefix the `unix` path with a null byte.
 
@@ -714,7 +715,7 @@ Bun.serve({
 
 Unlike unix domain sockets, abstract namespace sockets are not bound to the filesystem and are automatically removed when the last reference to the socket is closed.
 
-## [Error handling](https://bun.com/docs/api/http\#error-handling)
+## [Error handling](https://bun.com/docs/api/http#error-handling)
 
 To activate development mode, set `development: true`.
 
@@ -732,7 +733,7 @@ In development mode, Bun will surface errors in-browser with a built-in error pa
 
 [![](https://bun.com/images/exception_page.png)](https://bun.com/images/exception_page.png) Bun's built-in 500 page
 
-### [`error` callback](https://bun.com/docs/api/http\#error-callback)
+### [`error` callback](https://bun.com/docs/api/http#error-callback)
 
 To handle server-side errors, implement an `error` handler. This function should return a `Response` to serve to the client when an error occurs. This response will supersede Bun's default error page in `development` mode.
 
@@ -767,7 +768,7 @@ server.stop();
 
 ```
 
-## [TLS](https://bun.com/docs/api/http\#tls)
+## [TLS](https://bun.com/docs/api/http#tls)
 
 Bun supports TLS out of the box, powered by [BoringSSL](https://boringssl.googlesource.com/boringssl). Enable TLS by passing in a value for `key` and `cert`; both are required to enable TLS.
 
@@ -848,7 +849,7 @@ Bun.serve({
 
 ```
 
-### [Server name indication (SNI)](https://bun.com/docs/api/http\#server-name-indication-sni)
+### [Server name indication (SNI)](https://bun.com/docs/api/http#server-name-indication-sni)
 
 To configure the server name indication (SNI) for the server, set the `serverName` field in the `tls` object.
 
@@ -884,7 +885,7 @@ Bun.serve({
 
 ```
 
-## [idleTimeout](https://bun.com/docs/api/http\#idletimeout)
+## [idleTimeout](https://bun.com/docs/api/http#idletimeout)
 
 To configure the idle timeout, set the `idleTimeout` field in Bun.serve.
 
@@ -902,7 +903,7 @@ Bun.serve({
 
 This is the maximum amount of time a connection is allowed to be idle before the server closes it. A connection is idling if there is no data sent or received.
 
-## [export default syntax](https://bun.com/docs/api/http\#export-default-syntax)
+## [export default syntax](https://bun.com/docs/api/http#export-default-syntax)
 
 Thus far, the examples on this page have used the explicit `Bun.serve` API. Bun also supports an alternate syntax.
 
@@ -921,7 +922,7 @@ export default {
 
 Instead of passing the server options into `Bun.serve`, `export default` it. This file can be executed as-is; when Bun sees a file with a `default` export containing a `fetch` handler, it passes it into `Bun.serve` under the hood.
 
-## [Streaming files](https://bun.com/docs/api/http\#streaming-files)
+## [Streaming files](https://bun.com/docs/api/http#streaming-files)
 
 To stream a file, return a `Response` object with a `BunFile` object as the body.
 
@@ -957,9 +958,9 @@ Bun.serve({
 
 ```
 
-## [Server Lifecycle Methods](https://bun.com/docs/api/http\#server-lifecycle-methods)
+## [Server Lifecycle Methods](https://bun.com/docs/api/http#server-lifecycle-methods)
 
-### [server.stop() - Stop the server](https://bun.com/docs/api/http\#server-stop-stop-the-server)
+### [server.stop() - Stop the server](https://bun.com/docs/api/http#server-stop-stop-the-server)
 
 To stop the server from accepting new connections:
 
@@ -980,7 +981,7 @@ await server.stop(true);
 
 By default, `stop()` allows in-flight requests and WebSocket connections to complete. Pass `true` to immediately terminate all connections.
 
-### [server.ref() and server.unref() - Process lifecycle control](https://bun.com/docs/api/http\#server-ref-and-server-unref-process-lifecycle-control)
+### [server.ref() and server.unref() - Process lifecycle control](https://bun.com/docs/api/http#server-ref-and-server-unref-process-lifecycle-control)
 
 Control whether the server keeps the Bun process alive:
 
@@ -993,7 +994,7 @@ server.ref();
 
 ```
 
-### [server.reload() - Hot reload handlers](https://bun.com/docs/api/http\#server-reload-hot-reload-handlers)
+### [server.reload() - Hot reload handlers](https://bun.com/docs/api/http#server-reload-hot-reload-handlers)
 
 Update the server's handlers without restarting:
 
@@ -1021,9 +1022,9 @@ server.reload({
 
 This is useful for development and hot reloading. Only `fetch`, `error`, and `routes` can be updated.
 
-## [Per-Request Controls](https://bun.com/docs/api/http\#per-request-controls)
+## [Per-Request Controls](https://bun.com/docs/api/http#per-request-controls)
 
-### [server.timeout(Request, seconds) - Custom request timeouts](https://bun.com/docs/api/http\#server-timeout-request-seconds-custom-request-timeouts)
+### [server.timeout(Request, seconds) - Custom request timeouts](https://bun.com/docs/api/http#server-timeout-request-seconds-custom-request-timeouts)
 
 Set a custom idle timeout for individual requests:
 
@@ -1044,7 +1045,7 @@ const server = Bun.serve({
 
 Pass `0` to disable the timeout for a request.
 
-### [server.requestIP(Request) - Get client information](https://bun.com/docs/api/http\#server-requestip-request-get-client-information)
+### [server.requestIP(Request) - Get client information](https://bun.com/docs/api/http#server-requestip-request-get-client-information)
 
 Get client IP and port information:
 
@@ -1065,11 +1066,11 @@ const server = Bun.serve({
 
 Returns `null` for closed requests or Unix domain sockets.
 
-## [Working with Cookies](https://bun.com/docs/api/http\#working-with-cookies)
+## [Working with Cookies](https://bun.com/docs/api/http#working-with-cookies)
 
 Bun provides a built-in API for working with cookies in HTTP requests and responses. The `BunRequest` object includes a `cookies` property that provides a `CookieMap` for easily accessing and manipulating cookies. When using `routes`, `Bun.serve()` automatically tracks `request.cookies.set` and applies them to the response.
 
-### [Reading cookies](https://bun.com/docs/api/http\#reading-cookies)
+### [Reading cookies](https://bun.com/docs/api/http#reading-cookies)
 
 Read cookies from incoming requests using the `cookies` property on the `BunRequest` object:
 
@@ -1092,7 +1093,7 @@ Bun.serve({
 
 ```
 
-### [Setting cookies](https://bun.com/docs/api/http\#setting-cookies)
+### [Setting cookies](https://bun.com/docs/api/http#setting-cookies)
 
 To set cookies, use the `set` method on the `CookieMap` from the `BunRequest` object.
 
@@ -1123,7 +1124,7 @@ Bun.serve({
 
 `Bun.serve()` automatically tracks modified cookies from the request and applies them to the response.
 
-### [Deleting cookies](https://bun.com/docs/api/http\#deleting-cookies)
+### [Deleting cookies](https://bun.com/docs/api/http#deleting-cookies)
 
 To delete a cookie, use the `delete` method on the `request.cookies` ( `CookieMap`) object:
 
@@ -1145,9 +1146,9 @@ Bun.serve({
 
 Deleted cookies become a `Set-Cookie` header on the response with the `maxAge` set to `0` and an empty `value`.
 
-## [Server Metrics](https://bun.com/docs/api/http\#server-metrics)
+## [Server Metrics](https://bun.com/docs/api/http#server-metrics)
 
-### [server.pendingRequests and server.pendingWebSockets](https://bun.com/docs/api/http\#server-pendingrequests-and-server-pendingwebsockets)
+### [server.pendingRequests and server.pendingWebSockets](https://bun.com/docs/api/http#server-pendingrequests-and-server-pendingwebsockets)
 
 Monitor server activity with built-in counters:
 
@@ -1163,7 +1164,7 @@ const server = Bun.serve({
 
 ```
 
-### [server.subscriberCount(topic) - WebSocket subscribers](https://bun.com/docs/api/http\#server-subscribercount-topic-websocket-subscribers)
+### [server.subscriberCount(topic) - WebSocket subscribers](https://bun.com/docs/api/http#server-subscribercount-topic-websocket-subscribers)
 
 Get count of subscribers for a WebSocket topic:
 
@@ -1182,9 +1183,9 @@ const server = Bun.serve({
 
 ```
 
-## [WebSocket Configuration](https://bun.com/docs/api/http\#websocket-configuration)
+## [WebSocket Configuration](https://bun.com/docs/api/http#websocket-configuration)
 
-### [server.publish(topic, data, compress) - WebSocket Message Publishing](https://bun.com/docs/api/http\#server-publish-topic-data-compress-websocket-message-publishing)
+### [server.publish(topic, data, compress) - WebSocket Message Publishing](https://bun.com/docs/api/http#server-publish-topic-data-compress-websocket-message-publishing)
 
 The server can publish messages to all WebSocket clients subscribed to a topic:
 
@@ -1210,7 +1211,7 @@ The `publish()` method returns:
 - `0` if the message was dropped
 - `-1` if backpressure was applied
 
-### [WebSocket Handler Options](https://bun.com/docs/api/http\#websocket-handler-options)
+### [WebSocket Handler Options](https://bun.com/docs/api/http#websocket-handler-options)
 
 When configuring WebSockets, several advanced options are available through the `websocket` handler:
 
@@ -1255,7 +1256,7 @@ Bun.serve({
 
 ```
 
-## [Benchmarks](https://bun.com/docs/api/http\#benchmarks)
+## [Benchmarks](https://bun.com/docs/api/http#benchmarks)
 
 Below are Bun and Node.js implementations of a simple HTTP server that responds `Bun!` to each incoming `Request`.
 
@@ -1287,13 +1288,13 @@ require("http")
 The `Bun.serve` server can handle roughly 2.5x more requests per second than Node.js on Linux.
 
 | Runtime | Requests per second |
-| --- | --- |
-| Node 16 | ~64,000 |
-| Bun | ~160,000 |
+| ------- | ------------------- |
+| Node 16 | ~64,000             |
+| Bun     | ~160,000            |
 
 [![image](https://user-images.githubusercontent.com/709451/162389032-fc302444-9d03-46be-ba87-c12bd8ce89a0.png)](https://user-images.githubusercontent.com/709451/162389032-fc302444-9d03-46be-ba87-c12bd8ce89a0.png)
 
-## [Reference](https://bun.com/docs/api/http\#reference)
+## [Reference](https://bun.com/docs/api/http#reference)
 
 See TypeScript definitions
 
@@ -1476,7 +1477,7 @@ interface TLSOptions {
 \\
 HTTP client](https://bun.com/docs/api/fetch)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/http.md)
 
@@ -1500,7 +1501,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -6,6 +6,7 @@
 ## Executive Summary
 
 The codebase uses WebSockets in two primary contexts:
+
 1. **Voice Streaming** - Native Bun WebSocket server for bidirectional audio streaming
 2. **tRPC Subscriptions** - Observable-based streaming (not WebSocket, but included for completeness)
 
@@ -32,9 +33,15 @@ Bun.serve<VoiceSocketData>({
     server.upgrade(req, { data: { userId, runtime, lastActivity } });
   },
   websocket: {
-    open(ws) { /* Send ready */ },
-    message(ws, message) { /* Handle binary/JSON */ },
-    close(ws) { /* Cleanup session */ },
+    open(ws) {
+      /* Send ready */
+    },
+    message(ws, message) {
+      /* Handle binary/JSON */
+    },
+    close(ws) {
+      /* Cleanup session */
+    },
   },
 });
 ```
@@ -59,6 +66,7 @@ Bun.serve<VoiceSocketData>({
    - **Recommendation:** Use per-socket timeout instead of interval scan
 
 3. **Error Handling:** Silent catch blocks in `send()` function
+
    ```typescript
    function send(ws: ServerWebSocket<VoiceSocketData>, payload: unknown) {
      try {
@@ -66,6 +74,7 @@ Bun.serve<VoiceSocketData>({
      } catch (_error) {} // ⚠️ Silent failure
    }
    ```
+
    - **Risk:** Errors swallowed, no visibility into send failures
    - **Recommendation:** Log errors with context (sessionId, event type)
 
@@ -88,11 +97,13 @@ Bun.serve<VoiceSocketData>({
 #### ⚠️ Concerns
 
 1. **Memory Leak Risk:** `activeSockets` Set never cleared on normal close
+
    ```typescript
    close(ws) {
      activeSockets.delete(ws); // ✅ Good
    }
    ```
+
    - Actually handled correctly, but cleanup interval could miss rapid connect/disconnect
 
 2. **No Connection Limits:** No max concurrent connections enforced
@@ -148,9 +159,11 @@ Bun.serve<VoiceSocketData>({
 #### ⚠️ Concerns
 
 1. **Base64 Decoding:** Converts binary to Base64 then back to Buffer
+
    ```typescript
-   audioBase64: Buffer.from(message as any).toString("base64")
+   audioBase64: Buffer.from(message as any).toString("base64");
    ```
+
    - **Issue:** Unnecessary conversion overhead
    - **Recommendation:** Process binary directly when possible
 
@@ -171,12 +184,14 @@ Bun.serve<VoiceSocketData>({
 #### ⚠️ Concerns
 
 1. **Session Removal Timing:** Removes session before TTS synthesis completes
+
    ```typescript
    // Line 371: Removes session
    this.sessionRegistry.removeSession(sessionId);
    // Line 383: But then uses session for TTS
    session.clearTranscript();
    ```
+
    - **Issue:** Comment indicates confusion about when to remove
    - **Status:** Actually works because session object still exists, but confusing
 
@@ -207,6 +222,7 @@ Bun.serve<VoiceSocketData>({
    - **Recommendation:** Send periodic ping if server supports it
 
 3. **Binary Type:** Sets `binaryType = "arraybuffer"` but may fail silently
+
    ```typescript
    try {
      (ws as WebSocket).binaryType = "arraybuffer";
@@ -214,6 +230,7 @@ Bun.serve<VoiceSocketData>({
      // Ignore when not supported
    }
    ```
+
    - **Status:** Acceptable fallback, but no logging
 
 ### Resource Management
@@ -287,6 +304,7 @@ Bun.serve<VoiceSocketData>({
 4. **Binary Chunk Size:** No histogram for audio chunk sizes
 
 **Recommendation:** Add metrics in `packages/api/src/metrics.ts`:
+
 ```typescript
 export const voiceWebSocketConnections = new client.Gauge({
   name: "voice_websocket_connections_current",
@@ -311,6 +329,7 @@ export const voiceWebSocketSendFailures = new client.Counter({
 3. **Hook Errors:** Hook failures may not propagate properly
 
 **Recommendation:** Standardize error handling:
+
 - Always log errors with context
 - Emit metrics for error rates
 - Surface critical errors to monitoring
@@ -470,4 +489,3 @@ The WebSocket implementation is well-architected with proper separation of conce
 - `packages/api/test/voice.streaming.e2e.test.ts` - E2E tests
 - `packages/voice/src/server/socket.test.ts` - Unit tests
 - `apps/web/tests/voice-session.e2e.spec.ts` - Playwright E2E tests
-

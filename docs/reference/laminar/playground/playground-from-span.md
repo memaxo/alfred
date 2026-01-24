@@ -1,8 +1,9 @@
 ---
 title: Open LLM Spans in Playground - Laminar documentation
-url: 
+url:
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/playground/playground-from-span#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -25,7 +26,7 @@ On this page
 
 - [Creating Playground from Spans](https://docs.lmnr.ai/playground/playground-from-span#creating-playground-from-spans)
 
-## [​](https://docs.lmnr.ai/playground/playground-from-span\#creating-playground-from-spans)  Creating Playground from Spans
+## [​](https://docs.lmnr.ai/playground/playground-from-span#creating-playground-from-spans) Creating Playground from Spans
 
 One of the most powerful features is the ability to create a playground directly from existing LLM spans in your traces. When you click `Open in Playground` from any LLM span, the playground automatically inherits all the original configurations:
 

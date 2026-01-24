@@ -9,8 +9,7 @@ AI SDK RSC is currently experimental. We recommend using AI SDK UI for productio
 Get the current AI state.
 
 ## Import
-    
-    
+
     import { getAIState } from "@ai-sdk/rsc"
 
 ## API Signature

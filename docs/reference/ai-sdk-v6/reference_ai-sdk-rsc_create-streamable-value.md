@@ -9,8 +9,7 @@ AI SDK RSC is currently experimental. We recommend using AI SDK UI for productio
 Create a stream that sends values from the server to the client. The value can be any serializable data.
 
 ## Import
-    
-    
+
     import { createStreamableValue } from "@ai-sdk/rsc"
 
 ## API Signature

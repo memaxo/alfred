@@ -9,8 +9,7 @@ AI SDK RSC is currently experimental. We recommend using AI SDK UI for productio
 Get a mutable copy of the AI state. You can use this to update the state in the server.
 
 ## Import
-    
-    
+
     import { getMutableAIState } from "@ai-sdk/rsc"
 
 ## API Signature

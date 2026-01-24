@@ -32,18 +32,18 @@ The user-visible proof is simple:
 ## Surprises & Discoveries
 
 - Observation: Vite warns for variable-based dynamic imports even when the module specifier is a `const` string.
-Evidence: The current API route files use `const pkg = "..."; await import(pkg)` and still trigger “dynamic import cannot be analyzed” warnings.
+  Evidence: The current API route files use `const pkg = "..."; await import(pkg)` and still trigger “dynamic import cannot be analyzed” warnings.
 - Observation: `packages/api/src/init.ts` currently defaults `VOICE_PROVIDER` to `"maya1"`, which makes UV absence part of the common-path dev startup.
-Evidence: `packages/api/src/init.ts` reads `process.env.VOICE_PROVIDER ?? "maya1"`.
+  Evidence: `packages/api/src/init.ts` reads `process.env.VOICE_PROVIDER ?? "maya1"`.
 
 ## Decision Log
 
 - Decision: Treat variable-based dynamic import warnings as “intentional tradeoff” and suppress them at the callsite using `/* @vite-ignore */`, rather than changing import patterns.
-Rationale: String-literal dynamic imports can be statically analyzed by Vite and risk reintroducing SSR leakage or bundling. The existing SSR hardening doctrine requires imports to remain opaque to Vite’s analyzer.
-Date/Author: 2026-01-13 / agent
+  Rationale: String-literal dynamic imports can be statically analyzed by Vite and risk reintroducing SSR leakage or bundling. The existing SSR hardening doctrine requires imports to remain opaque to Vite’s analyzer.
+  Date/Author: 2026-01-13 / agent
 - Decision: Make local-voice initialization opt-in by defaulting `VOICE_PROVIDER` to a cloud provider (`"openai"`) in service init, while preserving explicit local providers (`"maya1"`, `"supertonic"`) when configured.
-Rationale: “Quiet by default” requires that missing UV does not produce warnings/errors unless the user chose a local voice provider.
-Date/Author: 2026-01-13 / agent
+  Rationale: “Quiet by default” requires that missing UV does not produce warnings/errors unless the user chose a local voice provider.
+  Date/Author: 2026-01-13 / agent
 
 ## Outcomes & Retrospective
 
@@ -125,4 +125,3 @@ This section will be populated with short transcripts proving:
 - pre-change baseline logs (representative warnings/errors)
 - post-change dev server startup/shutdown logs
 - `verify:build` and `test:web:smoke:prod` pass outputs
-

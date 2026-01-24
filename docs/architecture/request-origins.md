@@ -56,4 +56,3 @@ This keeps the response body untouched (important for typed clients and streamin
 - **Hook/SDK mismatch**: native stacks emitting non-browser `Origin` values that strict validators reject.
 - **Non-deterministic debugging**: body rewrites that change error payloads, break JSON parsing, or consume streams.
 - **Security regression**: relaxing origin checks globally instead of scoping the workaround to non-browser requests.
-

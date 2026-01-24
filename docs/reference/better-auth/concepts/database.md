@@ -1,9 +1,10 @@
 ---
 title: Database | Better Auth
-url: 
+url:
 description: Learn how to use a database with Better Auth.
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -26,17 +27,17 @@ language: en
 
 Copy MarkdownOpen in
 
-## [Adapters](https://www.better-auth.com/docs/concepts/database\#adapters)
+## [Adapters](https://www.better-auth.com/docs/concepts/database#adapters)
 
 Better Auth requires a database connection to store data. The database will be used to store data such as users, sessions, and more. Plugins can also define their own database tables to store data.
 
 You can pass a database connection to Better Auth by passing a supported database instance in the database options. You can learn more about supported database adapters in the [Other relational databases](https://www.better-auth.com/docs/adapters/other-relational-databases) documentation.
 
-## [CLI](https://www.better-auth.com/docs/concepts/database\#cli)
+## [CLI](https://www.better-auth.com/docs/concepts/database#cli)
 
 Better Auth comes with a CLI tool to manage database migrations and generate schema.
 
-### [Running Migrations](https://www.better-auth.com/docs/concepts/database\#running-migrations)
+### [Running Migrations](https://www.better-auth.com/docs/concepts/database#running-migrations)
 
 The cli checks your database and prompts you to add missing tables or update existing ones with new columns. This is only supported for the built-in Kysely adapter. For other adapters, you can use the `generate` command to create the schema and handle the migration through your ORM.
 
@@ -44,7 +45,7 @@ The cli checks your database and prompts you to add missing tables or update exi
 npx @better-auth/cli migrate
 ```
 
-### [Generating Schema](https://www.better-auth.com/docs/concepts/database\#generating-schema)
+### [Generating Schema](https://www.better-auth.com/docs/concepts/database#generating-schema)
 
 Better Auth also provides a `generate` command to generate the schema required by Better Auth. The `generate` command creates the schema required by Better Auth. If you're using a database adapter like Prisma or Drizzle, this command will generate the right schema for your ORM. If you're using the built-in Kysely adapter, it will generate an SQL file you can run directly on your database.
 
@@ -58,11 +59,11 @@ If you prefer adding tables manually, you can do that as well. The core schema
 required by Better Auth is described below and you can find additional schema
 required by plugins in the plugin documentation.
 
-## [Secondary Storage](https://www.better-auth.com/docs/concepts/database\#secondary-storage)
+## [Secondary Storage](https://www.better-auth.com/docs/concepts/database#secondary-storage)
 
 Secondary storage in Better Auth allows you to use key-value stores for managing session data, rate limiting counters, etc. This can be useful when you want to offload the storage of this intensive records to a high performance storage or even RAM.
 
-### [Implementation](https://www.better-auth.com/docs/concepts/database\#implementation)
+### [Implementation](https://www.better-auth.com/docs/concepts/database#implementation)
 
 To use secondary storage, implement the `SecondaryStorage` interface:
 
@@ -117,77 +118,77 @@ export const auth = betterAuth({
 
 This implementation allows Better Auth to use Redis for storing session data and rate limiting counters. You can also add prefixes to the keys names.
 
-## [Core Schema](https://www.better-auth.com/docs/concepts/database\#core-schema)
+## [Core Schema](https://www.better-auth.com/docs/concepts/database#core-schema)
 
 Better Auth requires the following tables to be present in the database. The types are in `typescript` format. You can use corresponding types in your database.
 
-### [User](https://www.better-auth.com/docs/concepts/database\#user)
+### [User](https://www.better-auth.com/docs/concepts/database#user)
 
 Table Name: `user`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each user |
-| name | string | - | User's chosen display name |
-| email | string | - | User's email address for communication and login |
-| emailVerified | boolean | - | Whether the user's email is verified |
-| image | string | ? | User's image url |
-| createdAt | Date | - | Timestamp of when the user account was created |
-| updatedAt | Date | - | Timestamp of the last update to the user's information |
+| Field Name    | Type    | Key | Description                                            |
+| ------------- | ------- | --- | ------------------------------------------------------ |
+| id            | string  | PK  | Unique identifier for each user                        |
+| name          | string  | -   | User's chosen display name                             |
+| email         | string  | -   | User's email address for communication and login       |
+| emailVerified | boolean | -   | Whether the user's email is verified                   |
+| image         | string  | ?   | User's image url                                       |
+| createdAt     | Date    | -   | Timestamp of when the user account was created         |
+| updatedAt     | Date    | -   | Timestamp of the last update to the user's information |
 
-### [Session](https://www.better-auth.com/docs/concepts/database\#session)
+### [Session](https://www.better-auth.com/docs/concepts/database#session)
 
 Table Name: `session`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each session |
-| userId | string | FK | The ID of the user |
-| token | string | - | The unique session token |
-| expiresAt | Date | - | The time when the session expires |
-| ipAddress | string | ? | The IP address of the device |
-| userAgent | string | ? | The user agent information of the device |
-| createdAt | Date | - | Timestamp of when the session was created |
-| updatedAt | Date | - | Timestamp of when the session was updated |
+| Field Name | Type   | Key | Description                               |
+| ---------- | ------ | --- | ----------------------------------------- |
+| id         | string | PK  | Unique identifier for each session        |
+| userId     | string | FK  | The ID of the user                        |
+| token      | string | -   | The unique session token                  |
+| expiresAt  | Date   | -   | The time when the session expires         |
+| ipAddress  | string | ?   | The IP address of the device              |
+| userAgent  | string | ?   | The user agent information of the device  |
+| createdAt  | Date   | -   | Timestamp of when the session was created |
+| updatedAt  | Date   | -   | Timestamp of when the session was updated |
 
-### [Account](https://www.better-auth.com/docs/concepts/database\#account)
+### [Account](https://www.better-auth.com/docs/concepts/database#account)
 
 Table Name: `account`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each account |
-| userId | string | FK | The ID of the user |
-| accountId | string | - | The ID of the account as provided by the SSO or equal to userId for credential accounts |
-| providerId | string | - | The ID of the provider |
-| accessToken | string | ? | The access token of the account. Returned by the provider |
-| refreshToken | string | ? | The refresh token of the account. Returned by the provider |
-| accessTokenExpiresAt | Date | ? | The time when the access token expires |
-| refreshTokenExpiresAt | Date | ? | The time when the refresh token expires |
-| scope | string | ? | The scope of the account. Returned by the provider |
-| idToken | string | ? | The ID token returned from the provider |
-| password | string | ? | The password of the account. Mainly used for email and password authentication |
-| createdAt | Date | - | Timestamp of when the account was created |
-| updatedAt | Date | - | Timestamp of when the account was updated |
+| Field Name            | Type   | Key | Description                                                                             |
+| --------------------- | ------ | --- | --------------------------------------------------------------------------------------- |
+| id                    | string | PK  | Unique identifier for each account                                                      |
+| userId                | string | FK  | The ID of the user                                                                      |
+| accountId             | string | -   | The ID of the account as provided by the SSO or equal to userId for credential accounts |
+| providerId            | string | -   | The ID of the provider                                                                  |
+| accessToken           | string | ?   | The access token of the account. Returned by the provider                               |
+| refreshToken          | string | ?   | The refresh token of the account. Returned by the provider                              |
+| accessTokenExpiresAt  | Date   | ?   | The time when the access token expires                                                  |
+| refreshTokenExpiresAt | Date   | ?   | The time when the refresh token expires                                                 |
+| scope                 | string | ?   | The scope of the account. Returned by the provider                                      |
+| idToken               | string | ?   | The ID token returned from the provider                                                 |
+| password              | string | ?   | The password of the account. Mainly used for email and password authentication          |
+| createdAt             | Date   | -   | Timestamp of when the account was created                                               |
+| updatedAt             | Date   | -   | Timestamp of when the account was updated                                               |
 
-### [Verification](https://www.better-auth.com/docs/concepts/database\#verification)
+### [Verification](https://www.better-auth.com/docs/concepts/database#verification)
 
 Table Name: `verification`
 
-| Field Name | Type | Key | Description |
-| --- | --- | --- | --- |
-| id | string | PK | Unique identifier for each verification |
-| identifier | string | - | The identifier for the verification request |
-| value | string | - | The value to be verified |
-| expiresAt | Date | - | The time when the verification request expires |
-| createdAt | Date | - | Timestamp of when the verification request was created |
-| updatedAt | Date | - | Timestamp of when the verification request was updated |
+| Field Name | Type   | Key | Description                                            |
+| ---------- | ------ | --- | ------------------------------------------------------ |
+| id         | string | PK  | Unique identifier for each verification                |
+| identifier | string | -   | The identifier for the verification request            |
+| value      | string | -   | The value to be verified                               |
+| expiresAt  | Date   | -   | The time when the verification request expires         |
+| createdAt  | Date   | -   | Timestamp of when the verification request was created |
+| updatedAt  | Date   | -   | Timestamp of when the verification request was updated |
 
-## [Custom Tables](https://www.better-auth.com/docs/concepts/database\#custom-tables)
+## [Custom Tables](https://www.better-auth.com/docs/concepts/database#custom-tables)
 
 Better Auth allows you to customize the table names and column names for the core schema. You can also extend the core schema by adding additional fields to the user and session tables.
 
-### [Custom Table Names](https://www.better-auth.com/docs/concepts/database\#custom-table-names)
+### [Custom Table Names](https://www.better-auth.com/docs/concepts/database#custom-table-names)
 
 You can customize the table names and column names for the core schema by using the `modelName` and `fields` properties in your auth config:
 
@@ -238,7 +239,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [Extending Core Schema](https://www.better-auth.com/docs/concepts/database\#extending-core-schema)
+### [Extending Core Schema](https://www.better-auth.com/docs/concepts/database#extending-core-schema)
 
 Better Auth provides a type-safe way to extend the `user` and `session` schemas. You can add custom fields to your auth config, and the CLI will automatically update the database schema. These additional fields will be properly inferred in functions like `useSession`, `signUp.email`, and other endpoints that work with user or session objects.
 
@@ -331,7 +332,7 @@ export const auth = betterAuth({
 });
 ```
 
-### [ID Generation](https://www.better-auth.com/docs/concepts/database\#id-generation)
+### [ID Generation](https://www.better-auth.com/docs/concepts/database#id-generation)
 
 Better Auth by default will generate unique IDs for users, sessions, and other entities. If you want to customize how IDs are generated, you can configure this in the `advanced.database.generateId` option in your auth config.
 
@@ -357,18 +358,18 @@ export const auth = betterAuth({
 });
 ```
 
-### [Database Hooks](https://www.better-auth.com/docs/concepts/database\#database-hooks)
+### [Database Hooks](https://www.better-auth.com/docs/concepts/database#database-hooks)
 
 Database hooks allow you to define custom logic that can be executed during the lifecycle of core database operations in Better Auth. You can create hooks for the following models: **user**, **session**, and **account**.
 
 There are two types of hooks you can define:
 
-#### [1\. Before Hook](https://www.better-auth.com/docs/concepts/database\#1-before-hook)
+#### [1\. Before Hook](https://www.better-auth.com/docs/concepts/database#1-before-hook)
 
 - **Purpose**: This hook is called before the respective entity (user, session, or account) is created or updated.
 - **Behavior**: If the hook returns `false`, the operation will be aborted. And If it returns a data object, it'll replace the original payload.
 
-#### [2\. After Hook](https://www.better-auth.com/docs/concepts/database\#2-after-hook)
+#### [2\. After Hook](https://www.better-auth.com/docs/concepts/database#2-after-hook)
 
 - **Purpose**: This hook is called after the respective entity is created or updated.
 - **Behavior**: You can perform additional actions or modifications after the entity has been successfully created or updated.
@@ -403,7 +404,7 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Throwing Errors](https://www.better-auth.com/docs/concepts/database\#throwing-errors)
+#### [Throwing Errors](https://www.better-auth.com/docs/concepts/database#throwing-errors)
 
 If you want to stop the database hook from proceeding, you can throw errors using the `APIError` class imported from `better-auth/api`.
 
@@ -435,7 +436,7 @@ export const auth = betterAuth({
 });
 ```
 
-#### [Using the Context Object](https://www.better-auth.com/docs/concepts/database\#using-the-context-object)
+#### [Using the Context Object](https://www.better-auth.com/docs/concepts/database#using-the-context-object)
 
 The context object ( `ctx`), passed as the second argument to the hook, contains useful information. For `update` hooks, this includes the current `session`, which you can use to access the logged-in user's details.
 
@@ -463,7 +464,7 @@ export const auth = betterAuth({
 
 Much like standard hooks, database hooks also provide a `ctx` object that offers a variety of useful properties. Learn more in the [Hooks Documentation](https://www.better-auth.com/docs/concepts/hooks#ctx).
 
-## [Plugins Schema](https://www.better-auth.com/docs/concepts/database\#plugins-schema)
+## [Plugins Schema](https://www.better-auth.com/docs/concepts/database#plugins-schema)
 
 Plugins can define their own tables in the database to store additional data. They can also add columns to the core tables to store additional data. For example, the two factor authentication plugin adds the following columns to the `user` table:
 

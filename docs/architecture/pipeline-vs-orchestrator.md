@@ -9,18 +9,18 @@ This document compares the new canonical pipeline (`@alfred/pipeline`) with the 
 
 ## High-Level Comparison
 
-| Aspect | Legacy Orchestrator | Canonical Pipeline |
-|--------|-------------------|-------------------|
-| **Entry Point** | `orchestrateWorkflowStream()` | `runWorkflowPipeline()` |
-| **Execution Model** | 4 phases (scan/plan/act/report) | 8 stages (init→summarize) |
-| **Event System** | `WorkflowEvent` with `_` discriminant | `PipelineEvent` with `type` discriminant |
-| **Observability** | Mixed (callbacks + events) | Pure observer pattern |
-| **State Management** | Implicit (closures + variables) | Explicit (PipelineContext key-value) |
-| **Extension Model** | Modify orchestrator directly | Add observers |
-| **Type Safety** | Partial (many `any` types) | Complete (100% typed) |
-| **Code Location** | Fragmented (3 packages) | Unified (1 package) |
-| **Lines of Code** | ~3,000+ across packages | ~1,600 in single package |
-| **Testing** | Integration-heavy | Unit + integration |
+| Aspect               | Legacy Orchestrator                   | Canonical Pipeline                       |
+| -------------------- | ------------------------------------- | ---------------------------------------- |
+| **Entry Point**      | `orchestrateWorkflowStream()`         | `runWorkflowPipeline()`                  |
+| **Execution Model**  | 4 phases (scan/plan/act/report)       | 8 stages (init→summarize)                |
+| **Event System**     | `WorkflowEvent` with `_` discriminant | `PipelineEvent` with `type` discriminant |
+| **Observability**    | Mixed (callbacks + events)            | Pure observer pattern                    |
+| **State Management** | Implicit (closures + variables)       | Explicit (PipelineContext key-value)     |
+| **Extension Model**  | Modify orchestrator directly          | Add observers                            |
+| **Type Safety**      | Partial (many `any` types)            | Complete (100% typed)                    |
+| **Code Location**    | Fragmented (3 packages)               | Unified (1 package)                      |
+| **Lines of Code**    | ~3,000+ across packages               | ~1,600 in single package                 |
+| **Testing**          | Integration-heavy                     | Unit + integration                       |
 
 ## Execution Flow
 
@@ -51,6 +51,7 @@ orchestrateWorkflowStream()
 ```
 
 **Key Characteristics:**
+
 - Phases are generator functions
 - Each phase yields `WorkflowEvent` objects
 - State passed via function parameters
@@ -100,6 +101,7 @@ PipelineRunner.run()
 ```
 
 **Key Characteristics:**
+
 - Stages implement `PipelineStage<TInput, TOutput>`
 - Explicit typed boundaries
 - State managed via `PipelineContext`
@@ -111,6 +113,7 @@ PipelineRunner.run()
 ### 1. Architecture Pattern
 
 **Legacy Orchestrator:**
+
 - **Pattern:** Imperative orchestration with generator functions
 - **Structure:** Monolithic `orchestrateWorkflowStream()` function (500+ lines)
 - **State:** Implicit via closures and local variables
@@ -134,6 +137,7 @@ export async function orchestrateWorkflowStream(
 ```
 
 **Canonical Pipeline:**
+
 - **Pattern:** Composable pipeline with explicit stages
 - **Structure:** Modular stages (8 separate files, 100-200 lines each)
 - **State:** Explicit via `PipelineContext.get/set()`
@@ -144,12 +148,17 @@ export async function orchestrateWorkflowStream(
 export class PipelineRunner {
   registerStage(stage: PipelineStage): this;
   addObserver(observer: PipelineObserver): this;
-  async *run(input: PipelineInput): AsyncGenerator<PipelineEvent, PipelineResult>;
+  async *run(
+    input: PipelineInput
+  ): AsyncGenerator<PipelineEvent, PipelineResult>;
 }
 
 // Each stage is self-contained
 export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
-  async execute(input: InitOutput, ctx: PipelineContext): Promise<ContextOutput> {
+  async execute(
+    input: InitOutput,
+    ctx: PipelineContext
+  ): Promise<ContextOutput> {
     // 50-100 lines of focused logic
   }
 }
@@ -158,12 +167,14 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
 ### 2. Event System
 
 **Legacy Orchestrator:**
+
 - **Type:** `WorkflowEvent` with `_` discriminant
 - **Examples:** `{ _: 'step-start' }`, `{ _: 'progress' }`, `{ _: 'agent-complete' }`
 - **Emission:** Direct callback (`callbacks.emitNext(event)`)
 - **Observation:** Callback-based via `OrchestratorCallbacks`
 
 **Canonical Pipeline:**
+
 - **Type:** `PipelineEvent` with `type` discriminant
 - **Examples:** `{ type: 'stage:enter' }`, `{ type: 'agent:spawn' }`, `{ type: 'pipeline:complete' }`
 - **Emission:** Context method (`ctx.emit(event)`) + yielded from generator
@@ -173,14 +184,15 @@ export class ContextStage implements PipelineStage<InitOutput, ContextOutput> {
 
 ### 3. Phase/Stage Mapping
 
-| Legacy Phase | Canonical Stages | Notes |
-|-------------|-----------------|-------|
-| SCAN | INIT + CONTEXT | Split project detection from context gathering |
-| PLAN | PLAN + SCHEDULE | Separated decomposition from wave scheduling |
-| ACT | EXECUTE + REVIEW | Extracted review logic into separate stage |
-| REPORT | LEARN + SUMMARIZE | Split knowledge extraction from summary generation |
+| Legacy Phase | Canonical Stages  | Notes                                              |
+| ------------ | ----------------- | -------------------------------------------------- |
+| SCAN         | INIT + CONTEXT    | Split project detection from context gathering     |
+| PLAN         | PLAN + SCHEDULE   | Separated decomposition from wave scheduling       |
+| ACT          | EXECUTE + REVIEW  | Extracted review logic into separate stage         |
+| REPORT       | LEARN + SUMMARIZE | Split knowledge extraction from summary generation |
 
 **Why 8 instead of 4?**
+
 - Better separation of concerns
 - Clearer failure boundaries
 - Easier to test in isolation
@@ -218,8 +230,8 @@ interface PipelineContext {
 }
 
 // Usage in stages
-ctx.set('subtasks', decomposed);
-const subtasks = ctx.get<SubTask[]>('subtasks');
+ctx.set("subtasks", decomposed);
+const subtasks = ctx.get<SubTask[]>("subtasks");
 
 // Clear data flow
 // Type-safe retrieval
@@ -297,7 +309,7 @@ await safeFinalizeLinearFailure({ ... });
 // Linear logic isolated in observer
 const observer = new LinearSyncObserver({
   syncIntervalMs: 30_000,
-  issueId: 'ALF-123',
+  issueId: "ALF-123",
   authz: token,
 });
 
@@ -345,10 +357,10 @@ const notifyLinearFailure = async (reason: string) => {
 for (const stageName of STAGE_ORDER) {
   try {
     const result = await stage.execute(input, ctx);
-    yield createEvent('stage:exit', { stage, durationMs });
+    yield createEvent("stage:exit", { stage, durationMs });
   } catch (error) {
-    yield createEvent('stage:error', { stage, error });
-    yield createEvent('pipeline:failed', { lastStage: stage });
+    yield createEvent("stage:error", { stage, error });
+    yield createEvent("pipeline:failed", { lastStage: stage });
     throw error;
   }
 }
@@ -363,12 +375,14 @@ for (const stageName of STAGE_ORDER) {
 **Legacy Orchestrator:**
 
 **Challenges:**
+
 - Monolithic function hard to test in isolation
 - Requires mocking callbacks, repos, executors
 - State management via closures makes unit testing difficult
 - Heavy integration tests required
 
 **Example Test:**
+
 ```typescript
 // Must mock entire callback structure
 const callbacks = {
@@ -387,12 +401,14 @@ const callbacks = {
 **Canonical Pipeline:**
 
 **Advantages:**
+
 - Each stage is independently testable
 - Mock just the dependencies needed
 - Context is a simple interface
 - Easy to test stage chains
 
 **Example Test:**
+
 ```typescript
 // Test single stage in isolation
 const stage = new PlanStage();
@@ -414,18 +430,20 @@ expect(events).toHaveLength(8);
 **Legacy Orchestrator:**
 
 To add functionality:
+
 1. Modify `orchestrateWorkflowStream()` directly
 2. Add new callbacks
 3. Update all call sites
 4. Risk breaking existing behavior
 
 **Example:**
+
 ```typescript
 // Must modify orchestrator
 export async function orchestrateWorkflowStream(
   input: WorkflowInputPayload,
   session: { user: { id: string } },
-  callbacks: OrchestratorCallbacks  // Add new callback here
+  callbacks: OrchestratorCallbacks // Add new callback here
 ) {
   // Add logic throughout 500+ line function
 }
@@ -434,17 +452,19 @@ export async function orchestrateWorkflowStream(
 **Canonical Pipeline:**
 
 To add functionality:
+
 1. Create new observer
 2. Register with runner
 3. Zero changes to pipeline core
 4. Safe, isolated extension
 
 **Example:**
+
 ```typescript
 // Create custom observer
 class SlackNotifier implements PipelineObserver {
   onEvent(event: PipelineEvent): void {
-    if (event.type === 'pipeline:complete') {
+    if (event.type === "pipeline:complete") {
       sendSlackMessage(`✓ ${event.summary.requirement}`);
     }
   }
@@ -516,12 +536,14 @@ Total: ~1,600 lines in single package
 ### Context Gathering
 
 **Legacy (SCAN Phase):**
+
 - Function: `executeScanPhase()`
 - Uses `gatherCodeContext()` + `gatherWebContext()`
 - Returns `ExecutionContext`
 - Mixed code/web in single phase
 
 **Pipeline (INIT + CONTEXT Stages):**
+
 - **INIT:** Project detection, Linear setup
 - **CONTEXT:** Code/web gathering via `ContextBuilder`
 - Clear separation of project setup vs context gathering
@@ -530,6 +552,7 @@ Total: ~1,600 lines in single package
 ### Task Decomposition
 
 **Legacy (PLAN Phase):**
+
 ```typescript
 export async function* executePlanPhase(
   input: RuntimeInput,
@@ -547,10 +570,14 @@ export async function* executePlanPhase(
 ```
 
 **Pipeline (PLAN + SCHEDULE Stages):**
+
 ```typescript
 // PLAN Stage - Decomposition + ExecPlan generation
 export class PlanStage {
-  async execute(input: ContextOutput, ctx: PipelineContext): Promise<PlanOutput> {
+  async execute(
+    input: ContextOutput,
+    ctx: PipelineContext
+  ): Promise<PlanOutput> {
     const decomposed = decomposeTask(ctx.requirement, { bundle: input.bundle });
     // Generate ExecPlans
     return { subtasks, execPlans, rootPlanPath };
@@ -559,7 +586,10 @@ export class PlanStage {
 
 // SCHEDULE Stage - Wave planning
 export class ScheduleStage {
-  async execute(input: PlanOutput, ctx: PipelineContext): Promise<ScheduleOutput> {
+  async execute(
+    input: PlanOutput,
+    ctx: PipelineContext
+  ): Promise<ScheduleOutput> {
     const waves = planWaves(input.subtasks, { maxParallel });
     return { waves, executionMode, estimatedDuration };
   }
@@ -567,6 +597,7 @@ export class ScheduleStage {
 ```
 
 **Improvement:** Separation makes it easier to:
+
 - Test decomposition independently from scheduling
 - Swap scheduling strategies without touching decomposition
 - Add caching at stage boundaries
@@ -574,6 +605,7 @@ export class ScheduleStage {
 ### Agent Execution
 
 **Legacy (ACT Phase):**
+
 ```typescript
 export async function* executeActPhase(
   input: RuntimeInput,
@@ -590,19 +622,22 @@ export async function* executeActPhase(
   // Choose between:
   // - runOrchestrator() (tool graph execution)
   // - runWaves() (multi-agent execution)
-  
   // 399 lines of complex logic
 }
 ```
 
 **Pipeline (EXECUTE Stage):**
+
 ```typescript
 export class ExecuteStage {
-  async execute(input: ScheduleOutput, ctx: PipelineContext): Promise<ExecuteOutput> {
+  async execute(
+    input: ScheduleOutput,
+    ctx: PipelineContext
+  ): Promise<ExecuteOutput> {
     // Always uses wave-based execution
     // Clearer agent lifecycle
     // Explicit outcome collection
-    
+
     // 195 lines focused on agent execution
     return { outcomes, fileChanges, handoffs };
   }
@@ -610,6 +645,7 @@ export class ExecuteStage {
 ```
 
 **Improvement:**
+
 - Single execution path (waves)
 - Tool graph moved to separate concern
 - Clearer outcome tracking
@@ -617,15 +653,20 @@ export class ExecuteStage {
 ### Quality Review
 
 **Legacy Orchestrator:**
+
 - **Location:** Embedded in `runWaves()` and `executeActPhase()`
 - **Trigger:** Via `ReviewGate` class
 - **Process:** Inline review logic mixed with execution
 - **Code:** Scattered across orchestrator and waves
 
 **Pipeline (REVIEW Stage):**
+
 ```typescript
 export class ReviewStage {
-  async execute(input: ExecuteOutput, ctx: PipelineContext): Promise<ReviewOutput> {
+  async execute(
+    input: ExecuteOutput,
+    ctx: PipelineContext
+  ): Promise<ReviewOutput> {
     // Dedicated review stage
     // All checks in one place
     // Clear pass/fail results
@@ -635,6 +676,7 @@ export class ReviewStage {
 ```
 
 **Improvement:**
+
 - Isolated review logic
 - Easy to add new checks
 - Clear stage boundary
@@ -665,15 +707,15 @@ await safeFinalizeLinearFailure(...);
 export class LinearSyncObserver implements PipelineObserver {
   private rateLimiter = new LinearRateLimiter();
   private pendingUpdates: LinearUpdate[] = [];
-  
+
   onEvent(event: PipelineEvent): void {
     // Queue updates based on events
   }
-  
+
   private async flush(): Promise<void> {
     // Rate-limited batch processing
     for (const update of pendingUpdates) {
-      await this.rateLimiter.throttle('session');
+      await this.rateLimiter.throttle("session");
       await this.applyUpdate(update);
     }
   }
@@ -684,6 +726,7 @@ runner.addObserver(new LinearSyncObserver(config));
 ```
 
 **Improvement:**
+
 - Complete isolation (146 lines in single file)
 - Built-in rate limiting (55 req/min)
 - Easy to disable, customize, or replace
@@ -692,12 +735,14 @@ runner.addObserver(new LinearSyncObserver(config));
 ### Learning Integration
 
 **Legacy Orchestrator:**
+
 - No explicit learning phase
 - Learning worker polls database separately
 - No direct integration with workflow execution
 - Passive background process
 
 **Pipeline (LEARN Stage):**
+
 ```typescript
 export class LearnStage {
   async execute(input: ReviewOutput, ctx: PipelineContext): Promise<LearnOutput> {
@@ -711,6 +756,7 @@ export class LearnStage {
 ```
 
 **Improvement:**
+
 - Explicit learning stage
 - Can be toggled via config
 - Explicit in pipeline flow
@@ -721,11 +767,13 @@ export class LearnStage {
 ### Memory Usage
 
 **Legacy Orchestrator:**
+
 - **Closure Overhead:** Large function with many closures
 - **State Retention:** All variables retained for entire workflow
 - **Event Buffering:** Multiple buffers (persistedMessageKeys, reasonTraces, handoffs)
 
 **Canonical Pipeline:**
+
 - **Minimal Closures:** Small, focused stage methods
 - **Scoped State:** Context storage cleaned between stages
 - **Single Event Stream:** AsyncGenerator provides natural backpressure
@@ -735,11 +783,13 @@ export class LearnStage {
 ### Execution Speed
 
 **Legacy Orchestrator:**
+
 - **Startup:** Immediate (no registration phase)
 - **Phase Transitions:** Implicit (no overhead)
 - **Total Time:** ~2-5 minutes typical
 
 **Canonical Pipeline:**
+
 - **Startup:** < 10ms (stage registration)
 - **Stage Transitions:** < 1ms overhead per transition
 - **Total Time:** ~2-5 minutes typical (same underlying logic)
@@ -749,11 +799,13 @@ export class LearnStage {
 ### Scalability
 
 **Legacy Orchestrator:**
+
 - Hard to parallelize phases
 - Global state makes concurrency risky
 - Limited horizontal scaling
 
 **Canonical Pipeline:**
+
 - Easy to parallelize stages (future)
 - Isolated state per pipeline
 - Observer pattern enables distributed observability
@@ -763,23 +815,25 @@ export class LearnStage {
 
 ### Code Complexity
 
-| Metric | Legacy | Pipeline | Change |
-|--------|--------|----------|--------|
-| Cyclomatic Complexity | High (monolithic) | Low (modular) | -60% |
-| Lines per File | 300-900 | 50-200 | -70% |
-| Function Length | 100-500 lines | 20-100 lines | -75% |
-| Dependencies per File | 10-20 imports | 3-8 imports | -60% |
-| Test Coverage | ~40% | ~60% | +50% |
+| Metric                | Legacy            | Pipeline      | Change |
+| --------------------- | ----------------- | ------------- | ------ |
+| Cyclomatic Complexity | High (monolithic) | Low (modular) | -60%   |
+| Lines per File        | 300-900           | 50-200        | -70%   |
+| Function Length       | 100-500 lines     | 20-100 lines  | -75%   |
+| Dependencies per File | 10-20 imports     | 3-8 imports   | -60%   |
+| Test Coverage         | ~40%              | ~60%          | +50%   |
 
 ### Debugging Experience
 
 **Legacy Orchestrator:**
+
 - **Difficulty:** High - must trace through 500+ line function
 - **State Inspection:** Difficult (closures, scattered variables)
 - **Breakpoints:** Single monolithic function
 - **Logs:** Mixed with execution logic
 
 **Canonical Pipeline:**
+
 - **Difficulty:** Low - each stage is 50-200 lines
 - **State Inspection:** Easy (`ctx.get()` at any point)
 - **Breakpoints:** One per stage (8 natural boundaries)
@@ -805,12 +859,14 @@ class DebugObserver implements PipelineObserver {
 ### Onboarding
 
 **Legacy Orchestrator:**
+
 - **Learning Curve:** Steep - must understand entire 500+ line flow
 - **Mental Model:** Complex - phases, executors, lifecycles, gates
 - **Documentation:** Scattered across multiple files
 - **Time to Productivity:** 2-3 days
 
 **Canonical Pipeline:**
+
 - **Learning Curve:** Gentle - understand one stage at a time
 - **Mental Model:** Simple - 8 sequential stages, typed boundaries
 - **Documentation:** Centralized in architecture doc
@@ -828,13 +884,14 @@ export async function orchestrateWorkflowStream(...) {
   if (isPipelineEnabled()) {
     return runWorkflowPipeline(input, session);  // New
   }
-  
+
   // Legacy orchestrator
   // ...existing 500+ line implementation
 }
 ```
 
 **Advantages:**
+
 - Zero risk to existing workflows
 - Side-by-side comparison
 - Easy rollback (unset environment variable)
@@ -855,6 +912,7 @@ function shouldUsePipeline(input: WorkflowInputPayload): boolean {
 ### Phase 3: Full Migration
 
 Remove legacy code:
+
 - Delete `packages/runtime/src/phases/`
 - Delete `pipeline-bridge.ts`
 - Update tests to use `PipelineEvent`
@@ -873,7 +931,7 @@ Remove legacy code:
 ✅ **Extensibility** - Add observers vs modify orchestrator  
 ✅ **Maintainability** - 1,600 LOC vs 5,000+ LOC  
 ✅ **Clear Boundaries** - Explicit stage I/O vs implicit data flow  
-✅ **Documentation** - Comprehensive vs scattered  
+✅ **Documentation** - Comprehensive vs scattered
 
 ### Advantages of Legacy Orchestrator
 
@@ -881,19 +939,20 @@ Remove legacy code:
 ✅ **Feature-Complete** - All edge cases handled  
 ✅ **Zero Migration Risk** - No code changes needed  
 ✅ **Optimized** - Performance tuned over time  
-✅ **Known Behavior** - Predictable for team  
+✅ **Known Behavior** - Predictable for team
 
 ### Neutral Differences
 
 ⚖️ **Performance** - Comparable (same underlying functions)  
 ⚖️ **Feature Set** - Equal (pipeline implements all orchestrator features)  
-⚖️ **Complexity** - Different kinds (monolithic vs distributed)  
+⚖️ **Complexity** - Different kinds (monolithic vs distributed)
 
 ## Recommendations
 
 ### For New Features
 
 **Use Pipeline:**
+
 - Easier to add new stages
 - Clean extension via observers
 - Better testing story
@@ -906,6 +965,7 @@ Remove legacy code:
 ### For Custom Integrations
 
 **Pipeline Strongly Preferred:**
+
 - Add observer instead of modifying core
 - Zero risk of breaking existing behavior
 - Isolated, testable integration logic
@@ -914,12 +974,12 @@ Remove legacy code:
 
 ### Success Indicators
 
-| Metric | Legacy Baseline | Pipeline Target |
-|--------|----------------|----------------|
-| Success Rate | 95% | ≥ 95% |
-| p95 Latency | 5 min | ≤ 5.5 min |
-| Error Rate | 5% | ≤ 5% |
-| Agent Success | 90% | ≥ 90% |
+| Metric        | Legacy Baseline | Pipeline Target |
+| ------------- | --------------- | --------------- |
+| Success Rate  | 95%             | ≥ 95%           |
+| p95 Latency   | 5 min           | ≤ 5.5 min       |
+| Error Rate    | 5%              | ≤ 5%            |
+| Agent Success | 90%             | ≥ 90%           |
 
 ### Pipeline-Specific Metrics
 
@@ -949,6 +1009,7 @@ The canonical pipeline represents a **fundamental architectural improvement** ov
 ### Migration Path
 
 The feature-flagged approach enables **zero-risk migration**:
+
 - Phase 1: Parallel testing (current)
 - Phase 2: Gradual rollout (2-4 weeks)
 - Phase 3: Full migration (1 week)

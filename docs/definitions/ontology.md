@@ -5,6 +5,7 @@ The ontology is ALFRED's structured vocabulary—the concepts, relationships, an
 ## Purpose
 
 Without an ontology, tools are just a flat list. With an ontology:
+
 - Tools are organized by function (knowledge, action, reflection)
 - Entities are grouped by domain (note, remind, knowledge)
 - Agents can reason about categories rather than memorizing individual tools
@@ -14,38 +15,39 @@ The ontology makes ALFRED's capabilities navigable and extensible.
 
 ## Tool Categories
 
-| Category | Purpose | Example Tools |
-|----------|---------|---------------|
-| **knowledge** | Query, extract, connect information | `rag_query`, `knowledge_query`, `knowledge_extract` |
-| **action** | Perform operations with side effects | `docker_exec`, `git_commit`, `note_create` |
-| **reflection** | Observe and reason about state | `cognitive_state`, `learning_pattern`, `memory_recall` |
-| **integration** | Interface with external systems | MCP tools, `web_search`, `ticket_create` |
-| **system** | Manage runtime and sessions | `runtime_status`, `session_create`, `router` |
+| Category        | Purpose                              | Example Tools                                          |
+| --------------- | ------------------------------------ | ------------------------------------------------------ |
+| **knowledge**   | Query, extract, connect information  | `rag_query`, `knowledge_query`, `knowledge_extract`    |
+| **action**      | Perform operations with side effects | `docker_exec`, `git_commit`, `note_create`             |
+| **reflection**  | Observe and reason about state       | `cognitive_state`, `learning_pattern`, `memory_recall` |
+| **integration** | Interface with external systems      | MCP tools, `web_search`, `ticket_create`               |
+| **system**      | Manage runtime and sessions          | `runtime_status`, `session_create`, `router`           |
 
 Categories answer "what kind of thing is this?" They help agents decide where to look for capabilities.
 
 ## Entity Domains
 
-| Domain | Entities | Purpose |
-|--------|----------|---------|
-| **note** | Notes, documents | User-created text content |
-| **remind** | Reminders, alerts | Time-triggered notifications |
-| **timer** | Timers, time tracking | Duration measurement |
-| **book** | Library items | Reading list management |
-| **knowledge** | Facts, relations, insights | Accumulated understanding |
-| **preference** | Settings, configurations | User customization |
+| Domain         | Entities                   | Purpose                      |
+| -------------- | -------------------------- | ---------------------------- |
+| **note**       | Notes, documents           | User-created text content    |
+| **remind**     | Reminders, alerts          | Time-triggered notifications |
+| **timer**      | Timers, time tracking      | Duration measurement         |
+| **book**       | Library items              | Reading list management      |
+| **knowledge**  | Facts, relations, insights | Accumulated understanding    |
+| **preference** | Settings, configurations   | User customization           |
 
 Domains answer "what does this relate to?" They group entities by semantic meaning.
 
 ## Persistence Layers
 
-| Layer | Storage | Purpose |
-|-------|---------|---------|
-| **Artifact** | `.agent/tools/*.json/md` | Human-readable, agent-consumable |
-| **AgentFS** | SQLite `tool_calls` table | Queryable audit trail |
-| **Postgres** | Relational tables | Durable entity storage |
+| Layer        | Storage                   | Purpose                          |
+| ------------ | ------------------------- | -------------------------------- |
+| **Artifact** | `.agent/tools/*.json/md`  | Human-readable, agent-consumable |
+| **AgentFS**  | SQLite `tool_calls` table | Queryable audit trail            |
+| **Postgres** | Relational tables         | Durable entity storage           |
 
 Each layer serves different consumers:
+
 - Agents read artifacts
 - Learning systems query AgentFS
 - Applications use Postgres
@@ -55,21 +57,25 @@ Each layer serves different consumers:
 The ontology is encoded in multiple places:
 
 **TypeScript types** (`@alfred/type`)
+
 - `ToolCategory` — Union type of categories
 - `ToolAnnotations` — Metadata structure
 - `ToolDefinition` — Full tool schema
 
 **Definition files** (`docs/definitions/`)
+
 - Prose explanations of concepts
 - Relationships between concepts
 - Examples and rationale
 
 **CATALOG.md** (`.agent/tools/CATALOG.md`)
+
 - Generated from annotations
 - Tools organized by category
 - Read by agents for discovery
 
 **Database schemas** (`packages/db/src/schema/`)
+
 - Entity table definitions
 - Relationship constraints
 

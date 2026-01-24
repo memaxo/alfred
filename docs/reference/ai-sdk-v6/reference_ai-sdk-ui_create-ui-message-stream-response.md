@@ -7,102 +7,100 @@ Copy markdown
 The `createUIMessageStreamResponse` function creates a Response object that streams UI messages to the client.
 
 ## Import
-    
-    
+
     import { createUIMessageStreamResponse } from "ai"
 
 ## Example
-    
-    
+
     import { createUIMessageStream, createUIMessageStreamResponse } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const response = createUIMessageStreamResponse({
-    
+
       status: 200,
-    
+
       statusText: 'OK',
-    
+
       headers: {
-    
+
         'Custom-Header': 'value',
-    
+
       },
-    
+
       stream: createUIMessageStream({
-    
+
         execute({ writer }) {
-    
+
           // Write custom data
-    
+
           writer.write({
-    
+
             type: 'data',
-    
+
             value: { message: 'Hello' },
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           // Write text content
-    
+
           writer.write({
-    
+
             type: 'text',
-    
+
             value: 'Hello, world!',
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           // Write source information
-    
+
           writer.write({
-    
+
             type: 'source-url',
-    
+
             value: {
-    
+
               type: 'source',
-    
+
               id: 'source-1',
-    
+
               url: 'https://example.com',
-    
+
               title: 'Example Source',
-    
+
             },
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           // Merge with LLM stream
-    
+
           const result = streamText({
-    
+
             model: openai('gpt-4'),
-    
+
             prompt: 'Say hello',
-    
+
           });
-    
-    
-    
-    
+
+
+
+
           writer.merge(result.toUIMessageStream());
-    
+
         },
-    
+
       }),
-    
+
     });
 
 ## API Signature

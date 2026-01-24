@@ -3,6 +3,7 @@
 ## Overview
 
 The dual-backend architecture automatically selects the optimal backend based on platform:
+
 - **macOS (Apple Silicon):** MLX backend (low latency)
 - **Linux (AMD GPU):** ROCm backend (high throughput)
 - **Fallback:** MPS (macOS) or CPU
@@ -101,6 +102,7 @@ scriptPath: this.config.scriptPath.replace(
 **Error:** `MLX model not found`
 
 **Solution:** Run conversion script first:
+
 ```bash
 python scripts/convert_maya1_to_mlx.py --hf-model maya-research/maya1 --output-dir models/maya1-mlx
 ```
@@ -110,6 +112,7 @@ python scripts/convert_maya1_to_mlx.py --hf-model maya-research/maya1 --output-d
 **Error:** `bitsandbytes not available`
 
 **Solution:** Install ROCm-specific PyTorch:
+
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.3
 pip install bitsandbytes
@@ -118,11 +121,13 @@ pip install bitsandbytes
 ### Backend Falls Back to CPU
 
 **Check:**
+
 1. GPU drivers installed?
 2. Platform-specific dependencies installed?
 3. Environment variables set correctly?
 
 **Debug:**
+
 ```bash
 # Check backend detection
 python -c "from python.tts.server_factory import detect_backend; print(detect_backend())"
@@ -145,4 +150,3 @@ python -c "from python.tts.server_factory import detect_backend; print(detect_ba
 - ⏳ MLX SNAC decoder port (TODO)
 - ⏳ Docker containerization (TODO)
 - ⏳ Performance benchmarking (TODO)
-

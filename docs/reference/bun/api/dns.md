@@ -1,9 +1,10 @@
 ---
 title: DNS – API | Bun Docs
-url: 
+url:
 description: Resolve domain names to IP addresses.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -63,7 +64,7 @@ console.log(addrs);
 
 ```
 
-## [DNS caching in Bun](https://bun.com/docs/api/dns\#dns-caching-in-bun)
+## [DNS caching in Bun](https://bun.com/docs/api/dns#dns-caching-in-bun)
 
 In Bun v1.1.9, we added support for DNS caching. This cache makes repeated connections to the same hosts faster.
 
@@ -78,7 +79,7 @@ This cache is automatically used by:
 - `node:net`
 - `node:tls`
 
-### [When should I prefetch a DNS entry?](https://bun.com/docs/api/dns\#when-should-i-prefetch-a-dns-entry)
+### [When should I prefetch a DNS entry?](https://bun.com/docs/api/dns#when-should-i-prefetch-a-dns-entry)
 
 Web browsers expose [`<link rel="dns-prefetch">`](https://developer.mozilla.org/en-US/docs/Web/Performance/dns-prefetch) to allow developers to prefetch DNS entries. This is useful when you know you'll need to connect to a host in the near future and want to avoid the initial DNS lookup.
 
@@ -93,7 +94,7 @@ dns.prefetch("my.database-host.com", 5432);
 
 An example where you might want to use this is a database driver. When your application first starts up, you can prefetch the DNS entry for the database host so that by the time it finishes loading everything, the DNS query to resolve the database host may already be completed.
 
-### [`dns.prefetch`](https://bun.com/docs/api/dns\#dns-prefetch)
+### [`dns.prefetch`](https://bun.com/docs/api/dns#dns-prefetch)
 
 **🚧** — This API is experimental and may change in the future.
 
@@ -116,7 +117,7 @@ await fetch("https://bun.com");
 
 ```
 
-### [`dns.getCacheStats()`](https://bun.com/docs/api/dns\#dns-getcachestats)
+### [`dns.getCacheStats()`](https://bun.com/docs/api/dns#dns-getcachestats)
 
 **🚧** — This API is experimental and may change in the future.
 
@@ -153,7 +154,7 @@ console.log(stats);
 
 ```
 
-### [Configuring DNS cache TTL](https://bun.com/docs/api/dns\#configuring-dns-cache-ttl)
+### [Configuring DNS cache TTL](https://bun.com/docs/api/dns#configuring-dns-cache-ttl)
 
 Bun defaults to 30 seconds for the TTL of DNS cache entries. To change this, you can set the environment variable `$BUN_CONFIG_DNS_TIME_TO_LIVE_SECONDS`. For example, to set the TTL to 5 seconds:
 
@@ -172,7 +173,7 @@ Glob](https://bun.com/docs/api/glob) [Next\\
 \\
 Semver](https://bun.com/docs/api/semver)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/dns.md)
 
@@ -196,7 +197,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

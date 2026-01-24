@@ -92,9 +92,9 @@ For your slogan generator, you might want a large pool of name suggestions. A mo
 
 Prompt Engineering is evolving rapidly, with new methods and research papers surfacing every week. Here are some resources that we've found useful for learning about and experimenting with prompt engineering:
 
-  * The Vercel AI Playground
-  * Brex Prompt Engineering
-  * Prompt Engineering Guide by Dair AI
+- The Vercel AI Playground
+- Brex Prompt Engineering
+- Prompt Engineering Guide by Dair AI
 
 Previous
 

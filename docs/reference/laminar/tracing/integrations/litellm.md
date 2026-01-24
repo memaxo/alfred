@@ -1,9 +1,10 @@
 ---
 title: LLM Observability for LiteLLM - Laminar documentation
-url: 
+url:
 description: Configure LiteLLM to send traces to Laminar
 language: en
 ---
+
 [Skip to main content](https://docs.lmnr.ai/tracing/integrations/litellm#content-area)
 
 [Laminar documentation home page![logo](https://mintcdn.com/laminarai/pCELL5UGvyOmmwBL/logo/logo.png?fit=max&auto=format&n=pCELL5UGvyOmmwBL&q=85&s=568416e0ece6e167d975769bcccddac6)](https://docs.lmnr.ai/)
@@ -27,11 +28,11 @@ On this page
 - [Overview](https://docs.lmnr.ai/tracing/integrations/litellm#overview)
 - [Default configuration](https://docs.lmnr.ai/tracing/integrations/litellm#default-configuration)
 
-## [​](https://docs.lmnr.ai/tracing/integrations/litellm\#overview)  Overview
+## [​](https://docs.lmnr.ai/tracing/integrations/litellm#overview) Overview
 
 [LiteLLM](https://www.litellm.ai/) is a framework/library for building LLM applications that simplifies accessing many models across different providers.
 
-## [​](https://docs.lmnr.ai/tracing/integrations/litellm\#default-configuration)  Default configuration
+## [​](https://docs.lmnr.ai/tracing/integrations/litellm#default-configuration) Default configuration
 
 1
 

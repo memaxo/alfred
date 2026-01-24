@@ -472,6 +472,7 @@ _layout.tsx (Root)
 ## Design System Tokens
 
 ### Colors (Signal in the Void)
+
 - `--color-void`: `oklch(0.05 0 0)` - Background
 - `--color-void-surface`: `oklch(0.14 0 0)` - Surface
 - `--color-biolum`: `oklch(0.99 0 0)` - Primary text/active
@@ -479,10 +480,12 @@ _layout.tsx (Root)
 - `--color-biolum-faint`: `oklch(0.40 0 0)` - Inactive
 
 ### Typography
+
 - Font: "Inter Tight", "Geist Sans", "San Francisco"
 - Tracking: `-0.04em` (headers), `-0.02em` (body)
 
 ### Spacing & Layout
+
 - Border radius: `24px` (containers), `9999px` (buttons/pills)
 - Border: `1px` thin borders with `border-white/10`
 - HUD Pattern: `bg-void-surface/40` + `backdrop-blur-xl` + `border border-white/10`
@@ -492,15 +495,18 @@ _layout.tsx (Root)
 ## Interaction Patterns
 
 ### Keyboard Shortcuts
+
 - `Cmd/Ctrl + M`: Toggle Mindscape
 - `Cmd/Ctrl + K`: Open Command Palette (Mindscape)
 
 ### Voice Interactions
+
 - **Drive Mode**: Press and hold → speak → release → process
 - **Voice S2S**: Click → speak → click → process
 - **Streaming**: Continuous listening with VAD
 
 ### Gestures (Native)
+
 - **Drive Mode**: Press and hold button
 - **Drawer**: Swipe from left edge
 - **Tabs**: Bottom navigation bar
@@ -515,4 +521,3 @@ _layout.tsx (Root)
 - Design system follows "Signal in the Void" aesthetic
 - Voice features are production-ready except streaming (prototype)
 - Mindscape is web-only; native app lacks spatial canvas
-

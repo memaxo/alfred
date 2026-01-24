@@ -132,4 +132,3 @@ Repeatable prevention:
 - Keep the worktree clean for files you’re committing (no partial/unstaged edits in those files).
 - Split commits by intent (feature vs formatting vs docs).
 - If the repo is busy (multiple agents), stash unrelated edits before committing, then re-apply after.
-

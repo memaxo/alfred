@@ -1,9 +1,10 @@
 ---
 title: Generic OAuth | Better Auth
-url: 
+url:
 description: Authenticate users with any OAuth provider
 language: en
 ---
+
 [\_helo](https://www.better-auth.com/) [docs](https://www.better-auth.com/docs) [examples](https://www.better-auth.com/docs/examples/next-js) [changelogs](https://www.better-auth.com/changelogs) [blogs](https://www.better-auth.com/blog) [community](https://www.better-auth.com/community)
 
 ### Get Started
@@ -28,9 +29,9 @@ Copy MarkdownOpen in
 
 The Generic OAuth plugin provides a flexible way to integrate authentication with any OAuth provider. It supports both OAuth 2.0 and OpenID Connect (OIDC) flows, allowing you to easily add social login or custom OAuth authentication to your application.
 
-## [Installation](https://www.better-auth.com/docs/plugins/generic-oauth\#installation)
+## [Installation](https://www.better-auth.com/docs/plugins/generic-oauth#installation)
 
-### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/generic-oauth\#add-the-plugin-to-your-auth-config)
+### [Add the plugin to your auth config](https://www.better-auth.com/docs/plugins/generic-oauth#add-the-plugin-to-your-auth-config)
 
 To use the Generic OAuth plugin, add it to your auth config.
 
@@ -59,7 +60,7 @@ export const auth = betterAuth({
 })
 ```
 
-### [Add the client plugin](https://www.better-auth.com/docs/plugins/generic-oauth\#add-the-client-plugin)
+### [Add the client plugin](https://www.better-auth.com/docs/plugins/generic-oauth#add-the-client-plugin)
 
 Include the Generic OAuth client plugin in your authentication client instance.
 
@@ -76,11 +77,11 @@ export const authClient = createAuthClient({
 })
 ```
 
-## [Usage](https://www.better-auth.com/docs/plugins/generic-oauth\#usage)
+## [Usage](https://www.better-auth.com/docs/plugins/generic-oauth#usage)
 
 The Generic OAuth plugin provides endpoints for initiating the OAuth flow and handling the callback. Here's how to use them:
 
-### [Initiate OAuth Sign-In](https://www.better-auth.com/docs/plugins/generic-oauth\#initiate-oauth-sign-in)
+### [Initiate OAuth Sign-In](https://www.better-auth.com/docs/plugins/generic-oauth#initiate-oauth-sign-in)
 
 To start the OAuth sign-in process:
 
@@ -102,15 +103,15 @@ const { data, error } = await authClient.signIn.oauth2({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `providerId` | The provider ID for the OAuth provider. | `string` |
-| `callbackURL?` | The URL to redirect to after sign in. | `string` |
-| `errorCallbackURL?` | The URL to redirect to if an error occurs. | `string` |
-| `newUserCallbackURL?` | The URL to redirect to after login if the user is new. | `string` |
-| `disableRedirect?` | Disable redirect. | `boolean` |
-| `scopes?` | Scopes to be passed to the provider authorization request. | `string[]` |
-| `requestSignUp?` | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider. | `boolean` |
+| Prop                  | Description                                                                              | Type       |
+| --------------------- | ---------------------------------------------------------------------------------------- | ---------- |
+| `providerId`          | The provider ID for the OAuth provider.                                                  | `string`   |
+| `callbackURL?`        | The URL to redirect to after sign in.                                                    | `string`   |
+| `errorCallbackURL?`   | The URL to redirect to if an error occurs.                                               | `string`   |
+| `newUserCallbackURL?` | The URL to redirect to after login if the user is new.                                   | `string`   |
+| `disableRedirect?`    | Disable redirect.                                                                        | `boolean`  |
+| `scopes?`             | Scopes to be passed to the provider authorization request.                               | `string[]` |
+| `requestSignUp?`      | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider. | `boolean`  |
 
 POST
 
@@ -130,17 +131,17 @@ const data = await auth.api.signInWithOAuth2({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `providerId` | The provider ID for the OAuth provider. | `string` |
-| `callbackURL?` | The URL to redirect to after sign in. | `string` |
-| `errorCallbackURL?` | The URL to redirect to if an error occurs. | `string` |
-| `newUserCallbackURL?` | The URL to redirect to after login if the user is new. | `string` |
-| `disableRedirect?` | Disable redirect. | `boolean` |
-| `scopes?` | Scopes to be passed to the provider authorization request. | `string[]` |
-| `requestSignUp?` | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider. | `boolean` |
+| Prop                  | Description                                                                              | Type       |
+| --------------------- | ---------------------------------------------------------------------------------------- | ---------- |
+| `providerId`          | The provider ID for the OAuth provider.                                                  | `string`   |
+| `callbackURL?`        | The URL to redirect to after sign in.                                                    | `string`   |
+| `errorCallbackURL?`   | The URL to redirect to if an error occurs.                                               | `string`   |
+| `newUserCallbackURL?` | The URL to redirect to after login if the user is new.                                   | `string`   |
+| `disableRedirect?`    | Disable redirect.                                                                        | `boolean`  |
+| `scopes?`             | Scopes to be passed to the provider authorization request.                               | `string[]` |
+| `requestSignUp?`      | Explicitly request sign-up. Useful when disableImplicitSignUp is true for this provider. | `boolean`  |
 
-### [Linking OAuth Accounts](https://www.better-auth.com/docs/plugins/generic-oauth\#linking-oauth-accounts)
+### [Linking OAuth Accounts](https://www.better-auth.com/docs/plugins/generic-oauth#linking-oauth-accounts)
 
 To link an OAuth account to an existing user:
 
@@ -157,9 +158,9 @@ const { data, error } = await authClient.oauth2.link({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `providerId` | The OAuth provider ID. | `string` |
+| Prop          | Description                                                   | Type     |
+| ------------- | ------------------------------------------------------------- | -------- |
+| `providerId`  | The OAuth provider ID.                                        | `string` |
 | `callbackURL` | The URL to redirect to once the account linking was complete. | `string` |
 
 POST
@@ -177,16 +178,16 @@ const data = await auth.api.oAuth2LinkAccount({
 });
 ```
 
-| Prop | Description | Type |
-| --- | --- | --- |
-| `providerId` | The OAuth provider ID. | `string` |
+| Prop          | Description                                                   | Type     |
+| ------------- | ------------------------------------------------------------- | -------- |
+| `providerId`  | The OAuth provider ID.                                        | `string` |
 | `callbackURL` | The URL to redirect to once the account linking was complete. | `string` |
 
-### [Handle OAuth Callback](https://www.better-auth.com/docs/plugins/generic-oauth\#handle-oauth-callback)
+### [Handle OAuth Callback](https://www.better-auth.com/docs/plugins/generic-oauth#handle-oauth-callback)
 
 The plugin mounts a route to handle the OAuth callback `/oauth2/callback/:providerId`. This means by default `${baseURL}/api/auth/oauth2/callback/:providerId` will be used as the callback URL. Make sure your OAuth provider is configured to use this URL.
 
-## [Configuration](https://www.better-auth.com/docs/plugins/generic-oauth\#configuration)
+## [Configuration](https://www.better-auth.com/docs/plugins/generic-oauth#configuration)
 
 When adding the plugin to your auth config, you can configure multiple OAuth providers. Each provider configuration object supports the following options:
 
@@ -209,7 +210,7 @@ interface GenericOAuthConfig {
 }
 ```
 
-### [Other Provider Configurations](https://www.better-auth.com/docs/plugins/generic-oauth\#other-provider-configurations)
+### [Other Provider Configurations](https://www.better-auth.com/docs/plugins/generic-oauth#other-provider-configurations)
 
 **providerId**: A unique string to identify the OAuth provider configuration.
 
@@ -257,9 +258,9 @@ interface GenericOAuthConfig {
 
 **overrideUserInfo**: (Optional) If true, the user's info in your database will be updated with the provider's info every time they sign in. Defaults to `false`.
 
-## [Advanced Usage](https://www.better-auth.com/docs/plugins/generic-oauth\#advanced-usage)
+## [Advanced Usage](https://www.better-auth.com/docs/plugins/generic-oauth#advanced-usage)
 
-### [Custom User Info Fetching](https://www.better-auth.com/docs/plugins/generic-oauth\#custom-user-info-fetching)
+### [Custom User Info Fetching](https://www.better-auth.com/docs/plugins/generic-oauth#custom-user-info-fetching)
 
 You can provide a custom `getUserInfo` function to handle specific provider requirements:
 
@@ -284,7 +285,7 @@ genericOAuth({
 })
 ```
 
-### [Map User Info Fields](https://www.better-auth.com/docs/plugins/generic-oauth\#map-user-info-fields)
+### [Map User Info Fields](https://www.better-auth.com/docs/plugins/generic-oauth#map-user-info-fields)
 
 If the user info returned by the provider does not match the expected format, or you need to map additional fields, you can use the `mapProfileToUser`:
 
@@ -305,7 +306,7 @@ genericOAuth({
 })
 ```
 
-### [Error Handling](https://www.better-auth.com/docs/plugins/generic-oauth\#error-handling)
+### [Error Handling](https://www.better-auth.com/docs/plugins/generic-oauth#error-handling)
 
 The plugin includes built-in error handling for common OAuth issues. Errors are typically redirected to your application's error page with an appropriate error message in the URL parameters. If the callback URL is not provided, the user will be redirected to Better Auth's default error page.
 

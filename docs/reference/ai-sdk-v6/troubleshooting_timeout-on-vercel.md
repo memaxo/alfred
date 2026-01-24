@@ -17,8 +17,7 @@ If you need to extend the timeout for longer-running processes, you can increase
 ### Next.js (App Router)
 
 Add the following to your route file or the page you are calling your Server Action from:
-    
-    
+
     export const maxDuration = 600;
 
 Setting `maxDuration` above 300 seconds requires a Pro or Enterprise plan.
@@ -26,20 +25,19 @@ Setting `maxDuration` above 300 seconds requires a Pro or Enterprise plan.
 ### Other Frameworks
 
 For other frameworks, you can set timeouts in your `vercel.json` file:
-    
-    
+
     {
-    
+
       "functions": {
-    
+
         "api/chat/route.ts": {
-    
+
           "maxDuration": 600
-    
+
         }
-    
+
       }
-    
+
     }
 
 Setting `maxDuration` above 300 seconds requires a Pro or Enterprise plan.
@@ -48,14 +46,14 @@ Setting `maxDuration` above 300 seconds requires a Pro or Enterprise plan.
 
 The maximum duration you can set depends on your Vercel plan:
 
-  * **Hobby** : Up to 300 seconds (5 minutes)
-  * **Pro** : Up to 800 seconds (~13 minutes)
-  * **Enterprise** : Up to 800 seconds (~13 minutes)
+- **Hobby** : Up to 300 seconds (5 minutes)
+- **Pro** : Up to 800 seconds (~13 minutes)
+- **Enterprise** : Up to 800 seconds (~13 minutes)
 
 ## Learn more
 
-  * Fluid Compute Default Settings
-  * Configuring Maximum Duration for Vercel Functions
+- Fluid Compute Default Settings
+- Configuring Maximum Duration for Vercel Functions
 
 Previous
 

@@ -10,12 +10,14 @@ This review analyzes integration and E2E testing coverage across ALFRED's full p
 ### Key Findings
 
 ✅ **Strengths:**
+
 - Excellent test infrastructure (VCR, fixtures, harnesses)
 - Strong unit and component test coverage
 - Good integration test patterns with minimal mocking
 - Comprehensive E2E tests for UI interactions
 
 ⚠️ **Gaps:**
+
 - Missing full pipeline E2E tests (Input → Orchestrator → Waves → Execution → Output)
 - Limited cross-boundary integration tests
 - Some integration tests use SQLite fallback (Postgres features untested)
@@ -37,6 +39,7 @@ ALFRED has four primary pipelines:
 #### Integration Tests (`packages/api/test/integration/workflow-pipeline.integration.test.ts`)
 
 **Coverage:**
+
 - ✅ Workflow streaming events (6 tests)
 - ✅ Event persistence to database
 - ✅ Authentication guards
@@ -44,12 +47,14 @@ ALFRED has four primary pipelines:
 - ✅ Context settings (RAG retrieval)
 
 **Mocking Level:** Minimal
+
 - Uses VCR for AI provider responses (OpenAI/Anthropic)
 - Real database (SQLite in-memory)
 - Real workflow runtime via `WorkflowTestHarness`
 - Real orchestrator execution
 
 **Gaps:**
+
 - ❌ No tests for multi-agent wave execution
 - ❌ No tests for conflict resolution (Arbiter)
 - ❌ No tests for supervisor interrupts
@@ -60,6 +65,7 @@ ALFRED has four primary pipelines:
 #### E2E Tests (`apps/web/tests/workflow-execution.e2e.spec.ts`)
 
 **Coverage:**
+
 - ✅ UI workflow initiation (chat node, droid node)
 - ✅ Workflow history access
 - ✅ Streaming response display
@@ -67,11 +73,13 @@ ALFRED has four primary pipelines:
 - ✅ State persistence across reloads
 
 **Mocking Level:** Minimal
+
 - Real browser environment
 - Real tRPC/SSE endpoints
 - Mocked auth (test user signup)
 
 **Gaps:**
+
 - ❌ No tests for full workflow completion end-to-end
 - ❌ No tests for workflow drawer with real run data
 - ❌ No tests for workflow obligation flows (biometric elevation)
@@ -79,12 +87,14 @@ ALFRED has four primary pipelines:
 #### Workflow Streaming Integration (`packages/api/test/workflow.stream.integration.test.ts`)
 
 **Coverage:**
+
 - ✅ Both SSE and tRPC transports
 - ✅ Policy enforcement
 - ✅ Preference refresh logic
 - ✅ Latency measurements (<100ms budget)
 
 **Mocking Level:** Minimal
+
 - Real orchestrator
 - Real DB (SQLite fallback)
 - Real streaming transports
@@ -94,16 +104,19 @@ ALFRED has four primary pipelines:
 #### Integration Tests (`packages/api/test/integration/voice-pipeline.integration.test.ts`)
 
 **Coverage:**
+
 - ⚠️ Voice session management (1 passing, 5 skipped)
 - ⚠️ TTS synthesis (skipped due to pyarrow dependency conflict)
 - ⚠️ Voice preview (skipped)
 
 **Mocking Level:** Minimal (when pools initialize)
+
 - Real voice pools (STT/TTS) when available
 - Real VoiceRegistry
 - Real IPC communication
 
 **Issues:**
+
 - Most tests skipped due to `pyarrow` dependency conflict
 - Tests gracefully skip when voice pools fail to initialize
 - No tests for full STT → Assistant → TTS flow
@@ -111,6 +124,7 @@ ALFRED has four primary pipelines:
 #### E2E Tests (`apps/web/tests/voice-session.e2e.spec.ts`)
 
 **Coverage:**
+
 - ✅ Full voice session lifecycle
 - ✅ Audio streaming (binary WebSocket frames)
 - ✅ STT transcription
@@ -120,12 +134,14 @@ ALFRED has four primary pipelines:
 - ✅ Session cleanup on disconnect
 
 **Mocking Level:** Minimal
+
 - Uses `createVoiceFixture` from `@alfred/test-kit`
 - Real VoiceRegistry and pools
 - Real WebSocket server
 - Deterministic transcripts/chunks via fixture options
 
 **Strengths:**
+
 - Excellent example of minimal-mock E2E testing
 - Tests real binary transport (not Base64 JSON)
 - Tests real session lifecycle and cleanup
@@ -135,6 +151,7 @@ ALFRED has four primary pipelines:
 #### Unit Tests (`packages/cognitive/test/`)
 
 **Coverage:**
+
 - ✅ State transitions (`state-transitions.test.ts`)
 - ✅ Physiology updates (`physiology.test.ts`)
 - ✅ Performance budgets (`performance-budget.test.ts`)
@@ -145,10 +162,12 @@ ALFRED has four primary pipelines:
 #### Integration Tests
 
 **Coverage:**
+
 - ⚠️ Limited integration tests for cognitive pipeline
 - ⚠️ No tests for full cognitive loop (Input → State → Physiology → Autonomy → Output)
 
 **Gaps:**
+
 - ❌ No tests for cognitive state persistence
 - ❌ No tests for autonomy gradient updates during workflows
 - ❌ No tests for supervisor interrupt triggers
@@ -157,12 +176,14 @@ ALFRED has four primary pipelines:
 #### E2E Tests (`apps/web/tests/cognitive-flow.e2e.spec.ts`)
 
 **Coverage:**
+
 - ✅ Cognitive feedback API bridge
 - ✅ Normalized feedback submission
 
 **Mocking Level:** Route mocking (not full pipeline)
 
 **Gaps:**
+
 - ❌ No full cognitive flow E2E tests
 - ❌ No tests for cognitive state visualization
 - ❌ No tests for physiology metrics display
@@ -172,16 +193,19 @@ ALFRED has four primary pipelines:
 #### Integration Tests
 
 **Coverage:**
+
 - ✅ Hypergraph traversal (`packages/knowledge/test/hypergraph.integration.test.ts`)
 - ✅ Graph store operations (`packages/agent/assistant/test/graphstore.integration.test.ts`)
 - ✅ RAG retrieval (`packages/api/test/graph.integration.test.ts`)
 
 **Mocking Level:** Varies
+
 - Some tests use real DB (Postgres)
 - Some tests use SQLite fallback
 - RAG tests may mock embeddings
 
 **Gaps:**
+
 - ❌ No tests for full knowledge pipeline (Capture → Synthesis → Graph → Retrieval)
 - ❌ No tests for knowledge graph updates during workflows
 - ❌ Limited tests for RAG retrieval performance budgets
@@ -191,6 +215,7 @@ ALFRED has four primary pipelines:
 #### Integration Tests (`packages/api/test/integration/auth-flow.integration.test.ts`)
 
 **Coverage:**
+
 - ✅ Session validation (4 tests)
 - ✅ Token operations (2 tests)
 - ✅ Profile operations (2 tests)
@@ -199,23 +224,27 @@ ALFRED has four primary pipelines:
 - ⚠️ CRUD operations (8 tests skipped due to SQLite limits)
 
 **Mocking Level:** Minimal
+
 - Real Better Auth
 - Real database (SQLite in-memory)
 - Real token issuance
 
 **Issues:**
+
 - Many tests skipped when using SQLite (tsvector, interval syntax)
 - Tests should run against Postgres for full coverage
 
 #### E2E Tests (`apps/web/tests/auth.e2e.spec.ts`)
 
 **Coverage:**
+
 - ✅ Sign up flow
 - ✅ Sign in flow
 - ✅ Session persistence
 - ✅ Protected route access
 
 **Mocking Level:** Minimal
+
 - Real browser environment
 - Real auth endpoints
 
@@ -228,6 +257,7 @@ ALFRED has four primary pipelines:
 **Purpose:** Provides deterministic voice testing with real VoiceRegistry and pools
 
 **Features:**
+
 - Configurable transcripts/chunks via options
 - Real WebSocket server
 - Automatic cleanup
@@ -240,6 +270,7 @@ ALFRED has four primary pipelines:
 **Purpose:** Provides workflow runtime testing with stubbed external boundaries
 
 **Features:**
+
 - Real workflow runtime execution
 - Stubbed Linear HTTP (in-process server)
 - Stubbed AI providers (configurable stream mode)
@@ -247,6 +278,7 @@ ALFRED has four primary pipelines:
 - Real workflow repo (in-memory)
 
 **Mocking Strategy:**
+
 - ✅ Real: Workflow runtime, orchestrator, DB repo
 - ⚠️ Stubbed: AI providers (via mock.module), Linear API, RAG, review gate
 - ✅ Minimal: Only external boundaries mocked
@@ -258,6 +290,7 @@ ALFRED has four primary pipelines:
 **Purpose:** Provides in-process workflow testing with real auth
 
 **Features:**
+
 - Real Better Auth session patching
 - Real tRPC caller creation
 - Database reset utilities
@@ -270,6 +303,7 @@ ALFRED has four primary pipelines:
 **Purpose:** Records and replays AI provider responses
 
 **Features:**
+
 - Supports OpenAI, Anthropic, Google, Cohere
 - Automatic authorization header redaction
 - Request matching by hash
@@ -278,6 +312,7 @@ ALFRED has four primary pipelines:
 **Assessment:** Excellent for testing AI integrations without API costs
 
 **Usage:**
+
 ```bash
 VCR_RECORD=1 bun test my-test.ts  # Record
 bun test my-test.ts               # Replay (default)
@@ -292,17 +327,20 @@ bun test my-test.ts               # Replay (default)
 **Required Tests:**
 
 #### Workflow Full Pipeline
+
 ```
-Input → Orchestrator → Scan Phase → Plan Phase → Act Phase → 
+Input → Orchestrator → Scan Phase → Plan Phase → Act Phase →
 Multi-Agent Waves → Execution → Report Phase → Output
 ```
 
-**Current State:** 
+**Current State:**
+
 - Integration tests cover individual phases
 - No single test exercises full pipeline end-to-end
 - `scripts/verify-full-pipeline.ts` exists but uses mock model
 
 **Recommendation:** Create `packages/api/test/integration/workflow-full-pipeline.integration.test.ts` that:
+
 - Uses VCR for AI providers
 - Exercises all four phases sequentially
 - Tests multi-agent wave execution
@@ -311,30 +349,36 @@ Multi-Agent Waves → Execution → Report Phase → Output
 - Tests conflict resolution
 
 #### Voice Full Pipeline
+
 ```
 Audio Input → STT → Assistant Processing → TTS → Audio Output
 ```
 
 **Current State:**
+
 - E2E tests cover voice session lifecycle
 - No test exercises full STT → Assistant → TTS flow with real assistant
 
 **Recommendation:** Create `packages/api/test/integration/voice-assistant-pipeline.integration.test.ts` that:
+
 - Uses voice fixture for STT/TTS
 - Uses real assistant for processing
 - Tests full round-trip latency
 - Verifies audio quality
 
 #### Cognitive Full Pipeline
+
 ```
 Input → State Transition → Physiology Update → Autonomy Update → Output
 ```
 
 **Current State:**
+
 - Unit tests cover individual components
 - No integration test exercises full cognitive loop
 
 **Recommendation:** Create `packages/api/test/integration/cognitive-full-pipeline.integration.test.ts` that:
+
 - Tests state persistence
 - Tests physiology regulation
 - Tests autonomy gradient updates
@@ -369,15 +413,18 @@ Input → State Transition → Physiology Update → Autonomy Update → Output
 ### 3. Postgres-Backed Integration Tests (MEDIUM PRIORITY)
 
 **Current State:**
+
 - Many integration tests use SQLite fallback
 - Postgres-specific features untested (tsvector, interval syntax, vector search)
 
 **Required:**
+
 - Run integration tests against Postgres in CI
 - Use `createTestDb`/`closeTestDb` for isolation
 - Test Postgres-specific features (full-text search, vector similarity, temporal queries)
 
 **Recommendation:**
+
 - Add `test:integration:postgres` command
 - Run Postgres integration tests in nightly CI
 - Document Postgres vs SQLite test coverage
@@ -385,16 +432,19 @@ Input → State Transition → Physiology Update → Autonomy Update → Output
 ### 4. Performance Budget Assertions (MEDIUM PRIORITY)
 
 **Current State:**
+
 - Some performance tests exist (`cognitive/test/performance-budget.test.ts`)
 - Limited performance assertions in integration tests
 
 **Required:**
+
 - Assert performance budgets in all integration tests
 - Database queries <10ms (p99)
 - Workflow streaming latency <100ms
 - Voice pipeline latency < real-time requirements
 
 **Recommendation:**
+
 - Add performance assertions to integration test helpers
 - Fail tests that exceed budgets
 - Track performance metrics in CI
@@ -402,16 +452,19 @@ Input → State Transition → Physiology Update → Autonomy Update → Output
 ### 5. Error Path Testing (MEDIUM PRIORITY)
 
 **Current State:**
+
 - Some error handling tests exist
 - Limited tests for failure scenarios
 
 **Required:**
+
 - Test supervisor interrupts (low entropy, zombie processes)
 - Test conflict resolution (merge conflicts)
 - Test workflow timeouts
 - Test service degradation (DB unavailable, voice pools down)
 
 **Recommendation:**
+
 - Add chaos testing scenarios
 - Test graceful degradation patterns
 - Test error recovery flows
@@ -472,22 +525,22 @@ Input → State Transition → Physiology Update → Autonomy Update → Output
 
 ### Integration Tests
 
-| Pipeline | Tests | Passing | Skipped | Failing | Coverage |
-|----------|-------|---------|---------|---------|----------|
-| Workflow | 6 | 3 | 0 | 3 | Partial |
-| Voice | 6 | 1 | 5 | 0 | Low |
-| Auth | 19 | 11 | 8 | 0 | Partial |
-| Cognitive | 0 | 0 | 0 | 0 | None |
-| Knowledge | Multiple | Varies | Varies | Varies | Partial |
+| Pipeline  | Tests    | Passing | Skipped | Failing | Coverage |
+| --------- | -------- | ------- | ------- | ------- | -------- |
+| Workflow  | 6        | 3       | 0       | 3       | Partial  |
+| Voice     | 6        | 1       | 5       | 0       | Low      |
+| Auth      | 19       | 11      | 8       | 0       | Partial  |
+| Cognitive | 0        | 0       | 0       | 0       | None     |
+| Knowledge | Multiple | Varies  | Varies  | Varies  | Partial  |
 
 ### E2E Tests
 
-| Area | Tests | Coverage |
-|------|-------|----------|
-| Workflow | 10 | Good |
-| Voice | 6 | Excellent |
-| Auth | 15 | Good |
-| Cognitive | 1 | Low |
+| Area      | Tests     | Coverage  |
+| --------- | --------- | --------- |
+| Workflow  | 10        | Good      |
+| Voice     | 6         | Excellent |
+| Auth      | 15        | Good      |
+| Cognitive | 1         | Low       |
 | Mindscape | Extensive | Excellent |
 
 ## Recommendations
@@ -544,6 +597,7 @@ Input → State Transition → Physiology Update → Autonomy Update → Output
 ALFRED has strong testing infrastructure with excellent patterns for minimal-mock testing. The VCR system, shared fixtures, and test harnesses provide a solid foundation. However, significant gaps remain in full pipeline coverage, particularly for end-to-end flows that span multiple subsystems.
 
 **Priority Focus Areas:**
+
 1. Full pipeline integration tests
 2. Cross-boundary integration tests
 3. Postgres-backed integration tests
@@ -551,6 +605,7 @@ ALFRED has strong testing infrastructure with excellent patterns for minimal-moc
 5. Error path testing
 
 **Next Steps:**
+
 1. Create ExecPlan for full pipeline testing
 2. Implement full pipeline integration tests
 3. Fix voice pipeline test issues

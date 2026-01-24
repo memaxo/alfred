@@ -6,14 +6,14 @@ AgentFS is ALFRED's SQLite-based filesystem for agent execution. It provides aud
 
 AgentFS replaces the deprecated poof system with a portable, queryable solution:
 
-| Feature | Poof (Deprecated) | AgentFS |
-|---------|-------------------|---------|
-| Platform | Linux only | Cross-platform |
-| State Storage | overlayfs | SQLite |
-| Audit Trail | File diffs | Structured DB |
-| Learning | Manual extraction | Automatic |
-| Checkpoint | File copy | DB snapshot |
-| Query | Shell commands | SQL/API |
+| Feature       | Poof (Deprecated) | AgentFS        |
+| ------------- | ----------------- | -------------- |
+| Platform      | Linux only        | Cross-platform |
+| State Storage | overlayfs         | SQLite         |
+| Audit Trail   | File diffs        | Structured DB  |
+| Learning      | Manual extraction | Automatic      |
+| Checkpoint    | File copy         | DB snapshot    |
+| Query         | Shell commands    | SQL/API        |
 
 ## Architecture
 
@@ -42,12 +42,12 @@ AgentFS replaces the deprecated poof system with a portable, queryable solution:
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 
 const workspace = await WorkspaceFactory.create(
-  "agentfs",        // workspace kind
-  "my-agent",       // agent ID
-  "run-123",        // run ID
-  "/path/to/repo",  // repository path
+  "agentfs", // workspace kind
+  "my-agent", // agent ID
+  "run-123", // run ID
+  "/path/to/repo", // repository path
   {
-    agentfsOverlay: true,  // enable copy-on-write
+    agentfsOverlay: true, // enable copy-on-write
   }
 );
 
@@ -104,53 +104,66 @@ The main workspace class implementing the `Workspace` interface.
 
 #### Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `kind` | `"agentfs"` | Workspace type identifier |
-| `root` | `string` | Absolute path to workspace root |
-| `branch` | `string \| null` | Git branch (always null for agentfs) |
-| `dbPath` | `string` | Path to SQLite database |
-| `isOverlay` | `boolean` | Whether overlay mode is enabled |
+| Property    | Type             | Description                          |
+| ----------- | ---------------- | ------------------------------------ |
+| `kind`      | `"agentfs"`      | Workspace type identifier            |
+| `root`      | `string`         | Absolute path to workspace root      |
+| `branch`    | `string \| null` | Git branch (always null for agentfs) |
+| `dbPath`    | `string`         | Path to SQLite database              |
+| `isOverlay` | `boolean`        | Whether overlay mode is enabled      |
 
 #### Methods
 
 ##### `initialize(): Promise<void>`
+
 Initialize the workspace and create the database.
 
 ##### `cleanup(): Promise<void>`
+
 Close the database connection and clean up resources.
 
 ##### `checkpoint(label: string): Promise<void>`
+
 Create a named checkpoint for later restoration.
 
 ##### `restore(label: string): Promise<void>`
+
 Restore state from a named checkpoint.
 
 ##### `recordToolCall(name, startedAt, completedAt, params?, result?, error?): Promise<number>`
+
 Record a tool invocation to the audit trail.
 
 ##### `getToolCalls(since?, limit?): Promise<ToolCall[]>`
+
 Retrieve recent tool calls.
 
 ##### `diff(): Promise<Change[]>`
+
 Get filesystem changes for this session.
 
 ##### `getToolStats(): Promise<ToolStats[]>`
+
 Get aggregated tool usage statistics.
 
 ##### `setKV<T>(key: string, value: T): Promise<void>`
+
 Store a value in the key-value store.
 
 ##### `getKV<T>(key: string): Promise<T | undefined>`
+
 Retrieve a value from the key-value store.
 
 ##### `writeFile(path: string, content: string): Promise<void>`
+
 Write content to a virtual file.
 
 ##### `readFile(path: string): Promise<string>`
+
 Read content from a virtual file.
 
 ##### `readdir(path: string): Promise<string[]>`
+
 List files in a directory.
 
 ### Wrapper Functions
@@ -182,9 +195,9 @@ AgentFS automatically captures data for the learning system.
 import { processForLearning } from "@alfred/agent/agentfs/learning-bridge";
 
 const result = await processForLearning("/path/to/agent.db");
-console.log(result.patterns);   // Tool usage patterns
-console.log(result.mistakes);   // Failed operations
-console.log(result.insights);   // Generated insights
+console.log(result.patterns); // Tool usage patterns
+console.log(result.mistakes); // Failed operations
+console.log(result.insights); // Generated insights
 ```
 
 ### Pattern Structure
@@ -224,32 +237,32 @@ await logger.recordDecision({
 
 AgentFS exports Prometheus metrics:
 
-| Metric | Type | Description |
-|--------|------|-------------|
-| `agentfs_executions_total` | Counter | Total workspace executions |
-| `agentfs_tool_calls_total` | Counter | Tool calls by name/status |
-| `agentfs_db_size_bytes` | Gauge | Database size |
-| `agentfs_operation_latency_ms` | Histogram | Operation latency |
-| `agentfs_active_workspaces` | Gauge | Currently open workspaces |
-| `agentfs_checkpoints_total` | Counter | Checkpoint operations |
-| `agentfs_kv_ops_total` | Counter | KV store operations |
-| `agentfs_errors` | Counter | Error count by type |
+| Metric                         | Type      | Description                |
+| ------------------------------ | --------- | -------------------------- |
+| `agentfs_executions_total`     | Counter   | Total workspace executions |
+| `agentfs_tool_calls_total`     | Counter   | Tool calls by name/status  |
+| `agentfs_db_size_bytes`        | Gauge     | Database size              |
+| `agentfs_operation_latency_ms` | Histogram | Operation latency          |
+| `agentfs_active_workspaces`    | Gauge     | Currently open workspaces  |
+| `agentfs_checkpoints_total`    | Counter   | Checkpoint operations      |
+| `agentfs_kv_ops_total`         | Counter   | KV store operations        |
+| `agentfs_errors`               | Counter   | Error count by type        |
 
 ## Configuration
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AGENTFS_DB_PATH` | `.agentfs/{runId}/{agentId}.db` | Database path |
-| `ORCH_USE_AGENTFS` | `0` | Enable AgentFS in orchestrator |
+| Variable           | Default                         | Description                    |
+| ------------------ | ------------------------------- | ------------------------------ |
+| `AGENTFS_DB_PATH`  | `.agentfs/{runId}/{agentId}.db` | Database path                  |
+| `ORCH_USE_AGENTFS` | `0`                             | Enable AgentFS in orchestrator |
 
 ### WorkspaceFactory Options
 
 ```typescript
 const options = {
-  agentfsOverlay: true,      // Enable copy-on-write overlay
-  agentfsDbPath: "/custom/path.db",  // Custom database path
+  agentfsOverlay: true, // Enable copy-on-write overlay
+  agentfsDbPath: "/custom/path.db", // Custom database path
 };
 ```
 
@@ -313,6 +326,7 @@ bun add agentfs-sdk
 ### Checkpoint Not Found
 
 Checkpoints are stored alongside the database:
+
 - Database: `.agentfs/run-123/agent-1.db`
 - Checkpoint: `.agentfs/run-123/agent-1.db.checkpoint-v1`
 
@@ -349,11 +363,16 @@ Docker security validates paths against allowed prefixes (repo root). Use `.agen
 ```typescript
 // ✅ Correct - under repo root
 const REPO_ROOT = process.cwd();
-const testDir = path.join(REPO_ROOT, ".agent", "test-workspaces", `test-${Date.now()}`);
+const testDir = path.join(
+  REPO_ROOT,
+  ".agent",
+  "test-workspaces",
+  `test-${Date.now()}`
+);
 mkdirSync(testDir, { recursive: true });
 
 // ❌ Wrong - os.tmpdir() is outside allowed paths
-const testDir = mkdtempSync(path.join(os.tmpdir(), "test-"));  // Docker rejects this
+const testDir = mkdtempSync(path.join(os.tmpdir(), "test-")); // Docker rejects this
 ```
 
 ### Complete Test Example
@@ -382,13 +401,13 @@ describe("AgentFS", () => {
   });
 
   afterEach(async () => {
-    await workspace.cleanup();  // Removes Docker container
+    await workspace.cleanup(); // Removes Docker container
     rmSync(testDir, { recursive: true, force: true });
   });
 
   it("initializes with Docker container", async () => {
     await workspace.initialize();
-    
+
     expect(workspace.containerId).toBeTruthy();
     expect(workspace.containerCw).toBe("/workspace");
   });
@@ -406,12 +425,12 @@ describe("AgentFS", () => {
 
 Docker operations add latency (~150-200ms per operation). Expected test durations:
 
-| Operation | Typical Duration |
-|-----------|------------------|
-| `initialize()` (first) | 2-4 seconds |
-| `initialize()` (reuse) | 150-200ms |
-| `exec()` | 100-200ms |
-| `cleanup()` | 100-200ms |
+| Operation              | Typical Duration |
+| ---------------------- | ---------------- |
+| `initialize()` (first) | 2-4 seconds      |
+| `initialize()` (reuse) | 150-200ms        |
+| `exec()`               | 100-200ms        |
+| `cleanup()`            | 100-200ms        |
 
 ## Best Practices
 

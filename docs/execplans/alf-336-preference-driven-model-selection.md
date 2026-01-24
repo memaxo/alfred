@@ -58,8 +58,7 @@ This work targets ALFRED itself (core runtime + web API handlers), not any appli
 
 ALFRED has two main “API generation paths” where LLM calls happen:
 
-1) **Streaming chat endpoints (web server).** The browser uses HTTP POST streaming endpoints:
-
+1. **Streaming chat endpoints (web server).** The browser uses HTTP POST streaming endpoints:
    - `/api/assistant` handled by `apps/web/src/routes/api/assistant/$.ts`
    - `/api/orchestrator` handled by `apps/web/src/routes/api/orchestrator/$.ts`
    - Both call `apps/web/src/lib/api/stream-handler.ts` which:
@@ -70,8 +69,7 @@ ALFRED has two main “API generation paths” where LLM calls happen:
 
    Today, the stream handler uses `getModelId()` from `@alfred/agent` (env-driven) and uses agent defaults that also resolve the model without userId.
 
-2) **tRPC non-streaming endpoints (API router).**
-
+2. **tRPC non-streaming endpoints (API router).**
    - Assistant: `packages/api/src/routers/assistant.ts` (`assistant.generate`)
    - Orchestrator: `packages/api/src/routers/orchestrator.ts` (`orchestrator.generate`)
    - These call `packages/api/src/ai/messages.ts` (history selection) and `packages/api/src/ai/generate.ts` (`generateText`).
@@ -107,11 +105,9 @@ Change `packages/api/src/routers/preference.ts` so that any mutation that can ch
 Edits:
 
 - In `preference.set`, after `userRepo.setPreference(...)`, call:
-
   - `await invalidatePreferenceCache(session.user.id, input.projectId)`
 
 - In `preference.delete`, after `userRepo.deletePreference(...)`, call:
-
   - `await invalidatePreferenceCache(session.user.id, input.projectId)`
 
 - In `preference.updateFromFeedback`, it already calls invalidation once at the end; ensure it passes `projectId` when set.
@@ -210,22 +206,19 @@ Run the web app and demonstrate preference-driven model switching:
 
 Build/run instructions (for humans running ALFRED locally):
 
-1) From repo root, start the dev server:
-
+1. From repo root, start the dev server:
    - `bun run dev:web`
 
-2) In the web UI, open Settings → Preferences (custom preferences section).
+2. In the web UI, open Settings → Preferences (custom preferences section).
 
-3) Set:
-
+3. Set:
    - Key: `domain.ai.model.chat`
    - Value: `"openai:gpt-4o-mini"` (or any valid `provider:modelId`)
 
-4) Send a message in chat. In devtools Network, inspect the `/api/assistant` response stream:
-
+4. Send a message in chat. In devtools Network, inspect the `/api/assistant` response stream:
    - Verify the stream “start” metadata includes `model: "openai/gpt-4o-mini"` or the derived `modelKey` form `openai/gpt-4o-mini` (depending on what the handler emits; this plan expects `modelKey`).
 
-5) Change the preference value to a different model (example: `"openai:gpt-4o"`), send another message, and verify the model metadata changes on the next request without restarting the server.
+5. Change the preference value to a different model (example: `"openai:gpt-4o"`), send another message, and verify the model metadata changes on the next request without restarting the server.
 
 ## Concrete Steps
 
@@ -252,13 +245,13 @@ From the repo root:
 
 Acceptance criteria:
 
-1) Writing `domain.ai.model.chat` via `preference.set` causes the *next* `/api/assistant` request to use the new model key (no process restart).
-2) Writing `domain.ai.model.orchestrator` causes the *next* `/api/orchestrator` request to use the new model key (no restart).
-3) The selected model key is visible to developers:
+1. Writing `domain.ai.model.chat` via `preference.set` causes the _next_ `/api/assistant` request to use the new model key (no process restart).
+2. Writing `domain.ai.model.orchestrator` causes the _next_ `/api/orchestrator` request to use the new model key (no restart).
+3. The selected model key is visible to developers:
    - in stream “start” metadata and/or
    - in a response header (`x-model`) and/or
    - in metrics labels (where present).
-4) Preference cache invalidation occurs on all preference writes, so cached values do not delay the flip.
+4. Preference cache invalidation occurs on all preference writes, so cached values do not delay the flip.
 
 ## Idempotence and Recovery
 

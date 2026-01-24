@@ -7,34 +7,32 @@ Copy markdown
 Embed several values using an embedding model. The type of the value is defined by the embedding model.
 
 `embedMany` automatically splits large requests into smaller chunks if the model has a limit on how many embeddings can be generated in a single call.
-    
-    
+
     import { openai } from '@ai-sdk/openai';
-    
+
     import { embedMany } from 'ai';
-    
-    
-    
-    
+
+
+
+
     const { embeddings } = await embedMany({
-    
+
       model: openai.textEmbeddingModel('text-embedding-3-small'),
-    
+
       values: [
-    
+
         'sunny day at the beach',
-    
+
         'rainy afternoon in the city',
-    
+
         'snowy night in the mountains',
-    
+
       ],
-    
+
     });
 
 ## Import
-    
-    
+
     import { embedMany } from "ai"
 
 ## API Signature

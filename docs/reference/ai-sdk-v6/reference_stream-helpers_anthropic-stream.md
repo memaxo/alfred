@@ -13,8 +13,7 @@ It is a utility function that transforms the output from Anthropic's SDK into a 
 ## Import
 
 ### React
-    
-    
+
     import { AnthropicStream } from "ai"
 
 ## API Signature

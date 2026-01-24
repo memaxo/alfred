@@ -120,43 +120,42 @@ Important constraints and conventions:
 - Security: all AgentFS file access must validate `dbPath` and normalize/validate `filePath`, and enforce policy via `@alfred/policy`.
 - Server/client split: web client code must not import server-only packages at module scope.
 - TanStack Router: after adding a new server route under `apps/web/src/routes/**`, regenerate the route tree:
-
-    - In `apps/web/`, run `bunx @tanstack/router-cli generate`.
+  - In `apps/web/`, run `bunx @tanstack/router-cli generate`.
 
 ## Feature Map (the 20 proposals, explicitly covered)
 
 This plan implements all of the following, grouped by milestone below:
 
-1) Unified run explorer
-2) Path-level audit timeline
-3) Diff across runs
-4) Per-file blame
-5) Content-addressed storage option
-6) Server-side safe preview rendering
-7) Archive/export run
-8) Selective restore
-9) Snapshot browser
-10) KV diff viewer
-11) Access control by project
-12) Retention tiers
-13) Large file streaming preview
-14) Binary inspector
-15) Artifact index + viewer
-16) Run hand-off pack
-17) Corruption detection + repair/quarantine
-18) Background compaction
-19) Event streaming for file changes
-20) Policy-visible file classifications
+1. Unified run explorer
+2. Path-level audit timeline
+3. Diff across runs
+4. Per-file blame
+5. Content-addressed storage option
+6. Server-side safe preview rendering
+7. Archive/export run
+8. Selective restore
+9. Snapshot browser
+10. KV diff viewer
+11. Access control by project
+12. Retention tiers
+13. Large file streaming preview
+14. Binary inspector
+15. Artifact index + viewer
+16. Run hand-off pack
+17. Corruption detection + repair/quarantine
+18. Background compaction
+19. Event streaming for file changes
+20. Policy-visible file classifications
 
 ## Plan of Work
 
 Implement these features in milestones that are independently shippable and testable. Each milestone must include:
 
-1) API surface (tRPC procedure and/or server route).
-2) Policy and input validation.
-3) UI/UX integration in the AgentFS Viewer.
-4) Unit tests at the router/service layer.
-5) Updates to this ExecPlan’s `Progress` and `Decision Log`.
+1. API surface (tRPC procedure and/or server route).
+2. Policy and input validation.
+3. UI/UX integration in the AgentFS Viewer.
+4. Unit tests at the router/service layer.
+5. Updates to this ExecPlan’s `Progress` and `Decision Log`.
 
 ### Milestone 1: Run explorer + run stats (proposal 1)
 
@@ -165,17 +164,14 @@ At the end of this milestone, a user can open the AgentFS Viewer, search/filter 
 Implementation outline:
 
 - Add a service module `packages/api/src/services/agentfs.ts` that exposes pure query helpers (no auth):
-
   - `listRuns({ userId, projectId? })` that prefers DB-backed workflow run records when Postgres is available (use `@alfred/db/repo/workflow`), and otherwise scans `.agentfs/*/agentfs.db` on disk.
   - `getRunStats({ dbPath })` that computes counts via bounded SQLite queries (file count, total bytes) and tool calls count.
 
 - Add router endpoints in `packages/api/src/routers/agentfs.ts`:
-
   - `agentfs.runs`: returns a list of run summaries.
   - `agentfs.runStats`: returns stats for a run.
 
 - Add UI in `apps/web/src/components/apps/agentfs/`:
-
   - A “Runs” tab with search input and filters (e.g. “Pinned”, “Has artifacts”, “Failed runs”).
   - Clicking a run loads stats and navigates the viewer to that run’s existing diff/file preview experience.
 
@@ -194,17 +190,14 @@ At the end of this milestone, for any path that exists in a run, the UI can show
 Implementation outline:
 
 - Extend `packages/api/src/services/agentfs.ts` with:
-
   - `getFileHistory({ dbPath, filePath })`: query SQLite for historical metadata where available. If AgentFS schema does not record per-path history, implement “history” as a sequence across snapshots/checkpoints when present (fallback: show only the current state and note that history is unavailable).
   - `blameFile({ dbPath, filePath })`: compute `mtime`, then find tool call(s) where `started_at <= mtime <= completed_at` (or closest window), return a ranked list with confidence.
 
 - Add router endpoints:
-
   - `agentfs.fileHistory`
   - `agentfs.fileBlame`
 
 - UI additions:
-
   - In the file preview panel, add a “History” and “Blame” section.
 
 Acceptance:
@@ -221,20 +214,16 @@ At the end of this milestone, the UI can compare two runs and show:
 Implementation outline:
 
 - Add API endpoints:
-
   - `agentfs.compareRuns`: input `{ leftDbPath, rightDbPath }` plus runIds for display.
 
 - File compare strategy:
-
   - For each run, build a map `path -> { size, mtime }` from `fs_dentry/fs_inode`.
   - Determine created/deleted/common and mark “modified” when size differs or when (optional) a small hash differs.
 
 - KV compare strategy:
-
   - Load kv entries for both runs and produce added/removed/changed keys.
 
 - UI:
-
   - Add a “Compare” action in Runs list; show side-by-side summary and allow clicking into a file to preview left vs right.
 
 Acceptance:
@@ -267,12 +256,10 @@ At the end of this milestone, when a run is active, the UI updates the file list
 Implementation outline:
 
 - Add a subscription in `packages/api/src/routers/agentfs.ts` (or a server route) that:
-
   - Polls the AgentFS DB for changes since a cursor (monotonic timestamp or inode seq when available).
   - Emits small deltas (path + changeType + size + mtime).
 
 - UI:
-
   - When viewing an active run, subscribe and merge deltas into the list.
 
 Acceptance:
@@ -291,20 +278,16 @@ At the end of this milestone, a user can:
 Implementation outline:
 
 - Export:
-
   - Add `GET /api/agentfs/export?runId=...` that streams an archive containing: `agentfs.db`, selected metadata JSON, and optionally `.agent/tools/**` files referenced by the run.
 
 - Restore-to-new-run:
-
   - Add `POST /api/agentfs/restore` that accepts an archive upload (or references an already-uploaded artifact), creates a new run, and seeds its `.agentfs/<newRunId>/agentfs.db`.
   - Reuse the existing base-run DB clone mechanism to avoid ad-hoc write paths.
 
 - Checkpoint browser:
-
   - Extend the UI to list checkpoints (with labels) and provide “restore to new run” actions.
 
 - Handoff pack:
-
   - Implement a builder that collects:
     - chosen files from AgentFS
     - newest artifact summaries in `.agent/tools/**`
@@ -326,20 +309,17 @@ At the end of this milestone:
 Implementation outline:
 
 - Add new policy resource kinds:
-
   - `agentfs_run` (id: `runId`)
   - `agentfs_file` (id: `runId:filePath`)
 
 - When run metadata exists in Postgres, treat `projectId` as part of policy context and enforce “same project” for non-admin reads.
 
 - File classification:
-
   - Add a classifier in `packages/api/src/services/agentfs.ts` that scans only a bounded prefix of file bytes.
   - Mark classification results in AgentFS kv (e.g. `classify:<path>`).
   - Enforce: sensitive files cannot be previewed, and download requires elevated authz (or explicit confirm).
 
 - Retention tiers:
-
   - Add UI actions “Pin run” and “Unpin run” that create/remove `.agentfs/<runId>/.keep`.
   - Extend cleanup scheduler to support optional tier markers (e.g. `.retention` file with days) with safe defaults.
 
@@ -359,16 +339,13 @@ At the end of this milestone:
 Implementation outline:
 
 - Integrity:
-
   - Add a background scheduler (gated behind an env flag) that runs `PRAGMA integrity_check` on candidate DBs.
   - If corrupt: move the run directory to a quarantine location (never delete immediately) and show UI diagnostics.
 
 - Compaction:
-
   - For DBs older than a threshold, run `PRAGMA optimize` and optional `VACUUM` (guarded by a tight deletion/lock policy to avoid interfering with active runs).
 
 - Content-addressed archive:
-
   - When exporting, compute sha256 of the archive stream and store it under `.agentfs/cas/<sha256>` plus a small manifest mapping runId->sha.
   - Provide a download route by sha, and allow restore by sha.
 
@@ -381,17 +358,15 @@ Acceptance:
 
 For each milestone:
 
-1) Implement API/service changes.
-2) Add/extend UI.
-3) Add/extend tests.
-4) Regenerate TanStack Router tree when adding routes:
+1. Implement API/service changes.
+2. Add/extend UI.
+3. Add/extend tests.
+4. Regenerate TanStack Router tree when adding routes:
+   - `cd apps/web && bunx @tanstack/router-cli generate`
 
-    - `cd apps/web && bunx @tanstack/router-cli generate`
-
-5) Run validators:
-
-    - `bun scripts/test-bun.ts --timeout 60000 <relevant test files>`
-    - `bun run typecheck:workspace --filter=@alfred/api --filter=@alfred/agent --filter=@alfred/runtime --filter=web`
+5. Run validators:
+   - `bun scripts/test-bun.ts --timeout 60000 <relevant test files>`
+   - `bun run typecheck:workspace --filter=@alfred/api --filter=@alfred/agent --filter=@alfred/runtime --filter=web`
 
 ## Validation and Acceptance
 

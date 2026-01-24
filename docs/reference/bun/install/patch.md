@@ -1,9 +1,10 @@
 ---
 title: Patch dependencies – Package manager | Bun Docs
-url: 
+url:
 description: Patch dependencies in your project to fix bugs or add features without vendoring the entire package.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -48,7 +49,7 @@ Project
 
 [Roadmap](https://bun.com/docs/project/roadmap) [Benchmarking](https://bun.com/docs/project/benchmarking) [Contributing](https://bun.com/docs/project/contributing) [Building Windows](https://bun.com/docs/project/building-windows) [Bindgen](https://bun.com/docs/project/bindgen) [License](https://bun.com/docs/project/licensing)
 
-`bun patch` lets you persistently patch node\_modules in a maintainable, git-friendly way.
+`bun patch` lets you persistently patch node_modules in a maintainable, git-friendly way.
 
 Sometimes, you need to make a small change to a package in `node_modules/` to fix a bug or add a feature. `bun patch` makes it easy to do this without vendoring the entire package and reuse the patch across multiple installs, multiple projects, and multiple machines.
 
@@ -294,11 +295,11 @@ bun patch jquery
 
 Generate a patch file for changes made to jquery
 
-bun patch --commit 'node\_modules/jquery'
+bun patch --commit 'node_modules/jquery'
 
 Generate a patch file in a custom directory for changes made to jquery
 
-bun patch --patches-dir 'my-patches' 'node\_modules/jquery'
+bun patch --patches-dir 'my-patches' 'node_modules/jquery'
 
 Full documentation is available at https://bun.sh/docs/install/patch.
 
@@ -308,7 +309,7 @@ Overrides and resolutions](https://bun.com/docs/install/overrides) [Next\\
 \\
 Audit dependencies](https://bun.com/docs/install/audit)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/install/patch.md)
 
@@ -332,7 +333,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

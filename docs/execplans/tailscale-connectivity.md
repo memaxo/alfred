@@ -10,11 +10,11 @@ Enable a high-quality, secure “mobile → home server” connection for ALFRED
 
 After this work, a novice user can:
 
-1) Join their home ALFRED server and their phone to the same Tailscale tailnet (a private network managed by Tailscale).
+1. Join their home ALFRED server and their phone to the same Tailscale tailnet (a private network managed by Tailscale).
 
-2) Reach the ALFRED API over a stable, encrypted, identity-aware URL (preferably `https://<alfred-host>.<tailnet>.ts.net`) without opening router ports.
+2. Reach the ALFRED API over a stable, encrypted, identity-aware URL (preferably `https://<alfred-host>.<tailnet>.ts.net`) without opening router ports.
 
-3) Configure the ALFRED mobile app to use that tailnet URL and see clear diagnostics (DNS/TLS/health) indicating whether the connection is working.
+3. Configure the ALFRED mobile app to use that tailnet URL and see clear diagnostics (DNS/TLS/health) indicating whether the connection is working.
 
 This ExecPlan targets ALFRED itself (this monorepo), not apps ALFRED generates for end users.
 
@@ -150,69 +150,61 @@ Only after connectivity is proven stable and observable, add an opt-in “genera
 
 All commands below are intended to be run by a human operator on their own machines. This plan is self-contained; it does not assume prior Tailscale knowledge.
 
-1) Prepare a tailnet and join devices
+1. Prepare a tailnet and join devices
+   - Install Tailscale on the home server host.
+   - Install Tailscale on the phone.
+   - Sign in to both with accounts that land them in the same tailnet.
+   - Confirm both appear in the Tailscale admin console as online devices.
 
-    - Install Tailscale on the home server host.
-    - Install Tailscale on the phone.
-    - Sign in to both with accounts that land them in the same tailnet.
-    - Confirm both appear in the Tailscale admin console as online devices.
+2. Publish ALFRED privately to the tailnet (HTTPS)
+   - Start the ALFRED server (this repo’s `apps/web`) and confirm health endpoints respond locally.
 
-2) Publish ALFRED privately to the tailnet (HTTPS)
+     For local development (runs on port 3001):
+     - From the repository root:
+       - bun run dev:web
+     - In another terminal:
+       - curl -sS http://localhost:3001/healthz
+       - curl -sS http://localhost:3001/healthz/deps
 
-    - Start the ALFRED server (this repo’s `apps/web`) and confirm health endpoints respond locally.
+     For production deployments, follow `docs/guides/deployment.md`. The guide assumes ALFRED serves on port 3000 and the canonical health checks are:
+     - curl http://<alfred-ip>:3000/healthz
+     - curl http://<alfred-ip>:3000/healthz/deps
 
-      For local development (runs on port 3001):
+   - Configure Tailscale “Serve” to publish the local ALFRED HTTP port over tailnet HTTPS.
 
-        - From the repository root:
-          - bun run dev:web
-        - In another terminal:
-          - curl -sS http://localhost:3001/healthz
-          - curl -sS http://localhost:3001/healthz/deps
+     This plan does not rely on Funnel (public exposure). The goal is: the service is reachable only from tailnet devices.
 
-      For production deployments, follow `docs/guides/deployment.md`. The guide assumes ALFRED serves on port 3000 and the canonical health checks are:
+     Example workflow on the ALFRED server host:
+     - tailscale status
+     - tailscale serve https / http://127.0.0.1:3000
+     - tailscale serve status
 
-        - curl http://<alfred-ip>:3000/healthz
-        - curl http://<alfred-ip>:3000/healthz/deps
+     Rollback / recovery:
+     - tailscale serve reset
 
-    - Configure Tailscale “Serve” to publish the local ALFRED HTTP port over tailnet HTTPS.
+   - Confirm the resulting `https://<device>.<tailnet>.ts.net/healthz` URL is reachable from the phone while Tailscale is connected.
 
-      This plan does not rely on Funnel (public exposure). The goal is: the service is reachable only from tailnet devices.
+3. Configure ALFRED mobile
+   - Configure the mobile app to use the tailnet HTTPS URL as its server base URL.
 
-      Example workflow on the ALFRED server host:
+     For development builds today, the base URL is `EXPO_PUBLIC_SERVER_URL`:
+     - Create `apps/native/.env` (copy from `apps/native/.env.example`) and set:
+       - EXPO_PUBLIC_SERVER_URL=https://<device>.<tailnet>.ts.net
+     - Start the native app from the repo root:
+       - bun run dev:native
 
-        - tailscale status
-        - tailscale serve https / http://127.0.0.1:3000
-        - tailscale serve status
+     The implementation work in this plan will add a runtime-configurable base URL UI so end users can change servers without rebuilding.
 
-      Rollback / recovery:
+   - Confirm the app shows:
+     - “DNS OK” (if hostname).
+     - “TLS OK”.
+     - “ALFRED health OK”.
 
-        - tailscale serve reset
-
-    - Confirm the resulting `https://<device>.<tailnet>.ts.net/healthz` URL is reachable from the phone while Tailscale is connected.
-
-3) Configure ALFRED mobile
-
-    - Configure the mobile app to use the tailnet HTTPS URL as its server base URL.
-
-      For development builds today, the base URL is `EXPO_PUBLIC_SERVER_URL`:
-
-        - Create `apps/native/.env` (copy from `apps/native/.env.example`) and set:
-          - EXPO_PUBLIC_SERVER_URL=https://<device>.<tailnet>.ts.net
-        - Start the native app from the repo root:
-          - bun run dev:native
-
-      The implementation work in this plan will add a runtime-configurable base URL UI so end users can change servers without rebuilding.
-    - Confirm the app shows:
-      - “DNS OK” (if hostname).
-      - “TLS OK”.
-      - “ALFRED health OK”.
-
-4) Capture evidence into the plan
-
-    - Include short, anonymized example transcripts demonstrating:
-      - The configured base URL form.
-      - A successful health check.
-      - A failed check case and the UI’s error messaging.
+4. Capture evidence into the plan
+   - Include short, anonymized example transcripts demonstrating:
+     - The configured base URL form.
+     - A successful health check.
+     - A failed check case and the UI’s error messaging.
 
 ## Validation and Acceptance
 

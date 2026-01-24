@@ -1,9 +1,10 @@
 ---
 title: Fullstack Dev Server – Bundler | Bun Docs
-url: 
+url:
 description: Serve your frontend and backend from the same app with Bun's dev server.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -107,7 +108,7 @@ console.log(`Listening on ${server.url}`);
 bun run app.ts
 ```
 
-## [HTML imports are routes](https://bun.com/docs/bundler/fullstack\#html-imports-are-routes)
+## [HTML imports are routes](https://bun.com/docs/bundler/fullstack#html-imports-are-routes)
 
 The web starts with HTML, and so does Bun's fullstack dev server.
 
@@ -177,7 +178,7 @@ index.html
 
 ```
 
-### [How to use with React](https://bun.com/docs/bundler/fullstack\#how-to-use-with-react)
+### [How to use with React](https://bun.com/docs/bundler/fullstack#how-to-use-with-react)
 
 To use React in your client-side code, import `react-dom/client` and render your app.
 
@@ -258,7 +259,7 @@ export function App() {
 
 ```
 
-### [Development mode](https://bun.com/docs/bundler/fullstack\#development-mode)
+### [Development mode](https://bun.com/docs/bundler/fullstack#development-mode)
 
 When building locally, enable development mode by setting `development: true` in `Bun.serve()`.
 
@@ -408,13 +409,13 @@ When adding a build step is too complicated, you can set `development: false` in
 - Enables `Cache-Control` headers and `ETag` headers
 - Minifies JavaScript/TypeScript/TSX/JSX files
 
-## [Plugins](https://bun.com/docs/bundler/fullstack\#plugins)
+## [Plugins](https://bun.com/docs/bundler/fullstack#plugins)
 
 Bun's [bundler plugins](https://bun.com/docs/bundler/plugins) are also supported when bundling static routes.
 
 To configure plugins for `Bun.serve`, add a `plugins` array in the `[serve.static]` section of your `bunfig.toml`.
 
-### [Using TailwindCSS in HTML routes](https://bun.com/docs/bundler/fullstack\#using-tailwindcss-in-html-routes)
+### [Using TailwindCSS in HTML routes](https://bun.com/docs/bundler/fullstack#using-tailwindcss-in-html-routes)
 
 For example, enable TailwindCSS on your routes by installing and adding the `bun-plugin-tailwind` plugin:
 
@@ -457,7 +458,7 @@ style.css
 
 ```
 
-### [Custom plugins](https://bun.com/docs/bundler/fullstack\#custom-plugins)
+### [Custom plugins](https://bun.com/docs/bundler/fullstack#custom-plugins)
 
 Any JS file or module which exports a [valid bundler plugin object](https://bun.com/docs/bundler/plugins#usage) (essentially an object with a `name` and `setup` field) can be placed inside the `plugins` array:
 
@@ -473,13 +474,11 @@ Bun will lazily resolve and load each plugin and use them to bundle your routes.
 
 Note: this is currently in `bunfig.toml` to make it possible to know statically which plugins are in use when we eventually integrate this with the `bun build` CLI. These plugins work in `Bun.build()`'s JS API, but are not yet supported in the CLI.
 
-## [How this works](https://bun.com/docs/bundler/fullstack\#how-this-works)
+## [How this works](https://bun.com/docs/bundler/fullstack#how-this-works)
 
 Bun uses [`HTMLRewriter`](https://bun.com/docs/api/html-rewriter) to scan for `<script>` and `<link>` tags in HTML files, uses them as entrypoints for [Bun's bundler](https://bun.com/docs/bundler), generates an optimized bundle for the JavaScript/TypeScript/TSX/JSX and CSS files, and serves the result.
 
 1. **`<script>` processing**
-
-
    - Transpiles TypeScript, JSX, and TSX in `<script>` tags
    - Bundles imported dependencies
    - Generates sourcemaps for debugging
@@ -491,8 +490,6 @@ Bun uses [`HTMLRewriter`](https://bun.com/docs/api/html-rewriter) to scan for `<
 ```
 
 2. **`<link>` processing**
-
-
    - Processes CSS imports and `<link>` tags
    - Concatenates CSS files
    - Rewrites `url` and asset paths to include content-addressable hashes in URLs
@@ -503,21 +500,20 @@ Bun uses [`HTMLRewriter`](https://bun.com/docs/api/html-rewriter) to scan for `<
 ```
 
 3. **`<img>` & asset processing**
-
    - Links to assets are rewritten to include content-addressable hashes in URLs
    - Small assets in CSS files are inlined into `data:` URLs, reducing the total number of HTTP requests sent over the wire
-4. **Rewrite HTML**
 
+4. **Rewrite HTML**
    - Combines all `<script>` tags into a single `<script>` tag with a content-addressable hash in the URL
    - Combines all `<link>` tags into a single `<link>` tag with a content-addressable hash in the URL
    - Outputs a new HTML file
-5. **Serve**
 
+5. **Serve**
    - All the output files from the bundler are exposed as static routes, using the same mechanism internally as when you pass a `Response` object to [`static` in `Bun.serve()`](https://bun.com/docs/api/http#static-routes).
 
 This works similarly to how [`Bun.build` processes HTML files](https://bun.com/docs/bundler/html).
 
-## [This is a work in progress](https://bun.com/docs/bundler/fullstack\#this-is-a-work-in-progress)
+## [This is a work in progress](https://bun.com/docs/bundler/fullstack#this-is-a-work-in-progress)
 
 - This doesn't support `bun build` yet. It also will in the future.
 
@@ -527,7 +523,7 @@ CSS](https://bun.com/docs/bundler/css) [Next\\
 \\
 Hot reloading](https://bun.com/docs/bundler/hmr)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/bundler/fullstack.md)
 
@@ -551,7 +547,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

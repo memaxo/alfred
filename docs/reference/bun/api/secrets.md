@@ -1,9 +1,10 @@
 ---
 title: Secrets – API | Bun Docs
-url: 
+url:
 description: Store and retrieve sensitive credentials securely using the operating system's native credential storage APIs.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -80,7 +81,7 @@ if (!githubToken) {
 
 ```
 
-## [Overview](https://bun.com/docs/api/secrets\#overview)
+## [Overview](https://bun.com/docs/api/secrets#overview)
 
 `Bun.secrets` provides a cross-platform API for managing sensitive credentials that CLI tools and development applications typically store in plaintext files like `~/.npmrc`, `~/.aws/credentials`, or `.env` files. It uses:
 
@@ -92,9 +93,9 @@ All operations are asynchronous and non-blocking, running on Bun's threadpool.
 
 Note: in the future, we may add an additional `provider` option to make this better for production deployment secrets, but today this API is mostly useful for local development tools.
 
-## [API](https://bun.com/docs/api/secrets\#api)
+## [API](https://bun.com/docs/api/secrets#api)
 
-### [`Bun.secrets.get(options)`](https://bun.com/docs/api/secrets\#bun-secrets-get-options)
+### [`Bun.secrets.get(options)`](https://bun.com/docs/api/secrets#bun-secrets-get-options)
 
 Retrieve a stored credential.
 
@@ -121,7 +122,7 @@ const password = await Bun.secrets.get("my-app", "alice@example.com");
 
 - `Promise<string | null>` \- The stored password, or `null` if not found
 
-### [`Bun.secrets.set(options, value)`](https://bun.com/docs/api/secrets\#bun-secrets-set-options-value)
+### [`Bun.secrets.set(options, value)`](https://bun.com/docs/api/secrets#bun-secrets-set-options-value)
 
 Store or update a credential.
 
@@ -147,7 +148,7 @@ await secrets.set({
 - If a credential already exists for the given service/name combination, it will be replaced
 - The stored value is encrypted by the operating system
 
-### [`Bun.secrets.delete(options)`](https://bun.com/docs/api/secrets\#bun-secrets-delete-options)
+### [`Bun.secrets.delete(options)`](https://bun.com/docs/api/secrets#bun-secrets-delete-options)
 
 Delete a stored credential.
 
@@ -170,9 +171,9 @@ const deleted = await Bun.secrets.delete({
 
 - `Promise<boolean>` \- `true` if a credential was deleted, `false` if not found
 
-## [Examples](https://bun.com/docs/api/secrets\#examples)
+## [Examples](https://bun.com/docs/api/secrets#examples)
 
-### [Storing CLI Tool Credentials](https://bun.com/docs/api/secrets\#storing-cli-tool-credentials)
+### [Storing CLI Tool Credentials](https://bun.com/docs/api/secrets#storing-cli-tool-credentials)
 
 ```
 // Store GitHub CLI token (instead of ~/.config/gh/hosts.yml)
@@ -208,7 +209,7 @@ if (token) {
 
 ```
 
-### [Migrating from Plaintext Config Files](https://bun.com/docs/api/secrets\#migrating-from-plaintext-config-files)
+### [Migrating from Plaintext Config Files](https://bun.com/docs/api/secrets#migrating-from-plaintext-config-files)
 
 ```
 // Instead of storing in ~/.aws/credentials
@@ -234,7 +235,7 @@ const apiKey =
 
 ```
 
-### [Error Handling](https://bun.com/docs/api/secrets\#error-handling)
+### [Error Handling](https://bun.com/docs/api/secrets#error-handling)
 
 ```
 try {
@@ -259,7 +260,7 @@ if (password === null) {
 
 ```
 
-### [Updating Credentials](https://bun.com/docs/api/secrets\#updating-credentials)
+### [Updating Credentials](https://bun.com/docs/api/secrets#updating-credentials)
 
 ```
 // Initial password
@@ -280,30 +281,30 @@ await Bun.secrets.set({
 
 ```
 
-## [Platform Behavior](https://bun.com/docs/api/secrets\#platform-behavior)
+## [Platform Behavior](https://bun.com/docs/api/secrets#platform-behavior)
 
-### [macOS (Keychain)](https://bun.com/docs/api/secrets\#macos-keychain)
+### [macOS (Keychain)](https://bun.com/docs/api/secrets#macos-keychain)
 
 - Credentials are stored in the name's login keychain
 - The keychain may prompt for access permission on first use
 - Credentials persist across system restarts
 - Accessible by the name who stored them
 
-### [Linux (libsecret)](https://bun.com/docs/api/secrets\#linux-libsecret)
+### [Linux (libsecret)](https://bun.com/docs/api/secrets#linux-libsecret)
 
 - Requires a secret service daemon (GNOME Keyring, KWallet, etc.)
 - Credentials are stored in the default collection
 - May prompt for unlock if the keyring is locked
 - The secret service must be running
 
-### [Windows (Credential Manager)](https://bun.com/docs/api/secrets\#windows-credential-manager)
+### [Windows (Credential Manager)](https://bun.com/docs/api/secrets#windows-credential-manager)
 
 - Credentials are stored in Windows Credential Manager
 - Visible in Control Panel → Credential Manager → Windows Credentials
 - Persist with `CRED_PERSIST_ENTERPRISE` flag so it's scoped per user
 - Encrypted using Windows Data Protection API
 
-## [Security Considerations](https://bun.com/docs/api/secrets\#security-considerations)
+## [Security Considerations](https://bun.com/docs/api/secrets#security-considerations)
 
 1. **Encryption**: Credentials are encrypted by the operating system's credential manager
 2. **Access Control**: Only the name who stored the credential can retrieve it
@@ -311,7 +312,7 @@ await Bun.secrets.set({
 4. **Memory Safety**: Bun zeros out password memory after use
 5. **Process Isolation**: Credentials are isolated per name account
 
-## [Limitations](https://bun.com/docs/api/secrets\#limitations)
+## [Limitations](https://bun.com/docs/api/secrets#limitations)
 
 - Maximum password length varies by platform (typically 2048-4096 bytes)
 - Service and name names should be reasonable lengths (< 256 characters)
@@ -321,7 +322,7 @@ await Bun.secrets.set({
   - macOS: Keychain Access must be available
   - Windows: Credential Manager service must be enabled
 
-## [Comparison with Environment Variables](https://bun.com/docs/api/secrets\#comparison-with-environment-variables)
+## [Comparison with Environment Variables](https://bun.com/docs/api/secrets#comparison-with-environment-variables)
 
 Unlike environment variables, `Bun.secrets`:
 
@@ -333,15 +334,9 @@ Unlike environment variables, `Bun.secrets`:
 - ❌ Requires OS credential service
 - ❌ Not very useful for deployment secrets (use environment variables in production)
 
-## [Best Practices](https://bun.com/docs/api/secrets\#best-practices)
+## [Best Practices](https://bun.com/docs/api/secrets#best-practices)
 
 1. **Use descriptive service names**: Match the tool or application nameIf you're building a CLI for external use, you probably should use a UTI (Uniform Type Identifier) for the service name.
-
-
-
-
-
-
 
 ```
 // Good - matches the actual tool
@@ -356,13 +351,12 @@ Unlike environment variables, `Bun.secrets`:
 2. **Credentials-only**: Don't store application configuration in this APIThis API is slow, you probably still need to use a config file for some things.
 
 3. **Use for local development tools**:
-
    - ✅ CLI tools (gh, npm, docker, kubectl)
    - ✅ Local development servers
    - ✅ Personal API keys for testing
    - ❌ Production servers (use proper secret management)
 
-## [TypeScript](https://bun.com/docs/api/secrets\#typescript)
+## [TypeScript](https://bun.com/docs/api/secrets#typescript)
 
 ```
 namespace Bun {
@@ -382,7 +376,7 @@ namespace Bun {
 
 ```
 
-## [See Also](https://bun.com/docs/api/secrets\#see-also)
+## [See Also](https://bun.com/docs/api/secrets#see-also)
 
 - [Environment Variables](https://bun.com/docs/api/env.md) \- For deployment configuration
 - [Bun.password](https://bun.com/docs/api/password.md) \- For password hashing and verification
@@ -393,7 +387,7 @@ C Compiler](https://bun.com/docs/api/cc) [Next\\
 \\
 Testing](https://bun.com/docs/cli/test)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/api/secrets.md)
 
@@ -417,7 +411,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

@@ -91,15 +91,15 @@ All changes are additive and guarded by env flags; re-running the helpers simply
 
 - `apps/web/src/lib/test-auth.ts` must export:
 
-    interface TestSession {
-        id: string;
-        email: string;
-        name: string;
-    }
+  interface TestSession {
+  id: string;
+  email: string;
+  name: string;
+  }
 
-    export function issueTestSession(overrides?: Partial<TestSession>): TestSession
+  export function issueTestSession(overrides?: Partial<TestSession>): TestSession
 
-    export function installTestAuthBridge(session: TestSession): void
+  export function installTestAuthBridge(session: TestSession): void
 
 - `apps/web/src/lib/auth-client.ts` must read from `globalThis.__TEST_SESSION__?: { data: { user: TestSession } }` when `import.meta.env.VITE_TEST_MODE === "true"`.
 - Playwright helpers must set `window.__TEST_SESSION__` via `page.addInitScript` and pass the serialized session in a `x-alfred-test-session` header so SSR can hydrate.

@@ -1,9 +1,10 @@
 ---
 title: bun init – Templating | Bun Docs
-url: 
+url:
 description: Scaffold an empty Bun project.
 language: en
 ---
+
 Search`` `K`
 
 Ask AI
@@ -134,7 +135,7 @@ Initialize a React project with @shadcn/ui and TailwindCSS
 
 ### Examples
 
-## [React](https://bun.com/docs/cli/init\#react)
+## [React](https://bun.com/docs/cli/init#react)
 
 The `--react` flag will scaffold a React project:
 
@@ -147,7 +148,7 @@ The `--react` flag accepts the following values:
 - `tailwind` \- Scaffold a React project with Tailwind CSS
 - `shadcn` \- Scaffold a React project with Shadcn/UI and Tailwind CSS
 
-### [React + TailwindCSS](https://bun.com/docs/cli/init\#react-tailwindcss)
+### [React + TailwindCSS](https://bun.com/docs/cli/init#react-tailwindcss)
 
 This will create a React project with Tailwind CSS configured with Bun's bundler and dev server.
 
@@ -155,7 +156,7 @@ This will create a React project with Tailwind CSS configured with Bun's bundler
 bun init --react=tailwind
 ```
 
-### [React + @shadcn/ui](https://bun.com/docs/cli/init\#react-shadcn-ui)
+### [React + @shadcn/ui](https://bun.com/docs/cli/init#react-shadcn-ui)
 
 This will create a React project with shadcn/ui and Tailwind CSS configured with Bun's bundler and dev server.
 
@@ -169,7 +170,7 @@ TypeScript](https://bun.com/docs/typescript) [Next\\
 \\
 `bun create`](https://bun.com/docs/cli/bun-create)
 
-[![GitHub logo](<Base64-Image-Removed>)![GitHub logo](<Base64-Image-Removed>)\\
+[![GitHub logo](Base64-Image-Removed)![GitHub logo](Base64-Image-Removed)\\
 \\
 Edit on GitHub](https://github.com/oven-sh/bun/edit/main/docs/cli/init.md)
 
@@ -193,7 +194,7 @@ How is Bun faster than Node.js? How can I benchmark it?
 
 Do I still need a bundler or TypeScript compiler?
 
-* * *
+---
 
 Powered by
 

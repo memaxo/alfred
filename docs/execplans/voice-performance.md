@@ -9,6 +9,7 @@ Reference: `.agent/PLANS.md` must be followed for maintenance of this document.
 This plan upgrades the Voice testing suite from functional verification to performance validation. We will verify the binary transport path, simulate load to check for event loop blocking, and measure end-to-end latency to ensure the architecture delivers a "Real-Time" feel.
 
 After this change:
+
 1.  We will have proof that binary audio frames are processed correctly.
 2.  We will know the system's capacity (concurrent sessions).
 3.  We will have a baseline latency metric for the streaming pipeline.
@@ -16,16 +17,16 @@ After this change:
 ## Progress
 
 - [ ] Phase 1: Binary Path Verification
-    - [ ] Update `packages/voice/src/server/socket.test.ts` to send/receive `Buffer` frames.
-    - [ ] Verify `VoiceSocketHandler` correctly routes binary data to `VoiceSession`.
+  - [ ] Update `packages/voice/src/server/socket.test.ts` to send/receive `Buffer` frames.
+  - [ ] Verify `VoiceSocketHandler` correctly routes binary data to `VoiceSession`.
 - [ ] Phase 2: Latency Benchmark
-    - [ ] Create `packages/voice/test/latency.bench.ts`.
-    - [ ] Implement a test using `VoiceStreamClient` and a local server to measure RTT.
-    - [ ] Use "delay-mocked" pools to simulate inference time.
+  - [ ] Create `packages/voice/test/latency.bench.ts`.
+  - [ ] Implement a test using `VoiceStreamClient` and a local server to measure RTT.
+  - [ ] Use "delay-mocked" pools to simulate inference time.
 - [ ] Phase 3: Load Testing
-    - [ ] Create `packages/voice/test/load.bench.ts`.
-    - [ ] Simulate 50+ concurrent clients sending 50 chunks/sec (20ms pcm).
-    - [ ] Measure event loop lag or processing time.
+  - [ ] Create `packages/voice/test/load.bench.ts`.
+  - [ ] Simulate 50+ concurrent clients sending 50 chunks/sec (20ms pcm).
+  - [ ] Measure event loop lag or processing time.
 
 ## Surprises & Discoveries
 
@@ -54,7 +55,7 @@ We previously implemented binary transport and native Opus support. However, cur
     - Modify `packages/voice/src/server/socket.test.ts`.
     - Add a test case `should handle binary audio message`.
     - Create a `Buffer`, pass it to `handleMessage`.
-    - Assert `mockSession.processAudioChunk` was called with the base64 string (since internal logic converts it for now) or raw buffer if we optimized that deep. *Note: Internal logic currently converts to base64 string for STT pool compatibility.*
+    - Assert `mockSession.processAudioChunk` was called with the base64 string (since internal logic converts it for now) or raw buffer if we optimized that deep. _Note: Internal logic currently converts to base64 string for STT pool compatibility._
 
 ### Phase 2: Latency Benchmark
 
