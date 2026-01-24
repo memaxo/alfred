@@ -77,6 +77,12 @@ Every workflow execution is a learning opportunity. The system must automaticall
 
 7. **Vector search performance.** Perform vector similarity matches directly in SQL using `pgvector` operators (`<=>`) to maintain <10ms retrieval latency. Use `CASE` expressions for contextual weighting within the query.
 
+8. **Task enrichment.** Enrich new tasks with similar past executions, relevant heuristics, and upstream failure context using `@alfred/plan/enrich`. See `packages/agent/.ruler/enrichment-patterns.md` for details.
+
+9. **Retry resolution tracking.** When a failed task succeeds on retry, record the resolution with `createRetryResolution()` to enable future similar-failure lookups.
+
+10. **Structured handoffs.** Build rich wave-to-wave handoffs with `buildStructuredHandoff()` including decisions, blockers, and tools to avoid for cross-wave learning.
+
 
 
 <!-- Source: .ruler/40-versioning.md -->
@@ -136,6 +142,28 @@ Terminal interfaces must be fast, keyboard-driven, and follow consistent panel/l
 14. **Error states.** Panels must handle null/undefined state gracefully. Show empty state message, don't crash.
 
 15. **API endpoints.** TUI-specific endpoints go in existing routers (e.g., `cognitive.state`, `knowledge.stats`). Don't create new routers for TUI.
+
+
+
+<!-- Source: .ruler/61-carplay-patterns.md -->
+
+# CarPlay Integration Patterns
+
+1. **Bridge existing systems.** When integrating with CarPlay, wrap existing voice/TTS/sync infrastructure rather than reimplementing. Create bridge files that adapt existing hooks for CarPlay context.
+
+2. **Zustand for feature state.** Use a dedicated Zustand store per major feature domain (e.g., `useCarPlayStore`). Include computed selectors as store methods.
+
+3. **Intent classification: local first.** Use regex pattern matching for common commands (fast path), fall back to LLM classification for complex intents. Return confidence scores.
+
+4. **Pattern matching: use word boundaries.** CarPlay intent patterns must use `\b` or `$` to avoid false matches (e.g., `/prs?$/i` not `/prs?/i` to avoid matching "progress").
+
+5. **Template callbacks: individual params.** react-native-carplay template constructors take callbacks as individual parameters, not as an object. Check the template type definitions.
+
+6. **Offline queue: reuse sync infrastructure.** CarPlay offline commands should use the existing `lib/sync/queue.ts` infrastructure, adding a table prefix for filtering.
+
+7. **Speech generators: truncate for voice.** TTS speech should be truncated to ~20 words per utterance. Use helper functions like `truncateForSpeech(text, maxWords)`.
+
+8. **Module structure.** CarPlay features belong in `lib/carplay/` with subdirectories for voice, nowplaying, offline, and scenes. Export everything from a barrel `index.ts`.
 
 
 
