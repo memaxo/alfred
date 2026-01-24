@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { combined } from "../src/index";
 
 describe("combined", () => {

@@ -8,10 +8,11 @@
  * Usage: bun scripts/verify-cognitive-pipeline.ts
  */
 
+import type { CognitiveEffect } from "@alfred/runtime";
+
 import { timestamp } from "@alfred/cognitive/state";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
-import type { CognitiveEffect } from "@alfred/runtime";
 import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 

@@ -547,7 +547,9 @@ async function waitForCodeRabbitReview(
     await delay(CODE_RABBIT_POLL_INTERVAL_MS);
   }
 
-  console.warn(`[REVIEW] ⚠️ Timeout waiting for CodeRabbit review on PR #${pr}`);
+  console.warn(
+    `[REVIEW] ⚠️ Timeout waiting for CodeRabbit review on PR #${pr}`
+  );
   return null;
 }
 

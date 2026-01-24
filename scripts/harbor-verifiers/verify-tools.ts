@@ -13,12 +13,12 @@
  *   --max-calls <n>       Maximum number of tool calls
  */
 
-import { parseArgs } from "node:util";
 import {
   assertToolSequence,
   parseTrajectory,
   queryToolCalls,
 } from "@alfred/harbor/inspect";
+import { parseArgs } from "node:util";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),

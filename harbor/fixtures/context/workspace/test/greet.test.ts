@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { expected, greet } from "../src/greet";
 
 describe("greet", () => {

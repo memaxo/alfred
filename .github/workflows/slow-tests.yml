@@ -3,7 +3,7 @@ name: Slow Tests
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 2 * * *' # Every day at 2am
+    - cron: "0 2 * * *" # Every day at 2am
 
 jobs:
   slow-tests:

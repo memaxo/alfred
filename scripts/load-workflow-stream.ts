@@ -1,13 +1,14 @@
 #!/usr/bin/env bun
 
-import { Buffer } from "node:buffer";
 import type { AppRouter } from "@alfred/api/routers/index";
+
 import {
   createTRPCClient,
   httpBatchLink,
   splitLink,
   unstable_httpSubscriptionLink,
 } from "@trpc/client";
+import { Buffer } from "node:buffer";
 
 type Args = {
   baseUrl: string;

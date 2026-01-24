@@ -12,7 +12,9 @@
  */
 
 import type { Subprocess } from "bun";
+
 import { spawn } from "bun";
+
 import { toolSession } from "../packages/agent/src/orchestrator/tool/session";
 
 type Mode = "default" | "fail" | "session-crash";

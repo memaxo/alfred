@@ -44,8 +44,8 @@
     name: "{{ item }}"
   loop:
     - OpenSSH
-    - '80/tcp'
-    - '443/tcp'
+    - "80/tcp"
+    - "443/tcp"
 
 - name: Enable UFW
   ufw:

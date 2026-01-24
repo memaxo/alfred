@@ -9,14 +9,14 @@
  *   bun scripts/pipeline.ts --requirement "Create packages/util/src/string.ts with capitalize function"
  */
 
-import { randomUUID } from "node:crypto";
-import { parseArgs } from "node:util";
 import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
 import {
   ConsoleObserver,
   CostCleanupObserver,
   MetricsObserver,
 } from "@alfred/pipeline/observers";
+import { randomUUID } from "node:crypto";
+import { parseArgs } from "node:util";
 
 async function main() {
   const { values } = parseArgs({

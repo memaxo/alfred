@@ -15,6 +15,7 @@ import { logger } from "@alfred/logger";
 import { spawn } from "bun";
 // import { createRuntime } from "@alfred/runtime"; // Not needed if we test toolCodex directly
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
+
 import { formatCodexRuntimeError } from "../packages/runtime/src/utils/codex-error";
 
 // Mock sys.spawn to simulate Codex output
@@ -83,9 +84,8 @@ async function _verifyLoopDetection() {
   // Let's try.
 
   try {
-    const { toolCodex } = await import(
-      "@alfred/agent/orchestrator/tool/codex/index"
-    );
+    const { toolCodex } =
+      await import("@alfred/agent/orchestrator/tool/codex/index");
 
     console.log("⚡ Executing repetitive tool (mocked)...");
     await toolCodex.execute({

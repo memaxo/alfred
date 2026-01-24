@@ -29,10 +29,10 @@
  *     logs/         - stdout.log, stderr.log, gc.log
  */
 
+import { spawn } from "bun";
 import { createWriteStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { spawn } from "bun";
 
 type Options = {
   cwd: string;

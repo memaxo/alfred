@@ -11,8 +11,8 @@
  *   --no-duplicate-stages      Stages must not be re-executed
  */
 
-import { parseArgs } from "node:util";
 import { parseTrajectory, querySteps } from "@alfred/harbor/inspect";
+import { parseArgs } from "node:util";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),

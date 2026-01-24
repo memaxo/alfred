@@ -10,13 +10,14 @@
  * Usage: bun scripts/verify-orchestrator.ts
  */
 
-import * as fs from "node:fs/promises";
+import type { WorkflowEvent } from "@alfred/type/plan";
+import type { LanguageModel } from "ai";
+
 import { issueAccessToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
 import { createRuntime } from "@alfred/runtime";
-import type { WorkflowEvent } from "@alfred/type/plan";
-import type { LanguageModel } from "ai";
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
+import * as fs from "node:fs/promises";
 
 const VERIFICATION_FILE = `verification-${Date.now()}.txt`;
 const VERIFICATION_CONTENT = "QED";

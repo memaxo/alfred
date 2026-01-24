@@ -11,8 +11,8 @@
  *   --has-estimates      Plan must include time estimates
  */
 
-import { parseArgs } from "node:util";
 import { extractPlan, parseTrajectory } from "@alfred/harbor/inspect";
+import { parseArgs } from "node:util";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),

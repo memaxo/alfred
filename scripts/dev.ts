@@ -13,8 +13,8 @@
  *   bun scripts/dev.ts native    # Run only native dev
  */
 
-import { resolve } from "node:path";
 import { spawn } from "bun";
+import { resolve } from "node:path";
 
 const ROOT_DIR = resolve(import.meta.dir, "..");
 

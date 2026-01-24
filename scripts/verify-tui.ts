@@ -63,9 +63,8 @@ async function testTuiEntrypoint() {
 }
 
 async function testCommands() {
-  const { fuzzyMatch, searchCommands, createStandardCommands } = await import(
-    "../packages/tui/src/tui/input/commands"
-  );
+  const { fuzzyMatch, searchCommands, createStandardCommands } =
+    await import("../packages/tui/src/tui/input/commands");
 
   if (fuzzyMatch("qt", "Quit") <= 0) {
     throw new Error("Expected fuzzyMatch to match basic patterns");
@@ -185,9 +184,8 @@ async function testTheme() {
 // ─── Intro Tests ──────────────────────────────────────────────────────────────
 
 async function testIntroLogo() {
-  const { LOGO_FULL, coloredLogo } = await import(
-    "../packages/tui/src/tui/intro/logo"
-  );
+  const { LOGO_FULL, coloredLogo } =
+    await import("../packages/tui/src/tui/intro/logo");
 
   if (!LOGO_FULL) {
     throw new Error("Expected LOGO_FULL to be defined");
@@ -207,9 +205,8 @@ async function testIntroLogo() {
 }
 
 async function testIntroGreeting() {
-  const { getGreeting } = await import(
-    "../packages/tui/src/tui/intro/greeting"
-  );
+  const { getGreeting } =
+    await import("../packages/tui/src/tui/intro/greeting");
 
   const greeting = getGreeting();
   if (typeof greeting !== "string") {

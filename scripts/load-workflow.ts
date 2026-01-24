@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 
-import { Buffer } from "node:buffer";
 import type { AppRouter } from "@alfred/api/routers/index";
+
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import { Buffer } from "node:buffer";
 
 type Args = {
   baseUrl: string;

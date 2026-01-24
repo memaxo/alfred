@@ -5,7 +5,7 @@
     state: directory
     owner: "{{ alfred_user }}"
     group: "{{ alfred_group }}"
-    mode: '0755'
+    mode: "0755"
 
 - name: Template backup script
   template:
@@ -13,7 +13,7 @@
     dest: "{{ postgres_backup_dir }}/backup.sh"
     owner: "{{ alfred_user }}"
     group: "{{ alfred_group }}"
-    mode: '0700'
+    mode: "0700"
 
 - name: Set up backup cron job
   cron:

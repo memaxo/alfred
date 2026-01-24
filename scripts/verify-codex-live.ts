@@ -17,10 +17,6 @@
  * - Codex binary available (CODEX_BIN or PATH)
  */
 
-import { randomUUID } from "node:crypto";
-import { accessSync, constants as fsConstants } from "node:fs";
-import * as fs from "node:fs/promises";
-import path from "node:path";
 import { redactSecrets } from "@alfred/agent/utils/redaction";
 import { issueAccessToken } from "@alfred/auth/token";
 import {
@@ -28,6 +24,10 @@ import {
   createCodexLiveWorkspace,
   runCodexLiveInWorkspace,
 } from "@alfred/test-kit/codex";
+import { randomUUID } from "node:crypto";
+import { accessSync, constants as fsConstants } from "node:fs";
+import * as fs from "node:fs/promises";
+import path from "node:path";
 
 function requiredEnv(name: string): string {
   const v = process.env[name];

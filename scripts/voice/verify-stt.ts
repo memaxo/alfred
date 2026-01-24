@@ -13,9 +13,9 @@
  *   bun run scripts/verify-stt.ts
  */
 
+import { spawn } from "bun";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { spawn } from "bun";
 
 async function checkPythonEnv() {
   console.log("🔍 Checking Python Environment...");

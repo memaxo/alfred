@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import path from "node:path";
 import { Glob } from "bun";
+import path from "node:path";
 
 type Kind = "unit" | "integration" | "e2e" | "perf" | "slow";
 

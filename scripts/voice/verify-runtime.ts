@@ -19,10 +19,11 @@
  *   STRICT_LATENCY=1 (optional, fails on latency violations)
  */
 
+import { spawn } from "bun";
 import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { spawn } from "bun";
+
 import {
   getVoicePools,
   initializeVoicePools,

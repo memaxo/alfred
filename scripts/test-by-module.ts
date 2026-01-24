@@ -7,10 +7,10 @@
  *   bun scripts/test-by-module.ts [--scope unit|integration|e2e|perf|all] [--module <name>]
  */
 
+import { Glob } from "bun";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-import { Glob } from "bun";
 
 const exec = promisify(spawn);
 

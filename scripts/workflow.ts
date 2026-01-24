@@ -1,20 +1,21 @@
 #!/usr/bin/env bun
 
-import { randomUUID } from "node:crypto";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import type { WorkflowEventType } from "@alfred/db/schema/workflow";
+import type { PersistedWorkflowEvent } from "@alfred/runtime/trajectory/atif";
+import type { RuntimeInput } from "@alfred/runtime/types";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { eventToUiMessages } from "@alfred/agent/utils/normalize";
 import { redactEventData } from "@alfred/agent/utils/redaction";
 import { workflowInput } from "@alfred/agent/workflow/schema";
-import type { WorkflowEventType } from "@alfred/db/schema/workflow";
 import { runOrchestrator } from "@alfred/runtime/orchestrator";
-import type { PersistedWorkflowEvent } from "@alfred/runtime/trajectory/atif";
 import { buildAtifTrajectory } from "@alfred/runtime/trajectory/atif";
 import { validateAtifTrajectory } from "@alfred/runtime/trajectory/validate";
-import type { RuntimeInput } from "@alfred/runtime/types";
 import { makeEventId } from "@alfred/type/id";
-import type { WorkflowEvent } from "@alfred/type/plan";
+import { randomUUID } from "node:crypto";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 
 type RunArgs = {
   requirement: string;

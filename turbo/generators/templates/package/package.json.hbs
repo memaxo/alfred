@@ -1,33 +1,8 @@
-{
-  "name": "@alfred/{{name}}",
-  "version": "0.1.0",
-  "type": "module",
-  "private": true,
-  "sideEffects": false,
-  "description": "{{description}}",
-  "exports": {
-    ".": {
-      "bun": "./src/index.ts",
-      "default": "./src/index.ts",
-      "types": "./dist/index.d.ts"
-    },
-    "./*": {
-      "bun": "./src/*.ts",
-      "default": "./src/*.ts",
-      "types": "./dist/*.d.ts"
-    }
-  },
-  "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
-    "typecheck": "tsc -b --pretty false",
-    "test": "bun test"
-  },
-  "dependencies": {
-    "@alfred/type": "workspace:*"
-  },
-  "devDependencies": {
-    "@alfred/tsconfig": "workspace:*",
-    "typescript": "^5.7.2"
-  }
-}
+{ "name": "@alfred/{{name}}", "version": "0.1.0", "type": "module", "private":
+true, "sideEffects": false, "description": "{{description}}", "exports": { ".":
+{ "bun": "./src/index.ts", "default": "./src/index.ts", "types":
+"./dist/index.d.ts" }, "./*": { "bun": "./src/*.ts", "default": "./src/*.ts",
+"types": "./dist/*.d.ts" } }, "scripts": { "build": "tsc -b", "dev": "tsc -b
+-w", "typecheck": "tsc -b --pretty false", "test": "bun test" }, "dependencies":
+{ "@alfred/type": "workspace:*" }, "devDependencies": { "@alfred/tsconfig":
+"workspace:*", "typescript": "^5.7.2" } }

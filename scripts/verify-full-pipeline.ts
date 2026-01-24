@@ -15,12 +15,12 @@
  * This test validates that all subsystems work together correctly.
  */
 
-import * as path from "node:path";
 import { issueAccessToken } from "@alfred/auth/token";
 import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
+import * as path from "node:path";
 
 // Configuration
 const USE_MOCK = process.env.USE_MOCK !== "false";
@@ -137,9 +137,8 @@ async function verifyWorkflowStreaming(): Promise<boolean> {
     const hasUpdateRun = typeof workflowRepo.updateRun === "function";
 
     // Test pipeline can be imported
-    const { PipelineRunner, registerDefaultStages } = await import(
-      "@alfred/pipeline"
-    );
+    const { PipelineRunner, registerDefaultStages } =
+      await import("@alfred/pipeline");
     const hasPipeline =
       typeof PipelineRunner === "function" &&
       typeof registerDefaultStages === "function";
@@ -172,9 +171,8 @@ async function verifyCognitiveTransitions(): Promise<boolean> {
   try {
     process.env.DATABASE_URL = "sqlite::memory:";
 
-    const { runCognitiveLoop } = await import(
-      "@alfred/runtime/loops/cognitive"
-    );
+    const { runCognitiveLoop } =
+      await import("@alfred/runtime/loops/cognitive");
     const ctx = new RuntimeContext([["scanContext", null]]);
     const streamId = `pipeline-test-${Date.now()}`;
 
@@ -216,9 +214,8 @@ async function verifyPhysiologyUpdates(): Promise<boolean> {
   try {
     process.env.DATABASE_URL = "sqlite::memory:";
 
-    const { runCognitiveLoop } = await import(
-      "@alfred/runtime/loops/cognitive"
-    );
+    const { runCognitiveLoop } =
+      await import("@alfred/runtime/loops/cognitive");
     const ctx = new RuntimeContext([["scanContext", null]]);
     const streamId = `physiology-test-${Date.now()}`;
 

@@ -145,7 +145,9 @@ function verifyResults(events: string[]) {
   console.log(`   Connection Established: ${hasConnected ? "✅" : "❌"}`);
 
   if (!hasConnected) {
-    console.log("\n⚠️  Note: Full verification requires a valid session token.");
+    console.log(
+      "\n⚠️  Note: Full verification requires a valid session token."
+    );
     console.log(
       "   Run the app in dev mode, log in, and use the UI to verify full E2E flow."
     );

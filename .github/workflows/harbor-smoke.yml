@@ -20,4 +20,3 @@ jobs:
 
       - name: Harbor smoke
         run: bun harbor:smoke
-

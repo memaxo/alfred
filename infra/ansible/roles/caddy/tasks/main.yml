@@ -29,7 +29,7 @@
     dest: /etc/caddy/Caddyfile
     owner: caddy
     group: caddy
-    mode: '0644'
+    mode: "0644"
   notify: restart caddy
 
 - name: Ensure Caddy is started and enabled

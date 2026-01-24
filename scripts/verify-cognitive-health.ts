@@ -7,12 +7,13 @@
  * Usage: bun scripts/verify-cognitive-health.ts
  */
 
+import type { CognitiveEffect } from "@alfred/runtime";
+
 import {
   cognitiveFeedbackSubmissionsTotal,
   metricsRegistry,
 } from "@alfred/api/metrics";
 import { timestamp } from "@alfred/cognitive/state";
-import type { CognitiveEffect } from "@alfred/runtime";
 import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 

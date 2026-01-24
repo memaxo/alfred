@@ -14,12 +14,12 @@
  *   --handoff-count <n>    Number of agent handoffs expected
  */
 
-import { parseArgs } from "node:util";
 import {
   extractWaves,
   parseTrajectory,
   querySteps,
 } from "@alfred/harbor/inspect";
+import { parseArgs } from "node:util";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { add } from "../src/math";
 
 describe("add", () => {

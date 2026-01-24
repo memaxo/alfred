@@ -1,6 +1,6 @@
+import { spawn } from "bun";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { spawn } from "bun";
 
 const FORBIDDEN_STRINGS = [
   "drizzle-orm",

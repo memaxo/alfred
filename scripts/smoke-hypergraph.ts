@@ -9,7 +9,7 @@ type HypergraphBridgeModule =
   typeof import("@alfred/agent/assistant/hypergraph-bridge");
 let persistHypergraphToDb: HypergraphBridgeModule["persistHypergraphToDb"];
 let loadHypergraphFromDb: HypergraphBridgeModule["loadHypergraphFromDb"];
-let db: typeof import("@alfred/db")["db"];
+let db: (typeof import("@alfred/db"))["db"];
 
 async function cleanup(resource: string) {
   await db
@@ -29,9 +29,8 @@ async function run() {
   if (!args.has("--use-existing-db")) {
     process.env.DATABASE_URL = "sqlite::memory:";
   }
-  ({ persistHypergraphToDb, loadHypergraphFromDb } = await import(
-    "@alfred/agent/assistant/hypergraph-bridge"
-  ));
+  ({ persistHypergraphToDb, loadHypergraphFromDb } =
+    await import("@alfred/agent/assistant/hypergraph-bridge"));
   ({ db } = await import("@alfred/db"));
   const resource = `smoke-${Date.now()}`;
   const graph = empty();

@@ -10,9 +10,9 @@
  *   bunx playwright test --config apps/web/playwright.config.ts
  */
 
+import { Glob } from "bun";
 import { stat } from "node:fs/promises";
 import path from "node:path";
-import { Glob } from "bun";
 
 type Scope = "unit" | "integration" | "e2e" | "perf" | "slow" | "all";
 type Kind = Exclude<Scope, "all">;

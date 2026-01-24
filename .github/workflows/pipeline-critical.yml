@@ -27,4 +27,3 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Run pipeline critical suite
         run: bun run test:pipeline:critical
-

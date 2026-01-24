@@ -4,8 +4,8 @@
  * Verifies (real execution, real providers):
  * - Codex server profile: long-lived `codex app-server` inside AgentFS container
  * - Codex default profile: per-prompt `codex exec` inside AgentFS container
- * - OpenCode server profile: long-lived `opencode acp` inside AgentFS container (Cerebras)
- * - OpenCode default profile: per-prompt `opencode acp` inside AgentFS container (Cerebras)
+ * - OpenCode server profile: long-lived `opencode acp` (legacy) or `opencode serve` (HTTP) inside AgentFS container (Cerebras)
+ * - OpenCode default profile: per-prompt `opencode acp` (legacy) or per-prompt `opencode serve` (HTTP) inside AgentFS container (Cerebras)
  * - Best-effort crash recovery: kill the in-container process and re-run
  *
  * Model policy:
@@ -23,8 +23,6 @@
  * - It runs with `auto=read` to avoid repo modifications.
  */
 
-import { randomUUID } from "node:crypto";
-import path from "node:path";
 import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
@@ -33,11 +31,14 @@ import { toolOpenCode } from "@alfred/agent/orchestrator/tool/opencode/index";
 import { stopAllServers } from "@alfred/agent/orchestrator/tool/shared/server";
 import { redactSecrets } from "@alfred/agent/utils/redaction";
 import { issueAccessToken } from "@alfred/auth/token";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 type FlagArgs = {
   retainContainer: boolean;
   strict: boolean;
   skipBuild: boolean;
+  opencodeHttp: boolean;
 };
 
 function parseArgs(argv: string[]): FlagArgs {
@@ -46,6 +47,7 @@ function parseArgs(argv: string[]): FlagArgs {
     retainContainer: args.has("--retain-container"),
     strict: args.has("--strict"),
     skipBuild: args.has("--skip-build"),
+    opencodeHttp: args.has("--opencode-http"),
   };
 }
 
@@ -270,19 +272,26 @@ async function runOpenCodeOnce(args: {
   containerName: string;
   containerCw: string;
   execProfile?: "default" | "server";
+  transport: "acp" | "http";
   model: string;
   prompt: string;
 }): Promise<string> {
+  const isHttp = args.transport === "http";
   const res = await toolOpenCode.execute({
     input: {
       action: "exec",
+      transport: isHttp ? "http" : "acp",
       execProfile: args.execProfile,
       prompt: args.prompt,
       auto: "read",
       cw: process.cwd(),
       model: args.model,
-      cmd: "opencode",
-      args: ["acp", "--hostname", "127.0.0.1", "--port", "47123"],
+      ...(isHttp
+        ? {}
+        : {
+            cmd: "opencode",
+            args: ["acp", "--hostname", "127.0.0.1", "--port", "47123"],
+          }),
       containerName: args.containerName,
       containerCw: args.containerCw,
       authz: args.authz,
@@ -317,6 +326,7 @@ async function runOpenCodeOnce(args: {
 
 async function main() {
   const flags = parseArgs(process.argv.slice(2));
+  const openTransport = flags.opencodeHttp ? "http" : "acp";
   console.log(
     "=== Executor Live Verification (AgentFS + Server Profiles) ===\n"
   );
@@ -448,11 +458,14 @@ async function main() {
       actual: codexDefault,
     });
 
-    console.log("\n--- OpenCode (server default inside AgentFS, Cerebras) ---");
+    console.log(
+      `\n--- OpenCode (${openTransport}, server default inside AgentFS, Cerebras) ---`
+    );
     const open1 = await runOpenCodeOnce({
       authz,
       containerName,
       containerCw,
+      transport: openTransport,
       model: "cerebras/gpt-oss-120b",
       prompt: "Reply with exactly: opencode_ok_1",
     });
@@ -467,6 +480,7 @@ async function main() {
       authz,
       containerName,
       containerCw,
+      transport: openTransport,
       model: "cerebras/gpt-oss-120b",
       prompt: "Reply with exactly: opencode_ok_2",
     });
@@ -478,13 +492,14 @@ async function main() {
     });
 
     console.log(
-      "\n--- OpenCode (explicit default profile baseline, Cerebras) ---"
+      `\n--- OpenCode (${openTransport}, explicit default profile baseline, Cerebras) ---`
     );
     const openDefault = await runOpenCodeOnce({
       authz,
       containerName,
       containerCw,
       execProfile: "default",
+      transport: openTransport,
       model: "cerebras/gpt-oss-120b",
       prompt: "Reply with exactly: opencode_default_ok",
     });
@@ -524,17 +539,25 @@ async function main() {
       );
     }
 
-    console.log("\n--- Best-effort crash recovery (OpenCode server) ---");
+    console.log(
+      `\n--- Best-effort crash recovery (OpenCode ${openTransport} server) ---`
+    );
     try {
       const top = await dockerTop(containerName);
-      const pid = findPid(top, /\bopencode\b.*\bacp\b/);
+      const pid = findPid(
+        top,
+        openTransport === "http"
+          ? /\bopencode\b.*\bserve\b/
+          : /\bopencode\b.*\bacp\b/
+      );
       if (pid) {
-        console.log(`Killing opencode acp pid=${pid}...`);
+        console.log(`Killing opencode (${openTransport}) pid=${pid}...`);
         await killPidInContainer({ authz, containerName, pid });
         const recovered = await runOpenCodeOnce({
           authz,
           containerName,
           containerCw,
+          transport: openTransport,
           model: "cerebras/gpt-oss-120b",
           prompt: "Reply with exactly: opencode_recovered_ok",
         });
@@ -546,7 +569,7 @@ async function main() {
         });
       } else {
         console.log(
-          "NOTE: Unable to locate opencode acp PID via docker top; skipping."
+          "NOTE: Unable to locate opencode server PID via docker top; skipping."
         );
       }
     } catch (error) {

@@ -19,9 +19,9 @@
  *   bun scripts/dev-guard.ts --kill   # Kill all dev processes
  */
 
+import { spawn } from "bun";
 import { existsSync, statSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { spawn } from "bun";
 
 const ROOT_DIR = resolve(import.meta.dir, "..");
 

@@ -12,10 +12,11 @@
  *   VOICE_PROVIDER=maya1 WHISPER_DEVICE=mps ALFRED_API_AUTO_INIT=false bun scripts/voice/validate.ts
  */
 
+import { spawn } from "bun";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { spawn } from "bun";
+
 import {
   getVoicePools,
   initializeVoicePools,
